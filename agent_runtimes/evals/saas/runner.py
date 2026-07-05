@@ -124,14 +124,18 @@ def _extract_case_usage(chat_result: dict[str, Any]) -> dict[str, Any]:
     direct = chat_result.get("usage")
     if isinstance(direct, dict) and direct:
         return dict(direct)
-    output = chat_result.get("output") if isinstance(chat_result.get("output"), dict) else {}
+    output = (
+        chat_result.get("output") if isinstance(chat_result.get("output"), dict) else {}
+    )
     nested = output.get("pydantic_ai_usage") or output.get("usage")
     if isinstance(nested, dict) and nested:
         return dict(nested)
     return {}
 
 
-def _merge_run_usage(aggregate: dict[str, Any], case_usage: dict[str, Any]) -> dict[str, Any]:
+def _merge_run_usage(
+    aggregate: dict[str, Any], case_usage: dict[str, Any]
+) -> dict[str, Any]:
     if not case_usage:
         return aggregate
 
@@ -156,7 +160,11 @@ def _merge_run_usage(aggregate: dict[str, Any], case_usage: dict[str, Any]) -> d
         "tokens_total",
         "token_total",
     )
-    if total_tokens is None and prompt_tokens is not None and completion_tokens is not None:
+    if (
+        total_tokens is None
+        and prompt_tokens is not None
+        and completion_tokens is not None
+    ):
         total_tokens = prompt_tokens + completion_tokens
 
     numeric_fields: list[tuple[str, float | None]] = [
@@ -399,7 +407,11 @@ def execute_evalset_spec(
         raise RuntimeError(f"Unable to create evalset from spec: {evalset_payload}")
     _emit(f"Created evalset: {evalset_id} ({resolved_name})")
 
-    ui_base = str(os.environ.get("DATALAYER_UI_URL") or "http://localhost:3063").strip().rstrip("/")
+    ui_base = (
+        str(os.environ.get("DATALAYER_UI_URL") or "http://localhost:3063")
+        .strip()
+        .rstrip("/")
+    )
     view_url = f"{ui_base}/evals/experiments/{run_environment}/{evalset_id}"
 
     result: dict[str, Any] = {
@@ -499,9 +511,7 @@ def execute_evalset_spec(
                 (experiment_payload.get("experiment") or {}).get("id") or ""
             )
             if not experiment_id:
-                raise RuntimeError(
-                    f"Unable to create experiment: {experiment_payload}"
-                )
+                raise RuntimeError(f"Unable to create experiment: {experiment_payload}")
             experiment_ids.append(experiment_id)
 
             ingress = ""
@@ -561,7 +571,9 @@ def execute_evalset_spec(
                             prompt=prompt,
                             timeout=case_request_timeout,
                         )
-                    status = str(chat_result.get("status") or "completed").strip().lower()
+                    status = (
+                        str(chat_result.get("status") or "completed").strip().lower()
+                    )
                     case_statuses.append(status)
                     output_payload = chat_result.get("output") or {}
                     outputs.append({"text": _extract_text(output_payload)})
@@ -596,9 +608,15 @@ def execute_evalset_spec(
                 interaction = [
                     {
                         "case": str(cases[idx].get("name") or f"case-{idx + 1}"),
-                        "status": case_statuses[idx] if idx < len(case_statuses) else None,
-                        "prompt": case_prompts[idx] if idx < len(case_prompts) else None,
-                        "output": full_outputs[idx] if idx < len(full_outputs) else None,
+                        "status": case_statuses[idx]
+                        if idx < len(case_statuses)
+                        else None,
+                        "prompt": case_prompts[idx]
+                        if idx < len(case_prompts)
+                        else None,
+                        "output": full_outputs[idx]
+                        if idx < len(full_outputs)
+                        else None,
                     }
                     for idx in range(len(cases))
                 ]
@@ -713,4 +731,3 @@ def execute_evalset_spec(
                 _emit(f"Terminated local agent registration: {agent_name}")
             if cleanup.get("local_runtime_terminated"):
                 _emit("Stopped auto-started local agent-runtimes server.")
-

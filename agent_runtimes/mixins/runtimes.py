@@ -13,7 +13,6 @@ import time
 from typing import Any, Optional
 
 import requests
-
 from datalayer_core.utils.defaults import get_default_credits_limit
 
 logger = logging.getLogger(__name__)
@@ -78,8 +77,8 @@ class RuntimesCreateMixin:
             or os.environ.get("DATALAYER_ACCOUNT_UID")
             or os.environ.get("DATALAYER_BILLABLE_ACCOUNT_UID")
         )
-        resolved_billable_account_handle = (
-            billable_account_handle or os.environ.get("DATALAYER_ACCOUNT_HANDLE")
+        resolved_billable_account_handle = billable_account_handle or os.environ.get(
+            "DATALAYER_ACCOUNT_HANDLE"
         )
 
         if given_name:
@@ -345,7 +344,9 @@ class RuntimesGetMixin:
             try:
                 result = response.json()
                 if "success" in result and not result["success"]:
-                    error_msg = f"Get runtime failed: {result.get('message', 'Unknown error')}"
+                    error_msg = (
+                        f"Get runtime failed: {result.get('message', 'Unknown error')}"
+                    )
                     logger.error(error_msg)
                     return {"success": False, "message": error_msg}
                 return result

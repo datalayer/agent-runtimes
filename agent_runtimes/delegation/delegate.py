@@ -101,8 +101,8 @@ async def delegate_to_agent(
     DelegationResult
         Structured result with output and usage metrics.
 
-    Example
-    -------
+    Examples
+    --------
     ```python
     @agent.tool
     async def delegate_analysis(ctx: RunContext, task: str) -> str:

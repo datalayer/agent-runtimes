@@ -203,9 +203,7 @@ def start_local_agent_runtime(
             "was not found on PATH. Install the agent-runtimes package first."
         ) from exc
     except Exception as exc:
-        raise RuntimeError(
-            f"Failed to start local agent runtime: {exc}"
-        ) from exc
+        raise RuntimeError(f"Failed to start local agent runtime: {exc}") from exc
 
     runtime = LocalAgentRuntime(
         base_url=base_url,
@@ -666,9 +664,7 @@ def _post_vercel_ai_chat(
     if not output_text:
         error_message = _vercel_ai_error_message(raw)
         if error_message is not None:
-            message_text = (
-                f"{source_label} chat returned no output: {error_message}"
-            )
+            message_text = f"{source_label} chat returned no output: {error_message}"
             return {
                 "status": "failed",
                 "output": {"text": "", "raw_stream_excerpt": raw[:2000]},
@@ -838,4 +834,3 @@ def run_cloud_agent_chat(
             ).strip()
             failure_cause["attempted_urls"] = attempted
     return last_result
-

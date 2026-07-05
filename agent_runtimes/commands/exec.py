@@ -19,13 +19,13 @@ from typing import Any, Optional
 from uuid import uuid4
 
 import typer
+from datalayer_core.utils.defaults import DEFAULT_ENVIRONMENT
+from datalayer_core.utils.network import fetch
 from rich.console import Console
 from rich.table import Table
 
 from agent_runtimes.client import DatalayerClient
 from agent_runtimes.console.manager import RuntimeManager
-from datalayer_core.utils.defaults import DEFAULT_ENVIRONMENT
-from datalayer_core.utils.network import fetch
 from agent_runtimes.utils.notebook import get_cells
 
 # Create the main Typer app for exec functionality
@@ -110,7 +110,9 @@ class CodeSandboxExecService:
                 # Start kernel and get client
                 self.kernel_manager.start_kernel(name=sandbox_name or "")
 
-                if bool(getattr(self.kernel_manager, "runtime_created_in_start", False)):
+                if bool(
+                    getattr(self.kernel_manager, "runtime_created_in_start", False)
+                ):
                     self._inspect_created_code_sandbox_kernels()
 
                 self.kernel_client = self.kernel_manager.client
@@ -124,11 +126,21 @@ class CodeSandboxExecService:
                 # the first execute call.
                 self.kernel_client.wait_for_ready(timeout=KERNEL_READY_TIMEOUT_SECONDS)
                 self._probe_kernel_execution()
-                manager_runtime_name = str(getattr(self.kernel_manager, "runtime_name", "") or sandbox_name or "auto-selected")
-                manager_runtime_uid = str(getattr(self.kernel_manager, "runtime_uid", "") or "")
-                manager_kernel_id = str(getattr(self.kernel_manager, "_kernel_id", "") or "")
+                manager_runtime_name = str(
+                    getattr(self.kernel_manager, "runtime_name", "")
+                    or sandbox_name
+                    or "auto-selected"
+                )
+                manager_runtime_uid = str(
+                    getattr(self.kernel_manager, "runtime_uid", "") or ""
+                )
+                manager_kernel_id = str(
+                    getattr(self.kernel_manager, "_kernel_id", "") or ""
+                )
                 if manager_runtime_uid or manager_kernel_id:
-                    runtime_ref = f"{manager_runtime_uid}#{manager_kernel_id}".strip("#")
+                    runtime_ref = f"{manager_runtime_uid}#{manager_kernel_id}".strip(
+                        "#"
+                    )
                     console.print(
                         f"[green]Connected to code sandbox: {manager_runtime_name} ({runtime_ref})[/green]"
                     )
@@ -160,7 +172,10 @@ class CodeSandboxExecService:
             )
 
             # Provide helpful authentication guidance
-            if "Token is required" in str(final_error) or "authentication" in str(final_error).lower():
+            if (
+                "Token is required" in str(final_error)
+                or "authentication" in str(final_error).lower()
+            ):
                 console.print(
                     "[yellow]Hint: Make sure you're authenticated. You can:[/yellow]"
                 )
@@ -177,7 +192,9 @@ class CodeSandboxExecService:
         if not self.kernel_manager:
             raise RuntimeError("Code sandbox manager is not initialized")
 
-        server_url = str(getattr(self.kernel_manager, "server_url", "") or "").rstrip("/")
+        server_url = str(getattr(self.kernel_manager, "server_url", "") or "").rstrip(
+            "/"
+        )
         sandbox_token = str(getattr(self.kernel_manager, "token", "") or "")
         sandbox_name = str(getattr(self.kernel_manager, "runtime_name", "") or "")
         sandbox_uid = str(getattr(self.kernel_manager, "runtime_uid", "") or "")
@@ -285,9 +302,7 @@ class CodeSandboxExecService:
             console.print(f"[blue]Found {total_cells} cell(s) to execute[/blue]")
             failed_cells = 0
             effective_timeout = (
-                float(timeout)
-                if timeout is not None
-                else DEFAULT_EXEC_TIMEOUT_SECONDS
+                float(timeout) if timeout is not None else DEFAULT_EXEC_TIMEOUT_SECONDS
             )
 
             # Execute each cell
@@ -358,7 +373,9 @@ class CodeSandboxExecService:
                             timeout=effective_timeout,
                         )
 
-                    cell_report["reply"] = reply.get("content") if isinstance(reply, dict) else {}
+                    cell_report["reply"] = (
+                        reply.get("content") if isinstance(reply, dict) else {}
+                    )
 
                     if raise_exceptions and reply["content"]["status"] != "ok":
                         content = reply["content"]
@@ -391,7 +408,9 @@ class CodeSandboxExecService:
                             )
 
                     if reply["content"].get("status") != "ok":
-                        cell_report["status"] = str(reply["content"].get("status") or "error")
+                        cell_report["status"] = str(
+                            reply["content"].get("status") or "error"
+                        )
                         failed_cells += 1
 
                 except Exception as e:
@@ -426,7 +445,9 @@ class CodeSandboxExecService:
         finally:
             self._executing = False
 
-    def _print_cell_outputs(self, cell_index: int, outputs: list[dict[str, Any]]) -> None:
+    def _print_cell_outputs(
+        self, cell_index: int, outputs: list[dict[str, Any]]
+    ) -> None:
         """Print collected outputs for a cell after execution."""
         if not outputs:
             console.print(f"[dim]Cell {cell_index} output: (no output)[/dim]")
@@ -455,7 +476,9 @@ class CodeSandboxExecService:
             if output_type == "error":
                 traceback = output.get("traceback") or []
                 if traceback:
-                    console.print("[red]" + "\n".join(str(line) for line in traceback) + "[/red]")
+                    console.print(
+                        "[red]" + "\n".join(str(line) for line in traceback) + "[/red]"
+                    )
                 else:
                     ename = str(output.get("ename") or "Error")
                     evalue = str(output.get("evalue") or "")
@@ -476,7 +499,9 @@ class CodeSandboxExecService:
         if not self.kernel_manager:
             raise RuntimeError("Code sandbox manager is not initialized")
 
-        server_url = str(getattr(self.kernel_manager, "server_url", "") or "").rstrip("/")
+        server_url = str(getattr(self.kernel_manager, "server_url", "") or "").rstrip(
+            "/"
+        )
         sandbox_token = str(getattr(self.kernel_manager, "token", "") or "")
         if not server_url:
             raise RuntimeError("Code sandbox endpoint is not available")
@@ -495,7 +520,7 @@ class CodeSandboxExecService:
                 break
 
         raise RuntimeError(
-                f"Code sandbox health check failed for '{server_url}': {last_error}"
+            f"Code sandbox health check failed for '{server_url}': {last_error}"
         ) from last_error
 
     def _prepare_kernel_before_execution(self) -> None:
@@ -511,7 +536,9 @@ class CodeSandboxExecService:
         if not self.kernel_manager:
             return []
 
-        server_url = str(getattr(self.kernel_manager, "server_url", "") or "").rstrip("/")
+        server_url = str(getattr(self.kernel_manager, "server_url", "") or "").rstrip(
+            "/"
+        )
         sandbox_token = str(getattr(self.kernel_manager, "token", "") or "")
         if not server_url:
             return []
@@ -544,7 +571,9 @@ class CodeSandboxExecService:
             execution_state = str((kernel or {}).get("execution_state") or "")
             connections = (kernel or {}).get("connections")
             last_activity = str((kernel or {}).get("last_activity") or "")
-            marker = "*" if selected_kernel_id and kernel_id == selected_kernel_id else " "
+            marker = (
+                "*" if selected_kernel_id and kernel_id == selected_kernel_id else " "
+            )
             console.print(
                 f"  [{marker}] id={kernel_id} name={kernel_name} state={execution_state} connections={connections} last_activity={last_activity}"
             )
@@ -621,9 +650,7 @@ def main(
         raise typer.Exit(1)
 
     if not filename and not example_notebook and not example_py:
-        console.print(
-            "[red]Error: missing FILE_PATH or an --example-* option[/red]"
-        )
+        console.print("[red]Error: missing FILE_PATH or an --example-* option[/red]")
         raise typer.Exit(1)
 
     generated_example = False
@@ -692,7 +719,9 @@ def main(
                 encoding="utf-8",
             )
             console.print(f"[green]Saved execution outputs: {report_path}[/green]")
-            console.print(f"[green]Full output report path: {report_path.resolve()}[/green]")
+            console.print(
+                f"[green]Full output report path: {report_path.resolve()}[/green]"
+            )
             if int(execution_report.get("failed_cells") or 0) > 0:
                 raise typer.Exit(1)
 
@@ -882,7 +911,9 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
                 show_default=True,
             )
             if requested_seconds <= 0:
-                console.print("[red]Code sandbox duration must be greater than 0 seconds.[/red]")
+                console.print(
+                    "[red]Code sandbox duration must be greater than 0 seconds.[/red]"
+                )
                 raise typer.Exit(1)
 
             requested_credits = burn_rate * requested_seconds
@@ -959,17 +990,18 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
         sandbox_uid = str(selected.uid or "")
         kernel_id = ""
         try:
-            runtime_token = str(getattr(selected, "jupyter_token", "") or client._get_token() or "")
+            runtime_token = str(
+                getattr(selected, "jupyter_token", "") or client._get_token() or ""
+            )
             ingress = str(getattr(selected, "ingress", "") or "").rstrip("/")
             if ingress and runtime_token:
-                response = fetch(f"{ingress}/api/kernels", token=runtime_token, timeout=10)
+                response = fetch(
+                    f"{ingress}/api/kernels", token=runtime_token, timeout=10
+                )
                 kernels = response.json() if response.content else []
                 if isinstance(kernels, list) and kernels:
                     ordered = sorted(
-                        (
-                            str((kernel or {}).get("id") or "")
-                            for kernel in kernels
-                        )
+                        (str((kernel or {}).get("id") or "") for kernel in kernels)
                     )
                     kernel_id = ordered[0] if ordered else ""
         except Exception:

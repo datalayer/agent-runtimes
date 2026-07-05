@@ -10,10 +10,10 @@ import os
 from typing import Any, Optional
 
 import typer
+from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 
 from agent_runtimes.displays.runtime_checkpoints import display_runtime_checkpoints
-from datalayer_core.utils.urls import DatalayerURLs
 
 # Create a Typer app for checkpoint commands
 app = typer.Typer(

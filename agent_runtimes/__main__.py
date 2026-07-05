@@ -34,20 +34,9 @@ import os
 from typing import Annotated, Optional
 
 import typer
+from datalayer_core.authn import AuthenticationManager
 
 from agent_runtimes._version import __version__
-from datalayer_core.authn import AuthenticationManager
-from agent_runtimes.commands.agents import app as agents_app
-from agent_runtimes.commands.agent_nodes import app as agent_nodes_app
-from agent_runtimes.commands.benchmarks import app as benchmarks_app
-from agent_runtimes.commands.checkpoints import app as checkpoints_app
-from agent_runtimes.commands.console import app as console_app
-from agent_runtimes.commands.envs import app as envs_app
-from agent_runtimes.commands.evals import app as evals_app
-from agent_runtimes.commands.exec import main as exec_main
-from agent_runtimes.commands.pools import app as pools_app
-from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
-
 from agent_runtimes.commands.agent_mcp_servers import (
     AgentMcpServersError,
     parse_env_vars,
@@ -55,8 +44,16 @@ from agent_runtimes.commands.agent_mcp_servers import (
     start_agent_mcp_servers,
     stop_agent_mcp_servers,
 )
+from agent_runtimes.commands.agent_nodes import app as agent_nodes_app
+from agent_runtimes.commands.agents import app as agents_app
+from agent_runtimes.commands.benchmarks import app as benchmarks_app
+from agent_runtimes.commands.checkpoints import app as checkpoints_app
+from agent_runtimes.commands.console import app as console_app
+from agent_runtimes.commands.envs import app as envs_app
+from agent_runtimes.commands.evals import app as evals_app
 from agent_runtimes.commands.events import app as events_app
 from agent_runtimes.commands.events import events_list, events_ls
+from agent_runtimes.commands.exec import main as exec_main
 from agent_runtimes.commands.list_agents import (
     ListAgentsError,
     OutputFormat,
@@ -68,8 +65,6 @@ from agent_runtimes.commands.list_specs import (
 from agent_runtimes.commands.list_specs import (
     list_agentspecs,
 )
-from agent_runtimes.commands.ray import app as ray_app
-from agent_runtimes.commands.schedules import app as schedules_app
 from agent_runtimes.commands.mcp_servers_catalog import (
     OutputFormat as CatalogOutputFormat,
 )
@@ -82,6 +77,10 @@ from agent_runtimes.commands.mcp_servers_config import (
 from agent_runtimes.commands.mcp_servers_config import (
     list_mcp_servers_config,
 )
+from agent_runtimes.commands.pools import app as pools_app
+from agent_runtimes.commands.ray import app as ray_app
+from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
+from agent_runtimes.commands.schedules import app as schedules_app
 from agent_runtimes.commands.serve import (
     LogLevel,
     Protocol,
@@ -287,12 +286,14 @@ def main_callback(
         if normalized_api_key:
             os.environ["DATALAYER_API_KEY"] = normalized_api_key
 
-    resolved_uid = str(billable_account_uid or "").strip() or str(
-        os.environ.get("DATALAYER_ACCOUNT_UID") or ""
-    ).strip()
-    resolved_handle = str(billable_account_handle or "").strip() or str(
-        os.environ.get("DATALAYER_ACCOUNT_HANDLE") or ""
-    ).strip()
+    resolved_uid = (
+        str(billable_account_uid or "").strip()
+        or str(os.environ.get("DATALAYER_ACCOUNT_UID") or "").strip()
+    )
+    resolved_handle = (
+        str(billable_account_handle or "").strip()
+        or str(os.environ.get("DATALAYER_ACCOUNT_HANDLE") or "").strip()
+    )
 
     if not resolved_uid and resolved_handle:
         effective_iam_url = str(os.environ.get("DATALAYER_IAM_URL") or "").strip()
@@ -326,6 +327,7 @@ def main_callback(
         os.environ["DATALAYER_BILLABLE_ACCOUNT_UID"] = resolved_uid
     if resolved_handle:
         os.environ["DATALAYER_ACCOUNT_HANDLE"] = resolved_handle
+
 
 # Register the interactive assistant CLI under `agent-runtimes chat`.
 # Keep this import lazy and guarded so server/node startup does not depend on

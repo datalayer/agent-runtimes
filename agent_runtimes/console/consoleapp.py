@@ -8,6 +8,8 @@
 
 import typing as t
 
+from datalayer_core.mixins.authn import AuthnMixin
+from datalayer_core.utils.urls import DatalayerURLs
 from jupyter_core.application import JupyterApp
 from jupyter_kernel_client.konsoleapp import (
     KonsoleApp,
@@ -23,8 +25,6 @@ from traitlets.config import catch_config_error
 
 from agent_runtimes._version import __version__
 from agent_runtimes.console.manager import RuntimeManager
-from datalayer_core.mixins.authn import AuthnMixin
-from datalayer_core.utils.urls import DatalayerURLs
 
 datalayer_aliases = dict(base_aliases)
 datalayer_aliases["run-url"] = "RuntimesConsoleApp.run_url"

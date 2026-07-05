@@ -14,12 +14,11 @@ from typing import Any, Optional
 
 import requests
 import typer
+from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 from rich.table import Table
 
 from agent_runtimes.client import DatalayerClient
-from datalayer_core.utils.urls import DatalayerURLs
-
 
 app = typer.Typer(
     name="pools",
@@ -61,7 +60,13 @@ def _api_get(path: str, *, token: Optional[str], runtimes_url: Optional[str]) ->
     return response.json()
 
 
-def _api_post(path: str, payload: dict[str, Any], *, token: Optional[str], runtimes_url: Optional[str]) -> Any:
+def _api_post(
+    path: str,
+    payload: dict[str, Any],
+    *,
+    token: Optional[str],
+    runtimes_url: Optional[str],
+) -> Any:
     resolved_token = _resolve_token(token)
     if not resolved_token:
         raise RuntimeError(
@@ -115,7 +120,9 @@ def show_pools(
             table.add_row(
                 str(pool.get("name") or "-"),
                 str(pool.get("desired") if pool.get("desired") is not None else "-"),
-                str(pool.get("available") if pool.get("available") is not None else "-"),
+                str(
+                    pool.get("available") if pool.get("available") is not None else "-"
+                ),
                 str(pool.get("pending") if pool.get("pending") is not None else "-"),
                 str(pool.get("assigned") if pool.get("assigned") is not None else "-"),
             )

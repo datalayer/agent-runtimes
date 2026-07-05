@@ -15,9 +15,13 @@ import uuid
 from functools import lru_cache
 from typing import Any, Optional, Union
 
-from jupyter_kernel_client import KernelClient
-
 from datalayer_core.client.client import DatalayerClient
+from datalayer_core.utils.defaults import (
+    DEFAULT_ENVIRONMENT,
+    DEFAULT_TIME_RESERVATION,
+)
+from datalayer_core.utils.types import Minutes
+from jupyter_kernel_client import KernelClient
 
 from agent_runtimes.mixins.environments import EnvironmentsMixin
 from agent_runtimes.mixins.evals import EvalsMixin
@@ -32,11 +36,6 @@ from agent_runtimes.sandboxes.code_sandbox_snapshots import (
     as_code_sandbox_snapshots,
     create_snapshot,
 )
-from datalayer_core.utils.defaults import (
-    DEFAULT_ENVIRONMENT,
-    DEFAULT_TIME_RESERVATION,
-)
-from datalayer_core.utils.types import Minutes
 
 logger = logging.getLogger(__name__)
 
@@ -214,9 +213,7 @@ class RuntimeClient(
             if retry_after:
                 context_parts.append(f"retry_after_seconds={retry_after}")
             context = ", ".join(context_parts)
-            raise RuntimeError(
-                f"Runtime creation failed ({context}): {message}"
-            )
+            raise RuntimeError(f"Runtime creation failed ({context}): {message}")
 
         runtime_data = response["runtime"]
         runtime = RuntimeService(
@@ -306,7 +303,9 @@ class RuntimeClient(
         if pod_name is not None:
             if api_key:
                 client_for_request = DatalayerClient(urls=self._urls, token=api_key)
-                return client_for_request._terminate_runtime(pod_name).get("success", False)
+                return client_for_request._terminate_runtime(pod_name).get(
+                    "success", False
+                )
             return self._terminate_runtime(pod_name)["success"]
         else:
             return False
@@ -426,14 +425,14 @@ class RuntimeClient(
             client_for_request = DatalayerClient(urls=self._urls, token=api_key)
 
         runtime_service = (
-            runtime if isinstance(runtime, RuntimeService) else client_for_request.get_runtime(runtime)
+            runtime
+            if isinstance(runtime, RuntimeService)
+            else client_for_request.get_runtime(runtime)
         )
 
         endpoint = str(runtime_service.ingress or "").rstrip("/")
         runtime_token = str(
-            runtime_service.jupyter_token
-            or client_for_request._get_token()
-            or ""
+            runtime_service.jupyter_token or client_for_request._get_token() or ""
         ).strip()
 
         result: dict[str, Any] = {

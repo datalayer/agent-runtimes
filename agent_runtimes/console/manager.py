@@ -13,13 +13,13 @@ import time
 from typing import Any, Optional
 
 import requests
+from datalayer_core.utils.date import timestamp_to_local_date
+from datalayer_core.utils.urls import DatalayerURLs
 from jupyter_kernel_client.manager import REQUEST_TIMEOUT, KernelHttpManager
 from jupyter_server.utils import url_path_join
 
 from agent_runtimes.client import DatalayerClient
 from agent_runtimes.displays.runtimes import display_runtimes
-from datalayer_core.utils.date import timestamp_to_local_date
-from datalayer_core.utils.urls import DatalayerURLs
 
 HTTP_PROTOCOL_REGEXP = re.compile(r"^http")
 
@@ -131,9 +131,7 @@ class RuntimeManager(KernelHttpManager):
         runtimes = self._client.list_runtimes()
 
         if not runtime_name:
-            self.log.debug(
-                "No Agent name provided. Picking the first available Agent…"
-            )
+            self.log.debug("No Agent name provided. Picking the first available Agent…")
             if not runtimes:
                 # Historical behaviour: when no Agent is running, offer to
                 # launch one from the first available environment instead of
@@ -281,7 +279,9 @@ class RuntimeManager(KernelHttpManager):
 
             if preferred_uid:
                 for runtime in runtimes:
-                    if str(runtime.uid or "") == preferred_uid and self._runtime_is_accessible(runtime):
+                    if str(
+                        runtime.uid or ""
+                    ) == preferred_uid and self._runtime_is_accessible(runtime):
                         return runtime
 
             selected = self._pick_accessible_runtime(runtimes)

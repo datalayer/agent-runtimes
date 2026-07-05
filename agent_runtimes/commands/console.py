@@ -10,10 +10,10 @@ import sys
 from typing import List, Optional
 
 import typer
+from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 
 from agent_runtimes.console.consoleapp import RuntimesConsoleApp
-from datalayer_core.utils.urls import DatalayerURLs
 
 # Create a Typer app for console commands
 app = typer.Typer(

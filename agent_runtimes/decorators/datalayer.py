@@ -12,10 +12,10 @@ import functools
 import inspect
 from typing import Any, Callable, Optional, Union
 
+from datalayer_core.utils.defaults import DEFAULT_ENVIRONMENT
 from typing_extensions import TypeAlias
 
 from agent_runtimes.client import RuntimeClient as DatalayerClient
-from datalayer_core.utils.defaults import DEFAULT_ENVIRONMENT
 
 # TODO:
 # - inputs are different from args and kwargs (rename)

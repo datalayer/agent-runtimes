@@ -65,9 +65,7 @@ def resolve_environment_burning_rate(
         )
     environments = response.get("environments")
     if not isinstance(environments, list):
-        raise RuntimeError(
-            "Failed to list environments: invalid environments payload."
-        )
+        raise RuntimeError("Failed to list environments: invalid environments payload.")
 
     matched_environment: Optional[dict[str, Any]] = None
     for raw_env in environments:
@@ -80,9 +78,7 @@ def resolve_environment_burning_rate(
 
     if matched_environment is None:
         available = [
-            str(env.get("name") or "")
-            for env in environments
-            if isinstance(env, dict)
+            str(env.get("name") or "") for env in environments if isinstance(env, dict)
         ]
         raise RuntimeError(
             f"Environment '{environment_name}' not found for cloud runtime launch. "
@@ -179,9 +175,7 @@ def create_cloud_agent_runtime(
     """
     if time_reservation is None:
         if credits_limit is None:
-            raise ValueError(
-                "Provide either time_reservation or credits_limit."
-            )
+            raise ValueError("Provide either time_reservation or credits_limit.")
         burning_rate = resolve_environment_burning_rate(client, environment_name)
         time_reservation = compute_time_reservation_minutes(
             credits_limit=credits_limit,
@@ -254,7 +248,9 @@ def terminate_cloud_agent_runtime(
         return False
 
     if not success and raise_on_error:
-        raise RuntimeError(f"Cloud runtime termination returned unsuccessful for pod {pod_name}.")
+        raise RuntimeError(
+            f"Cloud runtime termination returned unsuccessful for pod {pod_name}."
+        )
     return success
 
 

@@ -12,8 +12,6 @@ Provides data structures for runtime model in Datalayer.
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field
-
 from datalayer_core.utils.defaults import (
     DEFAULT_ENVIRONMENT,
     DEFAULT_TIME_RESERVATION,
@@ -23,6 +21,7 @@ from datalayer_core.utils.types import (
     Minutes,
 )
 from datalayer_core.utils.urls import DEFAULT_DATALAYER_URL
+from pydantic import BaseModel, Field
 
 
 class RuntimeModel(BaseModel):

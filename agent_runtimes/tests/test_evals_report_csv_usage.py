@@ -91,7 +91,9 @@ def test_write_report_csv_includes_usage_columns_and_values(tmp_path: Path) -> N
     assert case_row["usage_provider"] == "openai"
 
 
-def test_write_report_csv_falls_back_to_report_usage_when_metrics_usage_missing(tmp_path: Path) -> None:
+def test_write_report_csv_falls_back_to_report_usage_when_metrics_usage_missing(
+    tmp_path: Path,
+) -> None:
     report = {
         "evalset_id": "evalset-1",
         "run_environment": "ui",
@@ -265,5 +267,3 @@ def test_report_appendix_run_table_reads_direct_report_usage_payload() -> None:
     assert "| Total Tokens | Credits |" in content
     assert "321" in content
     assert "0.42" in content
-
-

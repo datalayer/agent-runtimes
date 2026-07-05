@@ -10,10 +10,9 @@ import sys
 from typing import Optional
 
 import typer
-from rich.console import Console
-
 from datalayer_core.base.serverapplication import launch_new_instance
 from datalayer_core.utils.urls import DatalayerURLs
+from rich.console import Console
 
 # Create a Typer app for benchmarks commands
 app = typer.Typer(

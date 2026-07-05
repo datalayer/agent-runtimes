@@ -12,9 +12,8 @@ Provides data structures for environment management in Datalayer environments.
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field
-
 from datalayer_core.utils.types import CreditsPerSecond
+from pydantic import BaseModel, Field
 
 
 class EnvironmentModel(BaseModel):

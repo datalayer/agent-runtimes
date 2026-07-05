@@ -16,11 +16,9 @@ from typing import Any, Optional
 
 import requests
 import typer
+from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 from rich.table import Table
-
-from datalayer_core.utils.urls import DatalayerURLs
-
 
 app = typer.Typer(
     name="schedules",
@@ -122,7 +120,9 @@ def _render_runs(runs: list[dict[str, Any]]) -> None:
 
 @app.command(name="ls")
 def list_schedules(
-    runs: bool = typer.Option(False, "--runs", help="List schedule runs instead of schedule definitions."),
+    runs: bool = typer.Option(
+        False, "--runs", help="List schedule runs instead of schedule definitions."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
     """List scheduler definitions or scheduler runs."""

@@ -247,3 +247,4 @@ skips = [
 
 [tool.interrogate]
 fail-under = 79.0
+exclude = ["agent_runtimes/tests", "scripts"]

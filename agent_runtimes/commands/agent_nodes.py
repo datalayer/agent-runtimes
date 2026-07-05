@@ -11,10 +11,10 @@ from typing import Any, Optional
 
 import requests
 import typer
+from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 
 from agent_runtimes.displays.agent_nodes import display_agent_nodes
-from datalayer_core.utils.urls import DatalayerURLs
 
 app = typer.Typer(
     name="agent-nodes",

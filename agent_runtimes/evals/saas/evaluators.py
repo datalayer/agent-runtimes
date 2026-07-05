@@ -90,9 +90,7 @@ def _evaluate_contains(
         "passed": passed,
         "score": 1.0 if passed else 0.0,
         "reason": (
-            "all tokens found"
-            if passed
-            else f"missing tokens: {', '.join(missing)}"
+            "all tokens found" if passed else f"missing tokens: {', '.join(missing)}"
         ),
     }
 
@@ -112,8 +110,7 @@ def _evaluate_pass_rate_threshold(
         "threshold": round(threshold, 4),
         "observed": round(rate, 4),
         "summary": (
-            f"pass rate {rate:.2f} "
-            f"{'≥' if ok else '<'} threshold {threshold:.2f}"
+            f"pass rate {rate:.2f} {'≥' if ok else '<'} threshold {threshold:.2f}"
         ),
     }
 
@@ -157,9 +154,7 @@ def run_case_evaluators(
             continue
         outcome = func(output, expected, arguments)
         outcome_passed = bool(outcome.get("passed"))
-        outcome_score = float(
-            outcome.get("score", 1.0 if outcome_passed else 0.0)
-        )
+        outcome_score = float(outcome.get("score", 1.0 if outcome_passed else 0.0))
         records.append(
             {
                 "name": name,
@@ -346,7 +341,9 @@ def evaluate_evalset(
     :func:`evaluate_run`. This is the single entry point examples and the CLI
     use so evaluator execution lives in the evals API rather than the caller.
     """
-    cases = [item for item in (evalset_spec.get("cases") or []) if isinstance(item, dict)]
+    cases = [
+        item for item in (evalset_spec.get("cases") or []) if isinstance(item, dict)
+    ]
     evalset_evaluators = [
         item
         for item in (evalset_spec.get("evalset_evaluators") or [])
@@ -407,9 +404,7 @@ def run_and_evaluate_evalset(
             status = None
         if status is None and statuses is not None and index < len(statuses):
             status = statuses[index]
-        collected_statuses.append(
-            str(status) if status is not None else None
-        )
+        collected_statuses.append(str(status) if status is not None else None)
     normalized_statuses = (
         [value or "" for value in collected_statuses]
         if any(value is not None for value in collected_statuses)

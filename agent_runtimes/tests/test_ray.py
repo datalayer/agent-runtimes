@@ -13,8 +13,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_runtimes.mixins.ray import RayMixin
 from datalayer_core.utils.urls import DatalayerURLs
+
+from agent_runtimes.mixins.ray import RayMixin
 
 
 class _FakeResponse:

@@ -47,6 +47,7 @@ def _truncate(value: str, width: int) -> str:
         return "…"
     return value[: width - 1] + "…"
 
+
 def _wrap_lines(text: str, width: int) -> list[str]:
     """Wrap plain text into lines bounded by width, preserving explicit breaks."""
     if width <= 1:
@@ -98,10 +99,18 @@ def display_environments(environments: list[dict[str, Any]]) -> None:
     inner_target = terminal_width - 2
 
     # Preferred widths; later adjusted to fit exactly within terminal width.
-    id_width = max(len(headers[0]), *(len(r[0]) for r in rows)) if rows else len(headers[0])
-    cost_width = max(len(headers[1]), *(len(r[1]) for r in rows)) if rows else len(headers[1])
-    name_width = max(len(headers[2]), *(len(r[2]) for r in rows)) if rows else len(headers[2])
-    lang_width = max(len(headers[3]), *(len(r[3]) for r in rows)) if rows else len(headers[3])
+    id_width = (
+        max(len(headers[0]), *(len(r[0]) for r in rows)) if rows else len(headers[0])
+    )
+    cost_width = (
+        max(len(headers[1]), *(len(r[1]) for r in rows)) if rows else len(headers[1])
+    )
+    name_width = (
+        max(len(headers[2]), *(len(r[2]) for r in rows)) if rows else len(headers[2])
+    )
+    lang_width = (
+        max(len(headers[3]), *(len(r[3]) for r in rows)) if rows else len(headers[3])
+    )
 
     id_width = max(12, min(id_width, 28))
     cost_width = max(6, min(cost_width, 16))
@@ -120,7 +129,10 @@ def display_environments(environments: list[dict[str, Any]]) -> None:
     resources_width = max(20, inner_target - used_without_resources)
 
     # If terminal is very narrow, squeeze fixed columns further.
-    if resources_width == 20 and used_without_resources + resources_width > inner_target:
+    if (
+        resources_width == 20
+        and used_without_resources + resources_width > inner_target
+    ):
         overflow = (used_without_resources + resources_width) - inner_target
         # Reduce name first, then id, then lang within minimums.
         shrink_name = min(max(0, name_width - 12), overflow)
@@ -136,12 +148,7 @@ def display_environments(environments: list[dict[str, Any]]) -> None:
 
     # Recompute resources width with final fixed widths.
     used_without_resources = (
-        (id_width + 2)
-        + (cost_width + 2)
-        + (name_width + 2)
-        + (lang_width + 2)
-        + 4
-        + 2
+        (id_width + 2) + (cost_width + 2) + (name_width + 2) + (lang_width + 2) + 4 + 2
     )
     resources_width = max(12, inner_target - used_without_resources)
 

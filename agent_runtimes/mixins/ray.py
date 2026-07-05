@@ -57,14 +57,18 @@ class RayMixin:
             json_body=payload,
         )
 
-    def ray_get_cluster(self, name: str, *, namespace: str = "default") -> dict[str, Any]:
+    def ray_get_cluster(
+        self, name: str, *, namespace: str = "default"
+    ) -> dict[str, Any]:
         return self._ray_request(
             f"/clusters/{name}",
             method="GET",
             params={"namespace": namespace},
         )
 
-    def ray_delete_cluster(self, name: str, *, namespace: str = "default") -> dict[str, Any]:
+    def ray_delete_cluster(
+        self, name: str, *, namespace: str = "default"
+    ) -> dict[str, Any]:
         return self._ray_request(
             f"/clusters/{name}",
             method="DELETE",
@@ -143,7 +147,9 @@ class RayMixin:
             },
         )
 
-    def ray_delete_job(self, name: str, *, namespace: str = "default") -> dict[str, Any]:
+    def ray_delete_job(
+        self, name: str, *, namespace: str = "default"
+    ) -> dict[str, Any]:
         return self._ray_request(
             f"/jobs/{name}",
             method="DELETE",

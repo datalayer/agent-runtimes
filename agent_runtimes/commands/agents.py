@@ -18,11 +18,13 @@ from typing import Any, Optional
 import requests
 import typer
 import yaml  # type: ignore[import-untyped]
+from datalayer_core.utils.date import timestamp_to_local_date
+from datalayer_core.utils.network import fetch
+from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agent_runtimes.client import DatalayerClient
 from agent_runtimes.agents.agent_local import (
     DEFAULT_LOCAL_AGENT_NAME,
     DEFAULT_LOCAL_HOST,
@@ -32,9 +34,7 @@ from agent_runtimes.agents.agent_local import (
     start_local_agent_runtime,
     terminate_local_agent_runtime,
 )
-from datalayer_core.utils.network import fetch
-from datalayer_core.utils.date import timestamp_to_local_date
-from datalayer_core.utils.urls import DatalayerURLs
+from agent_runtimes.client import DatalayerClient
 
 DEFAULT_AGENT_SPEC_ID = "example-simple"
 
@@ -138,7 +138,9 @@ def _resolve_billable_account_details(
         payload = whoami_response.json()
         profile = payload.get("profile") or {}
         profile_uid = str(profile.get("uid") or "").strip()
-        if profile_uid and (not billable_account_uid or profile_uid == billable_account_uid):
+        if profile_uid and (
+            not billable_account_uid or profile_uid == billable_account_uid
+        ):
             full_name = str(profile.get("name") or "").strip()
             if not full_name:
                 first_name = str(profile.get("first_name") or "").strip()
@@ -276,9 +278,7 @@ def _create_local_agent_runtime(
         }
         console.print(json.dumps(payload, ensure_ascii=False))
     else:
-        console.print(
-            f"[green]Local agent runtime '{agent_name}' started![/green]"
-        )
+        console.print(f"[green]Local agent runtime '{agent_name}' started![/green]")
         console.print(f"Base URL: {runtime.base_url}")
         console.print(f"Agentspec id: {agent_spec_id}")
         console.print(f"Chat endpoint: {runtime.chat_endpoint}")
@@ -366,9 +366,7 @@ def list_agents(
                 str(runtime.name or ""),
                 str(runtime.environment or ""),
                 display_billable_uid,
-                "Never"
-                if expired_at is None
-                else timestamp_to_local_date(expired_at),
+                "Never" if expired_at is None else timestamp_to_local_date(expired_at),
             )
 
         console.print(table)
@@ -1108,9 +1106,7 @@ def inspect_agent_runtime(
                 console.print(
                     "[yellow]Kernel list unavailable (all probed endpoints failed).[/yellow]"
                 )
-                console.print(
-                    "[dim]Probed endpoints:[/dim]"
-                )
+                console.print("[dim]Probed endpoints:[/dim]")
                 for kernel_url in kernel_endpoints:
                     console.print(f"[dim]- {kernel_url}[/dim]")
                 console.print(f"[dim]Last error: {kernel_lookup_error}[/dim]")

@@ -5,14 +5,15 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Environment commands for Datalayer CLI."""
+
 from typing import Any, Dict, Optional
 
 import typer
+from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 
 from agent_runtimes.client import DatalayerClient
 from agent_runtimes.displays.environments import display_environments
-from datalayer_core.utils.urls import DatalayerURLs
 
 # Create a Typer app for environment commands
 app = typer.Typer(

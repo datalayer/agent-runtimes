@@ -4031,7 +4031,6 @@ async def configure_from_spec_endpoint(
     a separate ``mcp-servers/start`` call from the companion.
 
     Tool Approval Flow (k8s)
-    -----------------------
     The companion injects the user JWT via ``body.user_token``.  This
     endpoint stores it in ``DATALAYER_USER_TOKEN`` *before* calling
     ``create_agent``.  Inside ``create_agent``:

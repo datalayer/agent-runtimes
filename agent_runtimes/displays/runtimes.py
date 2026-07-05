@@ -10,10 +10,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from datalayer_core.utils.date import timestamp_to_local_date
 from rich.console import Console
 from rich.table import Table
-
-from datalayer_core.utils.date import timestamp_to_local_date
 
 
 def _new_runtime_table(title: str = "Agents") -> Table:

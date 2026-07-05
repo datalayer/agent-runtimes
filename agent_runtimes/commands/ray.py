@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import ast
 import json
-from pathlib import Path
 import re
 import shlex
 import sys
 import time
+from pathlib import Path
 from typing import Any, Optional
 
 import typer
@@ -163,7 +163,9 @@ def _format_scope_label(kind: str, handle: str, uid: str, fallback_kind: str) ->
 @clusters_app.command(name="list")
 @clusters_app.command(name="ls")
 def clusters_list(
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON."),
 ) -> None:
@@ -188,17 +190,33 @@ def clusters_list(
         ownership = item.get("ownership") or {}
         desired = status.get("desiredWorkerReplicas")
         available = status.get("availableWorkerReplicas")
-        workers = f"{available}/{desired}" if desired is not None else str(available or "")
+        workers = (
+            f"{available}/{desired}" if desired is not None else str(available or "")
+        )
         principal = _format_scope_label(
             str(item.get("principal_kind") or ownership.get("principal_kind") or ""),
-            str(item.get("principal_handle") or ownership.get("principal_handle") or ""),
+            str(
+                item.get("principal_handle") or ownership.get("principal_handle") or ""
+            ),
             str(item.get("principal_uid") or ownership.get("principal_uid") or ""),
             "principal",
         )
         billable = _format_scope_label(
-            str(item.get("billable_account_kind") or ownership.get("billable_account_kind") or ""),
-            str(item.get("billable_account_handle") or ownership.get("billable_account_handle") or ""),
-            str(item.get("billable_account_uid") or ownership.get("billable_account_uid") or ""),
+            str(
+                item.get("billable_account_kind")
+                or ownership.get("billable_account_kind")
+                or ""
+            ),
+            str(
+                item.get("billable_account_handle")
+                or ownership.get("billable_account_handle")
+                or ""
+            ),
+            str(
+                item.get("billable_account_uid")
+                or ownership.get("billable_account_uid")
+                or ""
+            ),
             "account",
         )
         table.add_row(
@@ -216,9 +234,15 @@ def clusters_list(
 @clusters_app.command(name="create")
 def clusters_create(
     name: str = typer.Argument(..., help="RayCluster name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
-    image: str = typer.Option("rayproject/ray:2.38.0", "--image", help="Ray container image."),
-    ray_version: str = typer.Option("2.38.0", "--ray-version", help="Ray version in CR spec."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
+    image: str = typer.Option(
+        "rayproject/ray:2.38.0", "--image", help="Ray container image."
+    ),
+    ray_version: str = typer.Option(
+        "2.38.0", "--ray-version", help="Ray version in CR spec."
+    ),
     worker_replicas: int = typer.Option(1, "--worker-replicas", min=0),
     worker_min_replicas: int = typer.Option(1, "--worker-min-replicas", min=0),
     worker_max_replicas: int = typer.Option(3, "--worker-max-replicas", min=0),
@@ -245,7 +269,9 @@ def clusters_create(
     client = _make_client(token=token)
     result = client.ray_create_cluster(payload)
     if result.get("success") is False:
-        reason = str(result.get("message") or result.get("reason") or "Unable to create cluster")
+        reason = str(
+            result.get("message") or result.get("reason") or "Unable to create cluster"
+        )
         console.print(f"[red]Cluster creation failed:[/red] {reason}")
         raise typer.Exit(code=1)
 
@@ -255,13 +281,19 @@ def clusters_create(
         f"[green]Cluster created:[/green] {metadata.get('name', '')} "
         f"(ns={metadata.get('namespace', namespace)})"
     )
-    console.print("[dim]Next: agent-runtimes ray clusters ls --namespace {0}[/dim]".format(namespace))
+    console.print(
+        "[dim]Next: agent-runtimes ray clusters ls --namespace {0}[/dim]".format(
+            namespace
+        )
+    )
 
 
 @clusters_app.command(name="get")
 def clusters_get(
     name: str = typer.Argument(..., help="RayCluster name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
     client = _make_client(token=token)
@@ -272,7 +304,9 @@ def clusters_get(
 @clusters_app.command(name="delete")
 def clusters_delete(
     name: str = typer.Argument(..., help="RayCluster name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
     client = _make_client(token=token)
@@ -294,11 +328,21 @@ def jobs_submit(
         "--py",
         help="Inline Python source; supports @- (stdin) and @<path> for multiline input.",
     ),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
-    job_name: Optional[str] = typer.Option(None, "--job-name", help="Optional RayJob name."),
-    runtime_env_yaml: Optional[str] = typer.Option(None, "--runtime-env-yaml", help="Raw runtimeEnvYAML string."),
-    shutdown_after_job_finishes: bool = typer.Option(True, "--shutdown-after-job-finishes/--keep-cluster"),
-    ttl_seconds_after_finished: Optional[int] = typer.Option(3600, "--ttl-seconds-after-finished", min=0),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
+    job_name: Optional[str] = typer.Option(
+        None, "--job-name", help="Optional RayJob name."
+    ),
+    runtime_env_yaml: Optional[str] = typer.Option(
+        None, "--runtime-env-yaml", help="Raw runtimeEnvYAML string."
+    ),
+    shutdown_after_job_finishes: bool = typer.Option(
+        True, "--shutdown-after-job-finishes/--keep-cluster"
+    ),
+    ttl_seconds_after_finished: Optional[int] = typer.Option(
+        3600, "--ttl-seconds-after-finished", min=0
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
     resolved_python_inline = _resolve_python_inline(python_inline)
@@ -345,8 +389,12 @@ def jobs_submit(
 @jobs_app.command(name="list")
 @jobs_app.command(name="ls")
 def jobs_list(
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
-    cluster_name: Optional[str] = typer.Option(None, "--cluster-name", help="Filter by cluster label."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
+    cluster_name: Optional[str] = typer.Option(
+        None, "--cluster-name", help="Filter by cluster label."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON."),
 ) -> None:
@@ -381,12 +429,16 @@ def jobs_list(
         lowered = message.lower()
 
         if "no ray provider registered" in lowered:
-            console.print("[red]Unable to list Ray jobs:[/red] No Ray provider registered.")
+            console.print(
+                "[red]Unable to list Ray jobs:[/red] No Ray provider registered."
+            )
             console.print(
                 "[yellow]Hint:[/yellow] Start or register a Ray provider in the runtimes service, then retry [bold]d ray jobs ls[/bold]."
             )
         elif "status=503" in lowered:
-            console.print("[red]Unable to list Ray jobs:[/red] Ray service unavailable (503).")
+            console.print(
+                "[red]Unable to list Ray jobs:[/red] Ray service unavailable (503)."
+            )
             console.print(
                 "[yellow]Hint:[/yellow] Check runtimes/operator health and Ray provider registration."
             )
@@ -399,7 +451,9 @@ def jobs_list(
 @jobs_app.command(name="status")
 def jobs_status(
     name: str = typer.Argument(..., help="RayJob name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
     client = _make_client(token=token)
@@ -410,7 +464,9 @@ def jobs_status(
 @jobs_app.command(name="delete")
 def jobs_delete(
     name: str = typer.Argument(..., help="RayJob name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
     client = _make_client(token=token)
@@ -421,9 +477,15 @@ def jobs_delete(
 @jobs_app.command(name="logs")
 def jobs_logs(
     name: str = typer.Argument(..., help="RayJob name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
-    pod_name: Optional[str] = typer.Option(None, "--pod-name", help="Optional explicit pod name."),
-    container: Optional[str] = typer.Option(None, "--container", help="Optional pod container name."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
+    pod_name: Optional[str] = typer.Option(
+        None, "--pod-name", help="Optional explicit pod name."
+    ),
+    container: Optional[str] = typer.Option(
+        None, "--container", help="Optional pod container name."
+    ),
     tail_lines: int = typer.Option(200, "--tail-lines", min=1, max=5000),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
@@ -445,7 +507,9 @@ def jobs_logs(
 @jobs_app.command(name="events")
 def jobs_events(
     name: str = typer.Argument(..., help="RayJob name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
     limit: int = typer.Option(100, "--limit", min=1, max=1000),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON."),
@@ -484,10 +548,18 @@ def jobs_events(
 @jobs_app.command(name="monitor")
 def jobs_monitor(
     name: str = typer.Argument(..., help="RayJob name."),
-    namespace: str = typer.Option("default", "--namespace", help="Kubernetes namespace."),
-    interval_seconds: int = typer.Option(5, "--interval-seconds", min=1, help="Polling interval in seconds."),
-    timeout_seconds: int = typer.Option(600, "--timeout-seconds", min=1, help="Maximum time to wait before exiting."),
-    show_events: bool = typer.Option(False, "--show-events", help="Show latest events on each poll."),
+    namespace: str = typer.Option(
+        "default", "--namespace", help="Kubernetes namespace."
+    ),
+    interval_seconds: int = typer.Option(
+        5, "--interval-seconds", min=1, help="Polling interval in seconds."
+    ),
+    timeout_seconds: int = typer.Option(
+        600, "--timeout-seconds", min=1, help="Maximum time to wait before exiting."
+    ),
+    show_events: bool = typer.Option(
+        False, "--show-events", help="Show latest events on each poll."
+    ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
 ) -> None:
     """Monitor RayJob status until it reaches a terminal state."""
@@ -504,7 +576,9 @@ def jobs_monitor(
             last_status = status
 
         if show_events:
-            events_payload = client.ray_get_job_events(name, namespace=namespace, limit=5)
+            events_payload = client.ray_get_job_events(
+                name, namespace=namespace, limit=5
+            )
             events = events_payload.get("events") or []
             for event in events[:3]:
                 console.print(

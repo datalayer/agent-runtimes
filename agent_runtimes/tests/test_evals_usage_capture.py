@@ -17,7 +17,7 @@ def test_extract_vercel_stream_usage_prefers_token_payload() -> None:
             'data: {"type":"start"}',
             'data: {"type":"message-metadata","messageMetadata":{"pydantic_ai":{"timestamp":"2026-06-24T12:00:00Z"}}}',
             'data: {"type":"message-metadata","messageMetadata":{"pydantic_ai":{"provider":"bedrock","model":"claude","usage":{"prompt_tokens":12,"completion_tokens":5,"total_tokens":17,"credits_consumed":0.00034}}}}',
-            'data: [DONE]',
+            "data: [DONE]",
         ]
     )
 

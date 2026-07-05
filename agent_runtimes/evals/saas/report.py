@@ -94,7 +94,9 @@ def _parse_csv_values(raw: str | None) -> list[str]:
     return values
 
 
-def _parse_evaluator_specs(raw_values: list[str], option_name: str) -> list[dict[str, Any]]:
+def _parse_evaluator_specs(
+    raw_values: list[str], option_name: str
+) -> list[dict[str, Any]]:
     evaluators: list[dict[str, Any]] = []
     for index, raw in enumerate(raw_values, start=1):
         try:
@@ -133,11 +135,13 @@ def _evalset_runs_url(evalset_id: str, run_environment: str) -> str:
     evalset_value = str(evalset_id or "").strip()
     if not evalset_value:
         return ""
-    encoded_evalset_id = quote(evalset_value, safe='')
+    encoded_evalset_id = quote(evalset_value, safe="")
     env_value = str(run_environment or "").strip()
     if env_value:
-        encoded_env = quote(env_value, safe='')
-        return f"{WEB_APP_BASE_URL}/evals/experiments/{encoded_env}/{encoded_evalset_id}"
+        encoded_env = quote(env_value, safe="")
+        return (
+            f"{WEB_APP_BASE_URL}/evals/experiments/{encoded_env}/{encoded_evalset_id}"
+        )
     return f"{WEB_APP_BASE_URL}/evals/experiments?evalset_id={encoded_evalset_id}"
 
 
@@ -156,15 +160,18 @@ def _run_overlay_url(evalset_runs_url: str, run_id: str) -> str:
     return f"{base}{separator}run={quote(run_value, safe='')}"
 
 
-
 def _style_text(value: str, style: str | None, colorize: bool) -> str:
     if not colorize or not style:
         return value
     return f"[{style}]{value}[/{style}]"
 
 
-def _compute_baseline_and_drift(runs: list[dict[str, Any]]) -> tuple[float | None, float | None, float | None]:
-    pass_rates = [rate for rate in (_run_pass_rate(run) for run in runs) if rate is not None]
+def _compute_baseline_and_drift(
+    runs: list[dict[str, Any]],
+) -> tuple[float | None, float | None, float | None]:
+    pass_rates = [
+        rate for rate in (_run_pass_rate(run) for run in runs) if rate is not None
+    ]
     if not pass_rates:
         return None, None, None
     baseline_size = min(3, max(1, len(pass_rates) // 2))
@@ -175,7 +182,9 @@ def _compute_baseline_and_drift(runs: list[dict[str, Any]]) -> tuple[float | Non
     return baseline, latest, drift
 
 
-def _analysis_scalar(name: str, metric: str, value: float | int | None) -> dict[str, Any]:
+def _analysis_scalar(
+    name: str, metric: str, value: float | int | None
+) -> dict[str, Any]:
     return {
         "kind": "scalar",
         "name": name,
@@ -184,7 +193,9 @@ def _analysis_scalar(name: str, metric: str, value: float | int | None) -> dict[
     }
 
 
-def _analysis_table(name: str, columns: list[str], rows: list[list[Any]]) -> dict[str, Any]:
+def _analysis_table(
+    name: str, columns: list[str], rows: list[list[Any]]
+) -> dict[str, Any]:
     return {
         "kind": "table",
         "name": name,
@@ -256,14 +267,22 @@ def _build_experiment_report_analyses(
     analyses.append(
         _analysis_table(
             "Consecutive Run Deltas",
-            ["run_a_id", "run_b_id", "run_a_pass_rate", "run_b_pass_rate", "delta_pass_rate"],
+            [
+                "run_a_id",
+                "run_b_id",
+                "run_a_pass_rate",
+                "run_b_pass_rate",
+                "delta_pass_rate",
+            ],
             delta_rows,
         )
     )
     return analyses
 
 
-def _build_evalset_report_analyses(experiments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_evalset_report_analyses(
+    experiments: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     latest_rows: list[list[Any]] = []
     latest_names: list[str] = []
     latest_values: list[float] = []
@@ -285,12 +304,16 @@ def _build_evalset_report_analyses(experiments: list[dict[str, Any]]) -> list[di
                     all_run_pass_rates.append(float(pass_rate))
 
     overall_mean = (
-        (sum(all_run_pass_rates) / len(all_run_pass_rates)) if all_run_pass_rates else None
+        (sum(all_run_pass_rates) / len(all_run_pass_rates))
+        if all_run_pass_rates
+        else None
     )
 
     return [
         _analysis_scalar("Experiment Count", "experiment_count", len(experiments)),
-        _analysis_scalar("Overall Mean Pass Rate", "overall_mean_pass_rate", overall_mean),
+        _analysis_scalar(
+            "Overall Mean Pass Rate", "overall_mean_pass_rate", overall_mean
+        ),
         _analysis_table(
             "Experiment Latest/Baseline",
             ["experiment", "latest_pass_rate", "baseline_pass_rate", "drift_delta"],
@@ -316,7 +339,11 @@ def _classify_legacy_failure(message: str) -> dict[str, Any]:
 
     stage = "unknown"
     failure_type = "legacy_error"
-    if "all connection attempts failed" in lowered or "connection refused" in lowered or "request failed" in lowered:
+    if (
+        "all connection attempts failed" in lowered
+        or "connection refused" in lowered
+        or "request failed" in lowered
+    ):
         stage = "runtime_execution"
         failure_type = "runtime_unreachable"
     elif "returned http" in lowered or re.search(r"\bhttp\s*[45]\d\d\b", lowered):
@@ -470,9 +497,15 @@ def _run_detail_record(run: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _extract_experiment_agentspec(experiment: dict[str, Any], runs: list[dict[str, Any]]) -> tuple[str, str]:
-    config = experiment.get("config") if isinstance(experiment.get("config"), dict) else {}
-    summary = experiment.get("summary") if isinstance(experiment.get("summary"), dict) else {}
+def _extract_experiment_agentspec(
+    experiment: dict[str, Any], runs: list[dict[str, Any]]
+) -> tuple[str, str]:
+    config = (
+        experiment.get("config") if isinstance(experiment.get("config"), dict) else {}
+    )
+    summary = (
+        experiment.get("summary") if isinstance(experiment.get("summary"), dict) else {}
+    )
     run_summaries = [
         run.get("summary")
         for run in runs
@@ -558,8 +591,12 @@ def _extract_experiment_agentspec_details(
     inspecting the experiment config/summary, any inline ``agent_spec``
     object, and the most recent run summaries.
     """
-    config = experiment.get("config") if isinstance(experiment.get("config"), dict) else {}
-    summary = experiment.get("summary") if isinstance(experiment.get("summary"), dict) else {}
+    config = (
+        experiment.get("config") if isinstance(experiment.get("config"), dict) else {}
+    )
+    summary = (
+        experiment.get("summary") if isinstance(experiment.get("summary"), dict) else {}
+    )
     run_summaries = [
         run.get("summary")
         for run in runs
@@ -619,7 +656,11 @@ def _merge_agentspec_details(target: dict[str, Any], details: dict[str, Any]) ->
     """Merge non-empty agentspec detail fields into the aggregate record."""
     for key in ("description", "version", "model", "icon", "emoji", "color"):
         value = details.get(key)
-        if isinstance(value, str) and value.strip() and not str(target.get(key) or "").strip():
+        if (
+            isinstance(value, str)
+            and value.strip()
+            and not str(target.get(key) or "").strip()
+        ):
             target[key] = value.strip()
     incoming_tags = details.get("tags")
     if isinstance(incoming_tags, list) and incoming_tags:
@@ -640,7 +681,10 @@ def _load_agentspec_registry() -> tuple[dict[str, Any], Any]:
     package. Agentspec enrichment therefore relies only on fields already
     present in report payloads and per-run metadata.
     """
-    global _AGENTSPEC_REGISTRY_LOADED, _AGENTSPEC_REGISTRY_LOOKUP, _AGENTSPEC_REGISTRY_MAP
+    global \
+        _AGENTSPEC_REGISTRY_LOADED, \
+        _AGENTSPEC_REGISTRY_LOOKUP, \
+        _AGENTSPEC_REGISTRY_MAP
     if _AGENTSPEC_REGISTRY_LOADED:
         return (_AGENTSPEC_REGISTRY_MAP or {}, _AGENTSPEC_REGISTRY_LOOKUP)
     _AGENTSPEC_REGISTRY_LOADED = True
@@ -768,7 +812,7 @@ def _report_data(
         offset=0,
         account_uid=account_uid,
     )
-    for item in (evalsets_payload.get("evalsets") or []):
+    for item in evalsets_payload.get("evalsets") or []:
         if isinstance(item, dict) and str(item.get("id") or "") == evalset_id:
             evalset_record = item
             break
@@ -798,7 +842,9 @@ def _report_data(
             if isinstance(item, dict)
         ],
         "cases": [
-            case for case in (evalset_record.get("cases") or []) if isinstance(case, dict)
+            case
+            for case in (evalset_record.get("cases") or [])
+            if isinstance(case, dict)
         ],
         "report_analyses": [],
         "experiments": [],
@@ -866,7 +912,10 @@ def _report_data(
         latest_two_run_ids: list[str] = []
         latest_two_compare: dict[str, Any] | None = None
         if len(runs) >= 2:
-            latest_two_run_ids = [str(runs[0].get("id", "")), str(runs[1].get("id", ""))]
+            latest_two_run_ids = [
+                str(runs[0].get("id", "")),
+                str(runs[1].get("id", "")),
+            ]
             compare_payload = client.evals_compare_runs(
                 latest_two_run_ids,
                 account_uid=account_uid,
@@ -916,11 +965,19 @@ def _report_data(
             for run in runs
             if isinstance(_run_pass_rate(run), (int, float))
         ]
-        numeric_pass_rates = [float(value) for value in pass_rates if isinstance(value, (int, float))]
-        mean_pass = sum(numeric_pass_rates) / len(numeric_pass_rates) if numeric_pass_rates else None
+        numeric_pass_rates = [
+            float(value) for value in pass_rates if isinstance(value, (int, float))
+        ]
+        mean_pass = (
+            sum(numeric_pass_rates) / len(numeric_pass_rates)
+            if numeric_pass_rates
+            else None
+        )
         stddev_pass = None
         if numeric_pass_rates:
-            variance = sum((value - mean_pass) ** 2 for value in numeric_pass_rates) / len(numeric_pass_rates)
+            variance = sum(
+                (value - mean_pass) ** 2 for value in numeric_pass_rates
+            ) / len(numeric_pass_rates)
             stddev_pass = math.sqrt(variance)
 
         report["experiments"].append(
@@ -982,7 +1039,9 @@ def _ascii_bar(
         style = "yellow"
     else:
         style = "red"
-    return _style_text(filled_part, style, True) + _style_text(empty_part, "grey39", True)
+    return _style_text(filled_part, style, True) + _style_text(
+        empty_part, "grey39", True
+    )
 
 
 def _fmt_pts(value: float) -> str:
@@ -1041,12 +1100,12 @@ def _ascii_histogram(
                 bar_style = "blue"
             else:
                 bar_style = "magenta"
-            bar = _style_text(filled_part, bar_style, True) + _style_text(empty_part, "grey39", True)
+            bar = _style_text(filled_part, bar_style, True) + _style_text(
+                empty_part, "grey39", True
+            )
         else:
             bar = filled_part + empty_part
-        lines.append(
-            f"{_fmt_pts(left):>6} to {_fmt_pts(right):>6} pts |{bar}| {count}"
-        )
+        lines.append(f"{_fmt_pts(left):>6} to {_fmt_pts(right):>6} pts |{bar}| {count}")
     return lines
 
 
@@ -1105,7 +1164,7 @@ def _fit_label(text: str, width: int = 20) -> str:
         return raw.ljust(width)
     if width <= 3:
         return raw[:width]
-    return (raw[: width - 3] + "...")
+    return raw[: width - 3] + "..."
 
 
 def _ascii_passrate_heatmap(
@@ -1170,7 +1229,8 @@ def _ascii_drift_heatmap(
 
     for experiment in experiments:
         comparisons = [
-            item for item in (experiment.get("consecutive_comparisons") or [])
+            item
+            for item in (experiment.get("consecutive_comparisons") or [])
             if isinstance(item, dict)
         ]
         cells: list[str] = []
@@ -1199,7 +1259,9 @@ def _ascii_drift_heatmap(
         label = _fit_label(str(experiment.get("name", "")), width=20)
         lines.append(f"{label} | " + " ".join(cells))
 
-    lines.append("Legend: dNN are consecutive deltas (A-B), sign shows direction, magnitude uses '░'..'█', '··'=no comparison")
+    lines.append(
+        "Legend: dNN are consecutive deltas (A-B), sign shows direction, magnitude uses '░'..'█', '··'=no comparison"
+    )
     return lines
 
 
@@ -1210,16 +1272,22 @@ def _pairwise_latest_deltas(experiments: list[dict[str, Any]]) -> list[dict[str,
         if not isinstance(left_latest, (int, float)):
             continue
         left_agent_spec_id = str(left.get("agent_spec_id") or "")
-        left_agent_spec_name = str(left.get("agent_spec_name") or left_agent_spec_id or "")
+        left_agent_spec_name = str(
+            left.get("agent_spec_name") or left_agent_spec_id or ""
+        )
         for right in experiments[idx + 1 :]:
             right_latest = right.get("latest_pass_rate")
             if not isinstance(right_latest, (int, float)):
                 continue
             right_agent_spec_id = str(right.get("agent_spec_id") or "")
-            right_agent_spec_name = str(right.get("agent_spec_name") or right_agent_spec_id or "")
+            right_agent_spec_name = str(
+                right.get("agent_spec_name") or right_agent_spec_id or ""
+            )
             comparison_group = (
                 "within_agentspec"
-                if left_agent_spec_id and right_agent_spec_id and left_agent_spec_id == right_agent_spec_id
+                if left_agent_spec_id
+                and right_agent_spec_id
+                and left_agent_spec_id == right_agent_spec_id
                 else "cross_agentspec"
             )
             pairs.append(
@@ -1242,7 +1310,9 @@ def _pairwise_latest_deltas(experiments: list[dict[str, Any]]) -> list[dict[str,
     return pairs
 
 
-def _markdown_table(headers: list[str], rows: list[list[str]], aligns: list[str]) -> list[str]:
+def _markdown_table(
+    headers: list[str], rows: list[list[str]], aligns: list[str]
+) -> list[str]:
     widths = [len(header) for header in headers]
     for row in rows:
         for idx, cell in enumerate(row):
@@ -1253,7 +1323,11 @@ def _markdown_table(headers: list[str], rows: list[list[str]], aligns: list[str]
             return cell.rjust(width)
         return cell.ljust(width)
 
-    header_line = "| " + " | ".join(headers[idx].ljust(widths[idx]) for idx in range(len(headers))) + " |"
+    header_line = (
+        "| "
+        + " | ".join(headers[idx].ljust(widths[idx]) for idx in range(len(headers)))
+        + " |"
+    )
 
     sep_parts: list[str] = []
     for idx, align in enumerate(aligns):
@@ -1265,7 +1339,11 @@ def _markdown_table(headers: list[str], rows: list[list[str]], aligns: list[str]
     sep_line = "| " + " | ".join(sep_parts) + " |"
 
     body_lines = [
-        "| " + " | ".join(_pad(row[idx], widths[idx], aligns[idx]) for idx in range(len(headers))) + " |"
+        "| "
+        + " | ".join(
+            _pad(row[idx], widths[idx], aligns[idx]) for idx in range(len(headers))
+        )
+        + " |"
         for row in rows
     ]
     return [header_line, sep_line, *body_lines]
@@ -1278,7 +1356,9 @@ def _compact_json(value: Any, max_len: int = 140) -> str:
         text = value
     else:
         try:
-            text = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+            text = json.dumps(
+                value, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+            )
         except Exception:
             text = str(value)
     text = " ".join(text.split())
@@ -1301,9 +1381,7 @@ def _aggregate_case_outcomes(
     agentspec_names: list[str] = []
     for experiment in experiments:
         spec_label = str(
-            experiment.get("agent_spec_name")
-            or experiment.get("agent_spec_id")
-            or "-"
+            experiment.get("agent_spec_name") or experiment.get("agent_spec_id") or "-"
         )
         if spec_label not in agentspec_names:
             agentspec_names.append(spec_label)
@@ -1444,12 +1522,18 @@ def _report_analyses_lines(report: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool = False) -> str:
+def _report_markdown(
+    report: dict[str, Any], run_limit: int, *, colorize: bool = False
+) -> str:
     evalset_id = str(report.get("evalset_id", ""))
     run_environment = str(report.get("run_environment") or "")
     generated_at = str(report.get("generated_at", ""))
-    experiments = [item for item in (report.get("experiments") or []) if isinstance(item, dict)]
-    agentspecs = [item for item in (report.get("agentspecs") or []) if isinstance(item, dict)]
+    experiments = [
+        item for item in (report.get("experiments") or []) if isinstance(item, dict)
+    ]
+    agentspecs = [
+        item for item in (report.get("agentspecs") or []) if isinstance(item, dict)
+    ]
     cases = [item for item in (report.get("cases") or []) if isinstance(item, dict)]
     case_by_name: dict[str, dict[str, Any]] = {}
     representative_case_name: str | None = None
@@ -1556,24 +1640,30 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
                     f"- Experiments ({len(experiment_names)}): "
                     + ", ".join(str(name) for name in experiment_names)
                 )
-            appendix_lines.append(
-                f"- Runs analysed: {int(item.get('runs') or 0)}"
-            )
+            appendix_lines.append(f"- Runs analysed: {int(item.get('runs') or 0)}")
             if agent_spec_link:
-                appendix_lines.append(f"- Details: [Open in Datalayer]({agent_spec_link})")
+                appendix_lines.append(
+                    f"- Details: [Open in Datalayer]({agent_spec_link})"
+                )
             appendix_lines.append("")
     else:
         lines.append("No agentspec metadata found in experiment/run payloads.")
     lines.append("")
 
     evalset_evaluators = [
-        item for item in (report.get("evalset_evaluators") or []) if isinstance(item, dict)
+        item
+        for item in (report.get("evalset_evaluators") or [])
+        if isinstance(item, dict)
     ]
     report_evaluators = [
-        item for item in (report.get("report_evaluators") or []) if isinstance(item, dict)
+        item
+        for item in (report.get("report_evaluators") or [])
+        if isinstance(item, dict)
     ]
     evaluator_results = [
-        item for item in (report.get("evaluator_results") or []) if isinstance(item, dict)
+        item
+        for item in (report.get("evaluator_results") or [])
+        if isinstance(item, dict)
     ]
     lines.append("## Evaluator Results")
     lines.append("")
@@ -1600,15 +1690,27 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
                     str(item.get("name") or "-"),
                     str(item.get("scope") or "-"),
                     f"{passed_runs}/{runs_count}",
-                    f"{float(mean_score):.3f}" if isinstance(mean_score, (int, float)) else "-",
-                    f"{float(latest_score):.3f}" if isinstance(latest_score, (int, float)) else "-",
+                    f"{float(mean_score):.3f}"
+                    if isinstance(mean_score, (int, float))
+                    else "-",
+                    f"{float(latest_score):.3f}"
+                    if isinstance(latest_score, (int, float))
+                    else "-",
                     "pass" if item.get("latest_passed") else "fail",
                     str(item.get("summary") or "-"),
                 ]
             )
         lines.extend(
             _markdown_table(
-                ["Evaluator", "Scope", "Runs Passed", "Mean Score", "Latest Score", "Latest", "Summary"],
+                [
+                    "Evaluator",
+                    "Scope",
+                    "Runs Passed",
+                    "Mean Score",
+                    "Latest Score",
+                    "Latest",
+                    "Summary",
+                ],
                 result_rows,
                 ["left", "left", "right", "right", "right", "left", "left"],
             )
@@ -1632,7 +1734,9 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
     appendix_lines.append("")
     if evalset_evaluators:
         appendix_lines.append("```json")
-        appendix_lines.append(json.dumps(evalset_evaluators, ensure_ascii=False, indent=2, sort_keys=True))
+        appendix_lines.append(
+            json.dumps(evalset_evaluators, ensure_ascii=False, indent=2, sort_keys=True)
+        )
         appendix_lines.append("```")
     else:
         appendix_lines.append("No evalset-level evaluators configured.")
@@ -1641,7 +1745,9 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
     appendix_lines.append("")
     if report_evaluators:
         appendix_lines.append("```json")
-        appendix_lines.append(json.dumps(report_evaluators, ensure_ascii=False, indent=2, sort_keys=True))
+        appendix_lines.append(
+            json.dumps(report_evaluators, ensure_ascii=False, indent=2, sort_keys=True)
+        )
         appendix_lines.append("```")
     else:
         appendix_lines.append("No report-level evaluators configured.")
@@ -1689,17 +1795,47 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         overview_rows.append(
             [
                 f"{experiment.get('name', '')}",
-                str(experiment.get('agent_spec_name') or experiment.get('agent_spec_id') or '-'),
+                str(
+                    experiment.get("agent_spec_name")
+                    or experiment.get("agent_spec_id")
+                    or "-"
+                ),
                 f"{runs_fetched}/{runs_total}",
-                _fmt_pct(experiment.get('latest_pass_rate') if isinstance(experiment.get('latest_pass_rate'), (int, float)) else None),
-                _fmt_pct(experiment.get('baseline_pass_rate') if isinstance(experiment.get('baseline_pass_rate'), (int, float)) else None),
-                _fmt_delta(experiment.get('drift_delta') if isinstance(experiment.get('drift_delta'), (int, float)) else None, colorize=colorize),
-                _fmt_delta(experiment.get('latest_two_delta') if isinstance(experiment.get('latest_two_delta'), (int, float)) else None, colorize=colorize),
+                _fmt_pct(
+                    experiment.get("latest_pass_rate")
+                    if isinstance(experiment.get("latest_pass_rate"), (int, float))
+                    else None
+                ),
+                _fmt_pct(
+                    experiment.get("baseline_pass_rate")
+                    if isinstance(experiment.get("baseline_pass_rate"), (int, float))
+                    else None
+                ),
+                _fmt_delta(
+                    experiment.get("drift_delta")
+                    if isinstance(experiment.get("drift_delta"), (int, float))
+                    else None,
+                    colorize=colorize,
+                ),
+                _fmt_delta(
+                    experiment.get("latest_two_delta")
+                    if isinstance(experiment.get("latest_two_delta"), (int, float))
+                    else None,
+                    colorize=colorize,
+                ),
             ]
         )
     lines.extend(
         _markdown_table(
-            ["Experiment", "Agentspec", "Runs (fetched/total)", "Latest", "Baseline", "Drift", "Latest-2 Delta"],
+            [
+                "Experiment",
+                "Agentspec",
+                "Runs (fetched/total)",
+                "Latest",
+                "Baseline",
+                "Drift",
+                "Latest-2 Delta",
+            ],
             overview_rows,
             ["left", "left", "right", "right", "right", "right", "right"],
         )
@@ -1712,7 +1848,11 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
     lines.append("")
 
     ranked_latest = sorted(
-        [item for item in experiments if isinstance(item.get("latest_pass_rate"), (int, float))],
+        [
+            item
+            for item in experiments
+            if isinstance(item.get("latest_pass_rate"), (int, float))
+        ],
         key=lambda item: float(item.get("latest_pass_rate") or 0.0),
         reverse=True,
     )
@@ -1720,8 +1860,18 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
     lines.append("")
     latest_rows: list[list[str]] = []
     for idx, item in enumerate(ranked_latest, start=1):
-        latest_rows.append([str(idx), f"{item.get('name', '')}", _fmt_pct(float(item.get('latest_pass_rate') or 0.0))])
-    lines.extend(_markdown_table(["Rank", "Experiment", "Latest"], latest_rows, ["right", "left", "right"]))
+        latest_rows.append(
+            [
+                str(idx),
+                f"{item.get('name', '')}",
+                _fmt_pct(float(item.get("latest_pass_rate") or 0.0)),
+            ]
+        )
+    lines.extend(
+        _markdown_table(
+            ["Rank", "Experiment", "Latest"], latest_rows, ["right", "left", "right"]
+        )
+    )
     latest_values = [
         float(item.get("latest_pass_rate"))
         for item in ranked_latest
@@ -1742,15 +1892,29 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
     lines.append("")
 
     ranked_drift = sorted(
-        [item for item in experiments if isinstance(item.get("drift_delta"), (int, float))],
+        [
+            item
+            for item in experiments
+            if isinstance(item.get("drift_delta"), (int, float))
+        ],
         key=lambda item: float(item.get("drift_delta") or 0.0),
     )
     lines.append("### By Drift (Most Negative To Most Positive)")
     lines.append("")
     drift_rows: list[list[str]] = []
     for idx, item in enumerate(ranked_drift, start=1):
-        drift_rows.append([str(idx), f"{item.get('name', '')}", _fmt_delta(float(item.get('drift_delta') or 0.0), colorize=colorize)])
-    lines.extend(_markdown_table(["Rank", "Experiment", "Drift"], drift_rows, ["right", "left", "right"]))
+        drift_rows.append(
+            [
+                str(idx),
+                f"{item.get('name', '')}",
+                _fmt_delta(float(item.get("drift_delta") or 0.0), colorize=colorize),
+            ]
+        )
+    lines.extend(
+        _markdown_table(
+            ["Rank", "Experiment", "Drift"], drift_rows, ["right", "left", "right"]
+        )
+    )
     drift_values = [
         float(item.get("drift_delta"))
         for item in ranked_drift
@@ -1770,7 +1934,11 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
     lines.append("")
 
     ranked_stability = sorted(
-        [item for item in experiments if isinstance(item.get("stddev_pass_rate"), (int, float))],
+        [
+            item
+            for item in experiments
+            if isinstance(item.get("stddev_pass_rate"), (int, float))
+        ],
         key=lambda item: float(item.get("stddev_pass_rate") or 0.0),
     )
     lines.append("### By Stability (Lowest Pass-Rate StdDev)")
@@ -1783,11 +1951,21 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
             [
                 str(idx),
                 f"{item.get('name', '')}",
-                (f"{float(stddev) * 100:.2f} pts" if isinstance(stddev, (int, float)) else "n/a"),
+                (
+                    f"{float(stddev) * 100:.2f} pts"
+                    if isinstance(stddev, (int, float))
+                    else "n/a"
+                ),
                 (_fmt_pct(float(mean)) if isinstance(mean, (int, float)) else "n/a"),
             ]
         )
-    lines.extend(_markdown_table(["Rank", "Experiment", "StdDev", "Mean"], stability_rows, ["right", "left", "right", "right"]))
+    lines.extend(
+        _markdown_table(
+            ["Rank", "Experiment", "StdDev", "Mean"],
+            stability_rows,
+            ["right", "left", "right", "right"],
+        )
+    )
     lines.append("")
 
     lines.append("### Token Usage Across Runs By Experiment")
@@ -1802,11 +1980,13 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         runs = [run for run in (experiment.get("runs") or []) if isinstance(run, dict)]
         runs_sorted = sorted(
             runs,
-            key=lambda run: datetime.fromisoformat(
-                str(run.get("created_at") or "").replace("Z", "+00:00")
-            )
-            if str(run.get("created_at") or "").strip()
-            else datetime.min.replace(tzinfo=timezone.utc),
+            key=lambda run: (
+                datetime.fromisoformat(
+                    str(run.get("created_at") or "").replace("Z", "+00:00")
+                )
+                if str(run.get("created_at") or "").strip()
+                else datetime.min.replace(tzinfo=timezone.utc)
+            ),
         )
         token_values = [
             float(tokens)
@@ -1820,9 +2000,21 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
             [
                 experiment_name,
                 f"{len(token_values)}/{len(runs_sorted)}",
-                (f"{int(round(latest_tokens)):,}" if isinstance(latest_tokens, (int, float)) else "-"),
-                (f"{int(round(mean_tokens)):,}" if isinstance(mean_tokens, (int, float)) else "-"),
-                (f"{int(round(total_tokens)):,}" if isinstance(total_tokens, (int, float)) else "-"),
+                (
+                    f"{int(round(latest_tokens)):,}"
+                    if isinstance(latest_tokens, (int, float))
+                    else "-"
+                ),
+                (
+                    f"{int(round(mean_tokens)):,}"
+                    if isinstance(mean_tokens, (int, float))
+                    else "-"
+                ),
+                (
+                    f"{int(round(total_tokens)):,}"
+                    if isinstance(total_tokens, (int, float))
+                    else "-"
+                ),
                 f"`{_sparkline(token_values, colorize=colorize) if token_values else 'n/a'}`",
             ]
         )
@@ -1830,7 +2022,14 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         token_rows.append(["n/a", "0/0", "-", "-", "-", "`n/a`"])
     lines.extend(
         _markdown_table(
-            ["Experiment", "Runs With Tokens", "Latest Tokens", "Mean Tokens", "Total Tokens", "Token Trend"],
+            [
+                "Experiment",
+                "Runs With Tokens",
+                "Latest Tokens",
+                "Mean Tokens",
+                "Total Tokens",
+                "Token Trend",
+            ],
             token_rows,
             ["left", "right", "right", "right", "right", "left"],
         )
@@ -1851,9 +2050,9 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         pair_rows.append(
             [
                 f"{pair['left']} vs {pair['right']}",
-                _fmt_pct(pair['left_latest']),
-                _fmt_pct(pair['right_latest']),
-                _fmt_delta(pair['delta'], colorize=colorize),
+                _fmt_pct(pair["left_latest"]),
+                _fmt_pct(pair["right_latest"]),
+                _fmt_delta(pair["delta"], colorize=colorize),
             ]
         )
     if not pairwise:
@@ -1865,7 +2064,11 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
             ["left", "right", "right", "right"],
         )
     )
-    pair_deltas = [float(pair["delta"]) for pair in pairwise if isinstance(pair.get("delta"), (int, float))]
+    pair_deltas = [
+        float(pair["delta"])
+        for pair in pairwise
+        if isinstance(pair.get("delta"), (int, float))
+    ]
     lines.append("")
     lines.append("Pairwise latest-delta histogram (pts):")
     for hist_line in _ascii_histogram(
@@ -1886,10 +2089,14 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         within_pair_rows.append(
             [
                 f"{pair['left']} vs {pair['right']}",
-                str(pair.get('left_agent_spec_name') or pair.get('left_agent_spec_id') or '-'),
-                _fmt_pct(pair['left_latest']),
-                _fmt_pct(pair['right_latest']),
-                _fmt_delta(pair['delta'], colorize=colorize),
+                str(
+                    pair.get("left_agent_spec_name")
+                    or pair.get("left_agent_spec_id")
+                    or "-"
+                ),
+                _fmt_pct(pair["left_latest"]),
+                _fmt_pct(pair["right_latest"]),
+                _fmt_delta(pair["delta"], colorize=colorize),
             ]
         )
     if not within_pair_rows:
@@ -1910,9 +2117,9 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         cross_pair_rows.append(
             [
                 f"{pair['left']} ({pair.get('left_agent_spec_name') or pair.get('left_agent_spec_id') or '-'}) vs {pair['right']} ({pair.get('right_agent_spec_name') or pair.get('right_agent_spec_id') or '-'})",
-                _fmt_pct(pair['left_latest']),
-                _fmt_pct(pair['right_latest']),
-                _fmt_delta(pair['delta'], colorize=colorize),
+                _fmt_pct(pair["left_latest"]),
+                _fmt_pct(pair["right_latest"]),
+                _fmt_delta(pair["delta"], colorize=colorize),
             ]
         )
     if not cross_pair_rows:
@@ -1931,13 +2138,17 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
     appendix_lines.append("Pass-rate heatmap by experiment and run window:")
     appendix_lines.append("")
     appendix_lines.append("```text")
-    appendix_lines.extend(_ascii_passrate_heatmap(experiments, max_columns=12, colorize=False))
+    appendix_lines.extend(
+        _ascii_passrate_heatmap(experiments, max_columns=12, colorize=False)
+    )
     appendix_lines.append("```")
     appendix_lines.append("")
     appendix_lines.append("Consecutive delta heatmap (A-B) by experiment:")
     appendix_lines.append("")
     appendix_lines.append("```text")
-    appendix_lines.extend(_ascii_drift_heatmap(experiments, max_columns=12, colorize=False))
+    appendix_lines.extend(
+        _ascii_drift_heatmap(experiments, max_columns=12, colorize=False)
+    )
     appendix_lines.append("```")
     appendix_lines.append("")
 
@@ -2008,14 +2219,18 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         appendix_lines.append(f"### {experiment.get('name', '')}")
         appendix_lines.append("")
         agent_spec_id = str(experiment.get("agent_spec_id") or "")
-        agent_spec_label = str(experiment.get('agent_spec_name') or agent_spec_id or '-')
+        agent_spec_label = str(
+            experiment.get("agent_spec_name") or agent_spec_id or "-"
+        )
         agent_spec_link = _agentspec_details_url(agent_spec_id)
         if agent_spec_link:
             appendix_lines.append(f"Agentspec: [{agent_spec_label}]({agent_spec_link})")
         else:
             appendix_lines.append(f"Agentspec: {agent_spec_label}")
         if evalset_runs_url:
-            appendix_lines.append(f"Evalset run details: [Open run page]({evalset_runs_url})")
+            appendix_lines.append(
+                f"Evalset run details: [Open run page]({evalset_runs_url})"
+            )
         appendix_lines.append("")
         appendix_lines.append("#### Run Timeline")
         appendix_lines.append("")
@@ -2023,20 +2238,30 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         runs = [run for run in (experiment.get("runs") or []) if isinstance(run, dict)]
         token_timeline_values: list[float] = []
         for idx, run in enumerate(runs, start=1):
-            pass_rate = run.get("pass_rate") if isinstance(run.get("pass_rate"), (int, float)) else None
+            pass_rate = (
+                run.get("pass_rate")
+                if isinstance(run.get("pass_rate"), (int, float))
+                else None
+            )
             total_tokens = _run_total_tokens(run)
             if isinstance(total_tokens, (int, float)):
                 token_timeline_values.append(float(total_tokens))
             cause_text = _format_failure_cause(run.get("failure_cause"))
-            run_id = str(run.get('id', ''))
+            run_id = str(run.get("id", ""))
             run_link = _run_overlay_url(evalset_runs_url, run_id)
             run_rows.append(
                 [
                     str(idx),
                     (f"[{run_id}]({run_link})" if run_link and run_id else run_id),
-                    str(run.get('status', '')),
-                    _fmt_pct(float(pass_rate)) if isinstance(pass_rate, (int, float)) else 'n/a',
-                    (f"{int(round(total_tokens)):,}" if isinstance(total_tokens, (int, float)) else "-"),
+                    str(run.get("status", "")),
+                    _fmt_pct(float(pass_rate))
+                    if isinstance(pass_rate, (int, float))
+                    else "n/a",
+                    (
+                        f"{int(round(total_tokens)):,}"
+                        if isinstance(total_tokens, (int, float))
+                        else "-"
+                    ),
                     f"`{_ascii_bar(float(pass_rate), full_blocks=True, colorize=colorize) if isinstance(pass_rate, (int, float)) else '-'}`",
                     cause_text or "-",
                 ]
@@ -2045,7 +2270,15 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
             run_rows.append(["1", "n/a", "n/a", "n/a", "-", "`-`", "-"])
         appendix_lines.extend(
             _markdown_table(
-                ["#", "Run ID", "Status", "Pass Rate", "Total Tokens", "ASCII Trend", "Failure Cause"],
+                [
+                    "#",
+                    "Run ID",
+                    "Status",
+                    "Pass Rate",
+                    "Total Tokens",
+                    "ASCII Trend",
+                    "Failure Cause",
+                ],
                 run_rows,
                 ["right", "left", "left", "right", "right", "left", "left"],
             )
@@ -2088,7 +2321,9 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
                 detail_lines = _failure_cause_detail_lines(cause)
                 if not detail_lines:
                     continue
-                appendix_lines.append(f"<details><summary>Run {idx} failure detail ({run.get('id', '')})</summary>")
+                appendix_lines.append(
+                    f"<details><summary>Run {idx} failure detail ({run.get('id', '')})</summary>"
+                )
                 appendix_lines.append("")
                 appendix_lines.extend(detail_lines)
                 appendix_lines.append("")
@@ -2110,35 +2345,64 @@ def _report_markdown(report: dict[str, Any], run_limit: int, *, colorize: bool =
         appendix_lines.append("")
 
         comparisons = [
-            item for item in (experiment.get("consecutive_comparisons") or [])
+            item
+            for item in (experiment.get("consecutive_comparisons") or [])
             if isinstance(item, dict)
         ]
         appendix_lines.append("#### Consecutive Run Deltas (A-B)")
         appendix_lines.append("")
         comparison_rows: list[list[str]] = []
         for item in comparisons:
-            run_a = item.get("run_a_pass_rate") if isinstance(item.get("run_a_pass_rate"), (int, float)) else None
-            run_b = item.get("run_b_pass_rate") if isinstance(item.get("run_b_pass_rate"), (int, float)) else None
-            delta = item.get("delta_pass_rate") if isinstance(item.get("delta_pass_rate"), (int, float)) else None
+            run_a = (
+                item.get("run_a_pass_rate")
+                if isinstance(item.get("run_a_pass_rate"), (int, float))
+                else None
+            )
+            run_b = (
+                item.get("run_b_pass_rate")
+                if isinstance(item.get("run_b_pass_rate"), (int, float))
+                else None
+            )
+            delta = (
+                item.get("delta_pass_rate")
+                if isinstance(item.get("delta_pass_rate"), (int, float))
+                else None
+            )
             comparison_rows.append(
                 [
-                    str(item.get('run_a_id', '')),
-                    str(item.get('run_b_id', '')),
-                    _fmt_pct(float(run_a)) if isinstance(run_a, (int, float)) else 'n/a',
-                    _fmt_pct(float(run_b)) if isinstance(run_b, (int, float)) else 'n/a',
-                    _fmt_delta(float(delta), colorize=colorize) if isinstance(delta, (int, float)) else 'n/a',
+                    str(item.get("run_a_id", "")),
+                    str(item.get("run_b_id", "")),
+                    _fmt_pct(float(run_a))
+                    if isinstance(run_a, (int, float))
+                    else "n/a",
+                    _fmt_pct(float(run_b))
+                    if isinstance(run_b, (int, float))
+                    else "n/a",
+                    _fmt_delta(float(delta), colorize=colorize)
+                    if isinstance(delta, (int, float))
+                    else "n/a",
                 ]
             )
         if not comparisons:
             comparison_rows.append(["n/a", "n/a", "n/a", "n/a", "n/a"])
-        appendix_lines.extend(_markdown_table(["Run A", "Run B", "A Pass", "B Pass", "Delta"], comparison_rows, ["left", "left", "right", "right", "right"]))
+        appendix_lines.extend(
+            _markdown_table(
+                ["Run A", "Run B", "A Pass", "B Pass", "Delta"],
+                comparison_rows,
+                ["left", "left", "right", "right", "right"],
+            )
+        )
         appendix_lines.append("")
 
     lines.append("## Notes")
     lines.append("")
     lines.append("- Drift is computed as latest - baseline.")
-    lines.append("- Baseline uses the first half of fetched runs (minimum 1, maximum 3).")
-    lines.append("- Latest-2 delta uses the latest two runs returned in the fetched window.")
+    lines.append(
+        "- Baseline uses the first half of fetched runs (minimum 1, maximum 3)."
+    )
+    lines.append(
+        "- Latest-2 delta uses the latest two runs returned in the fetched window."
+    )
     lines.append("")
 
     appendix_lines.extend(
@@ -2409,7 +2673,9 @@ def _run_detail_block_lines(
                 if output_value is None:
                     output_value = "(per-case output not captured for this run)"
             expected_value = (
-                case_record.get("expected_output") if isinstance(case_record, dict) else None
+                case_record.get("expected_output")
+                if isinstance(case_record, dict)
+                else None
             )
             metadata_value = (
                 case_record.get("metadata") if isinstance(case_record, dict) else None
@@ -2424,7 +2690,9 @@ def _run_detail_block_lines(
             evaluators_lang, evaluators_text = _format_display_value(evaluators_value)
             result_text = "pass" if case_result.get("passed") else "fail"
             score = case_result.get("score")
-            score_text = f"{float(score):.3f}" if isinstance(score, (int, float)) else "-"
+            score_text = (
+                f"{float(score):.3f}" if isinstance(score, (int, float)) else "-"
+            )
             category_text = str(case_result.get("category") or "-")
             difficulty_text = str(case_result.get("difficulty") or "-")
             lines.append(
@@ -2503,7 +2771,9 @@ def _run_detail_block_lines(
                 continue
             usage_rows.append([key, str(usage.get(key) or "-")])
         if usage_rows:
-            lines.extend(_markdown_table(["Metric", "Value"], usage_rows, ["left", "left"]))
+            lines.extend(
+                _markdown_table(["Metric", "Value"], usage_rows, ["left", "left"])
+            )
             lines.append("")
         usage_lang, usage_text = _format_display_value(usage)
         lines.append("Raw usage payload:")
@@ -2615,9 +2885,19 @@ def _usage_total_tokens_value(usage: dict[str, Any]) -> str:
         )
     )
     if total_value is None:
-        prompt = _usage_number(_usage_pick(usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens"))
+        prompt = _usage_number(
+            _usage_pick(
+                usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens"
+            )
+        )
         completion = _usage_number(
-            _usage_pick(usage, "completion_tokens", "completionTokens", "output_tokens", "outputTokens")
+            _usage_pick(
+                usage,
+                "completion_tokens",
+                "completionTokens",
+                "output_tokens",
+                "outputTokens",
+            )
         )
         if prompt is not None and completion is not None:
             total_value = prompt + completion
@@ -2657,10 +2937,18 @@ def _run_total_tokens(run: dict[str, Any]) -> float | None:
     )
     if total_value is None:
         prompt = _usage_number(
-            _usage_pick(usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens")
+            _usage_pick(
+                usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens"
+            )
         )
         completion = _usage_number(
-            _usage_pick(usage, "completion_tokens", "completionTokens", "output_tokens", "outputTokens")
+            _usage_pick(
+                usage,
+                "completion_tokens",
+                "completionTokens",
+                "output_tokens",
+                "outputTokens",
+            )
         )
         if prompt is not None and completion is not None:
             total_value = prompt + completion
@@ -2698,9 +2986,7 @@ def _report_appendix_lines(
             continue
         any_runs = True
         agent_spec_label = str(
-            experiment.get("agent_spec_name")
-            or experiment.get("agent_spec_id")
-            or "-"
+            experiment.get("agent_spec_name") or experiment.get("agent_spec_id") or "-"
         )
         lines.append(f"### {experiment.get('name', '')}")
         lines.append("")
@@ -2715,15 +3001,19 @@ def _report_appendix_lines(
             pass_rate = run.get("pass_rate")
             passed = _appendix_metric_int(metrics, "passed", "passed_cases")
             total = _appendix_metric_int(metrics, "total_cases", "total", "cases")
-            cases_cell = (
-                f"{passed}/{total}" if passed != "-" or total != "-" else "-"
-            )
+            cases_cell = f"{passed}/{total}" if passed != "-" or total != "-" else "-"
             run_rows.append(
                 [
                     str(idx),
-                    (f"[{run_id}]({run_link})" if run_link and run_id else (run_id or "-")),
+                    (
+                        f"[{run_id}]({run_link})"
+                        if run_link and run_id
+                        else (run_id or "-")
+                    ),
                     str(run.get("status", "") or "-"),
-                    _fmt_pct(float(pass_rate)) if isinstance(pass_rate, (int, float)) else "n/a",
+                    _fmt_pct(float(pass_rate))
+                    if isinstance(pass_rate, (int, float))
+                    else "n/a",
                     cases_cell,
                     _appendix_metric_float(metrics, "avg_score", "average_score"),
                     _usage_total_tokens_value(usage),
@@ -2747,7 +3037,18 @@ def _report_appendix_lines(
                     "Failure Cause",
                 ],
                 run_rows,
-                ["right", "left", "left", "right", "right", "right", "right", "right", "left", "left"],
+                [
+                    "right",
+                    "left",
+                    "left",
+                    "right",
+                    "right",
+                    "right",
+                    "right",
+                    "right",
+                    "left",
+                    "left",
+                ],
             )
         )
         lines.append("")
@@ -2771,7 +3072,9 @@ def _report_appendix_lines(
 
 
 def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
-    experiments = [item for item in (report.get("experiments") or []) if isinstance(item, dict)]
+    experiments = [
+        item for item in (report.get("experiments") or []) if isinstance(item, dict)
+    ]
 
     def _run_usage_fields(run: dict[str, Any]) -> dict[str, Any]:
         usage = _extract_run_usage(run)
@@ -2780,10 +3083,20 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
             "usage_provider": _usage_pick(usage, "provider"),
             "usage_model": _usage_pick(usage, "model"),
             "usage_requests": _usage_pick(usage, "requests"),
-            "usage_prompt_tokens": _usage_pick(usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens"),
-            "usage_completion_tokens": _usage_pick(usage, "completion_tokens", "completionTokens", "output_tokens", "outputTokens"),
+            "usage_prompt_tokens": _usage_pick(
+                usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens"
+            ),
+            "usage_completion_tokens": _usage_pick(
+                usage,
+                "completion_tokens",
+                "completionTokens",
+                "output_tokens",
+                "outputTokens",
+            ),
             "usage_total_tokens": _usage_total_tokens_value(usage),
-            "usage_input_cached_tokens": _usage_pick(usage, "input_cached_tokens", "inputCachedTokens"),
+            "usage_input_cached_tokens": _usage_pick(
+                usage, "input_cached_tokens", "inputCachedTokens"
+            ),
             "usage_tool_calls": _usage_pick(usage, "tool_calls", "toolCalls"),
             "usage_duration_ms": _usage_pick(usage, "duration_ms", "durationMs"),
             "usage_credits_consumed": _usage_credits_value(usage),
@@ -2889,9 +3202,15 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                     "generated_at": str(report.get("generated_at", "")),
                 }
             )
-            runs = [run for run in (experiment.get("runs") or []) if isinstance(run, dict)]
+            runs = [
+                run for run in (experiment.get("runs") or []) if isinstance(run, dict)
+            ]
             for idx, run in enumerate(runs, start=1):
-                cause = run.get("failure_cause") if isinstance(run.get("failure_cause"), dict) else {}
+                cause = (
+                    run.get("failure_cause")
+                    if isinstance(run.get("failure_cause"), dict)
+                    else {}
+                )
                 usage_fields = _run_usage_fields(run)
                 writer.writerow(
                     {
@@ -2948,14 +3267,10 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                                 "run_pass_rate": run.get("pass_rate"),
                                 "case_name": str(case_result.get("name", "")),
                                 "case_status": (
-                                    "passed"
-                                    if case_result.get("passed")
-                                    else "failed"
+                                    "passed" if case_result.get("passed") else "failed"
                                 ),
                                 "case_score": case_result.get("score"),
-                                "case_category": str(
-                                    case_result.get("category") or ""
-                                ),
+                                "case_category": str(case_result.get("category") or ""),
                                 "case_difficulty": str(
                                     case_result.get("difficulty") or ""
                                 ),
@@ -3003,13 +3318,19 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     evalset_id = str(report.get("evalset_id", ""))
     run_environment = str(report.get("run_environment") or "")
     generated_at = str(report.get("generated_at", ""))
-    experiments = [item for item in (report.get("experiments") or []) if isinstance(item, dict)]
-    agentspecs = [item for item in (report.get("agentspecs") or []) if isinstance(item, dict)]
+    experiments = [
+        item for item in (report.get("experiments") or []) if isinstance(item, dict)
+    ]
+    agentspecs = [
+        item for item in (report.get("agentspecs") or []) if isinstance(item, dict)
+    ]
     evalset_runs_url = _evalset_runs_url(evalset_id, run_environment)
 
     console.rule(f"[bold cyan]Evals Report[/bold cyan] {evalset_id}")
     console.print(f"Generated at: {generated_at}")
-    console.print(f"Experiments: {len(experiments)} | Run window per experiment: {run_limit}")
+    console.print(
+        f"Experiments: {len(experiments)} | Run window per experiment: {run_limit}"
+    )
     if evalset_runs_url:
         console.print(f"Evalset run details: {evalset_runs_url}")
     console.print("")
@@ -3044,17 +3365,43 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     for experiment in experiments:
         overview.add_row(
             str(experiment.get("name", "")),
-            str(experiment.get("agent_spec_name") or experiment.get("agent_spec_id") or "-"),
+            str(
+                experiment.get("agent_spec_name")
+                or experiment.get("agent_spec_id")
+                or "-"
+            ),
             f"{int(experiment.get('runs_fetched') or 0)}/{int(experiment.get('runs_total') or 0)}",
-            _fmt_pct(experiment.get("latest_pass_rate") if isinstance(experiment.get("latest_pass_rate"), (int, float)) else None),
-            _fmt_pct(experiment.get("baseline_pass_rate") if isinstance(experiment.get("baseline_pass_rate"), (int, float)) else None),
-            _fmt_delta(experiment.get("drift_delta") if isinstance(experiment.get("drift_delta"), (int, float)) else None, colorize=True),
-            _fmt_delta(experiment.get("latest_two_delta") if isinstance(experiment.get("latest_two_delta"), (int, float)) else None, colorize=True),
+            _fmt_pct(
+                experiment.get("latest_pass_rate")
+                if isinstance(experiment.get("latest_pass_rate"), (int, float))
+                else None
+            ),
+            _fmt_pct(
+                experiment.get("baseline_pass_rate")
+                if isinstance(experiment.get("baseline_pass_rate"), (int, float))
+                else None
+            ),
+            _fmt_delta(
+                experiment.get("drift_delta")
+                if isinstance(experiment.get("drift_delta"), (int, float))
+                else None,
+                colorize=True,
+            ),
+            _fmt_delta(
+                experiment.get("latest_two_delta")
+                if isinstance(experiment.get("latest_two_delta"), (int, float))
+                else None,
+                colorize=True,
+            ),
         )
     console.print(overview)
 
     ranked_latest = sorted(
-        [item for item in experiments if isinstance(item.get("latest_pass_rate"), (int, float))],
+        [
+            item
+            for item in experiments
+            if isinstance(item.get("latest_pass_rate"), (int, float))
+        ],
         key=lambda item: float(item.get("latest_pass_rate") or 0.0),
         reverse=True,
     )
@@ -3063,7 +3410,11 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     latest_table.add_column("Experiment", style="white")
     latest_table.add_column("Latest", justify="right", no_wrap=True)
     for idx, item in enumerate(ranked_latest, start=1):
-        latest_table.add_row(str(idx), str(item.get("name", "")), _fmt_pct(float(item.get("latest_pass_rate") or 0.0)))
+        latest_table.add_row(
+            str(idx),
+            str(item.get("name", "")),
+            _fmt_pct(float(item.get("latest_pass_rate") or 0.0)),
+        )
     console.print(latest_table)
     latest_values = [
         float(item.get("latest_pass_rate"))
@@ -3083,7 +3434,11 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
         console.print(hist_line)
 
     ranked_drift = sorted(
-        [item for item in experiments if isinstance(item.get("drift_delta"), (int, float))],
+        [
+            item
+            for item in experiments
+            if isinstance(item.get("drift_delta"), (int, float))
+        ],
         key=lambda item: float(item.get("drift_delta") or 0.0),
     )
     drift_table = Table(title="By Drift (Negative To Positive)")
@@ -3146,7 +3501,11 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     for pair in within_agentspec_pairs:
         within_table.add_row(
             f"{pair['left']} vs {pair['right']}",
-            str(pair.get("left_agent_spec_name") or pair.get("left_agent_spec_id") or "-"),
+            str(
+                pair.get("left_agent_spec_name")
+                or pair.get("left_agent_spec_id")
+                or "-"
+            ),
             _fmt_pct(pair["left_latest"]),
             _fmt_pct(pair["right_latest"]),
             _fmt_delta(pair["delta"], colorize=True),
@@ -3209,14 +3568,20 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
         runs = [run for run in (experiment.get("runs") or []) if isinstance(run, dict)]
         for idx, run in enumerate(runs, start=1):
             status_value = str(run.get("status", ""))
-            pass_rate = float(run.get("pass_rate")) if isinstance(run.get("pass_rate"), (int, float)) else None
+            pass_rate = (
+                float(run.get("pass_rate"))
+                if isinstance(run.get("pass_rate"), (int, float))
+                else None
+            )
             cause_text = _format_failure_cause(run.get("failure_cause"))
             run_table.add_row(
                 str(idx),
                 str(run.get("id", "")),
                 f"[{_status_style(status_value)}]{status_value}[/{_status_style(status_value)}]",
                 _fmt_pct(pass_rate),
-                _ascii_bar(pass_rate, width=28, full_blocks=True, colorize=True) if pass_rate is not None else "-",
+                _ascii_bar(pass_rate, width=28, full_blocks=True, colorize=True)
+                if pass_rate is not None
+                else "-",
                 cause_text or "-",
             )
         if not runs:
@@ -3250,7 +3615,9 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
                         console.print(f"    {label}: {value}")
                 candidate_urls = diagnostics.get("candidate_urls")
                 if isinstance(candidate_urls, list) and candidate_urls:
-                    console.print(f"    candidate urls: {', '.join(str(u) for u in candidate_urls)}")
+                    console.print(
+                        f"    candidate urls: {', '.join(str(u) for u in candidate_urls)}"
+                    )
                 attempts = diagnostics.get("attempts")
                 if isinstance(attempts, list) and attempts:
                     for attempt in attempts:
@@ -3272,19 +3639,34 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
         deltas_table.add_column("B Pass", justify="right", no_wrap=True)
         deltas_table.add_column("Delta", justify="right", no_wrap=True)
         comparisons = [
-            item for item in (experiment.get("consecutive_comparisons") or [])
+            item
+            for item in (experiment.get("consecutive_comparisons") or [])
             if isinstance(item, dict)
         ]
         for item in comparisons:
-            run_a = item.get("run_a_pass_rate") if isinstance(item.get("run_a_pass_rate"), (int, float)) else None
-            run_b = item.get("run_b_pass_rate") if isinstance(item.get("run_b_pass_rate"), (int, float)) else None
-            delta = item.get("delta_pass_rate") if isinstance(item.get("delta_pass_rate"), (int, float)) else None
+            run_a = (
+                item.get("run_a_pass_rate")
+                if isinstance(item.get("run_a_pass_rate"), (int, float))
+                else None
+            )
+            run_b = (
+                item.get("run_b_pass_rate")
+                if isinstance(item.get("run_b_pass_rate"), (int, float))
+                else None
+            )
+            delta = (
+                item.get("delta_pass_rate")
+                if isinstance(item.get("delta_pass_rate"), (int, float))
+                else None
+            )
             deltas_table.add_row(
                 str(item.get("run_a_id", "")),
                 str(item.get("run_b_id", "")),
                 _fmt_pct(float(run_a)) if isinstance(run_a, (int, float)) else "n/a",
                 _fmt_pct(float(run_b)) if isinstance(run_b, (int, float)) else "n/a",
-                _fmt_delta(float(delta), colorize=True) if isinstance(delta, (int, float)) else "n/a",
+                _fmt_delta(float(delta), colorize=True)
+                if isinstance(delta, (int, float))
+                else "n/a",
             )
         if not comparisons:
             deltas_table.add_row("n/a", "n/a", "n/a", "n/a", "n/a")

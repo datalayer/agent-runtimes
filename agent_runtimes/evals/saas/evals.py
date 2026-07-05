@@ -17,9 +17,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 import typer
+from datalayer_core.utils.urls import DatalayerURLs
 
 from agent_runtimes.client import DatalayerClient
-from datalayer_core.utils.urls import DatalayerURLs
 
 _TERMINAL_RUN_STATES = {
     "completed",
@@ -162,7 +162,9 @@ def watch_runs(
         if verbose:
             elapsed = int(time.time() - started)
             summary = (
-                ", ".join(f"{status}={count}" for status, count in sorted(counts.items()))
+                ", ".join(
+                    f"{status}={count}" for status, count in sorted(counts.items())
+                )
                 or "unknown=0"
             )
             print(f"Run status at t+{elapsed}s: {summary}")
