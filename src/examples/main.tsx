@@ -33,6 +33,10 @@ import {
   iamStore,
   createDatalayerServiceManager,
 } from '@datalayer/core';
+import {
+  DATALAYER_IAM_TOKEN_KEY,
+  DATALAYER_IAM_USER_KEY,
+} from '@datalayer/core/lib/state';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -165,6 +169,200 @@ const isOAuthCallback = () => {
   const hasState = params.has('state');
   const hasError = params.has('error');
   return (hasCode && hasState) || hasError;
+};
+
+const isIAMSocialCallback = () => {
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  const isCallbackPath = /\/iam\/oauth2\/[^/]+\/callback$/.test(path);
+  return isCallbackPath && (params.has('token') || params.has('error'));
+};
+
+const resolveNavigationTarget = (
+  params: URLSearchParams,
+): string | undefined => {
+  const candidate =
+    params.get('navigate_to') ||
+    params.get('navigation') ||
+    params.get('post_auth_redirect') ||
+    params.get('redirect_url');
+  if (!candidate) {
+    return undefined;
+  }
+  const normalized = String(candidate).trim();
+  if (!normalized.startsWith('/') || normalized.startsWith('//')) {
+    return undefined;
+  }
+  if (/^\/iam\/oauth2\/[^/]+\/callback$/.test(normalized)) {
+    return undefined;
+  }
+  return normalized;
+};
+
+const parseUserFromCallback = (
+  encodedUser: string | null,
+): Record<string, unknown> | undefined => {
+  if (!encodedUser) {
+    return undefined;
+  }
+  const attempts = [encodedUser];
+  try {
+    attempts.push(decodeURIComponent(encodedUser));
+  } catch {
+    // ignore decode failure
+  }
+  if (attempts.length > 1) {
+    try {
+      attempts.push(decodeURIComponent(attempts[1]));
+    } catch {
+      // ignore double decode failure
+    }
+  }
+  for (const candidate of attempts) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object') {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // keep trying
+    }
+  }
+  return undefined;
+};
+
+const AgentRuntimesIAMCallback: React.FC = () => {
+  const [status, setStatus] = useState<'processing' | 'error'>('processing');
+  const [message, setMessage] = useState('Finalizing social sign-in...');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const provider =
+      window.location.pathname.match(
+        /\/iam\/oauth2\/([^/]+)\/callback$/,
+      )?.[1] || '';
+    const token = params.get('token') || '';
+    const error = params.get('error') || '';
+
+    if (error) {
+      setStatus('error');
+      setMessage(error);
+      return;
+    }
+    if (!token) {
+      setStatus('error');
+      setMessage('Missing token in OAuth callback.');
+      return;
+    }
+
+    const callbackUser = parseUserFromCallback(params.get('user'));
+    const handle =
+      String(
+        callbackUser?.handle_s ||
+          callbackUser?.handle ||
+          callbackUser?.email_s ||
+          callbackUser?.email ||
+          'user',
+      ).trim() || 'user';
+
+    const storedUser = {
+      uid: String(callbackUser?.uid || ''),
+      handle,
+      firstName: String(
+        callbackUser?.first_name_t || callbackUser?.firstName || '',
+      ),
+      lastName: String(
+        callbackUser?.last_name_t || callbackUser?.lastName || '',
+      ),
+      email: String(callbackUser?.email_s || callbackUser?.email || ''),
+      displayName:
+        String(
+          callbackUser?.display_name_t || callbackUser?.displayName || '',
+        ).trim() || handle,
+      avatarUrl: String(
+        callbackUser?.avatar_url_s || callbackUser?.avatarUrl || '',
+      ),
+      roles: Array.isArray(callbackUser?.roles_ss)
+        ? (callbackUser?.roles_ss as string[])
+        : [],
+      iamProviders: [],
+      settings: {},
+      unsubscribedFromOutbounds: false,
+      onboarding: {
+        clients: {
+          Platform: 0,
+          JupyterLab: 0,
+          CLI: 0,
+          VSCode: 0,
+        },
+        position: 'top' as const,
+        tours: {},
+      },
+      events: [],
+      initials: handle.slice(0, 2).toUpperCase(),
+      id: String(callbackUser?.uid || ''),
+    };
+
+    window.localStorage.setItem(DATALAYER_IAM_TOKEN_KEY, token);
+    window.localStorage.setItem(
+      DATALAYER_IAM_USER_KEY,
+      JSON.stringify(storedUser),
+    );
+    useSimpleAuthStore.getState().setAuth(token, handle);
+    iamStore.getState().setLogin(storedUser, token);
+
+    const providerAccessToken = provider
+      ? params.get(`${provider}_access_token`)
+      : null;
+    if (
+      providerAccessToken &&
+      (provider === 'github' ||
+        provider === 'google' ||
+        provider === 'linkedin' ||
+        provider === 'okta' ||
+        provider === 'bluesky')
+    ) {
+      iamStore
+        .getState()
+        .setIAMProviderAccessToken(provider, providerAccessToken);
+    }
+
+    const target = resolveNavigationTarget(params);
+    if (target) {
+      window.location.replace(target);
+      return;
+    }
+
+    window.localStorage.setItem('selectedExample', 'HomeExample');
+    window.location.replace('/');
+  }, []);
+
+  return (
+    <JupyterReactTheme>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          p: 3,
+        }}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          {status === 'processing' ? <Spinner size="large" /> : null}
+          <Text
+            as="p"
+            sx={{
+              mt: 3,
+              color: status === 'error' ? 'danger.fg' : 'fg.default',
+            }}
+          >
+            {message}
+          </Text>
+        </Box>
+      </Box>
+    </JupyterReactTheme>
+  );
 };
 
 // Get the default example name from localStorage
@@ -948,7 +1146,9 @@ if (root) {
     window.__agentRuntimesExamplesRoot ??
     (window.__agentRuntimesExamplesRoot = createRoot(root));
 
-  if (isOAuthCallback()) {
+  if (isIAMSocialCallback()) {
+    appRoot.render(<AgentRuntimesIAMCallback />);
+  } else if (isOAuthCallback()) {
     // Handle OAuth callback - render OAuthCallback component
     appRoot.render(
       <JupyterReactTheme>
