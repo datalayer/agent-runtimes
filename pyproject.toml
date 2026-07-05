@@ -124,6 +124,7 @@ agent-sudo = [
 [project.scripts]
 agent-runtimes = "agent_runtimes.main:main"
 loop = "agent_runtimes.main:main"
+l = "agent_runtimes.main:main"
 
 [tool.hatch.metadata]
 allow-direct-references = true
