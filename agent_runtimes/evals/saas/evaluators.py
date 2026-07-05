@@ -228,16 +228,16 @@ def evaluate_run(
         outcome = run_case_evaluators(
             output=output, expected=expected, evaluators=applicable
         )
-        passed = bool(outcome.get("passed"))
+        case_passed = bool(outcome.get("passed"))
         score = float(outcome.get("score", 0.0))
         if _status_for(idx) in {"failed", "error"}:
-            passed = False
+            case_passed = False
             score = 0.0
         case_results.append(
             {
                 "name": case.get("name"),
-                "passed": passed,
-                "status": "passed" if passed else "failed",
+                "passed": case_passed,
+                "status": "passed" if case_passed else "failed",
                 "score": round(score, 4),
                 "category": metadata.get("category"),
                 "difficulty": metadata.get("difficulty") or metadata.get("priority"),

@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useState, useEffect, useMemo } from 'react';
 import { Checkbox, FormControl, Heading } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -20,7 +15,7 @@ import {
 } from '@datalayer/jupyter-react';
 import { DatalayerCollaborationProvider } from '../collaboration/DatalayerCollaborationProvider';
 import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
-import { useCoreStore } from '../state/substates/CoreState';
+import { useCoreStore } from '../state';
 
 import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
 

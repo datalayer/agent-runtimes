@@ -22,8 +22,8 @@ class EnvironmentsListMixin:
             Dictionary containing environment information.
         """
         try:
-            response = self._fetch(  # type: ignore
-                "{}/api/runtimes/v1/environments".format(self.urls.runtimes_url),  # type: ignore
+            response = self._fetch(
+                "{}/api/runtimes/v1/environments".format(self.urls.runtimes_url),
             )
             return response.json()
         except RuntimeError as e:

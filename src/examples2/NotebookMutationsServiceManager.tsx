@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Box, SegmentedControl, Label, Text } from '@primer/react';
@@ -29,7 +24,7 @@ import {
   SpinnerCentered,
   JupyterReactTheme,
 } from '@datalayer/jupyter-react';
-import { useCoreStore } from '../state/substates/CoreState';
+import { useCoreStore } from '../state';
 import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
@@ -54,6 +49,16 @@ const NotebookMutationsServiceManager = () => {
   const { configuration } = useCoreStore();
   const notebookStore = useNotebookStore();
   const notebook = notebookStore.selectNotebook(NOTEBOOK_ID);
+  const getCurrentNotebookContent = (): INotebookContent => {
+    const adapter = notebook?.adapter as
+      | {
+          notebookPanel?: { content?: { model?: { toJSON?: () => unknown } } };
+        }
+      | undefined;
+    return ((adapter?.notebookPanel?.content?.model?.toJSON?.() as
+      | INotebookContent
+      | undefined) ?? nbformatExample) as INotebookContent;
+  };
   const onSessionConnection: OnSessionConnection = (
     session: Session.ISessionConnection | undefined,
   ) => {
@@ -65,9 +70,7 @@ const NotebookMutationsServiceManager = () => {
     setIndex(index);
     switch (index) {
       case 0: {
-        setNbformat(
-          notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-        );
+        setNbformat(getCurrentNotebookContent());
         setReadonly(true);
         setLite(false);
         setServiceManager(SERVICE_MANAGER_LESS);
@@ -77,9 +80,7 @@ const NotebookMutationsServiceManager = () => {
         setJupyterServerUrl(location.protocol + '//' + location.host);
         createLiteServiceManager().then(liteServiceManager => {
           setServiceManager(liteServiceManager);
-          setNbformat(
-            notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-          );
+          setNbformat(getCurrentNotebookContent());
           setReadonly(false);
           setLite(true);
         });
@@ -87,9 +88,7 @@ const NotebookMutationsServiceManager = () => {
       }
       case 2: {
         setJupyterServerUrl(DEFAULT_JUPYTER_SERVER_URL);
-        setNbformat(
-          notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-        );
+        setNbformat(getCurrentNotebookContent());
         setReadonly(false);
         setLite(false);
         const serverSettings = createServerSettings(
@@ -105,18 +104,14 @@ const NotebookMutationsServiceManager = () => {
         setReadonly(false);
         setWaiting(true);
         setLite(false);
-        setNbformat(
-          notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-        );
+        setNbformat(getCurrentNotebookContent());
         createDatalayerServiceManager(
           configuration?.cpuEnvironment || 'python-simple-env',
           configuration?.credits || 1,
         ).then(serviceManager => {
           (serviceManager as any)['__NAME__'] = 'DatalayerCPUServiceManager';
           setServiceManager(serviceManager);
-          setNbformat(
-            notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-          );
+          setNbformat(getCurrentNotebookContent());
           setReadonly(false);
           setWaiting(false);
         });
@@ -126,18 +121,14 @@ const NotebookMutationsServiceManager = () => {
         setReadonly(false);
         setWaiting(true);
         setLite(false);
-        setNbformat(
-          notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-        );
+        setNbformat(getCurrentNotebookContent());
         createDatalayerServiceManager(
           configuration?.gpuEnvironment || 'pytorch-cuda-env',
           configuration?.credits || 1,
         ).then(serviceManager => {
           (serviceManager as any)['__NAME__'] = 'DatalayerGPUServiceManager';
           setServiceManager(serviceManager);
-          setNbformat(
-            notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-          );
+          setNbformat(getCurrentNotebookContent());
           setReadonly(false);
           setWaiting(false);
         });
@@ -172,19 +163,14 @@ const NotebookMutationsServiceManager = () => {
             </SegmentedControl>
           </Box>
           <Box ml={1} mt={1}>
-            <Label>Lite: {String(notebook?.adapter?.lite)}</Label>
+            <Label>Lite: {String(lite)}</Label>
             <Label>
-              Service Manager URL:{' '}
-              {notebook?.adapter?.serviceManager.serverSettings.baseUrl}
+              Service Manager URL: {serviceManager.serverSettings.baseUrl}
             </Label>
             <Label>
-              Service Manager is ready:{' '}
-              {String(notebook?.adapter?.serviceManager.isReady)}
+              Service Manager is ready: {String(serviceManager.isReady)}
             </Label>
             <Label>Kernel ID: {notebook?.adapter?.kernel?.id}</Label>
-            <Label>
-              Kernel Banner: {notebook?.adapter?.kernel?.info?.banner}
-            </Label>
           </Box>
         </Box>
         <Box>
@@ -208,7 +194,6 @@ const NotebookMutationsServiceManager = () => {
           <Notebook
             height="calc(100vh - 2.6rem)"
             id={NOTEBOOK_ID}
-            lite={lite}
             nbformat={nbformat as INotebookContent}
             onSessionConnection={onSessionConnection}
             readonly={readonly}

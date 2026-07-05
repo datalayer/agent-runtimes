@@ -318,7 +318,7 @@ class RuntimeManager(KernelHttpManager):
         """
         from datalayer_core.utils.network import fetch
 
-        kernels_url = f"{self.server_url.rstrip('/')}/api/kernels"
+        kernels_url = f"{str(self.server_url or '').rstrip('/')}/api/kernels"
         max_attempts = 30
         last_error: Exception | None = None
         for attempt in range(1, max_attempts + 1):

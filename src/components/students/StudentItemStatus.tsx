@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { IStudent, IStudentItem } from '../../models';
 import { StudentResultCircle } from '@datalayer/core/lib/components/students/StudentResultCircle';
 

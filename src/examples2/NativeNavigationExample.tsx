@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Heading, Text, Link as PrimerLink } from '@primer/react';
 import { useNavigate, useLocation, useParams, useHistory } from '../hooks';

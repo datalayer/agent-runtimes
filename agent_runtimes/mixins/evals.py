@@ -37,8 +37,8 @@ class EvalsMixin:
         )
         if resolved_account_uid:
             query["account_uid"] = resolved_account_uid
-        response = self._fetch(  # type: ignore
-            f"{self.urls.ai_agents_url}/api/ai-agents/v1/evals{path}",  # type: ignore
+        response = self._fetch(
+            f"{self.urls.ai_agents_url}/api/ai-agents/v1/evals{path}",
             method=method,
             params=query,
             json=json_body,
@@ -193,8 +193,8 @@ class EvalsMixin:
         self,
         evalset_id: str,
     ) -> dict[str, Any]:
-        response = self._fetch(  # type: ignore
-            f"{self.urls.ai_agents_url}/api/ai-agents/v1/evals/public/evalsets/{evalset_id}",  # type: ignore
+        response = self._fetch(
+            f"{self.urls.ai_agents_url}/api/ai-agents/v1/evals/public/evalsets/{evalset_id}",
             method="GET",
         )
         return response.json()

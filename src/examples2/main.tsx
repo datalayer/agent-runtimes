@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 /// <reference types="vite/client" />
 
 import React, { useEffect, useState } from 'react';
@@ -24,11 +19,11 @@ import {
 } from '@datalayer/jupyter-react';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
-import { coreStore } from '../state/substates/CoreState';
+import { coreStore } from '../state';
 import { iamStore } from '../state';
 import { EXAMPLES } from './example-selector';
 import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
-import { BOOTSTRAP_USER_ONBOARDING } from '../models/UserOnboarding';
+import { BOOTSTRAP_USER_ONBOARDING } from '@datalayer/core/lib/models/UserOnboarding';
 
 import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
 

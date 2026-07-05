@@ -3,9 +3,5 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-export interface IContent {
-  name: string;
-  mount: string;
-}
-
-export default IContent;
+export * from './DatalayerCollaboration';
+export * from './DatalayerCollaborationProvider';

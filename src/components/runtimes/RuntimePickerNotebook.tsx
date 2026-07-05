@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActionList,
@@ -26,8 +21,8 @@ import type {
   IRuntimeOptions,
   IMultiServiceManager,
   IDatalayerSessionContext,
-} from '../../stateful/runtimes';
-import { RuntimeSnippetsFacade } from '../../stateful/runtimes/jupyter';
+} from '../../runtimes';
+import { RuntimeSnippetsFacade } from '../../jupyter';
 import { IRuntimeDesc } from '../../models';
 import { ExternalTokenSilentLogin } from '@datalayer/core/lib/components/iam';
 import { useCoreStore, useIAMStore } from '../../state/substates';

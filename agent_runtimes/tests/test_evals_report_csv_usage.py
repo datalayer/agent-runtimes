@@ -8,11 +8,13 @@
 # Distributed under the terms of the Modified BSD License.
 
 import csv
+from pathlib import Path
+from typing import Any
 
 from agent_runtimes.evals.saas.report import _report_appendix_lines, _write_report_csv
 
 
-def test_write_report_csv_includes_usage_columns_and_values(tmp_path):
+def test_write_report_csv_includes_usage_columns_and_values(tmp_path: Path) -> None:
     report = {
         "evalset_id": "evalset-1",
         "run_environment": "ui",
@@ -89,7 +91,7 @@ def test_write_report_csv_includes_usage_columns_and_values(tmp_path):
     assert case_row["usage_provider"] == "openai"
 
 
-def test_write_report_csv_falls_back_to_report_usage_when_metrics_usage_missing(tmp_path):
+def test_write_report_csv_falls_back_to_report_usage_when_metrics_usage_missing(tmp_path: Path) -> None:
     report = {
         "evalset_id": "evalset-1",
         "run_environment": "ui",
@@ -161,7 +163,7 @@ def test_write_report_csv_falls_back_to_report_usage_when_metrics_usage_missing(
     assert case_row["usage_provider"] == "openai"
 
 
-def test_write_report_csv_supports_direct_usage_alias_keys(tmp_path):
+def test_write_report_csv_supports_direct_usage_alias_keys(tmp_path: Path) -> None:
     report = {
         "evalset_id": "evalset-1",
         "run_environment": "ui",
@@ -224,7 +226,7 @@ def test_write_report_csv_supports_direct_usage_alias_keys(tmp_path):
     assert run_row["usage_credits_consumed"] == "0.2"
 
 
-def test_report_appendix_run_table_reads_direct_report_usage_payload():
+def test_report_appendix_run_table_reads_direct_report_usage_payload() -> None:
     experiments = [
         {
             "name": "exp-1",

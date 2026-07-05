@@ -5,13 +5,13 @@
 
 export * from './chat';
 export * from './client';
+export * from './collaboration';
 export * from './components';
 export * from './mcp';
 export * from './stores';
 export * from './identity';
 export * from './config';
 export * from './specs';
-export * from './stateful';
 export type {
   AgentRuntimeData,
   Agentspec,

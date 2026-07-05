@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { IUser, asUser } from '@datalayer/core/lib/models/User';
 import { PageTagName } from './PageTag';

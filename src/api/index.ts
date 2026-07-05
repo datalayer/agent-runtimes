@@ -22,7 +22,7 @@ export * as evals from './evals';
 export * as events from './events';
 export * as notifications from './notifications';
 export * as output from './output';
-export * from '../stateful/runtimes';
+export * from '../runtimes';
 
 import { iamStore } from '@datalayer/core/lib/state';
 import { listEnvironments } from './runtimes/environments';

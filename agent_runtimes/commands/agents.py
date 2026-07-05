@@ -17,7 +17,7 @@ from typing import Any, Optional
 
 import requests
 import typer
-import yaml
+import yaml  # type: ignore[import-untyped]
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table

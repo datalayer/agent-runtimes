@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { JSONExt } from '@lumino/coreutils';

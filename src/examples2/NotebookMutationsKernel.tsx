@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Box, SegmentedControl, Label, Text } from '@primer/react';
@@ -28,7 +23,7 @@ import {
   SpinnerCentered,
   JupyterReactTheme,
 } from '@datalayer/jupyter-react';
-import { useCoreStore } from '../state/substates/CoreState';
+import { useCoreStore } from '../state';
 import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
@@ -43,8 +38,6 @@ const NotebookMutationsKernel = () => {
   const [index, setIndex] = useState(0);
   const [nbformat, setNbformat] = useState(nbformatExample as INotebookContent);
   const [readonly, setReadonly] = useState(true);
-  const [serverless, setServerless] = useState(true);
-  const [kernelIndex, setKernelIndex] = useState(-1);
   const [waiting, setWaiting] = useState(false);
   const [lite, setLite] = useState(false);
   const [serviceManager, setServiceManager] =
@@ -55,6 +48,16 @@ const NotebookMutationsKernel = () => {
   const { configuration } = useCoreStore();
   const notebookStore = useNotebookStore();
   const notebook = notebookStore.selectNotebook(NOTEBOOK_ID);
+  const getCurrentNotebookContent = (): INotebookContent => {
+    const adapter = notebook?.adapter as
+      | {
+          notebookPanel?: { content?: { model?: { toJSON?: () => unknown } } };
+        }
+      | undefined;
+    return ((adapter?.notebookPanel?.content?.model?.toJSON?.() as
+      | INotebookContent
+      | undefined) ?? nbformatExample) as INotebookContent;
+  };
   const onSessionConnection: OnSessionConnection = (
     session: Session.ISessionConnection | undefined,
   ) => {
@@ -66,11 +69,7 @@ const NotebookMutationsKernel = () => {
     setIndex(index);
     switch (index) {
       case 0: {
-        setKernelIndex(-1);
-        setNbformat(
-          notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-        );
-        setServerless(true);
+        setNbformat(getCurrentNotebookContent());
         setReadonly(true);
         setLite(false);
         setServiceManager(SERVICE_MANAGER_LESS);
@@ -79,12 +78,8 @@ const NotebookMutationsKernel = () => {
       case 1: {
         setJupyterServerUrl(location.protocol + '//' + location.host);
         createLiteServiceManager().then(liteServiceManager => {
-          setKernelIndex(-1);
           setServiceManager(liteServiceManager);
-          setNbformat(
-            notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-          );
-          setServerless(false);
+          setNbformat(getCurrentNotebookContent());
           setReadonly(false);
           setLite(true);
         });
@@ -92,11 +87,7 @@ const NotebookMutationsKernel = () => {
       }
       case 2: {
         setJupyterServerUrl(DEFAULT_JUPYTER_SERVER_URL);
-        setKernelIndex(-1);
-        setNbformat(
-          notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-        );
-        setServerless(false);
+        setNbformat(getCurrentNotebookContent());
         setReadonly(false);
         setLite(false);
         const serverSettings = createServerSettings(
@@ -117,12 +108,8 @@ const NotebookMutationsKernel = () => {
         ).then(serviceManager => {
           (serviceManager as any)['__NAME__'] = 'DatalayerCPUServiceManager';
           setServiceManager(serviceManager);
-          setServerless(false);
           setReadonly(false);
-          setKernelIndex(0);
-          setNbformat(
-            notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-          );
+          setNbformat(getCurrentNotebookContent());
           //          setWaiting(false);
         });
         break;
@@ -134,13 +121,9 @@ const NotebookMutationsKernel = () => {
           configuration?.gpuEnvironment || 'pytorch-cuda-env',
           configuration?.credits || 1,
         ).then(serviceManager => {
-          setKernelIndex(0);
           (serviceManager as any)['__NAME__'] = 'DatalayerGPUServiceManager';
           setServiceManager(serviceManager);
-          setNbformat(
-            notebook?.adapter?.notebookPanel?.content.model?.toJSON() as INotebookContent,
-          );
-          setServerless(false);
+          setNbformat(getCurrentNotebookContent());
           setReadonly(false);
           setWaiting(false);
         });
@@ -179,19 +162,14 @@ const NotebookMutationsKernel = () => {
             <Label>Readonly: {String(notebook?.adapter?.readonly)}</Label>
             <Label>Serverless: {String(notebook?.adapter?.serverless)}</Label>
             */}
-            <Label>Lite: {String(notebook?.adapter?.lite)}</Label>
+            <Label>Lite: {String(lite)}</Label>
             <Label>
-              Service Manager URL:{' '}
-              {notebook?.adapter?.serviceManager.serverSettings.baseUrl}
+              Service Manager URL: {serviceManager.serverSettings.baseUrl}
             </Label>
             <Label>
-              Service Manager is ready:{' '}
-              {String(notebook?.adapter?.serviceManager.isReady)}
+              Service Manager is ready: {String(serviceManager.isReady)}
             </Label>
             <Label>Kernel ID: {notebook?.adapter?.kernel?.id}</Label>
-            <Label>
-              Kernel Banner: {notebook?.adapter?.kernel?.info?.banner}
-            </Label>
           </Box>
         </Box>
         <Box>
@@ -215,13 +193,10 @@ const NotebookMutationsKernel = () => {
           <Notebook
             height="calc(100vh - 2.6rem)"
             id={NOTEBOOK_ID}
-            lite={lite}
             nbformat={nbformat as INotebookContent}
             onSessionConnection={onSessionConnection}
             readonly={readonly}
-            serverless={serverless}
             serviceManager={serviceManager}
-            useRunningKernelIndex={kernelIndex}
           />
         )}
       </>

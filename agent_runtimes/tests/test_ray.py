@@ -11,41 +11,43 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from agent_runtimes.mixins.ray import RayMixin
 from datalayer_core.utils.urls import DatalayerURLs
 
 
 class _FakeResponse:
-    def __init__(self, payload):
+    def __init__(self, payload: dict[str, Any]) -> None:
         self._payload = payload
 
-    def json(self):
+    def json(self) -> dict[str, Any]:
         return self._payload
 
 
 class _FakeRayClient(RayMixin):
-    def __init__(self):
+    def __init__(self) -> None:
         self.urls = DatalayerURLs.from_environment(runtimes_url="https://ray.example")
-        self.calls = []
+        self.calls: list[tuple[str, dict[str, Any]]] = []
 
-    def _fetch(self, url: str, **kwargs):
+    def _fetch(self, url: str, **kwargs: Any) -> _FakeResponse:
         self.calls.append((url, kwargs))
         return _FakeResponse({"success": True, "url": url, "kwargs": kwargs})
 
 
-def test_urls_resolve_runtimes_url_from_environment(monkeypatch):
+def test_urls_resolve_runtimes_url_from_environment(monkeypatch: Any) -> None:
     monkeypatch.setenv("DATALAYER_RUNTIMES_URL", "https://runtimes-from-env.example/")
     urls = DatalayerURLs.from_environment()
     assert urls.runtimes_url == "https://runtimes-from-env.example"
 
 
-def test_urls_resolve_runtimes_url_from_default(monkeypatch):
+def test_urls_resolve_runtimes_url_from_default(monkeypatch: Any) -> None:
     monkeypatch.delenv("DATALAYER_RUNTIMES_URL", raising=False)
     urls = DatalayerURLs.from_environment()
     assert urls.runtimes_url == "https://r1.datalayer.run"
 
 
-def test_ray_mixin_job_logs_and_events_paths():
+def test_ray_mixin_job_logs_and_events_paths() -> None:
     client = _FakeRayClient()
 
     logs_payload = client.ray_get_job_logs(
@@ -77,7 +79,7 @@ def test_ray_mixin_job_logs_and_events_paths():
     }
 
 
-def test_ray_mixin_uses_runtimes_path_by_default():
+def test_ray_mixin_uses_runtimes_path_by_default() -> None:
     client = _FakeRayClient()
 
     payload = client.ray_list_clusters(namespace="default")
@@ -88,7 +90,7 @@ def test_ray_mixin_uses_runtimes_path_by_default():
     assert first_url.endswith("/api/runtimes/v1/ray/clusters")
 
 
-def test_ray_mixin_uses_addon_path_in_direct_mode():
+def test_ray_mixin_uses_addon_path_in_direct_mode() -> None:
     client = _FakeRayClient()
     client._ray_direct_addon = True
 

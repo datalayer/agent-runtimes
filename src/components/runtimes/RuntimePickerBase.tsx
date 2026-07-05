@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useEffect, useMemo, useState, ReactElement, ReactNode } from 'react';
 import { ISessionContext } from '@jupyterlab/apputils';
 import { ITranslator } from '@jupyterlab/translation';
@@ -30,7 +25,7 @@ import { CpuIcon } from '@primer/octicons-react';
 import { BrowserIcon, LaptopSimpleIcon } from '@datalayer/icons-react';
 import { CreditsIndicator } from '../../components/progress';
 import { IRuntimeDesc } from '../../models';
-import { isRuntimeRemote, IMultiServiceManager } from '../../stateful/runtimes';
+import { isRuntimeRemote, IMultiServiceManager } from '../../runtimes';
 import { getGroupedRuntimeDescs, IDatalayerRuntimeDesc } from './RuntimeUtils';
 
 /**

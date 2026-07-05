@@ -68,7 +68,7 @@ class RuntimesCreateMixin:
         dict[str, Any]
             Response containing runtime creation details.
         """
-        body = {
+        body: dict[str, Any] = {
             "type": "notebook",
             "environment_name": environment_name,
         }
@@ -87,8 +87,8 @@ class RuntimesCreateMixin:
 
         try:
             if credits_limit is None:
-                response = self._fetch(  # type: ignore
-                    "{}/api/iam/v1/usage/credits".format(self.urls.iam_url),  # type: ignore
+                response = self._fetch(
+                    "{}/api/iam/v1/usage/credits".format(self.urls.iam_url),
                     method="GET",
                 )
 
@@ -121,7 +121,7 @@ class RuntimesCreateMixin:
                 logger.error(error_msg)
                 return {"success": False, "message": error_msg}
 
-            body["credits_limit"] = credits_limit  # type: ignore
+            body["credits_limit"] = credits_limit
 
             if from_snapshot_uid:
                 body["from"] = from_snapshot_uid
@@ -138,7 +138,7 @@ class RuntimesCreateMixin:
             if resolved_billable_account_handle:
                 body["billable_account_handle"] = resolved_billable_account_handle
 
-            runtime_url = "{}/api/runtimes/v1/runtimes".format(self.urls.runtimes_url)  # type: ignore
+            runtime_url = "{}/api/runtimes/v1/runtimes".format(self.urls.runtimes_url)
             logger.debug(
                 "Creating runtime via %s with payload keys=%s",
                 runtime_url,
@@ -150,7 +150,7 @@ class RuntimesCreateMixin:
             max_attempts = 4
             for attempt in range(1, max_attempts + 1):
                 try:
-                    response = self._fetch(  # type: ignore
+                    response = self._fetch(
                         runtime_url,
                         method="POST",
                         json=body,
@@ -228,8 +228,8 @@ class RuntimesListMixin:
             A dictionary containing the response.
         """
         try:
-            response = self._fetch(  # type: ignore
-                "{}/api/runtimes/v1/runtimes".format(self.urls.runtimes_url),  # type: ignore
+            response = self._fetch(
+                "{}/api/runtimes/v1/runtimes".format(self.urls.runtimes_url),
             )
 
             if response.status_code != 200:

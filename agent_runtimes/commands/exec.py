@@ -153,14 +153,14 @@ class CodeSandboxExecService:
         if last_error is None:
             last_error = RuntimeError("Unknown code sandbox initialization failure")
 
-        e = last_error
+        final_error = last_error
         try:
             console.print(
-                f"[red]Failed to connect to code sandbox '{sandbox_name}': {e}[/red]"
+                f"[red]Failed to connect to code sandbox '{sandbox_name}': {final_error}[/red]"
             )
 
             # Provide helpful authentication guidance
-            if "Token is required" in str(e) or "authentication" in str(e).lower():
+            if "Token is required" in str(final_error) or "authentication" in str(final_error).lower():
                 console.print(
                     "[yellow]Hint: Make sure you're authenticated. You can:[/yellow]"
                 )

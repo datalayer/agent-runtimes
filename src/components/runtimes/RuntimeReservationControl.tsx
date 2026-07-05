@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { FormControl, IconButton, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { PlusIcon } from '@primer/octicons-react';

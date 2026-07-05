@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { Kernel } from '@jupyterlab/services';
 
 export const BACKWARDS_COMPATIBLE_KERNEL_TYPES_MAP = {

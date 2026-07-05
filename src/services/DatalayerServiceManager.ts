@@ -3,15 +3,10 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import { DEFAULT_DATALAYER_CONFIG } from '@datalayer/core/lib/config/Configuration';
-import { createRuntime } from '../stateful/runtimes/actions';
+import { createRuntime } from '../runtimes/actions';
 
 /**
  * Creates a ServiceManager configured for Datalayer.

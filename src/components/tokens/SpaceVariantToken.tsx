@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { Token } from '@primer/react';
 import { ProjectIcon } from '@primer/octicons-react';
 import { StudentIcon } from '@datalayer/icons-react';

@@ -9,8 +9,9 @@ import { Checkbox, FormControl, Heading } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
-import { useCoreStore, DatalayerCollaborationProvider } from '@datalayer/core';
 import { loadJupyterConfig, Notebook } from '@datalayer/jupyter-react';
+import { DatalayerCollaborationProvider } from '../collaboration';
+import { useCoreStore } from '../state';
 import { ThemedJupyterProvider } from './utils/themedProvider';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';

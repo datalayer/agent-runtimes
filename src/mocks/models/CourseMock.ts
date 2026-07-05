@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { uniqueNamesGenerator, names } from 'unique-names-generator';
 import { ICourse } from '../../models/Course';
 import { newUlid } from '@datalayer/core/lib/utils';

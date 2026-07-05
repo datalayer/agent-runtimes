@@ -168,6 +168,18 @@ ignore_errors = true
 module = "agent_runtimes.handlers.chat.*"
 disable_error_code = ["attr-defined"]
 
+[[tool.mypy.overrides]]
+module = "agent_runtimes.commands.evals"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.evals.saas.report"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.evals.saas.runner"
+ignore_errors = true
+
 [tool.ruff.lint]
 extend-select = ["I"]
 

@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 /**
  * Runtimes APIs.
  */
@@ -16,14 +11,14 @@ import { PromiseDelegate } from '@lumino/coreutils';
 import { Upload } from 'tus-js-client';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api';
 import type { IRuntimeOptions } from './apis';
-import { asCodeSandboxSnapshot } from '../../models';
+import { asCodeSandboxSnapshot } from '../models';
 import type {
   ICodeSandboxSnapshot,
   IAPICodeSandboxSnapshot,
   IDatalayerEnvironment,
   IRuntimePod,
-} from '../../models';
-import { iamStore, runtimesStore } from '../../state/substates';
+} from '../models';
+import { iamStore, runtimesStore } from '../state/substates';
 
 /**
  * Get available Environments.

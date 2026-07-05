@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useIsMounted } from 'usehooks-ts';
 import type { IMarkdownParser, IRenderMime } from '@jupyterlab/rendermime';
@@ -29,7 +24,7 @@ import { useJupyterReactStore } from '@datalayer/jupyter-react';
 import { USAGE_ROUTE } from '@datalayer/core/lib/routes';
 import { useNavigate } from '@datalayer/core/lib/hooks';
 import { NO_RUNTIME_AVAILABLE_LABEL } from '@datalayer/core/lib/i18n';
-import type { IRemoteServicesManager } from '../../stateful/runtimes';
+import type { IRemoteServicesManager } from '../../runtimes';
 import type { RunResponseError } from '@datalayer/core/lib/api/DatalayerApi';
 import type { ICodeSandboxSnapshot, IRuntimeDesc } from '../../models';
 import { iamStore, useCoreStore, useIAMStore } from '../../state/substates';

@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { IItemType } from './ItemType';
 import { IStudent } from '@datalayer/core/lib/models/Student';
 import { ISpaceItem } from './SpaceItem';

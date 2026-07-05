@@ -3,15 +3,10 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { PathExt } from '@jupyterlab/coreutils';
 import { SessionContext } from '@jupyterlab/apputils';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
-import { IMultiServiceManager } from '../../stateful/runtimes';
+import { IMultiServiceManager } from '../../runtimes';
 import { IRuntimeLocation, IRuntimeDesc } from '../../models';
 
 const ASSIGN_NEW_RUNTIME_LABEL = 'Assign a new Runtime';

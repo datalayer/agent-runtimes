@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import {
   useCallback,
   useEffect,
@@ -34,7 +29,7 @@ import {
   loadBrowserSandboxSnapshot,
   loadSandboxSnapshot,
   IMultiServiceManager,
-} from '../../stateful/runtimes';
+} from '../../runtimes';
 import { useRuntimesStore } from '../../state/substates';
 import { createSandboxSnapshotName } from '@datalayer/core/lib/utils';
 

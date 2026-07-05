@@ -425,7 +425,7 @@ const NotebookOnlyApp: React.FC = () => {
         if (configuration?.token && configuration?.runUrl) {
           try {
             const { DatalayerCollaborationProvider } =
-              await import('@datalayer/core/lib/collaboration/DatalayerCollaborationProvider');
+              await import('../collaboration/DatalayerCollaborationProvider');
             const provider = new DatalayerCollaborationProvider({
               runUrl: configuration.runUrl,
               token: configuration.token,

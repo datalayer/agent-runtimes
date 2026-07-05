@@ -39,8 +39,8 @@ class SandboxSnapshotsCreateMixin:
             "stop": stop,
         }
         try:
-            response = self._fetch(  # type: ignore
-                "{}/api/runtimes/v1/sandbox-snapshots".format(self.urls.runtimes_url),  # type: ignore
+            response = self._fetch(
+                "{}/api/runtimes/v1/sandbox-snapshots".format(self.urls.runtimes_url),
                 method="POST",
                 json=body,
             )
@@ -69,9 +69,9 @@ class SandboxSnapshotsDeleteMixin:
             Dictionary containing success status and message.
         """
         try:
-            response = self._fetch(  # type: ignore
+            response = self._fetch(
                 "{}/api/runtimes/v1/sandbox-snapshots/{}".format(
-                    self.urls.runtimes_url,  # type: ignore
+                    self.urls.runtimes_url,
                     snapshot_uid,
                 ),
                 method="DELETE",
@@ -99,8 +99,8 @@ class SandboxSnapshotsListMixin:
             Dictionary containing snapshot information or error details.
         """
         try:
-            response = self._fetch(  # type: ignore
-                "{}/api/runtimes/v1/sandbox-snapshots".format(self.urls.runtimes_url),  # type: ignore
+            response = self._fetch(
+                "{}/api/runtimes/v1/sandbox-snapshots".format(self.urls.runtimes_url),
             )
             return response.json()
         except RuntimeError as e:

@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@primer/react/experimental';
 import { ISessionContext } from '@jupyterlab/apputils';
@@ -15,7 +10,7 @@ import { CodeCellModel, ICellModel } from '@jupyterlab/cells';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { JSONExt } from '@lumino/coreutils';
 import { KernelExecutor } from '@datalayer/jupyter-react';
-import { RuntimeSnippetsFacade } from '../../stateful/runtimes/jupyter';
+import { RuntimeSnippetsFacade } from '../../jupyter';
 import { RuntimeCellVariables } from './RuntimeCellVariables';
 
 /**

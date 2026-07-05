@@ -18,8 +18,8 @@ class EventsMixin:
 
     def _resolve_event_agent_id(self, event_id: str) -> str:
         """Resolve an event's agent_id from the global events listing."""
-        response = self._fetch(  # type: ignore
-            "{}/api/ai-agents/v1/events".format(self.urls.run_url),  # type: ignore
+        response = self._fetch(
+            "{}/api/ai-agents/v1/events".format(self.urls.run_url),
             method="GET",
             params={"limit": 500, "offset": 0},
         )
@@ -51,13 +51,13 @@ class EventsMixin:
 
         if agent_id:
             url = "{}/api/ai-agents/v1/agents/{}/events".format(
-                self.urls.run_url,  # type: ignore
+                self.urls.run_url,
                 agent_id,
             )
         else:
-            url = "{}/api/ai-agents/v1/events".format(self.urls.run_url)  # type: ignore
+            url = "{}/api/ai-agents/v1/events".format(self.urls.run_url)
 
-        response = self._fetch(  # type: ignore
+        response = self._fetch(
             url,
             method="GET",
             params=params,
@@ -81,9 +81,9 @@ class EventsMixin:
             "payload": payload or {},
             "metadata": metadata or {},
         }
-        response = self._fetch(  # type: ignore
+        response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events".format(
-                self.urls.run_url,  # type: ignore
+                self.urls.run_url,
                 agent_id,
             ),
             method="POST",
@@ -96,9 +96,9 @@ class EventsMixin:
     ) -> dict[str, Any]:
         """Get a single event by ID."""
         resolved_agent_id = agent_id or self._resolve_event_agent_id(event_id)
-        response = self._fetch(  # type: ignore
+        response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events/{}".format(
-                self.urls.run_url,  # type: ignore
+                self.urls.run_url,
                 resolved_agent_id,
                 event_id,
             ),
@@ -133,9 +133,9 @@ class EventsMixin:
         if metadata is not None:
             body["metadata"] = metadata
 
-        response = self._fetch(  # type: ignore
+        response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events/{}".format(
-                self.urls.run_url,  # type: ignore
+                self.urls.run_url,
                 resolved_agent_id,
                 event_id,
             ),
@@ -149,9 +149,9 @@ class EventsMixin:
     ) -> dict[str, Any]:
         """Delete an event by ID."""
         resolved_agent_id = agent_id or self._resolve_event_agent_id(event_id)
-        response = self._fetch(  # type: ignore
+        response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events/{}".format(
-                self.urls.run_url,  # type: ignore
+                self.urls.run_url,
                 resolved_agent_id,
                 event_id,
             ),

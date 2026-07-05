@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ISessionContext } from '@jupyterlab/apputils';
 import { CodeCellModel, ICellModel } from '@jupyterlab/cells';
@@ -18,8 +13,8 @@ import { CloudUploadIcon } from '@datalayer/icons-react';
 import type { ISnippet } from '../../models';
 import { useCoreStore, useIAMStore } from '../../state/substates';
 import { IRuntimeDesc } from '../../models';
-import { isRuntimeRemote } from '../../stateful/runtimes';
-import { RuntimeSnippetsFacade } from '../../stateful/runtimes/jupyter';
+import { isRuntimeRemote } from '../../runtimes';
+import { RuntimeSnippetsFacade } from '../../jupyter';
 import { ExternalTokenSilentLogin } from '@datalayer/core/lib/components/iam';
 import { SnippetDialog } from '../../components/snippets/SnippetDialog';
 import { IRuntimePickerBaseProps } from './RuntimePickerBase';

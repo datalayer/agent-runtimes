@@ -3,17 +3,12 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { JSONExt } from '@lumino/coreutils';
 import { Poll } from '@lumino/polling';
-import type { IMultiServiceManager } from '../../stateful/runtimes';
-import { getRuntimes } from '../../stateful/runtimes';
+import type { IMultiServiceManager } from '../../runtimes';
+import { getRuntimes } from '../../runtimes';
 import type { IRuntimesConfiguration } from '@datalayer/core/lib/config';
 import type {
   IRuntimePod,

@@ -14,7 +14,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { IRuntimeOptions } from '../stateful/runtimes/apis';
+import type { IRuntimeOptions } from '../runtimes/apis';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
