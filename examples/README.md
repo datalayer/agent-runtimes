@@ -27,6 +27,17 @@ Features demonstrated:
 - MCP Codemode examples: [ai/agent-codemode/examples/codemode_example.py](ai/agent-codemode/examples/codemode_example.py), [ai/agent-codemode/examples/codemode_patterns_example.py](ai/agent-codemode/examples/codemode_patterns_example.py)
 - Agent Skills examples: [ai/agent-skills/examples/skills_example.py](ai/agent-skills/examples/skills_example.py), [ai/agent-skills/examples/skills/SKILL.md](ai/agent-skills/examples/skills/SKILL.md)
 
+## Datalayer Client Examples
+
+These examples demonstrate the Datalayer Client and runtime workflows (migrated from `datalayer-core`).
+
+- 🧪 [Simple Runtime Quickstart](./simple/README.md): minimal runtime execution quickstarts (`runtime_quickstart.py`, `runtime_quickstart_nocontext.py`).
+- 🎭 [Datalayer Decorator](./decorator/README.md): the `@datalayer` decorator for remote function execution.
+- 🚀 [FastAPI + Scikit-learn](./fastapi/README.md): REST API serving ML models on Datalayer runtimes.
+- 📊 [Streamlit + Scikit-learn](./streamlit/README.md): interactive ML inference app.
+- ⚛️ [Next.js + Datalayer Notebook](./nextjs/README.md): Next.js app integrating Jupyter notebooks with cloud runtimes.
+- ⚡ [PyTorch GPU Workloads](./pytorch/README.md): CPU vs GPU benchmarks on Datalayer runtimes.
+
 ## Key Concepts
 
 ### Code Mode

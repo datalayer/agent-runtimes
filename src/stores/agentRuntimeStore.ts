@@ -29,7 +29,7 @@ import {
   subscribeWithSelector,
 } from 'zustand/middleware';
 import type { ServiceManager } from '@jupyterlab/services';
-import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
+import type { IRuntimeOptions } from '@datalayer/core/lib/base/stateful/runtimes/apis';
 import type {
   AgentStatus,
   AgentConnection,

@@ -40,7 +40,7 @@ def events_callback(ctx: typer.Context) -> None:
 def _resolve_token(token: Optional[str]) -> str:
     resolved = token or os.environ.get("DATALAYER_API_KEY", "")
     if not resolved:
-        raise ValueError("Missing token. Use --token or set DATALAYER_API_KEY.")
+        raise ValueError("Missing token. Use --api-key or set DATALAYER_API_KEY.")
     return resolved
 
 
@@ -96,7 +96,7 @@ def events_list(
     ),
     kind: Optional[str] = typer.Option(None, "--kind", help="Filter events by kind."),
     token: Optional[str] = typer.Option(
-        None, "--token", help="Authentication token (Bearer token for API requests)."
+        None, "--api-key", help="API key (Bearer token for API requests)."
     ),
     base_url: Optional[str] = typer.Option(
         None, "--base-url", help="Datalayer run base URL."
@@ -133,7 +133,7 @@ def events_ls(
     ),
     kind: Optional[str] = typer.Option(None, "--kind", help="Filter events by kind."),
     token: Optional[str] = typer.Option(
-        None, "--token", help="Authentication token (Bearer token for API requests)."
+        None, "--api-key", help="API key (Bearer token for API requests)."
     ),
     base_url: Optional[str] = typer.Option(
         None, "--base-url", help="Datalayer run base URL."
@@ -150,7 +150,7 @@ def events_get(
         None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
     ),
     token: Optional[str] = typer.Option(
-        None, "--token", help="Authentication token (Bearer token for API requests)."
+        None, "--api-key", help="API key (Bearer token for API requests)."
     ),
     base_url: Optional[str] = typer.Option(
         None, "--base-url", help="Datalayer run base URL."
@@ -184,7 +184,7 @@ def events_create(
     kind: str = typer.Option("generic", "--kind", help="Event kind."),
     status: str = typer.Option("pending", "--status", help="Event status."),
     token: Optional[str] = typer.Option(
-        None, "--token", help="Authentication token (Bearer token for API requests)."
+        None, "--api-key", help="API key (Bearer token for API requests)."
     ),
     base_url: Optional[str] = typer.Option(
         None, "--base-url", help="Datalayer run base URL."
@@ -213,7 +213,7 @@ def events_delete(
         None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
     ),
     token: Optional[str] = typer.Option(
-        None, "--token", help="Authentication token (Bearer token for API requests)."
+        None, "--api-key", help="API key (Bearer token for API requests)."
     ),
     base_url: Optional[str] = typer.Option(
         None, "--base-url", help="Datalayer run base URL."
@@ -247,7 +247,7 @@ def events_mark_read(
         None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
     ),
     token: Optional[str] = typer.Option(
-        None, "--token", help="Authentication token (Bearer token for API requests)."
+        None, "--api-key", help="API key (Bearer token for API requests)."
     ),
     base_url: Optional[str] = typer.Option(
         None, "--base-url", help="Datalayer run base URL."
@@ -281,7 +281,7 @@ def events_mark_unread(
         None, "--agent-id", help="Agent runtime ID owning the event (recommended)."
     ),
     token: Optional[str] = typer.Option(
-        None, "--token", help="Authentication token (Bearer token for API requests)."
+        None, "--api-key", help="API key (Bearer token for API requests)."
     ),
     base_url: Optional[str] = typer.Option(
         None, "--base-url", help="Datalayer run base URL."

@@ -26,7 +26,7 @@ import {
   Box,
 } from '@datalayer/primer-addons';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
-import { Button } from '@primer/react';
+import { Button, Spinner, Text } from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import {
   coreStore,
@@ -285,6 +285,7 @@ const AgentRuntimesIAMCallback: React.FC = () => {
       roles: Array.isArray(callbackUser?.roles_ss)
         ? (callbackUser?.roles_ss as string[])
         : [],
+      setRoles: () => {},
       iamProviders: [],
       settings: {},
       unsubscribedFromOutbounds: false,

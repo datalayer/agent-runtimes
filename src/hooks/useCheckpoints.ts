@@ -205,7 +205,7 @@ export function usePauseAgent() {
       const runtimesRunUrl =
         coreStore.getState().configuration?.runtimesRunUrl || '';
       const { pauseRuntime } =
-        await import('@datalayer/core/lib/api/runtimes/runtimes');
+        await import('@datalayer/core/lib/base/api/runtimes/runtimes');
 
       const mode = params.mode || 'light';
       const resp = await pauseRuntime(token, params.podName, runtimesRunUrl, {
@@ -219,7 +219,7 @@ export function usePauseAgent() {
 
       if (resp.checkpoint_id) {
         const { waitForCheckpointStatus } =
-          await import('@datalayer/core/lib/api/runtimes/checkpoints');
+          await import('@datalayer/core/lib/base/api/runtimes/checkpoints');
         const ckpt = await waitForCheckpointStatus(
           token,
           params.podName,
@@ -263,7 +263,7 @@ export function useResumeAgent() {
       const runtimesRunUrl =
         coreStore.getState().configuration?.runtimesRunUrl || '';
       const { resumeRuntime } =
-        await import('@datalayer/core/lib/api/runtimes/runtimes');
+        await import('@datalayer/core/lib/base/api/runtimes/runtimes');
 
       return resumeRuntime(token, params.podName, runtimesRunUrl, {
         agent_spec_id: params.agentSpecId,
@@ -298,9 +298,9 @@ export function useCheckpointAgent() {
       const runtimesRunUrl =
         coreStore.getState().configuration?.runtimesRunUrl || '';
       const { pauseRuntime } =
-        await import('@datalayer/core/lib/api/runtimes/runtimes');
+        await import('@datalayer/core/lib/base/api/runtimes/runtimes');
       const { waitForCheckpointStatus } =
-        await import('@datalayer/core/lib/api/runtimes/checkpoints');
+        await import('@datalayer/core/lib/base/api/runtimes/checkpoints');
 
       const mode = params.mode || 'criu';
       const pauseResp = await pauseRuntime(
@@ -367,7 +367,7 @@ export function useTerminateAgent() {
       const runtimesRunUrl =
         coreStore.getState().configuration?.runtimesRunUrl || '';
       const { deleteRuntime } =
-        await import('@datalayer/core/lib/api/runtimes/runtimes');
+        await import('@datalayer/core/lib/base/api/runtimes/runtimes');
       return deleteRuntime(token, params.podName, runtimesRunUrl);
     },
     onSuccess: () => {
@@ -545,7 +545,7 @@ export function useAgentLifecycle(
             const runtimesRunUrl =
               coreStore.getState().configuration?.runtimesRunUrl || '';
             const { listRuntimes } =
-              await import('@datalayer/core/lib/api/runtimes/runtimes');
+              await import('@datalayer/core/lib/base/api/runtimes/runtimes');
             const runtimesResponse = await listRuntimes(token, runtimesRunUrl);
             const runtimes = runtimesResponse.runtimes || [];
             const aiAgentRuntimes = runtimes.filter(rt => {
