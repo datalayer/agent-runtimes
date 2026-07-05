@@ -2,17 +2,14 @@
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
+import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Checkbox, FormControl, Heading } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
-import {
-  useCoreStore,
-  createDatalayerServiceManager,
-  DatalayerCollaborationProvider,
-} from '@datalayer/core';
+import { useCoreStore, DatalayerCollaborationProvider } from '@datalayer/core';
 import { loadJupyterConfig, Notebook } from '@datalayer/jupyter-react';
 import { ThemedJupyterProvider } from './utils/themedProvider';
 

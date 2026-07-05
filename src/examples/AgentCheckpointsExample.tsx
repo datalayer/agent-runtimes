@@ -1109,7 +1109,7 @@ const AgentCheckpointsExample: React.FC = () => {
   useEffect(() => {
     if (token && !hasSynced.current) {
       hasSynced.current = true;
-      import('@datalayer/core/lib/state').then(({ iamStore }) => {
+      import('../state/substates').then(({ iamStore }) => {
         iamStore.setState({ token });
       });
     }
@@ -1121,7 +1121,7 @@ const AgentCheckpointsExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

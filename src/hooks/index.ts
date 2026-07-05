@@ -198,9 +198,23 @@ export {
 } from './useAIAgentsWebSocket';
 
 export {
+  useProjects,
+  useProject,
+  useUpdateProject,
+  useDeleteProject,
+  useRefreshProjects,
+  useProjectDefaultItems,
+  type ProjectData,
+} from './useProjects';
+
+export {
   useOtelTotalTokens,
   fetchOtelTotalTokens,
   fetchOtelMetricTotal,
   fetchOtelMetricRows,
   toMetricValue,
 } from './useMonitoring';
+
+// Re-export core hooks so consumers can progressively migrate imports to
+// agent-runtimes without splitting runtime/content and IAM hook sources.
+export * from '@datalayer/core/lib/hooks';

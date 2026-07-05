@@ -29,7 +29,7 @@ import {
   subscribeWithSelector,
 } from 'zustand/middleware';
 import type { ServiceManager } from '@jupyterlab/services';
-import type { IRuntimeOptions } from '@datalayer/core/lib/base/stateful/runtimes/apis';
+import type { IRuntimeOptions } from '../stateful/runtimes/apis';
 import type {
   AgentStatus,
   AgentConnection,
@@ -522,8 +522,9 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
         launchAgent: async config => {
           set({ status: 'launching', error: null, isLaunching: true });
           try {
-            const { createRuntime } = await import('@datalayer/core/lib/api');
-            const { runtimesStore } = await import('@datalayer/core/lib/state');
+            const { createRuntime } =
+              await import('../stateful/runtimes/actions');
+            const { runtimesStore } = await import('../state/substates');
             if (config.runtimesRunUrl) {
               runtimesStore.setState({
                 runtimesRunUrl: config.runtimesRunUrl,

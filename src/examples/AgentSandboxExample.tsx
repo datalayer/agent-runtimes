@@ -871,7 +871,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
 // ─── Auth wrapper ──────────────────────────────────────────────────────────
 
 const syncTokenToIamStore = (newToken: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token: newToken });
   });
 };
@@ -890,7 +890,7 @@ const AgentSandboxExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

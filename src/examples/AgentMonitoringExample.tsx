@@ -38,7 +38,7 @@ import { useAIAgentsWebSocket } from '../hooks';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
 import type { ContextSnapshotData } from '../types/context';
 import { parseAgentStreamMessage } from '../types/stream';
-import { useCoreStore } from '@datalayer/core/lib/state';
+import { useCoreStore } from '../state/substates';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -616,7 +616,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 };
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -635,7 +635,7 @@ const AgentMonitoringExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

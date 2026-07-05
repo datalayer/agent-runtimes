@@ -354,7 +354,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 };
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -373,7 +373,7 @@ const AgentToolApprovalsExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

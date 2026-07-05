@@ -2,6 +2,7 @@
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
+import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 /// <reference types="vite/client" />
 
@@ -28,15 +29,11 @@ import {
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
 import { Button, Spinner, Text } from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
-import {
-  coreStore,
-  iamStore,
-  createDatalayerServiceManager,
-} from '@datalayer/core';
+import { coreStore, iamStore } from '@datalayer/core';
 import {
   DATALAYER_IAM_TOKEN_KEY,
   DATALAYER_IAM_USER_KEY,
-} from '@datalayer/core/lib/state';
+} from '../state/substates';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -813,7 +810,7 @@ const ExampleAppThemed: React.FC<{
   const shouldShowAuthScreen = showSignIn && !token;
 
   const syncTokenToIamStore = useCallback((newToken: string | undefined) => {
-    import('@datalayer/core/lib/state').then(({ iamStore: coreIamStore }) => {
+    import('../state/substates').then(({ iamStore: coreIamStore }) => {
       coreIamStore.setState({ token: newToken });
     });
   }, []);

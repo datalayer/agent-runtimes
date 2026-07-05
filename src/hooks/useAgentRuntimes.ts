@@ -14,7 +14,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { IRuntimeOptions } from '@datalayer/core/lib/base/stateful/runtimes/apis';
+import type { IRuntimeOptions } from '../stateful/runtimes/apis';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -481,8 +481,7 @@ export function useAgentRuntimes(
         if (!token) {
           return;
         }
-        const { listRuntimes } =
-          await import('@datalayer/core/lib/base/api/runtimes/runtimes');
+        const { listRuntimes } = await import('../api/runtimes/runtimes');
         const runtimesResponse = await listRuntimes(token, runtimesRunUrl);
         const runtimes = runtimesResponse.runtimes || [];
         const aiAgentRuntimes = runtimes.filter(rt => {

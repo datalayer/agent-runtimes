@@ -2600,7 +2600,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 // ─── Sync token to core IAM store ──────────────────────────────────────────
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -2621,7 +2621,7 @@ const AgentTriggersExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);
