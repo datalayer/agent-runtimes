@@ -3270,6 +3270,64 @@ export const FINANCIAL_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const GALLERY_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-analyze-excel-spreadsheet',
+  version: '0.0.1',
+  name: 'Analyze an Excel Spreadsheet',
+  description: `Upload a spreadsheet or point at a public dataset and get data cleaning, summary statistics, charts, anomaly detection, and a plain-English explanation of what matters. Works great with well-known Kaggle datasets.`,
+  tags: ['gallery', 'spreadsheet', 'excel', 'csv', 'data-analysis', 'kaggle'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'graph',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Load the classic Titanic dataset from https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv and tell me what drives survival.',
+    'Analyze the Iris flowers dataset and show a chart comparing petal length across species.',
+    'Load a sample Superstore sales spreadsheet and summarise revenue, profit, and the top anomalies by category.',
+    'I will upload an Excel file — clean it, compute summary statistics, and highlight the three most important insights.',
+    'Compare monthly trends in this dataset and explain any seasonality you detect in plain English.',
+  ],
+  welcomeMessage:
+    "Hi! I analyse spreadsheets and CSVs. Upload a file or point me at a public dataset (for example a Kaggle CSV) and I'll clean the data, compute summary statistics, plot charts, flag anomalies, and explain what matters. Try one of the suggestions to get started right away.",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a data-analysis assistant specialised in spreadsheets and tabular data. Given a spreadsheet, CSV, or a public dataset URL, you: (1) load the data into a pandas DataFrame, (2) clean it (types, missing values, duplicates), (3) compute summary statistics, (4) create clear charts, (5) detect anomalies and outliers, and (6) explain the most important findings in concise, plain English for a non-technical audience. Prefer well-known public datasets (such as Kaggle datasets) when the user asks for an example. Always show the code you run and narrate your reasoning briefly. If a dataset cannot be accessed, suggest a comparable public alternative.`,
+  systemPromptCodemodeAddons: `Compose data-loading, cleaning, analysis, and plotting steps into efficient code runs. Use pandas for manipulation and matplotlib for charts. Keep each run focused and summarise the result before moving on.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'generate-weekly-reports',
   version: '0.0.1',
@@ -4621,6 +4679,8 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENTSPEC_0_0_1,
   financial: FINANCIAL_AGENTSPEC_0_0_1,
+  'gallery-analyze-excel-spreadsheet':
+    GALLERY_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1,
   'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1,
   'github-agent': GITHUB_AGENT_SPEC_0_0_1,
   'information-routing': INFORMATION_ROUTING_AGENTSPEC_0_0_1,

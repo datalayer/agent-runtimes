@@ -487,6 +487,7 @@ function ChatBaseInner({
   showToolsMenu = true,
   showSkillsMenu = true,
   disableInputPrompt = false,
+  overlay,
   codemodeEnabled = false,
   onToggleCodemode,
   initialModel,
@@ -3341,6 +3342,7 @@ function ChatBaseInner({
     <Box
       className={className}
       sx={{
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -3476,7 +3478,7 @@ function ChatBaseInner({
           padding={padding}
           onSend={() => handleSend()}
           onStop={handleStop}
-          disableInputPrompt={disableInputPrompt}
+          disableInputPrompt={disableInputPrompt || !!overlay}
           showTokenUsage={showTokenUsage}
           agentUsage={agentUsage}
           showModelSelector={showModelSelector}
@@ -3513,6 +3515,41 @@ function ChatBaseInner({
 
       {/* Powered by tag */}
       {showPoweredBy && <PoweredByTag {...poweredByProps} />}
+
+      {/* Overlay (e.g. sign-in gate for anonymous users). Rendered above the
+          chat surface with a translucent backdrop so the (disabled) chat
+          header, controls, and input stay visible behind it. The input and
+          selectors are force-disabled while an overlay is set. */}
+      {overlay && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 3,
+            overflow: 'auto',
+          }}
+        >
+          {/* Translucent dim layer (kept separate so the card stays opaque). */}
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              bg: 'canvas.default',
+              opacity: 0.4,
+              backdropFilter: 'blur(1px)',
+            }}
+          />
+          {/* Foreground gate content (opaque, above the dim layer). */}
+          <Box sx={{ position: 'relative', zIndex: 1, maxWidth: '100%' }}>
+            {overlay}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

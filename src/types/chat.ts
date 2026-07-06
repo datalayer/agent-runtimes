@@ -310,6 +310,13 @@ export interface ChatCommonProps {
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
 
+  /**
+   * Optional overlay rendered above the chat surface (messages + input).
+   * Use this to show a gating UI such as a sign-in form for anonymous users
+   * while keeping the chat visible and its controls disabled behind it.
+   */
+  overlay?: ReactNode;
+
   /** Custom class name */
   className?: string;
 
@@ -604,6 +611,13 @@ export interface ChatBaseProps {
 
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
+
+  /**
+   * Optional overlay rendered above the chat surface (messages + input).
+   * Use this to show a gating UI such as a sign-in form for anonymous users
+   * while keeping the chat visible and its controls disabled behind it.
+   */
+  overlay?: React.ReactNode;
 
   /** Show model selector (for protocols that support it) */
   showModelSelector?: boolean;

@@ -249,6 +249,7 @@ export function Chat({
   showToolsMenu = true,
   showInput = true,
   disableInputPrompt = false,
+  overlay,
   showSkillsMenu = true,
   codemodeEnabled = false,
   onToggleCodemode,
@@ -636,6 +637,7 @@ export function Chat({
             showToolsMenu={showToolsMenu}
             showInput={showInput}
             disableInputPrompt={disableInputPrompt}
+            overlay={overlay}
             showSkillsMenu={showSkillsMenu}
             showTokenUsage={showTokenUsage}
             codemodeEnabled={codemodeEnabled}
