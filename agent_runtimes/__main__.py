@@ -97,7 +97,7 @@ logger = logging.getLogger(__name__)
 app = typer.Typer(
     name="agent-runtimes",
     help="Agent Runtimes CLI - manage and query ai agents",
-    add_completion=False,
+    add_completion=True,
     no_args_is_help=True,
 )
 

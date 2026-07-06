@@ -241,6 +241,27 @@ agent-runtimes --help
 python -m agent_runtimes --help
 ```
 
+## Shell Autocomplete
+
+The CLI supports shell completion via Typer. Install it once for your shell:
+
+```bash
+# Bash
+agent-runtimes --install-completion bash
+
+# Zsh
+agent-runtimes --install-completion zsh
+
+# Fish
+agent-runtimes --install-completion fish
+```
+
+Preview the generated completion script without installing:
+
+```bash
+agent-runtimes --show-completion bash
+```
+
 ## Programmatic Usage
 
 The CLI commands can also be used as a library by other Python packages:

@@ -86,6 +86,24 @@ class TestCLIHelp:
         assert "crawler" in ids
 
 
+class TestCLICompletion:
+    """Tests for shell completion support."""
+
+    def test_help_includes_completion_flags(self) -> None:
+        """Test that root help exposes Typer completion flags."""
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        assert "--install-completion" in result.stdout
+        assert "--show-completion" in result.stdout
+
+    def test_show_completion_bash(self) -> None:
+        """Test that bash completion script is emitted."""
+        result = runner.invoke(app, ["--show-completion", "bash"])
+        assert result.exit_code == 0
+        assert "complete" in result.stdout
+        assert "agent-runtimes" in result.stdout
+
+
 class TestServeValidation:
     """Tests for serve command argument validation."""
 
