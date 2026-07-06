@@ -53,7 +53,6 @@ import {
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { agentSummaryStore } from './utils/agentSummaryStore';
 import { useAgentSummaryStore } from './utils/agentSummaryStore';
-import { uniqueAgentId } from './utils/agentId';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
@@ -81,6 +80,17 @@ const resolveRuntimesUrl = (configured?: string): string => {
     return DEFAULT_RUNTIMES_URL;
   }
   return candidate.replace(/\/$/, '');
+};
+
+const toAgentRuntimesBaseUrl = (value?: string | null): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  const normalized = value.trim().replace(/\/$/, '');
+  if (!normalized) {
+    return undefined;
+  }
+  return normalized.replace('/jupyter/server/', '/agent-runtimes/');
 };
 
 // Load configurations from DOM
@@ -614,6 +624,41 @@ export const ExampleApp: React.FC = () => {
     }
   };
 
+  const createLocalServiceManager = async (): Promise<ServiceManager.IManager> => {
+    const serverSettings = createServerSettings(
+      getJupyterServerUrl(),
+      getJupyterServerToken(),
+    );
+    const manager = new ServiceManager({ serverSettings });
+    await manager.ready;
+    return manager;
+  };
+
+  const createCloudServiceManager = async (): Promise<ServiceManager.IManager> => {
+    const { configuration } = coreStore.getState();
+    if (!configuration?.token) {
+      throw new Error('Cloud runtime requires authentication. Please sign in.');
+    }
+    const activeSummary = agentSummaryStore.getState().active;
+    const selectedEntry = getExampleEntriesList().find(
+      entry => entry.id === selectedExample,
+    );
+    const resolvedSpecId =
+      activeSummary?.exampleId === selectedExample
+        ? activeSummary.specId
+        : undefined;
+    const runtimeDescriptor =
+      resolvedSpecId || selectedEntry?.title || selectedExample;
+    const contextualRuntimeName = `Agent Runtime - ${runtimeDescriptor}`;
+    const manager = await createDatalayerServiceManager(
+      configuration.cpuEnvironment || 'python-3.11',
+      configuration.credits || 100,
+      contextualRuntimeName,
+    );
+    await manager.ready;
+    return manager;
+  };
+
   useEffect(() => {
     // Load configurations
     loadConfigurations();
@@ -621,18 +666,13 @@ export const ExampleApp: React.FC = () => {
     // Create service manager and load example - must be sequential
     const initializeApp = async () => {
       try {
-        const { configuration } = coreStore.getState();
         const runtimeTarget = runtimeTargetStore.getState().target;
 
         // Only create a cloud Datalayer runtime when the user picked "cloud".
         // In "local" mode we must never hit the cloud runtimes API.
-        if (runtimeTarget === 'cloud' && configuration?.token) {
+        if (runtimeTarget === 'cloud') {
           try {
-            const manager = await createDatalayerServiceManager(
-              configuration.cpuEnvironment || 'python-3.11',
-              configuration.credits || 100,
-            );
-            await manager.ready;
+            const manager = await createCloudServiceManager();
             setServiceManager(manager);
 
             // Load initial example
@@ -646,12 +686,7 @@ export const ExampleApp: React.FC = () => {
                 error instanceof Error ? error.message : String(error)
               }`,
             );
-            const serverSettings = createServerSettings(
-              getJupyterServerUrl(),
-              getJupyterServerToken(),
-            );
-            const manager = new ServiceManager({ serverSettings });
-            await manager.ready;
+            const manager = await createLocalServiceManager();
             setServiceManager(manager);
 
             // Load initial example
@@ -659,12 +694,7 @@ export const ExampleApp: React.FC = () => {
           }
         } else {
           // Local runtime target (or no token): use the local Jupyter server.
-          const serverSettings = createServerSettings(
-            getJupyterServerUrl(),
-            getJupyterServerToken(),
-          );
-          const manager = new ServiceManager({ serverSettings });
-          await manager.ready;
+          const manager = await createLocalServiceManager();
           setServiceManager(manager);
 
           // Load initial example
@@ -715,6 +745,23 @@ export const ExampleApp: React.FC = () => {
   ): Promise<void> => {
     if (newTarget === runtimeTarget || !serviceManager) return;
 
+    let nextManager: ServiceManager.IManager;
+    try {
+      nextManager =
+        newTarget === 'cloud'
+          ? await createCloudServiceManager()
+          : await createLocalServiceManager();
+    } catch (switchError) {
+      setError(
+        `Failed to switch to ${newTarget}: ${
+          switchError instanceof Error
+            ? switchError.message
+            : String(switchError)
+        }`,
+      );
+      return;
+    }
+
     // 1) Unmount the current example FIRST so its cleanup hooks run against the
     //    still-valid OLD runtime (AG-UI disconnect, abort fetches, sandboxes).
     setIsChangingExample(true);
@@ -732,7 +779,9 @@ export const ExampleApp: React.FC = () => {
     // 3) Switch the target and re-mount the example (its key includes the
     //    target, so this launches/connects a fresh runtime).
     setRuntimeTarget(newTarget);
-    await loadExample(selectedExample, serviceManager);
+    setServiceManager(nextManager);
+    setError(null);
+    await loadExample(selectedExample, nextManager);
   };
 
   if (loading) {
@@ -784,6 +833,7 @@ export const ExampleApp: React.FC = () => {
       error={error}
       ExampleComponent={ExampleComponent}
       exampleProps={exampleProps}
+      serviceManager={serviceManager}
       onExampleChange={handleExampleChange}
       onRuntimeTargetChange={handleRuntimeTargetChange}
       availableExamples={getExampleEntriesList()}
@@ -801,6 +851,7 @@ const ExampleAppThemed: React.FC<{
   error: string | null;
   ExampleComponent: React.ComponentType<Record<string, unknown>> | null;
   exampleProps: Record<string, unknown>;
+  serviceManager: ServiceManager.IManager | null;
   onExampleChange: (name: string) => Promise<void>;
   onRuntimeTargetChange: (target: ExampleRuntimeTarget) => Promise<void>;
   availableExamples: ExampleEntry[];
@@ -810,6 +861,7 @@ const ExampleAppThemed: React.FC<{
   error,
   ExampleComponent,
   exampleProps,
+  serviceManager,
   onExampleChange,
   onRuntimeTargetChange,
   availableExamples,
@@ -830,7 +882,9 @@ const ExampleAppThemed: React.FC<{
   }, []);
 
   useEffect(() => {
-    const baseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const baseUrl =
+      toAgentRuntimesBaseUrl(serviceManager?.serverSettings.baseUrl) ||
+      resolveExampleAgentRuntimesUrl(runtimeTarget);
     // Seed a base summary for the selected example. Do NOT clobber a richer
     // summary that the mounted example already published (spec id, agent id,
     // readiness) for the same example + target — otherwise fast-settling local
@@ -848,12 +902,12 @@ const ExampleAppThemed: React.FC<{
     }
     agentSummaryStore.getState().setActive({
       exampleId: selectedExample,
-      agentName: uniqueAgentId(selectedExample),
+      agentName: selectedExample,
       location: runtimeTarget,
       baseUrl,
       status: isChangingExample ? 'switching' : 'selected',
     });
-  }, [selectedExample, runtimeTarget, isChangingExample]);
+  }, [selectedExample, runtimeTarget, isChangingExample, serviceManager]);
 
   useEffect(() => {
     // Keep iamStore aligned with persisted auth token on app load/refresh.
