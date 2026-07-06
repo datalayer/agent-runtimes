@@ -9,7 +9,7 @@ import pytest
 
 from agent_runtimes.routes import agents as agents_route
 from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
-from agent_runtimes.specs.models import AIModels, DEFAULT_MODEL
+from agent_runtimes.specs.models import DEFAULT_MODEL, AIModels
 
 
 class _DummyToolset:
