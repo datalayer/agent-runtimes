@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { Spinner } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 
 export interface AgentSummaryData {
@@ -19,6 +20,22 @@ export interface AgentSummaryProps {
   summary: AgentSummaryData | null;
   title?: string;
 }
+
+/**
+ * Statuses that represent a settled runtime (creation finished, for good or
+ * ill). Anything else while the agent has no id is treated as "creating".
+ */
+const SETTLED_STATUSES = new Set([
+  'running',
+  'ready',
+  'resumed',
+  'paused',
+  'terminated',
+  'archived',
+  'stopped',
+  'error',
+  'failed',
+]);
 
 /**
  * Compact agent summary badge with a hover overlay for details.
@@ -43,6 +60,12 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
     return null;
   }
 
+  const normalizedStatus = (summary.status || '').toLowerCase();
+  // The agent is still being created while it has no id and its status has not
+  // settled into a terminal/running state.
+  const isCreating =
+    !summary.agentId && !SETTLED_STATUSES.has(normalizedStatus);
+
   return (
     <Box
       sx={{ position: 'relative' }}
@@ -62,8 +85,12 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           color: 'fg.default',
           fontSize: 0,
           cursor: 'default',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
         }}
       >
+        {isCreating && <Spinner size="small" sx={{ width: 12, height: 12 }} />}
         {summary.agentName} · {summary.location}
       </Box>
 
@@ -88,15 +115,33 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           <Box sx={{ mb: 1, fontWeight: 600 }}>{title}</Box>
           <Box sx={{ color: 'fg.muted' }}>Name: {summary.agentName}</Box>
           <Box sx={{ color: 'fg.muted' }}>Location: {summary.location}</Box>
-          <Box sx={{ color: 'fg.muted' }}>Spec: {summary.specId || 'n/a'}</Box>
+          <Box sx={{ color: 'fg.muted' }}>Spec: {summary.specId || '—'}</Box>
           <Box sx={{ color: 'fg.muted' }}>
-            Status: {summary.status || 'n/a'}
+            Status: {isCreating ? 'creating' : summary.status || '—'}
           </Box>
           <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
-            Base URL: {summary.baseUrl || 'n/a'}
+            Base URL: {summary.baseUrl || '—'}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
-            Agent ID: {summary.agentId || 'pending'}
+          <Box
+            sx={{
+              color: 'fg.muted',
+              wordBreak: 'break-all',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            Agent ID:{' '}
+            {summary.agentId ? (
+              summary.agentId
+            ) : isCreating ? (
+              <>
+                <Spinner size="small" sx={{ width: 12, height: 12 }} />
+                Creating…
+              </>
+            ) : (
+              '—'
+            )}
           </Box>
           <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
             Runtime status:{' '}

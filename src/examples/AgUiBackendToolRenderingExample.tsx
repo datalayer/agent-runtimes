@@ -21,35 +21,35 @@ import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
-import type { ToolCallRenderContext } from '../types';
 import { InlineWeatherCard, type WeatherResult } from './components/weather';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import {
+  useSpecRenderToolResult,
+  specRendererClassName,
+  type SpecRenderer,
+} from './hooks/useSpecRenderToolResult';
 
 /**
- * Render function for tool results - renders weather cards inline in chat
+ * Renderers for this example, keyed by the spec's renderer id. The tool name to
+ * match and the CSS file to load come from the agent spec, not from this file.
  */
-const renderWeatherToolResult = (context: ToolCallRenderContext) => {
-  // Only render for the get_weather tool
-  if (context.toolName !== 'get_weather') {
-    return null;
-  }
-
-  // Extract location from args
-  const location = (context.args as { location?: string })?.location;
-
-  // Cast result to WeatherResult if available
-  const weatherResult = context.result as WeatherResult | undefined;
-
-  return (
-    <InlineWeatherCard
-      location={location}
-      result={weatherResult}
-      status={context.status}
-      error={context.error}
-    />
-  );
+const weatherRenderers: Record<string, SpecRenderer> = {
+  'weather-card': (context, binding) => {
+    const location = (context.args as { location?: string })?.location;
+    const weatherResult = context.result as WeatherResult | undefined;
+    return (
+      <div className={specRendererClassName(binding)}>
+        <InlineWeatherCard
+          location={location}
+          result={weatherResult}
+          status={context.status}
+          error={context.error}
+        />
+      </div>
+    );
+  },
 };
 
 /**
@@ -85,6 +85,12 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
   });
   const backendToolRenderingEndpoint =
     agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
+
+  // Tool name to match and CSS file to load are read from the agent spec.
+  const renderToolResult = useSpecRenderToolResult(
+    AGENTSPEC_ID,
+    weatherRenderers,
+  );
 
   // Optional: still track weather for sidebar display if needed
   const handleStateUpdate = useCallback((_state: unknown) => {
@@ -205,7 +211,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
             position="bottom-right"
             brandColor={brandColor}
             onStateUpdate={handleStateUpdate}
-            renderToolResult={renderWeatherToolResult}
+            renderToolResult={renderToolResult}
             suggestions={[
               {
                 title: 'Paris weather',

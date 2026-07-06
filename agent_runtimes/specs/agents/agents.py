@@ -1127,6 +1127,9 @@ EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1 = Agentspec(
     skills=[],
     tools=["example-get-weather:0.0.1"],
     frontend_tools=[],
+    frontend_render_tools=[
+        {"tool": "get_weather", "renderer": "weather-card", "css": "weather-card.css"}
+    ],
     environment_name="ai-agents-env",
     icon="sun",
     emoji="🌤️",
@@ -1480,6 +1483,9 @@ EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1 = Agentspec(
     skills=[],
     tools=["example-generate-haiku:0.0.1"],
     frontend_tools=[],
+    frontend_render_tools=[
+        {"tool": "generate_haiku", "renderer": "haiku-card", "css": "haiku-card.css"}
+    ],
     environment_name="ai-agents-env",
     icon="pencil",
     emoji="🖋️",

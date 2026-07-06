@@ -5,7 +5,11 @@
 
 import type { SkillSpec } from './skills';
 import type { MCPServer, AgentMCPServerToolConfig } from './mcp';
-import type { ToolSpec, FrontendToolSpec } from './tools';
+import type {
+  ToolSpec,
+  FrontendToolSpec,
+  FrontendRenderToolSpec,
+} from './tools';
 import type { AgentTriggerConfig } from './triggers';
 import type { AgentModelConfig } from './models';
 import type { AgentOutputConfig } from './outputs';
@@ -51,6 +55,8 @@ export interface Agentspec {
   disableToolApprovals?: boolean;
   /** Frontend tool sets available to this agent */
   frontendTools?: FrontendToolSpec[];
+  /** Bindings of backend tools to frontend renderers (tool name + css) */
+  frontendRenderTools?: FrontendRenderToolSpec[];
   /** Runtime environment name for this agent */
   environmentName: string;
   /** Icon identifier or URL for the agent */

@@ -1408,6 +1408,9 @@ export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-get-weather:0.0.1']],
   frontendTools: [],
+  frontendRenderTools: [
+    { tool: 'get_weather', renderer: 'weather-card', css: 'weather-card.css' },
+  ],
   environmentName: 'ai-agents-env',
   icon: 'sun',
   emoji: '🌤️',
@@ -1815,6 +1818,9 @@ export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-generate-haiku:0.0.1']],
   frontendTools: [],
+  frontendRenderTools: [
+    { tool: 'generate_haiku', renderer: 'haiku-card', css: 'haiku-card.css' },
+  ],
   environmentName: 'ai-agents-env',
   icon: 'pencil',
   emoji: '🖋️',

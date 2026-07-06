@@ -57,6 +57,7 @@ import {
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { agentSummaryStore } from './utils/agentSummaryStore';
 import { useAgentSummaryStore } from './utils/agentSummaryStore';
+import { uniqueAgentId } from './utils/agentId';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
 
@@ -850,7 +851,7 @@ const ExampleAppThemed: React.FC<{
     const baseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
     agentSummaryStore.getState().setActive({
       exampleId: selectedExample,
-      agentName: selectedExample,
+      agentName: uniqueAgentId(selectedExample),
       location: runtimeTarget,
       baseUrl,
       status: isChangingExample ? 'switching' : 'selected',

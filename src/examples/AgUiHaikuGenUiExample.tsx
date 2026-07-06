@@ -18,7 +18,6 @@
  */
 import React, {
   useState,
-  useCallback,
   useMemo,
   useRef,
   useImperativeHandle,
@@ -33,10 +32,14 @@ import {
   HaikuDisplay,
   type HaikuResult,
 } from './components/haiku';
-import type { ToolCallRenderContext } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import {
+  useSpecRenderToolResult,
+  specRendererClassName,
+  type SpecRenderer,
+} from './hooks/useSpecRenderToolResult';
 
 /**
  * Ref handle for haiku state synchronization between chat and main display
@@ -125,56 +128,61 @@ const AgUiHaikuGenUiExample: React.FC = () => {
   const processedToolCallIds = useRef<Set<string>>(new Set());
 
   /**
-   * Render function for tool results - renders haiku cards inline in chat
-   * and also updates the main display
+   * Renderers keyed by the spec's renderer id. The tool name to match and the
+   * CSS file to load come from the agent spec, not from this file.
    */
-  const renderHaikuToolResult = useCallback(
-    (context: ToolCallRenderContext) => {
-      // Only render for the generate_haiku tool
-      if (context.toolName !== 'generate_haiku') {
-        return null;
-      }
+  const haikuRenderers = useMemo<Record<string, SpecRenderer>>(
+    () => ({
+      'haiku-card': (context, binding) => {
+        // Extract haiku data from args (the tool parameters are what we render)
+        const args = context.args as {
+          japanese?: string[];
+          english?: string[];
+          gradient?: string;
+        };
 
-      // Extract haiku data from args (the tool's parameters are what we render)
-      const args = context.args as {
-        japanese?: string[];
-        english?: string[];
-        gradient?: string;
-      };
+        // Build haiku result from args
+        const haiku: HaikuResult | undefined =
+          args.japanese && args.english
+            ? {
+                japanese: args.japanese,
+                english: args.english,
+                gradient:
+                  args.gradient ||
+                  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              }
+            : undefined;
 
-      // Build haiku result from args
-      const haiku: HaikuResult | undefined =
-        args.japanese && args.english
-          ? {
-              japanese: args.japanese,
-              english: args.english,
-              gradient:
-                args.gradient ||
-                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            }
-          : undefined;
+        // When tool completes successfully, add to main display (deduplicated)
+        if (
+          context.status === 'complete' &&
+          haiku &&
+          displayRef.current &&
+          context.toolCallId &&
+          !processedToolCallIds.current.has(context.toolCallId)
+        ) {
+          processedToolCallIds.current.add(context.toolCallId);
+          displayRef.current.addHaiku(haiku);
+        }
 
-      // When tool completes successfully, add to main display (deduplicated)
-      if (
-        context.status === 'complete' &&
-        haiku &&
-        displayRef.current &&
-        context.toolCallId &&
-        !processedToolCallIds.current.has(context.toolCallId)
-      ) {
-        processedToolCallIds.current.add(context.toolCallId);
-        displayRef.current.addHaiku(haiku);
-      }
-
-      return (
-        <InlineHaikuCard
-          haiku={haiku}
-          status={context.status}
-          error={context.error}
-        />
-      );
-    },
+        return (
+          <div className={specRendererClassName(binding)}>
+            <InlineHaikuCard
+              haiku={haiku}
+              status={context.status}
+              error={context.error}
+            />
+          </div>
+        );
+      },
+    }),
     [],
+  );
+
+  // Tool name to match and CSS file to load are read from the agent spec.
+  const renderToolResult = useSpecRenderToolResult(
+    AGENTSPEC_ID,
+    haikuRenderers,
   );
 
   return (
@@ -305,7 +313,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
             position="bottom-right"
             brandColor={brandColor}
             defaultOpen={true}
-            renderToolResult={renderHaikuToolResult}
+            renderToolResult={renderToolResult}
             hideMessagesAfterToolUI={true}
             suggestions={[
               {

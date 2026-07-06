@@ -222,6 +222,12 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                 versioned_ref(*split_spec_ref(ft))
                 for ft in spec.get("frontend_tools", [])
             ]
+            frontend_render_tools = spec.get("frontend_render_tools") or []
+            frontend_render_tools_py_line = (
+                f"    frontend_render_tools={_fmt_py_literal(frontend_render_tools)},\n"
+                if frontend_render_tools
+                else ""
+            )
 
             # Format optional fields
             icon = f'"{spec.get("icon")}"' if spec.get("icon") else "None"
@@ -373,7 +379,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
     skills={_fmt_list(skill_refs)},
     tools={_fmt_list(tool_refs)},
 {disable_tool_approvals_line}    frontend_tools={_fmt_list(frontend_tool_refs)},
-    environment_name="{spec.get("environment_name", "ai-agents-env")}",
+{frontend_render_tools_py_line}    environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
     emoji={emoji},
     color={color},
@@ -817,6 +823,14 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             else:
                 frontend_tools_str = ""
 
+            # Frontend render tools - inline structured data read verbatim
+            frontend_render_tools = spec.get("frontend_render_tools") or []
+            frontend_render_tools_ts_line = (
+                f"    frontendRenderTools: {_fmt_ts_literal(frontend_render_tools)},\n"
+                if frontend_render_tools
+                else ""
+            )
+
             # Format tags and suggestions as arrays
             tags = spec.get("tags", [])
             tags_str = "[" + ", ".join(f"'{t}'" for t in tags) + "]"
@@ -930,7 +944,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
 {disable_tool_approvals_line}    frontendTools: [{frontend_tools_str}],
-    environmentName: '{spec.get("environment_name", "ai-agents-env")}',
+{frontend_render_tools_ts_line}    environmentName: '{spec.get("environment_name", "ai-agents-env")}',
     icon: {icon},
     emoji: {emoji},
     color: {color},
