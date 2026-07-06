@@ -624,40 +624,44 @@ export const ExampleApp: React.FC = () => {
     }
   };
 
-  const createLocalServiceManager = async (): Promise<ServiceManager.IManager> => {
-    const serverSettings = createServerSettings(
-      getJupyterServerUrl(),
-      getJupyterServerToken(),
-    );
-    const manager = new ServiceManager({ serverSettings });
-    await manager.ready;
-    return manager;
-  };
+  const createLocalServiceManager =
+    async (): Promise<ServiceManager.IManager> => {
+      const serverSettings = createServerSettings(
+        getJupyterServerUrl(),
+        getJupyterServerToken(),
+      );
+      const manager = new ServiceManager({ serverSettings });
+      await manager.ready;
+      return manager;
+    };
 
-  const createCloudServiceManager = async (): Promise<ServiceManager.IManager> => {
-    const { configuration } = coreStore.getState();
-    if (!configuration?.token) {
-      throw new Error('Cloud runtime requires authentication. Please sign in.');
-    }
-    const activeSummary = agentSummaryStore.getState().active;
-    const selectedEntry = getExampleEntriesList().find(
-      entry => entry.id === selectedExample,
-    );
-    const resolvedSpecId =
-      activeSummary?.exampleId === selectedExample
-        ? activeSummary.specId
-        : undefined;
-    const runtimeDescriptor =
-      resolvedSpecId || selectedEntry?.title || selectedExample;
-    const contextualRuntimeName = `Agent Runtime - ${runtimeDescriptor}`;
-    const manager = await createDatalayerServiceManager(
-      configuration.cpuEnvironment || 'python-3.11',
-      configuration.credits || 100,
-      contextualRuntimeName,
-    );
-    await manager.ready;
-    return manager;
-  };
+  const createCloudServiceManager =
+    async (): Promise<ServiceManager.IManager> => {
+      const { configuration } = coreStore.getState();
+      if (!configuration?.token) {
+        throw new Error(
+          'Cloud runtime requires authentication. Please sign in.',
+        );
+      }
+      const activeSummary = agentSummaryStore.getState().active;
+      const selectedEntry = getExampleEntriesList().find(
+        entry => entry.id === selectedExample,
+      );
+      const resolvedSpecId =
+        activeSummary?.exampleId === selectedExample
+          ? activeSummary.specId
+          : undefined;
+      const runtimeDescriptor =
+        resolvedSpecId || selectedEntry?.title || selectedExample;
+      const contextualRuntimeName = `Agent Runtime - ${runtimeDescriptor}`;
+      const manager = await createDatalayerServiceManager(
+        configuration.cpuEnvironment || 'python-3.11',
+        configuration.credits || 100,
+        contextualRuntimeName,
+      );
+      await manager.ready;
+      return manager;
+    };
 
   useEffect(() => {
     // Load configurations
@@ -1065,8 +1069,12 @@ const ExampleAppThemed: React.FC<{
                 const grouped = new Map<string, typeof rest>();
                 for (const ex of rest) {
                   const g = groupOf(ex.id);
-                  if (!grouped.has(g)) grouped.set(g, []);
-                  grouped.get(g)!.push(ex);
+                  const group = grouped.get(g);
+                  if (group) {
+                    group.push(ex);
+                  } else {
+                    grouped.set(g, [ex]);
+                  }
                 }
                 for (const list of grouped.values()) {
                   list.sort((a, b) => a.title.localeCompare(b.title));

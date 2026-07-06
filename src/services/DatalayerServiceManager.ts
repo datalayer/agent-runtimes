@@ -26,8 +26,8 @@ const normalizeRuntimeName = (value?: string): string | undefined => {
   }
   const normalized = String(value)
     .trim()
-    .replace(/^['\"]+/, '')
-    .replace(/['\"]+$/, '')
+    .replace(/^['"]+/, '')
+    .replace(/['"]+$/, '')
     .replace(/\s+/g, ' ')
     .trim();
   return normalized || undefined;
@@ -60,14 +60,16 @@ export const createDatalayerServiceManager = async (
 ): Promise<ServiceManager.IManager> => {
   const { configuration } = coreStore.getState();
   const token = configuration?.token || '';
+  const defaultEnvironmentName =
+    DEFAULT_DATALAYER_CONFIG.cpuEnvironment ?? 'ai-agents-env';
+  const defaultCredits = DEFAULT_DATALAYER_CONFIG.credits ?? 100;
 
   // Use provided values or fall back to config or defaults
   const actualEnvironmentName =
     normalizeEnvironmentName(environmentName) ||
     normalizeEnvironmentName(configuration?.cpuEnvironment) ||
-    DEFAULT_DATALAYER_CONFIG.cpuEnvironment!;
-  const actualCredits =
-    credits ?? configuration?.credits ?? DEFAULT_DATALAYER_CONFIG.credits!;
+    defaultEnvironmentName;
+  const actualCredits = credits ?? configuration?.credits ?? defaultCredits;
   const actualRuntimeName =
     normalizeRuntimeName(runtimeName) ||
     `Agent Runtime - ${new Date().toISOString()}`;
@@ -96,15 +98,6 @@ export const createDatalayerServiceManager = async (
     });
 
     const serviceManager = new ServiceManager({ serverSettings });
-
-    console.log('Created Datalayer service manager:', {
-      environmentName: actualEnvironmentName,
-      credits: actualCredits,
-      givenName: actualRuntimeName,
-      reservationId: runtime.reservation_id,
-      podName: runtime.pod_name,
-      ingress: runtime.ingress,
-    });
 
     return serviceManager;
   } catch (error) {
