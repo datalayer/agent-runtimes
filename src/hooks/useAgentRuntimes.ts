@@ -103,6 +103,11 @@ export interface UseAgentReturn {
   createAgent: (
     config?: AgentConfig,
   ) => Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>>;
+  /**
+   * Delete the current agent on the server and reset in-process runtime state
+   * so a fresh runtime/agent can be launched.
+   */
+  teardown: () => Promise<void>;
   /** Whether agent creation is currently in progress */
   isCreating: boolean;
 
@@ -413,6 +418,33 @@ export function useAgentRuntimes(
     [agentSpecId, agentConfig, agentSpec, hasSpec, runtime, storeCreateAgent],
   );
 
+  // ─── Teardown ───────────────────────────────────────────────────────
+
+  const teardown = useCallback(async () => {
+    const agentId = runtime?.agentId;
+    const agentBaseUrl = runtime?.agentBaseUrl;
+    if (agentId && agentBaseUrl) {
+      try {
+        const { token } = await getAuthHeaders();
+        await fetch(
+          `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
+          {
+            method: 'DELETE',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
+      } catch {
+        // Best-effort teardown: ignore network / 404 errors.
+      }
+    }
+    // Reset in-process runtime state so a fresh agent can be launched.
+    hasCreatedAgentRef.current = false;
+    hasAutoStarted.current = false;
+    setLifecycleStatus('idle');
+    setLifecycleError(null);
+    agentRuntimeStore.getState().reset();
+  }, [runtime?.agentId, runtime?.agentBaseUrl, getAuthHeaders]);
+
   // ─── Auto-create agent when runtime is ready (connect mode) ───────
 
   useEffect(() => {
@@ -611,6 +643,7 @@ export function useAgentRuntimes(
     endpoint,
     serviceManager,
     createAgent,
+    teardown,
     isCreating,
 
     // Status

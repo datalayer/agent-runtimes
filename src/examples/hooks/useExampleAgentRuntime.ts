@@ -33,6 +33,11 @@ interface UseExampleAgentRuntimeResult {
     endpoint?: string;
     isReady?: boolean;
   }>;
+  /**
+   * Tear down the agent launched by this hook: delete it on the server and
+   * wipe in-process agent state so a fresh runtime can be launched.
+   */
+  teardown: () => Promise<void>;
 }
 
 /**
@@ -65,17 +70,24 @@ export function useExampleAgentRuntime(
     [agentName, specId, agentConfig],
   );
 
-  const { runtime, status, isReady, error, connectToRuntime, createAgent } =
-    useAgentRuntimes({
-      agentSpecId: isCloud ? specId : undefined,
-      autoCreateAgent,
-      autoStart: isCloud ? autoStart : false,
-      runtimeCreationTarget: isCloud
-        ? 'backend-services'
-        : 'local-agent-runtimes',
-      runtimeCreationBaseUrl: isCloud ? undefined : baseUrl,
-      agentConfig: combinedConfig,
-    });
+  const {
+    runtime,
+    status,
+    isReady,
+    error,
+    connectToRuntime,
+    createAgent,
+    teardown,
+  } = useAgentRuntimes({
+    agentSpecId: isCloud ? specId : undefined,
+    autoCreateAgent,
+    autoStart: isCloud ? autoStart : false,
+    runtimeCreationTarget: isCloud
+      ? 'backend-services'
+      : 'local-agent-runtimes',
+    runtimeCreationBaseUrl: isCloud ? undefined : baseUrl,
+    agentConfig: combinedConfig,
+  });
 
   useEffect(() => {
     if (isCloud) {
@@ -126,5 +138,6 @@ export function useExampleAgentRuntime(
     isReady,
     error,
     createAgent,
+    teardown,
   };
 }

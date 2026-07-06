@@ -43,6 +43,7 @@ import {
   useChatStore,
   useConversationStore,
 } from '../stores';
+import { teardownExampleAgents } from './utils/teardownAgents';
 import { OAuthCallback } from '../identity';
 import {
   EXAMPLES,
@@ -698,73 +699,43 @@ export const ExampleApp: React.FC = () => {
       requestAnimationFrame(() => resolve());
     });
 
-    // 2) Tear down any server-side agents created by the previous example.
-    //    Each example caches its agent id in sessionStorage via
-    //    `uniqueAgentId(baseName)` under key `agent-runtimes:agentId:<base>`.
-    //    Delete those agents on the server and drop the cached ids so the
-    //    next example (and a future re-entry into this one) boots fresh.
+    // 2) Tear down any server-side agents created by the previous example and
+    //    wipe in-process agent state so the next example boots fresh.
     const agentBaseUrl = resolveExampleAgentRuntimesUrl(
       runtimeTargetStore.getState().target,
     );
     const token = useSimpleAuthStore.getState().token;
-    const agentIdKeys: string[] = [];
-    try {
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && key.startsWith('agent-runtimes:agentId:')) {
-          agentIdKeys.push(key);
-        }
-      }
-    } catch {
-      // sessionStorage unavailable; skip teardown.
-    }
-    await Promise.all(
-      agentIdKeys.map(async key => {
-        let agentId: string | null = null;
-        try {
-          agentId = sessionStorage.getItem(key);
-        } catch {
-          /* ignore */
-        }
-        if (!agentId) return;
-        try {
-          await fetch(
-            `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
-            {
-              method: 'DELETE',
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            },
-          );
-        } catch {
-          // Best-effort teardown: ignore network / 404 errors.
-        }
-        try {
-          sessionStorage.removeItem(key);
-        } catch {
-          /* ignore */
-        }
-      }),
-    );
+    await teardownExampleAgents(agentBaseUrl, token);
 
-    // 3) Wipe every piece of in-process agent state so the next example boots
-    //    with a clean slate (no leftover messages, threads, pending tool
-    //    calls, code sandbox snapshots, monitoring caches, or sockets).
-    useChatStore.getState().reset();
-    useConversationStore.getState().clearAll();
-    agentRuntimeStore.getState().reset();
-
-    // 4) Drop the persisted slice from localStorage so a fresh example never
-    //    rehydrates a previous example's agents / monitoring cache.
-    try {
-      localStorage.removeItem('agent-runtimes-storage');
-    } catch {
-      // Ignore storage failures (e.g. private mode).
-    }
-
-    // 5) Load and mount the new example.
+    // 3) Load and mount the new example.
     setSelectedExample(newExample);
     localStorage.setItem('selectedExample', newExample);
     await loadExample(newExample, serviceManager);
+  };
+
+  const handleRuntimeTargetChange = async (
+    newTarget: ExampleRuntimeTarget,
+  ): Promise<void> => {
+    if (newTarget === runtimeTarget || !serviceManager) return;
+
+    // 1) Unmount the current example FIRST so its cleanup hooks run against the
+    //    still-valid OLD runtime (AG-UI disconnect, abort fetches, sandboxes).
+    setIsChangingExample(true);
+    setExampleComponent(null);
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    // 2) Tear down the agents created on the OLD target, then wipe state so a
+    //    brand-new runtime is launched for the new target.
+    const oldAgentBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const token = useSimpleAuthStore.getState().token;
+    await teardownExampleAgents(oldAgentBaseUrl, token);
+
+    // 3) Switch the target and re-mount the example (its key includes the
+    //    target, so this launches/connects a fresh runtime).
+    setRuntimeTarget(newTarget);
+    await loadExample(selectedExample, serviceManager);
   };
 
   if (loading) {
@@ -861,6 +832,21 @@ const ExampleAppThemed: React.FC<{
 
   useEffect(() => {
     const baseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    // Seed a base summary for the selected example. Do NOT clobber a richer
+    // summary that the mounted example already published (spec id, agent id,
+    // readiness) for the same example + target — otherwise fast-settling local
+    // agents lose their spec/agent id in the indicator.
+    const current = agentSummaryStore.getState().active;
+    const alreadyEnriched =
+      current != null &&
+      current.exampleId === selectedExample &&
+      current.location === runtimeTarget &&
+      (current.specId != null ||
+        current.agentId != null ||
+        current.isReady !== undefined);
+    if (alreadyEnriched) {
+      return;
+    }
     agentSummaryStore.getState().setActive({
       exampleId: selectedExample,
       agentName: uniqueAgentId(selectedExample),
@@ -1079,7 +1065,9 @@ const ExampleAppThemed: React.FC<{
               as="select"
               value={runtimeTarget}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                setRuntimeTarget(e.target.value as ExampleRuntimeTarget)
+                void handleRuntimeTargetChange(
+                  e.target.value as ExampleRuntimeTarget,
+                )
               }
               disabled={isChangingExample}
               aria-label="Runtime target"
@@ -1214,9 +1202,12 @@ const ExampleAppThemed: React.FC<{
               <p>Please wait while the example loads.</p>
             </Box>
           ) : ExampleComponent ? (
-            <ExampleErrorBoundary key={selectedExample}>
-              <ExampleWrapper key={selectedExample}>
-                <ExampleComponent key={selectedExample} {...exampleProps} />
+            <ExampleErrorBoundary key={`${selectedExample}:${runtimeTarget}`}>
+              <ExampleWrapper key={`${selectedExample}:${runtimeTarget}`}>
+                <ExampleComponent
+                  key={`${selectedExample}:${runtimeTarget}`}
+                  {...exampleProps}
+                />
               </ExampleWrapper>
             </ExampleErrorBoundary>
           ) : null}
