@@ -25,7 +25,7 @@ jobs:
     uses: ./.github/workflows/reusable-typescript.yml
     with:
       node-version: '22.x'
-      install-command: 'npm install --workspaces'
+      install-command: 'npm ci --workspaces --include-workspace-root --no-audit --no-fund'
       build-command: 'npm run build'
       run-format-check: false
       run-lint: false
@@ -49,7 +49,7 @@ jobs:
         node-version: '22.x'
 
     - name: Install dependencies
-      run: npm install --workspaces
+      run: npm ci --workspaces --include-workspace-root --no-audit --no-fund
 
     - name: Build project
       run: npm run build

@@ -9,7 +9,7 @@ import pytest
 
 from agent_runtimes.routes import agents as agents_route
 from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
-from agent_runtimes.specs.models import DEFAULT_MODEL
+from agent_runtimes.specs.models import AIModels, DEFAULT_MODEL
 
 
 class _DummyToolset:
@@ -199,11 +199,13 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
 async def test_create_agent_from_forwarded_agent_spec_payload(
     creation_spy: dict[str, object],
 ) -> None:
+    forwarded_model = AIModels.OPENAI_GPT_4_1.value
+
     request = CreateAgentRequest(
         name="Forwarded Spec Agent",
         agent_spec={
             "description": "Forwarded description",
-            "model": "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            "model": forwarded_model,
             "systemPrompt": "Forwarded prompt",
             "tools": ["fetch_webpage"],
             "protocol": "vercel-ai",
@@ -215,7 +217,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
 
     assert response.id == "forwarded-spec-agent"
     assert response.transport == "vercel-ai"
-    assert creation_spy["pydantic_model"] == "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    assert creation_spy["pydantic_model"] == forwarded_model
     assert creation_spy["tool_ids"] == ["fetch_webpage"]
 
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
