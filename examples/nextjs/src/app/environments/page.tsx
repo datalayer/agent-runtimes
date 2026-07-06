@@ -13,7 +13,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIAMStore } from '@datalayer/core/state';
-import { getEnvironments } from '@datalayer/core/lib/runtimes';
+import { getEnvironments } from '@datalayer/agent-runtimes/lib/runtimes';
 import { BeakerIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Flash, Heading, Label, Text, Spinner } from '@primer/react';

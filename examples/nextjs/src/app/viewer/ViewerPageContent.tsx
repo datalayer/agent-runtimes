@@ -16,7 +16,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useIAMStore } from '@datalayer/core/state';
 import { useActiveNotebook } from '@/contexts/ActiveNotebookContext';
-import { deleteRuntime } from '@datalayer/core/lib/runtimes';
+import { deleteRuntime } from '@datalayer/agent-runtimes/lib/runtimes';
 import { useCache } from '@datalayer/core/hooks';
 import { getStoredRuntime, removeStoredRuntime } from '@/utils/runtimeStorage';
 import { Box } from '@datalayer/primer-addons';
