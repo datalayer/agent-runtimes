@@ -159,7 +159,7 @@ class RuntimeClient(
 
         client_for_request = self
         if api_key:
-            client_for_request = DatalayerClient(urls=self._urls, token=api_key)
+            client_for_request = DatalayerClient(urls=self._urls, api_key=api_key)
 
         if snapshot_name is not None:
             snapshots = self.list_snapshots()
@@ -221,7 +221,7 @@ class RuntimeClient(
             environment=runtime_data["environment_name"],
             datalayer_url=self._urls.datalayer_url,
             iam_url=self._urls.iam_url,
-            token=api_key or self._token,
+            token=api_key or self._get_api_key(),
             ingress=runtime_data["ingress"],
             jupyter_token=runtime_data["token"],
             pod_name=runtime_data["pod_name"],
@@ -267,7 +267,7 @@ class RuntimeClient(
                     name=runtime["given_name"],
                     environment=runtime["environment_name"],
                     pod_name=runtime["pod_name"],
-                    token=self._token,
+                    token=self._get_api_key(),
                     ingress=runtime["ingress"],
                     reservation_id=runtime["reservation_id"],
                     uid=runtime["uid"],
@@ -302,7 +302,7 @@ class RuntimeClient(
         pod_name = runtime.pod_name if isinstance(runtime, RuntimeService) else runtime
         if pod_name is not None:
             if api_key:
-                client_for_request = DatalayerClient(urls=self._urls, token=api_key)
+                client_for_request = DatalayerClient(urls=self._urls, api_key=api_key)
                 return client_for_request._terminate_runtime(pod_name).get(
                     "success", False
                 )
@@ -348,7 +348,7 @@ class RuntimeClient(
             name=runtime_data.get("given_name", pod_name),
             environment=runtime_data.get("environment_name", ""),
             pod_name=runtime_data.get("pod_name", pod_name),
-            token=self._token,
+            token=self._get_api_key(),
             ingress=runtime_data.get("ingress"),
             reservation_id=runtime_data.get("reservation_id"),
             uid=runtime_data.get("uid"),
@@ -422,7 +422,7 @@ class RuntimeClient(
         """
         client_for_request = self
         if api_key:
-            client_for_request = DatalayerClient(urls=self._urls, token=api_key)
+            client_for_request = DatalayerClient(urls=self._urls, api_key=api_key)
 
         runtime_service = (
             runtime
@@ -432,7 +432,7 @@ class RuntimeClient(
 
         endpoint = str(runtime_service.ingress or "").rstrip("/")
         runtime_token = str(
-            runtime_service.jupyter_token or client_for_request._get_token() or ""
+            runtime_service.jupyter_token or client_for_request._get_api_key() or ""
         ).strip()
 
         result: dict[str, Any] = {

@@ -1304,11 +1304,7 @@ export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
   icon: 'clock',
   emoji: '🕒',
   color: '#6366F1',
-  suggestions: [
-    'What time is it?',
-    "What's the current date?",
-    'What time is it in Tokyo?',
-  ],
+  suggestions: ['What is the current time?', "What's the current date?"],
   welcomeMessage: 'Hi! Ask me for the current time in any timezone.\n',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
@@ -1357,9 +1353,8 @@ export const EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📋',
   color: '#6366F1',
   suggestions: [
-    'Plan and build a simple website',
-    'Organize a small research project',
-    'Set up a data pipeline step by step',
+    'Create a project plan for building a mobile app.',
+    'Generate a marketing strategy for a new product launch.',
   ],
   welcomeMessage:
     "Hi! Give me a goal and I'll create a plan, then work through the steps.\n",
@@ -1418,9 +1413,8 @@ export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🌤️',
   color: '#6366F1',
   suggestions: [
-    "What's the weather in Tokyo?",
-    'Weather in New York',
-    "How's the weather in London?",
+    "What's the weather like in Paris?",
+    'Show me the weather forecast for Tokyo.',
   ],
   welcomeMessage: 'Hi! Ask me about the weather in any city.\n',
   welcomeNotebook: undefined,
@@ -1826,9 +1820,9 @@ export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🖋️',
   color: '#6366F1',
   suggestions: [
-    'Write a haiku about spring',
-    'Create a haiku about the ocean',
-    'Make a haiku about city lights',
+    'Write me a haiku about cherry blossoms in spring.',
+    'Create a haiku about coding late at night.',
+    'Generate a haiku about hiking a mountain trail.',
   ],
   welcomeMessage: "Hi! Give me a theme and I'll craft a haiku for you.\n",
   welcomeNotebook: undefined,
@@ -2000,9 +1994,8 @@ export const EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧑‍⚖️',
   color: '#6366F1',
   suggestions: [
-    'Plan a deployment pipeline',
-    'Help me plan a code review process',
-    'Create a plan to set up a new project',
+    'Plan a weekend trip to Paris.',
+    'Plan a birthday party for next Saturday.',
   ],
   welcomeMessage:
     "Hi! Describe a task and I'll draft a step-by-step plan for you to review.\n",
@@ -2640,9 +2633,8 @@ export const EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🍳',
   color: '#6366F1',
   suggestions: [
-    'Make a quick vegetarian dinner',
-    'Add chicken to the recipe',
-    'Make it spicy and high protein',
+    'Help me create a simple pasta recipe.',
+    'Add tomatoes to the recipe.',
   ],
   welcomeMessage:
     "Hi! Tell me what you'd like to cook and I'll build a recipe with you.\n",
@@ -2980,9 +2972,8 @@ export const EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🎨',
   color: '#6366F1',
   suggestions: [
-    'Show me a plan with steps',
-    'Display some rich content',
-    'Render a summary card',
+    'Create a project plan for building a mobile app.',
+    'Generate a marketing strategy for a new product launch.',
   ],
   welcomeMessage:
     "Hi! Ask me to show something and I'll render it using the available UI tools.\n",

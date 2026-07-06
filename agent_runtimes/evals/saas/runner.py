@@ -440,7 +440,7 @@ def execute_evalset_spec(
     runtimes_by_spec: dict[str, Any] = {}
     local_runtime: Optional[LocalAgentRuntime] = None
     local_base_url = str(local_agent_base_url or DEFAULT_LOCAL_AGENT_BASE_URL)
-    token = str(client._get_token() or "")
+    token = str(client._get_api_key() or "")
     try:
         if target == "cloud":
             for spec_id in normalized_specs:

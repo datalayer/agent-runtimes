@@ -14,10 +14,8 @@ import dynamic from 'next/dynamic';
 import { useEffect, useState, useRef } from 'react';
 import { ServiceManager } from '@jupyterlab/services';
 import { INotebookContent } from '@jupyterlab/nbformat';
-import {
-  createDatalayerServiceManager,
-  reconnectToRuntime,
-} from '@datalayer/core/services';
+import { createDatalayerServiceManager } from '@datalayer/core/lib/services/DatalayerServiceManager';
+import { reconnectToRuntime } from '@datalayer/core/lib/services/reconnectToRuntime';
 import { DatalayerCollaborationProvider } from '@datalayer/core/collaboration';
 import {
   useIAMStore,

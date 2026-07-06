@@ -46,7 +46,7 @@ def _resolve_token(token: Optional[str] = None) -> str:
         from agent_runtimes.client import DatalayerClient
 
         client = DatalayerClient()
-        return client._get_token() or ""
+        return client._get_api_key() or ""
     except Exception:
         return ""
 

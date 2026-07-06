@@ -70,6 +70,21 @@ declare global {
   }
 }
 
+const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
+
+const resolveRuntimesUrl = (configured?: string): string => {
+  const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
+  const envBaseUrl = import.meta.env.VITE_DATALAYER_URL;
+  const candidate = configured || envRuntimeUrl || envBaseUrl;
+  if (!candidate) {
+    return DEFAULT_RUNTIMES_URL;
+  }
+  if (candidate.includes('prod1.datalayer.run')) {
+    return DEFAULT_RUNTIMES_URL;
+  }
+  return candidate.replace(/\/$/, '');
+};
+
 // Load configurations from DOM
 const loadConfigurations = () => {
   // Load Datalayer configuration
@@ -92,6 +107,9 @@ const loadConfigurations = () => {
       }
 
       if (datalayerConfig.datalayerUrl) {
+        datalayerConfig.runtimesUrl = resolveRuntimesUrl(
+          datalayerConfig.runtimesUrl,
+        );
         coreStore.getState().setConfiguration(datalayerConfig);
 
         // Also set the token in the IAM store for API authentication

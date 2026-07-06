@@ -29,6 +29,16 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
 }) => {
   const [isHovering, setIsHovering] = useState(false);
 
+  const runtimeStatusUrl = summary?.baseUrl
+    ? (() => {
+        const normalized = summary.baseUrl.replace(/\/$/, '');
+        if (normalized.endsWith('/api/v1')) {
+          return `${normalized}/runtime/status`;
+        }
+        return `${normalized}/api/v1/runtime/status`;
+      })()
+    : undefined;
+
   if (!summary) {
     return null;
   }
@@ -87,6 +97,22 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           </Box>
           <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
             Agent ID: {summary.agentId || 'pending'}
+          </Box>
+          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+            Runtime status:{' '}
+            {runtimeStatusUrl ? (
+              <Box
+                as="a"
+                href={runtimeStatusUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+              >
+                {runtimeStatusUrl}
+              </Box>
+            ) : (
+              'n/a'
+            )}
           </Box>
         </Box>
       )}

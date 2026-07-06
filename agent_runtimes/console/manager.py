@@ -70,7 +70,7 @@ class RuntimeManager(KernelHttpManager):
 
         # Initialize DatalayerClient for modern API access
         urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
-        self._client = DatalayerClient(urls=urls, token=token)
+        self._client = DatalayerClient(urls=urls, api_key=token)
 
     @property
     def kernel_url(self) -> Optional[str]:

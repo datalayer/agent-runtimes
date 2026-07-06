@@ -41,7 +41,7 @@ def list_snapshots(
 ) -> None:
     """List all snapshots."""
     try:
-        client = DatalayerClient(token=token)
+        client = DatalayerClient(api_key=token)
         snapshots = client.list_snapshots()
 
         # Convert to dict format for display_snapshots
@@ -94,7 +94,7 @@ def create_snapshot(
 ) -> None:
     """Create a snapshot from a running runtime."""
     try:
-        client = DatalayerClient(token=token)
+        client = DatalayerClient(api_key=token)
 
         snapshot = client.create_snapshot(
             pod_name=pod_name,
@@ -133,7 +133,7 @@ def delete_snapshot(
 ) -> None:
     """Delete a snapshot."""
     try:
-        client = DatalayerClient(token=token)
+        client = DatalayerClient(api_key=token)
 
         result = client.delete_snapshot(uid)
 

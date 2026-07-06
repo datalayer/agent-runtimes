@@ -57,7 +57,7 @@ class CodeSandboxExecService:
         self.kernel_manager: Optional[RuntimeManager] = None
         self.kernel_client = None
         self._executing = False
-        self._client = DatalayerClient(token=token)
+        self._client = DatalayerClient(api_key=token)
 
     def handle_sigint(self, *args: Any) -> None:
         """Handle SIGINT signal during kernel execution."""
@@ -98,7 +98,7 @@ class CodeSandboxExecService:
                         raise RuntimeError(f"Code sandbox '{sandbox_name}' not found")
 
                 # Get token using the same method as DatalayerClient
-                token = self._client._get_token()
+                token = self._client._get_api_key()
 
                 # Create a RuntimeManager with proper credentials
                 self.kernel_manager = RuntimeManager(
@@ -872,7 +872,7 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
         The name/ID of the code sandbox to use.
     """
     try:
-        client = DatalayerClient(token=token)
+        client = DatalayerClient(api_key=token)
         runtimes = client.list_runtimes()
 
         if not runtimes:
@@ -932,7 +932,7 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
             sandbox_pod = str(created_runtime.pod_name or "")
             sandbox_ingress = str(created_runtime.ingress or "").rstrip("/")
             sandbox_token = str(
-                created_runtime.jupyter_token or client._get_token() or ""
+                created_runtime.jupyter_token or client._get_api_key() or ""
             )
 
             if not sandbox_ingress or not sandbox_token:
@@ -991,7 +991,7 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
         kernel_id = ""
         try:
             runtime_token = str(
-                getattr(selected, "jupyter_token", "") or client._get_token() or ""
+                getattr(selected, "jupyter_token", "") or client._get_api_key() or ""
             )
             ingress = str(getattr(selected, "ingress", "") or "").rstrip("/")
             if ingress and runtime_token:

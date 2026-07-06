@@ -30,7 +30,7 @@ def _make_client(
 ) -> DatalayerClient:
     """Create a DatalayerClient with optional runtimes URL override."""
     urls = DatalayerURLs.from_environment(iam_url=iam_url, runtimes_url=runtimes_url)
-    return DatalayerClient(urls=urls, token=token)
+    return DatalayerClient(urls=urls, api_key=token)
 
 
 @app.callback()

@@ -19,6 +19,7 @@ import multiprocessing as mp
 import os
 import sys
 import tempfile
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator
@@ -1415,6 +1416,29 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 "a2a": f"{config.api_prefix}/a2a/",
                 "a2ui": f"{config.api_prefix}/a2ui/",
             },
+        }
+
+    @app.get(f"{config.api_prefix}/runtime/status")
+    async def runtime_status() -> dict[str, Any]:
+        """Runtime status endpoint for overlays and quick diagnostics."""
+        startup_info = dict(getattr(app.state, "startup_info", None) or {})
+
+        sandbox_status: dict[str, Any]
+        try:
+            from .services.code_sandbox_manager import get_code_sandbox_manager
+
+            sandbox_status = get_code_sandbox_manager().get_status()
+        except Exception as exc:  # pragma: no cover - best effort
+            sandbox_status = {"error": str(exc)}
+
+        return {
+            "status": "ok",
+            "service": config.title,
+            "version": config.version,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "api_prefix": config.api_prefix,
+            "startup": startup_info,
+            "sandbox": sandbox_status,
         }
 
     # Serve the built frontend assets (agent.html, JS/CSS bundles, etc.)

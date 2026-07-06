@@ -133,9 +133,16 @@ def register_agent_tools(
         )
 
         # Ensure function name is a valid Python identifier for pydantic_ai.
-        # Use spec.id (unversioned) rather than tool_id which may contain
-        # a version suffix like ":0.0.1" that is invalid for LLM APIs.
-        impl.__name__ = _tool_name_to_identifier(spec.id)
+        # Prefer the runtime method name (the actual callable, e.g.
+        # ``get_weather``) so the tool name exposed to the model and emitted
+        # in the AG-UI/Vercel stream matches what agent system prompts and
+        # frontend render handlers expect. Fall back to the unversioned
+        # spec.id only when no runtime method is available.
+        runtime = getattr(spec, "runtime", None)
+        tool_name = (
+            getattr(runtime, "method", None) if runtime is not None else None
+        ) or spec.id
+        impl.__name__ = _tool_name_to_identifier(tool_name)
 
         tool_plain(impl, requires_approval=requires_approval)
         registered.append(impl.__name__)

@@ -40,7 +40,7 @@ def console_connect(
     datalayer_url: Optional[str] = typer.Option(
         None,
         "--datalayer-url",
-        help="Datalayer Run URL",
+        help="Datalayer URL",
     ),
     token: Optional[str] = typer.Option(
         None,
@@ -82,7 +82,7 @@ def console_connect(
         urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
 
         console.print("[green]Starting Datalayer agent console...[/green]")
-        console.print(f"Run URL: {urls.datalayer_url}")
+        console.print(f"Datalayer URL: {urls.datalayer_url}")
         if runtime_name:
             console.print(f"Agent: {runtime_name}")
         console.print("[yellow]Press Ctrl+D or Ctrl+C to exit the console[/yellow]")
@@ -143,7 +143,7 @@ def console_callback_default(
     datalayer_url: Optional[str] = typer.Option(
         None,
         "--datalayer-url",
-        help="Datalayer Run URL",
+        help="Datalayer URL",
     ),
     token: Optional[str] = typer.Option(
         None,

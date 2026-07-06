@@ -34,7 +34,7 @@ def _terminate_runtime_with_core(
         iam_url=runtime_base_url,
         runtimes_url=runtime_base_url,
     )
-    client = DatalayerClient(urls=urls, token=token)
+    client = DatalayerClient(urls=urls, api_key=token)
     return terminate_cloud_agent_runtime(client, runtime_id)
 
 

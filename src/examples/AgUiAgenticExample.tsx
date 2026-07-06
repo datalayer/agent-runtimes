@@ -206,12 +206,12 @@ const AgUiAgenticExample: React.FC = () => {
             defaultOpen={true}
             suggestions={[
               {
-                title: 'Say hello',
-                message: 'Hi',
+                title: 'What time is it?',
+                message: 'What is the current time?',
               },
               {
-                title: 'Capabilities',
-                message: 'What can you help me with?',
+                title: "Today's date",
+                message: "What's the current date?",
               },
             ]}
           />

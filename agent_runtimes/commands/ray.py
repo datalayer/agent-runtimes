@@ -72,7 +72,7 @@ def jobs_callback(ctx: typer.Context) -> None:
 def _make_client(
     token: Optional[str] = None,
 ) -> DatalayerClient:
-    return DatalayerClient(token=token)
+    return DatalayerClient(api_key=token)
 
 
 def _print_json(payload: dict[str, Any]) -> None:

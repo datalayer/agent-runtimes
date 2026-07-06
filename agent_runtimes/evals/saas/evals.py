@@ -81,7 +81,7 @@ def make_client(
         runtimes_url=runtimes_url or None,
         ai_agents_url=ai_agents_url or None,
     )
-    return DatalayerClient(urls=urls, token=(token or api_key))
+    return DatalayerClient(urls=urls, api_key=(token or api_key))
 
 
 def resolve_billable_account_uid(

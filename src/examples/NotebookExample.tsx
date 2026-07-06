@@ -28,26 +28,33 @@ type IJupyterNotebookExampleProps = {
 
 export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
   const { serviceManager } = props;
+
   const extensions = useMemo(
     () => [new CellSidebarExtension({ factory: CellSidebarButton })],
     [],
   );
+
+  if (!serviceManager) {
+    return (
+      <Box as="h1">
+        A Jupyter Notebook
+        <div>Loading...</div>
+      </Box>
+    );
+  }
+
   return (
-    <>
-      <Box as="h1">Jupyter Notebook Example</Box>
-      {serviceManager && (
-        <ThemedJupyterProvider>
-          <Notebook
-            id={NOTEBOOK_ID}
-            nbformat={nbformatExample}
-            serviceManager={serviceManager}
-            startDefaultKernel={true}
-            extensions={extensions}
-            Toolbar={NotebookToolbar}
-          />
-        </ThemedJupyterProvider>
-      )}
-    </>
+    <ThemedJupyterProvider>
+      <Box as="h1">A Jupyter Notebook</Box>
+      <Notebook
+        id={NOTEBOOK_ID}
+        nbformat={nbformatExample}
+        serviceManager={serviceManager}
+        startDefaultKernel={true}
+        extensions={extensions}
+        Toolbar={NotebookToolbar}
+      />
+    </ThemedJupyterProvider>
   );
 };
 

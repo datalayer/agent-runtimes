@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useIAMStore } from '@datalayer/core/state';
 import { useCache } from '@datalayer/core/hooks';
 import { useActiveNotebook } from '@/contexts/ActiveNotebookContext';
-import { getEnvironments } from '@datalayer/core';
+import { getEnvironments } from '@datalayer/core/lib/runtimes';
 import { FileIcon, PlusIcon, BookIcon } from '@primer/octicons-react';
 import {
   Button,

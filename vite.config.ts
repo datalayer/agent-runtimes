@@ -150,7 +150,9 @@ export default defineConfig(({ mode, command }) => {
   if (isExamplesTarget) {
     plugins.unshift({
       name: 'html-transform',
-      transformIndexHtml(html: string) {
+      transformIndexHtml: {
+        order: 'pre' as const,
+        handler(html: string) {
         return html
           .replaceAll('%VITE_DATALAYER_API_KEY%', env.VITE_DATALAYER_API_KEY || '')
           .replaceAll(
@@ -182,6 +184,7 @@ export default defineConfig(({ mode, command }) => {
               `${env.VITE_DATALAYER_URL || 'https://r1.datalayer.run'}/api/jupyter-server`
             ).replace('http', 'ws'),
           );
+        },
       },
     });
   }

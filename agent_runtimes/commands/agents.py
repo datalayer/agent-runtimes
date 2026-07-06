@@ -60,7 +60,7 @@ def _make_client(
     runtimes_url: Optional[str] = None,
 ) -> DatalayerClient:
     urls = DatalayerURLs.from_environment(iam_url=iam_url, runtimes_url=runtimes_url)
-    return DatalayerClient(urls=urls, token=token)
+    return DatalayerClient(urls=urls, api_key=token)
 
 
 def _is_url(value: str) -> bool:
@@ -118,7 +118,7 @@ def _resolve_billable_account_details(
     fall back to the authenticated user profile from whoami.
     """
 
-    resolved_token = str(client._get_token() or "").strip()
+    resolved_token = str(client._get_api_key() or "").strip()
     if not resolved_token:
         return {"uid": billable_account_uid} if billable_account_uid else {}
 
@@ -958,7 +958,7 @@ def inspect_agent_runtime(
 
         refreshed = client.get_runtime(pod_name)
         endpoint = str(refreshed.ingress or "").rstrip("/")
-        runtime_token = str(refreshed.jupyter_token or client._get_token() or "")
+        runtime_token = str(refreshed.jupyter_token or client._get_api_key() or "")
         if not endpoint:
             console.print("[red]Runtime has no ingress endpoint.[/red]")
             raise typer.Exit(1)
