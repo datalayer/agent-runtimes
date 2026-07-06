@@ -28,7 +28,7 @@ Parameters:
       CIDR allowed to reach the public ALB listener on port 80. For production,
       set to your corporate egress IP(s) or front this stack with HTTPS + WAF.
 
-  DatalayerRunUrl:
+  DatalayerUrl:
     Type: String
     Default: https://prod1.datalayer.run
     Description: Datalayer platform base URL.
@@ -38,7 +38,7 @@ Parameters:
     Default: ''
     Description: >
       (Optional) Dedicated ai-inference base URL. When empty, the template
-      falls back to DatalayerRunUrl.
+      falls back to DatalayerUrl.
 
   AgentNodeImage:
     Type: String
@@ -281,19 +281,19 @@ Resources:
             - Name: DATALAYER_API_KEY
               Value: !Ref DatalayerApiKey
             - Name: DATALAYER_URL
-              Value: !Ref DatalayerRunUrl
+              Value: !Ref DatalayerUrl
             - Name: VITE_DATALAYER_URL
-              Value: !Ref DatalayerRunUrl
+              Value: !Ref DatalayerUrl
             - Name: DATALAYER_AI_INFERENCE_URL
               Value: !If
                 - HasDatalayerAiInferenceUrl
                 - !Ref DatalayerAiInferenceUrl
-                - !Ref DatalayerRunUrl
+                - !Ref DatalayerUrl
             - Name: VITE_DATALAYER_AI_INFERENCE_URL
               Value: !If
                 - HasDatalayerAiInferenceUrl
                 - !Ref DatalayerAiInferenceUrl
-                - !Ref DatalayerRunUrl
+                - !Ref DatalayerUrl
             - Name: AGENT_RUNTIMES_PORT
               Value: !Ref AgentNodePort
           LogConfiguration:

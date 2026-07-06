@@ -115,8 +115,8 @@ export class SpaceDTO {
    */
   async refresh(): Promise<void> {
     const token = (this._client as any).getToken();
-    const spacerRunUrl = (this._client as any).getSpacerRunUrl();
-    const response = await users.getMySpaces(token, spacerRunUrl);
+    const spacerUrl = (this._client as any).getSpacerUrl();
+    const response = await users.getMySpaces(token, spacerUrl);
     const freshSpace = response.spaces.find(s => s.uid === this.uid);
     if (freshSpace) {
       this._data = freshSpace;
@@ -181,7 +181,7 @@ export class SpaceDTO {
 
     // Get necessary configuration from Client
     const token = (this._client as any).getToken();
-    const spacerRunUrl = (this._client as any).getSpacerRunUrl();
+    const spacerUrl = (this._client as any).getSpacerUrl();
 
     if (data.type === ItemTypes.NOTEBOOK) {
       const requestData = {
@@ -194,7 +194,7 @@ export class SpaceDTO {
       const response = await notebooks.createNotebook(
         token,
         requestData,
-        spacerRunUrl,
+        spacerUrl,
       );
       if (!response.notebook) {
         throw new Error('Failed to create notebook: No notebook returned');
@@ -212,7 +212,7 @@ export class SpaceDTO {
       const response = await lexicals.createLexical(
         token,
         requestData,
-        spacerRunUrl,
+        spacerUrl,
       );
       if (!response.document) {
         throw new Error(
@@ -234,12 +234,12 @@ export class SpaceDTO {
   async getItems(): Promise<(NotebookDTO | LexicalDTO)[]> {
     this._checkDeleted();
     const token = (this._client as any).getToken();
-    const spacerRunUrl = (this._client as any).getSpacerRunUrl();
+    const spacerUrl = (this._client as any).getSpacerUrl();
 
     const response: GetSpaceItemsResponse = await items.getSpaceItems(
       token,
       this.uid,
-      spacerRunUrl,
+      spacerUrl,
     );
 
     // Use shared utility function to convert items to model instances

@@ -578,8 +578,8 @@ function ChatBaseInner({
       ? (protocolRaw as ProtocolConfig)
       : undefined;
   const configuredAiAgentsBaseUrl = useCoreStore(
-    (s: { configuration?: { aiagentsRunUrl?: string } }) =>
-      s.configuration?.aiagentsRunUrl,
+    (s: { configuration?: { aiAgentsUrl?: string } }) =>
+      s.configuration?.aiAgentsUrl,
   );
   const activeAgentId = protocolConfig?.agentId || runtimeId;
   const historyScopeId = runtimeId || activeAgentId;

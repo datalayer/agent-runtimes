@@ -60,7 +60,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         name: str,
         environment: str = DEFAULT_ENVIRONMENT,
         time_reservation: Minutes = DEFAULT_TIME_RESERVATION,
-        run_url: str = DEFAULT_DATALAYER_URL,
+        datalayer_url: str = DEFAULT_DATALAYER_URL,
         iam_url: Optional[str] = None,
         token: Optional[str] = None,
         api_key: Optional[str] = None,
@@ -84,10 +84,10 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             Environment type (e.g., "ai-agents-env"). Type of resources needed (cpu, gpu, etc.).
         time_reservation : Minutes
             Time reservation in minutes for the runtime. Defaults to 10 minutes.
-        run_url : str
+        datalayer_url : str
             Datalayer server URL.
         iam_url : Optional[str]
-            Datalayer IAM server URL. If not provided, defaults to run_url.
+            Datalayer IAM server URL. If not provided, defaults to datalayer_url.
         token : Optional[str]
             Authentication token (can also be set via DATALAYER_API_KEY env var).
         api_key : Optional[str]
@@ -114,8 +114,8 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             name=name,
             environment=environment,
             time_reservation=time_reservation,
-            run_url=run_url,
-            iam_url=iam_url or run_url,
+            datalayer_url=datalayer_url,
+            iam_url=iam_url or datalayer_url,
             token=token or api_key,
             external_token=None,
             pod_name=pod_name,
@@ -138,7 +138,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         Get the runtime model containing all configuration and state data.
 
         Provides access to all runtime properties including:
-        - Configuration: name, environment, run_url, iam_url
+        - Configuration: name, environment, datalayer_url, iam_url
         - Authentication: token, external_token
         - Runtime state: kernel_client, kernel_id, executing
         - Infrastructure: pod_name, ingress, uid, reservation_id
@@ -184,13 +184,13 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         Returns
         -------
         DatalayerURLs
-            URLs object with run_url and iam_url from the runtime configuration.
+            URLs object with datalayer_url and iam_url from the runtime configuration.
         """
         from datalayer_core.utils.urls import DatalayerURLs
 
         return DatalayerURLs.from_environment(
-            run_url=self._model.run_url,
-            iam_url=self._model.iam_url or self._model.run_url,
+            datalayer_url=self._model.datalayer_url,
+            iam_url=self._model.iam_url or self._model.datalayer_url,
         )
 
     @property

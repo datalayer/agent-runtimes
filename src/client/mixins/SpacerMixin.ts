@@ -51,8 +51,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getMySpaces(): Promise<SpaceDTO[]> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await users.getMySpaces(token, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await users.getMySpaces(token, spacerUrl);
       return response.spaces.map(s => new SpaceDTO(s, this as any));
     }
 
@@ -81,7 +81,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       isPublic: boolean,
     ): Promise<SpaceDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
 
       const data: CreateSpaceRequest = {
         name,
@@ -93,7 +93,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
         public: isPublic,
       };
 
-      const response = await spaces.createSpace(token, data, spacerRunUrl);
+      const response = await spaces.createSpace(token, data, spacerUrl);
       if (!response.space) {
         throw new Error('Failed to create space: no space returned');
       }
@@ -140,9 +140,9 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      * @returns Notebook instance
      */
     async getNotebook(id: string): Promise<NotebookDTO> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
-      const response = await notebooks.getNotebook(token, id, spacerRunUrl);
+      const response = await notebooks.getNotebook(token, id, spacerUrl);
 
       if (!response.notebook) {
         throw new Error(`Notebook with ID '${id}' not found`);
@@ -163,7 +163,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       name?: string,
       description?: string,
     ): Promise<NotebookDTO> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
 
       const data: UpdateNotebookRequest = {};
@@ -174,7 +174,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
         token,
         id,
         data,
-        spacerRunUrl,
+        spacerUrl,
       );
       if (!response.notebook) {
         throw new Error('Failed to update notebook: no notebook returned');
@@ -222,9 +222,9 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      * @returns Lexical instance
      */
     async getLexical(id: string): Promise<LexicalDTO> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
-      const response = await lexicals.getLexical(token, id, spacerRunUrl);
+      const response = await lexicals.getLexical(token, id, spacerUrl);
 
       if (!response.document) {
         throw new Error(`Lexical document with ID '${id}' not found`);
@@ -245,19 +245,14 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       name?: string,
       description?: string,
     ): Promise<LexicalDTO> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
 
       const data: UpdateLexicalRequest = {};
       if (name !== undefined) data.name = name;
       if (description !== undefined) data.description = description;
 
-      const response = await lexicals.updateLexical(
-        token,
-        id,
-        data,
-        spacerRunUrl,
-      );
+      const response = await lexicals.updateLexical(token, id, data, spacerUrl);
       return new LexicalDTO(response.document, this as any);
     }
 
@@ -273,13 +268,13 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
     async getSpaceItems(
       spaceId: string,
     ): Promise<(NotebookDTO | LexicalDTO)[]> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
 
       const response: GetSpaceItemsResponse = await items.getSpaceItems(
         token,
         spaceId,
-        spacerRunUrl,
+        spacerUrl,
       );
 
       // Use shared utility function to convert items to model instances
@@ -293,10 +288,10 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      * @throws Error if item not found
      */
     async getSpaceItem(itemId: string): Promise<NotebookDTO | LexicalDTO> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
 
-      const response = await items.getItem(token, itemId, spacerRunUrl);
+      const response = await items.getItem(token, itemId, spacerUrl);
       if (!response.success || !response.item) {
         throw new Error(`Space item '${itemId}' not found`);
       }
@@ -321,12 +316,12 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      * @throws Error if deletion fails
      */
     async deleteSpaceItem(itemId: string): Promise<void> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
 
       // First, check if the item exists
       try {
-        const getResponse = await items.getItem(token, itemId, spacerRunUrl);
+        const getResponse = await items.getItem(token, itemId, spacerUrl);
         if (!getResponse.success || !getResponse.item) {
           throw new Error(`Space item '${itemId}' not found`);
         }
@@ -346,7 +341,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       }
 
       // Item exists, proceed with deletion
-      const response = await items.deleteItem(token, itemId, spacerRunUrl);
+      const response = await items.deleteItem(token, itemId, spacerUrl);
 
       if (!response.success) {
         throw new Error(
@@ -361,11 +356,11 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
     // Content Loading with CDN Support
     // ========================================================================
     async getContent(itemId: string): Promise<any> {
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const token = (this as any).getToken();
 
       // First, get the item to check for CDN URL
-      const response = await items.getItem(token, itemId, spacerRunUrl);
+      const response = await items.getItem(token, itemId, spacerUrl);
       if (!response.success || !response.item) {
         throw new Error(`Space item '${itemId}' not found`);
       }
@@ -448,11 +443,11 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getCollaborationSessionId(documentId: string): Promise<string> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const response = await documents.getCollaborationSessionId(
         token,
         documentId,
-        spacerRunUrl,
+        spacerUrl,
       );
       if (!response.success || !response.sessionId) {
         throw new Error(
@@ -473,8 +468,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getSpace(uid: string): Promise<SpaceDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await spaces.getSpace(token, uid, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await spaces.getSpace(token, uid, spacerUrl);
       if (!response.space) {
         throw new Error(`Space with UID '${uid}' not found`);
       }
@@ -492,8 +487,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       data: UpdateSpaceRequest,
     ): Promise<SpaceDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await spaces.updateSpace(token, uid, data, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await spaces.updateSpace(token, uid, data, spacerUrl);
       if (!response.space) {
         throw new Error(`Failed to update space '${uid}'`);
       }
@@ -513,13 +508,13 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       data: UpdateSpaceRequest,
     ): Promise<SpaceDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const response = await spaces.updateUserSpace(
         token,
         uid,
         userId,
         data,
-        spacerRunUrl,
+        spacerUrl,
       );
       if (!response.space) {
         throw new Error(`Failed to update space '${uid}' for user '${userId}'`);
@@ -533,8 +528,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async deleteSpace(uid: string): Promise<void> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      await spaces.deleteSpace(token, uid, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      await spaces.deleteSpace(token, uid, spacerUrl);
     }
 
     /**
@@ -544,8 +539,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async makeSpacePublic(uid: string): Promise<SpaceDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await spaces.makeSpacePublic(token, uid, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await spaces.makeSpacePublic(token, uid, spacerUrl);
       if (!response.space) {
         throw new Error(`Failed to make space '${uid}' public`);
       }
@@ -559,8 +554,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async makeSpacePrivate(uid: string): Promise<SpaceDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await spaces.makeSpacePrivate(token, uid, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await spaces.makeSpacePrivate(token, uid, spacerUrl);
       if (!response.space) {
         throw new Error(`Failed to make space '${uid}' private`);
       }
@@ -574,8 +569,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async exportSpace(uid: string): Promise<any> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      return spaces.exportSpace(token, uid, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      return spaces.exportSpace(token, uid, spacerUrl);
     }
 
     /**
@@ -585,8 +580,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async cloneNotebook(id: string): Promise<NotebookDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await notebooks.cloneNotebook(token, id, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await notebooks.cloneNotebook(token, id, spacerUrl);
       if (!response.notebook) {
         throw new Error(`Failed to clone notebook '${id}'`);
       }
@@ -600,8 +595,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async cloneLexical(id: string): Promise<LexicalDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await lexicals.cloneLexical(token, id, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await lexicals.cloneLexical(token, id, spacerUrl);
       if (!response.document) {
         throw new Error(`Failed to clone lexical document '${id}'`);
       }
@@ -662,8 +657,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getProject(uid: string): Promise<ProjectDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await spaces.getSpace(token, uid, spacerRunUrl);
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await spaces.getSpace(token, uid, spacerUrl);
       if (!response.space) {
         throw new Error(`Project with UID '${uid}' not found`);
       }
@@ -681,7 +676,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       description?: string,
     ): Promise<ProjectDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       const spaceHandle = generateHandle(name);
 
       const data: CreateSpaceRequest = {
@@ -694,7 +689,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
         public: false,
       };
 
-      const response = await spaces.createSpace(token, data, spacerRunUrl);
+      const response = await spaces.createSpace(token, data, spacerUrl);
       if (!response.space) {
         throw new Error('Failed to create project: no project returned');
       }
@@ -712,7 +707,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
       data: UpdateSpaceRequest,
     ): Promise<ProjectDTO> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
+      const spacerUrl = (this as any).getSpacerUrl();
       // Resolve userId from: IAM mixin cache > AuthenticationManager cache > whoami()
       let resolvedUserId: string | undefined;
       const iamUser = (this as any).currentUserCache;
@@ -741,14 +736,14 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
         uid,
         resolvedUserId,
         data,
-        spacerRunUrl,
+        spacerUrl,
       );
       if (response.space) {
         return new ProjectDTO(response.space);
       }
       // Backend returns space: null on success for user-scoped updates.
       // Re-fetch the project to return fresh data.
-      const freshResponse = await spaces.getSpace(token, uid, spacerRunUrl);
+      const freshResponse = await spaces.getSpace(token, uid, spacerUrl);
       if (!freshResponse.space) {
         throw new Error(`Failed to update project '${uid}'`);
       }
@@ -782,12 +777,8 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getProjectDefaultItems(uid: string): Promise<ProjectDefaultItems> {
       const token = (this as any).getToken();
-      const spacerRunUrl = (this as any).getSpacerRunUrl();
-      const response = await spaces.getSpaceDefaultItems(
-        token,
-        uid,
-        spacerRunUrl,
-      );
+      const spacerUrl = (this as any).getSpacerUrl();
+      const response = await spaces.getSpaceDefaultItems(token, uid, spacerUrl);
       return {
         defaultNotebookUid: response.default_notebook_uid,
         defaultDocumentUid: response.default_document_uid,

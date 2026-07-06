@@ -30,7 +30,7 @@ export async function getEnvironments(): Promise<IDatalayerEnvironment[]> {
     environments?: IDatalayerEnvironment[];
   }>({
     url: URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       'api/runtimes/v1/environments',
     ),
     token: iamStore.getState().token,
@@ -77,7 +77,7 @@ export async function createRuntime(
     runtime?: IRuntimePod;
   }>({
     url: URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       `api/runtimes/v1/runtimes`,
     ),
     method: 'POST',
@@ -109,7 +109,7 @@ export async function getRuntimes(): Promise<IRuntimePod[]> {
     runtimes?: IRuntimePod[];
   }>({
     url: URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       'api/runtimes/v1/runtimes',
     ),
     token: iamStore.getState().token,
@@ -139,7 +139,7 @@ export async function deleteRuntime(options: {
   await requestDatalayerAPI({
     url:
       URLExt.join(
-        runtimesStore.getState().runtimesRunUrl,
+        runtimesStore.getState().runtimesUrl,
         `api/runtimes/v1/runtimes/${options.id}`,
       ) +
       URLExt.objectToQueryString(
@@ -183,7 +183,7 @@ export async function snapshotRuntime(options: {
     snapshot?: IAPICodeSandboxSnapshot;
   }>({
     url: URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       'api/runtimes/v1/sandbox-snapshots',
     ),
     method: 'POST',
@@ -220,7 +220,7 @@ export async function getSandboxSnapshots(): Promise<ICodeSandboxSnapshot[]> {
     snapshots?: IAPICodeSandboxSnapshot[];
   }>({
     url: URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       'api/runtimes/v1/sandbox-snapshots',
     ),
     token: iamStore.getState().token,
@@ -250,7 +250,7 @@ export async function loadSandboxSnapshot(options: {
     message: string;
   }>({
     url: URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       'api/runtimes/v1/runtimes',
       options.id,
     ),
@@ -277,7 +277,7 @@ export async function loadSandboxSnapshot(options: {
 export function createSandboxSnapshotDownloadURL(id: string): string {
   return (
     URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       `api/runtimes/v1/sandbox-snapshots/${id}`,
     ) +
     URLExt.objectToQueryString({
@@ -312,7 +312,7 @@ export async function deleteCodeSandboxSnapshot(id: string): Promise<void> {
     snapshots?: IAPICodeSandboxSnapshot[];
   }>({
     url: URLExt.join(
-      runtimesStore.getState().runtimesRunUrl,
+      runtimesStore.getState().runtimesUrl,
       `api/runtimes/v1/sandbox-snapshots/${id}`,
     ),
     method: 'DELETE',
@@ -334,7 +334,7 @@ export async function updateCodeSandboxSnapshot(
       snapshot?: IAPICodeSandboxSnapshot;
     }>({
       url: URLExt.join(
-        runtimesStore.getState().runtimesRunUrl,
+        runtimesStore.getState().runtimesUrl,
         `api/runtimes/v1/sandbox-snapshots/${id}`,
       ),
       method: 'PATCH',
@@ -361,7 +361,7 @@ export async function uploadCodeSandboxSnapshot(options: {
   // Create a new tus upload.
   const upload = new Upload(options.file, {
     // Endpoint is the upload creation URL from your tus server.
-    endpoint: `${runtimesStore.getState().runtimesRunUrl}/api/runtimes/v1/sandbox-snapshots/upload`,
+    endpoint: `${runtimesStore.getState().runtimesUrl}/api/runtimes/v1/sandbox-snapshots/upload`,
     headers: { Authorization: `Bearer ${iamStore.getState().token}` },
     // Retry delays will enable tus-js-client to automatically retry on errors.
     // retryDelays: [0, 3000, 5000, 10000, 20000],

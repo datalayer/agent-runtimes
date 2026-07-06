@@ -19,7 +19,7 @@ class EventsMixin:
     def _resolve_event_agent_id(self, event_id: str) -> str:
         """Resolve an event's agent_id from the global events listing."""
         response = self._fetch(
-            "{}/api/ai-agents/v1/events".format(self.urls.run_url),
+            "{}/api/ai-agents/v1/events".format(self.urls.datalayer_url),
             method="GET",
             params={"limit": 500, "offset": 0},
         )
@@ -51,11 +51,11 @@ class EventsMixin:
 
         if agent_id:
             url = "{}/api/ai-agents/v1/agents/{}/events".format(
-                self.urls.run_url,
+                self.urls.datalayer_url,
                 agent_id,
             )
         else:
-            url = "{}/api/ai-agents/v1/events".format(self.urls.run_url)
+            url = "{}/api/ai-agents/v1/events".format(self.urls.datalayer_url)
 
         response = self._fetch(
             url,
@@ -83,7 +83,7 @@ class EventsMixin:
         }
         response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events".format(
-                self.urls.run_url,
+                self.urls.datalayer_url,
                 agent_id,
             ),
             method="POST",
@@ -98,7 +98,7 @@ class EventsMixin:
         resolved_agent_id = agent_id or self._resolve_event_agent_id(event_id)
         response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events/{}".format(
-                self.urls.run_url,
+                self.urls.datalayer_url,
                 resolved_agent_id,
                 event_id,
             ),
@@ -135,7 +135,7 @@ class EventsMixin:
 
         response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events/{}".format(
-                self.urls.run_url,
+                self.urls.datalayer_url,
                 resolved_agent_id,
                 event_id,
             ),
@@ -151,7 +151,7 @@ class EventsMixin:
         resolved_agent_id = agent_id or self._resolve_event_agent_id(event_id)
         response = self._fetch(
             "{}/api/ai-agents/v1/agents/{}/events/{}".format(
-                self.urls.run_url,
+                self.urls.datalayer_url,
                 resolved_agent_id,
                 event_id,
             ),

@@ -13,20 +13,19 @@
  * and renders beautiful weather cards directly in the chat conversation,
  * similar to the AG-UI Dojo implementation.
  *
- * Backend: /api/v1/examples/backend_tool_rendering/
+ * Backend: managed AG-UI agent runtime (agentspec: example-backend-tool-rendering)
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
 import type { ToolCallRenderContext } from '../types';
 import { InlineWeatherCard, type WeatherResult } from './components/weather';
-
-// AG-UI endpoint for backend tool rendering example
-const BACKEND_TOOL_RENDERING_ENDPOINT =
-  'http://localhost:8765/api/v1/examples/backend_tool_rendering/';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 /**
  * Render function for tool results - renders weather cards inline in chat
@@ -68,8 +67,24 @@ const renderWeatherToolResult = (context: ToolCallRenderContext) => {
  * - Dynamic theming based on weather conditions
  * - Loading states while fetching data
  */
+const AGENT_NAME = 'ag-ui-backend-tools';
+const AGENTSPEC_ID = 'example-backend-tool-rendering';
+
 const AgUiBackendToolRenderingExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId } = useExampleAgentRuntime({
+    exampleId: 'AgUiBackendToolRenderingExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const backendToolRenderingEndpoint =
+    agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
 
   // Optional: still track weather for sidebar display if needed
   const handleStateUpdate = useCallback((_state: unknown) => {
@@ -181,26 +196,28 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
         </Box>
 
         {/* Floating chat with inline tool rendering */}
-        <ChatFloating
-          protocol="ag-ui"
-          endpoint={BACKEND_TOOL_RENDERING_ENDPOINT}
-          title="Weather Assistant"
-          description="Ask me about the weather anywhere in the world!"
-          position="bottom-right"
-          brandColor={brandColor}
-          onStateUpdate={handleStateUpdate}
-          renderToolResult={renderWeatherToolResult}
-          suggestions={[
-            {
-              title: 'Paris weather',
-              message: "What's the weather like in Paris?",
-            },
-            {
-              title: 'Tokyo forecast',
-              message: 'Show me the weather forecast for Tokyo.',
-            },
-          ]}
-        />
+        {backendToolRenderingEndpoint && (
+          <ChatFloating
+            protocol="ag-ui"
+            endpoint={backendToolRenderingEndpoint}
+            title="Weather Assistant"
+            description="Ask me about the weather anywhere in the world!"
+            position="bottom-right"
+            brandColor={brandColor}
+            onStateUpdate={handleStateUpdate}
+            renderToolResult={renderWeatherToolResult}
+            suggestions={[
+              {
+                title: 'Paris weather',
+                message: "What's the weather like in Paris?",
+              },
+              {
+                title: 'Tokyo forecast',
+                message: 'Show me the weather forecast for Tokyo.',
+              },
+            ]}
+          />
+        )}
       </Box>
     </ThemedProvider>
   );

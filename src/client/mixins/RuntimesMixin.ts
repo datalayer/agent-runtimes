@@ -67,11 +67,8 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async listEnvironments(): Promise<EnvironmentDTO[]> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
-      const response = await environments.listEnvironments(
-        token,
-        runtimesRunUrl,
-      );
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await environments.listEnvironments(token, runtimesUrl);
       // Save for later use after first call
       (this as any).environments = response.environments.map(
         env => new EnvironmentDTO(env, this as any),
@@ -112,7 +109,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
           );
         } else {
           const token = (this as any).getToken();
-          const runtimesRunUrl = (this as any).getRuntimesRunUrl();
+          const runtimesUrl = (this as any).getRuntimesUrl();
           const creditsLimit = (this as any).calculateCreditsFromMinutes(
             minutesLimit,
             env.burningRate,
@@ -129,7 +126,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
           const response = await runtimes.createRuntime(
             token,
             data,
-            runtimesRunUrl,
+            runtimesUrl,
           );
           return new RuntimeDTO(response.runtime, this as any);
         }
@@ -144,8 +141,8 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async listRuntimes(): Promise<RuntimeDTO[]> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
-      const response = await runtimes.listRuntimes(token, runtimesRunUrl);
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.listRuntimes(token, runtimesUrl);
       return response.runtimes.map(r => new RuntimeDTO(r, this as any));
     }
 
@@ -156,11 +153,11 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getRuntime(podName: string): Promise<RuntimeDTO> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
+      const runtimesUrl = (this as any).getRuntimesUrl();
       const runtimeData = await runtimes.getRuntime(
         token,
         podName,
-        runtimesRunUrl,
+        runtimesUrl,
       );
       return new RuntimeDTO(runtimeData, this as any);
     }
@@ -171,8 +168,8 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async deleteRuntime(podName: string): Promise<void> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
-      await runtimes.deleteRuntime(token, podName, runtimesRunUrl);
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      await runtimes.deleteRuntime(token, podName, runtimesUrl);
     }
 
     /**
@@ -182,14 +179,14 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async terminateAllRuntimes(): Promise<PromiseSettledResult<void>[]> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
+      const runtimesUrl = (this as any).getRuntimesUrl();
 
       // List all runtimes
-      const response = await runtimes.listRuntimes(token, runtimesRunUrl);
+      const response = await runtimes.listRuntimes(token, runtimesUrl);
 
       // Delete all runtimes in parallel
       const deletePromises = response.runtimes.map(runtime =>
-        runtimes.deleteRuntime(token, runtime.pod_name, runtimesRunUrl),
+        runtimes.deleteRuntime(token, runtime.pod_name, runtimesUrl),
       );
 
       return Promise.allSettled(deletePromises);
@@ -214,7 +211,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
       stop: boolean = false,
     ): Promise<CodeSandboxSnapshotDTO> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
+      const runtimesUrl = (this as any).getRuntimesUrl();
 
       const data: CreateCodeSandboxSnapshotRequest = {
         pod_name: podName,
@@ -223,11 +220,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
         stop,
       };
 
-      const response = await snapshots.createSnapshot(
-        token,
-        data,
-        runtimesRunUrl,
-      );
+      const response = await snapshots.createSnapshot(token, data, runtimesUrl);
       return new CodeSandboxSnapshotDTO(response.snapshot, this as any);
     }
 
@@ -237,8 +230,8 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async listSnapshots(): Promise<CodeSandboxSnapshotDTO[]> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
-      const response = await snapshots.listSnapshots(token, runtimesRunUrl);
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await snapshots.listSnapshots(token, runtimesUrl);
       return response.snapshots.map(
         s => new CodeSandboxSnapshotDTO(s, this as any),
       );
@@ -251,8 +244,8 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getSnapshot(id: string): Promise<CodeSandboxSnapshotDTO> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
-      const response = await snapshots.getSnapshot(token, id, runtimesRunUrl);
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await snapshots.getSnapshot(token, id, runtimesUrl);
       return new CodeSandboxSnapshotDTO(response.snapshot, this as any);
     }
 
@@ -262,8 +255,8 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
      */
     async deleteSnapshot(id: string): Promise<void> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
-      await snapshots.deleteSnapshot(token, id, runtimesRunUrl);
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      await snapshots.deleteSnapshot(token, id, runtimesUrl);
     }
 
     // ========================================================================

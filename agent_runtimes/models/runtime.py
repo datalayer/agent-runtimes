@@ -44,7 +44,7 @@ class RuntimeModel(BaseModel):
     )
 
     # Service URLs
-    run_url: str = Field(
+    datalayer_url: str = Field(
         default=DEFAULT_DATALAYER_URL,
         description="Runtime service URL (default: 'https://api.datalayer.run')",
     )
@@ -95,7 +95,7 @@ class RuntimeModel(BaseModel):
     # Legacy compatibility (keeping for backward compatibility)
     url: str = Field(
         default=DEFAULT_DATALAYER_URL,
-        description="Runtime service URL (alias for run_url)",
+        description="Runtime service URL (alias for datalayer_url)",
     )
     credits_per_second: CreditsPerSecond = Field(
         default=1, description="Credits consumed per second of runtime (default: 1)"

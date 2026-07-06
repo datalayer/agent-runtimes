@@ -37,9 +37,9 @@ def console_connect(
         "--agent",
         help="The name of the Agent to connect to",
     ),
-    run_url: Optional[str] = typer.Option(
+    datalayer_url: Optional[str] = typer.Option(
         None,
-        "--run-url",
+        "--datalayer-url",
         help="Datalayer Run URL",
     ),
     token: Optional[str] = typer.Option(
@@ -79,10 +79,10 @@ def console_connect(
     """Connect to a Datalayer agent console."""
     try:
         # Get URLs configuration
-        urls = DatalayerURLs.from_environment(run_url=run_url)
+        urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
 
         console.print("[green]Starting Datalayer agent console...[/green]")
-        console.print(f"Run URL: {urls.run_url}")
+        console.print(f"Run URL: {urls.datalayer_url}")
         if runtime_name:
             console.print(f"Agent: {runtime_name}")
         console.print("[yellow]Press Ctrl+D or Ctrl+C to exit the console[/yellow]")
@@ -92,8 +92,8 @@ def console_connect(
 
         if runtime_name:
             args.extend(["--agent", runtime_name])
-        if urls.run_url:
-            args.extend(["--run-url", urls.run_url])
+        if urls.datalayer_url:
+            args.extend(["--datalayer-url", urls.datalayer_url])
         if token:
             args.extend(["--api-key", token])
         if external_token:
@@ -140,9 +140,9 @@ def console_callback_default(
         "--agent",
         help="The name of the Agent to connect to",
     ),
-    run_url: Optional[str] = typer.Option(
+    datalayer_url: Optional[str] = typer.Option(
         None,
-        "--run-url",
+        "--datalayer-url",
         help="Datalayer Run URL",
     ),
     token: Optional[str] = typer.Option(
@@ -187,7 +187,7 @@ def console_callback_default(
         # Call console_connect with the parameters
         console_connect(
             runtime_name=runtime_name,
-            run_url=run_url,
+            datalayer_url=datalayer_url,
             token=token,
             external_token=external_token,
             no_browser=no_browser,

@@ -273,12 +273,12 @@ export function useAgentRuntimes(
       );
     }
     return (
-      configuration?.runtimesRunUrl ||
+      configuration?.runtimesUrl ||
       import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
       'https://r1.datalayer.run'
     );
   }, [
-    configuration?.runtimesRunUrl,
+    configuration?.runtimesUrl,
     runtimeCreationBaseUrl,
     runtimeCreationTarget,
   ]);
@@ -290,11 +290,11 @@ export function useAgentRuntimes(
       const { iamStore, coreStore } = await import('@datalayer/core/lib/state');
       const token = iamStore.getState().token || '';
       const config = coreStore.getState().configuration;
-      const runUrl = config?.aiagentsRunUrl || '';
-      const runtimesRunUrl = resolvedRuntimeCreationBaseUrl;
-      return { token, runUrl, runtimesRunUrl };
+      const datalayerUrl = config?.aiAgentsUrl || '';
+      const runtimesUrl = resolvedRuntimeCreationBaseUrl;
+      return { token, datalayerUrl, runtimesUrl };
     } catch {
-      return { token: '', runUrl: '', runtimesRunUrl: '' };
+      return { token: '', datalayerUrl: '', runtimesUrl: '' };
     }
   }, [resolvedRuntimeCreationBaseUrl]);
 
@@ -322,13 +322,13 @@ export function useAgentRuntimes(
             runtimeOptions
               ? {
                   ...runtimeOptions,
-                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                  runtimesUrl: resolvedRuntimeCreationBaseUrl,
                 }
               : {
                   environmentName: 'ai-agents-env',
                   creditsLimit: 10,
                   givenName: safeName,
-                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                  runtimesUrl: resolvedRuntimeCreationBaseUrl,
                 },
           );
           setLifecycleStatus('ready');
@@ -345,7 +345,7 @@ export function useAgentRuntimes(
         }
         return storeLaunchAgent({
           ...runtimeOptions,
-          runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+          runtimesUrl: resolvedRuntimeCreationBaseUrl,
         });
       }
     },
@@ -477,12 +477,12 @@ export function useAgentRuntimes(
     let cancelled = false;
     const bootstrap = async () => {
       try {
-        const { token, runtimesRunUrl } = await getAuthHeaders();
+        const { token, runtimesUrl } = await getAuthHeaders();
         if (!token) {
           return;
         }
         const { listRuntimes } = await import('../api/runtimes/runtimes');
-        const runtimesResponse = await listRuntimes(token, runtimesRunUrl);
+        const runtimesResponse = await listRuntimes(token, runtimesUrl);
         const runtimes = runtimesResponse.runtimes || [];
         const aiAgentRuntimes = runtimes.filter(rt => {
           if (rt.environment_name !== 'ai-agents-env') {
@@ -672,7 +672,7 @@ export function useAgentRuntimesQuery(
       }
       const query = params.toString();
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes${query ? `?${query}` : ''}`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes${query ? `?${query}` : ''}`,
         method: 'GET',
       });
       if (resp.success && resp.runtimes) {
@@ -708,7 +708,7 @@ export function useAgentRuntimeByPodName(podName: string | undefined) {
     queryKey: agentQueryKeys.agentRuntimes.detail(podName ?? ''),
     queryFn: async () => {
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
         method: 'GET',
       });
       if (resp.runtime) {
@@ -742,7 +742,7 @@ export function useCreateAgentRuntime() {
           ? [String(data.volumeUid).trim()]
           : [];
       return requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes`,
         method: 'POST',
         body: {
           environment_name: data.environmentName || 'ai-agents-env',
@@ -794,7 +794,7 @@ export function useDeleteAgentRuntime() {
   return useMutation({
     mutationFn: async (podName: string) => {
       return requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
         method: 'DELETE',
       });
     },

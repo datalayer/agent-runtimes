@@ -6,6 +6,7 @@
 export * from './ToolApprovalCard';
 export * from './NotificationEventCard';
 export * from './OutputCard';
+export * from './AgentSummary';
 
 export * from './runtimes';
 export * from './snapshots';

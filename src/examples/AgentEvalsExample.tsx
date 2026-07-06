@@ -134,9 +134,7 @@ const AgentEvalsInner: React.FC<{
     const envAgentRuntimesUrl = normalizeHttpUrl(
       import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL,
     );
-    const configuredRuntimesUrl = normalizeHttpUrl(
-      configuration?.runtimesRunUrl,
-    );
+    const configuredRuntimesUrl = normalizeHttpUrl(configuration?.runtimesUrl);
 
     if (envRuntimesUrl && !isLocalhostUrl(envRuntimesUrl)) {
       return envRuntimesUrl;
@@ -148,7 +146,7 @@ const AgentEvalsInner: React.FC<{
       return envAgentRuntimesUrl;
     }
     return 'https://r1.datalayer.run';
-  }, [configuration?.runtimesRunUrl]);
+  }, [configuration?.runtimesUrl]);
 
   const {
     runtime,
@@ -198,7 +196,7 @@ const AgentEvalsInner: React.FC<{
       : runtime?.podName || '(launching…)';
   const controlPlaneBaseUrl =
     (import.meta.env.VITE_RUN_URL as string | undefined) ||
-    configuration?.runUrl ||
+    configuration?.datalayerUrl ||
     (cloudAgentBaseUrl ? new URL(cloudAgentBaseUrl).origin : '');
   const isAgentReady =
     executionTarget === 'local' ? localStatus === 'ready' : isReady;

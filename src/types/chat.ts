@@ -395,7 +395,7 @@ export interface ChatCommonProps {
    */
   onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
 
-  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
+  /** Initial model ID to select (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0') */
   initialModel?: string;
 
   /**
@@ -623,7 +623,7 @@ export interface ChatBaseProps {
    */
   onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
 
-  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
+  /** Initial model ID to select (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0') */
   initialModel?: string;
 
   /**

@@ -206,8 +206,8 @@ export class CodeSandboxSnapshotDTO {
   async delete(): Promise<void> {
     this._checkDeleted();
     const token = (this._client as any).getToken();
-    const runtimesRunUrl = (this._client as any).getRuntimesRunUrl();
-    await snapshots.deleteSnapshot(token, this.uid, runtimesRunUrl);
+    const runtimesUrl = (this._client as any).getRuntimesUrl();
+    await snapshots.deleteSnapshot(token, this.uid, runtimesUrl);
     this._deleted = true;
   }
 

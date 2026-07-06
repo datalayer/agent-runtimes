@@ -167,8 +167,8 @@ export class LexicalDTO extends ItemDTO<LexicalData> {
   async getName(): Promise<string> {
     this._checkDeleted();
     const token = this._getToken();
-    const spacerRunUrl = this._getSpacerRunUrl();
-    const response = await lexicals.getLexical(token, this.uid, spacerRunUrl);
+    const spacerUrl = this._getSpacerUrl();
+    const response = await lexicals.getLexical(token, this.uid, spacerUrl);
 
     if (response.document) {
       this._updateData(response.document);
@@ -208,8 +208,8 @@ export class LexicalDTO extends ItemDTO<LexicalData> {
   async getUpdatedAt(): Promise<Date> {
     this._checkDeleted();
     const token = this._getToken();
-    const spacerRunUrl = this._getSpacerRunUrl();
-    const response = await lexicals.getLexical(token, this.uid, spacerRunUrl);
+    const spacerUrl = this._getSpacerUrl();
+    const response = await lexicals.getLexical(token, this.uid, spacerUrl);
 
     if (response.document) {
       this._updateData(response.document);
@@ -240,7 +240,7 @@ export class LexicalDTO extends ItemDTO<LexicalData> {
     // FIXME: check if both are needed, and use the existing values if only one provided
     this._checkDeleted();
     const token = this._getToken();
-    const spacerRunUrl = this._getSpacerRunUrl();
+    const spacerUrl = this._getSpacerUrl();
     const updateData: UpdateLexicalRequest = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
@@ -249,7 +249,7 @@ export class LexicalDTO extends ItemDTO<LexicalData> {
       token,
       this.uid,
       updateData,
-      spacerRunUrl,
+      spacerUrl,
     );
     this._updateData(response.document);
     return this;

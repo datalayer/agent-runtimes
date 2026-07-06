@@ -46,6 +46,7 @@ import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 
@@ -53,8 +54,6 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'outputs-example-agent';
 const AGENTSPEC_ID = 'demo-outputs';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -396,7 +395,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
   const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const authFetch = useCallback(

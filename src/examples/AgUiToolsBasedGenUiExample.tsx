@@ -10,14 +10,17 @@
  * that render UI components. Unlike frontend tools, these are backend
  * tools that return structured data to be rendered on the frontend.
  *
- * Backend: /api/v1/examples/agentic_generative_ui/
+ * Backend: managed AG-UI agent runtime (agentspec: example-agentic-generative-ui)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Text, ProgressBar, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
   CheckCircleIcon,
   CircleIcon,
@@ -25,10 +28,6 @@ import {
   CheckIcon,
   XIcon,
 } from '@primer/octicons-react';
-
-// AG-UI endpoint for agentic generative UI example
-const AGENTIC_GENERATIVE_UI_ENDPOINT =
-  'http://localhost:8765/api/v1/examples/agentic_generative_ui/';
 
 // Types for plan state - matches ag-ui protocol
 interface PlanStep {
@@ -340,8 +339,24 @@ const PlanDisplay: React.FC<{
  * - Real-time UI updates as agent works
  * - Interactive step selection with Confirm/Reject buttons
  */
+const AGENT_NAME = 'ag-ui-generative-ui';
+const AGENTSPEC_ID = 'example-agentic-generative-ui';
+
 const AgUiToolsBasedGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId } = useExampleAgentRuntime({
+    exampleId: 'AgUiToolsBasedGenUiExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const agenticGenerativeUiEndpoint =
+    agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
   const [plan, setPlan] = useState<PlanState | null>(null);
   const [decision, setDecision] = useState<'confirmed' | 'rejected' | null>(
     null,
@@ -504,26 +519,28 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
         </Box>
 
         {/* Floating chat */}
-        <ChatFloating
-          protocol="ag-ui"
-          endpoint={AGENTIC_GENERATIVE_UI_ENDPOINT}
-          title="Plan Generator"
-          description="I can create detailed plans and update them in real-time."
-          position="bottom-right"
-          brandColor={brandColor}
-          onStateUpdate={handleStateUpdate}
-          suggestions={[
-            {
-              title: 'Project plan',
-              message: 'Create a project plan for building a mobile app.',
-            },
-            {
-              title: 'Marketing strategy',
-              message:
-                'Generate a marketing strategy for a new product launch.',
-            },
-          ]}
-        />
+        {agenticGenerativeUiEndpoint && (
+          <ChatFloating
+            protocol="ag-ui"
+            endpoint={agenticGenerativeUiEndpoint}
+            title="Plan Generator"
+            description="I can create detailed plans and update them in real-time."
+            position="bottom-right"
+            brandColor={brandColor}
+            onStateUpdate={handleStateUpdate}
+            suggestions={[
+              {
+                title: 'Project plan',
+                message: 'Create a project plan for building a mobile app.',
+              },
+              {
+                title: 'Marketing strategy',
+                message:
+                  'Generate a marketing strategy for a new product launch.',
+              },
+            ]}
+          />
+        )}
       </Box>
     </ThemedProvider>
   );

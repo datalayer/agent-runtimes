@@ -10,13 +10,13 @@
  * Human in the Loop example backend. This shows how to implement
  * approval workflows where the human must approve generated plans.
  *
- * Backend: /api/v1/examples/human_in_the_loop/
+ * Backend: managed AG-UI agent runtime (agentspec: example-human-in-the-loop)
  *
  * Pattern: Uses renderToolResult with respond callback for human-in-the-loop
  * interactions, matching the CopilotKit useHumanInTheLoop pattern.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Text,
   Checkbox,
@@ -29,15 +29,14 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
 import type { ToolCallRenderContext } from '../types';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
   TasklistIcon,
   CheckCircleFillIcon,
   XCircleFillIcon,
 } from '@primer/octicons-react';
-
-// AG-UI endpoint for human in the loop example
-const HUMAN_IN_THE_LOOP_ENDPOINT =
-  'http://localhost:8765/api/v1/examples/human_in_the_loop/';
 
 // Types for task steps (ag-ui standard)
 interface TaskStep {
@@ -345,8 +344,24 @@ const renderTaskStepsTool = (context: ToolCallRenderContext) => {
  * - respond callback for sending user decisions back to the agent
  * - UI state changes based on user actions
  */
+const AGENT_NAME = 'ag-ui-human-in-the-loop';
+const AGENTSPEC_ID = 'example-human-in-the-loop';
+
 const AgUiHumanInTheLoopExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId } = useExampleAgentRuntime({
+    exampleId: 'AgUiHumanInTheLoopExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const humanInTheLoopEndpoint =
+    agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
 
   return (
     <ThemedProvider>
@@ -450,26 +465,28 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
         </Box>
 
         {/* Floating chat with tool rendering */}
-        <ChatFloating
-          protocol="ag-ui"
-          endpoint={HUMAN_IN_THE_LOOP_ENDPOINT}
-          title="Task Planner"
-          description="I can help you plan tasks. I'll generate steps for your review."
-          position="bottom-right"
-          brandColor={brandColor}
-          renderToolResult={renderTaskStepsTool}
-          hideMessagesAfterToolUI={true}
-          suggestions={[
-            {
-              title: 'Plan a trip',
-              message: 'Plan a weekend trip to Paris.',
-            },
-            {
-              title: 'Organize party',
-              message: 'Plan a birthday party for next Saturday.',
-            },
-          ]}
-        />
+        {humanInTheLoopEndpoint && (
+          <ChatFloating
+            protocol="ag-ui"
+            endpoint={humanInTheLoopEndpoint}
+            title="Task Planner"
+            description="I can help you plan tasks. I'll generate steps for your review."
+            position="bottom-right"
+            brandColor={brandColor}
+            renderToolResult={renderTaskStepsTool}
+            hideMessagesAfterToolUI={true}
+            suggestions={[
+              {
+                title: 'Plan a trip',
+                message: 'Plan a weekend trip to Paris.',
+              },
+              {
+                title: 'Organize party',
+                message: 'Plan a birthday party for next Saturday.',
+              },
+            ]}
+          />
+        )}
       </Box>
     </ThemedProvider>
   );

@@ -35,6 +35,13 @@ import {
 } from '../skills';
 import type { SkillSpec } from '../../types';
 import {
+  EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
+  EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
+  EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
+  EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
+  EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
+  EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
   RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
@@ -107,6 +114,21 @@ function toAgentSkillSpec(skill: SkillSpec) {
  * Map tool IDs to ToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
+  'example-create-plan:0.0.1': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
+  'example-create-plan': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
+  'example-current-time:0.0.1': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
+  'example-current-time': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
+  'example-display-recipe:0.0.1': EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
+  'example-display-recipe': EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
+  'example-generate-haiku:0.0.1': EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
+  'example-generate-haiku': EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
+  'example-generate-task-steps:0.0.1':
+    EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
+  'example-generate-task-steps': EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
+  'example-get-weather:0.0.1': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  'example-get-weather': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  'example-update-plan-step:0.0.1': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
+  'example-update-plan-step': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   'runtime-send-mail:0.0.1': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
@@ -1266,6 +1288,177 @@ export const EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-agentic-chat',
+  version: '0.0.1',
+  name: 'Agentic Chat',
+  description: `A basic conversational AG-UI agent that can chat and use a tool to get the current time in any timezone.`,
+  tags: ['example', 'ag-ui', 'chat'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-current-time:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'clock',
+  emoji: '🕒',
+  color: '#6366F1',
+  suggestions: [
+    'What time is it?',
+    "What's the current date?",
+    'What time is it in Tokyo?',
+  ],
+  welcomeMessage: 'Hi! Ask me for the current time in any timezone.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful assistant that can provide the current time in any timezone. Use the current_time tool when asked about the time. Keep your responses concise and helpful.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-agentic-generative-ui',
+  version: '0.0.1',
+  name: 'Agentic Generative UI',
+  description: `An AG-UI agent that creates plans with steps and updates individual steps as progress is made using JSON Patch (RFC 6902) state deltas.`,
+  tags: ['example', 'ag-ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['example-create-plan:0.0.1'],
+    TOOL_MAP['example-update-plan-step:0.0.1'],
+  ],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'list-unordered',
+  emoji: '📋',
+  color: '#6366F1',
+  suggestions: [
+    'Plan and build a simple website',
+    'Organize a small research project',
+    'Set up a data pipeline step by step',
+  ],
+  welcomeMessage:
+    "Hi! Give me a goal and I'll create a plan, then work through the steps.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful assistant that creates and executes plans.
+
+When asked to do something:
+1. Call \`create_plan\` with a list of step descriptions
+2. As you work through steps, call \`update_plan_step\` to mark them complete
+
+IMPORTANT:
+- Always create a plan first before doing anything
+- Mark steps as completed as you work through them
+- Don't repeat the plan in your messages
+- Give a brief summary (one sentence with emojis) after completing steps
+- Say you actually did the steps, not merely generated them
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-backend-tool-rendering',
+  version: '0.0.1',
+  name: 'Backend Tool Rendering',
+  description: `An AG-UI weather assistant that fetches real weather data with a backend tool for the frontend to render as a weather card.`,
+  tags: ['example', 'ag-ui', 'weather'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-get-weather:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'sun',
+  emoji: '🌤️',
+  color: '#6366F1',
+  suggestions: [
+    "What's the weather in Tokyo?",
+    'Weather in New York',
+    "How's the weather in London?",
+  ],
+  welcomeMessage: 'Hi! Ask me about the weather in any city.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful weather assistant that provides accurate weather information.
+
+When users ask about weather:
+- If no location is provided, ask for one
+- Translate non-English location names to English
+- For multi-part locations (e.g., "New York, NY"), use the most specific part
+- Include temperature, humidity, wind, and conditions in your response
+- Keep responses concise but informative
+
+Use the \`get_weather\` tool to fetch current weather data.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-codemode',
   version: '0.0.1',
@@ -1616,6 +1809,71 @@ This agent also demonstrates pydantic-ai tool execution hook naming: before_tool
   subagents: undefined,
 };
 
+export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-haiku-generative-ui',
+  version: '0.0.1',
+  name: 'Haiku Generative UI',
+  description: `An AG-UI agent that generates Japanese haiku with English translations and a gradient, rendered as cards by the frontend.`,
+  tags: ['example', 'ag-ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-generate-haiku:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'pencil',
+  emoji: '🖋️',
+  color: '#6366F1',
+  suggestions: [
+    'Write a haiku about spring',
+    'Create a haiku about the ocean',
+    'Make a haiku about city lights',
+  ],
+  welcomeMessage: "Hi! Give me a theme and I'll craft a haiku for you.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are an expert haiku generator that creates beautiful Japanese haiku poems
+and their English translations.
+
+When generating a haiku:
+1. Create a traditional 5-7-5 syllable structure haiku in Japanese
+2. Provide an accurate and poetic English translation
+3. Choose a CSS gradient that matches the mood of the haiku
+
+Always use the generate_haiku tool to create your haiku. The tool will handle
+the formatting and validation of your response.
+
+Focus on creating haiku that capture the essence of Japanese poetry: nature
+imagery, seasonal references, emotional depth, and moments of beauty or
+contemplation. That said, any topic is fair game.
+
+Do not repeat the haiku content in your text response - the UI will display it
+beautifully. Just acknowledge that you've created the haiku.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-hooks',
   version: '0.0.1',
@@ -1721,6 +1979,71 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
       },
     ],
   },
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-human-in-the-loop',
+  version: '0.0.1',
+  name: 'Human in the Loop',
+  description: `An AG-UI agent that generates task plans requiring human review and approval before execution.`,
+  tags: ['example', 'ag-ui', 'human-in-the-loop'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-generate-task-steps:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'tasklist',
+  emoji: '🧑‍⚖️',
+  color: '#6366F1',
+  suggestions: [
+    'Plan a deployment pipeline',
+    'Help me plan a code review process',
+    'Create a plan to set up a new project',
+  ],
+  welcomeMessage:
+    "Hi! Describe a task and I'll draft a step-by-step plan for you to review.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful task planning assistant.
+
+When asked to plan or do a task:
+1. Use the \`generate_task_steps\` tool to create a list of steps
+2. The steps will be displayed to the user for review
+3. Wait for user feedback
+4. If accepted, confirm the plan and the number of enabled steps
+5. If not accepted, ask for clarification
+
+IMPORTANT:
+- Only call \`generate_task_steps\` ONCE per request
+- Do NOT repeat the plan in your response after showing it
+- Do NOT call the tool again after receiving feedback
+- Keep your responses concise
+- Each step should be a brief imperative command (e.g., "Set up environment",
+  "Install dependencies")
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -2300,6 +2623,66 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-shared-state',
+  version: '0.0.1',
+  name: 'Shared State',
+  description: `An AG-UI recipe-builder agent demonstrating bidirectional state synchronization between the agent and the UI.`,
+  tags: ['example', 'ag-ui', 'shared-state'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-display-recipe:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'book',
+  emoji: '🍳',
+  color: '#6366F1',
+  suggestions: [
+    'Make a quick vegetarian dinner',
+    'Add chicken to the recipe',
+    'Make it spicy and high protein',
+  ],
+  welcomeMessage:
+    "Hi! Tell me what you'd like to cook and I'll build a recipe with you.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful recipe assistant.
+
+IMPORTANT RULES:
+1. Create recipes using the existing ingredients when possible
+2. Add new ingredients to the existing list (don't replace)
+3. Use the \`display_recipe\` tool to update the recipe
+4. Do NOT repeat the recipe in your message after using the tool
+5. Do NOT call \`display_recipe\` multiple times in a row
+
+After updating the recipe, give a brief summary of changes (one sentence).
+Don't describe the full recipe.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-simple',
   version: '0.0.1',
@@ -2576,6 +2959,56 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
       },
     ],
   },
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-tool-based-generative-ui',
+  version: '0.0.1',
+  name: 'Tool Based Generative UI',
+  description: `An AG-UI agent that renders rich content by calling frontend-defined render tools. The generative UI is produced by the frontend.`,
+  tags: ['example', 'ag-ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🎨',
+  color: '#6366F1',
+  suggestions: [
+    'Show me a plan with steps',
+    'Display some rich content',
+    'Render a summary card',
+  ],
+  welcomeMessage:
+    "Hi! Ask me to show something and I'll render it using the available UI tools.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful assistant that can display rich content. When asked to show or display something, use the appropriate render tool. Available render tools will be provided by the frontend.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
   parameters: undefined,
   subagents: undefined,
 };
@@ -4158,12 +4591,19 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'end-of-month-sales-performance':
     END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1,
   'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1,
+  'example-agentic-chat': EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
+  'example-agentic-generative-ui':
+    EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1,
+  'example-backend-tool-rendering':
+    EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1,
   'example-codemode': EXAMPLE_CODEMODE_AGENTSPEC_0_0_1,
   'example-evals-nocodemode': EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1,
   'example-evals': EXAMPLE_EVALS_AGENTSPEC_0_0_1,
   'example-full': EXAMPLE_FULL_AGENTSPEC_0_0_1,
   'example-guardrails': EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1,
+  'example-haiku-generative-ui': EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1,
   'example-hooks': EXAMPLE_HOOKS_AGENTSPEC_0_0_1,
+  'example-human-in-the-loop': EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1,
   'example-inference': EXAMPLE_INFERENCE_AGENTSPEC_0_0_1,
   'example-mcp': EXAMPLE_MCP_AGENTSPEC_0_0_1,
   'example-memory': EXAMPLE_MEMORY_AGENTSPEC_0_0_1,
@@ -4174,10 +4614,13 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'example-one-trigger': EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1,
   'example-otel': EXAMPLE_OTEL_AGENTSPEC_0_0_1,
   'example-parameters': EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1,
+  'example-shared-state': EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1,
   'example-simple': EXAMPLE_SIMPLE_AGENTSPEC_0_0_1,
   'example-skills': EXAMPLE_SKILLS_AGENTSPEC_0_0_1,
   'example-subagents': EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1,
   'example-tool-approvals': EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1,
+  'example-tool-based-generative-ui':
+    EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1,
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENTSPEC_0_0_1,
   financial: FINANCIAL_AGENTSPEC_0_0_1,

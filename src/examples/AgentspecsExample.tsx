@@ -324,11 +324,11 @@ const resolveCloudRuntimeBaseUrlFromSpec = (
   }
 
   const preferredKeys = [
-    'runtimesRunUrl',
-    'runtimeRunUrl',
+    'runtimesUrl',
+    'runtimeUrl',
     'runtimes_url',
     'runtime_url',
-    'runUrl',
+    'datalayerUrl',
     'baseUrl',
     'endpoint',
   ];
@@ -537,7 +537,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const { token } = useSimpleAuthStore();
 
   const cloudCatalogBaseUrl = useMemo(() => {
-    const configured = normalizeHttpUrl(configuration?.runtimesRunUrl);
+    const configured = normalizeHttpUrl(configuration?.runtimesUrl);
     const envConfigured = normalizeHttpUrl(
       import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL,
     );
@@ -545,7 +545,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
       return configured;
     }
     return envConfigured || 'https://r1.datalayer.run';
-  }, [configuration?.runtimesRunUrl]);
+  }, [configuration?.runtimesUrl]);
 
   const isCloudMode = isCloudSpecSelection(selectedAgentId);
   const selectedSpec = selectedCloudSpec || selectedLibrarySpec;

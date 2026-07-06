@@ -20,14 +20,13 @@ import { CheckCircleIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { Chat } from '../chat';
 import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
 const DEFAULT_AGENTSPEC_ID = 'example-tool-approvals';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 const getSelectedAgentspecIdFromUi = (): string => {
   const params = new URLSearchParams(window.location.search);
@@ -104,7 +103,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   const chatAuthToken: string | undefined = token === null ? undefined : token;
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const podName = 'localhost';
   const approvals = useAgentRuntimeApprovals();
   const pendingApprovalCount = useMemo(

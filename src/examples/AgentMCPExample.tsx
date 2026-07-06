@@ -34,6 +34,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useAIAgentsWebSocket } from '../hooks';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
 import type {
@@ -48,8 +49,6 @@ const queryClient = new QueryClient();
 const AGENT_NAME = 'mcp-example-agent';
 // Must match agentspecs/agentspecs/agents/example-mcp.yaml `id`.
 const AGENTSPEC_ID = 'example-mcp';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 /** A tool discovered from a running MCP server. */
 interface McpToolInfo {
@@ -305,7 +304,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   // Pending approvals are now managed internally by ChatBase via the Zustand
   // agent-runtime store — no local state needed.
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const authFetch = useCallback(

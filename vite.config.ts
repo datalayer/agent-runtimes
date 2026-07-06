@@ -48,6 +48,8 @@ export default defineConfig(({ mode, command }) => {
 
   const isShowcaseVercelAiElements = target === 'showcase-vercel-ai-elements';
   const isExamples = target === 'examples';
+  const isExamples2 = target === 'examples2';
+  const isExamplesTarget = isExamples || isExamples2;
 
   const plugins = [
     react(),
@@ -145,7 +147,7 @@ export default defineConfig(({ mode, command }) => {
     },
   ];
 
-  if (isExamples) {
+  if (isExamplesTarget) {
     plugins.unshift({
       name: 'html-transform',
       transformIndexHtml(html: string) {
@@ -153,7 +155,7 @@ export default defineConfig(({ mode, command }) => {
           .replaceAll('%VITE_DATALAYER_API_KEY%', env.VITE_DATALAYER_API_KEY || '')
           .replaceAll(
             '%VITE_DATALAYER_URL%',
-            env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run',
+            env.VITE_DATALAYER_URL || 'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_RUNTIMES_URL%',
@@ -166,18 +168,18 @@ export default defineConfig(({ mode, command }) => {
           )
           .replaceAll(
             '%VITE_DATALAYER_URL_WS%',
-            (env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run').replace('http', 'ws'),
+            (env.VITE_DATALAYER_URL || 'https://r1.datalayer.run').replace('http', 'ws'),
           )
           .replaceAll(
             '%VITE_JUPYTER_SERVER_URL%',
             env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`,
+              `${env.VITE_DATALAYER_URL || 'https://r1.datalayer.run'}/api/jupyter-server`,
           )
           .replaceAll(
             '%VITE_JUPYTER_SERVER_URL_WS%',
             (
               env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_URL || 'https://prod1.datalayer.run'}/api/jupyter-server`
+              `${env.VITE_DATALAYER_URL || 'https://r1.datalayer.run'}/api/jupyter-server`
             ).replace('http', 'ws'),
           );
       },
@@ -190,10 +192,10 @@ export default defineConfig(({ mode, command }) => {
         open: '/html/index-showcase-vercel-ai-elements.html',
         fs: { strict: false, allow: ['..', '../..', '../../..'] },
       }
-    : isExamples
+    : isExamplesTarget
       ? {
           port: 3000,
-          open: '/html/examples.html',
+          open: isExamples2 ? '/html/examples2.html' : '/html/examples.html',
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
 
         }
@@ -220,8 +222,11 @@ export default defineConfig(({ mode, command }) => {
     build.outDir = 'dist/showcase';
     build.emptyOutDir = true;
     build.rollupOptions.input = path.resolve(__dirname, 'html/index-showcase-vercel-ai-elements.html');
-  } else if (isExamples) {
-    build.rollupOptions.input = path.resolve(__dirname, 'html/examples.html');
+  } else if (isExamplesTarget) {
+    build.rollupOptions.input = path.resolve(
+      __dirname,
+      isExamples2 ? 'html/examples2.html' : 'html/examples.html',
+    );
   } else {
     build.rollupOptions.input = {
       main: path.resolve(__dirname, 'html/index.html'),
@@ -341,13 +346,13 @@ export default defineConfig(({ mode, command }) => {
   // the FastAPI StaticFiles mount, so we set base accordingly.
   // In dev mode (vite serve), use '/' so pages are accessible without the prefix.
   const isServe = command === 'serve';
-  const base = (isShowcaseVercelAiElements || isExamples || isServe) ? '/' : '/static/';
+  const base = (isShowcaseVercelAiElements || isExamplesTarget || isServe) ? '/' : '/static/';
 
   return {
     base,
     plugins,
     root: '.',
-    publicDir: isExamples ? false : 'public',
+    publicDir: isExamplesTarget ? false : 'public',
     define: {
       global: 'globalThis',
       __webpack_public_path__: '""',

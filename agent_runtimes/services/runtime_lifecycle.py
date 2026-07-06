@@ -30,7 +30,7 @@ def _terminate_runtime_with_core(
     from agent_runtimes.client import DatalayerClient
 
     urls = DatalayerURLs.from_environment(
-        run_url=runtime_base_url,
+        datalayer_url=runtime_base_url,
         iam_url=runtime_base_url,
         runtimes_url=runtime_base_url,
     )

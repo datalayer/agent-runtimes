@@ -26,6 +26,7 @@ import {
   themeConfigs,
   Box,
 } from '@datalayer/primer-addons';
+import { AgentSummary } from '../components';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
 import { Button, Spinner, Text } from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
@@ -48,6 +49,14 @@ import {
   getExampleEntries,
   type ExampleEntry,
 } from './example-selector';
+import {
+  runtimeTargetStore,
+  useRuntimeTargetStore,
+  type ExampleRuntimeTarget,
+} from './utils/runtimeTargetStore';
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { agentSummaryStore } from './utils/agentSummaryStore';
+import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
 
@@ -82,7 +91,7 @@ const loadConfigurations = () => {
         }
       }
 
-      if (datalayerConfig.runUrl) {
+      if (datalayerConfig.datalayerUrl) {
         coreStore.getState().setConfiguration(datalayerConfig);
 
         // Also set the token in the IAM store for API authentication
@@ -421,13 +430,13 @@ const NotebookOnlyApp: React.FC = () => {
       try {
         const { configuration } = coreStore.getState();
 
-        // Always try to create collaboration provider if we have token and runUrl
-        if (configuration?.token && configuration?.runUrl) {
+        // Always try to create collaboration provider if we have token and datalayerUrl
+        if (configuration?.token && configuration?.datalayerUrl) {
           try {
             const { DatalayerCollaborationProvider } =
               await import('../collaboration/DatalayerCollaborationProvider');
             const provider = new DatalayerCollaborationProvider({
-              runUrl: configuration.runUrl,
+              datalayerUrl: configuration.datalayerUrl,
               token: configuration.token,
             });
             setCollaborationProvider(provider);
@@ -663,8 +672,9 @@ export const ExampleApp: React.FC = () => {
     //    `uniqueAgentId(baseName)` under key `agent-runtimes:agentId:<base>`.
     //    Delete those agents on the server and drop the cached ids so the
     //    next example (and a future re-entry into this one) boots fresh.
-    const agentBaseUrl =
-      import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+    const agentBaseUrl = resolveExampleAgentRuntimesUrl(
+      runtimeTargetStore.getState().target,
+    );
     const token = useSimpleAuthStore.getState().token;
     const agentIdKeys: string[] = [];
     try {
@@ -803,6 +813,9 @@ const ExampleAppThemed: React.FC<{
   availableExamples,
 }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
+  const setRuntimeTarget = useRuntimeTargetStore(state => state.setTarget);
+  const agentSummary = useAgentSummaryStore(state => state.active);
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
@@ -814,6 +827,17 @@ const ExampleAppThemed: React.FC<{
       coreIamStore.setState({ token: newToken });
     });
   }, []);
+
+  useEffect(() => {
+    const baseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    agentSummaryStore.getState().setActive({
+      exampleId: selectedExample,
+      agentName: selectedExample,
+      location: runtimeTarget,
+      baseUrl,
+      status: isChangingExample ? 'switching' : 'selected',
+    });
+  }, [selectedExample, runtimeTarget, isChangingExample]);
 
   useEffect(() => {
     // Keep iamStore aligned with persisted auth token on app load/refresh.
@@ -1020,6 +1044,38 @@ const ExampleAppThemed: React.FC<{
                 return <>{nodes}</>;
               })()}
             </Box>
+            <Box
+              as="select"
+              value={runtimeTarget}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setRuntimeTarget(e.target.value as ExampleRuntimeTarget)
+              }
+              disabled={isChangingExample}
+              aria-label="Runtime target"
+              title="Runtime target"
+              sx={{
+                px: 2,
+                py: '6px',
+                fontSize: 1,
+                fontFamily: 'mono',
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                bg: 'canvas.default',
+                color: 'fg.default',
+                cursor: isChangingExample ? 'not-allowed' : 'pointer',
+                minWidth: '120px',
+                outline: 'none',
+                '&:focus-visible': {
+                  boxShadow:
+                    '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
+                },
+              }}
+            >
+              <option value="local">Local</option>
+              <option value="cloud">Cloud</option>
+            </Box>
+            <AgentSummary summary={agentSummary} />
             {isChangingExample && (
               <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
                 Loading…

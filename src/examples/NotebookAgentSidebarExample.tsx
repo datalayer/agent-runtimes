@@ -28,6 +28,8 @@ import { ThemedJupyterProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
 import type { ProtocolConfig } from '../types';
 import { DEFAULT_MODEL } from '../specs';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 
@@ -38,11 +40,8 @@ const NOTEBOOK_ID = 'chat-notebook-example';
 const NOTEBOOK_CONTENT = MatplotlibNotebook;
 
 // Default configuration
-const DEFAULT_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_AGENT_ID =
   import.meta.env.VITE_AGENT_ID || 'notebook-sidebar-agent-runtime-example';
-const VERCEL_AI_ENDPOINT = `${DEFAULT_BASE_URL}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
 
 function getJupyterSandboxUrl(
   serviceManager?: ServiceManager.IManager,
@@ -68,96 +67,6 @@ function getJupyterSandboxUrl(
 
   const separator = baseUrl.includes('?') ? '&' : '?';
   return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
-
-function useEnsureAgent(
-  agentId: string,
-  baseUrl: string,
-  jupyterSandboxUrl?: string,
-): {
-  isReady: boolean;
-  error: string | null;
-} {
-  const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function ensureAgent() {
-      try {
-        if (!jupyterSandboxUrl) {
-          if (mounted) {
-            setError(
-              'Could not detect Jupyter server URL from Notebook service manager.',
-            );
-            setIsReady(false);
-          }
-          return;
-        }
-
-        const response = await fetch(`${baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: agentId,
-            description: 'Demo agent for notebook sidebar example',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            model: DEFAULT_MODEL,
-            system_prompt:
-              'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
-            enable_codemode: false,
-            sandbox_variant: 'jupyter',
-            jupyter_sandbox: jupyterSandboxUrl,
-          }),
-        });
-
-        if (mounted) {
-          if (response.ok) {
-            console.warn(
-              `[NotebookAgentSidebarExample] Created agent: ${agentId}`,
-            );
-            setError(null);
-            setIsReady(true);
-          } else if (response.status === 409 || response.status === 400) {
-            console.warn(
-              `[NotebookAgentSidebarExample] Reusing existing agent: ${agentId}`,
-            );
-            setError(null);
-            setIsReady(true);
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            setError(
-              errorData.detail || `Failed to create agent: ${response.status}`,
-            );
-            setIsReady(false);
-          }
-        }
-      } catch (err) {
-        if (mounted) {
-          console.error(
-            '[NotebookAgentSidebarExample] Error creating agent:',
-            err,
-          );
-          setError(
-            err instanceof Error ? err.message : 'Failed to connect to server',
-          );
-          setIsReady(false);
-        }
-      }
-    }
-
-    void ensureAgent();
-
-    return () => {
-      mounted = false;
-    };
-  }, [agentId, baseUrl, jupyterSandboxUrl]);
-
-  return { isReady, error };
 }
 
 /**
@@ -206,16 +115,53 @@ interface ChatJupyterNotebookExampleProps {
 export function AgentRuntimeNotebookExampleInner({
   serviceManager,
 }: ChatJupyterNotebookExampleProps) {
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
+  const [createRequested, setCreateRequested] = useState(false);
   const jupyterSandboxUrl = useMemo(
     () => getJupyterSandboxUrl(serviceManager),
     [serviceManager],
   );
 
-  const { isReady, error } = useEnsureAgent(
-    DEFAULT_AGENT_ID,
-    DEFAULT_BASE_URL,
-    jupyterSandboxUrl,
-  );
+  const { agentId, isReady, status, error, createAgent } =
+    useExampleAgentRuntime({
+      exampleId: 'NotebookAgentSidebarExample',
+      agentName: DEFAULT_AGENT_ID,
+      autoCreateAgent: false,
+      agentConfig: {
+        name: DEFAULT_AGENT_ID,
+        description: 'Demo agent for notebook sidebar example',
+        protocol: 'vercel-ai',
+        model: DEFAULT_MODEL,
+        systemPrompt:
+          'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
+        enableCodemode: false,
+        sandboxVariant: 'jupyter',
+        jupyterSandbox: jupyterSandboxUrl,
+      },
+    });
+
+  useEffect(() => {
+    if (!jupyterSandboxUrl || createRequested || agentId) {
+      return;
+    }
+    setCreateRequested(true);
+    void createAgent({
+      name: DEFAULT_AGENT_ID,
+      description: 'Demo agent for notebook sidebar example',
+      protocol: 'vercel-ai',
+      model: DEFAULT_MODEL,
+      systemPrompt:
+        'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
+      enableCodemode: false,
+      sandboxVariant: 'jupyter',
+      jupyterSandbox: jupyterSandboxUrl,
+    }).catch(() => {
+      setCreateRequested(false);
+    });
+  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
+
+  const effectiveReady = isReady || status === 'ready';
 
   // Get notebook tools for ChatSidebar
   const tools = useNotebookTools(NOTEBOOK_ID);
@@ -224,12 +170,12 @@ export function AgentRuntimeNotebookExampleInner({
   const protocolConfig = useMemo((): ProtocolConfig => {
     return {
       type: 'vercel-ai',
-      endpoint: VERCEL_AI_ENDPOINT,
+      endpoint: vercelAiEndpoint,
       agentId: DEFAULT_AGENT_ID,
       enableConfigQuery: true,
-      configEndpoint: `${DEFAULT_BASE_URL}/api/v1/configure`,
+      configEndpoint: `${baseUrl}/api/v1/configure`,
     };
-  }, []);
+  }, [baseUrl, vercelAiEndpoint]);
 
   return (
     <>
@@ -292,7 +238,7 @@ export function AgentRuntimeNotebookExampleInner({
         </Box>
 
         {/* Chat sidebar */}
-        {isReady && (
+        {effectiveReady && (
           <ChatSidebar
             title="AI Assistant"
             protocol={protocolConfig}

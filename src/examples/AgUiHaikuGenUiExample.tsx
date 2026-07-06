@@ -14,12 +14,12 @@
  * This follows the AG-UI Dojo pattern where tool results are rendered
  * as UI components in both locations.
  *
- * Backend: /api/v1/examples/haiku_generative_ui/
+ * Backend: managed AG-UI agent runtime (agentspec: example-haiku-generative-ui)
  */
-
 import React, {
   useState,
   useCallback,
+  useMemo,
   useRef,
   useImperativeHandle,
   forwardRef,
@@ -34,10 +34,9 @@ import {
   type HaikuResult,
 } from './components/haiku';
 import type { ToolCallRenderContext } from '../types';
-
-// AG-UI endpoint for haiku generative UI example
-const HAIKU_ENDPOINT =
-  'http://localhost:8765/api/v1/examples/haiku_generative_ui/';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 /**
  * Ref handle for haiku state synchronization between chat and main display
@@ -100,8 +99,24 @@ HaikuDisplayWithRef.displayName = 'HaikuDisplayWithRef';
  * - Dynamic gradient backgrounds
  * - Japanese/English text rendering
  */
+const AGENT_NAME = 'ag-ui-haiku';
+const AGENTSPEC_ID = 'example-haiku-generative-ui';
+
 const AgUiHaikuGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId } = useExampleAgentRuntime({
+    exampleId: 'AgUiHaikuGenUiExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const haikuGenUiEndpoint =
+    agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
 
   // Ref to the main display for adding haikus
   const displayRef = useRef<HaikuDisplayHandle>(null);
@@ -281,31 +296,33 @@ const AgUiHaikuGenUiExample: React.FC = () => {
         </Box>
 
         {/* Floating chat with haiku tool rendering */}
-        <ChatFloating
-          protocol="ag-ui"
-          endpoint={HAIKU_ENDPOINT}
-          title="Haiku Generator"
-          description="Ask me to write haiku poetry about any topic!"
-          position="bottom-right"
-          brandColor={brandColor}
-          defaultOpen={true}
-          renderToolResult={renderHaikuToolResult}
-          hideMessagesAfterToolUI={true}
-          suggestions={[
-            {
-              title: 'Cherry blossoms',
-              message: 'Write me a haiku about cherry blossoms in spring.',
-            },
-            {
-              title: 'Night coding',
-              message: 'Create a haiku about coding late at night.',
-            },
-            {
-              title: 'Mountain path',
-              message: 'Generate a haiku about hiking a mountain trail.',
-            },
-          ]}
-        />
+        {haikuGenUiEndpoint && (
+          <ChatFloating
+            protocol="ag-ui"
+            endpoint={haikuGenUiEndpoint}
+            title="Haiku Generator"
+            description="Ask me to write haiku poetry about any topic!"
+            position="bottom-right"
+            brandColor={brandColor}
+            defaultOpen={true}
+            renderToolResult={renderHaikuToolResult}
+            hideMessagesAfterToolUI={true}
+            suggestions={[
+              {
+                title: 'Cherry blossoms',
+                message: 'Write me a haiku about cherry blossoms in spring.',
+              },
+              {
+                title: 'Night coding',
+                message: 'Create a haiku about coding late at night.',
+              },
+              {
+                title: 'Mountain path',
+                message: 'Generate a haiku about hiking a mountain trail.',
+              },
+            ]}
+          />
+        )}
       </Box>
     </ThemedProvider>
   );

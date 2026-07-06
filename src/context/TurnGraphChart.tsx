@@ -457,7 +457,7 @@ export interface TurnGraphChartProps {
   /** Filter spans to this agent ID (matches ``agent.id`` span attribute). */
   agentId?: string;
   /** Base URL for the Datalayer OTEL service. */
-  runUrl?: string;
+  datalayerUrl?: string;
   /** JWT / API key for OTEL auth. */
   apiKey?: string;
   /**
@@ -472,7 +472,7 @@ export interface TurnGraphChartProps {
 export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
   serviceName,
   agentId,
-  runUrl,
+  datalayerUrl,
   apiKey,
   autoRefreshMs = 10_000,
   height = 320,
@@ -544,11 +544,11 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!runUrl || !apiKey) return;
+    if (!datalayerUrl || !apiKey) return;
     setLoading(true);
     setError(null);
     try {
-      const client = createOtelClient({ baseUrl: runUrl, token: apiKey });
+      const client = createOtelClient({ baseUrl: datalayerUrl, token: apiKey });
       const result = await client.fetchTraces({ serviceName, limit: 200 });
       if (mountedRef.current) upsertRunsFromSpans(result.data, 'replace');
     } catch (err: unknown) {
@@ -558,10 +558,10 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [runUrl, apiKey, serviceName, upsertRunsFromSpans]);
+  }, [datalayerUrl, apiKey, serviceName, upsertRunsFromSpans]);
 
   const { connected: wsConnected, error: wsError } = useOtelWebSocket({
-    baseUrl: runUrl,
+    baseUrl: datalayerUrl,
     token: apiKey,
     callbacks: {
       onTraces: spans => {
@@ -586,7 +586,7 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
   );
 
   // Not configured — caller didn't pass auth.
-  if (!runUrl || !apiKey) return null;
+  if (!datalayerUrl || !apiKey) return null;
 
   if (loading && runs.length === 0) {
     return (

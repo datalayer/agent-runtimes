@@ -71,7 +71,7 @@ export function SandboxSnapshotMenu({
 }: PropsWithChildren<ICodeSandboxSnapshotMenu>): JSX.Element {
   const {
     addSandboxSnapshot,
-    runtimesRunUrl,
+    runtimesUrl,
     runtimeSnapshots,
     setSandboxSnapshots,
   } = useRuntimesStore();
@@ -92,7 +92,7 @@ export function SandboxSnapshotMenu({
       .catch(reason => {
         console.error(`Failed to fetch remote kernel snapshots; ${reason}`);
       });
-  }, [runtimesRunUrl]);
+  }, [runtimesUrl]);
   const onLoadSandboxSnapshot = useCallback(() => {
     setError(undefined);
     setOpenLoadDialog(true);

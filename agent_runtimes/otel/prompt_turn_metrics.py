@@ -188,22 +188,22 @@ def _resolve_otlp_endpoint() -> str:
         return explicit.rstrip("/")
     # Prefer the active runtime run URL first (cluster/environment-specific).
     # DATALAYER_OTEL_RUN_URL may be baked into some container images.
-    run_url = (
+    datalayer_url = (
         os.environ.get("DATALAYER_URL")
         or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )
-    return f"{run_url.rstrip('/')}/api/otel/v1/otlp"
+    return f"{datalayer_url.rstrip('/')}/api/otel/v1/otlp"
 
 
-def _resolve_run_url_source() -> tuple[str, str]:
+def _resolve_datalayer_url_source() -> tuple[str, str]:
     """Return (source, value) for the run URL used to build OTLP endpoint."""
-    run_url = os.environ.get("DATALAYER_URL")
-    if run_url:
-        return "DATALAYER_URL", run_url
-    run_url = os.environ.get("DATALAYER_OTEL_RUN_URL")
-    if run_url:
-        return "DATALAYER_OTEL_RUN_URL", run_url
+    datalayer_url = os.environ.get("DATALAYER_URL")
+    if datalayer_url:
+        return "DATALAYER_URL", datalayer_url
+    datalayer_url = os.environ.get("DATALAYER_OTEL_RUN_URL")
+    if datalayer_url:
+        return "DATALAYER_OTEL_RUN_URL", datalayer_url
     return "default", "https://prod1.datalayer.run"
 
 
@@ -663,12 +663,12 @@ def _get_emitter(user_jwt_token: str | None = None) -> PromptTurnMetricsEmitter 
             service_name = os.environ.get(
                 "DATALAYER_OTEL_SERVICE_NAME", "agent-runtimes"
             )
-            run_url_source, run_url_value = _resolve_run_url_source()
+            datalayer_url_source, datalayer_url_value = _resolve_datalayer_url_source()
             logger.info(
-                "Prompt-turn OTEL emitter init: service=%s run_url_source=%s run_url=%s",
+                "Prompt-turn OTEL emitter init: service=%s datalayer_url_source=%s datalayer_url=%s",
                 service_name,
-                run_url_source,
-                run_url_value,
+                datalayer_url_source,
+                datalayer_url_value,
             )
             emitter = PromptTurnMetricsEmitter(
                 service_name=service_name,

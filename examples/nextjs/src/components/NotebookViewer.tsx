@@ -163,15 +163,15 @@ export default function NotebookViewer({
 
           // Create collaboration provider
           const sdkConfig = coreStore.configuration;
-          const runUrl =
-            sdkConfig?.runtimesRunUrl || 'https://prod1.datalayer.run';
+          const datalayerUrl =
+            sdkConfig?.runtimesUrl || 'https://prod1.datalayer.run';
           const isValidUID =
             notebookPath && /^[A-Z0-9]{26,}$/i.test(notebookPath);
 
           if (token && isValidUID) {
             try {
               const collabProvider = new DatalayerCollaborationProvider({
-                runUrl,
+                datalayerUrl,
                 token,
               });
               setCollaborationProvider(collabProvider);

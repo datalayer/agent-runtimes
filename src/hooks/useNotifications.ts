@@ -30,9 +30,9 @@ function useAuthToken(): string {
 
 function useBaseUrl(): string {
   const config = useCoreStore(
-    (s: { configuration?: { aiagentsRunUrl?: string } }) => s.configuration,
+    (s: { configuration?: { aiAgentsUrl?: string } }) => s.configuration,
   );
-  return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
+  return config?.aiAgentsUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
 }
 
 // ─── Base hooks ──────────────────────────────────────────────────────

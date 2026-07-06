@@ -27,7 +27,7 @@ from agent_runtimes._version import __version__
 from agent_runtimes.console.manager import RuntimeManager
 
 datalayer_aliases = dict(base_aliases)
-datalayer_aliases["run-url"] = "RuntimesConsoleApp.run_url"
+datalayer_aliases["datalayer-url"] = "RuntimesConsoleApp.datalayer_url"
 datalayer_aliases["api-key"] = "RuntimesConsoleApp.token"
 datalayer_aliases["external-token"] = "RuntimesConsoleApp.external_token"
 
@@ -68,7 +68,7 @@ class RuntimesConsoleApp(AuthnMixin, KonsoleApp):
     user_handle = Unicode("", config=True, help="""Username for authentication.""")
 
     # URL configuration attributes
-    run_url = Unicode("", config=True, help="""Datalayer server URL.""")
+    datalayer_url = Unicode("", config=True, help="""Datalayer server URL.""")
 
     iam_url = Unicode("", config=True, help="""Datalayer IAM server URL.""")
 
@@ -82,11 +82,11 @@ class RuntimesConsoleApp(AuthnMixin, KonsoleApp):
         False, config=True, help="""Will prompt for user and password on the CLI."""
     )
 
-    @default("run_url")
-    def _run_url_default(self) -> str:
+    @default("datalayer_url")
+    def _datalayer_url_default(self) -> str:
         """Get the default run URL from environment."""
         urls = DatalayerURLs.from_environment()
-        return urls.run_url
+        return urls.datalayer_url
 
     @default("iam_url")
     def _iam_url_default(self) -> str:
@@ -102,12 +102,12 @@ class RuntimesConsoleApp(AuthnMixin, KonsoleApp):
         Returns
         -------
         DatalayerURLs
-            URLs object with run_url and iam_url from the app configuration.
+            URLs object with datalayer_url and iam_url from the app configuration.
         """
         from datalayer_core.utils.urls import DatalayerURLs
 
         return DatalayerURLs.from_environment(
-            run_url=self.run_url,
+            datalayer_url=self.datalayer_url,
             iam_url=self.iam_url,
         )
 
@@ -174,7 +174,7 @@ class RuntimesConsoleApp(AuthnMixin, KonsoleApp):
         # Create a RuntimeManager and start a kernel.
         self.kernel_client = self.kernel_manager_class(
             parent=self,
-            run_url=self.run_url,
+            datalayer_url=self.datalayer_url,
             token=self.token or "",
             username=self.user_handle or "",
         )

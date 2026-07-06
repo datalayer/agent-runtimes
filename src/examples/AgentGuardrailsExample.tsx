@@ -49,6 +49,7 @@ import { getAgentspecs } from '../specs/agents';
 import { subscribeOtelWs } from '../context/otelWsPool';
 import { toMetricValue } from '../hooks/useMonitoring';
 import { useAIAgentsWebSocket } from '../hooks';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -58,8 +59,6 @@ import { Chat } from '../chat';
 
 const AGENT_NAME = 'guardrails-example-agent';
 const AGENTSPEC_ID = 'example-guardrails';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
 const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
 const OTEL_SERVICE_NAME = 'agent-runtimes';
@@ -308,10 +307,10 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
-    configuration?.otelRunUrl ||
-    configuration?.runUrl ||
+    configuration?.otelUrl ||
+    configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
     DATALAYER_URL_ENV ||
     'https://prod1.datalayer.run';

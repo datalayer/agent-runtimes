@@ -203,7 +203,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
         name="Forwarded Spec Agent",
         agent_spec={
             "description": "Forwarded description",
-            "model": "openai:gpt-4o-mini",
+            "model": "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
             "systemPrompt": "Forwarded prompt",
             "tools": ["fetch_webpage"],
             "protocol": "vercel-ai",
@@ -215,7 +215,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
 
     assert response.id == "forwarded-spec-agent"
     assert response.transport == "vercel-ai"
-    assert creation_spy["pydantic_model"] == "openai:gpt-4o-mini"
+    assert creation_spy["pydantic_model"] == "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     assert creation_spy["tool_ids"] == ["fetch_webpage"]
 
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
@@ -255,7 +255,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
         lambda _spec_id: SimpleNamespace(
             description="Strict usage limits compatibility",
             goal=None,
-            model="openai:gpt-4o-mini",
+            model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
             system_prompt="Strict prompt",
             system_prompt_codemode_addons=None,
             skills=[],
@@ -274,7 +274,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
     request = CreateAgentRequest(
         name="Strict UsageLimits Agent",
         agent_spec_id="demo/spec",
-        model="openai:gpt-4o-mini",
+        model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
         system_prompt="Strict prompt",
         tools=["fetch_webpage"],
         transport="vercel-ai",

@@ -23,15 +23,13 @@ import {
 } from '@primer/react';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import { useAIAgentsWebSocket } from '../hooks';
 
 const AGENTSPEC_ID = 'example-inference';
 const AGENT_NAME = 'inference-provider-example-agent';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
-
 const queryClient = new QueryClient();
 
 type InferenceProviderKind = 'local' | 'datalayer';
@@ -97,7 +95,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
   const currentAgentRef = useRef<string | null>(null);
   const requestEpochRef = useRef(0);
 
-  const baseUrl = DEFAULT_LOCAL_BASE_URL;
+  const baseUrl = useExampleAgentRuntimesUrl();
 
   const inferenceUrl = useMemo(() => {
     if (provider === 'local') {

@@ -12,9 +12,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useExampleThemeStore } from './utils/themeStore';
 import { useA2uiProcessor } from './utils/a2ui';
-
-const A2UI_RESTAURANT_ENDPOINT =
-  'http://localhost:8765/api/v1/a2ui/restaurant/';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const LOADING_TEXT_LINES = [
   'Finding the best spots for you...',
@@ -134,6 +132,8 @@ function RestaurantSearch({
 }
 
 const A2UiRestaurantExample: React.FC = () => {
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const a2uiRestaurantEndpoint = `${baseUrl}/api/v1/a2ui/restaurant/`;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasData, setHasData] = useState(false);
@@ -185,7 +185,7 @@ const A2UiRestaurantExample: React.FC = () => {
         setError(null);
         setLoadingTextIndex(0);
 
-        const response = await fetch(A2UI_RESTAURANT_ENDPOINT, {
+        const response = await fetch(a2uiRestaurantEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -219,7 +219,7 @@ const A2UiRestaurantExample: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [processMessages, resetSurfaces],
+    [processMessages, resetSurfaces, a2uiRestaurantEndpoint],
   );
 
   useEffect(() => {
@@ -340,7 +340,7 @@ const A2UiRestaurantExample: React.FC = () => {
             }}
           >
             <Text sx={{ fontSize: '0.75rem', color: 'fg.muted' }}>
-              Backend: {A2UI_RESTAURANT_ENDPOINT}
+              Backend: {a2uiRestaurantEndpoint}
             </Text>
           </Box>
         </Box>

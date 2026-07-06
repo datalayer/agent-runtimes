@@ -30,7 +30,7 @@ export interface IDatalayerCollaborationConfig {
   /**
    * Base URL for the Datalayer server (optional, uses config from store if not provided).
    */
-  runUrl?: string;
+  datalayerUrl?: string;
   /**
    * Authentication token (optional, uses config from store if not provided).
    */
@@ -108,12 +108,12 @@ export class DatalayerCollaborationProvider implements ICollaborationProvider {
     this.setStatus(CollaborationStatus.Connecting);
 
     try {
-      const runUrl = this._config.runUrl;
+      const datalayerUrl = this._config.datalayerUrl;
       const token = this._config.token;
 
-      if (!runUrl) {
+      if (!datalayerUrl) {
         throw new Error(
-          'Datalayer runUrl is not configured - must be explicitly provided in DatalayerCollaborationProvider config',
+          'Datalayer datalayerUrl is not configured - must be explicitly provided in DatalayerCollaborationProvider config',
         );
       }
       if (!token) {
@@ -124,11 +124,11 @@ export class DatalayerCollaborationProvider implements ICollaborationProvider {
 
       const { ydoc, awareness } = sharedModel;
 
-      const documentURL = URLExt.join(runUrl, '/api/spacer/v1/documents');
-      const wsUrl = URLExt.join(runUrl, '/api/spacer/v1/documents/ws').replace(
-        /^http/,
-        'ws',
-      );
+      const documentURL = URLExt.join(datalayerUrl, '/api/spacer/v1/documents');
+      const wsUrl = URLExt.join(
+        datalayerUrl,
+        '/api/spacer/v1/documents/ws',
+      ).replace(/^http/, 'ws');
 
       const sessionId = await requestDatalayerCollaborationSessionId({
         url: URLExt.join(documentURL, documentId),

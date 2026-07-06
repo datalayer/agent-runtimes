@@ -30,7 +30,7 @@ export type RuntimesState = {
   /**
    * Runtimes RUN URL.
    */
-  runtimesRunUrl: string;
+  runtimesUrl: string;
   tab: number;
   getIntTab: () => number;
   setTab: (tab: number) => void;
@@ -104,7 +104,7 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
           : { configuration: { ...configuration } },
       );
     },
-    runtimesRunUrl: coreStore.getState().configuration?.runtimesRunUrl,
+    runtimesUrl: coreStore.getState().configuration?.runtimesUrl,
     tab: 0.0,
     getIntTab: () => Math.floor(get().tab),
     setTab: (tab: number) => set(state => ({ tab })),
@@ -225,7 +225,7 @@ const kernelsPoll = new Poll({
   },
   name: '@datalayer/jupyter-kernels:KernelsManager#kernels',
   standby: () =>
-    iamStore.getState().token || runtimesStore.getState().runtimesRunUrl
+    iamStore.getState().token || runtimesStore.getState().runtimesUrl
       ? 'when-hidden'
       : true,
 });
@@ -257,13 +257,12 @@ runtimesStore.subscribe((state: RuntimesState, prevState: RuntimesState) => {
 
 coreStore.subscribe((state, prevState) => {
   if (
-    state.configuration.runtimesRunUrl &&
-    state.configuration.runtimesRunUrl !==
-      prevState.configuration.runtimesRunUrl
+    state.configuration.runtimesUrl &&
+    state.configuration.runtimesUrl !== prevState.configuration.runtimesUrl
   ) {
-    const runtimesRunUrl = state.configuration.runtimesRunUrl;
-    console.log(`Updating runtimesRunUrl with new value ${runtimesRunUrl}`);
-    runtimesStore.setState({ runtimesRunUrl });
+    const runtimesUrl = state.configuration.runtimesUrl;
+    console.log(`Updating runtimesUrl with new value ${runtimesUrl}`);
+    runtimesStore.setState({ runtimesUrl });
     kernelsPoll
       .refresh()
       .then(() => kernelsPoll.tick)

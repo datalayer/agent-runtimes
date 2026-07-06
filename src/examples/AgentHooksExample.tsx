@@ -3,13 +3,14 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { SyncIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
@@ -20,69 +21,17 @@ const AGENT_NAME = 'hooks-example-agent';
 
 const AgentHooksExample: React.FC = () => {
   const baseUrl = useExampleAgentRuntimesUrl();
-  const [agentId, setAgentId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const name = uniqueAgentId(AGENT_NAME);
-
-    const createAgent = async () => {
-      try {
-        const response = await fetch(`${baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name,
-            agent_spec_id: AGENTSPEC_ID,
-            transport: 'vercel-ai',
-          }),
-        });
-
-        if (!response.ok) {
-          const data = await response
-            .json()
-            .catch(() => ({ detail: 'Unknown error' }));
-          throw new Error(
-            data.detail || `Failed to create agent: ${response.status}`,
-          );
-        }
-
-        const data = await response.json();
-        if (!cancelled) {
-          setAgentId(data.id);
-          setIsCreating(false);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : 'Failed to create agent',
-          );
-          setIsCreating(false);
-        }
-      }
-    };
-
-    createAgent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [baseUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (!agentId) {
-        return;
-      }
-      void fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
-        method: 'DELETE',
-      }).catch(() => {
-        // Ignore teardown failures in example mode.
-      });
-    };
-  }, [agentId, baseUrl]);
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId, error, status, isReady } = useExampleAgentRuntime({
+    exampleId: 'AgentHooksExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'vercel-ai',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const isCreating = !isReady && status !== 'error';
 
   if (isCreating) {
     return (

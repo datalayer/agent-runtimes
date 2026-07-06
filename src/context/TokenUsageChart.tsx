@@ -228,8 +228,8 @@ export interface TokenUsageChartProps {
   serviceName?: string;
   agentId?: string;
   apiKey?: string;
-  runUrl?: string;
-  wsRunUrl?: string;
+  datalayerUrl?: string;
+  wsUrl?: string;
   liveSystemPromptTokens?: number;
   liveToolsDescriptionTokens?: number;
   liveUserMessageTokens?: number;
@@ -285,8 +285,8 @@ export function TokenUsageChart({
   serviceName,
   agentId,
   apiKey,
-  runUrl,
-  wsRunUrl,
+  datalayerUrl,
+  wsUrl,
   liveSystemPromptTokens,
   liveToolsDescriptionTokens,
   liveUserMessageTokens,
@@ -403,8 +403,8 @@ export function TokenUsageChart({
     if (!serviceName || !apiKey) return;
 
     const rawBaseUrl =
-      wsRunUrl ||
-      runUrl ||
+      wsUrl ||
+      datalayerUrl ||
       (typeof window !== 'undefined' ? window.location.origin : '');
     if (!rawBaseUrl) return;
 
@@ -473,7 +473,7 @@ export function TokenUsageChart({
     });
 
     return unsubscribe;
-  }, [agentId, apiKey, mergeTokenTurns, runUrl, serviceName, wsRunUrl]);
+  }, [agentId, apiKey, mergeTokenTurns, datalayerUrl, serviceName, wsUrl]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {

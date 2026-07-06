@@ -123,7 +123,7 @@ export interface AgentsSdkLike {
  * import { AgentsMixin, SdkAgentRuntimesClient } from '@datalayer/agent-runtimes';
  *
  * const ClientWithAgents = AgentsMixin(DatalayerClient);
- * const sdk = new ClientWithAgents({ iamRunUrl, runtimesRunUrl, spacerRunUrl });
+ * const sdk = new ClientWithAgents({ iamUrl, runtimesUrl, spacerUrl });
  * const client = new SdkAgentRuntimesClient(sdk);
  * ```
  */

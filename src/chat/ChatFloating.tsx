@@ -45,7 +45,7 @@ import type { ChatCommonProps, ChatViewMode, ProtocolConfig } from '../types';
  */
 export interface ChatFloatingProps extends ChatCommonProps {
   /**
-   * AG-UI endpoint URL (e.g., `http://localhost:8000/api/v1/examples/agentic_chat`).
+   * AG-UI endpoint URL (e.g., `http://localhost:8000/api/v1/ag-ui/{agentId}/`).
    * When provided with useStore=false, enables AG-UI protocol mode.
    */
   endpoint?: string;

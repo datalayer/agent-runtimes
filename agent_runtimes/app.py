@@ -53,10 +53,8 @@ from .routes import (
     agui_router,
     configure_router,
     evals_router,
-    examples_router,
     get_a2a_mounts,
     get_agui_mounts,
-    get_example_mounts,
     health_router,
     identity_router,
     mcp_proxy_router,
@@ -1255,11 +1253,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 f"Mounted A2A route: {config.api_prefix}/a2a/agents{mount.path}"
             )
 
-        # Add AG-UI example mounts
-        for mount in get_example_mounts(config.api_prefix):
-            app.routes.append(mount)
-            logger.info(f"Mounted example route: {mount.path}/")
-
         # Start A2A TaskManagers (required for FastA2A apps to handle requests)
         await start_a2a_task_managers()
 
@@ -1395,7 +1388,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(mcp_ui_router, prefix=config.api_prefix)
     app.include_router(a2a_protocol_router, prefix=config.api_prefix)
     app.include_router(a2ui_router, prefix=config.api_prefix)
-    app.include_router(examples_router, prefix=config.api_prefix)
     if triggers_webhook_router is not None:
         app.include_router(triggers_webhook_router, prefix=config.api_prefix)
 
@@ -1422,7 +1414,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 "mcp_ui": f"{config.api_prefix}/mcp-ui/",
                 "a2a": f"{config.api_prefix}/a2a/",
                 "a2ui": f"{config.api_prefix}/a2ui/",
-                "examples": f"{config.api_prefix}/examples/",
             },
         }
 

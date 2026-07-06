@@ -31,9 +31,9 @@ function useAuthToken(): string {
 
 function useBaseUrl(): string {
   const config = useCoreStore(
-    (s: { configuration?: { aiagentsRunUrl?: string } }) => s.configuration,
+    (s: { configuration?: { aiAgentsUrl?: string } }) => s.configuration,
   );
-  return config?.aiagentsRunUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
+  return config?.aiAgentsUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
 }
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ export type AIAgentsWebSocketConnectionState =
 export interface UseAIAgentsWebSocketOptions {
   /** Enable/disable the socket lifecycle. */
   enabled?: boolean;
-  /** Override the service base URL (defaults to aiagentsRunUrl). */
+  /** Override the service base URL (defaults to aiAgentsUrl). */
   baseUrl?: string;
   /** WebSocket path (or full http/https URL) for the stream endpoint. */
   path?: string;

@@ -247,6 +247,11 @@ examples: ## examples – local-first (local agent-runtimes + local jupyter-serv
 	$(EXAMPLES_LOCAL_ENV) \
 		npm run examples
 
+examples2: ## examples2
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_LOCAL_ENV) \
+		npm run examples2
+
 examples\:prod: ## examples – dev server pointed at prod1.datalayer.run (and r1 for datalayer-runtimes)
 	$(BEDROCK_ENV) \
 	$(EXAMPLES_PROD_ENV) \

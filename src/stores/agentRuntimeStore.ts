@@ -235,7 +235,7 @@ export type AgentRuntimeStore = AgentRuntimeStoreState &
 
 export interface LaunchAgentOptions extends IRuntimeOptions {
   /** Optional runtimes API base URL override for runtime creation. */
-  runtimesRunUrl?: string;
+  runtimesUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -265,31 +265,59 @@ async function createAgentOnRuntime(
   agentId: string,
   config: AgentConfig = {},
 ): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
-  if (!config.protocol) {
+  if (!config.protocol && !config.agentSpecId) {
     throw new Error(
       'Agent protocol is required. Provide config.protocol from the selected spec/config.',
     );
   }
-  const transport = config.protocol;
-  if (!config.model) {
+  const transport = config.protocol || 'vercel-ai';
+  if (!config.model && !config.agentSpecId) {
     throw new Error(
       'Agent model is required. Provide config.model from the selected spec/config.',
     );
   }
+  const payload: Record<string, unknown> = {
+    name: config.name || agentId,
+    description: config.description || 'AI assistant',
+    agent_library: config.agentLibrary || 'pydantic-ai',
+    transport,
+    model: config.model,
+    system_prompt: config.systemPrompt || 'You are a helpful AI assistant.',
+  };
+
+  if (config.agentSpecId) {
+    payload.agent_spec_id = config.agentSpecId;
+  }
+  if (typeof config.enableSkills === 'boolean') {
+    payload.enable_skills = config.enableSkills;
+  }
+  if (Array.isArray(config.tools)) {
+    payload.tools = config.tools;
+  }
+  if (config.inferenceProvider) {
+    payload.inferenceProvider = config.inferenceProvider;
+  }
+  if (typeof config.enableCodemode === 'boolean') {
+    payload.enable_codemode = config.enableCodemode;
+  }
+  if (config.sandboxVariant) {
+    payload.sandbox_variant = config.sandboxVariant;
+  }
+  if (config.jupyterSandbox) {
+    payload.jupyter_sandbox = config.jupyterSandbox;
+  }
+
+  if (config.createPayload && typeof config.createPayload === 'object') {
+    Object.assign(payload, config.createPayload);
+  }
+
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: config.name || agentId,
-      description: config.description || 'AI assistant',
-      agent_library: config.agentLibrary || 'pydantic-ai',
-      transport,
-      model: config.model,
-      system_prompt: config.systemPrompt || 'You are a helpful AI assistant.',
-    }),
+    body: JSON.stringify(payload),
   });
 
-  if (response.ok || response.status === 400) {
+  if (response.ok || response.status === 400 || response.status === 409) {
     const endpoint = getTransportEndpoint(agentBaseUrl, transport, agentId);
     return { agentId, endpoint, isReady: true };
   }
@@ -524,14 +552,13 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           try {
             const { createRuntime } = await import('../runtimes/actions');
             const { runtimesStore } = await import('../state/substates');
-            if (config.runtimesRunUrl) {
+            if (config.runtimesUrl) {
               runtimesStore.setState({
-                runtimesRunUrl: config.runtimesRunUrl,
+                runtimesUrl: config.runtimesUrl,
               });
             }
 
-            const { runtimesRunUrl: _runtimesRunUrl, ...runtimeOptions } =
-              config;
+            const { runtimesUrl: _runtimesUrl, ...runtimeOptions } = config;
             const runtimePod = await createRuntime({
               environmentName: runtimeOptions.environmentName,
               creditsLimit: runtimeOptions.creditsLimit,

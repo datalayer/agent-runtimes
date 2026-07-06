@@ -163,8 +163,8 @@ export abstract class ItemDTO<TData> {
   async delete(): Promise<void> {
     this._checkDeleted();
     const token = (this._client as any).getToken();
-    const spacerRunUrl = (this._client as any).getSpacerRunUrl();
-    await items.deleteItem(token, this.uid, spacerRunUrl);
+    const spacerUrl = (this._client as any).getSpacerUrl();
+    await items.deleteItem(token, this.uid, spacerUrl);
     this._deleted = true;
   }
 
@@ -198,8 +198,8 @@ export abstract class ItemDTO<TData> {
     // Third try: Fetch full item details from API
     try {
       const token = (this._client as any).getToken();
-      const spacerRunUrl = (this._client as any).getSpacerRunUrl();
-      const response = await items.getItem(token, this.uid, spacerRunUrl);
+      const spacerUrl = (this._client as any).getSpacerUrl();
+      const response = await items.getItem(token, this.uid, spacerUrl);
 
       // Update internal data with full item details
       if (response.success && response.item) {
@@ -248,8 +248,8 @@ export abstract class ItemDTO<TData> {
   }
 
   /** Get spacer API URL for API calls. */
-  protected _getSpacerRunUrl(): string {
-    return (this._client as any).getSpacerRunUrl();
+  protected _getSpacerUrl(): string {
+    return (this._client as any).getSpacerUrl();
   }
 
   /** Update internal data after API call. */

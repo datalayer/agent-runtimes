@@ -43,8 +43,6 @@ from .agui import (
     unregister_thread as unregister_agui_thread,
 )
 from .configure import router as configure_router
-from .examples import get_example_mounts
-from .examples import router as examples_router
 from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router
@@ -77,13 +75,11 @@ __all__ = [
     "cancel_agui_thread",
     "cancel_agui_threads",
     "configure_router",
-    "examples_router",
     "evals_router",
     "get_a2a_agents",
     "get_a2a_mounts",
     "get_agui_app",
     "get_agui_mounts",
-    "get_example_mounts",
     "health_router",
     "history_router",
     "identity_router",

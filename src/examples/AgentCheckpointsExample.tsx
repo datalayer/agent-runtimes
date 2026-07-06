@@ -16,7 +16,7 @@
  *   3. Provides pause/resume/terminate lifecycle backed by CRIU
  *
  * Prerequisites:
- *   - Datalayer core configuration (runtimesRunUrl, aiagentsRunUrl)
+ *   - Datalayer core configuration (runtimesUrl, aiAgentsUrl)
  *   - Valid IAM token (set via SignInSimple or iamStore)
  */
 

@@ -12,8 +12,8 @@
  * is a ChatSidebar whose agent is selected from the agent-runtimes library spec
  * list and launched on demand.
  *
- * The OTEL backend is configured via `configuration.otelRunUrl` when available
- * (falling back to `configuration.runUrl`, then `VITE_OTEL_BASE_URL`, then
+ * The OTEL backend is configured via `configuration.otelUrl` when available
+ * (falling back to `configuration.datalayerUrl`, then `VITE_OTEL_BASE_URL`, then
  * `VITE_DATALAYER_URL`, then https://prod1.datalayer.run).
  * Agent routes use `VITE_BASE_URL` when provided, otherwise the same resolved
  * direct run URL to avoid proxy-relative calls.
@@ -244,13 +244,13 @@ const AgentOtelExampleInner: React.FC<{
   token: string;
 }> = ({ token }) => {
   const { configuration } = useCoreStore();
-  const resolvedRunUrl =
-    configuration?.otelRunUrl ||
-    configuration?.runUrl ||
+  const resolvedUrl =
+    configuration?.otelUrl ||
+    configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
     DATALAYER_URL_ENV ||
     'https://prod1.datalayer.run';
-  const otelBaseUrl = resolvedRunUrl;
+  const otelBaseUrl = resolvedUrl;
   const agentBaseUrl = AGENT_BASE_URL_ENV;
 
   // ── OTEL view state ─────────────────────────────────────────────
@@ -306,7 +306,7 @@ const AgentOtelExampleInner: React.FC<{
     if (connectedAgentTransport === 'ag-ui') {
       return {
         type: 'ag-ui',
-        endpoint: `${agentBaseUrl}/api/v1/examples/${connectedAgentId}/`,
+        endpoint: `${agentBaseUrl}/api/v1/ag-ui/${connectedAgentId}/`,
         agentId: connectedAgentId,
       };
     }

@@ -30,7 +30,7 @@ class RuntimeManager(KernelHttpManager):
 
     Parameters
     ----------
-    run_url : str
+    datalayer_url : str
         The runtime URL.
     token : str
         Authentication token.
@@ -41,14 +41,14 @@ class RuntimeManager(KernelHttpManager):
     """
 
     def __init__(
-        self, run_url: str, token: str, username: str, **kwargs: dict[str, Any]
+        self, datalayer_url: str, token: str, username: str, **kwargs: dict[str, Any]
     ):
         """
         Initialize the gateway Runtime manager.
 
         Parameters
         ----------
-        run_url : str
+        datalayer_url : str
             The runtime URL.
         token : str
             Authentication token.
@@ -64,12 +64,12 @@ class RuntimeManager(KernelHttpManager):
         self.runtime_name = ""
         self.runtime_pod_name = ""
         self.runtime_created_in_start = False
-        self.run_url = run_url
+        self.datalayer_url = datalayer_url
         self.run_token = token
         self.username = username
 
         # Initialize DatalayerClient for modern API access
-        urls = DatalayerURLs.from_environment(run_url=run_url)
+        urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
         self._client = DatalayerClient(urls=urls, token=token)
 
     @property

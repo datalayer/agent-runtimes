@@ -132,12 +132,12 @@ export class NotebookDTO extends ItemDTO<NotebookData> {
     // FIXME: check if both are needed, and use the existing values if only one provided
     this._checkDeleted();
     const token = (this as any)._client.getToken();
-    const spacerRunUrl = (this as any)._client.getSpacerRunUrl();
+    const spacerUrl = (this as any)._client.getSpacerUrl();
     const updateData: UpdateNotebookRequest = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
 
-    await notebooks.updateNotebook(token, this.uid, updateData, spacerRunUrl);
+    await notebooks.updateNotebook(token, this.uid, updateData, spacerUrl);
     // FIXME: handle partial updates
     return this;
   }

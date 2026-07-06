@@ -48,7 +48,7 @@ const loadConfigurations = () => {
         }
       }
 
-      if (datalayerConfig.runUrl) {
+      if (datalayerConfig.datalayerUrl) {
         coreStore.getState().setConfiguration(datalayerConfig);
 
         // Also set the token in the IAM store for API authentication
@@ -142,13 +142,13 @@ const NotebookOnlyApp: React.FC = () => {
       try {
         const { configuration } = coreStore.getState();
 
-        // Always try to create collaboration provider if we have token and runUrl
-        if (configuration?.token && configuration?.runUrl) {
+        // Always try to create collaboration provider if we have token and datalayerUrl
+        if (configuration?.token && configuration?.datalayerUrl) {
           try {
             const { DatalayerCollaborationProvider } =
               await import('../collaboration/DatalayerCollaborationProvider');
             const provider = new DatalayerCollaborationProvider({
-              runUrl: configuration.runUrl,
+              datalayerUrl: configuration.datalayerUrl,
               token: configuration.token,
             });
             console.warn(

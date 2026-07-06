@@ -256,7 +256,7 @@ export class RuntimeDTO {
       (this._client as any).getToken(),
       this.podName,
       from,
-      (this._client as any).getRuntimesRunUrl(),
+      (this._client as any).getRuntimesUrl(),
     );
     return new RuntimeDTO(updated, this._client);
   }
