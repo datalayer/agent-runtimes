@@ -38,11 +38,6 @@ import {
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import {
-  agentRuntimeStore,
-  useChatStore,
-  useConversationStore,
-} from '../stores';
 import { teardownExampleAgents } from './utils/teardownAgents';
 import { OAuthCallback } from '../identity';
 import {
@@ -574,6 +569,8 @@ export const ExampleApp: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState(getInitialSearchQuery());
   const [isChangingExample, setIsChangingExample] = useState(false);
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
+  const setRuntimeTarget = useRuntimeTargetStore(state => state.setTarget);
 
   const filteredExampleEntries = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -705,7 +702,7 @@ export const ExampleApp: React.FC = () => {
       runtimeTargetStore.getState().target,
     );
     const token = useSimpleAuthStore.getState().token;
-    await teardownExampleAgents(agentBaseUrl, token);
+    await teardownExampleAgents(agentBaseUrl, token ?? undefined);
 
     // 3) Load and mount the new example.
     setSelectedExample(newExample);
@@ -730,7 +727,7 @@ export const ExampleApp: React.FC = () => {
     //    brand-new runtime is launched for the new target.
     const oldAgentBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
     const token = useSimpleAuthStore.getState().token;
-    await teardownExampleAgents(oldAgentBaseUrl, token);
+    await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
 
     // 3) Switch the target and re-mount the example (its key includes the
     //    target, so this launches/connects a fresh runtime).
@@ -788,6 +785,7 @@ export const ExampleApp: React.FC = () => {
       ExampleComponent={ExampleComponent}
       exampleProps={exampleProps}
       onExampleChange={handleExampleChange}
+      onRuntimeTargetChange={handleRuntimeTargetChange}
       availableExamples={getExampleEntriesList()}
     />
   );
@@ -804,6 +802,7 @@ const ExampleAppThemed: React.FC<{
   ExampleComponent: React.ComponentType<Record<string, unknown>> | null;
   exampleProps: Record<string, unknown>;
   onExampleChange: (name: string) => Promise<void>;
+  onRuntimeTargetChange: (target: ExampleRuntimeTarget) => Promise<void>;
   availableExamples: ExampleEntry[];
 }> = ({
   selectedExample,
@@ -812,11 +811,11 @@ const ExampleAppThemed: React.FC<{
   ExampleComponent,
   exampleProps,
   onExampleChange,
+  onRuntimeTargetChange,
   availableExamples,
 }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
-  const setRuntimeTarget = useRuntimeTargetStore(state => state.setTarget);
   const agentSummary = useAgentSummaryStore(state => state.active);
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
@@ -1065,7 +1064,7 @@ const ExampleAppThemed: React.FC<{
               as="select"
               value={runtimeTarget}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                void handleRuntimeTargetChange(
+                void onRuntimeTargetChange(
                   e.target.value as ExampleRuntimeTarget,
                 )
               }
