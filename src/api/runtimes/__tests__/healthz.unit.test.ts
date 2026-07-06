@@ -5,9 +5,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { healthz } from '..';
-import { requestDatalayerAPI } from '@datalayer/core/lib/base/api/DatalayerApi';
+import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
 
-vi.mock('../../DatalayerApi');
+vi.mock('@datalayer/core/lib/api/DatalayerApi', () => ({
+  requestDatalayerAPI: vi.fn(),
+}));
 
 describe('Runtimes Healthz', () => {
   beforeEach(() => {

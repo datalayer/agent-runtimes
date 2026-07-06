@@ -10,9 +10,9 @@ import {
   API_BASE_PATHS,
   DEFAULT_SERVICE_URLS,
 } from '@datalayer/core/lib/api/constants';
-import { MOCK_JWT_TOKEN } from '@datalayer/core/lib/__tests__/shared/test-constants';
+import { MOCK_JWT_TOKEN } from '../../../__tests__/shared/test-constants';
 
-vi.mock('../../DatalayerApi', () => ({
+vi.mock('@datalayer/core/lib/api/DatalayerApi', () => ({
   requestDatalayerAPI: vi.fn(),
 }));
 

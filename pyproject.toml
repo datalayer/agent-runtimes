@@ -180,6 +180,14 @@ ignore_errors = true
 module = "agent_runtimes.evals.saas.runner"
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.commands.agents"
+disable_error_code = ["import-untyped"]
+
 [tool.ruff.lint]
 extend-select = ["I"]
 

@@ -17,7 +17,7 @@ from typing import Any, Optional
 
 import requests
 import typer
-import yaml  # type: ignore[import-untyped]
+import yaml
 from datalayer_core.utils.date import timestamp_to_local_date
 from datalayer_core.utils.network import fetch
 from datalayer_core.utils.urls import DatalayerURLs

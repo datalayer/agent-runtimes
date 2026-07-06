@@ -7,7 +7,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { healthz } from '..';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
 
-vi.mock('../../DatalayerApi');
+vi.mock('@datalayer/core/lib/api/DatalayerApi', () => ({
+  requestDatalayerAPI: vi.fn(),
+}));
 
 describe('Spacer Healthz', () => {
   beforeEach(() => {

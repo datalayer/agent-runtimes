@@ -5,10 +5,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { environments } from '..';
-import { requestDatalayerAPI } from '@datalayer/core/lib/base/api/DatalayerApi';
-import { MOCK_JWT_TOKEN } from '@datalayer/core/lib/base/__tests__/shared/test-constants';
+import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
+import { MOCK_JWT_TOKEN } from '../../../__tests__/shared/test-constants';
 
-vi.mock('../../DatalayerApi', () => ({
+vi.mock('@datalayer/core/lib/api/DatalayerApi', () => ({
   requestDatalayerAPI: vi.fn(),
 }));
 
