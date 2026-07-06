@@ -421,9 +421,9 @@ export function TokenUsageChart({
               : 'http:'
           }//${typeof window !== 'undefined' ? window.location.host : ''}${rawBaseUrl}`;
 
-    let wsUrl: string;
+    let resolvedWsUrl: string;
     try {
-      wsUrl = buildOtelWebSocketUrl({
+      resolvedWsUrl = buildOtelWebSocketUrl({
         baseUrl: baseWithProtocol,
         token: apiKey,
       });
@@ -431,7 +431,7 @@ export function TokenUsageChart({
       return;
     }
 
-    const unsubscribe = subscribeOtelWs(wsUrl, msg => {
+    const unsubscribe = subscribeOtelWs(resolvedWsUrl, msg => {
       if (msg.signal !== 'metrics') return;
 
       const rows = Array.isArray(msg.data) ? msg.data : [];

@@ -16,6 +16,8 @@ export interface AgentSummary {
   location: AgentSummaryLocation;
   baseUrl: string;
   status?: string;
+  isReady?: boolean;
+  error?: string;
 }
 
 interface AgentSummaryState {

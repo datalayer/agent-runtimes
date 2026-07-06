@@ -14,6 +14,8 @@ export interface AgentSummaryData {
   status?: string;
   baseUrl?: string;
   agentId?: string;
+  isReady?: boolean;
+  error?: string;
 }
 
 export interface AgentSummaryProps {
@@ -22,19 +24,17 @@ export interface AgentSummaryProps {
 }
 
 /**
- * Statuses that represent a settled runtime (creation finished, for good or
- * ill). Anything else while the agent has no id is treated as "creating".
+ * Statuses that represent an agent actively being created/started. The spinner
+ * only shows for these; app-navigation states ("selected", "switching") and
+ * settled states ("ready", "running", ...) never spin.
  */
-const SETTLED_STATUSES = new Set([
-  'running',
-  'ready',
-  'resumed',
-  'paused',
-  'terminated',
-  'archived',
-  'stopped',
-  'error',
-  'failed',
+const CREATING_STATUSES = new Set([
+  'creating',
+  'starting',
+  'launching',
+  'connecting',
+  'pending',
+  'resuming',
 ]);
 
 /**
@@ -61,10 +61,13 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
   }
 
   const normalizedStatus = (summary.status || '').toLowerCase();
-  // The agent is still being created while it has no id and its status has not
-  // settled into a terminal/running state.
+  // Only show the spinner while the agent is genuinely being created: it is not
+  // ready, has no id yet, and its status is an active creation/startup state.
   const isCreating =
-    !summary.agentId && !SETTLED_STATUSES.has(normalizedStatus);
+    !summary.isReady &&
+    !summary.agentId &&
+    CREATING_STATUSES.has(normalizedStatus);
+  const hasError = Boolean(summary.error);
 
   return (
     <Box
@@ -79,10 +82,10 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           px: 2,
           py: '6px',
           border: '1px solid',
-          borderColor: 'border.default',
+          borderColor: hasError ? 'danger.emphasis' : 'border.default',
           borderRadius: 2,
-          bg: 'canvas.default',
-          color: 'fg.default',
+          bg: hasError ? 'danger.subtle' : 'canvas.default',
+          color: hasError ? 'danger.fg' : 'fg.default',
           fontSize: 0,
           cursor: 'default',
           display: 'flex',
@@ -91,6 +94,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
         }}
       >
         {isCreating && <Spinner size="small" sx={{ width: 12, height: 12 }} />}
+        {hasError && <span aria-hidden>⚠</span>}
         {summary.agentName} · {summary.location}
       </Box>
 
@@ -159,6 +163,22 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
               'n/a'
             )}
           </Box>
+          {hasError && (
+            <Box
+              sx={{
+                mt: 1,
+                p: 1,
+                border: '1px solid',
+                borderColor: 'danger.muted',
+                borderRadius: 2,
+                bg: 'danger.subtle',
+                color: 'danger.fg',
+                wordBreak: 'break-word',
+              }}
+            >
+              Error: {summary.error}
+            </Box>
+          )}
         </Box>
       )}
     </Box>

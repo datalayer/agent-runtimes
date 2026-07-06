@@ -60,6 +60,7 @@ import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
+import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
@@ -468,7 +469,10 @@ const NotebookOnlyApp: React.FC = () => {
         }
 
         // Create service manager
-        if (configuration?.token) {
+        if (
+          runtimeTargetStore.getState().target === 'cloud' &&
+          configuration?.token
+        ) {
           try {
             const manager = await createDatalayerServiceManager(
               configuration.cpuEnvironment || 'python-3.11',
@@ -620,9 +624,11 @@ export const ExampleApp: React.FC = () => {
     const initializeApp = async () => {
       try {
         const { configuration } = coreStore.getState();
+        const runtimeTarget = runtimeTargetStore.getState().target;
 
-        // Try to use DatalayerServiceManager if we have a token
-        if (configuration?.token) {
+        // Only create a cloud Datalayer runtime when the user picked "cloud".
+        // In "local" mode we must never hit the cloud runtimes API.
+        if (runtimeTarget === 'cloud' && configuration?.token) {
           try {
             const manager = await createDatalayerServiceManager(
               configuration.cpuEnvironment || 'python-3.11',
@@ -635,7 +641,13 @@ export const ExampleApp: React.FC = () => {
             await loadExample(selectedExample, manager);
           } catch (error) {
             console.error('Failed to create DatalayerServiceManager:', error);
-            // Fall back to regular ServiceManager
+            // Surface the failure in the UI, then fall back to local so the
+            // app stays usable.
+            setError(
+              `Cloud runtime unavailable, using local instead: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
             const serverSettings = createServerSettings(
               getJupyterServerUrl(),
               getJupyterServerToken(),
@@ -648,7 +660,7 @@ export const ExampleApp: React.FC = () => {
             await loadExample(selectedExample, manager);
           }
         } else {
-          // Use regular ServiceManager (no Datalayer token)
+          // Local runtime target (or no token): use the local Jupyter server.
           const serverSettings = createServerSettings(
             getJupyterServerUrl(),
             getJupyterServerToken(),
@@ -1202,9 +1214,11 @@ const ExampleAppThemed: React.FC<{
               <p>Please wait while the example loads.</p>
             </Box>
           ) : ExampleComponent ? (
-            <ExampleWrapper key={selectedExample}>
-              <ExampleComponent key={selectedExample} {...exampleProps} />
-            </ExampleWrapper>
+            <ExampleErrorBoundary key={selectedExample}>
+              <ExampleWrapper key={selectedExample}>
+                <ExampleComponent key={selectedExample} {...exampleProps} />
+              </ExampleWrapper>
+            </ExampleErrorBoundary>
           ) : null}
         </Box>
       </Box>

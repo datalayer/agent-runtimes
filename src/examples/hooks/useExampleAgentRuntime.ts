@@ -97,6 +97,8 @@ export function useExampleAgentRuntime(
       location,
       baseUrl: runtime?.agentBaseUrl || baseUrl,
       status,
+      isReady,
+      error: error || undefined,
     });
 
     return () => {
@@ -111,6 +113,8 @@ export function useExampleAgentRuntime(
     location,
     baseUrl,
     status,
+    isReady,
+    error,
   ]);
 
   return {
