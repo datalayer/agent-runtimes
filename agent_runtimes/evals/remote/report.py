@@ -964,9 +964,7 @@ def _report_data(
             )
 
         numeric_pass_rates = [
-            value
-            for run in runs
-            if (value := _run_pass_rate(run)) is not None
+            value for run in runs if (value := _run_pass_rate(run)) is not None
         ]
         mean_pass: float | None = None
         stddev_pass = None
@@ -2181,7 +2179,9 @@ def _report_markdown(
     if most_stable:
         std = most_stable.get("stddev_pass_rate")
         mean = most_stable.get("mean_pass_rate")
-        std_text = f"{(float(std) * 100):.2f}" if isinstance(std, (int, float)) else "n/a"
+        std_text = (
+            f"{(float(std) * 100):.2f}" if isinstance(std, (int, float)) else "n/a"
+        )
         mean_text = _fmt_pct(float(mean)) if isinstance(mean, (int, float)) else "n/a"
         lines.append(
             "- Stability leader: "
@@ -3560,7 +3560,11 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
         for idx, run in enumerate(runs, start=1):
             status_value = str(run.get("status", ""))
             raw_pass_rate = run.get("pass_rate")
-            pass_rate = float(raw_pass_rate) if isinstance(raw_pass_rate, (int, float)) else None
+            pass_rate = (
+                float(raw_pass_rate)
+                if isinstance(raw_pass_rate, (int, float))
+                else None
+            )
             cause_text = _format_failure_cause(run.get("failure_cause"))
             run_table.add_row(
                 str(idx),
@@ -3598,9 +3602,9 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
                     ("agent_runtimes_url", "agent runtimes url"),
                     ("datalayer_url", "run url"),
                 ):
-                        diag_value = diagnostics.get(key)
-                        if diag_value:
-                            console.print(f"    {label}: {diag_value}")
+                    diag_value = diagnostics.get(key)
+                    if diag_value:
+                        console.print(f"    {label}: {diag_value}")
                 candidate_urls = diagnostics.get("candidate_urls")
                 if isinstance(candidate_urls, list) and candidate_urls:
                     console.print(
