@@ -268,6 +268,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                 .strip()
                 .replace('"', '\\"')
             )
+            display_name = spec.get("title", spec["name"]).replace('"', '\\"')
 
             # Use triple quotes for multiline system prompts
             system_prompt_str = f'"""{system_prompt}"""' if system_prompt else "None"
@@ -369,7 +370,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             code += f'''{const_name} = Agentspec(
     id="{full_agent_id}",
     version="{version}",
-    name="{spec["name"]}",
+                name="{display_name}",
     description="{description}",
     tags={_fmt_list(spec.get("tags", []))},
     enabled={spec.get("enabled", True)},
@@ -869,6 +870,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             description = (
                 spec["description"].replace("\n", " ").replace("  ", " ").strip()
             )
+            display_name = spec.get("title", spec["name"]).replace("'", "\\'")
 
             # Model field
             model_id = spec.get("model")
@@ -935,7 +937,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             code += f"""export const {const_name}: Agentspec = {{
     id: '{full_agent_id}',
     version: '{version}',
-    name: '{spec["name"]}',
+                name: '{display_name}',
     description: `{description}`,
     tags: {tags_str},
     enabled: {str(spec.get("enabled", True)).lower()},

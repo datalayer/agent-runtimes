@@ -7,8 +7,8 @@
 # Copyright (c) 2023-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-from agent_runtimes.agents.agent_local import extract_vercel_stream_usage
-from agent_runtimes.evals.saas.runner import _merge_run_usage
+from agent_runtimes.client.agent_client import extract_vercel_stream_usage
+from agent_runtimes.evals.common import merge_run_usage
 
 
 def test_extract_vercel_stream_usage_prefers_token_payload() -> None:
@@ -34,7 +34,7 @@ def test_extract_vercel_stream_usage_prefers_token_payload() -> None:
 def test_merge_run_usage_normalizes_aliases_and_sums() -> None:
     aggregate: dict[str, object] = {}
 
-    aggregate = _merge_run_usage(
+    aggregate = merge_run_usage(
         aggregate,
         {
             "provider": "bedrock",
@@ -43,7 +43,7 @@ def test_merge_run_usage_normalizes_aliases_and_sums() -> None:
             "credits_consumed": 0.0002,
         },
     )
-    aggregate = _merge_run_usage(
+    aggregate = merge_run_usage(
         aggregate,
         {
             "input_tokens": "4",

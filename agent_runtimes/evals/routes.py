@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from .runner import EvalRunner
+from .local import EvalRunner
 
 logger = logging.getLogger(__name__)
 

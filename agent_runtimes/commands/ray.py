@@ -24,7 +24,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 
 app = typer.Typer(
     name="ray",
@@ -71,8 +71,8 @@ def jobs_callback(ctx: typer.Context) -> None:
 
 def _make_client(
     token: Optional[str] = None,
-) -> DatalayerClient:
-    return DatalayerClient(api_key=token)
+) -> AgentClient:
+    return AgentClient(api_key=token)
 
 
 def _print_json(payload: dict[str, Any]) -> None:

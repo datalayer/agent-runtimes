@@ -1,11 +1,8 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Agent-runtimes Datalayer client (runtime-capable)."""
+"""Agent-runtimes Datalayer client (runtime + agent capable)."""
 
-from agent_runtimes.client.runtime_client import RuntimeClient
+from agent_runtimes.client.agent_client import AgentClient
 
-# Backwards-friendly alias: within agent-runtimes, DatalayerClient is runtime-capable.
-DatalayerClient = RuntimeClient
-
-__all__ = ["RuntimeClient", "DatalayerClient"]
+__all__ = ["AgentClient"]

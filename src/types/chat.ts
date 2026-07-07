@@ -311,6 +311,19 @@ export interface ChatCommonProps {
   disableInputPrompt?: boolean;
 
   /**
+   * Whether the underlying agent runtime is still launching. When true, the
+   * chat shell is rendered with the input and controls disabled and a spinner
+   * overlay is shown, so the plain chat view appears as soon as the agent
+   * starts being created and stays interactive-disabled until it is ready.
+   */
+  launching?: boolean;
+
+  /**
+   * Optional message shown next to the spinner while `launching` is true.
+   */
+  launchingMessage?: ReactNode;
+
+  /**
    * Optional overlay rendered above the chat surface (messages + input).
    * Use this to show a gating UI such as a sign-in form for anonymous users
    * while keeping the chat visible and its controls disabled behind it.
@@ -611,6 +624,15 @@ export interface ChatBaseProps {
 
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
+
+  /**
+   * Whether the underlying agent runtime is still launching. When true, the
+   * chat shell renders with input and controls disabled and a spinner overlay.
+   */
+  launching?: boolean;
+
+  /** Optional message shown next to the spinner while `launching` is true. */
+  launchingMessage?: React.ReactNode;
 
   /**
    * Optional overlay rendered above the chat surface (messages + input).

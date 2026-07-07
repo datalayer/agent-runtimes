@@ -488,6 +488,8 @@ function ChatBaseInner({
   showSkillsMenu = true,
   disableInputPrompt = false,
   overlay,
+  launching = false,
+  launchingMessage,
   codemodeEnabled = false,
   onToggleCodemode,
   initialModel,
@@ -3478,7 +3480,7 @@ function ChatBaseInner({
           padding={padding}
           onSend={() => handleSend()}
           onStop={handleStop}
-          disableInputPrompt={disableInputPrompt || !!overlay}
+          disableInputPrompt={disableInputPrompt || !!overlay || launching}
           showTokenUsage={showTokenUsage}
           agentUsage={agentUsage}
           showModelSelector={showModelSelector}
@@ -3547,6 +3549,50 @@ function ChatBaseInner({
           {/* Foreground gate content (opaque, above the dim layer). */}
           <Box sx={{ position: 'relative', zIndex: 1, maxWidth: '100%' }}>
             {overlay}
+          </Box>
+        </Box>
+      )}
+
+      {/* Launching overlay — shown while the agent runtime is still starting.
+          Keeps the plain chat shell visible (header, disabled input, disabled
+          controls) with a centered spinner so the view appears immediately
+          when the agent begins to be created. */}
+      {launching && !overlay && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 15,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 3,
+          }}
+        >
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              bg: 'canvas.default',
+              opacity: 0.35,
+              backdropFilter: 'blur(1px)',
+            }}
+          />
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 3,
+            }}
+          >
+            <Spinner size="large" />
+            <Text sx={{ color: 'fg.muted' }}>
+              {launchingMessage || 'Launching your agent…'}
+            </Text>
           </Box>
         </Box>
       )}

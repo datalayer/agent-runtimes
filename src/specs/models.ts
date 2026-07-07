@@ -30,6 +30,8 @@ export const AIModels = {
   AZURE_OPENAI_GPT_4O: 'azure-openai:gpt-4o',
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1:
     'bedrock:us.anthropic.claude-opus-4-6-v1',
+  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_V1:
+    'bedrock:us.anthropic.claude-opus-4-8-v1',
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0:
@@ -146,6 +148,20 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
   version: '0.0.1',
   name: 'Bedrock Claude Opus 4.6',
   description: 'Claude Opus 4.6 via AWS Bedrock',
+  provider: 'bedrock',
+  default: false,
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
+};
+
+export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_V1_0_0_1: AIModel = {
+  id: 'bedrock:us.anthropic.claude-opus-4-8-v1',
+  version: '0.0.1',
+  name: 'Bedrock Claude Opus 4.8',
+  description: 'Claude Opus 4.8 via AWS Bedrock',
   provider: 'bedrock',
   default: false,
   requiredEnvVars: [
@@ -278,6 +294,8 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
   'azure-openai:gpt-4o': AZURE_OPENAI_GPT_4O_0_0_1,
   'bedrock:us.anthropic.claude-opus-4-6-v1':
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
+  'bedrock:us.anthropic.claude-opus-4-8-v1':
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_V1_0_0_1,
   'bedrock:us.anthropic.claude-opus-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0':

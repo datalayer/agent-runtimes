@@ -19,7 +19,7 @@ from typing import Any, Optional
 import typer
 from datalayer_core.utils.urls import DatalayerURLs
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 
 _TERMINAL_RUN_STATES = {
     "completed",
@@ -69,8 +69,8 @@ def make_client(
     iam_url: Optional[str] = None,
     runtimes_url: Optional[str] = None,
     ai_agents_url: Optional[str] = None,
-) -> DatalayerClient:
-    """Build a :class:`DatalayerClient` from the environment.
+) -> AgentClient:
+    """Build a :class:`AgentClient` from the environment.
 
     Optional service-URL overrides are forwarded to
     :meth:`DatalayerURLs.from_environment` so examples and integrations can
@@ -81,7 +81,7 @@ def make_client(
         runtimes_url=runtimes_url or None,
         ai_agents_url=ai_agents_url or None,
     )
-    return DatalayerClient(urls=urls, api_key=(token or api_key))
+    return AgentClient(urls=urls, api_key=(token or api_key))
 
 
 def resolve_billable_account_uid(
@@ -101,7 +101,7 @@ def load_evalset_spec(
     """Load and validate a JSON evalset spec file.
 
     The returned dict can be passed straight to
-    :meth:`DatalayerClient.evals_create_eval_from_spec`. Shared by examples,
+    :meth:`AgentClient.evals_create_eval_from_spec`. Shared by examples,
     the GitHub Action, and any other integration that creates evalsets from a
     declarative JSON spec.
     """
@@ -130,7 +130,7 @@ def load_evalset_spec(
 
 
 def watch_runs(
-    client: DatalayerClient,
+    client: AgentClient,
     run_ids: list[str],
     *,
     account_uid: Optional[str] = None,
@@ -184,20 +184,20 @@ def watch_runs(
 
 def now_iso() -> str:
     """Return the current UTC timestamp in ISO-8601 form."""
-    from agent_runtimes.evals.saas.report import _now_iso
+    from agent_runtimes.evals.remote.report import _now_iso
 
     return _now_iso()
 
 
 def timestamp_slug(raw_iso: str) -> str:
     """Return a filesystem-safe slug for an ISO-8601 timestamp."""
-    from agent_runtimes.evals.saas.report import _timestamp_slug
+    from agent_runtimes.evals.remote.report import _timestamp_slug
 
     return _timestamp_slug(raw_iso)
 
 
 def build_eval_report(
-    client: DatalayerClient,
+    client: AgentClient,
     evalset_id: str,
     *,
     account_uid: Optional[str] = None,
@@ -208,7 +208,7 @@ def build_eval_report(
     Thin public facade over the report engine so callers do not import private
     CLI helpers.
     """
-    from agent_runtimes.evals.saas.report import _report_data
+    from agent_runtimes.evals.remote.report import _report_data
 
     return _report_data(
         client=client,
@@ -225,14 +225,14 @@ def render_eval_report_markdown(
     colorize: bool = False,
 ) -> str:
     """Render a structured eval report as markdown."""
-    from agent_runtimes.evals.saas.report import _report_markdown
+    from agent_runtimes.evals.remote.report import _report_markdown
 
     return _report_markdown(report, run_limit=run_limit, colorize=colorize)
 
 
 def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Path:
     """Write a structured eval report to a CSV file and return its path."""
-    from agent_runtimes.evals.saas.report import _write_report_csv
+    from agent_runtimes.evals.remote.report import _write_report_csv
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -241,7 +241,7 @@ def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Pa
 
 
 def write_eval_reports(
-    client: DatalayerClient,
+    client: AgentClient,
     evalset_id: str,
     *,
     account_uid: Optional[str] = None,
@@ -256,7 +256,7 @@ def write_eval_reports(
     Returns a dict with the structured ``report`` plus the written file paths.
     Shared by examples and integrations to avoid duplicating report I/O.
     """
-    from agent_runtimes.evals.saas.report import _timestamp_slug
+    from agent_runtimes.evals.remote.report import _timestamp_slug
 
     report = build_eval_report(
         client, evalset_id, account_uid=account_uid, run_limit=run_limit

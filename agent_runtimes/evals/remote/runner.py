@@ -18,7 +18,6 @@ grade outputs -> persist runs -> teardown runtimes).
 
 from __future__ import annotations
 
-import json
 import os
 import uuid
 from typing import Any, Callable, Optional
@@ -33,15 +32,25 @@ from agent_runtimes.agents import (
     start_local_agent_runtime,
     teardown_agent_execution_resources,
 )
-from agent_runtimes.agents.agent_local import (
+from agent_runtimes.client import AgentClient
+from agent_runtimes.client.agent_client import (
     run_cloud_agent_chat,
     run_local_agent_chat,
     runtime_route_candidates,
     wait_for_local_runtime,
 )
-from agent_runtimes.client import DatalayerClient
-from agent_runtimes.evals.saas.evals import now_iso, timestamp_slug, write_eval_reports
-from agent_runtimes.evals.saas.evaluators import evaluate_evalset
+from agent_runtimes.evals.common import (
+    compose_case_prompt,
+    extract_case_usage,
+    extract_text,
+    merge_run_usage,
+)
+from agent_runtimes.evals.remote.evals import (
+    now_iso,
+    timestamp_slug,
+    write_eval_reports,
+)
+from agent_runtimes.evals.remote.evaluators import evaluate_evalset
 
 DEFAULT_ENVIRONMENT_NAME = "ai-agents-env"
 DEFAULT_AGENT_NAME = "default"
@@ -53,207 +62,8 @@ DEFAULT_LOCAL_AGENT_BASE_URL = "http://localhost:8765"
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 180
 
 
-def _case_prompt(case: dict[str, Any]) -> str:
-    """Extract a prompt string from an evalset case's inputs."""
-    inputs = case.get("inputs")
-    if isinstance(inputs, dict):
-        for key in ("prompt", "text", "query", "message"):
-            value = inputs.get(key)
-            if isinstance(value, str) and value.strip():
-                return value
-        return json.dumps(inputs, ensure_ascii=True)
-    if isinstance(inputs, str):
-        return inputs
-    return ""
-
-
-def _compose_case_prompt(case: dict[str, Any], *, preamble: str = "") -> str:
-    """Build the effective case prompt with an optional preamble.
-
-    ``preamble`` lets a spec enforce task instructions (for example output
-    format/constraints) without mutating every individual case input.
-    """
-    base_prompt = _case_prompt(case)
-    normalized_preamble = str(preamble or "").strip()
-    if not normalized_preamble:
-        return base_prompt
-    if not base_prompt:
-        return normalized_preamble
-    return f"{normalized_preamble}\n\nInput:\n{base_prompt}"
-
-
-def _extract_text(payload: Any) -> str:
-    """Coerce an agent output payload into a plain text answer."""
-    if isinstance(payload, dict):
-        text = payload.get("text")
-        if isinstance(text, str):
-            return text
-        message = payload.get("message")
-        if isinstance(message, str):
-            return message
-    if isinstance(payload, str):
-        return payload
-    return json.dumps(payload, ensure_ascii=True)
-
-
-def _usage_number(value: Any) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return None
-        try:
-            return float(text)
-        except Exception:
-            return None
-    return None
-
-
-def _usage_pick_number(usage: dict[str, Any], *keys: str) -> float | None:
-    for key in keys:
-        number = _usage_number(usage.get(key))
-        if number is not None:
-            return number
-    return None
-
-
-def _extract_case_usage(chat_result: dict[str, Any]) -> dict[str, Any]:
-    direct = chat_result.get("usage")
-    if isinstance(direct, dict) and direct:
-        return dict(direct)
-    output = (
-        chat_result.get("output") if isinstance(chat_result.get("output"), dict) else {}
-    )
-    nested = output.get("pydantic_ai_usage") or output.get("usage")
-    if isinstance(nested, dict) and nested:
-        return dict(nested)
-    return {}
-
-
-def _merge_run_usage(
-    aggregate: dict[str, Any], case_usage: dict[str, Any]
-) -> dict[str, Any]:
-    if not case_usage:
-        return aggregate
-
-    prompt_tokens = _usage_pick_number(
-        case_usage,
-        "prompt_tokens",
-        "promptTokens",
-        "input_tokens",
-        "inputTokens",
-    )
-    completion_tokens = _usage_pick_number(
-        case_usage,
-        "completion_tokens",
-        "completionTokens",
-        "output_tokens",
-        "outputTokens",
-    )
-    total_tokens = _usage_pick_number(
-        case_usage,
-        "total_tokens",
-        "totalTokens",
-        "tokens_total",
-        "token_total",
-    )
-    if (
-        total_tokens is None
-        and prompt_tokens is not None
-        and completion_tokens is not None
-    ):
-        total_tokens = prompt_tokens + completion_tokens
-
-    numeric_fields: list[tuple[str, float | None]] = [
-        ("prompt_tokens", prompt_tokens),
-        ("completion_tokens", completion_tokens),
-        ("total_tokens", total_tokens),
-        (
-            "input_cached_tokens",
-            _usage_pick_number(
-                case_usage,
-                "input_cached_tokens",
-                "inputCachedTokens",
-                "cached_input_tokens",
-                "cachedInputTokens",
-            ),
-        ),
-        (
-            "tool_calls",
-            _usage_pick_number(
-                case_usage,
-                "tool_calls",
-                "toolCalls",
-                "tool_call_count",
-                "toolCallCount",
-            ),
-        ),
-        (
-            "requests",
-            _usage_pick_number(
-                case_usage,
-                "requests",
-                "request_count",
-                "requestCount",
-            ),
-        ),
-        (
-            "duration_ms",
-            _usage_pick_number(
-                case_usage,
-                "duration_ms",
-                "durationMs",
-                "latency_ms",
-                "latencyMs",
-            ),
-        ),
-        (
-            "credits_consumed",
-            _usage_pick_number(
-                case_usage,
-                "credits_consumed",
-                "creditsConsumed",
-                "credits",
-                "total_credits",
-                "cost_credits",
-            ),
-        ),
-    ]
-    for key, value in numeric_fields:
-        if value is None:
-            continue
-        current = _usage_number(aggregate.get(key)) or 0.0
-        summed = current + value
-        if key in {"credits_consumed"}:
-            aggregate[key] = round(summed, 6)
-        else:
-            aggregate[key] = int(round(summed))
-
-    for key in (
-        "source",
-        "provider",
-        "model",
-        "billable_account_kind",
-        "billable_account_uid",
-        "requester_kind",
-        "requester_uid",
-        "captured_at",
-        "timestamp",
-    ):
-        value = case_usage.get(key)
-        if value is None:
-            continue
-        if isinstance(value, str) and not value.strip():
-            continue
-        aggregate.setdefault(key, value)
-    return aggregate
-
-
 def execute_evalset_spec(
-    client: DatalayerClient,
+    client: AgentClient,
     *,
     spec: dict[str, Any],
     agentspec_ids: list[str],
@@ -286,7 +96,7 @@ def execute_evalset_spec(
 
     Parameters
     ----------
-    client : DatalayerClient
+    client : AgentClient
         An authenticated client.
     spec : dict[str, Any]
         Evalset spec (as loaded by :func:`load_evalset_spec`).
@@ -549,7 +359,7 @@ def execute_evalset_spec(
                 failure_causes: list[dict[str, Any]] = []
 
                 for case in cases:
-                    prompt = _compose_case_prompt(case, preamble=prompt_preamble)
+                    prompt = compose_case_prompt(case, preamble=prompt_preamble)
                     case_prompts.append(prompt)
                     if target == "cloud":
                         chat_result = run_cloud_agent_chat(
@@ -576,11 +386,11 @@ def execute_evalset_spec(
                     )
                     case_statuses.append(status)
                     output_payload = chat_result.get("output") or {}
-                    outputs.append({"text": _extract_text(output_payload)})
+                    outputs.append({"text": extract_text(output_payload)})
                     full_outputs.append(
                         output_payload
                         if isinstance(output_payload, dict)
-                        else {"text": _extract_text(output_payload)}
+                        else {"text": extract_text(output_payload)}
                     )
                     if status in {"failed", "error"}:
                         failed_cases += 1
@@ -588,8 +398,8 @@ def execute_evalset_spec(
                         if isinstance(failure, dict):
                             failure_causes.append(failure)
 
-                    case_usage = _extract_case_usage(chat_result)
-                    aggregated_usage = _merge_run_usage(aggregated_usage, case_usage)
+                    case_usage = extract_case_usage(chat_result)
+                    aggregated_usage = merge_run_usage(aggregated_usage, case_usage)
 
                 metrics = evaluate_evalset(spec, outputs, statuses=case_statuses)
                 # Persist per-case prompts/outputs onto the graded case results so

@@ -11,7 +11,7 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 from agent_runtimes.displays.sandbox_snapshots import display_code_sandbox_snapshots
 
 # Create a Typer app for snapshot commands
@@ -41,7 +41,7 @@ def list_snapshots(
 ) -> None:
     """List all snapshots."""
     try:
-        client = DatalayerClient(api_key=token)
+        client = AgentClient(api_key=token)
         snapshots = client.list_snapshots()
 
         # Convert to dict format for display_snapshots
@@ -94,7 +94,7 @@ def create_snapshot(
 ) -> None:
     """Create a snapshot from a running runtime."""
     try:
-        client = DatalayerClient(api_key=token)
+        client = AgentClient(api_key=token)
 
         snapshot = client.create_snapshot(
             pod_name=pod_name,
@@ -133,7 +133,7 @@ def delete_snapshot(
 ) -> None:
     """Delete a snapshot."""
     try:
-        client = DatalayerClient(api_key=token)
+        client = AgentClient(api_key=token)
 
         result = client.delete_snapshot(uid)
 

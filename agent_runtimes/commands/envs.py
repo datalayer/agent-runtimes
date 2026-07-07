@@ -12,7 +12,7 @@ import typer
 from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 from agent_runtimes.displays.environments import display_environments
 
 # Create a Typer app for environment commands
@@ -27,10 +27,10 @@ def _make_client(
     token: Optional[str] = None,
     iam_url: Optional[str] = None,
     runtimes_url: Optional[str] = None,
-) -> DatalayerClient:
-    """Create a DatalayerClient with optional runtimes URL override."""
+) -> AgentClient:
+    """Create a AgentClient with optional runtimes URL override."""
     urls = DatalayerURLs.from_environment(iam_url=iam_url, runtimes_url=runtimes_url)
-    return DatalayerClient(urls=urls, api_key=token)
+    return AgentClient(urls=urls, api_key=token)
 
 
 @app.callback()

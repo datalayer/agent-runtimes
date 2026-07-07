@@ -25,7 +25,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agent_runtimes.agents.agent_local import (
+from agent_runtimes.client import AgentClient
+from agent_runtimes.client.agent_client import (
     DEFAULT_LOCAL_AGENT_NAME,
     DEFAULT_LOCAL_HOST,
     DEFAULT_LOCAL_LOG_LEVEL,
@@ -34,7 +35,6 @@ from agent_runtimes.agents.agent_local import (
     start_local_agent_runtime,
     terminate_local_agent_runtime,
 )
-from agent_runtimes.client import DatalayerClient
 
 DEFAULT_AGENT_SPEC_ID = "example-simple"
 
@@ -58,9 +58,9 @@ def _make_client(
     token: Optional[str] = None,
     iam_url: Optional[str] = None,
     runtimes_url: Optional[str] = None,
-) -> DatalayerClient:
+) -> AgentClient:
     urls = DatalayerURLs.from_environment(iam_url=iam_url, runtimes_url=runtimes_url)
-    return DatalayerClient(urls=urls, api_key=token)
+    return AgentClient(urls=urls, api_key=token)
 
 
 def _is_url(value: str) -> bool:
@@ -109,7 +109,7 @@ def _load_agent_spec(spec_source: str) -> dict[str, Any]:
 
 def _resolve_billable_account_details(
     *,
-    client: DatalayerClient,
+    client: AgentClient,
     billable_account_uid: str,
 ) -> dict[str, str]:
     """Resolve account metadata from IAM whoami/memberships payloads.

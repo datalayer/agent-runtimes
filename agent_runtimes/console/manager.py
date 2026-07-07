@@ -18,7 +18,7 @@ from datalayer_core.utils.urls import DatalayerURLs
 from jupyter_kernel_client.manager import REQUEST_TIMEOUT, KernelHttpManager
 from jupyter_server.utils import url_path_join
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 from agent_runtimes.displays.runtimes import display_runtimes
 
 HTTP_PROTOCOL_REGEXP = re.compile(r"^http")
@@ -68,9 +68,9 @@ class RuntimeManager(KernelHttpManager):
         self.run_token = token
         self.username = username
 
-        # Initialize DatalayerClient for modern API access
+        # Initialize AgentClient for modern API access
         urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
-        self._client = DatalayerClient(urls=urls, api_key=token)
+        self._client = AgentClient(urls=urls, api_key=token)
 
     @property
     def kernel_url(self) -> Optional[str]:
@@ -127,7 +127,7 @@ class RuntimeManager(KernelHttpManager):
         runtime_name = name
         runtime = None
 
-        # Use DatalayerClient to get runtime information.
+        # Use AgentClient to get runtime information.
         runtimes = self._client.list_runtimes()
 
         if not runtime_name:

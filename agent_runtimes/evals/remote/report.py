@@ -30,7 +30,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 
 console = Console()
 
@@ -800,7 +800,7 @@ def _aggregate_evaluator_results(
 
 
 def _report_data(
-    client: DatalayerClient,
+    client: AgentClient,
     evalset_id: str,
     run_limit: int,
     account_uid: Optional[str],

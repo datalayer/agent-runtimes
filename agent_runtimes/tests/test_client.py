@@ -13,7 +13,7 @@ import uuid
 import pytest
 from dotenv import load_dotenv
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
 
 load_dotenv()
@@ -31,7 +31,7 @@ def test_secrets_creation_list_delete() -> None:
     Test the creation and deletion of secrets.
     """
     # Create a secret
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
     secret_name = f"test_secret-{uuid.uuid4()}"
     created_secret = client.create_secret(
         name=secret_name,
@@ -69,7 +69,7 @@ def test_secrets_delete_non_existent() -> None:
     """
     Test the creation and deletion of secrets.
     """
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
 
     # Delete the secret
     response = client.delete_secret(str(uuid.uuid4()))
@@ -86,7 +86,7 @@ def test_runtime_create_execute_and_list() -> None:
     """
     time.sleep(10)
     # Create a secret
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
     runtime_name = f"test_runtime-{uuid.uuid4()}"
     with client.create_runtime(name=runtime_name) as runtime:
         assert runtime.name == runtime_name
@@ -109,14 +109,14 @@ def test_code_sandbox_snapshot_create_and_delete() -> None:
     Test the creation and deletion of runtime.
     """
     time.sleep(10)
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
     runtime_name = f"test_runtime-{uuid.uuid4()}"
     snapshot_name = f"test_snapshot-{uuid.uuid4()}"
     snapshot_name_2 = f"test_snapshot-{uuid.uuid4()}"
     snapshot_name_3 = f"test_snapshot-{uuid.uuid4()}"
 
     def _delete_with_retry(
-        client: DatalayerClient,
+        client: AgentClient,
         snap: SandboxSnapshotModel,
         retries: int = 10,
         delay: float = 5.0,
@@ -157,7 +157,7 @@ def test_code_sandbox_snapshot_create_and_delete() -> None:
     reason="TEST_DATALAYER_API_KEY is not set, skipping secret tests.",
 )
 def test_environments_list() -> None:
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
     envs = client.list_environments()
     assert len(envs) >= 1
 
@@ -167,7 +167,7 @@ def test_environments_list() -> None:
     reason="TEST_DATALAYER_API_KEY is not set, skipping secret tests.",
 )
 def test_authenticate() -> None:
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
     print(client._log_in())
     assert client.authenticate()
 
@@ -180,7 +180,7 @@ def test_profile() -> None:
     """
     Test the profile
     """
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
     assert client.get_profile()
 
 
@@ -192,5 +192,5 @@ def test_api_keys_list() -> None:
     """
     Test the listing of API keys.
     """
-    client = DatalayerClient(api_key=TEST_DATALAYER_API_KEY)
+    client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
     assert isinstance(client.list_api_keys(), list)

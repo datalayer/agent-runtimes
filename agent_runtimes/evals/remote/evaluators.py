@@ -337,7 +337,7 @@ def evaluate_evalset(
 
     Convenience wrapper that pulls ``cases``, ``evalset_evaluators`` and
     ``report_evaluators`` out of an evalset spec dict (as produced by
-    :func:`agent_runtimes.evals.saas.load_evalset_spec`) and delegates to
+    :func:`agent_runtimes.evals.remote.load_evalset_spec`) and delegates to
     :func:`evaluate_run`. This is the single entry point examples and the CLI
     use so evaluator execution lives in the evals API rather than the caller.
     """

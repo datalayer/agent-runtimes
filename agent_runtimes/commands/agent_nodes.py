@@ -32,9 +32,9 @@ def _resolve_token(token: Optional[str] = None) -> str:
     if env_token:
         return env_token
     try:
-        from agent_runtimes.client import DatalayerClient
+        from agent_runtimes.client import AgentClient
 
-        client = DatalayerClient()
+        client = AgentClient()
         return client._get_api_key() or ""
     except Exception:
         return ""

@@ -18,7 +18,7 @@ from datalayer_core.utils.urls import DatalayerURLs
 from rich.console import Console
 from rich.table import Table
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 
 app = typer.Typer(
     name="pools",
@@ -36,7 +36,7 @@ def _resolve_token(token: Optional[str] = None) -> str:
     if env_token:
         return env_token
     try:
-        client = DatalayerClient()
+        client = AgentClient()
         return client._get_api_key() or ""
     except Exception:
         return ""

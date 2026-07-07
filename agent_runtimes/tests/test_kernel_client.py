@@ -15,7 +15,7 @@ import os
 import pytest
 from dotenv import load_dotenv
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 
 load_dotenv()
 
@@ -31,7 +31,7 @@ def test_kernel_client() -> None:
             "DATALAYER_API_KEY or TEST_DATALAYER_API_KEY environment variable not set"
         )
 
-    client = DatalayerClient(api_key=token)
+    client = AgentClient(api_key=token)
     with client.create_runtime(
         name="test-kernel-vars", environment="ai-agents-env"
     ) as runtime:

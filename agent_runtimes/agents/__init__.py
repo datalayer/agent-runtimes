@@ -3,7 +3,14 @@
 
 """Agent runtime execution helpers (local + cloud), migrated from datalayer-core."""
 
-from agent_runtimes.agents.agent_local import (
+from agent_runtimes.agents.agent_utils import (
+    compute_time_reservation_minutes,
+    create_cloud_agent_runtime,
+    resolve_environment_burning_rate,
+    teardown_agent_execution_resources,
+    terminate_cloud_agent_runtime,
+)
+from agent_runtimes.client.agent_client import (
     DEFAULT_LOCAL_AGENT_NAME,
     DEFAULT_LOCAL_HOST,
     DEFAULT_LOCAL_LOG_LEVEL,
@@ -12,13 +19,6 @@ from agent_runtimes.agents.agent_local import (
     ensure_local_agent,
     start_local_agent_runtime,
     terminate_local_agent_runtime,
-)
-from agent_runtimes.agents.agent_utils import (
-    compute_time_reservation_minutes,
-    create_cloud_agent_runtime,
-    resolve_environment_burning_rate,
-    teardown_agent_execution_resources,
-    terminate_cloud_agent_runtime,
 )
 
 __all__ = [

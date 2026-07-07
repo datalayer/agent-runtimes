@@ -15,7 +15,7 @@ from typing import Any, Callable, Optional, Union
 from datalayer_core.utils.defaults import DEFAULT_ENVIRONMENT
 from typing_extensions import TypeAlias
 
-from agent_runtimes.client import RuntimeClient as DatalayerClient
+from agent_runtimes.client import AgentClient
 
 # TODO:
 # - inputs are different from args and kwargs (rename)
@@ -186,7 +186,7 @@ def datalayer(
             # print("function_source:", function_source)
             # print("function_call:", function_call)
 
-            client = DatalayerClient(
+            client = AgentClient(
                 token=token
             )  # Resolves token from param/env/keyring
             with client.create_runtime(

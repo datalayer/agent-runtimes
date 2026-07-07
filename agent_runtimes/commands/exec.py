@@ -24,7 +24,7 @@ from datalayer_core.utils.network import fetch
 from rich.console import Console
 from rich.table import Table
 
-from agent_runtimes.client import DatalayerClient
+from agent_runtimes.client import AgentClient
 from agent_runtimes.console.manager import RuntimeManager
 from agent_runtimes.utils.notebook import get_cells
 
@@ -57,7 +57,7 @@ class CodeSandboxExecService:
         self.kernel_manager: Optional[RuntimeManager] = None
         self.kernel_client = None
         self._executing = False
-        self._client = DatalayerClient(api_key=token)
+        self._client = AgentClient(api_key=token)
 
     def handle_sigint(self, *args: Any) -> None:
         """Handle SIGINT signal during kernel execution."""
@@ -97,7 +97,7 @@ class CodeSandboxExecService:
                     if target_sandbox is None:
                         raise RuntimeError(f"Code sandbox '{sandbox_name}' not found")
 
-                # Get token using the same method as DatalayerClient
+                # Get token using the same method as AgentClient
                 token = self._client._get_api_key()
 
                 # Create a RuntimeManager with proper credentials
@@ -872,7 +872,7 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
         The name/ID of the code sandbox to use.
     """
     try:
-        client = DatalayerClient(api_key=token)
+        client = AgentClient(api_key=token)
         runtimes = client.list_runtimes()
 
         if not runtimes:
@@ -1027,7 +1027,7 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
         raise typer.Exit(1)
 
 
-def _get_environment_burning_rate(client: DatalayerClient, environment: str) -> float:
+def _get_environment_burning_rate(client: AgentClient, environment: str) -> float:
     """Get environment burning rate in credits/second."""
     environments = client.list_environments()
     for env in environments:
@@ -1053,7 +1053,7 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
-def _get_remaining_credits_after_reservations(client: DatalayerClient) -> float:
+def _get_remaining_credits_after_reservations(client: AgentClient) -> float:
     """Compute remaining credits after reservations from usage payload."""
     usage = client.get_usage_credits()
     if not usage.get("success", True):

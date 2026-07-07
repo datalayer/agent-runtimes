@@ -21,26 +21,26 @@ from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
 
-from agent_runtimes.evals.saas.evals import (
+from agent_runtimes.evals.remote.evals import (
     load_evalset_spec,
 )
-from agent_runtimes.evals.saas.evals import (
+from agent_runtimes.evals.remote.evals import (
     make_client as _make_client,
 )
-from agent_runtimes.evals.saas.evals import (
+from agent_runtimes.evals.remote.evals import (
     merge_dicts as _merge_dicts,
 )
-from agent_runtimes.evals.saas.evals import (
+from agent_runtimes.evals.remote.evals import (
     parse_json_file as _parse_json_file,
 )
-from agent_runtimes.evals.saas.evals import (
+from agent_runtimes.evals.remote.evals import (
     parse_json_value as _parse_json_value,
 )
-from agent_runtimes.evals.saas.evals import (
+from agent_runtimes.evals.remote.evals import (
     resolve_billable_account_uid as _resolve_billable_account_uid,
 )
-from agent_runtimes.evals.saas.evaluators import evaluate_evalset
-from agent_runtimes.evals.saas.report import (
+from agent_runtimes.evals.remote.evaluators import evaluate_evalset
+from agent_runtimes.evals.remote.report import (
     _now_iso,
     _parse_csv_values,
     _parse_evaluator_specs,
@@ -589,7 +589,7 @@ def evals_evaluate(
     """Run per-case and global evaluators over real agent outputs.
 
     Grades the provided outputs against an evalset spec using the shared evals
-    API (``agent_runtimes.evals.saas.evaluate_evalset``) and emits run metrics
+    API (``agent_runtimes.evals.remote.evaluate_evalset``) and emits run metrics
     (``case_results`` + ``evaluator_results``). Callers produce outputs and
     delegate all evaluator execution here instead of re-implementing it.
     """

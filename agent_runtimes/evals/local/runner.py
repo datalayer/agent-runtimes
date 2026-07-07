@@ -1,7 +1,13 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""EvalRunner — orchestrates evaluation suites against registered agents."""
+"""Local, in-process eval runner.
+
+:class:`EvalRunner` orchestrates evaluation suites against an in-process agent
+callable. It does not launch any runtime and does not create platform
+evalset/experiment/run records — for that remote workflow use
+:func:`agent_runtimes.evals.remote.execute_evalset_spec`.
+"""
 
 from __future__ import annotations
 
