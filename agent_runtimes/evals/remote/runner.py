@@ -189,7 +189,8 @@ def execute_evalset_spec(
     if not cases:
         raise ValueError("Evalset spec has no cases; cannot execute real runs.")
 
-    metadata = spec.get("metadata") if isinstance(spec.get("metadata"), dict) else {}
+    metadata_raw = spec.get("metadata")
+    metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
     run_mode = str(spec.get("kind") or "batch").strip().lower() or "batch"
     if run_mode not in {"batch", "interactive"}:
         raise ValueError(
@@ -461,7 +462,7 @@ def execute_evalset_spec(
                     summary["local_agent_id"] = agent_name
                 if failure_causes:
                     summary["failure_cause"] = failure_causes[0]
-                report = {
+                report: dict[str, Any] = {
                     "note": f"real agent execution via datalayer-core runner ({run_mode})",
                     "interaction": interaction,
                     "failure_causes": failure_causes,

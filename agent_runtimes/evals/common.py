@@ -127,9 +127,8 @@ def extract_case_usage(chat_result: dict[str, Any]) -> dict[str, Any]:
     direct = chat_result.get("usage")
     if isinstance(direct, dict) and direct:
         return dict(direct)
-    output = (
-        chat_result.get("output") if isinstance(chat_result.get("output"), dict) else {}
-    )
+    output_raw = chat_result.get("output")
+    output = output_raw if isinstance(output_raw, dict) else {}
     nested = output.get("pydantic_ai_usage") or output.get("usage")
     if isinstance(nested, dict) and nested:
         return dict(nested)

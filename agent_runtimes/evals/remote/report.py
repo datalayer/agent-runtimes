@@ -23,7 +23,7 @@ import math
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from urllib.parse import quote
 
 import typer
@@ -59,6 +59,13 @@ def _status_style(status: str) -> str:
     if normalized in {"failed", "error"}:
         return "red"
     return "white"
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    """Return ``value`` when it's a dict, else an empty dict."""
+    if isinstance(value, dict):
+        return cast(dict[str, Any], value)
+    return {}
 
 
 def _run_pass_rate(run: dict[str, Any]) -> float | None:
@@ -379,8 +386,8 @@ def _extract_failure_cause(run: dict[str, Any]) -> dict[str, Any] | None:
             if isinstance(cause, dict) and cause:
                 return cause
     # Fallback: synthesize a structured cause from legacy error fields.
-    summary = run.get("summary") if isinstance(run.get("summary"), dict) else {}
-    report = run.get("report") if isinstance(run.get("report"), dict) else {}
+    summary = _as_dict(run.get("summary"))
+    report = _as_dict(run.get("report"))
     message = (
         summary.get("failure_reason")
         or summary.get("execution_error")
@@ -437,17 +444,17 @@ def _failure_cause_detail_lines(cause: dict[str, Any]) -> list[str]:
             ("agent_runtimes_url", "Agent runtimes URL"),
             ("datalayer_url", "Datalayer URL"),
         ):
-            value = diagnostics.get(key)
-            if value:
-                lines.append(f"- {label}: `{value}`")
+            diag_value = diagnostics.get(key)
+            if diag_value:
+                lines.append(f"- {label}: `{diag_value}`")
         for key, label in (
             ("route_ids", "Route IDs tried"),
             ("discovered_agent_ids", "Discovered agent IDs"),
             ("candidate_urls", "Candidate URLs"),
         ):
-            value = diagnostics.get(key)
-            if isinstance(value, list) and value:
-                rendered = ", ".join(f"`{item}`" for item in value)
+            diag_list = diagnostics.get(key)
+            if isinstance(diag_list, list) and diag_list:
+                rendered = ", ".join(f"`{item}`" for item in diag_list)
                 lines.append(f"- {label}: {rendered}")
 
         attempts = diagnostics.get("attempts")
@@ -500,12 +507,8 @@ def _run_detail_record(run: dict[str, Any]) -> dict[str, Any]:
 def _extract_experiment_agentspec(
     experiment: dict[str, Any], runs: list[dict[str, Any]]
 ) -> tuple[str, str]:
-    config = (
-        experiment.get("config") if isinstance(experiment.get("config"), dict) else {}
-    )
-    summary = (
-        experiment.get("summary") if isinstance(experiment.get("summary"), dict) else {}
-    )
+    config = _as_dict(experiment.get("config"))
+    summary = _as_dict(experiment.get("summary"))
     run_summaries = [
         run.get("summary")
         for run in runs
@@ -960,21 +963,15 @@ def _report_data(
                 }
             )
 
-        pass_rates = [
-            _run_pass_rate(run)
-            for run in runs
-            if isinstance(_run_pass_rate(run), (int, float))
-        ]
         numeric_pass_rates = [
-            float(value) for value in pass_rates if isinstance(value, (int, float))
+            value
+            for run in runs
+            if (value := _run_pass_rate(run)) is not None
         ]
-        mean_pass = (
-            sum(numeric_pass_rates) / len(numeric_pass_rates)
-            if numeric_pass_rates
-            else None
-        )
+        mean_pass: float | None = None
         stddev_pass = None
         if numeric_pass_rates:
+            mean_pass = sum(numeric_pass_rates) / len(numeric_pass_rates)
             variance = sum(
                 (value - mean_pass) ** 2 for value in numeric_pass_rates
             ) / len(numeric_pass_rates)
@@ -1388,7 +1385,7 @@ def _aggregate_case_outcomes(
         for run in experiment.get("runs") or []:
             if not isinstance(run, dict):
                 continue
-            metrics = run.get("metrics") if isinstance(run.get("metrics"), dict) else {}
+            metrics = _as_dict(run.get("metrics"))
             case_results = metrics.get("case_results")
             if not isinstance(case_results, list):
                 continue
@@ -1873,9 +1870,9 @@ def _report_markdown(
         )
     )
     latest_values = [
-        float(item.get("latest_pass_rate"))
+        float(latest)
         for item in ranked_latest
-        if isinstance(item.get("latest_pass_rate"), (int, float))
+        if isinstance((latest := item.get("latest_pass_rate")), (int, float))
     ]
     lines.append("")
     lines.append("Latest pass-rate histogram (pts):")
@@ -1916,9 +1913,9 @@ def _report_markdown(
         )
     )
     drift_values = [
-        float(item.get("drift_delta"))
+        float(delta)
         for item in ranked_drift
-        if isinstance(item.get("drift_delta"), (int, float))
+        if isinstance((delta := item.get("drift_delta")), (int, float))
     ]
     lines.append("")
     lines.append("Drift histogram (delta pts):")
@@ -2184,10 +2181,12 @@ def _report_markdown(
     if most_stable:
         std = most_stable.get("stddev_pass_rate")
         mean = most_stable.get("mean_pass_rate")
+        std_text = f"{(float(std) * 100):.2f}" if isinstance(std, (int, float)) else "n/a"
+        mean_text = _fmt_pct(float(mean)) if isinstance(mean, (int, float)) else "n/a"
         lines.append(
             "- Stability leader: "
             + f"{most_stable.get('name', '')} "
-            + f"(stddev={(float(std) * 100):.2f} pts, mean={_fmt_pct(float(mean)) if isinstance(mean, (int, float)) else 'n/a'})."
+            + f"(stddev={std_text} pts, mean={mean_text})."
         )
 
     drift_neg_count = len([value for value in drift_values if value < 0])
@@ -2330,9 +2329,9 @@ def _report_markdown(
                 appendix_lines.append("</details>")
                 appendix_lines.append("")
         timeline_values = [
-            float(run.get("pass_rate"))
+            float(pass_rate)
             for run in runs
-            if isinstance(run.get("pass_rate"), (int, float))
+            if isinstance((pass_rate := run.get("pass_rate")), (int, float))
         ]
         appendix_lines.append(
             "Pass-rate sparkline: "
@@ -2536,8 +2535,8 @@ def _extract_case_output_from_result(case_result: dict[str, Any]) -> Any:
 
 
 def _is_synthetic_run(run: dict[str, Any]) -> bool:
-    summary = run.get("summary") if isinstance(run.get("summary"), dict) else {}
-    report = run.get("report") if isinstance(run.get("report"), dict) else {}
+    summary = _as_dict(run.get("summary"))
+    report = _as_dict(run.get("report"))
     if summary.get("synthetic") is True or report.get("synthetic") is True:
         return True
     output = summary.get("agent_output")
@@ -2609,9 +2608,7 @@ def _run_detail_block_lines(
     lines.append(f"- Status: {status}")
     lines.append(f"- Pass rate: {pass_text}")
     lines.append(f"- Created: {created}")
-    summary_for_header = (
-        run.get("summary") if isinstance(run.get("summary"), dict) else {}
-    )
+    summary_for_header = _as_dict(run.get("summary"))
     runtime_pod = str(summary_for_header.get("runtime_pod_name") or "").strip()
     if runtime_pod:
         lines.append(f"- Runtime: `{runtime_pod}`")
@@ -2620,7 +2617,7 @@ def _run_detail_block_lines(
         lines.append(f"- Runtime ID: `{runtime_id}`")
     lines.append("")
 
-    metrics = run.get("metrics") if isinstance(run.get("metrics"), dict) else {}
+    metrics = _as_dict(run.get("metrics"))
     case_results = metrics.get("case_results")
     if isinstance(case_results, list) and case_results:
         lines.append("**Per-Case Results**")
@@ -2828,19 +2825,19 @@ def _extract_run_usage(run: dict[str, Any]) -> dict[str, Any]:
     if direct_usage:
         return direct_usage
 
-    metrics = run.get("metrics") if isinstance(run.get("metrics"), dict) else {}
+    metrics = _as_dict(run.get("metrics"))
     for key in ("pydantic_ai_usage", "usage"):
         usage = _coerce_usage(metrics.get(key))
         if usage:
             return usage
 
-    summary = run.get("summary") if isinstance(run.get("summary"), dict) else {}
+    summary = _as_dict(run.get("summary"))
     for key in ("pydantic_ai_usage", "usage"):
         usage = _coerce_usage(summary.get(key))
         if usage:
             return usage
 
-    report_payload = run.get("report") if isinstance(run.get("report"), dict) else {}
+    report_payload = _as_dict(run.get("report"))
     report_usage = _coerce_usage(report_payload.get("usage"))
     if report_usage:
         return report_usage
@@ -2994,7 +2991,7 @@ def _report_appendix_lines(
         lines.append("")
         run_rows: list[list[str]] = []
         for idx, run in enumerate(runs, start=1):
-            metrics = run.get("metrics") if isinstance(run.get("metrics"), dict) else {}
+            metrics = _as_dict(run.get("metrics"))
             usage = _extract_run_usage(run)
             run_id = str(run.get("id", ""))
             run_link = _run_overlay_url(evalset_runs_url, run_id)
@@ -3206,11 +3203,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                 run for run in (experiment.get("runs") or []) if isinstance(run, dict)
             ]
             for idx, run in enumerate(runs, start=1):
-                cause = (
-                    run.get("failure_cause")
-                    if isinstance(run.get("failure_cause"), dict)
-                    else {}
-                )
+                cause = _as_dict(run.get("failure_cause"))
                 usage_fields = _run_usage_fields(run)
                 writer.writerow(
                     {
@@ -3241,9 +3234,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                         "generated_at": str(report.get("generated_at", "")),
                     }
                 )
-                run_metrics = (
-                    run.get("metrics") if isinstance(run.get("metrics"), dict) else {}
-                )
+                run_metrics = _as_dict(run.get("metrics"))
                 case_results = run_metrics.get("case_results")
                 if isinstance(case_results, list):
                     for case_result in case_results:
@@ -3417,9 +3408,9 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
         )
     console.print(latest_table)
     latest_values = [
-        float(item.get("latest_pass_rate"))
+        float(latest)
         for item in ranked_latest
-        if isinstance(item.get("latest_pass_rate"), (int, float))
+        if isinstance((latest := item.get("latest_pass_rate")), (int, float))
     ]
     console.print("Latest histogram:")
     for hist_line in _ascii_histogram(
@@ -3453,9 +3444,9 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
         )
     console.print(drift_table)
     drift_values = [
-        float(item.get("drift_delta"))
+        float(delta)
         for item in ranked_drift
-        if isinstance(item.get("drift_delta"), (int, float))
+        if isinstance((delta := item.get("drift_delta")), (int, float))
     ]
     console.print("Drift histogram:")
     for hist_line in _ascii_histogram(
@@ -3568,11 +3559,8 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
         runs = [run for run in (experiment.get("runs") or []) if isinstance(run, dict)]
         for idx, run in enumerate(runs, start=1):
             status_value = str(run.get("status", ""))
-            pass_rate = (
-                float(run.get("pass_rate"))
-                if isinstance(run.get("pass_rate"), (int, float))
-                else None
-            )
+            raw_pass_rate = run.get("pass_rate")
+            pass_rate = float(raw_pass_rate) if isinstance(raw_pass_rate, (int, float)) else None
             cause_text = _format_failure_cause(run.get("failure_cause"))
             run_table.add_row(
                 str(idx),
@@ -3610,9 +3598,9 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
                     ("agent_runtimes_url", "agent runtimes url"),
                     ("datalayer_url", "run url"),
                 ):
-                    value = diagnostics.get(key)
-                    if value:
-                        console.print(f"    {label}: {value}")
+                        diag_value = diagnostics.get(key)
+                        if diag_value:
+                            console.print(f"    {label}: {diag_value}")
                 candidate_urls = diagnostics.get("candidate_urls")
                 if isinstance(candidate_urls, list) and candidate_urls:
                     console.print(
@@ -3745,10 +3733,10 @@ def collect_report_failures(report: dict[str, Any]) -> dict[str, Any]:
 def average_latest_pass_rate(report: dict[str, Any]) -> float | None:
     """Return the mean of each experiment's ``latest_pass_rate`` (or ``None``)."""
     values = [
-        float(experiment.get("latest_pass_rate"))
+        float(latest)
         for experiment in (report.get("experiments") or [])
         if isinstance(experiment, dict)
-        and isinstance(experiment.get("latest_pass_rate"), (int, float))
+        and isinstance((latest := experiment.get("latest_pass_rate")), (int, float))
     ]
     if not values:
         return None
