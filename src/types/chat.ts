@@ -438,6 +438,16 @@ export interface ChatCommonProps {
   /** Frontend tool definitions to register with the chat */
   frontendTools?: FrontendToolDefinition[];
 
+  /**
+   * Show an in-memory "ephemeral notebook" next to the chat, toggled from the
+   * input footer. The notebook model lives purely in memory (never persisted)
+   * and its frontend tools are registered while visible. @default true
+   */
+  enableEphemeralNotebook?: boolean;
+
+  /** Initial open state of the ephemeral notebook. @default true */
+  initialEphemeralNotebookOpen?: boolean;
+
   /** Pre-hook: fires when a tool call starts executing */
   onToolCallStart?: (context: ToolCallStartContext) => void;
 
@@ -883,6 +893,23 @@ export interface ChatBaseProps {
    * These tools execute in the browser and their results are sent back to the agent.
    */
   frontendTools?: FrontendToolDefinition[];
+
+  // ============ Ephemeral Notebook ============
+
+  /**
+   * Enable the "Ephemeral Notebook" feature. When true, a toggle is rendered in
+   * the input footer that shows/hides an in-memory notebook next to the chat.
+   * The notebook model lives purely in memory (never persisted) and is backed
+   * by a sandbox kernel. While visible, its frontend tools are registered so
+   * the agent can drive the notebook cells. @default true
+   */
+  enableEphemeralNotebook?: boolean;
+
+  /**
+   * Initial open state of the ephemeral notebook toggle. Only relevant when
+   * `enableEphemeralNotebook` is true. @default true
+   */
+  initialEphemeralNotebookOpen?: boolean;
 
   // ============ Identity/Authorization Support ============
 

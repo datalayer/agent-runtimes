@@ -88,6 +88,8 @@ import {
   ToolApprovalDialog,
   type PendingApproval,
 } from '../tools';
+import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -541,7 +543,9 @@ function ChatBaseInner({
   submitOnSuggestionClick = true,
   hideMessagesAfterToolUI = false,
   focusTrigger,
-  frontendTools,
+  frontendTools: frontendToolsProp,
+  enableEphemeralNotebook = false,
+  initialEphemeralNotebookOpen = true,
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
@@ -587,6 +591,39 @@ function ChatBaseInner({
   const activeAgentId = protocolConfig?.agentId || runtimeId;
   const historyScopeId = runtimeId || activeAgentId;
   const aiAgentsAuthToken = protocolConfig?.authToken;
+
+  // ── Ephemeral notebook (in-memory) ──────────────────────────────────────
+  // A stable notebook id scoped to this chat instance. Must match the id used
+  // by `useNotebookTools` so the agent's notebook tools drive this notebook.
+  const generatedNotebookIdRef = useRef(
+    `ephemeral-notebook-${Math.random().toString(36).slice(2, 10)}`,
+  );
+  const ephemeralNotebookId = historyScopeId
+    ? `ephemeral-notebook-${historyScopeId}`
+    : generatedNotebookIdRef.current;
+
+  const [ephemeralNotebookOpen, setEphemeralNotebookOpen] = useState(
+    enableEphemeralNotebook && initialEphemeralNotebookOpen,
+  );
+  const notebookVisible = enableEphemeralNotebook && ephemeralNotebookOpen;
+  // When the notebook is shown, the chat can be docked as a sidebar (default)
+  // or floated over the notebook, driven by the header view-mode toggle.
+  const notebookChatFloating =
+    notebookVisible &&
+    (chatViewMode === 'floating' || chatViewMode === 'floating-small');
+
+  // Notebook frontend tools are always created (hooks must be unconditional)
+  // but only merged into the tools sent to the agent while the notebook is
+  // visible, so the agent can manipulate the live notebook cells.
+  const notebookTools = useNotebookTools(ephemeralNotebookId);
+  const frontendTools = useMemo(
+    () =>
+      notebookVisible
+        ? [...(frontendToolsProp || []), ...notebookTools]
+        : frontendToolsProp,
+    [notebookVisible, frontendToolsProp, notebookTools],
+  );
+
   const aiAgentsBaseUrl = useMemo(
     () =>
       normalizeAiAgentsBaseUrl(
@@ -3337,6 +3374,92 @@ function ChatBaseInner({
     !!configQuery.data ||
     !!skillsQuery.data;
 
+  const messagesContent = children ? (
+    children
+  ) : (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        bg: 'canvas.default',
+      }}
+    >
+      <ChatMessageList
+        displayItems={displayItems}
+        isLoading={isLoading}
+        isStreaming={isStreaming}
+        showLoadingIndicator={showLoadingIndicator}
+        hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+        avatarConfig={defaultAvatarConfig}
+        padding={padding}
+        renderToolResult={renderToolResult}
+        approvalConfig={approvalConfig}
+        messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
+        onRespond={handleRespond}
+        emptyContent={
+          <ChatEmptyState
+            emptyState={emptyState}
+            brandIcon={brandIcon}
+            description={description}
+            suggestions={suggestions}
+            submitOnSuggestionClick={submitOnSuggestionClick}
+            onSuggestionSubmit={handleSuggestionSubmit}
+            onSuggestionFill={handleSuggestionFill}
+          />
+        }
+      />
+    </Box>
+  );
+
+  const inputToolbar = showInput ? (
+    <InputToolbar
+      input={input}
+      setInput={setInput}
+      isLoading={isLoading}
+      kernelStatus={liveKernelStatus}
+      connectionConfirmed={connectionConfirmed}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      focusTrigger={focusTrigger}
+      padding={padding}
+      onSend={() => handleSend()}
+      onStop={handleStop}
+      disableInputPrompt={disableInputPrompt || !!overlay || launching}
+      showTokenUsage={showTokenUsage}
+      agentUsage={agentUsage}
+      showModelSelector={showModelSelector}
+      showToolsMenu={showToolsMenu}
+      showSkillsMenu={showSkillsMenu}
+      codemodeEnabled={codemodeEnabled}
+      onToggleCodemode={onToggleCodemode}
+      isA2AProtocol={isA2AProtocol}
+      hasConfigData={!!configQuery.data}
+      hasSkillsData={!!skillsQuery.data}
+      models={availableModels || configQuery.data?.models || []}
+      selectedModel={selectedModel}
+      onModelSelect={setSelectedModel}
+      availableTools={configQuery.data?.builtinTools || []}
+      mcpServers={filteredMcpServers}
+      enabledMcpTools={enabledMcpTools}
+      enabledMcpToolCount={getEnabledMcpToolNames().length}
+      onToggleMcpTool={toggleMcpTool}
+      onToggleAllMcpServerTools={toggleAllMcpServerTools}
+      approvedMcpTools={approvedMcpTools}
+      onToggleMcpToolApproval={toggleMcpToolApproval}
+      skills={skillsQuery.data?.skills || []}
+      skillsLoading={!!skillsQuery.isLoading}
+      enabledSkills={enabledSkills}
+      onToggleSkill={toggleSkill}
+      onToggleAllSkills={toggleAllSkills}
+      approvedSkills={approvedSkills}
+      onToggleSkillApproval={toggleSkillApproval}
+      apiBase={indicatorApiBase}
+      authToken={protocol?.authToken}
+      mcpStatusData={effectiveMcpStatusData}
+    />
+  ) : null;
+
   // ========================================================================
   // Render
   // ========================================================================
@@ -3381,6 +3504,9 @@ function ChatBaseInner({
           onClear={handleClear}
           chatViewMode={chatViewMode}
           onChatViewModeChange={onChatViewModeChange}
+          showEphemeralNotebookToggle={enableEphemeralNotebook}
+          ephemeralNotebookOpen={ephemeralNotebookOpen}
+          onToggleEphemeralNotebook={setEphemeralNotebookOpen}
         />
       )}
 
@@ -3414,105 +3540,106 @@ function ChatBaseInner({
       )}
 
       {/* Messages area */}
-      <Box
-        ref={messagesContainerRef}
-        sx={{
-          flex: 1,
-          flexGrow: 1,
-          minHeight: 0,
-          overflow: 'auto',
-          bg: 'canvas.default',
-        }}
-      >
-        {children ? (
-          children
-        ) : (
+      {notebookVisible ? (
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          {/* Left: in-memory ephemeral notebook (main pane) */}
           <Box
             sx={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
               display: 'flex',
               flexDirection: 'column',
+              overflow: 'hidden',
+              ...(notebookChatFloating
+                ? null
+                : { borderRight: '1px solid', borderColor: 'border.default' }),
+            }}
+          >
+            <EphemeralNotebook notebookId={ephemeralNotebookId} />
+          </Box>
+
+          {/* Right: chat — docked as a sidebar, or floating over the notebook
+              depending on the selected chat view mode. */}
+          <Box
+            sx={
+              notebookChatFloating
+                ? {
+                    position: 'absolute',
+                    right: 16,
+                    width: chatViewMode === 'floating-small' ? 360 : 440,
+                    maxWidth: 'calc(100% - 32px)',
+                    ...(chatViewMode === 'floating-small'
+                      ? { bottom: 16, height: '62%' }
+                      : { top: 16, bottom: 16 }),
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    bg: 'canvas.default',
+                    border: '1px solid',
+                    borderColor: 'border.default',
+                    borderRadius: 2,
+                    boxShadow: 'shadow.large',
+                    zIndex: 5,
+                  }
+                : {
+                    flexShrink: 0,
+                    width: 440,
+                    minWidth: 320,
+                    maxWidth: '48%',
+                    minHeight: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    bg: 'canvas.default',
+                  }
+            }
+          >
+            <Box
+              ref={messagesContainerRef}
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflow: 'auto',
+                bg: 'canvas.default',
+              }}
+            >
+              {messagesContent}
+            </Box>
+            {footerContent}
+            {inputToolbar}
+          </Box>
+        </Box>
+      ) : (
+        <>
+          <Box
+            ref={messagesContainerRef}
+            sx={{
+              flex: 1,
+              flexGrow: 1,
               minHeight: 0,
+              overflow: 'auto',
               bg: 'canvas.default',
             }}
           >
-            <ChatMessageList
-              displayItems={displayItems}
-              isLoading={isLoading}
-              isStreaming={isStreaming}
-              showLoadingIndicator={showLoadingIndicator}
-              hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-              avatarConfig={defaultAvatarConfig}
-              padding={padding}
-              renderToolResult={renderToolResult}
-              approvalConfig={approvalConfig}
-              messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
-              onRespond={handleRespond}
-              emptyContent={
-                <ChatEmptyState
-                  emptyState={emptyState}
-                  brandIcon={brandIcon}
-                  description={description}
-                  suggestions={suggestions}
-                  submitOnSuggestionClick={submitOnSuggestionClick}
-                  onSuggestionSubmit={handleSuggestionSubmit}
-                  onSuggestionFill={handleSuggestionFill}
-                />
-              }
-            />
+            {messagesContent}
           </Box>
-        )}
-      </Box>
 
-      {/* Footer content */}
-      {footerContent}
+          {/* Footer content */}
+          {footerContent}
 
-      {/* Input */}
-      {showInput && (
-        <InputToolbar
-          input={input}
-          setInput={setInput}
-          isLoading={isLoading}
-          kernelStatus={liveKernelStatus}
-          connectionConfirmed={connectionConfirmed}
-          placeholder={placeholder}
-          autoFocus={autoFocus}
-          focusTrigger={focusTrigger}
-          padding={padding}
-          onSend={() => handleSend()}
-          onStop={handleStop}
-          disableInputPrompt={disableInputPrompt || !!overlay || launching}
-          showTokenUsage={showTokenUsage}
-          agentUsage={agentUsage}
-          showModelSelector={showModelSelector}
-          showToolsMenu={showToolsMenu}
-          showSkillsMenu={showSkillsMenu}
-          codemodeEnabled={codemodeEnabled}
-          onToggleCodemode={onToggleCodemode}
-          isA2AProtocol={isA2AProtocol}
-          hasConfigData={!!configQuery.data}
-          hasSkillsData={!!skillsQuery.data}
-          models={availableModels || configQuery.data?.models || []}
-          selectedModel={selectedModel}
-          onModelSelect={setSelectedModel}
-          availableTools={configQuery.data?.builtinTools || []}
-          mcpServers={filteredMcpServers}
-          enabledMcpTools={enabledMcpTools}
-          enabledMcpToolCount={getEnabledMcpToolNames().length}
-          onToggleMcpTool={toggleMcpTool}
-          onToggleAllMcpServerTools={toggleAllMcpServerTools}
-          approvedMcpTools={approvedMcpTools}
-          onToggleMcpToolApproval={toggleMcpToolApproval}
-          skills={skillsQuery.data?.skills || []}
-          skillsLoading={!!skillsQuery.isLoading}
-          enabledSkills={enabledSkills}
-          onToggleSkill={toggleSkill}
-          onToggleAllSkills={toggleAllSkills}
-          approvedSkills={approvedSkills}
-          onToggleSkillApproval={toggleSkillApproval}
-          apiBase={indicatorApiBase}
-          authToken={protocol?.authToken}
-          mcpStatusData={effectiveMcpStatusData}
-        />
+          {/* Input */}
+          {inputToolbar}
+        </>
       )}
 
       {/* Powered by tag */}

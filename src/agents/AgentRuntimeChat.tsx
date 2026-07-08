@@ -136,6 +136,9 @@ export function AgentRuntimeChat({
     showSkillsMenu,
     showPoweredBy,
     suggestions,
+    // Show the in-memory ephemeral notebook next to the chat (with a footer
+    // toggle to hide it) for agent runtime + gallery surfaces.
+    enableEphemeralNotebook: true,
   };
 
   if (launchingError) {

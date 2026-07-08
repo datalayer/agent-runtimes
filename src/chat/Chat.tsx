@@ -278,6 +278,8 @@ export function Chat({
   chatViewMode,
   onChatViewModeChange,
   frontendTools,
+  enableEphemeralNotebook,
+  initialEphemeralNotebookOpen,
   onToolCallStart,
   onToolCallComplete,
   renderToolResult,
@@ -660,6 +662,8 @@ export function Chat({
             chatViewMode={chatViewMode}
             onChatViewModeChange={onChatViewModeChange}
             frontendTools={frontendTools}
+            enableEphemeralNotebook={enableEphemeralNotebook}
+            initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
             onToolCallStart={onToolCallStart}
             onToolCallComplete={onToolCallComplete}
             renderToolResult={renderToolResult}

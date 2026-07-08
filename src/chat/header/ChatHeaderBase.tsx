@@ -14,7 +14,7 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Text, Truncate } from '@primer/react';
+import { Heading, IconButton, Text, ToggleSwitch, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
@@ -22,6 +22,7 @@ import {
   PlusIcon,
   TrashIcon,
   GearIcon,
+  BookIcon,
   CommentDiscussionIcon,
   DeviceMobileIcon,
   SidebarExpandIcon,
@@ -115,6 +116,12 @@ export interface ChatBaseHeaderProps {
   chatViewMode?: ChatViewMode;
   /** Callback when view mode changes */
   onChatViewModeChange?: (mode: ChatViewMode) => void;
+  /** Show the "Ephemeral Notebook" toggle in the header. */
+  showEphemeralNotebookToggle?: boolean;
+  /** Current open state of the ephemeral notebook. */
+  ephemeralNotebookOpen?: boolean;
+  /** Callback fired when the user toggles the ephemeral notebook. */
+  onToggleEphemeralNotebook?: (open: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +150,9 @@ export function ChatBaseHeader({
   onClear,
   chatViewMode,
   onChatViewModeChange,
+  showEphemeralNotebookToggle = false,
+  ephemeralNotebookOpen = false,
+  onToggleEphemeralNotebook,
 }: ChatBaseHeaderProps) {
   const effectiveIndicatorState =
     kernelIndicatorState ?? toRuntimeExecutionState(runtimeStatus);
@@ -280,6 +290,32 @@ export function ChatBaseHeader({
               size="small"
               onClick={headerButtons.onSettings}
             />
+          )}
+          {/* Ephemeral notebook toggle */}
+          {showEphemeralNotebookToggle && (
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+              }}
+            >
+              <BookIcon size={14} />
+              <Text
+                id="toggle-ephemeral-notebook"
+                sx={{ fontSize: 0, color: 'fg.muted' }}
+              >
+                Notebook
+              </Text>
+              <ToggleSwitch
+                size="small"
+                checked={ephemeralNotebookOpen}
+                aria-labelledby="toggle-ephemeral-notebook"
+                onClick={() =>
+                  onToggleEphemeralNotebook?.(!ephemeralNotebookOpen)
+                }
+              />
+            </Box>
           )}
           {/* View mode segmented toggle */}
           {chatViewMode && onChatViewModeChange && (
