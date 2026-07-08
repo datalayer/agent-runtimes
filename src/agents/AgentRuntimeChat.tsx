@@ -22,7 +22,7 @@
  * @module agents/AgentRuntimeChat
  */
 
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useEffect, useMemo } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state';
@@ -30,6 +30,7 @@ import { Chat } from '../chat';
 import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 import { getAgentspecs } from '../specs';
 import type { AgentConfig } from '../types/config';
+import type { AgentConnection } from '../types/connection';
 import type { Protocol, Suggestion } from '../types';
 
 /**
@@ -70,6 +71,8 @@ export interface AgentRuntimeChatProps {
   showPoweredBy?: boolean;
   /** Override the agent config used when creating the agent. */
   agentConfig?: Partial<AgentConfig>;
+  /** Optional callback invoked when runtime connection state changes. */
+  onRuntimeChange?: (runtime: AgentConnection | null) => void;
 }
 
 /**
@@ -94,6 +97,7 @@ export function AgentRuntimeChat({
   showHeader = true,
   showPoweredBy = false,
   agentConfig,
+  onRuntimeChange,
 }: AgentRuntimeChatProps) {
   const { token } = useIAMStore();
   const spec = useMemo(() => getAgentspecs(agentSpecId), [agentSpecId]);
@@ -113,6 +117,10 @@ export function AgentRuntimeChat({
 
   const resolvedTitle = title || spec?.name || 'Agent';
   const authToken = token ?? undefined;
+
+  useEffect(() => {
+    onRuntimeChange?.(runtime ?? null);
+  }, [onRuntimeChange, runtime]);
 
   // The chat is "launching" whenever we intend to launch but no live endpoint
   // is ready yet (covers connecting, launching, and agent-creation phases).

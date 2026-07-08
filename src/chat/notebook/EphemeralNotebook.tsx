@@ -20,8 +20,9 @@
  * @module chat/notebook/EphemeralNotebook
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
+import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
   Box,
   DatalayerThemeProvider,
@@ -37,6 +38,7 @@ import {
   JupyterReactTheme,
   useJupyter,
 } from '@datalayer/jupyter-react';
+import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 
 /**
  * Minimal in-memory notebook content. A single empty code cell is provided so
@@ -70,6 +72,8 @@ export interface EphemeralNotebookProps {
    * agent's notebook frontend tools operate on this notebook instance.
    */
   notebookId: string;
+  /** Preferred runtime pod name to bind the notebook kernel to. */
+  runtimePodName?: string;
   /** Left margin reserved for the cell sidebar (default 120). */
   cellSidebarMargin?: number;
 }
@@ -79,12 +83,103 @@ export interface EphemeralNotebookProps {
  */
 export function EphemeralNotebook({
   notebookId,
+  runtimePodName,
   cellSidebarMargin = 120,
 }: EphemeralNotebookProps) {
-  // Obtain an in-memory service manager and a default sandbox kernel.
-  const { serviceManager, defaultKernel } = useJupyter({
+  // Fallback Jupyter manager used when no runtime sandbox is available.
+  const { serviceManager } = useJupyter({
     startDefaultKernel: true,
   });
+
+  // Resolve runtime sandboxes and attach to the first eligible one.
+  const { runtimes } = useAgentsRuntimes();
+  const selectedRuntime = useMemo(() => {
+    const preferredPod = String(runtimePodName || '').trim();
+    const byPod = (podName: string) =>
+      runtimes.find(rt => String(rt?.pod_name || '') === podName);
+    const isRunning = (status: string | undefined) =>
+      status === 'running' || status === 'resumed';
+
+    if (preferredPod) {
+      const exact = byPod(preferredPod);
+      if (exact) {
+        return exact;
+      }
+    }
+
+    const firstRunning = runtimes.find(rt => isRunning(rt?.status));
+    if (firstRunning) {
+      return firstRunning;
+    }
+
+    return runtimes[0];
+  }, [runtimePodName, runtimes]);
+
+  const [runtimeServiceManager, setRuntimeServiceManager] =
+    useState<ServiceManager.IManager | null>(null);
+  const [runtimeKernelId, setRuntimeKernelId] = useState<string | undefined>(
+    undefined,
+  );
+  const [runtimeStartDefaultKernel, setRuntimeStartDefaultKernel] =
+    useState<boolean>(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let manager: ServiceManager | null = null;
+
+    const connectRuntime = async () => {
+      const baseUrl = String(selectedRuntime?.url || '').trim();
+      if (!baseUrl) {
+        if (!cancelled) {
+          setRuntimeServiceManager(null);
+          setRuntimeKernelId(undefined);
+          setRuntimeStartDefaultKernel(false);
+        }
+        return;
+      }
+
+      try {
+        const token = String(selectedRuntime?.token || '').trim();
+        const serverSettings = ServerConnection.makeSettings({
+          baseUrl,
+          wsUrl: baseUrl.replace(/^http/, 'ws'),
+          token,
+          appendToken: true,
+        });
+        manager = new ServiceManager({ serverSettings });
+        await manager.ready;
+        await manager.kernels.refreshRunning();
+        const runningKernel = [...manager.kernels.running()][0];
+
+        if (!cancelled) {
+          setRuntimeServiceManager(manager);
+          setRuntimeKernelId(runningKernel?.id);
+          setRuntimeStartDefaultKernel(!runningKernel);
+        }
+      } catch {
+        if (!cancelled) {
+          setRuntimeServiceManager(null);
+          setRuntimeKernelId(undefined);
+          setRuntimeStartDefaultKernel(false);
+        }
+      }
+    };
+
+    connectRuntime();
+
+    return () => {
+      cancelled = true;
+      if (manager) {
+        manager.dispose();
+      }
+    };
+  }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
+
+  const activeServiceManager = runtimeServiceManager || serviceManager;
+  const activeKernelId = runtimeServiceManager ? runtimeKernelId : undefined;
+  const activeStartDefaultKernel = runtimeServiceManager
+    ? runtimeStartDefaultKernel
+    : true;
 
   // Resolve the active theme/color-mode exactly like the notebook editor
   // (NotebookEditorPanel) so the notebook honours dark / branded themes
@@ -116,7 +211,7 @@ export function EphemeralNotebook({
         bg: 'canvas.default',
       }}
     >
-      {serviceManager ? (
+      {activeServiceManager ? (
         <DatalayerThemeProvider
           colorMode={colorMode}
           theme={themeConfig.primerTheme}
@@ -160,8 +255,9 @@ export function EphemeralNotebook({
               <Notebook
                 nbformat={EPHEMERAL_NOTEBOOK_CONTENT}
                 id={notebookId}
-                serviceManager={serviceManager}
-                kernel={defaultKernel}
+                serviceManager={activeServiceManager}
+                startDefaultKernel={activeStartDefaultKernel}
+                kernelId={activeKernelId}
                 height="100%"
                 cellSidebarMargin={cellSidebarMargin}
                 extensions={extensions}

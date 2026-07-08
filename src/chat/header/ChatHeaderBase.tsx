@@ -14,7 +14,13 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Text, ToggleSwitch, Truncate } from '@primer/react';
+import {
+  Heading,
+  IconButton,
+  Text,
+  ToggleSwitch,
+  Truncate,
+} from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';

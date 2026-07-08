@@ -3580,6 +3580,7 @@ export const GALLERY_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
+    'Load the local Excel file /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx (Microsoft Excel format) with pandas (read_excel) and analyze the Titanic dataset in at most 3 notebook cells: cell 1 loads the file and shows a quick overview, cell 2 computes survival statistics, and cell 3 plots the key findings. Keep it to 3 cells total.',
     'Load and analyze the Iris CSV from https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv, then summarize key patterns and outliers.',
     'Fetch Titanic data from https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv and build a quick survival analysis with charts.',
     'Load this public Excel file https://people.sc.fsu.edu/~jburkardt/data/xls/cities.xls and create a clean profile report (types, missing values, distributions).',

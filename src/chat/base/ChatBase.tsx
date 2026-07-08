@@ -3564,7 +3564,10 @@ function ChatBaseInner({
                 : { borderRight: '1px solid', borderColor: 'border.default' }),
             }}
           >
-            <EphemeralNotebook notebookId={ephemeralNotebookId} />
+            <EphemeralNotebook
+              notebookId={ephemeralNotebookId}
+              runtimePodName={runtimeId || activeAgentId}
+            />
           </Box>
 
           {/* Right: chat — docked as a sidebar, or floating over the notebook
