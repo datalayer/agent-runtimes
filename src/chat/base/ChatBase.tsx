@@ -26,6 +26,7 @@ import React, {
 } from 'react';
 import { Text, Spinner } from '@primer/react';
 import type { KernelMessage } from '@jupyterlab/services';
+import type { INotebookContent } from '@jupyterlab/nbformat';
 import {
   Box,
   setupPrimerPortals,
@@ -598,9 +599,22 @@ function ChatBaseInner({
   const generatedNotebookIdRef = useRef(
     `ephemeral-notebook-${Math.random().toString(36).slice(2, 10)}`,
   );
-  const ephemeralNotebookId = historyScopeId
-    ? `ephemeral-notebook-${historyScopeId}`
+  const notebookScopeId = protocolConfig?.agentId || activeAgentId || runtimeId;
+  const ephemeralNotebookId = notebookScopeId
+    ? `ephemeral-notebook-${notebookScopeId}`
     : generatedNotebookIdRef.current;
+  const persistedEphemeralNbformat = useAgentRuntimeStore(s =>
+    s.getEphemeralNotebookModel(ephemeralNotebookId),
+  );
+  const setEphemeralNotebookModel = useAgentRuntimeStore(
+    s => s.setEphemeralNotebookModel,
+  );
+  const handleEphemeralNotebookChange = useCallback(
+    (model: INotebookContent) => {
+      setEphemeralNotebookModel(ephemeralNotebookId, model);
+    },
+    [ephemeralNotebookId, setEphemeralNotebookModel],
+  );
 
   const [ephemeralNotebookOpen, setEphemeralNotebookOpen] = useState(
     enableEphemeralNotebook && initialEphemeralNotebookOpen,
@@ -3567,6 +3581,8 @@ function ChatBaseInner({
             <EphemeralNotebook
               notebookId={ephemeralNotebookId}
               runtimePodName={runtimeId || activeAgentId}
+              nbformat={persistedEphemeralNbformat ?? undefined}
+              onNbformatChange={handleEphemeralNotebookChange}
             />
           </Box>
 

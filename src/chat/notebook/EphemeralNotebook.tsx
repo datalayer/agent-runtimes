@@ -20,7 +20,7 @@
  * @module chat/notebook/EphemeralNotebook
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
@@ -36,6 +36,7 @@ import {
   CellSidebarExtension,
   CellSidebarButton,
   JupyterReactTheme,
+  notebookStore,
   useJupyter,
 } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
@@ -76,6 +77,10 @@ export interface EphemeralNotebookProps {
   runtimePodName?: string;
   /** Left margin reserved for the cell sidebar (default 120). */
   cellSidebarMargin?: number;
+  /** Optional persisted notebook model to restore when mounting. */
+  nbformat?: INotebookContent;
+  /** Callback fired when the notebook model changes. */
+  onNbformatChange?: (content: INotebookContent) => void;
 }
 
 /**
@@ -85,7 +90,30 @@ export function EphemeralNotebook({
   notebookId,
   runtimePodName,
   cellSidebarMargin = 120,
+  nbformat,
+  onNbformatChange,
 }: EphemeralNotebookProps) {
+  // The `nbformat` passed to the `Notebook` component MUST stay a stable
+  // reference for the lifetime of a given `notebookId`: the underlying
+  // `useNotebookModel` hook rebuilds the notebook model (and its context /
+  // adapter) every time the `nbformat` reference changes. Feeding the live
+  // model back into this prop would thrash the notebook and can persist
+  // transient/empty content. So we capture the initial/restore content ONCE
+  // per `notebookId` and never mutate it from the live model.
+  const initialNbformatRef = useRef<INotebookContent>(
+    nbformat ?? EPHEMERAL_NOTEBOOK_CONTENT,
+  );
+  const initialNotebookIdRef = useRef<string>(notebookId);
+  if (initialNotebookIdRef.current !== notebookId) {
+    // Notebook scope changed (e.g. switching agents) — reset the restore seed.
+    initialNotebookIdRef.current = notebookId;
+    initialNbformatRef.current = nbformat ?? EPHEMERAL_NOTEBOOK_CONTENT;
+  }
+  const initialNbformat = initialNbformatRef.current;
+
+  // Hash of the last content we persisted, so the poll only writes on change.
+  const lastSavedHashRef = useRef<string>(JSON.stringify(initialNbformat));
+
   // Fallback Jupyter manager used when no runtime sandbox is available.
   const { serviceManager } = useJupyter({
     startDefaultKernel: true,
@@ -181,6 +209,51 @@ export function EphemeralNotebook({
     ? runtimeStartDefaultKernel
     : true;
 
+  useEffect(() => {
+    // Read the CURRENT live notebook model straight from the notebook store.
+    // The `NotebookAdapter` exposes `notebook` (the widget, whose `.model` is
+    // the `INotebookModel`) and `panel` (`panel.content.model`). There is NO
+    // `notebookPanel` getter, so we read through those real accessors.
+    const readLiveModel = (): INotebookContent | null => {
+      const notebook = notebookStore.getState().selectNotebook(notebookId);
+      const adapter = notebook?.adapter as
+        | {
+            notebook?: { model?: { toJSON?: () => unknown } | null };
+            panel?: { content?: { model?: { toJSON?: () => unknown } | null } };
+          }
+        | undefined;
+      const model =
+        adapter?.notebook?.model ?? adapter?.panel?.content?.model ?? null;
+      const modelJson = model?.toJSON?.() as INotebookContent | undefined;
+      return modelJson ?? null;
+    };
+
+    // Persist the current model to the store, but only when it actually
+    // changed. This never feeds back into the `nbformat` prop, so the live
+    // notebook is not rebuilt.
+    const persistLiveModel = () => {
+      const model = readLiveModel();
+      if (!model || !Array.isArray(model.cells)) {
+        return;
+      }
+      const nextHash = JSON.stringify(model);
+      if (nextHash === lastSavedHashRef.current) {
+        return;
+      }
+      lastSavedHashRef.current = nextHash;
+      onNbformatChange?.(model);
+    };
+
+    const intervalId = window.setInterval(persistLiveModel, 500);
+
+    return () => {
+      window.clearInterval(intervalId);
+      // Capture the final model on unmount (navigating away) so the very last
+      // edits are persisted before the notebook adapter is disposed.
+      persistLiveModel();
+    };
+  }, [activeServiceManager, notebookId, onNbformatChange]);
+
   // Resolve the active theme/color-mode exactly like the notebook editor
   // (NotebookEditorPanel) so the notebook honours dark / branded themes
   // instead of always rendering light.
@@ -253,7 +326,7 @@ export function EphemeralNotebook({
               }}
             >
               <Notebook
-                nbformat={EPHEMERAL_NOTEBOOK_CONTENT}
+                nbformat={initialNbformat}
                 id={notebookId}
                 serviceManager={activeServiceManager}
                 startDefaultKernel={activeStartDefaultKernel}

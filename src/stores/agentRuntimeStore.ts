@@ -29,6 +29,7 @@ import {
   subscribeWithSelector,
 } from 'zustand/middleware';
 import type { ServiceManager } from '@jupyterlab/services';
+import type { INotebookContent } from '@jupyterlab/nbformat';
 import type { IRuntimeOptions } from '../runtimes/apis';
 import type {
   AgentStatus,
@@ -127,6 +128,7 @@ export interface AgentRuntimeStoreState {
   fullContext: Record<string, unknown> | null;
   monitoringCache: Record<string, MonitoringCacheEntry>;
   loadedSkillsByAgentId: Record<string, LoadedSkillInfo[]>;
+  ephemeralNotebookModels: Record<string, INotebookContent>;
 }
 
 export interface AgentRuntimeStoreActions {
@@ -154,6 +156,12 @@ export interface AgentRuntimeStoreActions {
   setLoadedSkillsForAgent: (agentId: string, skills: LoadedSkillInfo[]) => void;
   getLoadedSkillsForAgent: (agentId: string) => LoadedSkillInfo[];
   clearLoadedSkillsForAgent: (agentId: string) => void;
+  setEphemeralNotebookModel: (
+    notebookId: string,
+    model: INotebookContent,
+  ) => void;
+  getEphemeralNotebookModel: (notebookId: string) => INotebookContent | null;
+  clearEphemeralNotebookModel: (notebookId: string) => void;
 
   // ─── Runtime connection ──────────────────────────────────────────
   launchAgent: (options: LaunchAgentOptions) => Promise<AgentConnection>;
@@ -367,6 +375,13 @@ const initialWsState: Pick<
   loadedSkillsByAgentId: {},
 };
 
+const initialNotebookState: Pick<
+  AgentRuntimeStoreState,
+  'ephemeralNotebookModels'
+> = {
+  ephemeralNotebookModels: {},
+};
+
 const countPendingApprovals = (
   approvals: AgentStreamToolApprovalPayload[],
 ): number => approvals.filter(approval => approval.status === 'pending').length;
@@ -516,6 +531,29 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           });
         },
 
+        setEphemeralNotebookModel: (notebookId, model) => {
+          set(state => ({
+            ephemeralNotebookModels: {
+              ...state.ephemeralNotebookModels,
+              [notebookId]: model,
+            },
+          }));
+        },
+
+        getEphemeralNotebookModel: notebookId =>
+          get().ephemeralNotebookModels[notebookId] ?? null,
+
+        clearEphemeralNotebookModel: notebookId => {
+          set(state => {
+            if (!(notebookId in state.ephemeralNotebookModels)) {
+              return {};
+            }
+            const { [notebookId]: _removed, ...remaining } =
+              state.ephemeralNotebookModels;
+            return { ephemeralNotebookModels: remaining };
+          });
+        },
+
         // ── Runtime connection ────────────────────────────────────────
         ...initialRuntimeState,
 
@@ -631,6 +669,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
 
         // ── WebSocket stream ──────────────────────────────────────────
         ...initialWsState,
+        ...initialNotebookState,
 
         setWsState: wsState => set({ wsState }),
 
@@ -977,7 +1016,12 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           }
           _ws = null;
           _wsByAgentId.clear();
-          set({ ...initialRuntimeState, ...initialWsState });
+          set(state => ({
+            ...initialRuntimeState,
+            ...initialWsState,
+            // Keep persisted notebook models across navigation/reset cycles.
+            ephemeralNotebookModels: state.ephemeralNotebookModels,
+          }));
         },
 
         resetWs: () => {
@@ -990,7 +1034,11 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           }
           _ws = null;
           _wsByAgentId.clear();
-          set(initialWsState);
+          set(state => ({
+            ...initialWsState,
+            // Preserve notebook models when the chat websocket reconnects.
+            ephemeralNotebookModels: state.ephemeralNotebookModels,
+          }));
         },
       }),
       {
@@ -1010,6 +1058,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           })),
           monitoringCache: state.monitoringCache,
           loadedSkillsByAgentId: state.loadedSkillsByAgentId,
+          ephemeralNotebookModels: state.ephemeralNotebookModels,
         }),
       },
     ),
