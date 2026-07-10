@@ -9,7 +9,7 @@
  * @module types/chat
  */
 
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { ChatMessage, MessageHandler } from './messages';
 import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
@@ -66,6 +66,8 @@ export interface ToolCallCompleteContext {
  * - 'sidebar': Docked sidebar panel
  */
 export type ChatViewMode = 'floating' | 'floating-small' | 'sidebar';
+
+export type EphemeralNotebookToolbarComponent = ComponentType<any>;
 
 // ---------------------------------------------------------------------------
 // Tool call types
@@ -447,6 +449,12 @@ export interface ChatCommonProps {
 
   /** Initial open state of the ephemeral notebook. @default true */
   initialEphemeralNotebookOpen?: boolean;
+
+  /**
+   * Optional toolbar component used by the ephemeral notebook.
+   * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
+   */
+  ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
 
   /** Pre-hook: fires when a tool call starts executing */
   onToolCallStart?: (context: ToolCallStartContext) => void;
@@ -910,6 +918,12 @@ export interface ChatBaseProps {
    * `enableEphemeralNotebook` is true. @default true
    */
   initialEphemeralNotebookOpen?: boolean;
+
+  /**
+   * Optional toolbar component used by the ephemeral notebook.
+   * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
+   */
+  ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
 
   // ============ Identity/Authorization Support ============
 

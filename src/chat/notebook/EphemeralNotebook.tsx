@@ -40,6 +40,7 @@ import {
   useJupyter,
 } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import type { EphemeralNotebookToolbarComponent } from '../../types/chat';
 
 /**
  * Minimal in-memory notebook content. A single empty code cell is provided so
@@ -81,6 +82,8 @@ export interface EphemeralNotebookProps {
   nbformat?: INotebookContent;
   /** Callback fired when the notebook model changes. */
   onNbformatChange?: (content: INotebookContent) => void;
+  /** Optional toolbar component override. */
+  toolbarComponent?: EphemeralNotebookToolbarComponent;
 }
 
 /**
@@ -92,6 +95,7 @@ export function EphemeralNotebook({
   cellSidebarMargin = 120,
   nbformat,
   onNbformatChange,
+  toolbarComponent,
 }: EphemeralNotebookProps) {
   // The `nbformat` passed to the `Notebook` component MUST stay a stable
   // reference for the lifetime of a given `notebookId`: the underlying
@@ -208,6 +212,7 @@ export function EphemeralNotebook({
   const activeStartDefaultKernel = runtimeServiceManager
     ? runtimeStartDefaultKernel
     : true;
+  const ToolbarComponent = toolbarComponent || NotebookToolbar;
 
   useEffect(() => {
     // Read the CURRENT live notebook model straight from the notebook store.
@@ -334,7 +339,7 @@ export function EphemeralNotebook({
                 height="100%"
                 cellSidebarMargin={cellSidebarMargin}
                 extensions={extensions}
-                Toolbar={NotebookToolbar}
+                Toolbar={ToolbarComponent}
               />
             </Box>
           </JupyterReactTheme>

@@ -28,7 +28,6 @@ import {
   PlusIcon,
   TrashIcon,
   GearIcon,
-  BookIcon,
   CommentDiscussionIcon,
   DeviceMobileIcon,
   SidebarExpandIcon,
@@ -255,7 +254,7 @@ export function ChatBaseHeader({
               cpu={kernelCpu}
               memory={kernelMemory}
               gpu={kernelGpu}
-              position="sw"
+                position="s"
               bordered={false}
             />
           ) : (
@@ -265,7 +264,7 @@ export function ChatBaseHeader({
               cpu={kernelCpu}
               memory={kernelMemory}
               gpu={kernelGpu}
-              position="sw"
+                position="s"
               bordered={false}
             />
           )}
@@ -306,7 +305,6 @@ export function ChatBaseHeader({
                 gap: 1,
               }}
             >
-              <BookIcon size={14} />
               <Text
                 id="toggle-ephemeral-notebook"
                 sx={{ fontSize: 0, color: 'fg.muted' }}

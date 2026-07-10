@@ -26,7 +26,9 @@ import React, {
 } from 'react';
 import { Text, Spinner } from '@primer/react';
 import type { KernelMessage } from '@jupyterlab/services';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
+import { notebookStore } from '@datalayer/jupyter-react';
 import {
   Box,
   setupPrimerPortals,
@@ -547,6 +549,7 @@ function ChatBaseInner({
   frontendTools: frontendToolsProp,
   enableEphemeralNotebook = false,
   initialEphemeralNotebookOpen = true,
+  ephemeralNotebookToolbar,
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
@@ -599,7 +602,11 @@ function ChatBaseInner({
   const generatedNotebookIdRef = useRef(
     `ephemeral-notebook-${Math.random().toString(36).slice(2, 10)}`,
   );
-  const notebookScopeId = protocolConfig?.agentId || activeAgentId || runtimeId;
+  // Scope the ephemeral notebook to the STABLE runtime identity first (the pod
+  // name / route id that stays constant across navigation), falling back to the
+  // agent id. This keeps the persisted notebook model addressable by the same
+  // key when navigating away from and back to the same runtime page.
+  const notebookScopeId = runtimeId || protocolConfig?.agentId || activeAgentId;
   const ephemeralNotebookId = notebookScopeId
     ? `ephemeral-notebook-${notebookScopeId}`
     : generatedNotebookIdRef.current;
@@ -620,6 +627,41 @@ function ChatBaseInner({
     enableEphemeralNotebook && initialEphemeralNotebookOpen,
   );
   const notebookVisible = enableEphemeralNotebook && ephemeralNotebookOpen;
+
+  // Track the ephemeral notebook's live kernel connection so the chat header
+  // renders the same rich `KernelIndicator` details (kernel id, client id,
+  // server/ws url, status) as the notebook editor. Without this the header
+  // falls back to the sandbox-status placeholder ("disconnected", "no-kernel").
+  const [notebookKernel, setNotebookKernel] =
+    useState<IKernelConnection | null>(null);
+  useEffect(() => {
+    if (!notebookVisible) {
+      setNotebookKernel(null);
+      return;
+    }
+    const readKernel = (): IKernelConnection | null => {
+      const notebook = notebookStore.getState().selectNotebook(
+        ephemeralNotebookId,
+      );
+      const adapter = notebook?.adapter as
+        | { kernel?: IKernelConnection | null }
+        | undefined;
+      return adapter?.kernel ?? null;
+    };
+    const sync = () => {
+      const next = readKernel();
+      setNotebookKernel(prev => (prev?.id === next?.id ? prev : next));
+    };
+    sync();
+    // Poll: the kernel connection appears asynchronously after the notebook
+    // mounts and can change on restart. Also react to store mutations.
+    const intervalId = window.setInterval(sync, 750);
+    const unsubscribe = notebookStore.subscribe(sync);
+    return () => {
+      window.clearInterval(intervalId);
+      unsubscribe();
+    };
+  }, [notebookVisible, ephemeralNotebookId]);
   // When the notebook is shown, the chat can be docked as a sidebar (default)
   // or floated over the notebook, driven by the header view-mode toggle.
   const notebookChatFloating =
@@ -3507,7 +3549,7 @@ function ChatBaseInner({
           padding={padding}
           kernelIndicatorState={kernelIndicatorState}
           runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
-          kernel={kernel}
+          kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
           kernelEnvironmentName={kernelEnvironmentName}
           kernelCpu={kernelCpu}
           kernelMemory={kernelMemory}
@@ -3583,6 +3625,7 @@ function ChatBaseInner({
               runtimePodName={runtimeId || activeAgentId}
               nbformat={persistedEphemeralNbformat ?? undefined}
               onNbformatChange={handleEphemeralNotebookChange}
+              toolbarComponent={ephemeralNotebookToolbar}
             />
           </Box>
 
