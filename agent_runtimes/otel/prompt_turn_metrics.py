@@ -10,7 +10,7 @@ The exporter is configured lazily and reads:
 - ``DATALAYER_OTEL_SERVICE_NAME`` for service.name resource attribute
 - ``DATALAYER_OTLP_METRICS_URL`` / ``OTEL_EXPORTER_OTLP_METRICS_ENDPOINT``
     (explicit metrics endpoint override)
-- ``DATALAYER_OTLP_URL`` / ``OTEL_EXPORTER_OTLP_ENDPOINT`` / ``DATALAYER_OTEL_RUN_URL``
+- ``DATALAYER_OTLP_URL`` / ``OTEL_EXPORTER_OTLP_ENDPOINT`` / ``DATALAYER_OTEL_URL``
     (base OTLP endpoint)
 """
 
@@ -186,11 +186,10 @@ def _resolve_otlp_endpoint() -> str:
     )
     if explicit:
         return explicit.rstrip("/")
-    # Prefer the active runtime run URL first (cluster/environment-specific).
-    # DATALAYER_OTEL_RUN_URL may be baked into some container images.
+    # Prefer explicit OTEL base URL for cluster/environment-specific routing.
     datalayer_url = (
-        os.environ.get("DATALAYER_URL")
-        or os.environ.get("DATALAYER_OTEL_RUN_URL")
+        os.environ.get("DATALAYER_OTEL_URL")
+        or os.environ.get("DATALAYER_URL")
         or "https://prod1.datalayer.run"
     )
     return f"{datalayer_url.rstrip('/')}/api/otel/v1/otlp"
@@ -198,12 +197,12 @@ def _resolve_otlp_endpoint() -> str:
 
 def _resolve_datalayer_url_source() -> tuple[str, str]:
     """Return (source, value) for the run URL used to build OTLP endpoint."""
+    datalayer_url = os.environ.get("DATALAYER_OTEL_URL")
+    if datalayer_url:
+        return "DATALAYER_OTEL_URL", datalayer_url
     datalayer_url = os.environ.get("DATALAYER_URL")
     if datalayer_url:
         return "DATALAYER_URL", datalayer_url
-    datalayer_url = os.environ.get("DATALAYER_OTEL_RUN_URL")
-    if datalayer_url:
-        return "DATALAYER_OTEL_RUN_URL", datalayer_url
     return "default", "https://prod1.datalayer.run"
 
 
