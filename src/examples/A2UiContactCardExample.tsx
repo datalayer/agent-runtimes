@@ -130,7 +130,7 @@ function ContactCardContent({
 }: {
   onAction: (action: A2uiClientAction) => void;
 }) {
-  const { surfaces, processMessages, resetSurfaces } =
+  const { surfaces, processMessages, resetSurfaces, themeStyle } =
     useA2uiProcessor(onAction);
 
   const loadCard = useCallback(() => {
@@ -155,7 +155,7 @@ function ContactCardContent({
         </Button>
       </Box>
 
-      <Box sx={{ display: 'grid', gap: 3 }}>
+      <Box style={themeStyle} sx={{ display: 'grid', gap: 3 }}>
         {surfaces.map(surface => (
           <Box
             key={surface.id}

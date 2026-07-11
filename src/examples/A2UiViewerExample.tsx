@@ -275,6 +275,72 @@ const SCENES: ViewerScene[] = [
       ],
     }),
   },
+  {
+    id: 'shipping',
+    label: 'Shipping Status',
+    emoji: '📦',
+    description: 'Order fulfillment timeline with current package state.',
+    messages: createSceneMessages({
+      surfaceId: 'viewer-shipping',
+      components: [
+        { id: 'root', component: 'Card', child: 'main' },
+        {
+          id: 'main',
+          component: 'Column',
+          children: [
+            'title-row',
+            'tracking',
+            'divider',
+            'status-1',
+            'status-2',
+            'status-3',
+            'eta',
+          ],
+        },
+        {
+          id: 'title-row',
+          component: 'Row',
+          align: 'center',
+          children: ['title-icon', 'title'],
+        },
+        { id: 'title-icon', component: 'Icon', name: 'inventory' },
+        {
+          id: 'title',
+          component: 'Text',
+          variant: 'h2',
+          text: 'Package Status',
+        },
+        {
+          id: 'tracking',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/tracking' },
+        },
+        { id: 'divider', component: 'Divider' },
+        { id: 'status-1', component: 'Text', text: { path: '/statusPlaced' } },
+        { id: 'status-2', component: 'Text', text: { path: '/statusShipped' } },
+        {
+          id: 'status-3',
+          component: 'Text',
+          variant: 'h3',
+          text: { path: '/statusDelivery' },
+        },
+        {
+          id: 'eta',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/eta' },
+        },
+      ],
+      value: {
+        tracking: 'Tracking: 17999AA10123456784',
+        statusPlaced: '✓ Order Placed',
+        statusShipped: '✓ Shipped',
+        statusDelivery: '🚚 Out for Delivery',
+        eta: 'Estimated delivery: Today by 8 PM',
+      },
+    }),
+  },
 ];
 
 function ViewerContent({
@@ -282,7 +348,7 @@ function ViewerContent({
 }: {
   onAction: (action: A2uiClientAction) => void;
 }) {
-  const { surfaces, processMessages, resetSurfaces } =
+  const { surfaces, processMessages, resetSurfaces, themeStyle } =
     useA2uiProcessor(onAction);
   const [selectedSceneId, setSelectedSceneId] = useState(SCENES[0].id);
 
@@ -329,6 +395,7 @@ function ViewerContent({
       </Box>
 
       <Box
+        style={themeStyle}
         sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}
       >
         {surfaces.map(surface => (

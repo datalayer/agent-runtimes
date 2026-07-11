@@ -366,7 +366,24 @@ export default defineConfig(({ mode, command }) => {
       // Force these packages to resolve from the root node_modules only.
       // Without this, Vite follows the @datalayer/core symlink into the core
       // source tree and picks up incompatible versions nestled there.
-      dedupe: ['date-fns', 'react', 'react-dom'],
+      //
+      // @primer/react (and its siblings) MUST be deduped: multiple physical
+      // copies exist across workspaces (agent-runtimes, primer-addons,
+      // jupyter-react) at the same version. Each copy owns its own React
+      // ThemeProvider context, so without deduping, the theme applied by
+      // primer-addons' <DatalayerThemeProvider> is invisible to example
+      // components that import from @primer/react directly — they render
+      // unthemed while primer-addons' own components (theme selector) stay
+      // themed. Collapsing to a single instance restores shared theming.
+      dedupe: [
+        'date-fns',
+        'react',
+        'react-dom',
+        '@primer/react',
+        '@primer/react-brand',
+        '@primer/octicons-react',
+        'styled-components',
+      ],
       alias: [
         ...(isExamples
           ? [

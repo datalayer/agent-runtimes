@@ -310,6 +310,244 @@ const SCENES: GalleryScene[] = [
       ],
     }),
   },
+  {
+    id: 'restaurant-card',
+    label: 'Restaurant',
+    description: 'Restaurant card layout with image, rating, ETA, and action.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-restaurant-card',
+      components: [
+        { id: 'root', component: 'Card', child: 'main' },
+        {
+          id: 'main',
+          component: 'Column',
+          children: [
+            'hero',
+            'title-row',
+            'meta',
+            'stats-row',
+            'cta-label',
+            'cta',
+          ],
+        },
+        {
+          id: 'hero',
+          component: 'Image',
+          url: { path: '/image' },
+          fit: 'cover',
+          variant: 'largeFeature',
+        },
+        {
+          id: 'title-row',
+          component: 'Row',
+          justify: 'spaceBetween',
+          children: ['title', 'price'],
+        },
+        {
+          id: 'title',
+          component: 'Text',
+          variant: 'h3',
+          text: { path: '/title' },
+        },
+        { id: 'price', component: 'Text', text: { path: '/price' } },
+        {
+          id: 'meta',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/meta' },
+        },
+        {
+          id: 'stats-row',
+          component: 'Row',
+          justify: 'spaceBetween',
+          children: ['rating', 'eta', 'distance'],
+        },
+        {
+          id: 'rating',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/rating' },
+        },
+        {
+          id: 'eta',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/eta' },
+        },
+        {
+          id: 'distance',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/distance' },
+        },
+        { id: 'cta-label', component: 'Text', text: 'Reserve Table' },
+        {
+          id: 'cta',
+          component: 'Button',
+          variant: 'primary',
+          child: 'cta-label',
+          action: {
+            event: {
+              name: 'reserve_restaurant',
+              context: {
+                restaurantId: { path: '/id' },
+                restaurantName: { path: '/title' },
+              },
+            },
+          },
+        },
+      ],
+      value: {
+        id: 'rest_italian_001',
+        image:
+          'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=640&h=360&fit=crop',
+        title: 'The Italian Kitchen',
+        price: '$$$',
+        meta: 'Italian • Pasta • Wine Bar',
+        rating: '⭐ 4.8 (2,847 reviews)',
+        eta: '25-35 min',
+        distance: '0.8 mi',
+      },
+    }),
+  },
+  {
+    id: 'list',
+    label: 'Data List',
+    description:
+      'List component rendering a data-bound template with per-item actions.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-list',
+      components: [
+        { id: 'root', component: 'Column', children: ['heading', 'items'] },
+        {
+          id: 'heading',
+          component: 'Text',
+          variant: 'h2',
+          text: { path: '/title' },
+        },
+        {
+          id: 'items',
+          component: 'List',
+          direction: 'vertical',
+          children: { componentId: 'item-template', path: '/items' },
+        },
+        { id: 'item-template', component: 'Card', child: 'item-row' },
+        {
+          id: 'item-row',
+          component: 'Row',
+          align: 'center',
+          children: ['item-image', 'item-details', 'item-cta'],
+        },
+        {
+          id: 'item-image',
+          component: 'Image',
+          url: { path: 'image' },
+          fit: 'cover',
+          variant: 'smallFeature',
+          weight: 1,
+        },
+        {
+          id: 'item-details',
+          component: 'Column',
+          weight: 3,
+          children: ['item-name', 'item-meta'],
+        },
+        {
+          id: 'item-name',
+          component: 'Text',
+          variant: 'h3',
+          text: { path: 'name' },
+        },
+        {
+          id: 'item-meta',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: 'meta' },
+        },
+        {
+          id: 'item-cta',
+          component: 'Button',
+          variant: 'primary',
+          child: 'item-cta-label',
+          action: {
+            event: {
+              name: 'select_item',
+              context: { id: { path: 'id' }, name: { path: 'name' } },
+            },
+          },
+        },
+        { id: 'item-cta-label', component: 'Text', text: 'Select' },
+      ],
+      value: {
+        title: 'Featured Restaurants',
+        items: [
+          {
+            id: 'rest_001',
+            name: "Xi'an Famous Foods",
+            meta: '★★★★☆ · Hand-pulled noodles',
+            image:
+              'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=200&h=200&fit=crop',
+          },
+          {
+            id: 'rest_002',
+            name: 'Han Dynasty',
+            meta: '★★★★☆ · Authentic Szechuan',
+            image:
+              'https://images.unsplash.com/photo-1525755662778-989d0524087e?w=200&h=200&fit=crop',
+          },
+          {
+            id: 'rest_003',
+            name: 'RedFarm',
+            meta: '★★★★☆ · Farm-to-table Chinese',
+            image:
+              'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=200&h=200&fit=crop',
+          },
+        ],
+      },
+    }),
+  },
+  {
+    id: 'media',
+    label: 'Media',
+    description: 'Video and AudioPlayer components from the basic catalog.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-media',
+      components: [
+        { id: 'root', component: 'Card', child: 'media-column' },
+        {
+          id: 'media-column',
+          component: 'Column',
+          children: ['media-title', 'video', 'audio-title', 'audio'],
+        },
+        {
+          id: 'media-title',
+          component: 'Text',
+          variant: 'h3',
+          text: 'Media Components',
+        },
+        { id: 'video', component: 'Video', url: { path: '/videoUrl' } },
+        {
+          id: 'audio-title',
+          component: 'Text',
+          variant: 'caption',
+          text: { path: '/audioLabel' },
+        },
+        {
+          id: 'audio',
+          component: 'AudioPlayer',
+          url: { path: '/audioUrl' },
+          description: { path: '/audioLabel' },
+        },
+      ],
+      value: {
+        videoUrl:
+          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        audioLabel: 'Sample audio track',
+        audioUrl:
+          'https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3',
+      },
+    }),
+  },
 ];
 
 function GalleryContent({
@@ -317,7 +555,7 @@ function GalleryContent({
 }: {
   onAction: (action: A2uiClientAction) => void;
 }) {
-  const { surfaces, processMessages, resetSurfaces } =
+  const { surfaces, processMessages, resetSurfaces, themeStyle } =
     useA2uiProcessor(onAction);
   const [selectedScene, setSelectedScene] = useState<string>(SCENES[0].id);
 
@@ -393,6 +631,7 @@ function GalleryContent({
       </Box>
 
       <Box
+        style={themeStyle}
         sx={{
           width: '100%',
           minWidth: 0,

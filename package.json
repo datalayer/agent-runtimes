@@ -128,7 +128,9 @@
   },
   "dependencies": {
     "@a2a-js/sdk": "^0.3.6",
+    "@a2ui/markdown-it": "^0.1.0",
     "@a2ui/react": "^0.10.1",
+    "@a2ui/web_core": "^0.10.4",
     "@ag-ui/client": "^0.0.42",
     "@ag-ui/core": "^0.0.42",
     "@ag-ui/encoder": "^0.0.42",
@@ -309,6 +311,7 @@
     "vitest": "^3.2.4"
   },
   "resolutions": {
+    "@a2ui/web_core": "^0.10.4",
     "@langchain/core": "^0.3.80",
     "@ai-sdk/react": "^4.0.0-beta.116",
     "@microsoft/fast-colors": "5.3.1",
@@ -327,6 +330,7 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
+    "@a2ui/web_core": "^0.10.4",
     "@langchain/core": "^0.3.80",
     "@ai-sdk/react": "^4.0.0-beta.116",
     "@microsoft/fast-colors": "5.3.1",

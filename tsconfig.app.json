@@ -30,7 +30,9 @@
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@a2ui/web_core": ["./node_modules/@a2ui/web_core"],
+      "@a2ui/web_core/*": ["./node_modules/@a2ui/web_core/*"]
     }
   },
   "include": ["src"],

@@ -32,7 +32,7 @@ class RestaurantDeps:
         self.last_restaurants: list[dict[str, Any]] = []
 
 
-A2UI_BASIC_CATALOG_ID = "https://a2ui.org/specification/v0_9/basic_catalog.json"
+A2UI_BASIC_CATALOG_ID = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
 
 
 def _create_surface_message(surface_id: str, primary_color: str) -> dict[str, Any]:

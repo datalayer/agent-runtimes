@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, getCardGradient } from '@datalayer/primer-addons';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
-import { A2uiSurface } from '@a2ui/react/v0_9';
+import { A2uiSurface, basicCatalog } from '@a2ui/react/v0_9';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
@@ -45,6 +45,14 @@ const extractV09Messages = (data: A2AServerPayloadPart[]): A2uiMessage[] => {
 
     const message = part.data as Record<string, unknown>;
     if (message.version === 'v0.9') {
+      // Normalize the catalog id so surfaces render regardless of which
+      // catalog URL variant the backend/LLM emits (the frontend only has the
+      // registered basicCatalog).
+      const createSurface = message.createSurface as
+        { catalogId?: string } | undefined;
+      if (createSurface && createSurface.catalogId !== basicCatalog.id) {
+        createSurface.catalogId = basicCatalog.id;
+      }
       messages.push(message as unknown as A2uiMessage);
     }
   });
@@ -159,7 +167,7 @@ const A2UiRestaurantExample: React.FC = () => {
     });
   }, []);
 
-  const { surfaces, processMessages, resetSurfaces } =
+  const { surfaces, processMessages, resetSurfaces, themeStyle } =
     useA2uiProcessor(handleAction);
 
   useEffect(() => {
@@ -305,7 +313,10 @@ const A2UiRestaurantExample: React.FC = () => {
             )}
 
             {!isLoading && hasData && !error && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box
+                style={themeStyle}
+                sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+              >
                 <Button
                   variant="invisible"
                   sx={{ alignSelf: 'flex-start' }}
