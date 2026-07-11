@@ -24,9 +24,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-#    "a2ui-agent-sdk>=0.2.1",
 dependencies = [
     "a2a-sdk[all]>=1.0.2",
+    "a2ui-agent-sdk>=0.4.0",
     "ag-ui-protocol>=0.1.10",
     "agent-client-protocol>=0.7.1",
     "agent-codemode>=0.1.0",
