@@ -47,9 +47,16 @@ function createA2uiTheme(themeVariant: ThemeVariant, colorMode: ColorMode) {
     resolvedMode === 'dark' ? cfg.themeStyles.dark : cfg.themeStyles.light;
   const vars = modeStyles as Record<string, string>;
 
+  // Primer buttons use a subtle resting shadow in light mode and none in dark.
+  const buttonShadow =
+    resolvedMode === 'dark' ? 'none' : '0 1px 0 rgba(31, 35, 40, 0.04)';
+
   return {
     mode: resolvedMode,
-    '--a2ui-color-primary': cfg.brandColor,
+    // Use Primer's primary button color token so A2UI primary buttons match
+    // Primer semantics regardless of the selected brand palette.
+    '--a2ui-color-primary':
+      vars['--button-primary-bgColor-rest'] ?? cfg.brandColor,
     '--a2ui-color-primary-hover': vars['--button-primary-bgColor-hover'],
     '--a2ui-color-on-primary': vars['--button-primary-fgColor-rest'],
     '--a2ui-color-secondary': vars['--button-default-bgColor-rest'],
@@ -68,6 +75,15 @@ function createA2uiTheme(themeVariant: ThemeVariant, colorMode: ColorMode) {
       resolvedMode === 'dark'
         ? '0 8px 24px rgba(1, 4, 9, 0.55)'
         : '0 8px 20px rgba(31, 35, 40, 0.08)',
+    // Primer-style button tokens: compact padding, 6px radius, semibold label,
+    // hairline default border and a subtle resting shadow.
+    '--a2ui-button-padding': '5px 16px',
+    '--a2ui-button-margin': '0',
+    '--a2ui-button-border-radius': '6px',
+    '--a2ui-button-font-weight': '500',
+    '--a2ui-button-box-shadow': buttonShadow,
+    '--a2ui-button-background': vars['--button-default-bgColor-rest'],
+    '--a2ui-button-border': `1px solid ${vars['--button-default-borderColor-rest']}`,
   } as Record<string, unknown>;
 }
 

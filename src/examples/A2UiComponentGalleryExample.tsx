@@ -548,6 +548,160 @@ const SCENES: GalleryScene[] = [
       },
     }),
   },
+  {
+    id: 'validation',
+    label: 'Form Validation',
+    description:
+      'Live client-side validation via local function evaluation (email, regex, and/or/required) with two-way data binding.',
+    messages: createSceneMessages({
+      surfaceId: 'gallery-validation',
+      components: [
+        { id: 'root', component: 'Card', child: 'main-column' },
+        {
+          id: 'main-column',
+          component: 'Column',
+          align: 'stretch',
+          children: [
+            'welcome-text',
+            'email-field',
+            'phone-field',
+            'zip-field',
+            'terms-checkbox',
+            'submit-btn',
+          ],
+        },
+        {
+          id: 'welcome-text',
+          component: 'Text',
+          variant: 'h3',
+          text: {
+            call: 'formatString',
+            args: {
+              value:
+                "Hello! Today is ${formatDate(value: ${/now}, format: 'EEEE, MMMM d')}.",
+            },
+            returnType: 'string',
+          },
+        },
+        {
+          id: 'email-field',
+          component: 'TextField',
+          label: 'Email Address',
+          value: { path: '/formData/email' },
+          checks: [
+            {
+              condition: {
+                call: 'email',
+                args: { value: { path: '/formData/email' } },
+              },
+              message: 'Invalid email format',
+            },
+          ],
+        },
+        {
+          id: 'phone-field',
+          component: 'TextField',
+          label: 'Phone Number',
+          value: { path: '/formData/phone' },
+          checks: [
+            {
+              condition: {
+                call: 'regex',
+                args: {
+                  value: { path: '/formData/phone' },
+                  pattern: '^\\+?[0-9]{10,15}$',
+                },
+              },
+              message: 'Invalid phone format',
+            },
+          ],
+        },
+        {
+          id: 'zip-field',
+          component: 'TextField',
+          label: 'Zip Code',
+          value: { path: '/formData/zip' },
+          checks: [
+            {
+              condition: {
+                call: 'regex',
+                args: {
+                  value: { path: '/formData/zip' },
+                  pattern: '^[0-9]{5}$',
+                },
+              },
+              message: 'Must be exactly 5 digits',
+            },
+          ],
+        },
+        {
+          id: 'terms-checkbox',
+          component: 'CheckBox',
+          label: 'I agree to the terms and conditions',
+          value: { path: '/formData/agree' },
+        },
+        {
+          id: 'submit-btn-text',
+          component: 'Text',
+          text: 'Submit Registration',
+        },
+        {
+          id: 'submit-btn',
+          component: 'Button',
+          variant: 'primary',
+          child: 'submit-btn-text',
+          checks: [
+            {
+              condition: {
+                call: 'and',
+                args: {
+                  values: [
+                    { path: '/formData/agree' },
+                    {
+                      call: 'or',
+                      args: {
+                        values: [
+                          {
+                            call: 'required',
+                            args: { value: { path: '/formData/email' } },
+                          },
+                          {
+                            call: 'required',
+                            args: { value: { path: '/formData/phone' } },
+                          },
+                        ],
+                      },
+                    },
+                    {
+                      call: 'required',
+                      args: { value: { path: '/formData/zip' } },
+                    },
+                  ],
+                },
+              },
+              message:
+                'You must agree to terms AND provide either Email or Phone, plus a Zip code.',
+            },
+          ],
+          action: {
+            event: {
+              name: 'gallery_register',
+              context: { data: { path: '/formData' } },
+            },
+          },
+        },
+      ],
+      value: {
+        now: '2025-12-15T12:00:00Z',
+        formData: {
+          email: '',
+          phone: '',
+          zip: '',
+          agree: false,
+        },
+      },
+    }),
+  },
 ];
 
 function GalleryContent({
