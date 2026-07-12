@@ -660,7 +660,8 @@ export function ChatFloating({
         ref={popupRef}
         className={className}
         sx={{
-          position: 'fixed',
+          position:
+            viewMode === 'panel' && !isMobile ? 'relative' : ('fixed' as const),
           // floating (normal) — full-height column pinned to the right edge
           ...(viewMode === 'floating' && !isMobile
             ? {
@@ -676,15 +677,19 @@ export function ChatFloating({
             : {}),
           ...(viewMode === 'panel' && !isMobile
             ? {
-                top: 0,
-                right: 0,
-                bottom: 0,
+                top: 'auto',
+                right: 'auto',
+                bottom: 'auto',
                 left: 'auto',
+                marginLeft: 'auto',
+                alignSelf: 'stretch',
               }
             : {}),
           width:
             viewMode === 'panel' && !isMobile
-              ? '420px'
+              ? isOpen || isAnimating
+                ? '420px'
+                : '0px'
               : viewMode === 'floating' && !isMobile
                 ? typeof popupWidth === 'number'
                   ? `${popupWidth}px`
@@ -700,7 +705,7 @@ export function ChatFloating({
                       : popupWidth,
           height:
             (viewMode === 'panel' || viewMode === 'floating') && !isMobile
-              ? 'auto'
+              ? '100%'
               : viewMode === 'floating-small' && !isMobile
                 ? typeof popupHeight === 'number'
                   ? `${popupHeight}px`
@@ -717,7 +722,7 @@ export function ChatFloating({
           borderColor: 'border.default',
           borderRadius: viewMode === 'panel' || isMobile ? 0 : '12px',
           boxShadow:
-            viewMode === 'panel' ? 'shadow.large' : 'shadow.extra-large',
+            viewMode === 'panel' ? 'shadow.none' : 'shadow.extra-large',
           overflow: 'hidden',
           transform:
             viewMode === 'panel'
@@ -726,8 +731,8 @@ export function ChatFloating({
                 : 'translateX(100%)'
               : getAnimationTransform(isOpen),
           opacity: viewMode === 'panel' ? 1 : isOpen ? 1 : 0,
-          transition: `transform ${animationDuration}ms ease, opacity ${animationDuration}ms ease`,
-          zIndex: 1001,
+          transition: `transform ${animationDuration}ms ease, opacity ${animationDuration}ms ease, width ${animationDuration}ms ease`,
+          zIndex: viewMode === 'panel' && !isMobile ? 'auto' : 1001,
           // Hide from accessibility and pointer events when closed
           visibility: isOpen || isAnimating ? 'visible' : 'hidden',
           pointerEvents: isOpen ? 'auto' : 'none',
