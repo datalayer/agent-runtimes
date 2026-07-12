@@ -1028,7 +1028,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               brandIcon={<AgentIcon size={16} />}
               placeholder="Ask about sales KPIs…"
               description="Monitor Sales KPI agent with pause/resume checkpointing"
-              showHeader={false}
+              showHeader={true}
               showTokenUsage={true}
               autoFocus
               height="100%"

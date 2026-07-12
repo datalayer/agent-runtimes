@@ -382,7 +382,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             placeholder="Ask the agent to use its skills..."
             showHeader={true}
             showNewChatButton={true}
-            showClearButton={false}
+            showClearButton={true}
             showTokenUsage={true}
             showSkillsMenu={true}
             autoFocus

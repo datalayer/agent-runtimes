@@ -791,7 +791,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
               placeholder="Ask the agent to write and run code…"
               showHeader={true}
               showNewChatButton={true}
-              showClearButton={false}
+              showClearButton={true}
               showTokenUsage={true}
               autoFocus
               height="100%"

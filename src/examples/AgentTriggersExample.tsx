@@ -1226,7 +1226,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 runtimeId={agentId}
                 showInput={true}
                 disableInputPrompt={true}
-                showModelSelector={false}
+                showModelSelector={true}
                 showToolsMenu={true}
                 showSkillsMenu={true}
               />
@@ -1451,8 +1451,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                       }
 
                       const p = outputEvent?.payload as
-                        | Record<string, any>
-                        | undefined;
+                        Record<string, any> | undefined;
                       const outputText = outputEvent
                         ? p?.outputs
                           ? String(p.outputs)

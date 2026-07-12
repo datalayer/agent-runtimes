@@ -281,7 +281,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             placeholder="Ask for actions that require approval..."
             showHeader={true}
             showNewChatButton={true}
-            showClearButton={false}
+            showClearButton={true}
             showTokenUsage={true}
             autoFocus
             height="100%"

@@ -416,7 +416,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
                 placeholder="Ask the inference provider something..."
                 showHeader={true}
                 showNewChatButton={true}
-                showClearButton={false}
+                showClearButton={true}
                 showModelSelector={true}
                 showToolsMenu={true}
                 showSkillsMenu={true}

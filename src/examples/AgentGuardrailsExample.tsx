@@ -789,7 +789,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           brandIcon={<ShieldCheckIcon size={16} />}
           placeholder="Ask something that triggers tools…"
           description="Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)"
-          showHeader={false}
+          showHeader={true}
           showTokenUsage={true}
           errorBanner={overBudgetBanner}
           disableInputPrompt={isOverRunBudget}

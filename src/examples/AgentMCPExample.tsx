@@ -86,8 +86,7 @@ function deriveAggregate(servers: McpServerStatus[]): McpAggregateStatus {
 const McpToolCard: React.FC<{ tool: McpToolInfo }> = ({ tool }) => {
   const schemaProps = (tool.inputSchema as Record<string, unknown>)
     ?.properties as
-    | Record<string, { type?: string; description?: string }>
-    | undefined;
+    Record<string, { type?: string; description?: string }> | undefined;
   const paramNames = schemaProps ? Object.keys(schemaProps) : [];
 
   return (
@@ -647,7 +646,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             placeholder="Ask the agent to search the web or explore GitHub..."
             showHeader={true}
             showNewChatButton={true}
-            showClearButton={false}
+            showClearButton={true}
             showToolsMenu={true}
             showSkillsMenu={true}
             showTokenUsage={true}
