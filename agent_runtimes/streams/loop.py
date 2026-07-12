@@ -504,6 +504,17 @@ def set_agent_enabled_mcp_tool_names(
             known_aliases.add(_normalize_tool_name(name))
 
     if not (selected & known_aliases or selected_normalized & known_aliases):
+        # Preserve explicit per-agent MCP state when the incoming payload does
+        # not include MCP tools (e.g. only builtins). Falling back to
+        # lifecycle defaults here can re-introduce unrelated servers/tools
+        # such as github into a prior explicit selection.
+        existing = _MCP_ENABLED_TOOLS_BY_AGENT.get(key)
+        if existing is not None:
+            return {
+                server_id: sorted(set(tool_set))
+                for server_id, tool_set in existing.items()
+                if tool_set
+            }
         return _get_agent_mcp_enabled_tools_by_server(agent_id)
 
     enabled_map: dict[str, set[str]] = {}
