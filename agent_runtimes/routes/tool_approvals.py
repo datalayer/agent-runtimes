@@ -84,6 +84,8 @@ class ToolApprovalRecord(BaseModel):
     tool_call_id: str | None = None
     status: str = "pending"
     note: str | None = None
+    execution_started_at: str | None = None
+    execution_tool_call_id: str | None = None
     consumed_at: str | None = None
     execution_status: str | None = None
     execution_ref: str | None = None
@@ -631,7 +633,7 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
                     tool_name=body.tool_name,
                     tool_args=body.tool_args,
                     tool_call_id=body.tool_call_id,
-                ) and record.status not in {"deleted", "consumed"}:
+                ) and record.status not in {"deleted", "executing", "consumed"}:
                     # Return an exact-envelope match so continuation turns don't
                     # create a duplicate approval for the same logical call.
                     return record
@@ -787,6 +789,47 @@ async def _update_approval(
     return updated
 
 
+async def _mark_approval_executing(
+    approval_id: str,
+    *,
+    agent_id: str,
+    tool_name: str,
+    tool_args: Any,
+    execution_tool_call_id: str | None = None,
+) -> ToolApprovalRecord | None:
+    """Atomically reserve an approved envelope before its tool can execute."""
+
+    now = _now_iso()
+    async with _APPROVALS_LOCK:
+        record = _APPROVALS.get(approval_id)
+        if record is None or record.status != "approved":
+            return None
+        if not _approval_envelope_matches(
+            record,
+            agent_id=agent_id,
+            tool_name=tool_name,
+            tool_args=tool_args,
+        ):
+            return None
+
+        updated = record.model_copy(
+            update={
+                "status": "executing",
+                "execution_started_at": now,
+                "execution_tool_call_id": execution_tool_call_id,
+                "updated_at": now,
+            }
+        )
+        _APPROVALS[approval_id] = updated
+
+    await _publish_approval_event(
+        event_type="tool_approval_execution_started",
+        payload=updated.model_dump(),
+        agent_id=updated.agent_id or None,
+    )
+    return updated
+
+
 async def _mark_approval_consumed(
     *,
     agent_id: str,
@@ -796,7 +839,7 @@ async def _mark_approval_consumed(
     execution_status: str,
     execution_ref: str | None = None,
 ) -> ToolApprovalRecord | None:
-    """Mark the approved envelope as consumed after the tool call reaches a terminal result.
+    """Mark the executing envelope as consumed after the tool call terminates.
 
     Approval reuse is useful while a tool call is resuming before execution.
     Once the tool has actually run, the same approval should not authorize a
@@ -808,27 +851,22 @@ async def _mark_approval_consumed(
         candidates = [
             record
             for record in _APPROVALS.values()
-            if record.status == "approved"
+            if record.status == "executing"
             and _approval_envelope_matches(
                 record,
                 agent_id=agent_id,
                 tool_name=tool_name,
                 tool_args=tool_args,
-                tool_call_id=tool_call_id,
+            )
+            and (
+                tool_call_id is None
+                or record.execution_tool_call_id == tool_call_id
+                or (
+                    record.execution_tool_call_id is None
+                    and record.tool_call_id == tool_call_id
+                )
             )
         ]
-        if not candidates and tool_call_id is None:
-            candidates = [
-                record
-                for record in _APPROVALS.values()
-                if record.status == "approved"
-                and _approval_envelope_matches(
-                    record,
-                    agent_id=agent_id,
-                    tool_name=tool_name,
-                    tool_args=tool_args,
-                )
-            ]
         if not candidates:
             return None
 

@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from pydantic_ai import DeferredToolRequests, RunContext
 from pydantic_ai.capabilities import AbstractCapability
@@ -95,14 +96,16 @@ def _risk_class_for_tool(tool_name: str, args: dict[str, Any]) -> str:
     return "low"
 
 
-def _append_audit_log(path: str, payload: dict[str, Any]) -> None:
+def _append_audit_log(path: str, payload: dict[str, Any]) -> bool:
     try:
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
         with target.open("a", encoding="utf-8") as fp:
             fp.write(json_mod.dumps(payload, ensure_ascii=False) + "\n")
+        return True
     except Exception:
         logger.debug("[tool-hooks] Failed to append audit log", exc_info=True)
+        return False
 
 
 def _default_audit_log_path() -> str:
@@ -391,6 +394,17 @@ class ToolApprovalRejectedError(GuardrailBlockedError):
         if note:
             msg += f": {note}"
         super().__init__(msg)
+
+
+class ToolApprovalExecutionReservationError(GuardrailBlockedError):
+    """Raised when an approval cannot be reserved before tool execution."""
+
+    def __init__(self, tool_name: str, approval_id: str | None = None):
+        suffix = f" (approval_id={approval_id})" if approval_id else ""
+        super().__init__(
+            f"Tool '{tool_name}' was blocked because its approval could not be "
+            f"reserved for execution{suffix}"
+        )
 
 
 # ============================================================================
@@ -937,14 +951,59 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             },
         )
 
-    def _log_execution_result(self, payload: dict[str, Any]) -> None:
-        _append_audit_log(
+    def _log_execution_result(self, payload: dict[str, Any]) -> str | None:
+        execution_ref = f"tool-execution:{uuid4()}"
+        payload["execution_ref"] = execution_ref
+        persisted = _append_audit_log(
             self.config.audit_log_path,
             {
                 "ts": _now_iso(),
                 "event": "tool-execution-result",
                 **payload,
             },
+        )
+        if not persisted:
+            logger.warning(
+                "[tool-approval] Execution result audit receipt could not be persisted"
+            )
+            return None
+        return execution_ref
+
+    async def _reserve_approval_for_execution(
+        self,
+        *,
+        approval_id: str,
+        tool_name: str,
+        safe_args: dict[str, str],
+        tool_call_id: str | None,
+        request_payload: dict[str, Any],
+    ) -> None:
+        from agent_runtimes.routes.tool_approvals import _mark_approval_executing
+
+        try:
+            reserved = await _mark_approval_executing(
+                approval_id,
+                agent_id=self.config.agent_id,
+                tool_name=tool_name,
+                tool_args=safe_args,
+                execution_tool_call_id=tool_call_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                "[tool-approval] Failed to reserve approval_id=%s before execution",
+                approval_id,
+                exc_info=True,
+            )
+            raise ToolApprovalExecutionReservationError(tool_name, approval_id) from exc
+
+        if reserved is None:
+            raise ToolApprovalExecutionReservationError(tool_name, approval_id)
+
+        self._remember_decision(
+            tool_call_id=tool_call_id,
+            decision="approval-needed",
+            note="approved",
+            request_payload=request_payload,
         )
 
     async def handle_deferred_tool_calls(
@@ -1126,6 +1185,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
 
         recent_window_seconds = 120.0
         now = datetime.now(timezone.utc)
+        approval_to_execute: str | None = None
 
         logger.info(
             "[tool-approval] before_tool_execute entered tool='%s' "
@@ -1176,7 +1236,8 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                             approval.id,
                             tool_call_id,
                         )
-                        return args
+                        approval_to_execute = approval.id
+                        break
                     # tool_call_id matches but still pending — this is the
                     # original outstanding approval for this very call. Bail
                     # out of the loop and go wait on it rather than creating
@@ -1226,7 +1287,8 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                         approval.id,
                         age_seconds,
                     )
-                    return args
+                    approval_to_execute = approval.id
+                    break
                 else:
                     logger.info(
                         "[tool-approval:dedup] candidate approval_id=%s tool='%s' "
@@ -1237,22 +1299,38 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                         recent_window_seconds,
                     )
 
+        if approval_to_execute is not None:
+            await self._reserve_approval_for_execution(
+                approval_id=approval_to_execute,
+                tool_name=call.tool_name,
+                safe_args=safe_args,
+                tool_call_id=tool_call_id,
+                request_payload=auth_request,
+            )
+            return args
+
         logger.info(
             "[tool-approval] No dedupe match for tool='%s' tool_call_id=%s — "
             "requesting new approval",
             call.tool_name,
             tool_call_id,
         )
-        await manager.request_and_wait(
+        approval_result = await manager.request_and_wait(
             call.tool_name,
             safe_args,
             tool_call_id,
         )
 
-        self._remember_decision(
+        approval_id = (
+            approval_result.get("id") if isinstance(approval_result, dict) else None
+        )
+        if not isinstance(approval_id, str) or not approval_id:
+            raise ToolApprovalExecutionReservationError(call.tool_name)
+        await self._reserve_approval_for_execution(
+            approval_id=approval_id,
+            tool_name=call.tool_name,
+            safe_args=safe_args,
             tool_call_id=tool_call_id,
-            decision="approval-needed",
-            note="approved",
             request_payload=auth_request,
         )
 
@@ -1308,23 +1386,31 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             "result": str(result)[:4000],
             "request": request_payload,
         }
-        try:
-            from agent_runtimes.routes.tool_approvals import _mark_approval_consumed
+        execution_ref = self._log_execution_result(result_payload)
+        if execution_ref is not None:
+            try:
+                from agent_runtimes.routes.tool_approvals import _mark_approval_consumed
 
-            await _mark_approval_consumed(
-                agent_id=self.config.agent_id,
-                tool_name=call.tool_name,
-                tool_args=_normalize_tool_args_for_match(args),
-                tool_call_id=tool_call_id,
-                execution_status="success",
-                execution_ref=tool_call_id,
-            )
-        except Exception:
-            logger.debug(
-                "[tool-approval] Failed to mark approval consumed", exc_info=True
-            )
+                consumed = await _mark_approval_consumed(
+                    agent_id=self.config.agent_id,
+                    tool_name=call.tool_name,
+                    tool_args=_normalize_tool_args_for_match(args),
+                    tool_call_id=tool_call_id,
+                    execution_status="success",
+                    execution_ref=execution_ref,
+                )
+                if consumed is None and isinstance(decision_entry, dict):
+                    if decision_entry.get("decision") == "approval-needed":
+                        logger.warning(
+                            "[tool-approval] Executing approval was not found for "
+                            "successful tool_call_id=%s",
+                            tool_call_id,
+                        )
+            except Exception:
+                logger.warning(
+                    "[tool-approval] Failed to mark approval consumed", exc_info=True
+                )
 
-        self._log_execution_result(result_payload)
         await self._run_tool_hooks(
             phase="after_tool_execute",
             payload=result_payload,
@@ -1370,23 +1456,31 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             "error_type": type(error).__name__,
             "request": request_payload,
         }
-        try:
-            from agent_runtimes.routes.tool_approvals import _mark_approval_consumed
+        execution_ref = self._log_execution_result(error_payload)
+        if execution_ref is not None:
+            try:
+                from agent_runtimes.routes.tool_approvals import _mark_approval_consumed
 
-            await _mark_approval_consumed(
-                agent_id=self.config.agent_id,
-                tool_name=call.tool_name,
-                tool_args=_normalize_tool_args_for_match(args),
-                tool_call_id=tool_call_id,
-                execution_status="error",
-                execution_ref=tool_call_id,
-            )
-        except Exception:
-            logger.debug(
-                "[tool-approval] Failed to mark approval consumed", exc_info=True
-            )
+                consumed = await _mark_approval_consumed(
+                    agent_id=self.config.agent_id,
+                    tool_name=call.tool_name,
+                    tool_args=_normalize_tool_args_for_match(args),
+                    tool_call_id=tool_call_id,
+                    execution_status="error",
+                    execution_ref=execution_ref,
+                )
+                if consumed is None and isinstance(decision_entry, dict):
+                    if decision_entry.get("decision") == "approval-needed":
+                        logger.warning(
+                            "[tool-approval] Executing approval was not found for "
+                            "failed tool_call_id=%s",
+                            tool_call_id,
+                        )
+            except Exception:
+                logger.warning(
+                    "[tool-approval] Failed to mark approval consumed", exc_info=True
+                )
 
-        self._log_execution_result(error_payload)
         await self._run_tool_hooks(
             phase="on_tool_execute_error",
             payload=error_payload,
