@@ -120,7 +120,6 @@ const AgUiHaikuGenUiExample: React.FC = () => {
   });
   const haikuGenUiEndpoint =
     agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
-
   // Ref to the main display for adding haikus
   const displayRef = useRef<HaikuDisplayHandle>(null);
 
@@ -303,34 +302,36 @@ const AgUiHaikuGenUiExample: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Floating chat with haiku tool rendering */}
-        {haikuGenUiEndpoint && (
-          <ChatFloating
-            protocol="ag-ui"
-            endpoint={haikuGenUiEndpoint}
-            title="Haiku Generator"
-            description="Ask me to write haiku poetry about any topic!"
-            position="bottom-right"
-            brandColor={brandColor}
-            defaultOpen={true}
-            renderToolResult={renderToolResult}
-            hideMessagesAfterToolUI={true}
-            suggestions={[
-              {
-                title: 'Cherry blossoms',
-                message: 'Write me a haiku about cherry blossoms in spring.',
-              },
-              {
-                title: 'Night coding',
-                message: 'Create a haiku about coding late at night.',
-              },
-              {
-                title: 'Mountain path',
-                message: 'Generate a haiku about hiking a mountain trail.',
-              },
-            ]}
-          />
-        )}
+        {/* Floating chat with haiku tool rendering. Rendered immediately with a
+            launching state so the chat appears instantly while the managed
+            agent runtime is still starting. */}
+        <ChatFloating
+          protocol="ag-ui"
+          endpoint={haikuGenUiEndpoint}
+          launching={!haikuGenUiEndpoint}
+          launchingMessage="Starting the haiku agent runtime…"
+          title="Haiku Generator"
+          description="Ask me to write haiku poetry about any topic!"
+          position="bottom-right"
+          brandColor={brandColor}
+          defaultOpen={true}
+          renderToolResult={renderToolResult}
+          hideMessagesAfterToolUI={true}
+          suggestions={[
+            {
+              title: 'Cherry blossoms',
+              message: 'Write me a haiku about cherry blossoms in spring.',
+            },
+            {
+              title: 'Night coding',
+              message: 'Create a haiku about coding late at night.',
+            },
+            {
+              title: 'Mountain path',
+              message: 'Generate a haiku about hiking a mountain trail.',
+            },
+          ]}
+        />
       </Box>
     </ThemedProvider>
   );

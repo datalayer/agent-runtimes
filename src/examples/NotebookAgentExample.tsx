@@ -16,10 +16,11 @@
  * @module examples/NotebookAgentExample
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { ServiceManager } from '@jupyterlab/services';
-import { Notebook } from '@datalayer/jupyter-react';
+import { ServiceManager, Session } from '@jupyterlab/services';
+import { Notebook, OnSessionConnection } from '@datalayer/jupyter-react';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { ThemedJupyterProvider } from './utils/themedProvider';
 
 // Agent-runtimes imports
@@ -72,10 +73,12 @@ function getJupyterSandboxUrl(
  */
 interface NotebookUIProps {
   serviceManager?: ServiceManager.IManager;
+  onSessionConnection?: OnSessionConnection;
 }
 
 const NotebookUI = React.memo(function NotebookUI({
   serviceManager,
+  onSessionConnection,
 }: NotebookUIProps): JSX.Element {
   return (
     <Box
@@ -119,6 +122,7 @@ const NotebookUI = React.memo(function NotebookUI({
               nbformat={NOTEBOOK_CONTENT}
               id={NOTEBOOK_ID}
               serviceManager={serviceManager}
+              onSessionConnection={onSessionConnection}
               height="calc(100vh - 300px)"
               cellSidebarMargin={120}
               startDefaultKernel={true}
@@ -150,6 +154,8 @@ function NotebookWithChat({
     [serviceManager],
   );
   const [createRequested, setCreateRequested] = useState(false);
+  const [notebookKernel, setNotebookKernel] =
+    useState<IKernelConnection | null>(null);
 
   const { agentId, isReady, status, error, createAgent } =
     useExampleAgentRuntime({
@@ -191,6 +197,13 @@ function NotebookWithChat({
 
   const effectiveReady = isReady || status === 'ready';
 
+  const handleSessionConnection = useCallback(
+    (session: Session.ISessionConnection | undefined) => {
+      setNotebookKernel(session?.kernel ?? null);
+    },
+    [],
+  );
+
   const protocolConfig = useMemo(
     () => ({
       type: 'vercel-ai' as const,
@@ -214,7 +227,10 @@ function NotebookWithChat({
         overflow: 'hidden',
       }}
     >
-      <NotebookUI serviceManager={serviceManager} />
+      <NotebookUI
+        serviceManager={serviceManager}
+        onSessionConnection={handleSessionConnection}
+      />
 
       {error && (
         <Box
@@ -246,6 +262,9 @@ function NotebookWithChat({
           showModelSelector={true}
           showToolsMenu={true}
           showSkillsMenu={true}
+          panelProps={{
+            kernel: notebookKernel,
+          }}
           suggestions={[
             {
               title: 'Add a cell',
