@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { SegmentedControl, Text } from '@primer/react';
-import { A2uiSurface } from '@a2ui/react/v0_9';
+import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
 import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
@@ -396,11 +396,17 @@ function ViewerContent({
 
       <Box
         style={themeStyle}
-        sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}
+        sx={{
+          ...A2UI_RENDER_SCOPE_SX,
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3,
+        }}
       >
         {surfaces.map(surface => (
           <Box key={surface.id} sx={{ width: '100%' }}>
-            <A2uiSurface surface={surface} />
+            <A2uiSurfaceComposed surface={surface} />
           </Box>
         ))}
       </Box>

@@ -6,7 +6,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, getCardGradient } from '@datalayer/primer-addons';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
-import { A2uiSurface, basicCatalog } from '@a2ui/react/v0_9';
+import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
+import { basicCatalog } from '@a2ui/react/v0_9';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
@@ -315,7 +316,12 @@ const A2UiRestaurantExample: React.FC = () => {
             {!isLoading && hasData && !error && (
               <Box
                 style={themeStyle}
-                sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+                sx={{
+                  ...A2UI_RENDER_SCOPE_SX,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                }}
               >
                 <Button
                   variant="invisible"
@@ -334,7 +340,7 @@ const A2UiRestaurantExample: React.FC = () => {
                       p: 3,
                     }}
                   >
-                    <A2uiSurface surface={surface} />
+                    <A2uiSurfaceComposed surface={surface} />
                   </Box>
                 ))}
               </Box>

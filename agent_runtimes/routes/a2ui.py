@@ -141,3 +141,81 @@ async def restaurant_health() -> dict[str, Any]:
             "status": "unhealthy",
             "error": "restaurant_finder module not available",
         }
+
+
+@router.post("/support-assistant")
+async def support_assistant_query(request: A2UIQueryRequest) -> list[dict[str, Any]]:
+    """
+    Handle support assistant chat and user actions via A2UI protocol.
+
+    Query requests build a support workflow UI with form components.
+    Action requests process A2UI button events from that workflow.
+    """
+    try:
+        from agent_runtimes.agents.support_assistant import (
+            handle_support_action,
+            run_support_assistant,
+        )
+
+        base_url = "http://localhost:8765"
+
+        if request.action and request.context:
+            logger.info(
+                "A2UI support action: %s with context: %s",
+                request.action,
+                request.context,
+            )
+            result = await handle_support_action(
+                request.action,
+                request.context,
+                base_url=base_url,
+            )
+        elif request.query:
+            logger.info("A2UI support query: %s", request.query)
+            result = await run_support_assistant(
+                request.query,
+                base_url=base_url,
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'query' or 'action' with 'context' must be provided",
+            )
+
+        if not result.get("success"):
+            error_msg = result.get("error", "Unknown error")
+            logger.error("A2UI support assistant error: %s", error_msg)
+            raise HTTPException(status_code=500, detail=error_msg)
+
+        return _format_a2a_response(
+            a2ui_messages=result.get("a2ui_messages"),
+            text=result.get("text"),
+        )
+
+    except ImportError as e:
+        logger.error("Failed to import support_assistant module: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Support assistant module not available: {e}",
+        )
+    except Exception as e:
+        logger.exception("A2UI support assistant error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/support-assistant/health")
+async def support_assistant_health() -> dict[str, Any]:
+    """Health check for the A2UI support assistant endpoint."""
+    try:
+        from agent_runtimes.agents import support_assistant  # noqa: F401
+
+        return {
+            "status": "healthy",
+            "agent": "support_assistant",
+            "protocol": "a2ui",
+        }
+    except ImportError:
+        return {
+            "status": "unhealthy",
+            "error": "support_assistant module not available",
+        }

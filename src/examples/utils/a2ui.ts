@@ -66,6 +66,8 @@ function createA2uiTheme(themeVariant: ThemeVariant, colorMode: ColorMode) {
     '--a2ui-color-surface': vars['--bgColor-muted'],
     '--a2ui-color-on-background': vars['--fgColor-default'],
     '--a2ui-color-on-surface': vars['--fgColor-default'],
+    '--a2ui-color-input': vars['--bgColor-default'],
+    '--a2ui-color-on-input': vars['--fgColor-default'],
     '--a2ui-color-border': vars['--borderColor-default'],
     '--a2ui-color-border-hover': vars['--borderColor-emphasis'],
     '--a2ui-text-caption-color': vars['--fgColor-muted'],
@@ -84,6 +86,21 @@ function createA2uiTheme(themeVariant: ThemeVariant, colorMode: ColorMode) {
     '--a2ui-button-box-shadow': buttonShadow,
     '--a2ui-button-background': vars['--button-default-bgColor-rest'],
     '--a2ui-button-border': `1px solid ${vars['--button-default-borderColor-rest']}`,
+    '--a2ui-textfield-border': `1px solid ${
+      vars['--control-borderColor-rest'] ?? vars['--borderColor-default']
+    }`,
+    '--a2ui-textfield-background':
+      vars['--control-bgColor-rest'] ?? vars['--bgColor-default'],
+    '--a2ui-textfield-color': vars['--fgColor-default'],
+    '--a2ui-textfield-label-color': vars['--fgColor-muted'],
+    '--a2ui-textfield-color-border-hover':
+      vars['--control-borderColor-emphasis'] ?? vars['--borderColor-emphasis'],
+    '--a2ui-textfield-color-border-focus':
+      vars['--button-primary-bgColor-rest'],
+    '--a2ui-textfield-color-error': vars['--fgColor-danger'],
+    '--a2ui-textfield-border-radius': '6px',
+    '--a2ui-textfield-padding': '5px 12px',
+    '--a2ui-control-height': '32px',
   } as Record<string, unknown>;
 }
 

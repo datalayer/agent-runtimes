@@ -41,6 +41,7 @@ import {
   EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
   EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
   EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
   EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
@@ -127,6 +128,9 @@ const TOOL_MAP: Record<string, any> = {
   'example-generate-task-steps': EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
   'example-get-weather:0.0.1': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
   'example-get-weather': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  'example-render-a2ui-surface:0.0.1':
+    EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
+  'example-render-a2ui-surface': EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
   'example-update-plan-step:0.0.1': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   'example-update-plan-step': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
@@ -1269,6 +1273,77 @@ export const EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1: Agentspec = {
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
   protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
+  id: 'example-a2ui-agent',
+  version: '0.0.1',
+  name: 'A2UI Agent',
+  description: `An AG-UI agent that generates interactive A2UI surfaces on demand. Describe a form, intake, configurator, survey or booking flow and the agent renders a validated, themeable A2UI surface you can fill in.`,
+  tags: ['example', 'ag-ui', 'a2ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-render-a2ui-surface:0.0.1']],
+  frontendTools: [],
+  frontendRenderTools: [
+    { tool: 'render_a2ui_surface', renderer: 'a2ui-surface' },
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🎛️',
+  color: '#6366F1',
+  suggestions: [
+    'Build a support ticket intake form with category, priority and a description.',
+    'Create a trip booking form with destination, dates, travelers and budget.',
+    'Generate a customer feedback survey with a rating slider and comments.',
+    'Make a product configurator for a laptop with CPU, RAM and add-ons.',
+  ],
+  welcomeMessage:
+    "Hi! I turn requests into interactive A2UI surfaces. Ask me to build a form, survey, configurator or booking flow and I'll render it live for you.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are an A2UI generative-UI agent. You render real, interactive user
+interfaces (forms, intakes, configurators, surveys, bookings, checklists)
+from the user's request.
+
+How to respond:
+1. ALWAYS call the \`render_a2ui_surface\` tool to produce the UI. Never
+   describe the form in prose instead of rendering it.
+2. Choose a concise \`title\` and a one-sentence \`intro\`.
+3. Design a sensible ordered list of \`fields\`. Pick the best \`type\` for each:
+   - \`text\` / \`email\` for short input, \`longtext\` for descriptions/notes
+   - \`choice\` (single) or \`multichoice\` (many) with \`options\` for pick-lists
+   - \`checkbox\` for yes/no, \`slider\` (with \`min\`/\`max\`) for ranges/ratings
+   - \`date\` / \`datetime\` for scheduling
+4. When the request implies triage or categorization (e.g. support tickets),
+   add \`summary_items\` such as detected Category or Priority.
+5. Keep forms focused: usually 4-8 fields.
+6. After the tool call, reply with ONE short sentence confirming what you
+   built. Do NOT repeat every field in text — the surface is shown directly.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
   uiExtension: undefined,
   trigger: undefined,
   modelConfig: undefined,
@@ -6541,6 +6616,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'end-of-month-sales-performance':
     END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1,
   'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1,
+  'example-a2ui-agent': EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
   'example-agentic-chat': EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
   'example-agentic-generative-ui':
     EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1,

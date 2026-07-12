@@ -196,6 +196,26 @@ export const EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🌤️',
 };
 
+export const EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1: ToolSpec = {
+  id: 'example-render-a2ui-surface',
+  version: '0.0.1',
+  name: 'Render A2UI Surface',
+  description:
+    'Turn a declarative field spec into a validated A2UI v0.9 surface rendered live by the frontend as an interactive form/card.',
+  tags: ['example', 'ag-ui', 'a2ui', 'generative-ui'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.examples.tools.a2ui',
+    method: 'render_a2ui_surface',
+  },
+  icon: 'browser',
+  emoji: '🎛️',
+};
+
 export const EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1: ToolSpec = {
   id: 'example-update-plan-step',
   version: '0.0.1',
@@ -368,6 +388,7 @@ export const TOOL_CATALOG: Record<string, ToolSpec> = {
   'example-generate-haiku': EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
   'example-generate-task-steps': EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
   'example-get-weather': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  'example-render-a2ui-surface': EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
   'example-update-plan-step': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   'generate-haiku': GENERATE_HAIKU_TOOL_SPEC_0_0_1,
   'generate-task-steps': GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,

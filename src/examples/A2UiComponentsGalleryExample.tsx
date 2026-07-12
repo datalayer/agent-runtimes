@@ -3,14 +3,54 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Button, SegmentedControl, Text } from '@primer/react';
-import { A2uiSurface } from '@a2ui/react/v0_9';
-import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
+import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
+import { basicCatalog } from '@a2ui/react/v0_9';
+import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { createSceneMessages, useA2uiProcessor } from './utils/a2ui';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+
+type A2APayloadPart = {
+  kind?: 'text' | 'data';
+  text?: string;
+  data?: Record<string, unknown>;
+  root?: {
+    kind?: 'text' | 'data';
+    text?: string;
+    data?: Record<string, unknown>;
+  };
+};
+
+const extractA2uiMessages = (parts: A2APayloadPart[]): A2uiMessage[] => {
+  const messages: A2uiMessage[] = [];
+  parts.forEach(part => {
+    const node = part.root ?? part;
+    if (node.kind !== 'data' || !node.data) {
+      return;
+    }
+    const payload = node.data as Record<string, unknown>;
+    if (payload.version !== 'v0.9') {
+      return;
+    }
+    const createSurface = payload.createSurface as
+      { catalogId?: string } | undefined;
+    if (createSurface && createSurface.catalogId !== basicCatalog.id) {
+      createSurface.catalogId = basicCatalog.id;
+    }
+    messages.push(payload as unknown as A2uiMessage);
+  });
+  return messages;
+};
 
 type GalleryScene = {
   id: string;
@@ -709,9 +749,123 @@ function GalleryContent({
 }: {
   onAction: (action: A2uiClientAction) => void;
 }) {
-  const { surfaces, processMessages, resetSurfaces, themeStyle } =
-    useA2uiProcessor(onAction);
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const supportEndpoint = `${baseUrl}/api/v1/a2ui/support-assistant/`;
+  const supportHealthEndpoint = `${baseUrl}/api/v1/a2ui/support-assistant/health`;
   const [selectedScene, setSelectedScene] = useState<string>(SCENES[0].id);
+  const [backendLoading, setBackendLoading] = useState(false);
+  const [backendSummary, setBackendSummary] = useState<string>('');
+  const [backendError, setBackendError] = useState<string | null>(null);
+  const [backendHealth, setBackendHealth] = useState<
+    'unknown' | 'healthy' | 'unhealthy'
+  >('unknown');
+  const [backendMode, setBackendMode] = useState(false);
+  const backendModeRef = useRef(false);
+  const sendSupportPayloadRef = useRef<
+    | ((payload: {
+        query?: string;
+        action?: string;
+        context?: Record<string, unknown>;
+      }) => Promise<void>)
+    | null
+  >(null);
+
+  const handleAction = useCallback(
+    (action: A2uiClientAction) => {
+      onAction(action);
+      if (!backendModeRef.current || !sendSupportPayloadRef.current) {
+        return;
+      }
+      void sendSupportPayloadRef.current({
+        action: action.name,
+        context: action.context,
+      });
+    },
+    [onAction],
+  );
+
+  const { surfaces, processMessages, resetSurfaces, themeStyle } =
+    useA2uiProcessor(handleAction);
+
+  const sendSupportPayload = useCallback(
+    async (payload: {
+      query?: string;
+      action?: string;
+      context?: Record<string, unknown>;
+    }) => {
+      setBackendLoading(true);
+      setBackendError(null);
+      try {
+        const response = await fetch(supportEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const data = (await response.json()) as { detail?: string };
+          throw new Error(data.detail || 'Support endpoint request failed');
+        }
+        const parts = (await response.json()) as A2APayloadPart[];
+        const messages = extractA2uiMessages(parts);
+        if (messages.length === 0) {
+          throw new Error('Python backend did not return A2UI messages');
+        }
+        resetSurfaces();
+        processMessages(messages);
+        setBackendMode(true);
+        const serverText = parts
+          .map(part => {
+            const node = part.root ?? part;
+            return node.kind === 'text' ? node.text : undefined;
+          })
+          .filter(Boolean)
+          .join(' ');
+        setBackendSummary(
+          serverText ||
+            'Python backend surface loaded from /api/v1/a2ui/support-assistant/.',
+        );
+      } catch (err) {
+        setBackendError(
+          err instanceof Error ? err.message : 'Unknown backend error',
+        );
+      } finally {
+        setBackendLoading(false);
+      }
+    },
+    [processMessages, resetSurfaces, supportEndpoint],
+  );
+
+  useEffect(() => {
+    backendModeRef.current = backendMode;
+  }, [backendMode]);
+
+  useEffect(() => {
+    sendSupportPayloadRef.current = sendSupportPayload;
+  }, [sendSupportPayload]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const probe = async () => {
+      try {
+        const response = await fetch(supportHealthEndpoint);
+        if (!response.ok) {
+          throw new Error('Health check failed');
+        }
+        const data = (await response.json()) as { status?: string };
+        if (!cancelled) {
+          setBackendHealth(data.status === 'healthy' ? 'healthy' : 'unhealthy');
+        }
+      } catch {
+        if (!cancelled) {
+          setBackendHealth('unhealthy');
+        }
+      }
+    };
+    void probe();
+    return () => {
+      cancelled = true;
+    };
+  }, [supportHealthEndpoint]);
 
   const currentScene = useMemo(
     () => SCENES.find(scene => scene.id === selectedScene) ?? SCENES[0],
@@ -722,6 +876,9 @@ function GalleryContent({
     (scene: GalleryScene) => {
       resetSurfaces();
       processMessages(scene.messages);
+      setBackendMode(false);
+      setBackendSummary('');
+      setBackendError(null);
     },
     [processMessages, resetSurfaces],
   );
@@ -731,6 +888,9 @@ function GalleryContent({
     SCENES.forEach(scene => {
       processMessages(scene.messages);
     });
+    setBackendMode(false);
+    setBackendSummary('');
+    setBackendError(null);
   }, [processMessages, resetSurfaces]);
 
   useEffect(() => {
@@ -781,12 +941,37 @@ function GalleryContent({
           <Button size="small" variant="invisible" onClick={resetSurfaces}>
             Clear
           </Button>
+          <Button
+            size="small"
+            variant="default"
+            onClick={() =>
+              void sendSupportPayload({
+                query:
+                  'Production deploy is failing with auth errors. Help me triage.',
+              })
+            }
+            disabled={backendLoading}
+          >
+            {backendLoading
+              ? 'Loading Python Backend…'
+              : 'Load Python Backend Agent'}
+          </Button>
         </Box>
+        <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+          Python endpoint status: {backendHealth}
+        </Text>
+        {backendSummary && (
+          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>{backendSummary}</Text>
+        )}
+        {backendError && (
+          <Text sx={{ color: 'danger.fg', fontSize: 1 }}>{backendError}</Text>
+        )}
       </Box>
 
       <Box
         style={themeStyle}
         sx={{
+          ...A2UI_RENDER_SCOPE_SX,
           width: '100%',
           minWidth: 0,
           display: 'flex',
@@ -796,7 +981,7 @@ function GalleryContent({
       >
         {surfaces.map(surface => (
           <Box key={surface.id} sx={{ width: '100%' }}>
-            <A2uiSurface surface={surface} />
+            <A2uiSurfaceComposed surface={surface} />
           </Box>
         ))}
       </Box>
@@ -804,11 +989,11 @@ function GalleryContent({
   );
 }
 
-const A2UiComponentGalleryExample: React.FC = () => {
+const A2UiComponentsGalleryExample: React.FC = () => {
   const [lastAction, setLastAction] = useState<A2uiClientAction | null>(null);
 
   const handleAction = useCallback((action: A2uiClientAction) => {
-    console.log('A2UI Gallery Action:', action);
+    console.warn('A2UI Gallery Action:', action);
     setLastAction(action);
   }, []);
 
@@ -828,7 +1013,7 @@ const A2UiComponentGalleryExample: React.FC = () => {
             }}
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
-              🎨 A2UI Component Gallery
+              🎨 A2UI Components Gallery
             </Text>
             <Text sx={{ color: 'fg.muted' }}>
               Showcases the A2UI basic catalog rendered live via
@@ -861,4 +1046,4 @@ const A2UiComponentGalleryExample: React.FC = () => {
   );
 };
 
-export default A2UiComponentGalleryExample;
+export default A2UiComponentsGalleryExample;

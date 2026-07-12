@@ -640,12 +640,11 @@ function ChatBaseInner({
       return;
     }
     const readKernel = (): IKernelConnection | null => {
-      const notebook = notebookStore.getState().selectNotebook(
-        ephemeralNotebookId,
-      );
+      const notebook = notebookStore
+        .getState()
+        .selectNotebook(ephemeralNotebookId);
       const adapter = notebook?.adapter as
-        | { kernel?: IKernelConnection | null }
-        | undefined;
+        { kernel?: IKernelConnection | null } | undefined;
       return adapter?.kernel ?? null;
     };
     const sync = () => {
@@ -1254,8 +1253,10 @@ function ChatBaseInner({
   const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
   const [adapterReady, setAdapterReady] = useState(false);
-  // Guard so the pending prompt is sent at most once
-  const pendingPromptSentRef = useRef(false);
+  // Guard so each distinct pending prompt is sent at most once. Stores the
+  // last-sent key (not a boolean) so that changing `pendingPrompt` to a new
+  // value — e.g. re-submitting an interactive surface — triggers a fresh send.
+  const pendingPromptSentRef = useRef<string | null>(null);
   const pendingPromptKey =
     pendingPrompt &&
     [
@@ -2457,8 +2458,7 @@ function ChatBaseInner({
                   Array.isArray(existingToolCall.args.steps);
 
                 const resultData = event.toolResult.result as
-                  | Record<string, unknown>
-                  | undefined;
+                  Record<string, unknown> | undefined;
                 let executionError: string | undefined;
                 let codeError: ToolCallMessage['codeError'] | undefined;
                 let exitCode: number | null | undefined;
@@ -2956,14 +2956,18 @@ function ChatBaseInner({
 
   // Send pending prompt once history loaded and adapter/handler available
   useEffect(() => {
-    if (!pendingPrompt || pendingPromptSentRef.current) return;
+    if (!pendingPrompt) return;
+    // Already handled this exact prompt in the current component instance.
+    if (pendingPromptKey && pendingPromptSentRef.current === pendingPromptKey) {
+      return;
+    }
     if (pendingPromptKey && sentPendingPromptKeys.has(pendingPromptKey)) {
-      pendingPromptSentRef.current = true;
+      pendingPromptSentRef.current = pendingPromptKey;
       return;
     }
     if (!historyLoaded) return;
     if (!adapterReady && !onSendMessage) return;
-    pendingPromptSentRef.current = true;
+    pendingPromptSentRef.current = pendingPromptKey ?? null;
     if (pendingPromptKey) {
       sentPendingPromptKeys.add(pendingPromptKey);
     }
