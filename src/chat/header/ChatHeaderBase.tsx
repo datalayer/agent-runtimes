@@ -18,6 +18,7 @@ import {
   Heading,
   IconButton,
   Text,
+  Tooltip,
   ToggleSwitch,
   Truncate,
 } from '@primer/react';
@@ -352,37 +353,40 @@ export function ChatBaseHeader({
                   },
                 ] as const
               ).map(({ mode, icon: ModeIcon, label }) => (
-                <Box
-                  key={mode}
-                  as="button"
-                  aria-label={label}
-                  title={label}
-                  onClick={() => onChatViewModeChange(mode)}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 26,
-                    height: 24,
-                    borderRadius: '4px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    bg:
-                      chatViewMode === mode ? 'canvas.default' : 'transparent',
-                    boxShadow: chatViewMode === mode ? 'shadow.small' : 'none',
-                    color: chatViewMode === mode ? 'fg.default' : 'fg.muted',
-                    transition: 'all 0.15s ease',
-                    '&:hover': {
-                      color: 'fg.default',
+                <Tooltip key={mode} text={label} direction="n">
+                  <Box
+                    as="button"
+                    aria-label={label}
+                    onClick={() => onChatViewModeChange(mode)}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 26,
+                      height: 24,
+                      borderRadius: '4px',
+                      border: 'none',
+                      cursor: 'pointer',
                       bg:
                         chatViewMode === mode
                           ? 'canvas.default'
-                          : 'neutral.subtle',
-                    },
-                  }}
-                >
-                  <ModeIcon size={14} />
-                </Box>
+                          : 'transparent',
+                      boxShadow:
+                        chatViewMode === mode ? 'shadow.small' : 'none',
+                      color: chatViewMode === mode ? 'fg.default' : 'fg.muted',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        color: 'fg.default',
+                        bg:
+                          chatViewMode === mode
+                            ? 'canvas.default'
+                            : 'neutral.subtle',
+                      },
+                    }}
+                  >
+                    <ModeIcon size={14} />
+                  </Box>
+                </Tooltip>
               ))}
             </Box>
           )}

@@ -240,9 +240,16 @@ export function ChatFloating({
   const handleChatViewModeChange = useCallback(
     (mode: ChatViewMode) => {
       if (mode === 'sidebar') {
-        // 'sidebar' means the parent should switch to a ChatSidebar layout.
-        // Notify parent and let it handle the transition.
-        onViewModeChange?.(mode);
+        // When a parent callback is provided, let it switch the host layout
+        // (e.g. swap to ChatSidebar). Otherwise, fall back to the built-in
+        // full-height side panel mode so examples still honor the sidebar
+        // selection instead of staying in floating popup mode.
+        if (onViewModeChange) {
+          onViewModeChange(mode);
+          return;
+        }
+        setViewMode('panel');
+        setFocusTrigger(prev => prev + 1);
       } else {
         // 'floating' or 'floating-small' stays within ChatFloating
         setViewMode(mode);
@@ -278,10 +285,7 @@ export function ChatFloating({
       /\/api\/v1\/(ag-ui|vercel-ai|a2a|acp)\//,
     );
     const detectedType = (explicitType ?? protocolMatch?.[1] ?? 'vercel-ai') as
-      | 'ag-ui'
-      | 'vercel-ai'
-      | 'a2a'
-      | 'acp';
+      'ag-ui' | 'vercel-ai' | 'a2a' | 'acp';
 
     // Extract agentId from endpoint path
     const agentIdMatch = endpoint.match(
