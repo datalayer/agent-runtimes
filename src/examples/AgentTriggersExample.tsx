@@ -1086,7 +1086,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -1118,7 +1118,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     >
       <Box
         sx={{
-          height: 'calc(100vh - 60px)',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
         }}

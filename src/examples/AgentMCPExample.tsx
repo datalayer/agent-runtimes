@@ -597,7 +597,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -614,7 +614,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}

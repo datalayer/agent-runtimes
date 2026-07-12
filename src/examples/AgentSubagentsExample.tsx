@@ -177,7 +177,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -196,7 +196,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}

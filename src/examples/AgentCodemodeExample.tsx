@@ -775,7 +775,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}

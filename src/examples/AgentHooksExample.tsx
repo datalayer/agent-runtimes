@@ -42,7 +42,7 @@ const AgentHooksExample: React.FC = () => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '100vh',
+            height: '100%',
             gap: 3,
             bg: 'canvas.default',
           }}
