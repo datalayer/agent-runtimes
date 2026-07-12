@@ -190,6 +190,28 @@ export function ChatBaseHeader({
           }}
         >
           {brandIcon || <AiAgentIcon colored size={20} />}
+          {/* Runtime status indicator: shown between leading icon and title. */}
+          {kernel ? (
+            <KernelIndicator
+              kernel={kernel}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+              position="s"
+              bordered={false}
+            />
+          ) : (
+            <KernelIndicator
+              state={effectiveIndicatorState ?? 'undefined'}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+              position="s"
+              bordered={false}
+            />
+          )}
           {(title || subtitle) && (
             <Box
               sx={{
@@ -246,28 +268,6 @@ export function ChatBaseHeader({
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
-          {/* Runtime status indicator: always use shared KernelIndicator. */}
-          {kernel ? (
-            <KernelIndicator
-              kernel={kernel}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-                position="s"
-              bordered={false}
-            />
-          ) : (
-            <KernelIndicator
-              state={effectiveIndicatorState ?? 'undefined'}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-                position="s"
-              bordered={false}
-            />
-          )}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (
             <IconButton
