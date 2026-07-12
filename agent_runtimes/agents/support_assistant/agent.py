@@ -466,9 +466,7 @@ async def handle_support_action(
     if action_id == "refresh_support_plan":
         issue_type = str((context.get("issueType") or ["runtime"])[0])
         priority = str((context.get("priority") or ["medium"])[0])
-        summary = (
-            "Plan refreshed using the latest selections from the intake form."
-        )
+        summary = "Plan refreshed using the latest selections from the intake form."
         messages = _build_support_surface(
             summary=summary,
             issue_type=issue_type,

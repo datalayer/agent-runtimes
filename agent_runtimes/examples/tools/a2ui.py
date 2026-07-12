@@ -88,9 +88,7 @@ class A2uiField(BaseModel):
     )
     min_length: Optional[int] = Field(
         default=None,
-        description=(
-            "Optional minimum number of characters for text/longtext fields."
-        ),
+        description=("Optional minimum number of characters for text/longtext fields."),
     )
     default: Optional[str] = Field(
         default=None,
@@ -156,8 +154,10 @@ def _default_for(field: A2uiField) -> Any:
         return str(field.default).strip().lower() in ("true", "1", "yes", "on")
     if field.type == "slider":
         try:
-            return float(field.default) if field.default is not None else (
-                field.min if field.min is not None else 0
+            return (
+                float(field.default)
+                if field.default is not None
+                else (field.min if field.min is not None else 0)
             )
         except ValueError:
             return field.min if field.min is not None else 0
@@ -533,9 +533,7 @@ async def render_a2ui_surface(
     )
 
     # ----- data model -----------------------------------------------------
-    form_values: dict[str, Any] = {
-        field.id: _default_for(field) for field in fields
-    }
+    form_values: dict[str, Any] = {field.id: _default_for(field) for field in fields}
 
     messages: list[dict[str, Any]] = [
         {
@@ -566,9 +564,7 @@ async def render_a2ui_surface(
     warnings = _validate(messages)
 
     required_fields = [
-        {"id": field.id, "label": field.label}
-        for field in fields
-        if field.required
+        {"id": field.id, "label": field.label} for field in fields if field.required
     ]
 
     field_rules = [_field_rule(field) for field in fields]
