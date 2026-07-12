@@ -228,8 +228,8 @@ export interface TokenUsageChartProps {
   serviceName?: string;
   agentId?: string;
   apiKey?: string;
-  runUrl?: string;
-  wsRunUrl?: string;
+  datalayerUrl?: string;
+  wsUrl?: string;
   liveSystemPromptTokens?: number;
   liveToolsDescriptionTokens?: number;
   liveUserMessageTokens?: number;
@@ -285,8 +285,8 @@ export function TokenUsageChart({
   serviceName,
   agentId,
   apiKey,
-  runUrl,
-  wsRunUrl,
+  datalayerUrl,
+  wsUrl,
   liveSystemPromptTokens,
   liveToolsDescriptionTokens,
   liveUserMessageTokens,
@@ -403,8 +403,8 @@ export function TokenUsageChart({
     if (!serviceName || !apiKey) return;
 
     const rawBaseUrl =
-      wsRunUrl ||
-      runUrl ||
+      wsUrl ||
+      datalayerUrl ||
       (typeof window !== 'undefined' ? window.location.origin : '');
     if (!rawBaseUrl) return;
 
@@ -421,9 +421,9 @@ export function TokenUsageChart({
               : 'http:'
           }//${typeof window !== 'undefined' ? window.location.host : ''}${rawBaseUrl}`;
 
-    let wsUrl: string;
+    let resolvedWsUrl: string;
     try {
-      wsUrl = buildOtelWebSocketUrl({
+      resolvedWsUrl = buildOtelWebSocketUrl({
         baseUrl: baseWithProtocol,
         token: apiKey,
       });
@@ -431,7 +431,7 @@ export function TokenUsageChart({
       return;
     }
 
-    const unsubscribe = subscribeOtelWs(wsUrl, msg => {
+    const unsubscribe = subscribeOtelWs(resolvedWsUrl, msg => {
       if (msg.signal !== 'metrics') return;
 
       const rows = Array.isArray(msg.data) ? msg.data : [];
@@ -473,7 +473,7 @@ export function TokenUsageChart({
     });
 
     return unsubscribe;
-  }, [agentId, apiKey, mergeTokenTurns, runUrl, serviceName, wsRunUrl]);
+  }, [agentId, apiKey, mergeTokenTurns, datalayerUrl, serviceName, wsUrl]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {

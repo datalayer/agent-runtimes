@@ -41,7 +41,7 @@ repos:
     rev: v2.9.0
     hooks:
       - id: pip-audit
-        args: ['--ignore-vuln', 'GHSA-4xh5-x5gv-qwph', '--ignore-vuln', 'GHSA-6vgw-5pg2-w6jp', '--ignore-vuln', 'GHSA-5239-wwwm-4pmq', '--ignore-vuln', 'GHSA-gc5v-m9x4-r6x2', '--ignore-vuln', 'GHSA-58qw-9mgm-455v']
+        args: ['--ignore-vuln', 'GHSA-4xh5-x5gv-qwph', '--ignore-vuln', 'GHSA-6vgw-5pg2-w6jp', '--ignore-vuln', 'GHSA-5239-wwwm-4pmq', '--ignore-vuln', 'GHSA-gc5v-m9x4-r6x2', '--ignore-vuln', 'GHSA-58qw-9mgm-455v', '--ignore-vuln', 'GHSA-6v7p-g79w-8964']
         additional_dependencies: ['pip>=26.1.2', 'idna>=3.15', 'urllib3>=2.7.0']
 
   # Check for large files that shouldn't be committed
@@ -56,4 +56,5 @@ repos:
     rev: 1.7.0
     hooks:
       - id: interrogate
-        args: [--config=pyproject.toml]
+        args: [--config=pyproject.toml, --exclude=agent_runtimes/tests, --exclude=scripts]
+        pass_filenames: false

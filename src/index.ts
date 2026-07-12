@@ -5,6 +5,7 @@
 
 export * from './chat';
 export * from './client';
+export * from './collaboration';
 export * from './components';
 export * from './mcp';
 export * from './stores';

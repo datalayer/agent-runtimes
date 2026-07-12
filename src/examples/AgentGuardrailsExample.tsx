@@ -36,7 +36,7 @@ import {
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
-import { useCoreStore } from '@datalayer/core/lib/state';
+import { useCoreStore } from '../state/substates';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
@@ -49,6 +49,7 @@ import { getAgentspecs } from '../specs/agents';
 import { subscribeOtelWs } from '../context/otelWsPool';
 import { toMetricValue } from '../hooks/useMonitoring';
 import { useAIAgentsWebSocket } from '../hooks';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -58,10 +59,8 @@ import { Chat } from '../chat';
 
 const AGENT_NAME = 'guardrails-example-agent';
 const AGENTSPEC_ID = 'example-guardrails';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
-const DATALAYER_RUN_URL_ENV = import.meta.env.DATALAYER_RUN_URL;
+const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
 const OTEL_SERVICE_NAME = 'agent-runtimes';
 const COST_RUN_METRIC = 'agent_runtimes.capability.cost.run.usd';
 const COST_CUMULATIVE_METRIC = 'agent_runtimes.capability.cost.cumulative.usd';
@@ -308,12 +307,12 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   const [approvals, setApprovals] = useState<ToolApprovalRequest[]>([]);
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
-    configuration?.otelRunUrl ||
-    configuration?.runUrl ||
+    configuration?.otelUrl ||
+    configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_RUN_URL_ENV ||
+    DATALAYER_URL_ENV ||
     'https://prod1.datalayer.run';
   const podName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
@@ -568,7 +567,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -617,7 +616,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -790,7 +789,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           brandIcon={<ShieldCheckIcon size={16} />}
           placeholder="Ask something that triggers tools…"
           description="Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)"
-          showHeader={false}
+          showHeader={true}
           showTokenUsage={true}
           errorBanner={overBudgetBanner}
           disableInputPrompt={isOverRunBudget}
@@ -826,7 +825,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 // ─── Sync token to core IAM store ──────────────────────────────────────────
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -847,7 +846,7 @@ const AgentGuardrailsExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

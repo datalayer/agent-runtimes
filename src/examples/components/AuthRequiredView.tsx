@@ -16,7 +16,7 @@ export const AuthRequiredView: React.FC = () => {
   const setAuth = useSimpleAuthStore(s => s.setAuth);
 
   const syncTokenToIamStore = useCallback((token: string | undefined) => {
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token });
     });
   }, []);

@@ -327,11 +327,11 @@ export function AgentNode() {
 
   const pushCredentials = useCallback(
     (authToken: string | null, payloadToken: string | null = authToken) => {
-      const runUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+      const datalayerUrl =
+        (import.meta as any).env?.VITE_DATALAYER_URL ||
         'https://prod1.datalayer.run';
-      const runtimesRunUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
+      const runtimesUrl =
+        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || datalayerUrl;
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -345,7 +345,7 @@ export function AgentNode() {
         headers,
         body: JSON.stringify({
           token: payloadToken || null,
-          runtimes_url: payloadToken ? runtimesRunUrl : null,
+          runtimes_url: payloadToken ? runtimesUrl : null,
         }),
       });
     },
@@ -546,28 +546,29 @@ export function AgentNode() {
 
   useEffect(() => {
     import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
-      const runUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+      const datalayerUrl =
+        (import.meta as any).env?.VITE_DATALAYER_URL ||
         'https://prod1.datalayer.run';
-      const runtimesRunUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || runUrl;
-      const aiInferenceRunUrl =
-        (import.meta as any).env?.VITE_DATALAYER_AI_INFERENCE_URL || runUrl;
+      const runtimesUrl =
+        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || datalayerUrl;
+      const aiInferenceUrl =
+        (import.meta as any).env?.VITE_DATALAYER_AI_INFERENCE_URL ||
+        datalayerUrl;
       // Seed all per-service URLs to match the main UI login behavior.
       const coreApi = coreStore.getState() as any;
       const prevCfg = coreApi.configuration ?? {};
       const urls = {
-        iamRunUrl: runUrl,
-        runtimesRunUrl,
-        spacerRunUrl: runUrl,
-        libraryRunUrl: runUrl,
-        aiagentsRunUrl: runUrl,
-        aiinferenceRunUrl: aiInferenceRunUrl,
-        mcpserversRunUrl: runUrl,
-        otelRunUrl: runUrl,
-        growthRunUrl: runUrl,
-        successRunUrl: runUrl,
-        supportRunUrl: runUrl,
+        iamUrl: datalayerUrl,
+        runtimesUrl,
+        spacerUrl: datalayerUrl,
+        libraryUrl: datalayerUrl,
+        aiAgentsUrl: datalayerUrl,
+        aiInferenceUrl: aiInferenceUrl,
+        mcpServersUrl: datalayerUrl,
+        otelUrl: datalayerUrl,
+        growthUrl: datalayerUrl,
+        successUrl: datalayerUrl,
+        supportUrl: datalayerUrl,
       };
       if (typeof coreApi.setConfiguration === 'function') {
         coreApi.setConfiguration({ ...prevCfg, ...urls });
@@ -578,7 +579,7 @@ export function AgentNode() {
       }
 
       const api = iamStore.getState() as any;
-      iamStore.setState({ token: tokenForCore, iamRunUrl: runUrl } as any);
+      iamStore.setState({ token: tokenForCore, iamUrl: datalayerUrl } as any);
       if (tokenForCore && typeof api.refreshUserByToken === 'function') {
         void Promise.resolve(api.refreshUserByToken(tokenForCore)).then(() => {
           queryClient.invalidateQueries({ queryKey: ['organizations'] });
@@ -617,11 +618,11 @@ export function AgentNode() {
   // API keys are exchanged for a session token before login so billing and
   // plans endpoints (/api/iam/v1/plans/*) resolve the correct paid plan.
   const handleApiKeySignIn = async (apiKey: string) => {
-    const runUrl =
-      (import.meta as any).env?.VITE_DATALAYER_RUN_URL ||
+    const datalayerUrl =
+      (import.meta as any).env?.VITE_DATALAYER_URL ||
       'https://prod1.datalayer.run';
     try {
-      const resp = await fetch(`${runUrl}/api/iam/v1/login`, {
+      const resp = await fetch(`${datalayerUrl}/api/iam/v1/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: apiKey }),

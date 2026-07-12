@@ -149,15 +149,22 @@ def _get_agent_mcp_enabled_tools_by_server(
 ) -> dict[str, list[str]]:
     """Get effective enabled MCP tools per server for an agent."""
     key = _stream_key(agent_id)
-    defaults = _build_default_mcp_enabled_tools_by_server()
-    overrides = _MCP_ENABLED_TOOLS_BY_AGENT.get(key, {})
-    for server_id, tool_names in overrides.items():
-        # An empty override means "no explicit user selection yet" — keep
-        # lifecycle-derived defaults rather than wiping the server's tools.
-        if not tool_names:
-            continue
-        defaults[server_id] = sorted(set(tool_names))
-    return defaults
+    overrides = _MCP_ENABLED_TOOLS_BY_AGENT.get(key)
+
+    # When the agent has an explicit per-turn selection recorded, it is
+    # authoritative: return exactly that selection (servers with at least one
+    # enabled tool). Do NOT merge lifecycle-derived defaults, which would
+    # re-introduce servers/tools (e.g. github) the user did not select.
+    if overrides:
+        projected = {
+            server_id: sorted(set(tool_names))
+            for server_id, tool_names in overrides.items()
+            if tool_names
+        }
+        if projected:
+            return projected
+
+    return _build_default_mcp_enabled_tools_by_server()
 
 
 def get_agent_mcp_enabled_tools_by_server(
@@ -497,6 +504,17 @@ def set_agent_enabled_mcp_tool_names(
             known_aliases.add(_normalize_tool_name(name))
 
     if not (selected & known_aliases or selected_normalized & known_aliases):
+        # Preserve explicit per-agent MCP state when the incoming payload does
+        # not include MCP tools (e.g. only builtins). Falling back to
+        # lifecycle defaults here can re-introduce unrelated servers/tools
+        # such as github into a prior explicit selection.
+        existing = _MCP_ENABLED_TOOLS_BY_AGENT.get(key)
+        if existing is not None:
+            return {
+                server_id: sorted(set(tool_set))
+                for server_id, tool_set in existing.items()
+                if tool_set
+            }
         return _get_agent_mcp_enabled_tools_by_server(agent_id)
 
     enabled_map: dict[str, set[str]] = {}
@@ -515,7 +533,14 @@ def set_agent_enabled_mcp_tool_names(
     for server_id, approved in list(approved_map.items()):
         approved_map[server_id] = approved & enabled_map.get(server_id, set())
 
-    return _get_agent_mcp_enabled_tools_by_server(agent_id)
+    # Project directly from the per-turn selection rather than merging with
+    # lifecycle-derived defaults. Merging defaults here would re-introduce
+    # unrelated servers/tools (e.g. github) that the request did not select.
+    return {
+        server_id: sorted(tool_set)
+        for server_id, tool_set in enabled_map.items()
+        if tool_set
+    }
 
 
 def enable_agent_skill(agent_id: str | None, skill_ref: str) -> None:
@@ -737,22 +762,22 @@ async def _flush_otel_service(auth_token: str | None = None) -> None:
     The OTEL service contract for live delivery is websocket-based
     (``/api/otel/v1/ws``).  We intentionally avoid a REST flush call here.
     """
-    run_url = (
-        os.environ.get("DATALAYER_RUN_URL")
+    datalayer_url = (
+        os.environ.get("DATALAYER_URL")
         or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )
     token = auth_token or os.environ.get("DATALAYER_API_KEY")
 
-    run_url = run_url.strip().rstrip("/")
-    if run_url.startswith("https://"):
-        ws_base = "wss://" + run_url[len("https://") :]
-    elif run_url.startswith("http://"):
-        ws_base = "ws://" + run_url[len("http://") :]
-    elif run_url.startswith("ws://") or run_url.startswith("wss://"):
-        ws_base = run_url
+    datalayer_url = datalayer_url.strip().rstrip("/")
+    if datalayer_url.startswith("https://"):
+        ws_base = "wss://" + datalayer_url[len("https://") :]
+    elif datalayer_url.startswith("http://"):
+        ws_base = "ws://" + datalayer_url[len("http://") :]
+    elif datalayer_url.startswith("ws://") or datalayer_url.startswith("wss://"):
+        ws_base = datalayer_url
     else:
-        ws_base = "wss://" + run_url
+        ws_base = "wss://" + datalayer_url
 
     params: dict[str, str] = {}
     if token:

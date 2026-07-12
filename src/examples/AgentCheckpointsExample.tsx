@@ -16,7 +16,7 @@
  *   3. Provides pause/resume/terminate lifecycle backed by CRIU
  *
  * Prerequisites:
- *   - Datalayer core configuration (runtimesRunUrl, aiagentsRunUrl)
+ *   - Datalayer core configuration (runtimesUrl, aiAgentsUrl)
  *   - Valid IAM token (set via SignInSimple or iamStore)
  */
 
@@ -427,7 +427,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -1028,7 +1028,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               brandIcon={<AgentIcon size={16} />}
               placeholder="Ask about sales KPIs…"
               description="Monitor Sales KPI agent with pause/resume checkpointing"
-              showHeader={false}
+              showHeader={true}
               showTokenUsage={true}
               autoFocus
               height="100%"
@@ -1109,7 +1109,7 @@ const AgentCheckpointsExample: React.FC = () => {
   useEffect(() => {
     if (token && !hasSynced.current) {
       hasSynced.current = true;
-      import('@datalayer/core/lib/state').then(({ iamStore }) => {
+      import('../state/substates').then(({ iamStore }) => {
         iamStore.setState({ token });
       });
     }
@@ -1121,7 +1121,7 @@ const AgentCheckpointsExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

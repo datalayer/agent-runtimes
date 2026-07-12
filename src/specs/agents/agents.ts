@@ -35,6 +35,14 @@ import {
 } from '../skills';
 import type { SkillSpec } from '../../types';
 import {
+  EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
+  EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
+  EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
+  EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
+  EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
+  EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
+  EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
   RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
@@ -107,6 +115,24 @@ function toAgentSkillSpec(skill: SkillSpec) {
  * Map tool IDs to ToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
+  'example-create-plan:0.0.1': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
+  'example-create-plan': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
+  'example-current-time:0.0.1': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
+  'example-current-time': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
+  'example-display-recipe:0.0.1': EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
+  'example-display-recipe': EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
+  'example-generate-haiku:0.0.1': EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
+  'example-generate-haiku': EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
+  'example-generate-task-steps:0.0.1':
+    EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
+  'example-generate-task-steps': EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
+  'example-get-weather:0.0.1': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  'example-get-weather': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
+  'example-render-a2ui-surface:0.0.1':
+    EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
+  'example-render-a2ui-surface': EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
+  'example-update-plan-step:0.0.1': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
+  'example-update-plan-step': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
   'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
   'runtime-send-mail:0.0.1': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
@@ -143,7 +169,7 @@ export const ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
     'social-media',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -271,7 +297,7 @@ export const ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.`,
   tags: ['analytics', 'data', 'support', 'tickets'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -374,7 +400,7 @@ export const AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.`,
   tags: ['finance', 'automation', 'inventory', 'supply-chain'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -471,7 +497,7 @@ export const AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.`,
   tags: ['finance', 'compliance', 'regulatory', 'risk', 'banking', 'audit'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -592,7 +618,7 @@ export const CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A generic email classification and routing agent. Analyzes incoming emails to determine intent (inquiry, complaint, order, support request), assigns priority (critical, high, medium, low), and routes to the appropriate department queue. Works across any industry with email-based workflows.`,
   tags: ['email', 'classification', 'routing', 'horizontal', 'automation'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -693,7 +719,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.`,
   tags: ['sales', 'analytics', 'kpi', 'monitoring', 'horizontal'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -782,7 +808,7 @@ export const CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   description: `Web crawling and research agent that searches the web and GitHub repositories for information.`,
   tags: ['web', 'search', 'research', 'crawler', 'github'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -861,7 +887,7 @@ export const DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   description: `Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.`,
   tags: ['data', 'acquisition', 'kaggle', 'filesystem'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['kaggle:0.0.1'],
     MCP_SERVER_MAP['filesystem:0.0.1'],
@@ -944,7 +970,7 @@ export const DEMO_OUTPUTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates structured response rendering (table, json, chart, and file) for the AgentOutputsExample sidebar output parser.`,
   tags: ['demo', 'outputs', 'rendering'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1017,7 +1043,7 @@ export const END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
     'sku',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['salesforce:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -1217,7 +1243,7 @@ export const EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1: Agentspec = {
   description: `Dedicated agent spec for launching and running evaluation experiments from the Evals interface. Includes baseline tooling for reproducible eval runs.`,
   tags: ['evals', 'experiments', 'runner'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1266,6 +1292,245 @@ export const EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
+  id: 'example-a2ui-agent',
+  version: '0.0.1',
+  name: 'A2UI Agent',
+  description: `An AG-UI agent that generates interactive A2UI surfaces on demand. Describe a form, intake, configurator, survey or booking flow and the agent renders a validated, themeable A2UI surface you can fill in.`,
+  tags: ['example', 'ag-ui', 'a2ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-render-a2ui-surface:0.0.1']],
+  frontendTools: [],
+  frontendRenderTools: [
+    { tool: 'render_a2ui_surface', renderer: 'a2ui-surface' },
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🎛️',
+  color: '#6366F1',
+  suggestions: [
+    'Build a support ticket intake form with category, priority and a description.',
+    'Create a trip booking form with destination, dates, travelers and budget.',
+    'Generate a customer feedback survey with a rating slider and comments.',
+    'Make a product configurator for a laptop with CPU, RAM and add-ons.',
+  ],
+  welcomeMessage:
+    "Hi! I turn requests into interactive A2UI surfaces. Ask me to build a form, survey, configurator or booking flow and I'll render it live for you.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are an A2UI generative-UI agent. You render real, interactive user
+interfaces (forms, intakes, configurators, surveys, bookings, checklists)
+from the user's request.
+
+How to respond:
+1. ALWAYS call the \`render_a2ui_surface\` tool to produce the UI. Never
+   describe the form in prose instead of rendering it.
+2. Choose a concise \`title\` and a one-sentence \`intro\`.
+3. Design a sensible ordered list of \`fields\`. Pick the best \`type\` for each:
+   - \`text\` / \`email\` for short input, \`longtext\` for descriptions/notes
+   - \`choice\` (single) or \`multichoice\` (many) with \`options\` for pick-lists
+   - \`checkbox\` for yes/no, \`slider\` (with \`min\`/\`max\`) for ranges/ratings
+   - \`date\` / \`datetime\` for scheduling
+4. When the request implies triage or categorization (e.g. support tickets),
+   add \`summary_items\` such as detected Category or Priority.
+5. Keep forms focused: usually 4-8 fields.
+6. After the tool call, reply with ONE short sentence confirming what you
+   built. Do NOT repeat every field in text — the surface is shown directly.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-agentic-chat',
+  version: '0.0.1',
+  name: 'Agentic Chat',
+  description: `A basic conversational AG-UI agent that can chat and use a tool to get the current time in any timezone.`,
+  tags: ['example', 'ag-ui', 'chat'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-current-time:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'clock',
+  emoji: '🕒',
+  color: '#6366F1',
+  suggestions: ['What is the current time?', "What's the current date?"],
+  welcomeMessage: 'Hi! Ask me for the current time in any timezone.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful assistant that can provide the current time in any timezone. Use the current_time tool when asked about the time. Keep your responses concise and helpful.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-agentic-generative-ui',
+  version: '0.0.1',
+  name: 'Agentic Generative UI',
+  description: `An AG-UI agent that creates plans with steps and updates individual steps as progress is made using JSON Patch (RFC 6902) state deltas.`,
+  tags: ['example', 'ag-ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['example-create-plan:0.0.1'],
+    TOOL_MAP['example-update-plan-step:0.0.1'],
+  ],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'list-unordered',
+  emoji: '📋',
+  color: '#6366F1',
+  suggestions: [
+    'Create a project plan for building a mobile app.',
+    'Generate a marketing strategy for a new product launch.',
+  ],
+  welcomeMessage:
+    "Hi! Give me a goal and I'll create a plan, then work through the steps.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful assistant that creates and executes plans.
+
+When asked to do something:
+1. Call \`create_plan\` with a list of step descriptions
+2. As you work through steps, call \`update_plan_step\` to mark them complete
+
+IMPORTANT:
+- Always create a plan first before doing anything
+- Mark steps as completed as you work through them
+- Don't repeat the plan in your messages
+- Give a brief summary (one sentence with emojis) after completing steps
+- Say you actually did the steps, not merely generated them
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-backend-tool-rendering',
+  version: '0.0.1',
+  name: 'Backend Tool Rendering',
+  description: `An AG-UI weather assistant that fetches real weather data with a backend tool for the frontend to render as a weather card.`,
+  tags: ['example', 'ag-ui', 'weather'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-get-weather:0.0.1']],
+  frontendTools: [],
+  frontendRenderTools: [
+    { tool: 'get_weather', renderer: 'weather-card', css: 'weather-card.css' },
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'sun',
+  emoji: '🌤️',
+  color: '#6366F1',
+  suggestions: [
+    "What's the weather like in Paris?",
+    'Show me the weather forecast for Tokyo.',
+  ],
+  welcomeMessage: 'Hi! Ask me about the weather in any city.\n',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful weather assistant that provides accurate weather information.
+
+When users ask about weather:
+- If no location is provided, ask for one
+- Translate non-English location names to English
+- For multi-part locations (e.g., "New York, NY"), use the most specific part
+- Include temperature, humidity, wind, and conditions in your response
+- Keep responses concise but informative
+
+Use the \`get_weather\` tool to fetch current weather data.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-codemode',
   version: '0.0.1',
@@ -1273,7 +1538,7 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Tavily MCP demo agent with codemode enabled. MCP tools can be composed through codemode execution flows.`,
   tags: ['demo', 'mcp', 'tavily', 'codemode'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1329,7 +1594,7 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Evals runner variant with codemode disabled for A/B comparisons against example-evals in SDK eval examples.`,
   tags: ['evals', 'demo', 'runner', 'no-codemode'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1356,7 +1621,7 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt: `You are the Demo Evals Runner. Execute evaluation workflows reliably, validate inputs before execution, and summarize outcomes clearly.`,
+  systemPrompt: `You are a strict text normalization agent used by automated evals. For every user message, return only the normalized text. Rules: 1. Trim leading and trailing whitespace. 2. Convert all alphabetic characters to uppercase. 3. Preserve punctuation, numbers, symbols, and internal spacing. 4. Return plain text only (no JSON, markdown, explanations, or extra words).`,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
   protocol: undefined,
@@ -1386,7 +1651,7 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Default eval runner for local and cloud execution in SDK eval examples. Includes baseline tooling for reproducible eval runs.`,
   tags: ['evals', 'demo', 'runner'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1404,16 +1669,16 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧪',
   color: '#0EA5E9',
   suggestions: [
-    'Run the selected evaluation experiment on the configured dataset',
-    'Validate experiment configuration and report missing fields',
-    'Summarize run results with pass rate and latency highlights',
+    'Run the selected evaluation experiment on the configured dataset using at most 3 sandbox calls total',
+    'Validate experiment configuration and report missing fields, batching checks to stay within 3 sandbox calls',
+    'Summarize run results with pass rate and latency highlights without exceeding 3 sandbox calls overall',
   ],
   welcomeMessage:
     'Ready to run eval experiments. Configure your benchmark and evaluator setup, then launch a run.',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter',
-  systemPrompt: `You are the Demo Evals Runner. Execute evaluation workflows reliably, validate inputs before execution, and summarize outcomes clearly.`,
+  systemPrompt: `You are a strict text normalization agent used by automated evals. For every user message, return only the normalized text. Rules: 1. Trim leading and trailing whitespace. 2. Convert all alphabetic characters to uppercase. 3. Preserve punctuation, numbers, symbols, and internal spacing. 4. Return plain text only (no JSON, markdown, explanations, or extra words).`,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
   protocol: undefined,
@@ -1443,7 +1708,7 @@ export const EXAMPLE_FULL_AGENTSPEC_0_0_1: Agentspec = {
   description: `A full-featured demonstration agent showcasing MCP servers (Tavily web search), skills (GitHub, PDF, crawl, events, text summarizer, jokes), human-in-the-loop tool approval, and frontend tools (Jupyter notebooks, Lexical documents).`,
   tags: ['demo', 'approval', 'human-in-the-loop', 'utility'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -1526,7 +1791,7 @@ export const EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Guardrails-focused example agent for AgentGuardrailsExample. Includes budget limits and a sensitive tool requiring manual approval.`,
   tags: ['demo', 'guardrails', 'approval'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1616,6 +1881,74 @@ This agent also demonstrates pydantic-ai tool execution hook naming: before_tool
   subagents: undefined,
 };
 
+export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-haiku-generative-ui',
+  version: '0.0.1',
+  name: 'Haiku Generative UI',
+  description: `An AG-UI agent that generates Japanese haiku with English translations and a gradient, rendered as cards by the frontend.`,
+  tags: ['example', 'ag-ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-generate-haiku:0.0.1']],
+  frontendTools: [],
+  frontendRenderTools: [
+    { tool: 'generate_haiku', renderer: 'haiku-card', css: 'haiku-card.css' },
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'pencil',
+  emoji: '🖋️',
+  color: '#6366F1',
+  suggestions: [
+    'Write me a haiku about cherry blossoms in spring.',
+    'Create a haiku about coding late at night.',
+    'Generate a haiku about hiking a mountain trail.',
+  ],
+  welcomeMessage: "Hi! Give me a theme and I'll craft a haiku for you.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are an expert haiku generator that creates beautiful Japanese haiku poems
+and their English translations.
+
+When generating a haiku:
+1. Create a traditional 5-7-5 syllable structure haiku in Japanese
+2. Provide an accurate and poetic English translation
+3. Choose a CSS gradient that matches the mood of the haiku
+
+Always use the generate_haiku tool to create your haiku. The tool will handle
+the formatting and validation of your response.
+
+Focus on creating haiku that capture the essence of Japanese poetry: nature
+imagery, seasonal references, emotional depth, and moments of beauty or
+contemplation. That said, any topic is fair game.
+
+Do not repeat the haiku content in your text response - the UI will display it
+beautifully. Just acknowledge that you've created the haiku.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-hooks',
   version: '0.0.1',
@@ -1623,7 +1956,7 @@ export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates pre-hooks and post-hooks executed in the sandbox lifecycle.`,
   tags: ['demo', 'hooks', 'lifecycle'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
@@ -1725,6 +2058,70 @@ When the user asks about hooks, use execute_code to show concrete evidence: read
   subagents: undefined,
 };
 
+export const EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-human-in-the-loop',
+  version: '0.0.1',
+  name: 'Human in the Loop',
+  description: `An AG-UI agent that generates task plans requiring human review and approval before execution.`,
+  tags: ['example', 'ag-ui', 'human-in-the-loop'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-generate-task-steps:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'tasklist',
+  emoji: '🧑‍⚖️',
+  color: '#6366F1',
+  suggestions: [
+    'Plan a weekend trip to Paris.',
+    'Plan a birthday party for next Saturday.',
+  ],
+  welcomeMessage:
+    "Hi! Describe a task and I'll draft a step-by-step plan for you to review.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful task planning assistant.
+
+When asked to plan or do a task:
+1. Use the \`generate_task_steps\` tool to create a list of steps
+2. The steps will be displayed to the user for review
+3. Wait for user feedback
+4. If accepted, confirm the plan and the number of enabled steps
+5. If not accepted, ask for clarification
+
+IMPORTANT:
+- Only call \`generate_task_steps\` ONCE per request
+- Do NOT repeat the plan in your response after showing it
+- Do NOT call the tool again after receiving feedback
+- Keep your responses concise
+- Each step should be a brief imperative command (e.g., "Set up environment",
+  "Install dependencies")
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_INFERENCE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-inference',
   version: '0.0.1',
@@ -1732,7 +2129,7 @@ export const EXAMPLE_INFERENCE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates inference-provider switching (local vs datalayer) for a local agent runtime session.`,
   tags: ['demo', 'inference', 'provider', 'runtime'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   inferenceProvider: 'local',
   mcpServers: [],
   skills: [
@@ -1789,7 +2186,7 @@ export const EXAMPLE_MCP_AGENTSPEC_0_0_1: Agentspec = {
   description: `MCP-focused example agent for AgentMCPExample. It connects to the Tavily MCP server and demonstrates search/research style tool usage from the chat panel.`,
   tags: ['demo', 'mcp', 'tools', 'research'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1849,7 +2246,7 @@ export const EXAMPLE_MEMORY_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates durable conversational memory with the Mem0 backend. Persists user preferences and supports memory inspection/search.`,
   tags: ['memory', 'mem0', 'demo'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1905,7 +2302,7 @@ export const EXAMPLE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Monitoring-focused example agent for AgentMonitoringExample. It is intentionally lightweight so it starts reliably in local example runs.`,
   tags: ['demo', 'monitoring', 'observability'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1961,7 +2358,7 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Tavily MCP demo agent without codemode conversion. MCP tools are used directly without codemode orchestration.`,
   tags: ['demo', 'mcp', 'tavily', 'no-codemode'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2017,7 +2414,7 @@ export const EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates multi-channel notifications including in-app, email, and Slack style destinations with preference management.`,
   tags: ['notifications', 'alerts', 'demo'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2073,7 +2470,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1: Agentspec = {
   description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle', 'approval'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
@@ -2122,7 +2519,7 @@ export const EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1: Agentspec = {
   description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
   tags: ['demo', 'trigger', 'once', 'lifecycle'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -2178,7 +2575,7 @@ export const EXAMPLE_OTEL_AGENTSPEC_0_0_1: Agentspec = {
   description: `OTEL observability example agent for AgentOtelExample. It assists the user in exploring traces, logs and metrics surfaced by the OTEL dashboard.`,
   tags: ['demo', 'otel', 'observability', 'telemetry'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2235,7 +2632,7 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates launch-time parameterization with JSON schema validation.`,
   tags: ['demo', 'parameters', 'schema'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -2300,6 +2697,65 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-shared-state',
+  version: '0.0.1',
+  name: 'Shared State',
+  description: `An AG-UI recipe-builder agent demonstrating bidirectional state synchronization between the agent and the UI.`,
+  tags: ['example', 'ag-ui', 'shared-state'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['example-display-recipe:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'book',
+  emoji: '🍳',
+  color: '#6366F1',
+  suggestions: [
+    'Help me create a simple pasta recipe.',
+    'Add tomatoes to the recipe.',
+  ],
+  welcomeMessage:
+    "Hi! Tell me what you'd like to cook and I'll build a recipe with you.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful recipe assistant.
+
+IMPORTANT RULES:
+1. Create recipes using the existing ingredients when possible
+2. Add new ingredients to the existing list (don't replace)
+3. Use the \`display_recipe\` tool to update the recipe
+4. Do NOT repeat the recipe in your message after using the tool
+5. Do NOT call \`display_recipe\` multiple times in a row
+
+After updating the recipe, give a brief summary of changes (one sentence).
+Don't describe the full recipe.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-simple',
   version: '0.0.1',
@@ -2307,7 +2763,7 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
   tags: ['simple', 'chat', 'assistant'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2365,7 +2821,7 @@ export const EXAMPLE_SKILLS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demo agent for skills usage with mixed discovery sources, including built-in file skills and package-registered skills like datalayer-whoami.`,
   tags: ['demo', 'skills', 'discovery'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -2440,7 +2896,7 @@ export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates multi-agent delegation with a parent orchestrator that can split work between a researcher and a writer subagent.`,
   tags: ['demo', 'subagents', 'orchestration'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2496,7 +2952,7 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates per-tool approval hooks with policy requests and decision/audit logging.`,
   tags: ['approvals', 'hooks', 'policy'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
@@ -2506,7 +2962,7 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   frontendTools: [],
   environmentName: 'ai-agents-env',
   icon: 'pi pi-shield',
-  emoji: undefined,
+  emoji: '✅',
   color: undefined,
   suggestions: [
     "Call runtime_sensitive_echo with reason 'read logs' and message 'hello approvals'.",
@@ -2580,6 +3036,55 @@ Hook names align with pydantic-ai capability hooks: before_tool_execute, after_t
   subagents: undefined,
 };
 
+export const EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-tool-based-generative-ui',
+  version: '0.0.1',
+  name: 'Tool Based Generative UI',
+  description: `An AG-UI agent that renders rich content by calling frontend-defined render tools. The generative UI is produced by the frontend.`,
+  tags: ['example', 'ag-ui', 'generative-ui'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🎨',
+  color: '#6366F1',
+  suggestions: [
+    'Create a project plan for building a mobile app.',
+    'Generate a marketing strategy for a new product launch.',
+  ],
+  welcomeMessage:
+    "Hi! Ask me to show something and I'll render it using the available UI tools.\n",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: undefined,
+  systemPrompt: `You are a helpful assistant that can display rich content. When asked to show or display something, use the appropriate render tool. Available render tools will be provided by the frontend.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'ag-ui',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1: Agentspec = {
   id: 'extract-data-from-files',
   version: '0.0.1',
@@ -2587,7 +3092,7 @@ export const EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1: Agentspec = {
   description: `A generic data extraction agent that processes unstructured files (PDFs, scanned documents, spreadsheets, images with text) and extracts structured data — tables, key-value pairs, line items, totals. Outputs clean JSON or CSV ready for downstream systems. Applicable to invoices, receipts, forms, medical records, legal documents, and more.`,
   tags: ['extraction', 'data', 'horizontal', 'automation', 'documents'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -2692,7 +3197,7 @@ export const FINANCIAL_VIZ_AGENTSPEC_0_0_1: Agentspec = {
   description: `Analyzes financial market data and creates visualizations and charts.`,
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -2771,7 +3276,7 @@ export const FINANCIAL_AGENTSPEC_0_0_1: Agentspec = {
   description: `Analyzes financial market data and provides chart-ready insights.`,
   tags: ['finance', 'stocks', 'visualization', 'charts'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2840,6 +3345,1959 @@ export const FINANCIAL_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const GALLERY_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-agent-critic-loop-for-analysis',
+    version: '0.0.1',
+    name: 'Agent Critic Loop for Analysis',
+    description: `Use a planner, executor, and critic agent loop to iteratively improve analysis quality and reduce logical errors in outputs.`,
+    tags: ['gallery', 'agent', 'critic', 'loop', 'for', 'analysis'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'sync',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/finance/transactions_q1.csv and run a critic loop: first produce a reconciliation analysis, then critique it for gaps and publish a corrected final report.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with agent critic loop for analysis. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Agent Critic Loop for Analysis. Objective: Use a planner, executor, and critic agent loop to iteratively improve analysis quality and reduce logical errors in outputs. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-agent-reviews-sql',
+  version: '0.0.1',
+  name: 'Agent Reviews SQL',
+  description: `Review SQL queries for correctness, performance, missing filters, risky joins, and opportunities to simplify the analysis.`,
+  tags: ['gallery', 'agent', 'reviews', 'sql'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'code',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql and perform a structured SQL review with lint findings, risk notes, and an improved query draft.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with agent reviews sql. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Agent Reviews SQL. Objective: Review SQL queries for correctness, performance, missing filters, risky joins, and opportunities to simplify the analysis. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-ai-creates-dashboards',
+  version: '0.0.1',
+  name: 'AI Creates Dashboards',
+  description: `Generate charts and dashboard-ready views from your data, then iterate by asking follow-up questions in natural language.`,
+  tags: ['gallery', 'ai', 'creates', 'dashboards'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'graph',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a dashboard-style notebook with funnel metrics, regional split, and one executive summary cell.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with ai creates dashboards. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: AI Creates Dashboards. Objective: Generate charts and dashboard-ready views from your data, then iterate by asking follow-up questions in natural language. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-ai-explains-notebook-output',
+  version: '0.0.1',
+  name: 'AI Explains Notebook Output',
+  description: `Turn raw cells, charts, and model outputs into an executive explanation that non-technical stakeholders can understand.`,
+  tags: ['gallery', 'ai', 'explains', 'notebook', 'output'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'note',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv to build and run a notebook, then explain each output cell in plain language.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with ai explains notebook output. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: AI Explains Notebook Output. Objective: Turn raw cells, charts, and model outputs into an executive explanation that non-technical stakeholders can understand. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-ai-writes-pandas-code',
+  version: '0.0.1',
+  name: 'AI Writes Pandas Code',
+  description: `Describe the transformation you need and let AI generate, run, debug, and explain the Pandas code behind the result.`,
+  tags: ['gallery', 'ai', 'writes', 'pandas', 'code'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'code',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv and write pandas code that cleans, aggregates by month and region, and highlights growth trends.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with ai writes pandas code. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: AI Writes Pandas Code. Objective: Describe the transformation you need and let AI generate, run, debug, and explain the Pandas code behind the result. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-analyze-excel-spreadsheet',
+  version: '0.0.1',
+  name: 'Analyze an Excel Spreadsheet',
+  description: `Upload a spreadsheet and get data cleaning, summary statistics, charts, anomalies, and a plain-English explanation of what matters.`,
+  tags: ['gallery', 'analyze', 'excel', 'spreadsheet'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'table',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then produce a 3-cell notebook: schema+missing values, survival breakdown, and one chart with a concise summary.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with analyze an excel spreadsheet. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Analyze an Excel Spreadsheet. Objective: Upload a spreadsheet and get data cleaning, summary statistics, charts, anomalies, and a plain-English explanation of what matters. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-build-notebook-with-one-prompt',
+    version: '0.0.1',
+    name: 'Build a Notebook with One Prompt',
+    description: `Turn a question into a complete Jupyter notebook with data loading, analysis, charts, explanations, and next steps.`,
+    tags: ['gallery', 'build', 'notebook', 'with', 'one', 'prompt'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'note',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and generate a complete analysis notebook from one prompt, including conclusions.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with build a notebook with one prompt. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Build a Notebook with One Prompt. Objective: Turn a question into a complete Jupyter notebook with data loading, analysis, charts, explanations, and next steps. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-compare-two-spreadsheets',
+  version: '0.0.1',
+  name: 'Compare Two Spreadsheets',
+  description: `Compare two versions of a workbook, detect row-level and formula differences, and summarize what changed and why it matters.`,
+  tags: ['gallery', 'compare', 'two', 'spreadsheets'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'git-branch',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Compare /home/jovyan/datasets/datalayer-nfs/titanic/titanic_baseline.csv and /home/jovyan/datasets/datalayer-nfs/titanic/titanic_candidate.csv, then summarize schema and value-level differences.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with compare two spreadsheets. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Compare Two Spreadsheets. Objective: Compare two versions of a workbook, detect row-level and formula differences, and summarize what changed and why it matters. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-compliance-report-draft',
+  version: '0.0.1',
+  name: 'Compliance Report Draft',
+  description: `Collect evidence from documents and data, flag missing information, and draft a structured compliance report for review.`,
+  tags: ['gallery', 'compliance', 'report', 'draft'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/compliance/audit_findings.csv to draft a compliance report with top risks, control gaps, and remediation priorities.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with compliance report draft. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Compliance Report Draft. Objective: Collect evidence from documents and data, flag missing information, and draft a structured compliance report for review. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-cost-comparison-report',
+  version: '0.0.1',
+  name: 'Cost Comparison Report',
+  description: `Compare a chat-heavy workflow with a code-first workflow and show where tokens, latency, and cost are reduced.`,
+  tags: ['gallery', 'cost', 'comparison', 'report'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'pulse',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/cost/cloud_costs.csv to produce a month-over-month cost comparison report with major cost drivers.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with cost comparison report. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Cost Comparison Report. Objective: Compare a chat-heavy workflow with a code-first workflow and show where tokens, latency, and cost are reduced. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-customer-churn-analysis',
+  version: '0.0.1',
+  name: 'Customer Churn Analysis',
+  description: `Detect churn signals, rank at-risk customers, and generate a retention report with suggested next actions.`,
+  tags: ['gallery', 'customer', 'churn', 'analysis'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'issue-opened',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv to identify churn signals, rank at-risk customers, and propose retention actions.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with customer churn analysis. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Customer Churn Analysis. Objective: Detect churn signals, rank at-risk customers, and generate a retention report with suggested next actions. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_DOCUMENT_QA_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-document-qa',
+  version: '0.0.1',
+  name: 'Document Q&A',
+  description: `Ask questions across contracts, reports, policies, or research notes and receive cited answers with supporting context.`,
+  tags: ['gallery', 'document', 'qa'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'search',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Load PDFs from /home/jovyan/datasets/datalayer-nfs/placeholder, answer three cross-document questions, and cite which file supports each answer.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with document q&a. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Document Q&A. Objective: Ask questions across contracts, reports, policies, or research notes and receive cited answers with supporting context. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-explore-sql-database',
+  version: '0.0.1',
+  name: 'Explore a SQL Database',
+  description: `Connect to a database, ask business questions, generate SQL, inspect results, and turn findings into charts or reports.`,
+  tags: ['gallery', 'explore', 'sql', 'database'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'database',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql as a starting workload, profile query intent, and propose executable SQL exploration steps.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with explore a sql database. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Explore a SQL Database. Objective: Connect to a database, ask business questions, generate SQL, inspect results, and turn findings into charts or reports. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-extract-kpis-from-quarterly-pdf',
+    version: '0.0.1',
+    name: 'Extract KPIs from Quarterly PDF',
+    description: `Pull revenue, margin, growth, and guidance metrics from quarterly reports and output a clean KPI table with source citations.`,
+    tags: ['gallery', 'extract', 'kpis', 'from', 'quarterly', 'pdf'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'pulse',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use the PDF set in /home/jovyan/datasets/datalayer-nfs/placeholder to extract quarterly KPI candidates and return them in a structured table.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with extract kpis from quarterly pdf. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Extract KPIs from Quarterly PDF. Objective: Pull revenue, margin, growth, and guidance metrics from quarterly reports and output a clean KPI table with source citations. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_FINANCIAL_RECONCILIATION_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-financial-reconciliation',
+  version: '0.0.1',
+  name: 'Financial Reconciliation',
+  description: `Compare invoices, payments, accounting exports, and bank transactions to identify mismatches and explain exceptions.`,
+  tags: ['gallery', 'financial', 'reconciliation'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'sync',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/finance/transactions_q1.csv to reconcile duplicate or inconsistent ledger entries and summarize unresolved items.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with financial reconciliation. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Financial Reconciliation. Objective: Compare invoices, payments, accounting exports, and bank transactions to identify mismatches and explain exceptions. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-five-ai-agents-analyze-csv',
+  version: '0.0.1',
+  name: 'Five AI Agents Analyze a CSV',
+  description: `One agent profiles the data, another cleans it, another charts it, another checks quality, and another writes the final summary.`,
+  tags: ['gallery', 'five', 'ai', 'agents', 'analyze', 'csv'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'people',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv and split the analysis across five agents, then merge their findings into one final brief.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with five ai agents analyze a csv. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Five AI Agents Analyze a CSV. Objective: One agent profiles the data, another cleans it, another charts it, another checks quality, and another writes the final summary. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-five-notebooks-in-parallel',
+  version: '0.0.1',
+  name: 'Five Notebooks in Parallel',
+  description: `Run several analyses at the same time, compare their outputs, and merge the best findings into one final report.`,
+  tags: ['gallery', 'five', 'notebooks', 'in', 'parallel'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'note',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/notebooks/parallel_tasks.csv to plan and execute five notebook tasks in parallel with a combined status summary.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with five notebooks in parallel. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Five Notebooks in Parallel. Objective: Run several analyses at the same time, compare their outputs, and merge the best findings into one final report. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-gpt-and-claude-collaborate',
+  version: '0.0.1',
+  name: 'GPT and Claude Collaborate',
+  description: `Use different models for different roles: one creates the plan, one writes code, one critiques the output, and one summarizes results.`,
+  tags: ['gallery', 'gpt', 'and', 'claude', 'collaborate'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'people',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv and orchestrate a two-agent collaboration where one analyzes and one critiques.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with gpt and claude collaborate. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: GPT and Claude Collaborate. Objective: Use different models for different roles: one creates the plan, one writes code, one critiques the output, and one summarizes results. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-human-approved-automation',
+  version: '0.0.1',
+  name: 'Human-Approved Automation',
+  description: `Let AI prepare the work while humans approve sensitive actions, final reports, or external notifications before they happen.`,
+  tags: ['gallery', 'human', 'approved', 'automation'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield-check',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with human-approved automation. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Human-Approved Automation. Objective: Let AI prepare the work while humans approve sensitive actions, final reports, or external notifications before they happen. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-insurance-claims-review',
+  version: '0.0.1',
+  name: 'Insurance Claims Review',
+  description: `Group claims, detect unusual patterns, compare supporting documents, and prepare a review summary for human approval.`,
+  tags: ['gallery', 'insurance', 'claims', 'review'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'shield-check',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/insurance/claims.csv to detect suspicious claim patterns and draft a prioritized review queue.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with insurance claims review. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Insurance Claims Review. Objective: Group claims, detect unusual patterns, compare supporting documents, and prepare a review summary for human approval. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-inventory-demand-planning',
+  version: '0.0.1',
+  name: 'Inventory Demand Planning',
+  description: `Forecast product demand, identify stockout risk, and propose reorder quantities across SKUs, regions, and seasonal trends.`,
+  tags: ['gallery', 'inventory', 'demand', 'planning'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'package',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/inventory/inventory_demand.csv to forecast near-term stock risk and recommend reorder priorities.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with inventory demand planning. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Inventory Demand Planning. Objective: Forecast product demand, identify stockout risk, and propose reorder quantities across SKUs, regions, and seasonal trends. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-long-running-agent-overnight',
+  version: '0.0.1',
+  name: 'Long-Running Agent Overnight',
+  description: `Launch a data workflow that can continue running, recover from interruptions, and return results when the job is complete.`,
+  tags: ['gallery', 'long', 'running', 'agent', 'overnight'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'play',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/etl/daily_events.csv to run an overnight-style batch analysis and provide a completion summary with checkpoints.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with long-running agent overnight. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Long-Running Agent Overnight. Objective: Launch a data workflow that can continue running, recover from interruptions, and return results when the job is complete. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_MARKETING_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-marketing-analytics',
+  version: '0.0.1',
+  name: 'Marketing Analytics',
+  description: `Analyze campaign exports, traffic data, conversion funnels, and customer segments to find what is working and what is wasting spend.`,
+  tags: ['gallery', 'marketing', 'analytics'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'graph',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv to analyze ROAS, conversion efficiency, and channel-level recommendations.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with marketing analytics. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Marketing Analytics. Objective: Analyze campaign exports, traffic data, conversion funnels, and customer segments to find what is working and what is wasting spend. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-medical-research-review',
+  version: '0.0.1',
+  name: 'Medical Research Review',
+  description: `Compare studies, extract measurements, summarize findings, and prepare a research note for domain experts to validate.`,
+  tags: ['gallery', 'medical', 'research', 'review'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'beaker',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/medical/clinical_trials.csv to summarize trial outcomes, safety trade-offs, and key evidence caveats.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with medical research review. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Medical Research Review. Objective: Compare studies, extract measurements, summarize findings, and prepare a research note for domain experts to validate. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-multi-agent-data-cleaning',
+  version: '0.0.1',
+  name: 'Multi-Agent Data Cleaning',
+  description: `Split cleaning, validation, deduplication, normalization, and explanation into separate agents with a shared context.`,
+  tags: ['gallery', 'multi', 'agent', 'data', 'cleaning'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'tools',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/quality/dirty_customers.csv and coordinate multiple agents to deduplicate and clean the dataset.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with multi-agent data cleaning. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Multi-Agent Data Cleaning. Objective: Split cleaning, validation, deduplication, normalization, and explanation into separate agents with a shared context. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-multi-agent-root-cause-analysis',
+    version: '0.0.1',
+    name: 'Multi-Agent Root Cause Analysis',
+    description: `Assign agents to anomaly detection, hypothesis generation, evidence review, and synthesis to produce root-cause findings.`,
+    tags: ['gallery', 'multi', 'agent', 'root', 'cause', 'analysis'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'bug',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/ops/incidents.csv to run multi-agent root-cause analysis and produce a ranked remediation plan.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with multi-agent root cause analysis. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Multi-Agent Root Cause Analysis. Objective: Assign agents to anomaly detection, hypothesis generation, evidence review, and synthesis to produce root-cause findings. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-optimize-sql-query-performance',
+    version: '0.0.1',
+    name: 'Optimize SQL Query Performance',
+    description: `Profile slow SQL queries, identify bottlenecks, and suggest rewrites and index strategies with before/after performance notes.`,
+    tags: ['gallery', 'optimize', 'sql', 'query', 'performance'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'zap',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql to identify query bottlenecks and propose optimized SQL with rationale.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with optimize sql query performance. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Optimize SQL Query Performance. Objective: Profile slow SQL queries, identify bottlenecks, and suggest rewrites and index strategies with before/after performance notes. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-replace-excel-pivot-work',
+  version: '0.0.1',
+  name: 'Replace Excel Pivot Work',
+  description: `Ask for the tables, groupings, filters, and charts you would usually build by hand in Excel, then export the result.`,
+  tags: ['gallery', 'replace', 'excel', 'pivot', 'work'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'table',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/titanic/titanic.csv and replace a manual pivot-table workflow with reproducible notebook code and visuals.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with replace excel pivot work. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Replace Excel Pivot Work. Objective: Ask for the tables, groupings, filters, and charts you would usually build by hand in Excel, then export the result. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-resumable-etl-with-checkpoints',
+    version: '0.0.1',
+    name: 'Resumable ETL with Checkpoints',
+    description: `Execute long ETL pipelines with checkpointing and automatic resume so failures do not require restarting from scratch.`,
+    tags: ['gallery', 'resumable', 'etl', 'with', 'checkpoints'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'sync',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/etl/source_orders.csv to build a resumable ETL flow with explicit checkpoint states.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with resumable etl with checkpoints. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Resumable ETL with Checkpoints. Objective: Execute long ETL pipelines with checkpointing and automatic resume so failures do not require restarting from scratch. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-run-python-safely-in-the-cloud',
+    version: '0.0.1',
+    name: 'Run Python Safely in the Cloud',
+    description: `Let AI execute Python in a controlled runtime instead of only suggesting code you still need to copy and run manually.`,
+    tags: ['gallery', 'run', 'python', 'safely', 'in', 'the'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'shield',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with run python safely in the cloud. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Run Python Safely in the Cloud. Objective: Let AI execute Python in a controlled runtime instead of only suggesting code you still need to copy and run manually. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_SALES_FORECASTING_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-sales-forecasting',
+  version: '0.0.1',
+  name: 'Sales Forecasting',
+  description: `Use historical sales data to project future revenue, identify seasonality, and explain the assumptions behind the forecast.`,
+  tags: ['gallery', 'sales', 'forecasting'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'graph',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv to produce a short-term sales forecast with assumptions and confidence notes.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with sales forecasting. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Sales Forecasting. Objective: Use historical sales data to project future revenue, identify seasonality, and explain the assumptions behind the forecast. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-sales-pipeline-board-report',
+  version: '0.0.1',
+  name: 'Sales Pipeline Board Report',
+  description: `Build a board-ready sales pipeline report with stage conversion, weighted forecast, and regional performance insights.`,
+  tags: ['gallery', 'sales', 'pipeline', 'board', 'report'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'table',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with sales pipeline board report. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Sales Pipeline Board Report. Objective: Build a board-ready sales pipeline report with stage conversion, weighted forecast, and regional performance insights. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-scheduled-nightly-data-quality-checks',
+    version: '0.0.1',
+    name: 'Scheduled Nightly Data Quality Checks',
+    description: `Run nightly validation jobs, detect schema and freshness drift, and send a morning report with prioritized issues.`,
+    tags: ['gallery', 'scheduled', 'nightly', 'data', 'quality', 'checks'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'sync',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/quality/data_quality_checks.csv to define nightly quality checks and return a failure triage summary.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with scheduled nightly data quality checks. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Scheduled Nightly Data Quality Checks. Objective: Run nightly validation jobs, detect schema and freshness drift, and send a morning report with prioritized issues. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1: Agentspec =
+  {
+    id: 'gallery-scientific-notebook-assistant',
+    version: '0.0.1',
+    name: 'Scientific Notebook Assistant',
+    description: `Analyze experimental data, generate plots, explain results, and preserve the full workflow in an executable notebook.`,
+    tags: ['gallery', 'scientific', 'notebook', 'assistant'],
+    enabled: true,
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    mcpServers: [],
+    skills: [
+      SKILL_MAP['events:0.0.1']
+        ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+        : undefined,
+    ].filter(Boolean) as SkillSpec[],
+    tools: [TOOL_MAP['runtime-echo:0.0.1']],
+    frontendTools: [
+      FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+      FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+    ],
+    environmentName: 'ai-agents-env',
+    icon: 'beaker',
+    emoji: '📊',
+    color: '#1F883D',
+    suggestions: [
+      'Use /home/jovyan/datasets/datalayer-nfs/notebooks/scientific_measurements.csv to run exploratory analysis and produce publication-ready notebook notes.',
+    ],
+    welcomeMessage:
+      'Hi! I can help with scientific notebook assistant. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+    welcomeNotebook: undefined,
+    welcomeDocument: undefined,
+    sandboxVariant: 'jupyter',
+    systemPrompt: `You are a specialized assistant for this gallery workflow: Scientific Notebook Assistant. Objective: Analyze experimental data, generate plots, explain results, and preserve the full workflow in an executable notebook. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+    systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+    goal: undefined,
+    protocol: undefined,
+    uiExtension: undefined,
+    trigger: undefined,
+    modelConfig: undefined,
+    mcpServerTools: undefined,
+    guardrails: undefined,
+    evals: undefined,
+    codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+    output: undefined,
+    advanced: undefined,
+    authorizationPolicy: undefined,
+    notifications: undefined,
+    memory: 'ephemeral',
+    preHooks: undefined,
+    postHooks: undefined,
+    toolHooks: undefined,
+    parameters: undefined,
+    subagents: undefined,
+  };
+
+export const GALLERY_SUMMARIZE_10_PDFS_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-summarize-10-pdfs',
+  version: '0.0.1',
+  name: 'Summarize 10 PDFs',
+  description: `Extract the key points, compare documents, find repeated themes, and generate a structured report from many PDF files.`,
+  tags: ['gallery', 'summarize', '10', 'pdfs'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'file',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Load the 10 PDFs in /home/jovyan/datasets/datalayer-nfs/placeholder and produce a concise synthesis with a per-document key takeaway table.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with summarize 10 pdfs. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Summarize 10 PDFs. Objective: Extract the key points, compare documents, find repeated themes, and generate a structured report from many PDF files. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-weekly-executive-briefing',
+  version: '0.0.1',
+  name: 'Weekly Executive Briefing',
+  description: `Generate a weekly executive summary with KPI deltas, top risks, and recommended actions from operational and analytics data.`,
+  tags: ['gallery', 'weekly', 'executive', 'briefing'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'lightbulb',
+  emoji: '📊',
+  color: '#1F883D',
+  suggestions: [
+    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to produce a weekly executive briefing with trends, risks, and actions.',
+  ],
+  welcomeMessage:
+    'Hi! I can help with weekly executive briefing. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Weekly Executive Briefing. Objective: Generate a weekly executive summary with KPI deltas, top risks, and recommended actions from operational and analytics data. Use the runtime tools and notebook execution environment when needed. Keep outputs concise, structured, and decision-oriented. Provide clear reasoning and recommended next actions.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps, validate intermediate results, and summarize outcomes after each run. Prefer efficient, reproducible code paths.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'generate-weekly-reports',
   version: '0.0.1',
@@ -2847,7 +5305,7 @@ export const GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Aggregates data across marketing, sales, and operations departments. Generates structured weekly reports with charts, KPI summaries, trend analysis, and executive-level takeaways.`,
   tags: ['marketing', 'reports', 'weekly', 'analytics', 'automation'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -2963,7 +5421,7 @@ export const GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   description: `Manages GitHub repositories, issues, and pull requests with email notification capabilities.`,
   tags: ['github', 'git', 'code', 'email'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -3042,7 +5500,7 @@ export const INFORMATION_ROUTING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Routes information between Google Drive and other services, managing document workflows and information sharing.`,
   tags: ['workflow', 'communication', 'gdrive'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-6-v1',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['google-workspace:0.0.1'],
     MCP_SERVER_MAP['github:0.0.1'],
@@ -3121,7 +5579,7 @@ export const MONITOR_SALES_KPIS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.`,
   tags: ['support', 'chatbot', 'sales', 'kpi', 'monitoring'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -3251,7 +5709,7 @@ export const OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1: Agentspec = {
     'margins',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3387,7 +5845,7 @@ export const OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1: Agentspec = {
     'sustainability',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3509,7 +5967,7 @@ export const PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1: Agentspec = {
     'transparency',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3639,7 +6097,7 @@ export const PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1: Agentspec = {
     'compliance',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3771,7 +6229,7 @@ export const PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1: Agentspec = {
     'reconciliation',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -3877,7 +6335,7 @@ export const SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Discovers, acquires, and analyzes geospatial datasets using Earthdata and Eurus tools. Produces map-ready summaries, anomaly diagnostics, and reproducible analysis artifacts for environmental and climate use cases.`,
   tags: ['geospatial', 'climate', 'earth-observation', 'analytics'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['eurus:0.0.1'],
@@ -3948,7 +6406,7 @@ export const SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1: Agentspec = {
     'productivity',
   ],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -4048,7 +6506,7 @@ export const SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.`,
   tags: ['sales', 'crm', 'data-sync', 'deduplication'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -4158,12 +6616,20 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'end-of-month-sales-performance':
     END_OF_MONTH_SALES_PERFORMANCE_AGENTSPEC_0_0_1,
   'eval-experiment-runner': EVAL_EXPERIMENT_RUNNER_AGENTSPEC_0_0_1,
+  'example-a2ui-agent': EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
+  'example-agentic-chat': EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
+  'example-agentic-generative-ui':
+    EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1,
+  'example-backend-tool-rendering':
+    EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1,
   'example-codemode': EXAMPLE_CODEMODE_AGENTSPEC_0_0_1,
   'example-evals-nocodemode': EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1,
   'example-evals': EXAMPLE_EVALS_AGENTSPEC_0_0_1,
   'example-full': EXAMPLE_FULL_AGENTSPEC_0_0_1,
   'example-guardrails': EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1,
+  'example-haiku-generative-ui': EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1,
   'example-hooks': EXAMPLE_HOOKS_AGENTSPEC_0_0_1,
+  'example-human-in-the-loop': EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1,
   'example-inference': EXAMPLE_INFERENCE_AGENTSPEC_0_0_1,
   'example-mcp': EXAMPLE_MCP_AGENTSPEC_0_0_1,
   'example-memory': EXAMPLE_MEMORY_AGENTSPEC_0_0_1,
@@ -4174,13 +6640,82 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'example-one-trigger': EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1,
   'example-otel': EXAMPLE_OTEL_AGENTSPEC_0_0_1,
   'example-parameters': EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1,
+  'example-shared-state': EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1,
   'example-simple': EXAMPLE_SIMPLE_AGENTSPEC_0_0_1,
   'example-skills': EXAMPLE_SKILLS_AGENTSPEC_0_0_1,
   'example-subagents': EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1,
   'example-tool-approvals': EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1,
+  'example-tool-based-generative-ui':
+    EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1,
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENTSPEC_0_0_1,
   financial: FINANCIAL_AGENTSPEC_0_0_1,
+  'gallery-agent-critic-loop-for-analysis':
+    GALLERY_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1,
+  'gallery-agent-reviews-sql': GALLERY_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1,
+  'gallery-ai-creates-dashboards':
+    GALLERY_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1,
+  'gallery-ai-explains-notebook-output':
+    GALLERY_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1,
+  'gallery-ai-writes-pandas-code':
+    GALLERY_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1,
+  'gallery-analyze-excel-spreadsheet':
+    GALLERY_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1,
+  'gallery-build-notebook-with-one-prompt':
+    GALLERY_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1,
+  'gallery-compare-two-spreadsheets':
+    GALLERY_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1,
+  'gallery-compliance-report-draft':
+    GALLERY_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1,
+  'gallery-cost-comparison-report':
+    GALLERY_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1,
+  'gallery-customer-churn-analysis':
+    GALLERY_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1,
+  'gallery-document-qa': GALLERY_DOCUMENT_QA_AGENTSPEC_0_0_1,
+  'gallery-explore-sql-database': GALLERY_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1,
+  'gallery-extract-kpis-from-quarterly-pdf':
+    GALLERY_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1,
+  'gallery-financial-reconciliation':
+    GALLERY_FINANCIAL_RECONCILIATION_AGENTSPEC_0_0_1,
+  'gallery-five-ai-agents-analyze-csv':
+    GALLERY_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1,
+  'gallery-five-notebooks-in-parallel':
+    GALLERY_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1,
+  'gallery-gpt-and-claude-collaborate':
+    GALLERY_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1,
+  'gallery-human-approved-automation':
+    GALLERY_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1,
+  'gallery-insurance-claims-review':
+    GALLERY_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1,
+  'gallery-inventory-demand-planning':
+    GALLERY_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1,
+  'gallery-long-running-agent-overnight':
+    GALLERY_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1,
+  'gallery-marketing-analytics': GALLERY_MARKETING_ANALYTICS_AGENTSPEC_0_0_1,
+  'gallery-medical-research-review':
+    GALLERY_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1,
+  'gallery-multi-agent-data-cleaning':
+    GALLERY_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1,
+  'gallery-multi-agent-root-cause-analysis':
+    GALLERY_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1,
+  'gallery-optimize-sql-query-performance':
+    GALLERY_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1,
+  'gallery-replace-excel-pivot-work':
+    GALLERY_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1,
+  'gallery-resumable-etl-with-checkpoints':
+    GALLERY_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1,
+  'gallery-run-python-safely-in-the-cloud':
+    GALLERY_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1,
+  'gallery-sales-forecasting': GALLERY_SALES_FORECASTING_AGENTSPEC_0_0_1,
+  'gallery-sales-pipeline-board-report':
+    GALLERY_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1,
+  'gallery-scheduled-nightly-data-quality-checks':
+    GALLERY_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1,
+  'gallery-scientific-notebook-assistant':
+    GALLERY_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1,
+  'gallery-summarize-10-pdfs': GALLERY_SUMMARIZE_10_PDFS_AGENTSPEC_0_0_1,
+  'gallery-weekly-executive-briefing':
+    GALLERY_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1,
   'generate-weekly-reports': GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1,
   'github-agent': GITHUB_AGENT_SPEC_0_0_1,
   'information-routing': INFORMATION_ROUTING_AGENTSPEC_0_0_1,

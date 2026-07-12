@@ -68,7 +68,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Install TypeScript dependencies
-        run: npm install --workspaces
+        run: npm install --workspaces --include-workspace-root --no-audit --no-fund
 
       - name: Build TypeScript
         run: npm run build

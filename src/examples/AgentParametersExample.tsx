@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { Button, Heading, Label, Spinner, Text } from '@primer/react';
 import { FileIcon } from '@primer/octicons-react';
@@ -13,6 +13,7 @@ import { Form, yamlSchemaToJsonSchema } from '@datalayer/primer-rjsf';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
@@ -139,14 +140,29 @@ function hasRequiredValues(
 
 const AgentParametersExample: React.FC = () => {
   const baseUrl = useExampleAgentRuntimesUrl();
+  const [agentName] = useState(() => uniqueAgentId(AGENT_NAME));
   const [showSchemaForm, setShowSchemaForm] = useState(false);
   const [isSchemaLoading, setIsSchemaLoading] = useState(false);
   const [schema, setSchema] = useState<RJSFSchema | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
-  const [agentId, setAgentId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formTouched, setFormTouched] = useState(false);
+
+  const {
+    agentId,
+    error: runtimeError,
+    createAgent,
+  } = useExampleAgentRuntime({
+    exampleId: 'AgentParametersExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    autoCreateAgent: false,
+    agentConfig: {
+      protocol: 'vercel-ai',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
 
   const hasRequired = useMemo(
     () => hasRequiredValues(schema, formData),
@@ -195,29 +211,14 @@ const AgentParametersExample: React.FC = () => {
     setError(null);
 
     try {
-      const name = uniqueAgentId(AGENT_NAME);
-      const response = await fetch(`${baseUrl}/api/v1/agents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          agent_spec_id: AGENTSPEC_ID,
-          transport: 'vercel-ai',
+      await createAgent({
+        name: agentName,
+        protocol: 'vercel-ai',
+        agentSpecId: AGENTSPEC_ID,
+        createPayload: {
           agent_parameters: formData,
-        }),
+        },
       });
-
-      if (!response.ok) {
-        const data = await response
-          .json()
-          .catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(
-          data.detail || `Failed to create agent: ${response.status}`,
-        );
-      }
-
-      const data = await response.json();
-      setAgentId(data.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to launch agent');
     } finally {
@@ -225,18 +226,7 @@ const AgentParametersExample: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (!agentId) {
-        return;
-      }
-      void fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
-        method: 'DELETE',
-      }).catch(() => {
-        // Ignore teardown failures in example mode.
-      });
-    };
-  }, [agentId, baseUrl]);
+  const effectiveError = error || runtimeError;
 
   if (!agentId) {
     return (
@@ -358,7 +348,6 @@ const AgentParametersExample: React.FC = () => {
                 onSubmit={(_, event) => {
                   event?.preventDefault();
                   event?.stopPropagation();
-                  // Prevent implicit form submission; launching is click-only.
                 }}
                 noHtml5Validate
               />
@@ -389,7 +378,9 @@ const AgentParametersExample: React.FC = () => {
             </Text>
           )}
 
-          {error && <ErrorView error="Launch failed" detail={error} />}
+          {effectiveError && (
+            <ErrorView error="Launch failed" detail={effectiveError} />
+          )}
         </Box>
       </ThemedProvider>
     );

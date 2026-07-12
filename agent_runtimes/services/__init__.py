@@ -14,6 +14,10 @@ from .code_sandbox_manager import (
     SandboxVariant,
     get_code_sandbox_manager,
 )
+from .runtime_lifecycle import (
+    terminate_runtime_and_local_agent,
+    terminate_runtime_prefer_core,
+)
 from .runtime_tools import (
     register_agent_tools,
     tools_requiring_approval_ids,
@@ -31,4 +35,6 @@ __all__ = [
     "wire_skills_into_codemode",
     "register_agent_tools",
     "tools_requiring_approval_ids",
+    "terminate_runtime_and_local_agent",
+    "terminate_runtime_prefer_core",
 ]

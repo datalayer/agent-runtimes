@@ -16,12 +16,13 @@
  * Backend: POST /api/v1/agents  →  /api/v1/ag-ui/{agentId}/
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
@@ -32,57 +33,17 @@ const AGENT_NAME = 'simple';
 
 const AgentRuntimeChatExample: React.FC = () => {
   const baseUrl = useExampleAgentRuntimesUrl();
-  const [agentId, setAgentId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(true);
-
-  // Create the agent on mount — always create a fresh instance with a random
-  // slug so that each run starts with clean OTEL data.
-  useEffect(() => {
-    let cancelled = false;
-    const name = uniqueAgentId(AGENT_NAME);
-
-    const createAgent = async () => {
-      try {
-        const response = await fetch(`${baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name,
-            agent_spec_id: AGENTSPEC_ID,
-            transport: 'ag-ui',
-          }),
-        });
-
-        if (!response.ok) {
-          const data = await response
-            .json()
-            .catch(() => ({ detail: 'Unknown error' }));
-          throw new Error(
-            data.detail || `Failed to create agent: ${response.status}`,
-          );
-        }
-
-        const data = await response.json();
-        if (!cancelled) {
-          setAgentId(data.id);
-          setIsCreating(false);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : 'Failed to create agent',
-          );
-          setIsCreating(false);
-        }
-      }
-    };
-
-    createAgent();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseUrl]);
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId, error, status, isReady } = useExampleAgentRuntime({
+    exampleId: 'ChatExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const isCreating = !isReady && status !== 'error';
 
   // Loading state while agent is being created
   if (isCreating) {

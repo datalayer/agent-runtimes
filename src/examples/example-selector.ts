@@ -81,9 +81,9 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['home', 'navigation'],
   ),
   makeEntry(
-    'A2UiComponentGalleryExample',
-    () => import('./A2UiComponentGalleryExample'),
-    'Gallery showcasing A2UI component patterns.',
+    'A2UiComponentsGalleryExample',
+    () => import('./A2UiComponentsGalleryExample'),
+    'Consolidated A2UI components gallery with Primer-themed color modes.',
   ),
   makeEntry(
     'A2UiContactCardExample',
@@ -99,6 +99,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'A2UiViewerExample',
     () => import('./A2UiViewerExample'),
     'A2UI viewer integration example.',
+  ),
+  makeEntry(
+    'A2UiAgentExample',
+    () => import('./A2UiAgentExample'),
+    'A2UI Agent with built-in chat component and Python A2UI extension surface.',
   ),
   makeEntry(
     'AgUiAgenticExample',

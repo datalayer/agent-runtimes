@@ -12,18 +12,17 @@
  *
  * This is the simplest AG-UI example showing basic chat with tool use.
  *
- * Backend: /api/v1/examples/agentic_chat/
+ * Backend: managed AG-UI agent runtime (agentspec: example-agentic-chat)
  */
 
-import React from 'react';
-import { Text } from '@primer/react';
+import React, { useMemo } from 'react';
+import { Spinner, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
-
-// AG-UI endpoint for agentic chat example
-const AGENTIC_CHAT_ENDPOINT =
-  'http://localhost:8765/api/v1/examples/agentic_chat/';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 /**
  * AgUiAgenticExample Component
@@ -36,7 +35,26 @@ const AGENTIC_CHAT_ENDPOINT =
  * - Tool calling (current_time tool)
  * - Floating popup interface
  */
+const AGENT_NAME = 'ag-ui-agentic';
+const AGENTSPEC_ID = 'example-agentic-chat';
+
 const AgUiAgenticExample: React.FC = () => {
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId, status, error, isReady } = useExampleAgentRuntime({
+    exampleId: 'AgUiAgenticExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+
+  const agenticChatEndpoint =
+    agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
+  const isLoading = !isReady && status !== 'error';
+
   return (
     <ThemedProvider>
       <Box
@@ -72,8 +90,42 @@ const AgUiAgenticExample: React.FC = () => {
             }}
           >
             Click the chat button in the bottom-right corner to start a
-            conversation with an AI agent that can use tools.
+            conversation with an AI agent. The runtime target (local or cloud)
+            follows your selection in the examples header.
           </Text>
+
+          {isLoading && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                marginBottom: 3,
+              }}
+            >
+              <Spinner size="small" />
+              <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                Starting managed agent runtime...
+              </Text>
+            </Box>
+          )}
+
+          {error && (
+            <Box
+              sx={{
+                padding: 3,
+                marginBottom: 3,
+                backgroundColor: 'danger.subtle',
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'danger.muted',
+              }}
+            >
+              <Text sx={{ color: 'danger.fg', fontSize: 1 }}>
+                Failed to initialize managed agent runtime: {error}
+              </Text>
+            </Box>
+          )}
 
           <Box
             sx={{
@@ -88,16 +140,16 @@ const AgUiAgenticExample: React.FC = () => {
               as="h2"
               sx={{ fontSize: 2, fontWeight: 'semibold', marginBottom: 2 }}
             >
-              Available Tools
+              Runtime Mode
             </Text>
             <Box as="ul" sx={{ paddingLeft: 3 }}>
               <Box as="li" sx={{ marginBottom: 1 }}>
                 <Text sx={{ fontFamily: 'mono', fontSize: 1 }}>
-                  current_time()
+                  managed runtime + managed agent
                 </Text>
                 <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
                   {' '}
-                  - Returns the current date and time
+                  - Launches on cloud when the header target is set to cloud
                 </Text>
               </Box>
             </Box>
@@ -109,7 +161,7 @@ const AgUiAgenticExample: React.FC = () => {
                 marginTop: 3,
               }}
             >
-              Try asking: "What time is it?" or "What's the current date?"
+              Try asking: "hi" or "what can you help with?"
             </Text>
           </Box>
 
@@ -144,24 +196,26 @@ const AgUiAgenticExample: React.FC = () => {
         </Box>
 
         {/* Floating chat */}
-        <ChatFloating
-          protocol="ag-ui"
-          endpoint={AGENTIC_CHAT_ENDPOINT}
-          title="Agentic Chat"
-          description="Chat with an AI agent that can use tools like getting the current time."
-          position="bottom-right"
-          defaultOpen={true}
-          suggestions={[
-            {
-              title: 'What time is it?',
-              message: 'What is the current time?',
-            },
-            {
-              title: "Today's date",
-              message: "What's the current date?",
-            },
-          ]}
-        />
+        {agenticChatEndpoint && (
+          <ChatFloating
+            protocol="ag-ui"
+            endpoint={agenticChatEndpoint}
+            title="Agentic Chat"
+            description="Chat with a managed AG-UI agent runtime."
+            position="bottom-right"
+            defaultOpen={true}
+            suggestions={[
+              {
+                title: 'What time is it?',
+                message: 'What is the current time?',
+              },
+              {
+                title: "Today's date",
+                message: "What's the current date?",
+              },
+            ]}
+          />
+        )}
       </Box>
     </ThemedProvider>
   );

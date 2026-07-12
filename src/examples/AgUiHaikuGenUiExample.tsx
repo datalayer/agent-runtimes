@@ -14,12 +14,11 @@
  * This follows the AG-UI Dojo pattern where tool results are rendered
  * as UI components in both locations.
  *
- * Backend: /api/v1/examples/haiku_generative_ui/
+ * Backend: managed AG-UI agent runtime (agentspec: example-haiku-generative-ui)
  */
-
 import React, {
   useState,
-  useCallback,
+  useMemo,
   useRef,
   useImperativeHandle,
   forwardRef,
@@ -33,11 +32,14 @@ import {
   HaikuDisplay,
   type HaikuResult,
 } from './components/haiku';
-import type { ToolCallRenderContext } from '../types';
-
-// AG-UI endpoint for haiku generative UI example
-const HAIKU_ENDPOINT =
-  'http://localhost:8765/api/v1/examples/haiku_generative_ui/';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import {
+  useSpecRenderToolResult,
+  specRendererClassName,
+  type SpecRenderer,
+} from './hooks/useSpecRenderToolResult';
 
 /**
  * Ref handle for haiku state synchronization between chat and main display
@@ -100,9 +102,24 @@ HaikuDisplayWithRef.displayName = 'HaikuDisplayWithRef';
  * - Dynamic gradient backgrounds
  * - Japanese/English text rendering
  */
+const AGENT_NAME = 'ag-ui-haiku';
+const AGENTSPEC_ID = 'example-haiku-generative-ui';
+
 const AgUiHaikuGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
-
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId } = useExampleAgentRuntime({
+    exampleId: 'AgUiHaikuGenUiExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const haikuGenUiEndpoint =
+    agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
   // Ref to the main display for adding haikus
   const displayRef = useRef<HaikuDisplayHandle>(null);
 
@@ -110,56 +127,61 @@ const AgUiHaikuGenUiExample: React.FC = () => {
   const processedToolCallIds = useRef<Set<string>>(new Set());
 
   /**
-   * Render function for tool results - renders haiku cards inline in chat
-   * and also updates the main display
+   * Renderers keyed by the spec's renderer id. The tool name to match and the
+   * CSS file to load come from the agent spec, not from this file.
    */
-  const renderHaikuToolResult = useCallback(
-    (context: ToolCallRenderContext) => {
-      // Only render for the generate_haiku tool
-      if (context.toolName !== 'generate_haiku') {
-        return null;
-      }
+  const haikuRenderers = useMemo<Record<string, SpecRenderer>>(
+    () => ({
+      'haiku-card': (context, binding) => {
+        // Extract haiku data from args (the tool parameters are what we render)
+        const args = context.args as {
+          japanese?: string[];
+          english?: string[];
+          gradient?: string;
+        };
 
-      // Extract haiku data from args (the tool's parameters are what we render)
-      const args = context.args as {
-        japanese?: string[];
-        english?: string[];
-        gradient?: string;
-      };
+        // Build haiku result from args
+        const haiku: HaikuResult | undefined =
+          args.japanese && args.english
+            ? {
+                japanese: args.japanese,
+                english: args.english,
+                gradient:
+                  args.gradient ||
+                  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              }
+            : undefined;
 
-      // Build haiku result from args
-      const haiku: HaikuResult | undefined =
-        args.japanese && args.english
-          ? {
-              japanese: args.japanese,
-              english: args.english,
-              gradient:
-                args.gradient ||
-                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            }
-          : undefined;
+        // When tool completes successfully, add to main display (deduplicated)
+        if (
+          context.status === 'complete' &&
+          haiku &&
+          displayRef.current &&
+          context.toolCallId &&
+          !processedToolCallIds.current.has(context.toolCallId)
+        ) {
+          processedToolCallIds.current.add(context.toolCallId);
+          displayRef.current.addHaiku(haiku);
+        }
 
-      // When tool completes successfully, add to main display (deduplicated)
-      if (
-        context.status === 'complete' &&
-        haiku &&
-        displayRef.current &&
-        context.toolCallId &&
-        !processedToolCallIds.current.has(context.toolCallId)
-      ) {
-        processedToolCallIds.current.add(context.toolCallId);
-        displayRef.current.addHaiku(haiku);
-      }
-
-      return (
-        <InlineHaikuCard
-          haiku={haiku}
-          status={context.status}
-          error={context.error}
-        />
-      );
-    },
+        return (
+          <div className={specRendererClassName(binding)}>
+            <InlineHaikuCard
+              haiku={haiku}
+              status={context.status}
+              error={context.error}
+            />
+          </div>
+        );
+      },
+    }),
     [],
+  );
+
+  // Tool name to match and CSS file to load are read from the agent spec.
+  const renderToolResult = useSpecRenderToolResult(
+    AGENTSPEC_ID,
+    haikuRenderers,
   );
 
   return (
@@ -280,16 +302,20 @@ const AgUiHaikuGenUiExample: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Floating chat with haiku tool rendering */}
+        {/* Floating chat with haiku tool rendering. Rendered immediately with a
+            launching state so the chat appears instantly while the managed
+            agent runtime is still starting. */}
         <ChatFloating
           protocol="ag-ui"
-          endpoint={HAIKU_ENDPOINT}
+          endpoint={haikuGenUiEndpoint}
+          launching={!haikuGenUiEndpoint}
+          launchingMessage="Starting the haiku agent runtime…"
           title="Haiku Generator"
           description="Ask me to write haiku poetry about any topic!"
           position="bottom-right"
           brandColor={brandColor}
           defaultOpen={true}
-          renderToolResult={renderHaikuToolResult}
+          renderToolResult={renderToolResult}
           hideMessagesAfterToolUI={true}
           suggestions={[
             {

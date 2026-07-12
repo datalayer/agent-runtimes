@@ -46,6 +46,7 @@ import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 
@@ -53,8 +54,6 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'outputs-example-agent';
 const AGENTSPEC_ID = 'demo-outputs';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -396,7 +395,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
   const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const authFetch = useCallback(
@@ -533,7 +532,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -570,7 +569,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -817,7 +816,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
 // ─── Sync token to core IAM store ──────────────────────────────────────────
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -838,7 +837,7 @@ const AgentOutputsExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

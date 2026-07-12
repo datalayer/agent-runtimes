@@ -22,7 +22,7 @@ class ConfigHandler(ExtensionHandlerMixin, APIHandler):
         """Return the configuration of the server extension."""
         settings = self.settings["datalayer"]
         configuration = dict(
-            run_url=settings.run_url,
+            datalayer_url=settings.datalayer_url,
             launcher={
                 "category": settings.launcher.category,
                 "name": settings.launcher.name,

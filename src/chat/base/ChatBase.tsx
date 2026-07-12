@@ -26,6 +26,9 @@ import React, {
 } from 'react';
 import { Text, Spinner } from '@primer/react';
 import type { KernelMessage } from '@jupyterlab/services';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
+import type { INotebookContent } from '@jupyterlab/nbformat';
+import { notebookStore } from '@datalayer/jupyter-react';
 import {
   Box,
   setupPrimerPortals,
@@ -88,6 +91,8 @@ import {
   ToolApprovalDialog,
   type PendingApproval,
 } from '../tools';
+import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -487,6 +492,9 @@ function ChatBaseInner({
   showToolsMenu = true,
   showSkillsMenu = true,
   disableInputPrompt = false,
+  overlay,
+  launching = false,
+  launchingMessage,
   codemodeEnabled = false,
   onToggleCodemode,
   initialModel,
@@ -538,7 +546,10 @@ function ChatBaseInner({
   submitOnSuggestionClick = true,
   hideMessagesAfterToolUI = false,
   focusTrigger,
-  frontendTools,
+  frontendTools: frontendToolsProp,
+  enableEphemeralNotebook = false,
+  initialEphemeralNotebookOpen = true,
+  ephemeralNotebookToolbar,
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
@@ -578,12 +589,96 @@ function ChatBaseInner({
       ? (protocolRaw as ProtocolConfig)
       : undefined;
   const configuredAiAgentsBaseUrl = useCoreStore(
-    (s: { configuration?: { aiagentsRunUrl?: string } }) =>
-      s.configuration?.aiagentsRunUrl,
+    (s: { configuration?: { aiAgentsUrl?: string } }) =>
+      s.configuration?.aiAgentsUrl,
   );
   const activeAgentId = protocolConfig?.agentId || runtimeId;
   const historyScopeId = runtimeId || activeAgentId;
   const aiAgentsAuthToken = protocolConfig?.authToken;
+
+  // ── Ephemeral notebook (in-memory) ──────────────────────────────────────
+  // A stable notebook id scoped to this chat instance. Must match the id used
+  // by `useNotebookTools` so the agent's notebook tools drive this notebook.
+  const generatedNotebookIdRef = useRef(
+    `ephemeral-notebook-${Math.random().toString(36).slice(2, 10)}`,
+  );
+  // Scope the ephemeral notebook to the STABLE runtime identity first (the pod
+  // name / route id that stays constant across navigation), falling back to the
+  // agent id. This keeps the persisted notebook model addressable by the same
+  // key when navigating away from and back to the same runtime page.
+  const notebookScopeId = runtimeId || protocolConfig?.agentId || activeAgentId;
+  const ephemeralNotebookId = notebookScopeId
+    ? `ephemeral-notebook-${notebookScopeId}`
+    : generatedNotebookIdRef.current;
+  const persistedEphemeralNbformat = useAgentRuntimeStore(s =>
+    s.getEphemeralNotebookModel(ephemeralNotebookId),
+  );
+  const setEphemeralNotebookModel = useAgentRuntimeStore(
+    s => s.setEphemeralNotebookModel,
+  );
+  const handleEphemeralNotebookChange = useCallback(
+    (model: INotebookContent) => {
+      setEphemeralNotebookModel(ephemeralNotebookId, model);
+    },
+    [ephemeralNotebookId, setEphemeralNotebookModel],
+  );
+
+  const [ephemeralNotebookOpen, setEphemeralNotebookOpen] = useState(
+    enableEphemeralNotebook && initialEphemeralNotebookOpen,
+  );
+  const notebookVisible = enableEphemeralNotebook && ephemeralNotebookOpen;
+
+  // Track the ephemeral notebook's live kernel connection so the chat header
+  // renders the same rich `KernelIndicator` details (kernel id, client id,
+  // server/ws url, status) as the notebook editor. Without this the header
+  // falls back to the sandbox-status placeholder ("disconnected", "no-kernel").
+  const [notebookKernel, setNotebookKernel] =
+    useState<IKernelConnection | null>(null);
+  useEffect(() => {
+    if (!notebookVisible) {
+      setNotebookKernel(null);
+      return;
+    }
+    const readKernel = (): IKernelConnection | null => {
+      const notebook = notebookStore
+        .getState()
+        .selectNotebook(ephemeralNotebookId);
+      const adapter = notebook?.adapter as
+        { kernel?: IKernelConnection | null } | undefined;
+      return adapter?.kernel ?? null;
+    };
+    const sync = () => {
+      const next = readKernel();
+      setNotebookKernel(prev => (prev?.id === next?.id ? prev : next));
+    };
+    sync();
+    // Poll: the kernel connection appears asynchronously after the notebook
+    // mounts and can change on restart. Also react to store mutations.
+    const intervalId = window.setInterval(sync, 750);
+    const unsubscribe = notebookStore.subscribe(sync);
+    return () => {
+      window.clearInterval(intervalId);
+      unsubscribe();
+    };
+  }, [notebookVisible, ephemeralNotebookId]);
+  // When the notebook is shown, the chat can be docked as a sidebar (default)
+  // or floated over the notebook, driven by the header view-mode toggle.
+  const notebookChatFloating =
+    notebookVisible &&
+    (chatViewMode === 'floating' || chatViewMode === 'floating-small');
+
+  // Notebook frontend tools are always created (hooks must be unconditional)
+  // but only merged into the tools sent to the agent while the notebook is
+  // visible, so the agent can manipulate the live notebook cells.
+  const notebookTools = useNotebookTools(ephemeralNotebookId);
+  const frontendTools = useMemo(
+    () =>
+      notebookVisible
+        ? [...(frontendToolsProp || []), ...notebookTools]
+        : frontendToolsProp,
+    [notebookVisible, frontendToolsProp, notebookTools],
+  );
+
   const aiAgentsBaseUrl = useMemo(
     () =>
       normalizeAiAgentsBaseUrl(
@@ -1158,8 +1253,10 @@ function ChatBaseInner({
   const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
   const [adapterReady, setAdapterReady] = useState(false);
-  // Guard so the pending prompt is sent at most once
-  const pendingPromptSentRef = useRef(false);
+  // Guard so each distinct pending prompt is sent at most once. Stores the
+  // last-sent key (not a boolean) so that changing `pendingPrompt` to a new
+  // value — e.g. re-submitting an interactive surface — triggers a fresh send.
+  const pendingPromptSentRef = useRef<string | null>(null);
   const pendingPromptKey =
     pendingPrompt &&
     [
@@ -2361,8 +2458,7 @@ function ChatBaseInner({
                   Array.isArray(existingToolCall.args.steps);
 
                 const resultData = event.toolResult.result as
-                  | Record<string, unknown>
-                  | undefined;
+                  Record<string, unknown> | undefined;
                 let executionError: string | undefined;
                 let codeError: ToolCallMessage['codeError'] | undefined;
                 let exitCode: number | null | undefined;
@@ -2860,14 +2956,18 @@ function ChatBaseInner({
 
   // Send pending prompt once history loaded and adapter/handler available
   useEffect(() => {
-    if (!pendingPrompt || pendingPromptSentRef.current) return;
+    if (!pendingPrompt) return;
+    // Already handled this exact prompt in the current component instance.
+    if (pendingPromptKey && pendingPromptSentRef.current === pendingPromptKey) {
+      return;
+    }
     if (pendingPromptKey && sentPendingPromptKeys.has(pendingPromptKey)) {
-      pendingPromptSentRef.current = true;
+      pendingPromptSentRef.current = pendingPromptKey;
       return;
     }
     if (!historyLoaded) return;
     if (!adapterReady && !onSendMessage) return;
-    pendingPromptSentRef.current = true;
+    pendingPromptSentRef.current = pendingPromptKey ?? null;
     if (pendingPromptKey) {
       sentPendingPromptKeys.add(pendingPromptKey);
     }
@@ -3334,6 +3434,92 @@ function ChatBaseInner({
     !!configQuery.data ||
     !!skillsQuery.data;
 
+  const messagesContent = children ? (
+    children
+  ) : (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        bg: 'canvas.default',
+      }}
+    >
+      <ChatMessageList
+        displayItems={displayItems}
+        isLoading={isLoading}
+        isStreaming={isStreaming}
+        showLoadingIndicator={showLoadingIndicator}
+        hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+        avatarConfig={defaultAvatarConfig}
+        padding={padding}
+        renderToolResult={renderToolResult}
+        approvalConfig={approvalConfig}
+        messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
+        onRespond={handleRespond}
+        emptyContent={
+          <ChatEmptyState
+            emptyState={emptyState}
+            brandIcon={brandIcon}
+            description={description}
+            suggestions={suggestions}
+            submitOnSuggestionClick={submitOnSuggestionClick}
+            onSuggestionSubmit={handleSuggestionSubmit}
+            onSuggestionFill={handleSuggestionFill}
+          />
+        }
+      />
+    </Box>
+  );
+
+  const inputToolbar = showInput ? (
+    <InputToolbar
+      input={input}
+      setInput={setInput}
+      isLoading={isLoading}
+      kernelStatus={liveKernelStatus}
+      connectionConfirmed={connectionConfirmed}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      focusTrigger={focusTrigger}
+      padding={padding}
+      onSend={() => handleSend()}
+      onStop={handleStop}
+      disableInputPrompt={disableInputPrompt || !!overlay || launching}
+      showTokenUsage={showTokenUsage}
+      agentUsage={agentUsage}
+      showModelSelector={showModelSelector}
+      showToolsMenu={showToolsMenu}
+      showSkillsMenu={showSkillsMenu}
+      codemodeEnabled={codemodeEnabled}
+      onToggleCodemode={onToggleCodemode}
+      isA2AProtocol={isA2AProtocol}
+      hasConfigData={!!configQuery.data}
+      hasSkillsData={!!skillsQuery.data}
+      models={availableModels || configQuery.data?.models || []}
+      selectedModel={selectedModel}
+      onModelSelect={setSelectedModel}
+      availableTools={configQuery.data?.builtinTools || []}
+      mcpServers={filteredMcpServers}
+      enabledMcpTools={enabledMcpTools}
+      enabledMcpToolCount={getEnabledMcpToolNames().length}
+      onToggleMcpTool={toggleMcpTool}
+      onToggleAllMcpServerTools={toggleAllMcpServerTools}
+      approvedMcpTools={approvedMcpTools}
+      onToggleMcpToolApproval={toggleMcpToolApproval}
+      skills={skillsQuery.data?.skills || []}
+      skillsLoading={!!skillsQuery.isLoading}
+      enabledSkills={enabledSkills}
+      onToggleSkill={toggleSkill}
+      onToggleAllSkills={toggleAllSkills}
+      approvedSkills={approvedSkills}
+      onToggleSkillApproval={toggleSkillApproval}
+      apiBase={indicatorApiBase}
+      authToken={protocol?.authToken}
+      mcpStatusData={effectiveMcpStatusData}
+    />
+  ) : null;
+
   // ========================================================================
   // Render
   // ========================================================================
@@ -3341,6 +3527,7 @@ function ChatBaseInner({
     <Box
       className={className}
       sx={{
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -3366,7 +3553,7 @@ function ChatBaseInner({
           padding={padding}
           kernelIndicatorState={kernelIndicatorState}
           runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
-          kernel={kernel}
+          kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
           kernelEnvironmentName={kernelEnvironmentName}
           kernelCpu={kernelCpu}
           kernelMemory={kernelMemory}
@@ -3377,6 +3564,9 @@ function ChatBaseInner({
           onClear={handleClear}
           chatViewMode={chatViewMode}
           onChatViewModeChange={onChatViewModeChange}
+          showEphemeralNotebookToggle={enableEphemeralNotebook}
+          ephemeralNotebookOpen={ephemeralNotebookOpen}
+          onToggleEphemeralNotebook={setEphemeralNotebookOpen}
         />
       )}
 
@@ -3410,109 +3600,195 @@ function ChatBaseInner({
       )}
 
       {/* Messages area */}
-      <Box
-        ref={messagesContainerRef}
-        sx={{
-          flex: 1,
-          flexGrow: 1,
-          minHeight: 0,
-          overflow: 'auto',
-          bg: 'canvas.default',
-        }}
-      >
-        {children ? (
-          children
-        ) : (
+      {notebookVisible ? (
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          {/* Left: in-memory ephemeral notebook (main pane) */}
           <Box
             sx={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
               display: 'flex',
               flexDirection: 'column',
+              overflow: 'hidden',
+              ...(notebookChatFloating
+                ? null
+                : { borderRight: '1px solid', borderColor: 'border.default' }),
+            }}
+          >
+            <EphemeralNotebook
+              notebookId={ephemeralNotebookId}
+              runtimePodName={runtimeId || activeAgentId}
+              nbformat={persistedEphemeralNbformat ?? undefined}
+              onNbformatChange={handleEphemeralNotebookChange}
+              toolbarComponent={ephemeralNotebookToolbar}
+            />
+          </Box>
+
+          {/* Right: chat — docked as a sidebar, or floating over the notebook
+              depending on the selected chat view mode. */}
+          <Box
+            sx={
+              notebookChatFloating
+                ? {
+                    position: 'absolute',
+                    right: 16,
+                    width: chatViewMode === 'floating-small' ? 360 : 440,
+                    maxWidth: 'calc(100% - 32px)',
+                    ...(chatViewMode === 'floating-small'
+                      ? { bottom: 16, height: '62%' }
+                      : { top: 16, bottom: 16 }),
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    bg: 'canvas.default',
+                    border: '1px solid',
+                    borderColor: 'border.default',
+                    borderRadius: 2,
+                    boxShadow: 'shadow.large',
+                    zIndex: 5,
+                  }
+                : {
+                    flexShrink: 0,
+                    width: 440,
+                    minWidth: 320,
+                    maxWidth: '48%',
+                    minHeight: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    bg: 'canvas.default',
+                  }
+            }
+          >
+            <Box
+              ref={messagesContainerRef}
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflow: 'auto',
+                bg: 'canvas.default',
+              }}
+            >
+              {messagesContent}
+            </Box>
+            {footerContent}
+            {inputToolbar}
+          </Box>
+        </Box>
+      ) : (
+        <>
+          <Box
+            ref={messagesContainerRef}
+            sx={{
+              flex: 1,
+              flexGrow: 1,
               minHeight: 0,
+              overflow: 'auto',
               bg: 'canvas.default',
             }}
           >
-            <ChatMessageList
-              displayItems={displayItems}
-              isLoading={isLoading}
-              isStreaming={isStreaming}
-              showLoadingIndicator={showLoadingIndicator}
-              hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-              avatarConfig={defaultAvatarConfig}
-              padding={padding}
-              renderToolResult={renderToolResult}
-              approvalConfig={approvalConfig}
-              messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
-              onRespond={handleRespond}
-              emptyContent={
-                <ChatEmptyState
-                  emptyState={emptyState}
-                  brandIcon={brandIcon}
-                  description={description}
-                  suggestions={suggestions}
-                  submitOnSuggestionClick={submitOnSuggestionClick}
-                  onSuggestionSubmit={handleSuggestionSubmit}
-                  onSuggestionFill={handleSuggestionFill}
-                />
-              }
-            />
+            {messagesContent}
           </Box>
-        )}
-      </Box>
 
-      {/* Footer content */}
-      {footerContent}
+          {/* Footer content */}
+          {footerContent}
 
-      {/* Input */}
-      {showInput && (
-        <InputToolbar
-          input={input}
-          setInput={setInput}
-          isLoading={isLoading}
-          kernelStatus={liveKernelStatus}
-          connectionConfirmed={connectionConfirmed}
-          placeholder={placeholder}
-          autoFocus={autoFocus}
-          focusTrigger={focusTrigger}
-          padding={padding}
-          onSend={() => handleSend()}
-          onStop={handleStop}
-          disableInputPrompt={disableInputPrompt}
-          showTokenUsage={showTokenUsage}
-          agentUsage={agentUsage}
-          showModelSelector={showModelSelector}
-          showToolsMenu={showToolsMenu}
-          showSkillsMenu={showSkillsMenu}
-          codemodeEnabled={codemodeEnabled}
-          onToggleCodemode={onToggleCodemode}
-          isA2AProtocol={isA2AProtocol}
-          hasConfigData={!!configQuery.data}
-          hasSkillsData={!!skillsQuery.data}
-          models={availableModels || configQuery.data?.models || []}
-          selectedModel={selectedModel}
-          onModelSelect={setSelectedModel}
-          availableTools={configQuery.data?.builtinTools || []}
-          mcpServers={filteredMcpServers}
-          enabledMcpTools={enabledMcpTools}
-          enabledMcpToolCount={getEnabledMcpToolNames().length}
-          onToggleMcpTool={toggleMcpTool}
-          onToggleAllMcpServerTools={toggleAllMcpServerTools}
-          approvedMcpTools={approvedMcpTools}
-          onToggleMcpToolApproval={toggleMcpToolApproval}
-          skills={skillsQuery.data?.skills || []}
-          skillsLoading={!!skillsQuery.isLoading}
-          enabledSkills={enabledSkills}
-          onToggleSkill={toggleSkill}
-          onToggleAllSkills={toggleAllSkills}
-          approvedSkills={approvedSkills}
-          onToggleSkillApproval={toggleSkillApproval}
-          apiBase={indicatorApiBase}
-          authToken={protocol?.authToken}
-          mcpStatusData={effectiveMcpStatusData}
-        />
+          {/* Input */}
+          {inputToolbar}
+        </>
       )}
 
       {/* Powered by tag */}
       {showPoweredBy && <PoweredByTag {...poweredByProps} />}
+
+      {/* Overlay (e.g. sign-in gate for anonymous users). Rendered above the
+          chat surface with a translucent backdrop so the (disabled) chat
+          header, controls, and input stay visible behind it. The input and
+          selectors are force-disabled while an overlay is set. */}
+      {overlay && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 3,
+            overflow: 'auto',
+          }}
+        >
+          {/* Translucent dim layer (kept separate so the card stays opaque). */}
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              bg: 'canvas.default',
+              opacity: 0.4,
+              backdropFilter: 'blur(1px)',
+            }}
+          />
+          {/* Foreground gate content (opaque, above the dim layer). */}
+          <Box sx={{ position: 'relative', zIndex: 1, maxWidth: '100%' }}>
+            {overlay}
+          </Box>
+        </Box>
+      )}
+
+      {/* Launching overlay — shown while the agent runtime is still starting.
+          Keeps the plain chat shell visible (header, disabled input, disabled
+          controls) with a centered spinner so the view appears immediately
+          when the agent begins to be created. */}
+      {launching && !overlay && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 15,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 3,
+          }}
+        >
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              bg: 'canvas.default',
+              opacity: 0.35,
+              backdropFilter: 'blur(1px)',
+            }}
+          />
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 3,
+            }}
+          >
+            <Spinner size="large" />
+            <Text sx={{ color: 'fg.muted' }}>
+              {launchingMessage || 'Launching your agent…'}
+            </Text>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

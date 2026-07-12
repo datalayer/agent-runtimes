@@ -62,6 +62,87 @@ Agent Runtimes solves the complexity of deploying AI agents by providing:
 - 💾 **Persistence**: DBOS support for durable execution
 - 🔒 **Context Optimization**: LLM context management
 
+## Runtime, Snapshot, and Evals Workflows
+
+The runtime-oriented examples and CLI workflows migrated from `datalayer-core` now live here.
+
+### Python Runtime Quickstart
+
+```python
+from agent_runtimes.client import RuntimeClient
+
+client = RuntimeClient()
+
+# Execute code in a managed runtime
+with client.create_runtime() as runtime:
+    response = runtime.execute("print('Hello from Datalayer!')")
+    print(response.stdout)
+```
+
+### Runtime and Snapshot CLI
+
+```bash
+# List available runtimes
+datalayer runtime list
+
+# Create a new runtime
+datalayer runtime create ai-env --given-name my-runtime-123
+
+# Execute a script in a runtime
+datalayer runtime exec my-script.py --agent <agent-id>
+
+# Create a snapshot from a runtime but do not terminate the runtime
+datalayer snapshots create <pod-name> my-snapshot 'AI work!' False
+```
+
+### Subscription and Credits CLI
+
+```bash
+# End-user billing view
+datalayer subscriptions show
+datalayer subscriptions available
+datalayer subscriptions move
+datalayer subscriptions topups
+datalayer subscriptions dry-run
+
+# Organization and team credits visibility
+datalayer usage org-overview --organization-uid <org_uid>
+datalayer usage team-overview --team-uid <team_uid>
+
+# Monitoring-driven credit management
+datalayer usage org-monitor --organization-uid <org_uid> --window-hours 24
+datalayer usage team-monitor --team-uid <team_uid> --window-hours 24
+
+# Credits transfer operations (owners/admins)
+datalayer usage org-allocate-team --organization-uid <org_uid> --team-uid <team_uid> --amount 50
+datalayer usage org-revoke-team --organization-uid <org_uid> --team-uid <team_uid> --amount 20
+datalayer usage team-allocate-member --team-uid <team_uid> --member-uid <member_uid> --amount 15
+datalayer usage team-revoke-member --team-uid <team_uid> --member-uid <member_uid> --amount 5
+```
+
+### Evals CLI (Multi-Agentspec)
+
+Use comma-separated agentspec ids to create one experiment per agentspec variant:
+
+```bash
+# Creates one experiment per agentspec in the list
+agent-runtimes evals experiments create my-exp \
+  --evalset-id <evalset_id> \
+  --agent-spec-ids example-evals,example-evals-nocodemode,example-custom
+```
+
+Generate a comparison report:
+
+```bash
+agent-runtimes evals report <evalset_id> --run-limit 50 --export
+```
+
+How to interpret grouped comparisons in the report:
+
+- `Within-Agentspec Pairwise Latest-Pass Deltas`: compares experiments using the same agentspec id.
+- `Cross-Agentspec Pairwise Latest-Pass Deltas`: compares experiments using different agentspec ids.
+- Pairwise sections compute all combinations for the selected experiments, not just two agentspecs.
+
 ## Examples
 
 The examples demonstrate how to use the Agent Runtimes functionality in various scenarios and frameworks.
@@ -173,7 +254,7 @@ and propagates those values to the Vite HTML placeholders.
 Override any URL on the command line:
 
 ```bash
-make examples:prod DATALAYER_RUN_URL=https://prod2.datalayer.run
+make examples:prod DATALAYER_URL=https://prod2.datalayer.run
 ```
 
 ### Running against a local `plane local` stack

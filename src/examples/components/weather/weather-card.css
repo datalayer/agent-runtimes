@@ -1,0 +1,11 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/* Loaded on demand from the agent spec's frontend_render_tools css field. */
+/* display: contents keeps the wrapper transparent so it adds no padding or
+   box around the card and preserves the card's own margins. */
+.dla-agui-render-weather-card {
+  display: contents;
+}

@@ -20,6 +20,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -45,7 +46,7 @@ import type { ChatCommonProps, ChatViewMode, ProtocolConfig } from '../types';
  */
 export interface ChatFloatingProps extends ChatCommonProps {
   /**
-   * AG-UI endpoint URL (e.g., `http://localhost:8000/api/v1/examples/agentic_chat`).
+   * AG-UI endpoint URL (e.g., `http://localhost:8000/api/v1/ag-ui/{agentId}/`).
    * When provided with useStore=false, enables AG-UI protocol mode.
    */
   endpoint?: string;
@@ -208,6 +209,8 @@ export function ChatFloating({
   onApproveApproval,
   onRejectApproval,
   panelProps,
+  launching = false,
+  launchingMessage,
 }: ChatFloatingProps) {
   // Store-based state
   const storeIsOpen = useChatOpen();
@@ -231,6 +234,12 @@ export function ChatFloating({
     'floating' | 'floating-small' | 'panel'
   >(defaultViewMode);
   const [focusTrigger, setFocusTrigger] = useState(0);
+  const [panelInFlow, setPanelInFlow] = useState(false);
+  const [panelHostRect, setPanelHostRect] = useState<{
+    top: number;
+    height: number;
+    right: number;
+  } | null>(null);
 
   // Map internal viewMode to ChatViewMode for the header toggle
   const chatViewMode: ChatViewMode =
@@ -240,9 +249,16 @@ export function ChatFloating({
   const handleChatViewModeChange = useCallback(
     (mode: ChatViewMode) => {
       if (mode === 'sidebar') {
-        // 'sidebar' means the parent should switch to a ChatSidebar layout.
-        // Notify parent and let it handle the transition.
-        onViewModeChange?.(mode);
+        // When a parent callback is provided, let it switch the host layout
+        // (e.g. swap to ChatSidebar). Otherwise, fall back to the built-in
+        // full-height side panel mode so examples still honor the sidebar
+        // selection instead of staying in floating popup mode.
+        if (onViewModeChange) {
+          onViewModeChange(mode);
+          return;
+        }
+        setViewMode('panel');
+        setFocusTrigger(prev => prev + 1);
       } else {
         // 'floating' or 'floating-small' stays within ChatFloating
         setViewMode(mode);
@@ -252,6 +268,91 @@ export function ChatFloating({
     },
     [onViewModeChange],
   );
+
+  // Detect whether the chat is mounted inside a parent that is intentionally
+  // configured for docked side panels (Notebook example lays the chat out as a
+  // flex sibling). Those hosts dock the panel in-flow. Plain content pages
+  // (AG-UI demos) instead get a fixed panel measured against the host region.
+  useLayoutEffect(() => {
+    if (viewMode !== 'panel' || isMobile) {
+      setPanelInFlow(false);
+      return;
+    }
+    const parent = popupRef.current?.parentElement;
+    if (!parent) {
+      setPanelInFlow(false);
+      return;
+    }
+    const style = window.getComputedStyle(parent);
+    const isFlexRow =
+      style.display.includes('flex') &&
+      (style.flexDirection === 'row' || style.flexDirection === 'row-reverse');
+    const isGrid = style.display.includes('grid');
+    setPanelInFlow(isFlexRow || isGrid);
+  }, [viewMode, isMobile, isOpen]);
+
+  // For fixed (non-flow) panel mode, measure the host region so the docked
+  // panel aligns to the visible content area (below any app header) at full
+  // height, and reserve horizontal space so the page content reflows to the
+  // left instead of being covered like an overlay.
+  const panelWidthPx =
+    typeof width === 'number'
+      ? width
+      : typeof width === 'string'
+        ? Number.parseInt(width, 10) || 420
+        : 420;
+
+  useLayoutEffect(() => {
+    if (isMobile || viewMode !== 'panel' || panelInFlow || !isOpen) {
+      setPanelHostRect(null);
+      return;
+    }
+    const host = popupRef.current?.parentElement;
+    if (!host) {
+      setPanelHostRect(null);
+      return;
+    }
+
+    const prevPaddingRight = host.style.paddingRight;
+    const prevBoxSizing = host.style.boxSizing;
+    const basePaddingRight = window.getComputedStyle(host).paddingRight;
+    host.style.boxSizing = 'border-box';
+    host.style.paddingRight = `calc(${basePaddingRight} + ${panelWidthPx}px)`;
+
+    const measure = () => {
+      const rect = host.getBoundingClientRect();
+      setPanelHostRect(prev => {
+        const next = {
+          top: rect.top,
+          height: rect.height,
+          right: Math.max(0, window.innerWidth - rect.right),
+        };
+        if (
+          prev &&
+          Math.abs(prev.top - next.top) < 1 &&
+          Math.abs(prev.height - next.height) < 1 &&
+          Math.abs(prev.right - next.right) < 1
+        ) {
+          return prev;
+        }
+        return next;
+      });
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+      observer.disconnect();
+      host.style.paddingRight = prevPaddingRight;
+      host.style.boxSizing = prevBoxSizing;
+    };
+  }, [isMobile, viewMode, panelInFlow, isOpen, panelWidthPx]);
 
   // Build protocol config from endpoint if not provided directly
   // Memoize to avoid creating new object on every render (which would trigger useEffect re-runs)
@@ -278,10 +379,7 @@ export function ChatFloating({
       /\/api\/v1\/(ag-ui|vercel-ai|a2a|acp)\//,
     );
     const detectedType = (explicitType ?? protocolMatch?.[1] ?? 'vercel-ai') as
-      | 'ag-ui'
-      | 'vercel-ai'
-      | 'a2a'
-      | 'acp';
+      'ag-ui' | 'vercel-ai' | 'a2a' | 'acp';
 
     // Extract agentId from endpoint path
     const agentIdMatch = endpoint.match(
@@ -656,7 +754,10 @@ export function ChatFloating({
         ref={popupRef}
         className={className}
         sx={{
-          position: 'fixed',
+          position:
+            viewMode === 'panel' && !isMobile && panelInFlow
+              ? 'relative'
+              : ('fixed' as const),
           // floating (normal) — full-height column pinned to the right edge
           ...(viewMode === 'floating' && !isMobile
             ? {
@@ -672,15 +773,31 @@ export function ChatFloating({
             : {}),
           ...(viewMode === 'panel' && !isMobile
             ? {
-                top: 0,
-                right: 0,
-                bottom: 0,
-                left: 'auto',
+                ...(panelInFlow
+                  ? {
+                      top: 'auto',
+                      right: 'auto',
+                      bottom: 'auto',
+                      left: 'auto',
+                      marginLeft: 'auto',
+                      alignSelf: 'stretch',
+                    }
+                  : {
+                      // Fixed panel aligned to the measured host region so it
+                      // docks below any app header at full content height,
+                      // instead of overlaying from the very top of the viewport.
+                      top: panelHostRect ? `${panelHostRect.top}px` : 0,
+                      right: panelHostRect ? `${panelHostRect.right}px` : 0,
+                      bottom: panelHostRect ? 'auto' : 0,
+                      left: 'auto',
+                    }),
               }
             : {}),
           width:
             viewMode === 'panel' && !isMobile
-              ? '420px'
+              ? isOpen || isAnimating
+                ? `${panelWidthPx}px`
+                : '0px'
               : viewMode === 'floating' && !isMobile
                 ? typeof popupWidth === 'number'
                   ? `${popupWidth}px`
@@ -695,17 +812,23 @@ export function ChatFloating({
                       ? `${popupWidth}px`
                       : popupWidth,
           height:
-            (viewMode === 'panel' || viewMode === 'floating') && !isMobile
-              ? 'auto'
-              : viewMode === 'floating-small' && !isMobile
-                ? typeof popupHeight === 'number'
-                  ? `${popupHeight}px`
-                  : popupHeight
-                : isMobile
-                  ? '100%'
-                  : typeof popupHeight === 'number'
+            viewMode === 'panel' && !isMobile
+              ? panelInFlow
+                ? '100%'
+                : panelHostRect
+                  ? `${panelHostRect.height}px`
+                  : '100%'
+              : viewMode === 'floating' && !isMobile
+                ? '100%'
+                : viewMode === 'floating-small' && !isMobile
+                  ? typeof popupHeight === 'number'
                     ? `${popupHeight}px`
-                    : popupHeight,
+                    : popupHeight
+                  : isMobile
+                    ? '100%'
+                    : typeof popupHeight === 'number'
+                      ? `${popupHeight}px`
+                      : popupHeight,
           display: 'flex',
           flexDirection: 'column',
           bg: 'canvas.default',
@@ -713,7 +836,7 @@ export function ChatFloating({
           borderColor: 'border.default',
           borderRadius: viewMode === 'panel' || isMobile ? 0 : '12px',
           boxShadow:
-            viewMode === 'panel' ? 'shadow.large' : 'shadow.extra-large',
+            viewMode === 'panel' ? 'shadow.none' : 'shadow.extra-large',
           overflow: 'hidden',
           transform:
             viewMode === 'panel'
@@ -722,8 +845,13 @@ export function ChatFloating({
                 : 'translateX(100%)'
               : getAnimationTransform(isOpen),
           opacity: viewMode === 'panel' ? 1 : isOpen ? 1 : 0,
-          transition: `transform ${animationDuration}ms ease, opacity ${animationDuration}ms ease`,
-          zIndex: 1001,
+          transition: `transform ${animationDuration}ms ease, opacity ${animationDuration}ms ease, width ${animationDuration}ms ease`,
+          zIndex:
+            viewMode === 'panel' && !isMobile
+              ? panelInFlow
+                ? 'auto'
+                : 1001
+              : 1001,
           // Hide from accessibility and pointer events when closed
           visibility: isOpen || isAnimating ? 'visible' : 'hidden',
           pointerEvents: isOpen ? 'auto' : 'none',
@@ -737,6 +865,8 @@ export function ChatFloating({
           protocol={protocol}
           autoFocus={isOpen}
           focusTrigger={focusTrigger}
+          launching={launching}
+          launchingMessage={launchingMessage}
           brandIcon={brandIcon || <AiAgentIcon colored size={20} />}
           headerButtons={{
             showNewChat: showNewChatButton,

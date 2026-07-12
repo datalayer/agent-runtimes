@@ -6,15 +6,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, getCardGradient } from '@datalayer/primer-addons';
 import { Text, Spinner, TextInput, Button } from '@primer/react';
-import { A2uiSurface } from '@a2ui/react/v0_9';
+import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
+import { basicCatalog } from '@a2ui/react/v0_9';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useExampleThemeStore } from './utils/themeStore';
 import { useA2uiProcessor } from './utils/a2ui';
-
-const A2UI_RESTAURANT_ENDPOINT =
-  'http://localhost:8765/api/v1/a2ui/restaurant/';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const LOADING_TEXT_LINES = [
   'Finding the best spots for you...',
@@ -47,6 +46,14 @@ const extractV09Messages = (data: A2AServerPayloadPart[]): A2uiMessage[] => {
 
     const message = part.data as Record<string, unknown>;
     if (message.version === 'v0.9') {
+      // Normalize the catalog id so surfaces render regardless of which
+      // catalog URL variant the backend/LLM emits (the frontend only has the
+      // registered basicCatalog).
+      const createSurface = message.createSurface as
+        { catalogId?: string } | undefined;
+      if (createSurface && createSurface.catalogId !== basicCatalog.id) {
+        createSurface.catalogId = basicCatalog.id;
+      }
       messages.push(message as unknown as A2uiMessage);
     }
   });
@@ -134,6 +141,8 @@ function RestaurantSearch({
 }
 
 const A2UiRestaurantExample: React.FC = () => {
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const a2uiRestaurantEndpoint = `${baseUrl}/api/v1/a2ui/restaurant/`;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasData, setHasData] = useState(false);
@@ -159,7 +168,7 @@ const A2UiRestaurantExample: React.FC = () => {
     });
   }, []);
 
-  const { surfaces, processMessages, resetSurfaces } =
+  const { surfaces, processMessages, resetSurfaces, themeStyle } =
     useA2uiProcessor(handleAction);
 
   useEffect(() => {
@@ -185,7 +194,7 @@ const A2UiRestaurantExample: React.FC = () => {
         setError(null);
         setLoadingTextIndex(0);
 
-        const response = await fetch(A2UI_RESTAURANT_ENDPOINT, {
+        const response = await fetch(a2uiRestaurantEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -219,7 +228,7 @@ const A2UiRestaurantExample: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [processMessages, resetSurfaces],
+    [processMessages, resetSurfaces, a2uiRestaurantEndpoint],
   );
 
   useEffect(() => {
@@ -305,7 +314,15 @@ const A2UiRestaurantExample: React.FC = () => {
             )}
 
             {!isLoading && hasData && !error && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box
+                style={themeStyle}
+                sx={{
+                  ...A2UI_RENDER_SCOPE_SX,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                }}
+              >
                 <Button
                   variant="invisible"
                   sx={{ alignSelf: 'flex-start' }}
@@ -323,7 +340,7 @@ const A2UiRestaurantExample: React.FC = () => {
                       p: 3,
                     }}
                   >
-                    <A2uiSurface surface={surface} />
+                    <A2uiSurfaceComposed surface={surface} />
                   </Box>
                 ))}
               </Box>
@@ -340,7 +357,7 @@ const A2UiRestaurantExample: React.FC = () => {
             }}
           >
             <Text sx={{ fontSize: '0.75rem', color: 'fg.muted' }}>
-              Backend: {A2UI_RESTAURANT_ENDPOINT}
+              Backend: {a2uiRestaurantEndpoint}
             </Text>
           </Box>
         </Box>

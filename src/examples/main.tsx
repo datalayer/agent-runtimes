@@ -2,6 +2,7 @@
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
+import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 /// <reference types="vite/client" />
 
@@ -25,30 +26,36 @@ import {
   themeConfigs,
   Box,
 } from '@datalayer/primer-addons';
+import { AgentSummary } from '../components';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
-import { Button } from '@primer/react';
+import { Button, Spinner, Text } from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
+import { coreStore, iamStore } from '@datalayer/core';
 import {
-  coreStore,
-  iamStore,
-  createDatalayerServiceManager,
-} from '@datalayer/core';
+  DATALAYER_IAM_TOKEN_KEY,
+  DATALAYER_IAM_USER_KEY,
+} from '../state/substates';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import {
-  agentRuntimeStore,
-  useChatStore,
-  useConversationStore,
-} from '../stores';
+import { teardownExampleAgents } from './utils/teardownAgents';
 import { OAuthCallback } from '../identity';
 import {
   EXAMPLES,
   getExampleEntries,
   type ExampleEntry,
 } from './example-selector';
+import {
+  runtimeTargetStore,
+  useRuntimeTargetStore,
+  type ExampleRuntimeTarget,
+} from './utils/runtimeTargetStore';
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { agentSummaryStore } from './utils/agentSummaryStore';
+import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
+import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
@@ -59,6 +66,32 @@ declare global {
     __agentRuntimesExamplesRoot?: ReturnType<typeof createRoot>;
   }
 }
+
+const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
+
+const resolveRuntimesUrl = (configured?: string): string => {
+  const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
+  const envBaseUrl = import.meta.env.VITE_DATALAYER_URL;
+  const candidate = configured || envRuntimeUrl || envBaseUrl;
+  if (!candidate) {
+    return DEFAULT_RUNTIMES_URL;
+  }
+  if (candidate.includes('prod1.datalayer.run')) {
+    return DEFAULT_RUNTIMES_URL;
+  }
+  return candidate.replace(/\/$/, '');
+};
+
+const toAgentRuntimesBaseUrl = (value?: string | null): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  const normalized = value.trim().replace(/\/$/, '');
+  if (!normalized) {
+    return undefined;
+  }
+  return normalized.replace('/jupyter/server/', '/agent-runtimes/');
+};
 
 // Load configurations from DOM
 const loadConfigurations = () => {
@@ -81,7 +114,10 @@ const loadConfigurations = () => {
         }
       }
 
-      if (datalayerConfig.runUrl) {
+      if (datalayerConfig.datalayerUrl) {
+        datalayerConfig.runtimesUrl = resolveRuntimesUrl(
+          datalayerConfig.runtimesUrl,
+        );
         coreStore.getState().setConfiguration(datalayerConfig);
 
         // Also set the token in the IAM store for API authentication
@@ -167,6 +203,201 @@ const isOAuthCallback = () => {
   return (hasCode && hasState) || hasError;
 };
 
+const isIAMSocialCallback = () => {
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  const isCallbackPath = /\/iam\/oauth2\/[^/]+\/callback$/.test(path);
+  return isCallbackPath && (params.has('token') || params.has('error'));
+};
+
+const resolveNavigationTarget = (
+  params: URLSearchParams,
+): string | undefined => {
+  const candidate =
+    params.get('navigate_to') ||
+    params.get('navigation') ||
+    params.get('post_auth_redirect') ||
+    params.get('redirect_url');
+  if (!candidate) {
+    return undefined;
+  }
+  const normalized = String(candidate).trim();
+  if (!normalized.startsWith('/') || normalized.startsWith('//')) {
+    return undefined;
+  }
+  if (/^\/iam\/oauth2\/[^/]+\/callback$/.test(normalized)) {
+    return undefined;
+  }
+  return normalized;
+};
+
+const parseUserFromCallback = (
+  encodedUser: string | null,
+): Record<string, unknown> | undefined => {
+  if (!encodedUser) {
+    return undefined;
+  }
+  const attempts = [encodedUser];
+  try {
+    attempts.push(decodeURIComponent(encodedUser));
+  } catch {
+    // ignore decode failure
+  }
+  if (attempts.length > 1) {
+    try {
+      attempts.push(decodeURIComponent(attempts[1]));
+    } catch {
+      // ignore double decode failure
+    }
+  }
+  for (const candidate of attempts) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object') {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // keep trying
+    }
+  }
+  return undefined;
+};
+
+const AgentRuntimesIAMCallback: React.FC = () => {
+  const [status, setStatus] = useState<'processing' | 'error'>('processing');
+  const [message, setMessage] = useState('Finalizing social sign-in...');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const provider =
+      window.location.pathname.match(
+        /\/iam\/oauth2\/([^/]+)\/callback$/,
+      )?.[1] || '';
+    const token = params.get('token') || '';
+    const error = params.get('error') || '';
+
+    if (error) {
+      setStatus('error');
+      setMessage(error);
+      return;
+    }
+    if (!token) {
+      setStatus('error');
+      setMessage('Missing token in OAuth callback.');
+      return;
+    }
+
+    const callbackUser = parseUserFromCallback(params.get('user'));
+    const handle =
+      String(
+        callbackUser?.handle_s ||
+          callbackUser?.handle ||
+          callbackUser?.email_s ||
+          callbackUser?.email ||
+          'user',
+      ).trim() || 'user';
+
+    const storedUser = {
+      uid: String(callbackUser?.uid || ''),
+      handle,
+      firstName: String(
+        callbackUser?.first_name_t || callbackUser?.firstName || '',
+      ),
+      lastName: String(
+        callbackUser?.last_name_t || callbackUser?.lastName || '',
+      ),
+      email: String(callbackUser?.email_s || callbackUser?.email || ''),
+      displayName:
+        String(
+          callbackUser?.display_name_t || callbackUser?.displayName || '',
+        ).trim() || handle,
+      avatarUrl: String(
+        callbackUser?.avatar_url_s || callbackUser?.avatarUrl || '',
+      ),
+      roles: Array.isArray(callbackUser?.roles_ss)
+        ? (callbackUser?.roles_ss as string[])
+        : [],
+      setRoles: () => {},
+      iamProviders: [],
+      settings: {},
+      unsubscribedFromOutbounds: false,
+      onboarding: {
+        clients: {
+          Platform: 0,
+          JupyterLab: 0,
+          CLI: 0,
+          VSCode: 0,
+        },
+        position: 'top' as const,
+        tours: {},
+      },
+      events: [],
+      initials: handle.slice(0, 2).toUpperCase(),
+      id: String(callbackUser?.uid || ''),
+    };
+
+    window.localStorage.setItem(DATALAYER_IAM_TOKEN_KEY, token);
+    window.localStorage.setItem(
+      DATALAYER_IAM_USER_KEY,
+      JSON.stringify(storedUser),
+    );
+    useSimpleAuthStore.getState().setAuth(token, handle);
+    iamStore.getState().setLogin(storedUser, token);
+
+    const providerAccessToken = provider
+      ? params.get(`${provider}_access_token`)
+      : null;
+    if (
+      providerAccessToken &&
+      (provider === 'github' ||
+        provider === 'google' ||
+        provider === 'linkedin' ||
+        provider === 'okta' ||
+        provider === 'bluesky')
+    ) {
+      iamStore
+        .getState()
+        .setIAMProviderAccessToken(provider, providerAccessToken);
+    }
+
+    const target = resolveNavigationTarget(params);
+    if (target) {
+      window.location.replace(target);
+      return;
+    }
+
+    window.localStorage.setItem('selectedExample', 'HomeExample');
+    window.location.replace('/');
+  }, []);
+
+  return (
+    <JupyterReactTheme>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          p: 3,
+        }}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          {status === 'processing' ? <Spinner size="large" /> : null}
+          <Text
+            as="p"
+            sx={{
+              mt: 3,
+              color: status === 'error' ? 'danger.fg' : 'fg.default',
+            }}
+          >
+            {message}
+          </Text>
+        </Box>
+      </Box>
+    </JupyterReactTheme>
+  );
+};
+
 // Get the default example name from localStorage
 const getDefaultExampleName = (): string => {
   const stored = localStorage.getItem('selectedExample');
@@ -225,13 +456,13 @@ const NotebookOnlyApp: React.FC = () => {
       try {
         const { configuration } = coreStore.getState();
 
-        // Always try to create collaboration provider if we have token and runUrl
-        if (configuration?.token && configuration?.runUrl) {
+        // Always try to create collaboration provider if we have token and datalayerUrl
+        if (configuration?.token && configuration?.datalayerUrl) {
           try {
             const { DatalayerCollaborationProvider } =
-              await import('@datalayer/core/lib/collaboration/DatalayerCollaborationProvider');
+              await import('../collaboration/DatalayerCollaborationProvider');
             const provider = new DatalayerCollaborationProvider({
-              runUrl: configuration.runUrl,
+              datalayerUrl: configuration.datalayerUrl,
               token: configuration.token,
             });
             setCollaborationProvider(provider);
@@ -244,7 +475,10 @@ const NotebookOnlyApp: React.FC = () => {
         }
 
         // Create service manager
-        if (configuration?.token) {
+        if (
+          runtimeTargetStore.getState().target === 'cloud' &&
+          configuration?.token
+        ) {
           try {
             const manager = await createDatalayerServiceManager(
               configuration.cpuEnvironment || 'python-3.11',
@@ -345,6 +579,8 @@ export const ExampleApp: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState(getInitialSearchQuery());
   const [isChangingExample, setIsChangingExample] = useState(false);
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
+  const setRuntimeTarget = useRuntimeTargetStore(state => state.setTarget);
 
   const filteredExampleEntries = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -388,6 +624,45 @@ export const ExampleApp: React.FC = () => {
     }
   };
 
+  const createLocalServiceManager =
+    async (): Promise<ServiceManager.IManager> => {
+      const serverSettings = createServerSettings(
+        getJupyterServerUrl(),
+        getJupyterServerToken(),
+      );
+      const manager = new ServiceManager({ serverSettings });
+      await manager.ready;
+      return manager;
+    };
+
+  const createCloudServiceManager =
+    async (): Promise<ServiceManager.IManager> => {
+      const { configuration } = coreStore.getState();
+      if (!configuration?.token) {
+        throw new Error(
+          'Cloud runtime requires authentication. Please sign in.',
+        );
+      }
+      const activeSummary = agentSummaryStore.getState().active;
+      const selectedEntry = getExampleEntriesList().find(
+        entry => entry.id === selectedExample,
+      );
+      const resolvedSpecId =
+        activeSummary?.exampleId === selectedExample
+          ? activeSummary.specId
+          : undefined;
+      const runtimeDescriptor =
+        resolvedSpecId || selectedEntry?.title || selectedExample;
+      const contextualRuntimeName = `Agent Runtime - ${runtimeDescriptor}`;
+      const manager = await createDatalayerServiceManager(
+        configuration.cpuEnvironment || 'python-3.11',
+        configuration.credits || 100,
+        contextualRuntimeName,
+      );
+      await manager.ready;
+      return manager;
+    };
+
   useEffect(() => {
     // Load configurations
     loadConfigurations();
@@ -395,42 +670,35 @@ export const ExampleApp: React.FC = () => {
     // Create service manager and load example - must be sequential
     const initializeApp = async () => {
       try {
-        const { configuration } = coreStore.getState();
+        const runtimeTarget = runtimeTargetStore.getState().target;
 
-        // Try to use DatalayerServiceManager if we have a token
-        if (configuration?.token) {
+        // Only create a cloud Datalayer runtime when the user picked "cloud".
+        // In "local" mode we must never hit the cloud runtimes API.
+        if (runtimeTarget === 'cloud') {
           try {
-            const manager = await createDatalayerServiceManager(
-              configuration.cpuEnvironment || 'python-3.11',
-              configuration.credits || 100,
-            );
-            await manager.ready;
+            const manager = await createCloudServiceManager();
             setServiceManager(manager);
 
             // Load initial example
             await loadExample(selectedExample, manager);
           } catch (error) {
             console.error('Failed to create DatalayerServiceManager:', error);
-            // Fall back to regular ServiceManager
-            const serverSettings = createServerSettings(
-              getJupyterServerUrl(),
-              getJupyterServerToken(),
+            // Surface the failure in the UI, then fall back to local so the
+            // app stays usable.
+            setError(
+              `Cloud runtime unavailable, using local instead: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
             );
-            const manager = new ServiceManager({ serverSettings });
-            await manager.ready;
+            const manager = await createLocalServiceManager();
             setServiceManager(manager);
 
             // Load initial example
             await loadExample(selectedExample, manager);
           }
         } else {
-          // Use regular ServiceManager (no Datalayer token)
-          const serverSettings = createServerSettings(
-            getJupyterServerUrl(),
-            getJupyterServerToken(),
-          );
-          const manager = new ServiceManager({ serverSettings });
-          await manager.ready;
+          // Local runtime target (or no token): use the local Jupyter server.
+          const manager = await createLocalServiceManager();
           setServiceManager(manager);
 
           // Load initial example
@@ -462,72 +730,62 @@ export const ExampleApp: React.FC = () => {
       requestAnimationFrame(() => resolve());
     });
 
-    // 2) Tear down any server-side agents created by the previous example.
-    //    Each example caches its agent id in sessionStorage via
-    //    `uniqueAgentId(baseName)` under key `agent-runtimes:agentId:<base>`.
-    //    Delete those agents on the server and drop the cached ids so the
-    //    next example (and a future re-entry into this one) boots fresh.
-    const agentBaseUrl =
-      import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
-    const token = useSimpleAuthStore.getState().token;
-    const agentIdKeys: string[] = [];
-    try {
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && key.startsWith('agent-runtimes:agentId:')) {
-          agentIdKeys.push(key);
-        }
-      }
-    } catch {
-      // sessionStorage unavailable; skip teardown.
-    }
-    await Promise.all(
-      agentIdKeys.map(async key => {
-        let agentId: string | null = null;
-        try {
-          agentId = sessionStorage.getItem(key);
-        } catch {
-          /* ignore */
-        }
-        if (!agentId) return;
-        try {
-          await fetch(
-            `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
-            {
-              method: 'DELETE',
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            },
-          );
-        } catch {
-          // Best-effort teardown: ignore network / 404 errors.
-        }
-        try {
-          sessionStorage.removeItem(key);
-        } catch {
-          /* ignore */
-        }
-      }),
+    // 2) Tear down any server-side agents created by the previous example and
+    //    wipe in-process agent state so the next example boots fresh.
+    const agentBaseUrl = resolveExampleAgentRuntimesUrl(
+      runtimeTargetStore.getState().target,
     );
+    const token = useSimpleAuthStore.getState().token;
+    await teardownExampleAgents(agentBaseUrl, token ?? undefined);
 
-    // 3) Wipe every piece of in-process agent state so the next example boots
-    //    with a clean slate (no leftover messages, threads, pending tool
-    //    calls, code sandbox snapshots, monitoring caches, or sockets).
-    useChatStore.getState().reset();
-    useConversationStore.getState().clearAll();
-    agentRuntimeStore.getState().reset();
-
-    // 4) Drop the persisted slice from localStorage so a fresh example never
-    //    rehydrates a previous example's agents / monitoring cache.
-    try {
-      localStorage.removeItem('agent-runtimes-storage');
-    } catch {
-      // Ignore storage failures (e.g. private mode).
-    }
-
-    // 5) Load and mount the new example.
+    // 3) Load and mount the new example.
     setSelectedExample(newExample);
     localStorage.setItem('selectedExample', newExample);
     await loadExample(newExample, serviceManager);
+  };
+
+  const handleRuntimeTargetChange = async (
+    newTarget: ExampleRuntimeTarget,
+  ): Promise<void> => {
+    if (newTarget === runtimeTarget || !serviceManager) return;
+
+    let nextManager: ServiceManager.IManager;
+    try {
+      nextManager =
+        newTarget === 'cloud'
+          ? await createCloudServiceManager()
+          : await createLocalServiceManager();
+    } catch (switchError) {
+      setError(
+        `Failed to switch to ${newTarget}: ${
+          switchError instanceof Error
+            ? switchError.message
+            : String(switchError)
+        }`,
+      );
+      return;
+    }
+
+    // 1) Unmount the current example FIRST so its cleanup hooks run against the
+    //    still-valid OLD runtime (AG-UI disconnect, abort fetches, sandboxes).
+    setIsChangingExample(true);
+    setExampleComponent(null);
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    // 2) Tear down the agents created on the OLD target, then wipe state so a
+    //    brand-new runtime is launched for the new target.
+    const oldAgentBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const token = useSimpleAuthStore.getState().token;
+    await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
+
+    // 3) Switch the target and re-mount the example (its key includes the
+    //    target, so this launches/connects a fresh runtime).
+    setRuntimeTarget(newTarget);
+    setServiceManager(nextManager);
+    setError(null);
+    await loadExample(selectedExample, nextManager);
   };
 
   if (loading) {
@@ -579,7 +837,9 @@ export const ExampleApp: React.FC = () => {
       error={error}
       ExampleComponent={ExampleComponent}
       exampleProps={exampleProps}
+      serviceManager={serviceManager}
       onExampleChange={handleExampleChange}
+      onRuntimeTargetChange={handleRuntimeTargetChange}
       availableExamples={getExampleEntriesList()}
     />
   );
@@ -595,7 +855,9 @@ const ExampleAppThemed: React.FC<{
   error: string | null;
   ExampleComponent: React.ComponentType<Record<string, unknown>> | null;
   exampleProps: Record<string, unknown>;
+  serviceManager: ServiceManager.IManager | null;
   onExampleChange: (name: string) => Promise<void>;
+  onRuntimeTargetChange: (target: ExampleRuntimeTarget) => Promise<void>;
   availableExamples: ExampleEntry[];
 }> = ({
   selectedExample,
@@ -603,10 +865,14 @@ const ExampleAppThemed: React.FC<{
   error,
   ExampleComponent,
   exampleProps,
+  serviceManager,
   onExampleChange,
+  onRuntimeTargetChange,
   availableExamples,
 }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
+  const agentSummary = useAgentSummaryStore(state => state.active);
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
@@ -614,10 +880,38 @@ const ExampleAppThemed: React.FC<{
   const shouldShowAuthScreen = showSignIn && !token;
 
   const syncTokenToIamStore = useCallback((newToken: string | undefined) => {
-    import('@datalayer/core/lib/state').then(({ iamStore: coreIamStore }) => {
+    import('../state/substates').then(({ iamStore: coreIamStore }) => {
       coreIamStore.setState({ token: newToken });
     });
   }, []);
+
+  useEffect(() => {
+    const baseUrl =
+      toAgentRuntimesBaseUrl(serviceManager?.serverSettings.baseUrl) ||
+      resolveExampleAgentRuntimesUrl(runtimeTarget);
+    // Seed a base summary for the selected example. Do NOT clobber a richer
+    // summary that the mounted example already published (spec id, agent id,
+    // readiness) for the same example + target — otherwise fast-settling local
+    // agents lose their spec/agent id in the indicator.
+    const current = agentSummaryStore.getState().active;
+    const alreadyEnriched =
+      current != null &&
+      current.exampleId === selectedExample &&
+      current.location === runtimeTarget &&
+      (current.specId != null ||
+        current.agentId != null ||
+        current.isReady !== undefined);
+    if (alreadyEnriched) {
+      return;
+    }
+    agentSummaryStore.getState().setActive({
+      exampleId: selectedExample,
+      agentName: selectedExample,
+      location: runtimeTarget,
+      baseUrl,
+      status: isChangingExample ? 'switching' : 'selected',
+    });
+  }, [selectedExample, runtimeTarget, isChangingExample, serviceManager]);
 
   useEffect(() => {
     // Keep iamStore aligned with persisted auth token on app load/refresh.
@@ -775,8 +1069,12 @@ const ExampleAppThemed: React.FC<{
                 const grouped = new Map<string, typeof rest>();
                 for (const ex of rest) {
                   const g = groupOf(ex.id);
-                  if (!grouped.has(g)) grouped.set(g, []);
-                  grouped.get(g)!.push(ex);
+                  const group = grouped.get(g);
+                  if (group) {
+                    group.push(ex);
+                  } else {
+                    grouped.set(g, [ex]);
+                  }
                 }
                 for (const list of grouped.values()) {
                   list.sort((a, b) => a.title.localeCompare(b.title));
@@ -824,6 +1122,40 @@ const ExampleAppThemed: React.FC<{
                 return <>{nodes}</>;
               })()}
             </Box>
+            <Box
+              as="select"
+              value={runtimeTarget}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                void onRuntimeTargetChange(
+                  e.target.value as ExampleRuntimeTarget,
+                )
+              }
+              disabled={isChangingExample}
+              aria-label="Runtime target"
+              title="Runtime target"
+              sx={{
+                px: 2,
+                py: '6px',
+                fontSize: 1,
+                fontFamily: 'mono',
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                bg: 'canvas.default',
+                color: 'fg.default',
+                cursor: isChangingExample ? 'not-allowed' : 'pointer',
+                minWidth: '120px',
+                outline: 'none',
+                '&:focus-visible': {
+                  boxShadow:
+                    '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
+                },
+              }}
+            >
+              <option value="local">Local</option>
+              <option value="cloud">Cloud</option>
+            </Box>
+            <AgentSummary summary={agentSummary} />
             {isChangingExample && (
               <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
                 Loading…
@@ -931,9 +1263,14 @@ const ExampleAppThemed: React.FC<{
               <p>Please wait while the example loads.</p>
             </Box>
           ) : ExampleComponent ? (
-            <ExampleWrapper key={selectedExample}>
-              <ExampleComponent key={selectedExample} {...exampleProps} />
-            </ExampleWrapper>
+            <ExampleErrorBoundary key={`${selectedExample}:${runtimeTarget}`}>
+              <ExampleWrapper key={`${selectedExample}:${runtimeTarget}`}>
+                <ExampleComponent
+                  key={`${selectedExample}:${runtimeTarget}`}
+                  {...exampleProps}
+                />
+              </ExampleWrapper>
+            </ExampleErrorBoundary>
           ) : null}
         </Box>
       </Box>
@@ -948,7 +1285,9 @@ if (root) {
     window.__agentRuntimesExamplesRoot ??
     (window.__agentRuntimesExamplesRoot = createRoot(root));
 
-  if (isOAuthCallback()) {
+  if (isIAMSocialCallback()) {
+    appRoot.render(<AgentRuntimesIAMCallback />);
+  } else if (isOAuthCallback()) {
     // Handle OAuth callback - render OAuthCallback component
     appRoot.render(
       <JupyterReactTheme>

@@ -62,7 +62,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getRunningAgents(): Promise<RunningAgent[]> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return agents.getRunningAgents(token, baseUrl);
     }
 
@@ -77,7 +77,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       agentId?: string,
     ): Promise<RunningAgent> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return agents.getAgentStatus(token, podName, agentId, baseUrl);
     }
 
@@ -87,7 +87,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async pauseAgent(podName: string): Promise<void> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return agents.pauseAgent(token, podName, baseUrl);
     }
 
@@ -97,7 +97,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async resumeAgent(podName: string): Promise<void> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return agents.resumeAgent(token, podName, baseUrl);
     }
 
@@ -112,7 +112,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       agentId?: string,
     ): Promise<ConversationCheckpoint[]> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return agents.getAgentCheckpoints(token, podName, agentId, baseUrl);
     }
 
@@ -127,7 +127,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       agentId?: string,
     ): Promise<AgentUsageSummary> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return agents.getAgentUsage(token, podName, agentId, baseUrl);
     }
 
@@ -154,7 +154,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       filters?: NotificationFilters,
     ): Promise<AgentNotification[]> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return notifications.getNotifications(token, filters, baseUrl);
     }
 
@@ -164,7 +164,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async markNotificationRead(notificationId: string): Promise<void> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return notifications.markNotificationRead(token, notificationId, baseUrl);
     }
 
@@ -173,7 +173,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async markAllNotificationsRead(): Promise<void> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return notifications.markAllRead(token, undefined, baseUrl);
     }
 
@@ -190,7 +190,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       data: CreateAgentEventRequest,
     ): Promise<{ success: boolean; event: AgentEvent }> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return events.createEvent(token, data, baseUrl);
     }
 
@@ -204,7 +204,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       params: Omit<ListAgentEventsParams, 'agent_id'> = {},
     ): Promise<ListAgentEventsResponse> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return events.listEvents(token, agentId, params, baseUrl);
     }
 
@@ -218,7 +218,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       eventId: string,
     ): Promise<GetAgentEventResponse> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return events.getEvent(token, agentId, eventId, baseUrl);
     }
 
@@ -234,7 +234,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       data: UpdateAgentEventRequest,
     ): Promise<GetAgentEventResponse> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return events.updateEvent(token, agentId, eventId, data, baseUrl);
     }
 
@@ -249,7 +249,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getAgentOutputs(agentId: string): Promise<OutputArtifact[]> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return output.getAgentOutputs(token, agentId, baseUrl);
     }
 
@@ -264,7 +264,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       outputId: string,
     ): Promise<OutputArtifact> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return output.getAgentOutput(token, agentId, outputId, baseUrl);
     }
 
@@ -281,7 +281,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       options?: Record<string, any>,
     ): Promise<OutputArtifact> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return output.generateAgentOutput(
         token,
         agentId,
@@ -306,7 +306,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       request: RunEvalsRequest,
     ): Promise<EvalReport> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return evals.runEvals(token, agentId, request, baseUrl);
     }
 
@@ -317,7 +317,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async listEvals(agentId: string): Promise<EvalReport[]> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return evals.listEvals(token, agentId, baseUrl);
     }
 
@@ -329,7 +329,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getEval(agentId: string, evalId: string): Promise<EvalReport> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return evals.getEval(token, agentId, evalId, baseUrl);
     }
 
@@ -344,7 +344,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getContextUsage(agentId: string): Promise<ContextUsage> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return context.getContextUsage(token, agentId, baseUrl);
     }
 
@@ -355,7 +355,7 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
      */
     async getCostUsage(agentId: string): Promise<CostUsage> {
       const token = (this as any).getToken();
-      const baseUrl = (this as any).getIamRunUrl();
+      const baseUrl = (this as any).getIamUrl();
       return context.getCostUsage(token, agentId, baseUrl);
     }
 
@@ -449,14 +449,14 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
       data: CreateAgentRuntimeRequest,
     ): Promise<CreateRuntimeApiResponse> {
       const token = (this as any).getToken();
-      const runtimesRunUrl = (this as any).getRuntimesRunUrl();
+      const runtimesUrl = (this as any).getRuntimesUrl();
       const normalizedVolumeUids = Array.isArray(data.volumeUids)
         ? data.volumeUids.map(uid => String(uid || '').trim()).filter(Boolean)
         : data.volumeUid
           ? [String(data.volumeUid).trim()]
           : [];
       return requestDatalayerAPI<CreateRuntimeApiResponse>({
-        url: `${runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        url: `${runtimesUrl}/api/runtimes/v1/runtimes`,
         method: 'POST',
         token,
         body: {

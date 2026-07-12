@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Text } from '@primer/react';
-import { A2uiSurface } from '@a2ui/react/v0_9';
+import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
 import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
@@ -130,7 +130,7 @@ function ContactCardContent({
 }: {
   onAction: (action: A2uiClientAction) => void;
 }) {
-  const { surfaces, processMessages, resetSurfaces } =
+  const { surfaces, processMessages, resetSurfaces, themeStyle } =
     useA2uiProcessor(onAction);
 
   const loadCard = useCallback(() => {
@@ -155,7 +155,14 @@ function ContactCardContent({
         </Button>
       </Box>
 
-      <Box sx={{ display: 'grid', gap: 3 }}>
+      <Box
+        style={themeStyle}
+        sx={{
+          ...A2UI_RENDER_SCOPE_SX,
+          display: 'grid',
+          gap: 3,
+        }}
+      >
         {surfaces.map(surface => (
           <Box
             key={surface.id}
@@ -167,7 +174,7 @@ function ContactCardContent({
               backgroundColor: 'canvas.subtle',
             }}
           >
-            <A2uiSurface surface={surface} />
+            <A2uiSurfaceComposed surface={surface} />
           </Box>
         ))}
       </Box>
@@ -179,7 +186,7 @@ const A2UiContactCardExample: React.FC = () => {
   const [lastAction, setLastAction] = useState<A2uiClientAction | null>(null);
 
   const handleAction = useCallback((action: A2uiClientAction) => {
-    console.log('A2UI Contact Card Action:', action);
+    console.warn('A2UI Contact Card Action:', action);
     setLastAction(action);
   }, []);
 

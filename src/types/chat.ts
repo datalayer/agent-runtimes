@@ -9,7 +9,7 @@
  * @module types/chat
  */
 
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { ChatMessage, MessageHandler } from './messages';
 import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
@@ -66,6 +66,8 @@ export interface ToolCallCompleteContext {
  * - 'sidebar': Docked sidebar panel
  */
 export type ChatViewMode = 'floating' | 'floating-small' | 'sidebar';
+
+export type EphemeralNotebookToolbarComponent = ComponentType<any>;
 
 // ---------------------------------------------------------------------------
 // Tool call types
@@ -310,6 +312,26 @@ export interface ChatCommonProps {
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
 
+  /**
+   * Whether the underlying agent runtime is still launching. When true, the
+   * chat shell is rendered with the input and controls disabled and a spinner
+   * overlay is shown, so the plain chat view appears as soon as the agent
+   * starts being created and stays interactive-disabled until it is ready.
+   */
+  launching?: boolean;
+
+  /**
+   * Optional message shown next to the spinner while `launching` is true.
+   */
+  launchingMessage?: ReactNode;
+
+  /**
+   * Optional overlay rendered above the chat surface (messages + input).
+   * Use this to show a gating UI such as a sign-in form for anonymous users
+   * while keeping the chat visible and its controls disabled behind it.
+   */
+  overlay?: ReactNode;
+
   /** Custom class name */
   className?: string;
 
@@ -395,7 +417,7 @@ export interface ChatCommonProps {
    */
   onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
 
-  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
+  /** Initial model ID to select (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0') */
   initialModel?: string;
 
   /**
@@ -417,6 +439,22 @@ export interface ChatCommonProps {
 
   /** Frontend tool definitions to register with the chat */
   frontendTools?: FrontendToolDefinition[];
+
+  /**
+   * Show an in-memory "ephemeral notebook" next to the chat, toggled from the
+   * input footer. The notebook model lives purely in memory (never persisted)
+   * and its frontend tools are registered while visible. @default true
+   */
+  enableEphemeralNotebook?: boolean;
+
+  /** Initial open state of the ephemeral notebook. @default true */
+  initialEphemeralNotebookOpen?: boolean;
+
+  /**
+   * Optional toolbar component used by the ephemeral notebook.
+   * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
+   */
+  ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
 
   /** Pre-hook: fires when a tool call starts executing */
   onToolCallStart?: (context: ToolCallStartContext) => void;
@@ -605,6 +643,22 @@ export interface ChatBaseProps {
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
 
+  /**
+   * Whether the underlying agent runtime is still launching. When true, the
+   * chat shell renders with input and controls disabled and a spinner overlay.
+   */
+  launching?: boolean;
+
+  /** Optional message shown next to the spinner while `launching` is true. */
+  launchingMessage?: React.ReactNode;
+
+  /**
+   * Optional overlay rendered above the chat surface (messages + input).
+   * Use this to show a gating UI such as a sign-in form for anonymous users
+   * while keeping the chat visible and its controls disabled behind it.
+   */
+  overlay?: React.ReactNode;
+
   /** Show model selector (for protocols that support it) */
   showModelSelector?: boolean;
 
@@ -623,7 +677,7 @@ export interface ChatBaseProps {
    */
   onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
 
-  /** Initial model ID to select (e.g., 'openai:gpt-4o-mini') */
+  /** Initial model ID to select (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0') */
   initialModel?: string;
 
   /**
@@ -847,6 +901,29 @@ export interface ChatBaseProps {
    * These tools execute in the browser and their results are sent back to the agent.
    */
   frontendTools?: FrontendToolDefinition[];
+
+  // ============ Ephemeral Notebook ============
+
+  /**
+   * Enable the "Ephemeral Notebook" feature. When true, a toggle is rendered in
+   * the input footer that shows/hides an in-memory notebook next to the chat.
+   * The notebook model lives purely in memory (never persisted) and is backed
+   * by a sandbox kernel. While visible, its frontend tools are registered so
+   * the agent can drive the notebook cells. @default true
+   */
+  enableEphemeralNotebook?: boolean;
+
+  /**
+   * Initial open state of the ephemeral notebook toggle. Only relevant when
+   * `enableEphemeralNotebook` is true. @default true
+   */
+  initialEphemeralNotebookOpen?: boolean;
+
+  /**
+   * Optional toolbar component used by the ephemeral notebook.
+   * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
+   */
+  ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
 
   // ============ Identity/Authorization Support ============
 

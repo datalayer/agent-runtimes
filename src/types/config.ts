@@ -12,7 +12,17 @@ import { BuiltinTool } from './models';
 /**
  * Default agent configuration values.
  */
-export const DEFAULT_AGENT_CONFIG: Required<AgentConfig> = {
+export const DEFAULT_AGENT_CONFIG: Required<
+  Pick<
+    AgentConfig,
+    | 'name'
+    | 'description'
+    | 'model'
+    | 'systemPrompt'
+    | 'agentLibrary'
+    | 'protocol'
+  >
+> = {
   name: 'ai-agent',
   description: 'AI Assistant',
   model: '',
@@ -37,6 +47,22 @@ export interface AgentConfig {
   agentLibrary?: AgentLibrary;
   /** Transport protocol (defaults to `ag-ui`). */
   protocol?: Protocol;
+  /** Optional agent spec ID for server-side spec-based creation. */
+  agentSpecId?: string;
+  /** Optional custom tools payload. */
+  tools?: unknown[];
+  /** Enable skills for this agent. */
+  enableSkills?: boolean;
+  /** Optional inference provider override (e.g. local, datalayer). */
+  inferenceProvider?: string;
+  /** Enable codemode if supported by the selected spec/runtime. */
+  enableCodemode?: boolean;
+  /** Optional sandbox variant (e.g. eval, jupyter). */
+  sandboxVariant?: string;
+  /** Optional Jupyter sandbox URL for jupyter-backed sandbox mode. */
+  jupyterSandbox?: string;
+  /** Additional raw request fields merged into POST /api/v1/agents payload. */
+  createPayload?: Record<string, unknown>;
 }
 
 /**

@@ -3,7 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { snapshots, runtimes } from '@datalayer/core/lib/api/runtimes';
+import { snapshots, runtimes } from '../../api/runtimes';
 import { users, items } from '@datalayer/core/lib/api/spacer';
 import { testConfig } from './test-config';
 

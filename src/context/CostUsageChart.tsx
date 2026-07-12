@@ -199,8 +199,8 @@ export interface CostUsageChartProps {
   serviceName?: string;
   agentId?: string;
   apiKey?: string;
-  runUrl?: string;
-  wsRunUrl?: string;
+  datalayerUrl?: string;
+  wsUrl?: string;
   liveCumulativeUsd?: number;
   liveTimestampMs?: number | null;
   height?: number;
@@ -210,8 +210,8 @@ export function CostUsageChart({
   serviceName,
   agentId,
   apiKey,
-  runUrl,
-  wsRunUrl,
+  datalayerUrl,
+  wsUrl,
   liveCumulativeUsd,
   liveTimestampMs,
   height = 160,
@@ -331,8 +331,8 @@ export function CostUsageChart({
     if (!serviceName || !apiKey) return;
 
     const rawBaseUrl =
-      wsRunUrl ||
-      runUrl ||
+      wsUrl ||
+      datalayerUrl ||
       (typeof window !== 'undefined' ? window.location.origin : '');
     if (!rawBaseUrl) return;
 
@@ -349,9 +349,9 @@ export function CostUsageChart({
               : 'http:'
           }//${typeof window !== 'undefined' ? window.location.host : ''}${rawBaseUrl}`;
 
-    let wsUrl: string;
+    let resolvedWsUrl: string;
     try {
-      wsUrl = buildOtelWebSocketUrl({
+      resolvedWsUrl = buildOtelWebSocketUrl({
         baseUrl: baseWithProtocol,
         token: apiKey,
       });
@@ -359,7 +359,7 @@ export function CostUsageChart({
       return;
     }
 
-    const unsubscribe = subscribeOtelWs(wsUrl, msg => {
+    const unsubscribe = subscribeOtelWs(resolvedWsUrl, msg => {
       if (msg.signal !== 'metrics') return;
 
       const rows = Array.isArray(msg.data) ? msg.data : [];
@@ -399,7 +399,7 @@ export function CostUsageChart({
     });
 
     return unsubscribe;
-  }, [agentId, apiKey, mergeCostPoints, runUrl, serviceName, wsRunUrl]);
+  }, [agentId, apiKey, mergeCostPoints, datalayerUrl, serviceName, wsUrl]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {

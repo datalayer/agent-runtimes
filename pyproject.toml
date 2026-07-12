@@ -24,18 +24,18 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-#    "a2ui-agent-sdk>=0.2.1",
 dependencies = [
-    "a2a-sdk[all]>=1.0.2",
+    "a2a-sdk[all]>=0.3.0,<0.4.0",
+    "a2ui-agent-sdk>=0.4.0",
     "ag-ui-protocol>=0.1.10",
     "agent-client-protocol>=0.7.1",
     "agent-codemode>=0.1.0",
     "agent-skills>=0.1.1",
     "anthropic>=0.105.0,<1.0.0",
     "boto3>=1.42.96,<1.43.0",
-    "code-sandboxes>=0.0.11,<0.0.14",
+    "code-sandboxes>=0.0.13",
     "croniter>=6.0.0",
-    "datalayer-core>=1.1.22,<1.2.0",
+    "datalayer-core>=1.1.42",
     "dbos>=2.10.0,<2.23.0",
     "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
     "fastapi",
@@ -44,6 +44,7 @@ dependencies = [
     "google-auth>=2.52.0",
     "google-api-core>=2.30.3",
     "jupyter-kernel-client>=0.0.9",
+    "nbformat",
     "jupyter-server>=2.10,<3",
     "logfire>=4.32.1",
     "logfire-api>=4.33.0",
@@ -122,7 +123,8 @@ agent-sudo = [
 
 [project.scripts]
 agent-runtimes = "agent_runtimes.main:main"
-ag = "agent_runtimes.main:main"
+loop = "agent_runtimes.main:main"
+l = "agent_runtimes.main:main"
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -165,6 +167,26 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = "agent_runtimes.handlers.chat.*"
 disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.commands.evals"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.evals.saas.report"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.evals.saas.runner"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "agent_runtimes.commands.agents"
+disable_error_code = ["import-untyped"]
 
 [tool.ruff.lint]
 extend-select = ["I"]
@@ -233,3 +255,4 @@ skips = [
 
 [tool.interrogate]
 fail-under = 79.0
+exclude = ["agent_runtimes/tests", "scripts"]

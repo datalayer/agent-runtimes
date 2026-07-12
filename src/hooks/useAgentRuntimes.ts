@@ -14,7 +14,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import type { IRuntimeOptions } from '@datalayer/core/lib/stateful/runtimes/apis';
+import type { IRuntimeOptions } from '../runtimes/apis';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -103,6 +103,11 @@ export interface UseAgentReturn {
   createAgent: (
     config?: AgentConfig,
   ) => Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>>;
+  /**
+   * Delete the current agent on the server and reset in-process runtime state
+   * so a fresh runtime/agent can be launched.
+   */
+  teardown: () => Promise<void>;
   /** Whether agent creation is currently in progress */
   isCreating: boolean;
 
@@ -273,12 +278,12 @@ export function useAgentRuntimes(
       );
     }
     return (
-      configuration?.runtimesRunUrl ||
+      configuration?.runtimesUrl ||
       import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
       'https://r1.datalayer.run'
     );
   }, [
-    configuration?.runtimesRunUrl,
+    configuration?.runtimesUrl,
     runtimeCreationBaseUrl,
     runtimeCreationTarget,
   ]);
@@ -290,11 +295,11 @@ export function useAgentRuntimes(
       const { iamStore, coreStore } = await import('@datalayer/core/lib/state');
       const token = iamStore.getState().token || '';
       const config = coreStore.getState().configuration;
-      const runUrl = config?.aiagentsRunUrl || '';
-      const runtimesRunUrl = resolvedRuntimeCreationBaseUrl;
-      return { token, runUrl, runtimesRunUrl };
+      const datalayerUrl = config?.aiAgentsUrl || '';
+      const runtimesUrl = resolvedRuntimeCreationBaseUrl;
+      return { token, datalayerUrl, runtimesUrl };
     } catch {
-      return { token: '', runUrl: '', runtimesRunUrl: '' };
+      return { token: '', datalayerUrl: '', runtimesUrl: '' };
     }
   }, [resolvedRuntimeCreationBaseUrl]);
 
@@ -322,13 +327,13 @@ export function useAgentRuntimes(
             runtimeOptions
               ? {
                   ...runtimeOptions,
-                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                  runtimesUrl: resolvedRuntimeCreationBaseUrl,
                 }
               : {
                   environmentName: 'ai-agents-env',
                   creditsLimit: 10,
                   givenName: safeName,
-                  runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+                  runtimesUrl: resolvedRuntimeCreationBaseUrl,
                 },
           );
           setLifecycleStatus('ready');
@@ -345,7 +350,7 @@ export function useAgentRuntimes(
         }
         return storeLaunchAgent({
           ...runtimeOptions,
-          runtimesRunUrl: resolvedRuntimeCreationBaseUrl,
+          runtimesUrl: resolvedRuntimeCreationBaseUrl,
         });
       }
     },
@@ -413,6 +418,33 @@ export function useAgentRuntimes(
     [agentSpecId, agentConfig, agentSpec, hasSpec, runtime, storeCreateAgent],
   );
 
+  // ─── Teardown ───────────────────────────────────────────────────────
+
+  const teardown = useCallback(async () => {
+    const agentId = runtime?.agentId;
+    const agentBaseUrl = runtime?.agentBaseUrl;
+    if (agentId && agentBaseUrl) {
+      try {
+        const { token } = await getAuthHeaders();
+        await fetch(
+          `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
+          {
+            method: 'DELETE',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
+      } catch {
+        // Best-effort teardown: ignore network / 404 errors.
+      }
+    }
+    // Reset in-process runtime state so a fresh agent can be launched.
+    hasCreatedAgentRef.current = false;
+    hasAutoStarted.current = false;
+    setLifecycleStatus('idle');
+    setLifecycleError(null);
+    agentRuntimeStore.getState().reset();
+  }, [runtime?.agentId, runtime?.agentBaseUrl, getAuthHeaders]);
+
   // ─── Auto-create agent when runtime is ready (connect mode) ───────
 
   useEffect(() => {
@@ -477,13 +509,12 @@ export function useAgentRuntimes(
     let cancelled = false;
     const bootstrap = async () => {
       try {
-        const { token, runtimesRunUrl } = await getAuthHeaders();
+        const { token, runtimesUrl } = await getAuthHeaders();
         if (!token) {
           return;
         }
-        const { listRuntimes } =
-          await import('@datalayer/core/lib/api/runtimes/runtimes');
-        const runtimesResponse = await listRuntimes(token, runtimesRunUrl);
+        const { listRuntimes } = await import('../api/runtimes/runtimes');
+        const runtimesResponse = await listRuntimes(token, runtimesUrl);
         const runtimes = runtimesResponse.runtimes || [];
         const aiAgentRuntimes = runtimes.filter(rt => {
           if (rt.environment_name !== 'ai-agents-env') {
@@ -612,6 +643,7 @@ export function useAgentRuntimes(
     endpoint,
     serviceManager,
     createAgent,
+    teardown,
     isCreating,
 
     // Status
@@ -673,7 +705,7 @@ export function useAgentRuntimesQuery(
       }
       const query = params.toString();
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes${query ? `?${query}` : ''}`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes${query ? `?${query}` : ''}`,
         method: 'GET',
       });
       if (resp.success && resp.runtimes) {
@@ -709,7 +741,7 @@ export function useAgentRuntimeByPodName(podName: string | undefined) {
     queryKey: agentQueryKeys.agentRuntimes.detail(podName ?? ''),
     queryFn: async () => {
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
         method: 'GET',
       });
       if (resp.runtime) {
@@ -743,7 +775,7 @@ export function useCreateAgentRuntime() {
           ? [String(data.volumeUid).trim()]
           : [];
       return requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes`,
         method: 'POST',
         body: {
           environment_name: data.environmentName || 'ai-agents-env',
@@ -795,7 +827,7 @@ export function useDeleteAgentRuntime() {
   return useMutation({
     mutationFn: async (podName: string) => {
       return requestDatalayer({
-        url: `${configuration.runtimesRunUrl}/api/runtimes/v1/runtimes/${podName}`,
+        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
         method: 'DELETE',
       });
     },

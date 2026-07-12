@@ -14,13 +14,51 @@ This implementation uses a hybrid approach:
 
 import logging
 import os
+from functools import lru_cache
 from typing import Any
 
+from a2ui.basic_catalog.provider import BasicCatalog
+from a2ui.schema.constants import VERSION_0_9
+from a2ui.schema.manager import A2uiSchemaManager
 from pydantic_ai import Agent, RunContext
 
 from .restaurant_data import get_restaurant_data
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _get_a2ui_catalog() -> Any:
+    """Return the cached basic A2UI catalog from the a2ui-agent-sdk."""
+    manager = A2uiSchemaManager(
+        version=VERSION_0_9,
+        catalogs=[BasicCatalog.get_config(version=VERSION_0_9)],
+    )
+    return manager.get_selected_catalog()
+
+
+def _validate_a2ui_messages(messages: list[dict[str, Any]]) -> None:
+    """Validate A2UI messages against the SDK catalog, logging any issues.
+
+    Validation is best-effort and never blocks a response: malformed messages
+    are logged as warnings so the client still receives whatever was built.
+    """
+    try:
+        catalog = _get_a2ui_catalog()
+    except Exception as exc:  # pragma: no cover - SDK/catalog load failure
+        logger.warning("--- A2UI: Unable to load catalog for validation: %s ---", exc)
+        return
+    for index, message in enumerate(messages):
+        try:
+            catalog.validator.validate(message)
+        except Exception as exc:
+            command = next((k for k in message if k != "version"), "unknown")
+            logger.warning(
+                "--- A2UI: Message %d (%s) failed validation: %s ---",
+                index,
+                command,
+                exc,
+            )
 
 
 # Agent state for storing context
@@ -32,7 +70,9 @@ class RestaurantDeps:
         self.last_restaurants: list[dict[str, Any]] = []
 
 
-A2UI_BASIC_CATALOG_ID = "https://a2ui.org/specification/v0_9/basic_catalog.json"
+# Authoritative basic catalog id, derived from the a2ui-agent-sdk so it always
+# matches the catalog the client renderer has registered.
+A2UI_BASIC_CATALOG_ID = BasicCatalog.get_catalog_id(VERSION_0_9)
 
 
 def _create_surface_message(surface_id: str, primary_color: str) -> dict[str, Any]:
@@ -394,7 +434,9 @@ def create_restaurant_agent(base_url: str) -> Agent[RestaurantDeps, str]:
     Create a new restaurant agent instance with the given base URL.
     """
     agent: Agent[RestaurantDeps, str] = Agent(
-        model=os.getenv("PYDANTIC_AI_MODEL", "openai:gpt-4o-mini"),
+        model=os.getenv(
+            "PYDANTIC_AI_MODEL", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        ),
         deps_type=RestaurantDeps,
         system_prompt="""You are a helpful restaurant finding assistant.
 
@@ -470,6 +512,7 @@ async def run_restaurant_agent(
         # Build A2UI response from the stored restaurant data
         if deps.last_restaurants:
             a2ui_messages = _build_restaurant_list_a2ui(deps.last_restaurants)
+            _validate_a2ui_messages(a2ui_messages)
             logger.info(
                 f"--- RestaurantAgent: Built A2UI with {len(deps.last_restaurants)} restaurants ---"
             )
@@ -523,6 +566,7 @@ async def handle_a2ui_action(
         address = context.get("address", "")
 
         a2ui_messages = _build_booking_form_a2ui(restaurant_name, address, image_url)
+        _validate_a2ui_messages(a2ui_messages)
 
         return {
             "success": True,
@@ -539,6 +583,7 @@ async def handle_a2ui_action(
         a2ui_messages = _build_confirmation_a2ui(
             restaurant_name, party_size, reservation_time, dietary
         )
+        _validate_a2ui_messages(a2ui_messages)
 
         return {
             "success": True,

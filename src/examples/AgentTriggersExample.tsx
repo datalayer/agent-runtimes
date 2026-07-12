@@ -50,6 +50,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useConnectedIdentities } from '../identity';
 import {
   ToolApprovalBanner,
@@ -74,14 +75,12 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'trigger-example-agent';
 const AGENTSPEC_ID = 'example-one-trigger';
-const APPROVAL_AGENT_NAME = 'trigger-approval-example-agent';
-const APPROVAL_AGENTSPEC_ID = 'example-one-trigger-approval';
+const APPROVAL_AGENT_NAME = 'trigger-approval-agent';
+const APPROVAL_AGENTSPEC_ID = 'example-tool-approvals';
 const ONCE_TRIGGER_PROMPT =
   "List the user's top 3 public and top 3 private GitHub repositories, ranked by recent activity, and provide a brief summary of each. Execute exactly two tool calls: run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'public', sort:'updated', limit:3, format:'json'}) and run_skill_script(skill_name='github', script_name='list_repos', kwargs={visibility:'private', sort:'updated', limit:3, format:'json'}). Do not call list_skills/load_skill/read_skill_resource. Do not retry. If a tool call fails, report failure_reason/error/stderr exactly as returned.";
 const ONCE_TRIGGER_APPROVAL_PROMPT =
   'Use the runtime_sensitive_echo tool once.';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_CRON = '0 8 * * *'; // daily at 08:00 UTC
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -122,7 +121,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   const [hookError, setHookError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string>(agentName);
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   // Cron state
@@ -1087,7 +1086,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -1119,7 +1118,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     >
       <Box
         sx={{
-          height: 'calc(100vh - 60px)',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -1227,7 +1226,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 runtimeId={agentId}
                 showInput={true}
                 disableInputPrompt={true}
-                showModelSelector={false}
+                showModelSelector={true}
                 showToolsMenu={true}
                 showSkillsMenu={true}
               />
@@ -1452,8 +1451,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                       }
 
                       const p = outputEvent?.payload as
-                        | Record<string, any>
-                        | undefined;
+                        Record<string, any> | undefined;
                       const outputText = outputEvent
                         ? p?.outputs
                           ? String(p.outputs)
@@ -2600,7 +2598,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 // ─── Sync token to core IAM store ──────────────────────────────────────────
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -2621,7 +2619,7 @@ const AgentTriggersExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

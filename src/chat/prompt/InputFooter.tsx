@@ -214,6 +214,7 @@ export function InputToolbar({
       {/* Model, Skills, and Tools Footer — Below Input */}
       {showSelectorsBar && (
         <Box
+          aria-disabled={disableInputPrompt || undefined}
           sx={{
             display: 'flex',
             gap: 2,
@@ -224,6 +225,9 @@ export function InputToolbar({
             borderColor: 'border.default',
             alignItems: 'center',
             bg: 'canvas.subtle',
+            ...(disableInputPrompt
+              ? { opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(1)' }
+              : null),
           }}
         >
           {hasSelectorsContent ? (

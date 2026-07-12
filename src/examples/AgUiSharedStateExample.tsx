@@ -10,14 +10,17 @@
  * and the AI agent using AG-UI. This example shows a recipe builder where
  * both the user and the AI can modify the shared state.
  *
- * Backend: /api/v1/examples/shared_state/
+ * Backend: managed AG-UI agent runtime (agentspec: example-shared-state)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Text, Button, TextInput, Label } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
   PlusIcon,
   XIcon,
@@ -25,10 +28,6 @@ import {
   ClockIcon,
   PersonIcon,
 } from '@primer/octicons-react';
-
-// AG-UI endpoint for shared state example
-const SHARED_STATE_ENDPOINT =
-  'http://localhost:8765/api/v1/examples/shared_state/';
 
 // Types for recipe state
 interface RecipeState {
@@ -315,8 +314,24 @@ const RecipeDisplay: React.FC<{
  * - STATE_SNAPSHOT for receiving state from agent
  * - Editable UI that updates shared state
  */
+const AGENT_NAME = 'ag-ui-shared-state';
+const AGENTSPEC_ID = 'example-shared-state';
+
 const AgUiSharedStateExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId } = useExampleAgentRuntime({
+    exampleId: 'AgUiSharedStateExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      protocol: 'ag-ui',
+      agentSpecId: AGENTSPEC_ID,
+    },
+  });
+  const sharedStateEndpoint =
+    agentId != null ? `${baseUrl}/api/v1/ag-ui/${agentId}/` : undefined;
   const [recipe, setRecipe] = useState<RecipeState>(DEFAULT_RECIPE);
 
   // Handle state updates from AG-UI
@@ -468,25 +483,27 @@ const AgUiSharedStateExample: React.FC = () => {
         </Box>
 
         {/* Floating chat with initial state */}
-        <ChatFloating
-          protocol="ag-ui"
-          endpoint={SHARED_STATE_ENDPOINT}
-          title="Recipe Assistant"
-          description="Let's build a recipe together! I can add ingredients, instructions, and more."
-          position="bottom-right"
-          brandColor={brandColor}
-          onStateUpdate={handleStateUpdate}
-          suggestions={[
-            {
-              title: 'Pasta recipe',
-              message: 'Help me create a simple pasta recipe.',
-            },
-            {
-              title: 'Add ingredient',
-              message: 'Add tomatoes to the recipe.',
-            },
-          ]}
-        />
+        {sharedStateEndpoint && (
+          <ChatFloating
+            protocol="ag-ui"
+            endpoint={sharedStateEndpoint}
+            title="Recipe Assistant"
+            description="Let's build a recipe together! I can add ingredients, instructions, and more."
+            position="bottom-right"
+            brandColor={brandColor}
+            onStateUpdate={handleStateUpdate}
+            suggestions={[
+              {
+                title: 'Pasta recipe',
+                message: 'Help me create a simple pasta recipe.',
+              },
+              {
+                title: 'Add ingredient',
+                message: 'Add tomatoes to the recipe.',
+              },
+            ]}
+          />
+        )}
       </Box>
     </ThemedProvider>
   );

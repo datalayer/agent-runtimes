@@ -193,6 +193,32 @@ class FrontendToolSpec(BaseModel):
     )
 
 
+class FrontendRenderToolSpec(BaseModel):
+    """
+    Specification binding a backend tool to a frontend renderer.
+
+    Lets an agent declare, in its spec, which backend tool results should be
+    rendered inline by the frontend, which renderer to use, and an optional
+    CSS file to load. Frontend examples read this instead of hardcoding the
+    tool name or CSS filename.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    tool: str = Field(
+        ...,
+        description="Name of the backend tool whose result is rendered inline",
+    )
+    renderer: str = Field(
+        ...,
+        description="Renderer key the frontend maps to a component",
+    )
+    css: Optional[str] = Field(
+        default=None,
+        description="Optional CSS filename the frontend loads for this renderer",
+    )
+
+
 class AIModel(BaseModel):
     """Specification for an AI model."""
 
@@ -960,6 +986,15 @@ class Agentspec(BaseModel):
         default_factory=list,
         description="Frontend tool IDs available to this agent",
         alias="frontendTools",
+    )
+    frontend_render_tools: List[FrontendRenderToolSpec] = Field(
+        default_factory=list,
+        description=(
+            "Bindings of backend tools to frontend renderers so examples "
+            "read the tool name and CSS filename from the spec instead of "
+            "hardcoding them."
+        ),
+        alias="frontendRenderTools",
     )
     environment_name: str = Field(
         default="ai-agents-env",

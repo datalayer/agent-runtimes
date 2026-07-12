@@ -34,6 +34,7 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { Chat } from '../chat';
 import { useAIAgentsWebSocket } from '../hooks';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
 import { parseAgentStreamMessage } from '../types/stream';
 import type {
@@ -48,8 +49,6 @@ const queryClient = new QueryClient();
 const AGENT_NAME = 'mcp-example-agent';
 // Must match agentspecs/agentspecs/agents/example-mcp.yaml `id`.
 const AGENTSPEC_ID = 'example-mcp';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 /** A tool discovered from a running MCP server. */
 interface McpToolInfo {
@@ -87,8 +86,7 @@ function deriveAggregate(servers: McpServerStatus[]): McpAggregateStatus {
 const McpToolCard: React.FC<{ tool: McpToolInfo }> = ({ tool }) => {
   const schemaProps = (tool.inputSchema as Record<string, unknown>)
     ?.properties as
-    | Record<string, { type?: string; description?: string }>
-    | undefined;
+    Record<string, { type?: string; description?: string }> | undefined;
   const paramNames = schemaProps ? Object.keys(schemaProps) : [];
 
   return (
@@ -305,7 +303,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   // Pending approvals are now managed internally by ChatBase via the Zustand
   // agent-runtime store — no local state needed.
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   const authFetch = useCallback(
@@ -599,7 +597,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -616,7 +614,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -648,7 +646,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             placeholder="Ask the agent to search the web or explore GitHub..."
             showHeader={true}
             showNewChatButton={true}
-            showClearButton={false}
+            showClearButton={true}
             showToolsMenu={true}
             showSkillsMenu={true}
             showTokenUsage={true}
@@ -836,7 +834,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 };
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -855,7 +853,7 @@ const AgentMCPExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

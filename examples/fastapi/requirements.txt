@@ -1,0 +1,5 @@
+datalayer-core
+pydantic
+scikit-learn
+fastapi
+uvicorn

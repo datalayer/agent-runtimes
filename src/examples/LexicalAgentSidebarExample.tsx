@@ -66,6 +66,8 @@ import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import type { FrontendToolDefinition, ProtocolConfig } from '../types';
 import { DEFAULT_MODEL } from '../specs';
 
@@ -76,11 +78,8 @@ import './lexical/lexical-theme.css';
 const LEXICAL_ID = 'chat-lexical-example';
 
 // Default configuration
-const DEFAULT_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const DEFAULT_AGENT_ID =
   import.meta.env.VITE_AGENT_ID || 'lexical-sidebar-agent-runtime-example';
-const VERCEL_AI_ENDPOINT = `${DEFAULT_BASE_URL}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
 
 function getJupyterSandboxUrl(
   serviceManager?: ServiceManager.IManager,
@@ -108,96 +107,6 @@ function getJupyterSandboxUrl(
   return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
-function useEnsureAgent(
-  agentId: string,
-  baseUrl: string,
-  jupyterSandboxUrl?: string,
-): {
-  isReady: boolean;
-  error: string | null;
-} {
-  const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function ensureAgent() {
-      try {
-        if (!jupyterSandboxUrl) {
-          if (mounted) {
-            setError(
-              'Could not detect Jupyter server URL from Lexical service manager.',
-            );
-            setIsReady(false);
-          }
-          return;
-        }
-
-        const response = await fetch(`${baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: agentId,
-            description: 'Demo agent for lexical sidebar example',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            model: DEFAULT_MODEL,
-            system_prompt:
-              'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
-            enable_codemode: false,
-            sandbox_variant: 'jupyter',
-            jupyter_sandbox: jupyterSandboxUrl,
-          }),
-        });
-
-        if (mounted) {
-          if (response.ok) {
-            console.warn(
-              `[LexicalAgentSidebarExample] Created agent: ${agentId}`,
-            );
-            setError(null);
-            setIsReady(true);
-          } else if (response.status === 409 || response.status === 400) {
-            console.warn(
-              `[LexicalAgentSidebarExample] Reusing existing agent: ${agentId}`,
-            );
-            setError(null);
-            setIsReady(true);
-          } else {
-            const errorData = await response.json().catch(() => ({}));
-            setError(
-              errorData.detail || `Failed to create agent: ${response.status}`,
-            );
-            setIsReady(false);
-          }
-        }
-      } catch (err) {
-        if (mounted) {
-          console.error(
-            '[LexicalAgentSidebarExample] Error creating agent:',
-            err,
-          );
-          setError(
-            err instanceof Error ? err.message : 'Failed to connect to server',
-          );
-          setIsReady(false);
-        }
-      }
-    }
-
-    void ensureAgent();
-
-    return () => {
-      mounted = false;
-    };
-  }, [agentId, baseUrl, jupyterSandboxUrl]);
-
-  return { isReady, error };
-}
-
 /**
  * Lexical plugin for code highlighting
  */
@@ -216,9 +125,10 @@ function CodeHighlightingPlugin() {
  */
 interface LexicalEditorProps {
   serviceManager?: ServiceManager.IManager;
+  endpoint: string;
 }
 
-function LexicalEditor({ serviceManager }: LexicalEditorProps) {
+function LexicalEditor({ serviceManager, endpoint }: LexicalEditorProps) {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
   const [_isLinkEditMode, setIsLinkEditMode] = useState(false);
@@ -331,7 +241,7 @@ function LexicalEditor({ serviceManager }: LexicalEditorProps) {
           <ChatInlinePlugin
             protocol={{
               type: 'vercel-ai',
-              endpoint: VERCEL_AI_ENDPOINT,
+              endpoint,
             }}
             isOpen={isAiOpen}
             onClose={closeAi}
@@ -354,16 +264,53 @@ interface ChatLexicalAgentExampleProps {
 export function ChatLexicalAgentExampleInner({
   serviceManager,
 }: ChatLexicalAgentExampleProps) {
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
+  const [createRequested, setCreateRequested] = useState(false);
   const jupyterSandboxUrl = useMemo(
     () => getJupyterSandboxUrl(serviceManager),
     [serviceManager],
   );
 
-  const { isReady, error } = useEnsureAgent(
-    DEFAULT_AGENT_ID,
-    DEFAULT_BASE_URL,
-    jupyterSandboxUrl,
-  );
+  const { agentId, isReady, status, error, createAgent } =
+    useExampleAgentRuntime({
+      exampleId: 'LexicalAgentSidebarExample',
+      agentName: DEFAULT_AGENT_ID,
+      autoCreateAgent: false,
+      agentConfig: {
+        name: DEFAULT_AGENT_ID,
+        description: 'Demo agent for lexical sidebar example',
+        protocol: 'vercel-ai',
+        model: DEFAULT_MODEL,
+        systemPrompt:
+          'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
+        enableCodemode: false,
+        sandboxVariant: 'jupyter',
+        jupyterSandbox: jupyterSandboxUrl,
+      },
+    });
+
+  useEffect(() => {
+    if (!jupyterSandboxUrl || createRequested || agentId) {
+      return;
+    }
+    setCreateRequested(true);
+    void createAgent({
+      name: DEFAULT_AGENT_ID,
+      description: 'Demo agent for lexical sidebar example',
+      protocol: 'vercel-ai',
+      model: DEFAULT_MODEL,
+      systemPrompt:
+        'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
+      enableCodemode: false,
+      sandboxVariant: 'jupyter',
+      jupyterSandbox: jupyterSandboxUrl,
+    }).catch(() => {
+      setCreateRequested(false);
+    });
+  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
+
+  const effectiveReady = isReady || status === 'ready';
 
   // Get lexical tools for ChatSidebar
   const tools = useLexicalTools(LEXICAL_ID);
@@ -372,12 +319,12 @@ export function ChatLexicalAgentExampleInner({
   const protocolConfig = useMemo((): ProtocolConfig => {
     return {
       type: 'vercel-ai',
-      endpoint: VERCEL_AI_ENDPOINT,
+      endpoint: vercelAiEndpoint,
       agentId: DEFAULT_AGENT_ID,
       enableConfigQuery: true,
-      configEndpoint: `${DEFAULT_BASE_URL}/api/v1/configure`,
+      configEndpoint: `${baseUrl}/api/v1/configure`,
     };
-  }, []);
+  }, [baseUrl, vercelAiEndpoint]);
 
   return (
     <>
@@ -425,12 +372,15 @@ export function ChatLexicalAgentExampleInner({
               bg: 'canvas.default',
             }}
           >
-            <LexicalEditor serviceManager={serviceManager} />
+            <LexicalEditor
+              serviceManager={serviceManager}
+              endpoint={vercelAiEndpoint}
+            />
           </Box>
         </Box>
 
         {/* Chat sidebar */}
-        {isReady && (
+        {effectiveReady && (
           <ChatSidebar
             title="AI Assistant"
             protocol={protocolConfig}

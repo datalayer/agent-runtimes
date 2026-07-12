@@ -43,6 +43,7 @@ import { CodeIcon, StopIcon, TerminalIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { Chat } from '../chat';
 import type { SandboxWsStatus } from '../types/sandbox';
 import { SANDBOX_STATUS_COLORS, SANDBOX_STATUS_LABELS } from '../types/sandbox';
@@ -53,8 +54,6 @@ import type { SandboxAggregateStatus } from '../types/sandbox';
 const queryClient = new QueryClient();
 const AGENT_NAME = 'sandbox-example-agent';
 const AGENTSPEC_ID = 'example-full';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 
 type SandboxVariant = 'eval' | 'jupyter';
 
@@ -112,7 +111,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
   const { token } = useSimpleAuthStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
 
   // ── Agent lifecycle ──
   const [runtimeStatus, setRuntimeStatus] = useState<
@@ -792,7 +791,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
               placeholder="Ask the agent to write and run code…"
               showHeader={true}
               showNewChatButton={true}
-              showClearButton={false}
+              showClearButton={true}
               showTokenUsage={true}
               autoFocus
               height="100%"
@@ -871,7 +870,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
 // ─── Auth wrapper ──────────────────────────────────────────────────────────
 
 const syncTokenToIamStore = (newToken: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token: newToken });
   });
 };
@@ -890,7 +889,7 @@ const AgentSandboxExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);

@@ -1,0 +1,85 @@
+<!--
+  ~ Copyright (c) 2025-2026 Datalayer, Inc.
+  ~ Distributed under the terms of the Modified BSD License.
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Datalayer ☰ Agent Runtimes Examples 2</title>
+
+    <!-- Datalayer Configuration -->
+    <script id="datalayer-config-data" type="application/json">
+      {
+        "datalayerUrl": "%VITE_DATALAYER_URL%",
+        "aiAgentsUrl": "%VITE_DATALAYER_URL%",
+        "aiInferenceUrl": "%VITE_DATALAYER_URL%",
+        "mcpServersUrl": "%VITE_DATALAYER_URL%",
+        "iamUrl": "%VITE_DATALAYER_URL%",
+        "runtimesUrl": "%VITE_DATALAYER_RUNTIMES_URL%",
+        "jupyterServerToken": "60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6",
+        "jupyterServerUrl": "%VITE_JUPYTER_SERVER_URL%",
+        "jupyterServerless": "true",
+        "libraryUrl": "%VITE_DATALAYER_URL%",
+        "spacerUrl": "%VITE_DATALAYER_URL%",
+        "otelUrl": "%VITE_DATALAYER_URL%",
+        "growthUrl": "%VITE_DATALAYER_URL%",
+        "inboundsUrl": "%VITE_DATALAYER_URL%",
+        "successUrl": "%VITE_DATALAYER_URL%",
+        "supportUrl": "%VITE_DATALAYER_URL%",
+        "useMock": false,
+        "whiteLabel": false,
+        "loadConfigurationFromServer": false,
+        "brand": {
+          "name": "Datalayer",
+          "about": "AI Agents for Data Analysis",
+          "logoUrl": "https://assets.datalayer.tech/datalayer-25.svg",
+          "logoSquareUrl": "https://assets.datalayer.tech/datalayer-square.png",
+          "copyright": "© 2025 Datalayer, Inc",
+          "docsUrl": "https://docs.datalayer.ai",
+          "supportUrl": "https://datalayer.app/support",
+          "termsUrl": "https://datalayer.app/terms",
+          "pricingUrl": "https://datalayer.app/pricing",
+          "privacyUrl": "https://datalayer.app/privacy"
+        }
+      }
+    </script>
+
+    <!-- Jupyter Configuration -->
+    <script id="jupyter-config-data" type="application/json">
+      {
+        "appName": "Agent Runtimes Examples 2",
+        "baseUrl": "%VITE_JUPYTER_SERVER_URL%",
+        "wsUrl": "%VITE_JUPYTER_SERVER_URL_WS%",
+        "token": "60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6",
+        "appUrl": "/lab",
+        "themesUrl": "/lab/api/themes",
+        "disableRTC": false,
+        "terminalsAvailable": "false",
+        "mathjaxUrl": "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js",
+        "mathjaxConfig": "TeX-AMS_CHTML-full,Safe"
+      }
+    </script>
+
+    <!-- IPyWidgets support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <script
+      data-jupyter-widgets-cdn="https://cdn.jsdelivr.net/npm/"
+      data-jupyter-widgets-cdn-only="true"
+    ></script>
+
+    <!-- Favicon -->
+    <link
+      rel="shortcut icon"
+      href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAN1wAADdcBQiibeAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAC7SURBVFiF7ZU9CgIxEIXfTHbPopfYc+pJ9AALtmJnZSOIoJWFoCTzLHazxh/Ebpt5EPIxM8XXTCKTxYyMCYwJFhOYCo4JFiMuu317PZwaqEBUIar4YMmskL73DytGjgu4gAt4PDJdzkkzMBloBhqBgcu69XW+1I+rNSQESNDuaMEhdP/Fj/7oW+ACLuACHk/3F5BAfuMLBjm8/ZnxNvNtHmY4b7Ztut0bqStoVSHfWj9Z6mr8LXABF3CBB3nvkDfEVN6PAAAAAElFTkSuQmCC"
+      type="image/x-icon"
+    />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/examples2/main.tsx"></script>
+  </body>
+</html>

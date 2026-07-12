@@ -72,6 +72,8 @@ import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 import { DEFAULT_MODEL } from '../specs';
 
@@ -81,12 +83,7 @@ import './lexical/lexical-theme.css';
 // Fixed lexical document ID
 const LEXICAL_ID = 'agui-lexical-example';
 
-// Base URL for agent-runtimes server
-const BASE_URL = 'http://localhost:8765';
 const AGENT_ID = 'lexical-agent-runtime-example';
-
-// Vercel AI endpoint for lexical operations
-const VERCEL_AI_ENDPOINT = `${BASE_URL}/api/v1/vercel-ai/${AGENT_ID}`;
 
 function getJupyterSandboxUrl(
   serviceManager?: ServiceManager.IManager,
@@ -118,115 +115,6 @@ function getJupyterSandboxUrl(
  * Hook to ensure the example-agent exists on the server.
  * Creates it if it doesn't exist.
  */
-function useEnsureAgent(
-  agentId: string,
-  baseUrl: string,
-  jupyterSandboxUrl?: string,
-): {
-  isReady: boolean;
-  error: string | null;
-} {
-  const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function ensureAgent() {
-      try {
-        if (!jupyterSandboxUrl) {
-          if (mounted) {
-            setError(
-              'Could not detect Jupyter server URL from Lexical service manager.',
-            );
-            setIsReady(false);
-          }
-          return;
-        }
-
-        // Try to create the agent (will fail if already exists, which is fine)
-        const response = await fetch(`${baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: agentId,
-            description: 'Demo agent for lexical example',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            model: DEFAULT_MODEL,
-            system_prompt:
-              'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
-            enable_codemode: false,
-            sandbox_variant: 'jupyter',
-            jupyter_sandbox: jupyterSandboxUrl,
-          }),
-        });
-
-        if (mounted) {
-          if (response.ok) {
-            console.log(
-              `[AgentRuntimeLexicalAgentExample] Created agent: ${agentId}`,
-            );
-            setError(null);
-            setIsReady(true);
-          } else {
-            const rawBody = await response.text().catch(() => '');
-            let detail = rawBody;
-            try {
-              const parsed = rawBody ? JSON.parse(rawBody) : {};
-              if (
-                typeof parsed.detail === 'string' &&
-                parsed.detail.length > 0
-              ) {
-                detail = parsed.detail;
-              }
-            } catch {
-              // Keep raw body as fallback detail.
-            }
-
-            const alreadyExists =
-              response.status === 409 ||
-              response.status === 400 ||
-              /already exists/i.test(detail || '');
-
-            if (alreadyExists) {
-              console.log(
-                `[AgentRuntimeLexicalAgentExample] Reusing existing agent: ${agentId}`,
-              );
-              setError(null);
-              setIsReady(true);
-            } else {
-              setError(detail || `Failed to create agent: ${response.status}`);
-              setIsReady(false);
-            }
-          }
-        }
-      } catch (err) {
-        if (mounted) {
-          console.error(
-            '[AgentRuntimeLexicalAgentExample] Error creating agent:',
-            err,
-          );
-          setError(
-            err instanceof Error ? err.message : 'Failed to connect to server',
-          );
-          setIsReady(false);
-        }
-      }
-    }
-
-    ensureAgent();
-
-    return () => {
-      mounted = false;
-    };
-  }, [agentId, baseUrl, jupyterSandboxUrl]);
-
-  return { isReady, error };
-}
-
 // import contentLexical from './lexicals/vscode.lexical';
 // const INITIAL_CONTENT = JSON.stringify(contentLexical);
 const INITIAL_CONTENT = undefined; // Use default empty document
@@ -333,12 +221,14 @@ function LexicalToolsPlugin({
 interface LexicalUIProps {
   content?: string;
   serviceManager?: ServiceManager.IManager;
+  endpoint: string;
   onToolsReady: (tools: ReturnType<typeof useLexicalTools>) => void;
 }
 
 const LexicalUI = React.memo(function LexicalUI({
   content = INITIAL_CONTENT,
   serviceManager,
+  endpoint,
   onToolsReady,
 }: LexicalUIProps): JSX.Element {
   const [floatingAnchorElem, setFloatingAnchorElem] =
@@ -453,7 +343,7 @@ const LexicalUI = React.memo(function LexicalUI({
               <ChatInlinePlugin
                 protocol={{
                   type: 'vercel-ai',
-                  endpoint: VERCEL_AI_ENDPOINT,
+                  endpoint,
                 }}
                 isOpen={isAiOpen}
                 onClose={closeAi}
@@ -480,17 +370,51 @@ function LexicalWithChat({
   content,
   serviceManager,
 }: LexicalWithChatProps): JSX.Element {
+  const baseUrl = useExampleAgentRuntimesUrl();
+  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${AGENT_ID}`;
+  const [createRequested, setCreateRequested] = useState(false);
   const jupyterSandboxUrl = useMemo(
     () => getJupyterSandboxUrl(serviceManager),
     [serviceManager],
   );
+  const { agentId, isReady, status, error, createAgent } =
+    useExampleAgentRuntime({
+      exampleId: 'LexicalAgentExample',
+      agentName: AGENT_ID,
+      autoCreateAgent: false,
+      agentConfig: {
+        name: AGENT_ID,
+        description: 'Demo agent for lexical example',
+        protocol: 'vercel-ai',
+        model: DEFAULT_MODEL,
+        systemPrompt:
+          'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
+        enableCodemode: false,
+        sandboxVariant: 'jupyter',
+        jupyterSandbox: jupyterSandboxUrl,
+      },
+    });
 
-  // Ensure the agent exists before rendering chat
-  const { isReady, error } = useEnsureAgent(
-    AGENT_ID,
-    BASE_URL,
-    jupyterSandboxUrl,
-  );
+  useEffect(() => {
+    if (!jupyterSandboxUrl || createRequested || agentId) {
+      return;
+    }
+    setCreateRequested(true);
+    void createAgent({
+      name: AGENT_ID,
+      description: 'Demo agent for lexical example',
+      protocol: 'vercel-ai',
+      model: DEFAULT_MODEL,
+      systemPrompt:
+        'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
+      enableCodemode: false,
+      sandboxVariant: 'jupyter',
+      jupyterSandbox: jupyterSandboxUrl,
+    }).catch(() => {
+      setCreateRequested(false);
+    });
+  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
+  const effectiveReady = isReady || status === 'ready';
 
   // State to hold tools - populated by LexicalToolsPlugin inside the context
   const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
@@ -520,6 +444,7 @@ function LexicalWithChat({
       <LexicalUI
         content={content}
         serviceManager={serviceManager}
+        endpoint={vercelAiEndpoint}
         onToolsReady={handleToolsReady}
       />
 
@@ -540,10 +465,10 @@ function LexicalWithChat({
         </Box>
       )}
 
-      {isReady && (
+      {effectiveReady && (
         <ChatFloating
           protocol="vercel-ai"
-          endpoint={VERCEL_AI_ENDPOINT}
+          endpoint={vercelAiEndpoint}
           title="Lexical AI Agent Runtime"
           description="Hi! I can help you edit documents. Try: 'Insert a heading', 'Add a code block', or 'Create a list'"
           defaultOpen={true}

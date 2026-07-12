@@ -2,18 +2,16 @@
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
+import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Checkbox, FormControl, Heading } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
-import {
-  useCoreStore,
-  createDatalayerServiceManager,
-  DatalayerCollaborationProvider,
-} from '@datalayer/core';
 import { loadJupyterConfig, Notebook } from '@datalayer/jupyter-react';
+import { DatalayerCollaborationProvider } from '../collaboration';
+import { useCoreStore } from '../state';
 import { ThemedJupyterProvider } from './utils/themedProvider';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
@@ -61,7 +59,7 @@ const NotebookCollaborationExample = (
       }
 
       // Create DatalayerServiceManager if we have credentials
-      if (configuration?.token && configuration?.runUrl) {
+      if (configuration?.token && configuration?.datalayerUrl) {
         try {
           // Now we can pass undefined to use config/defaults
           const manager = await createDatalayerServiceManager(
@@ -75,7 +73,7 @@ const NotebookCollaborationExample = (
         }
       } else {
         console.warn(
-          'Datalayer credentials not configured. Please set runUrl and token.',
+          'Datalayer credentials not configured. Please set datalayerUrl and token.',
         );
       }
     };
@@ -89,12 +87,12 @@ const NotebookCollaborationExample = (
       return undefined;
     }
 
-    const runUrl = configuration?.runUrl;
+    const datalayerUrl = configuration?.datalayerUrl;
     const token = configuration?.token;
 
-    if (!runUrl || !token) {
+    if (!datalayerUrl || !token) {
       console.warn(
-        'Datalayer collaboration enabled but runUrl or token not configured. ' +
+        'Datalayer collaboration enabled but datalayerUrl or token not configured. ' +
           'Please configure them in the Datalayer store or environment.',
       );
       return undefined;
@@ -102,7 +100,7 @@ const NotebookCollaborationExample = (
 
     // Create and return the Datalayer collaboration provider
     return new DatalayerCollaborationProvider({
-      runUrl,
+      datalayerUrl,
       token,
     });
   }, [enableCollaboration, configuration]);
@@ -126,10 +124,11 @@ const NotebookCollaborationExample = (
           </FormControl>
         </Box>
 
-        {(!configuration?.runUrl || !configuration?.token) && (
+        {(!configuration?.datalayerUrl || !configuration?.token) && (
           <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
-            Warning: Datalayer configuration is missing. Please configure runUrl
-            and token to use DatalayerServiceManager and collaboration features.
+            Warning: Datalayer configuration is missing. Please configure
+            datalayerUrl and token to use DatalayerServiceManager and
+            collaboration features.
           </Box>
         )}
 
@@ -259,7 +258,7 @@ const NotebookCollaborationExample = (
               <strong>DatalayerCollaborationProvider:</strong> Enables real-time
               collaboration
             </li>
-            <li>Both require Datalayer credentials (runUrl and token)</li>
+            <li>Both require Datalayer credentials (datalayerUrl and token)</li>
             <li>Pass them directly to the base Notebook component</li>
             <li>
               No wrapper components needed - just create the services and pass

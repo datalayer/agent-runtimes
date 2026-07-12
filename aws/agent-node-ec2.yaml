@@ -29,7 +29,7 @@ Parameters:
       egress IP(s) or private network range instead of exposing to the public
       internet.
 
-  DatalayerRunUrl:
+  DatalayerUrl:
     Type: String
     Default: https://prod1.datalayer.run
     Description: Datalayer platform base URL.
@@ -39,7 +39,7 @@ Parameters:
     Default: ''
     Description: >
       (Optional) Dedicated ai-inference base URL. When empty, the template
-      falls back to DatalayerRunUrl.
+      falls back to DatalayerUrl.
 
   AgentNodeImage:
     Type: String
@@ -195,7 +195,7 @@ Resources:
 
           AI_INFERENCE_URL='${DatalayerAiInferenceUrl}'
           if [[ -z "$AI_INFERENCE_URL" ]]; then
-            AI_INFERENCE_URL='${DatalayerRunUrl}'
+            AI_INFERENCE_URL='${DatalayerUrl}'
           fi
 
           docker run -d \
@@ -203,8 +203,8 @@ Resources:
             --restart unless-stopped \
             -p ${AgentNodePort}:${AgentNodePort} \
             -e DATALAYER_API_KEY='${DatalayerApiKey}' \
-            -e DATALAYER_RUN_URL='${DatalayerRunUrl}' \
-            -e VITE_DATALAYER_RUN_URL='${DatalayerRunUrl}' \
+            -e DATALAYER_URL='${DatalayerUrl}' \
+            -e VITE_DATALAYER_URL='${DatalayerUrl}' \
             -e DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \
             -e VITE_DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \
             -e AGENT_RUNTIMES_PORT='${AgentNodePort}' \

@@ -20,7 +20,7 @@ from agent_runtimes.monitoring.cost_monitoring import CostMonitoringCapability
 
 @dataclass
 class _Spec:
-    model: str = "openai:gpt-4o-mini"
+    model: str = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     guardrails: list[dict] | None = None
     capabilities: list[dict] | None = None
     advanced: dict | None = None
@@ -52,7 +52,7 @@ def test_cost_store_records_run() -> None:
 
     store.record_run(
         agent_id="agent-1",
-        model="openai:gpt-4o-mini",
+        model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
         input_tokens=100,
         output_tokens=50,
         run_cost_usd=0.0123,

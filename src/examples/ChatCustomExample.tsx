@@ -3,13 +3,13 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { Spinner, Text } from '@primer/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { Chat } from '../chat';
 
 // Create a query client for React Query
@@ -27,29 +27,24 @@ const queryClient = new QueryClient({
 const AGENT_NAME = 'datalayer-assistant';
 
 /**
- * Hook to ensure the agent exists on the server
- * Creates the agent if it doesn't exist
+ * Agent Runtime Custom Example Component
+ *
+ * Demonstrates the unified Chat component with AG-UI transport
+ * and all necessary providers:
+ * - QueryClientProvider for data fetching
+ * - Auto-creates agent on the server if it doesn't exist
  */
-function useEnsureAgent(baseUrl: string) {
-  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
-  const [agentId, setAgentId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const createAgent = useCallback(async (): Promise<string | null> => {
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/agents`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: agentName,
-          description: 'Datalayer AI Assistant - Your helpful coding companion',
-          agent_library: 'pydantic-ai',
-          transport: 'ag-ui',
-          model: 'openai:gpt-4o-mini',
-          system_prompt: `You are custom chat assistant, a helpful AI assistant specialized in data science, Python programming, and Jupyter notebooks.
+const AgentRuntimeCustomExample: React.FC = () => {
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const { agentId, status, error, isReady } = useExampleAgentRuntime({
+    exampleId: 'ChatCustomExample',
+    agentName,
+    agentConfig: {
+      description: 'Datalayer AI Assistant - Your helpful coding companion',
+      agentLibrary: 'pydantic-ai',
+      protocol: 'ag-ui',
+      model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+      systemPrompt: `You are custom chat assistant, a helpful AI assistant specialized in data science, Python programming, and Jupyter notebooks.
 
 You can help users with:
 - Writing and debugging Python code
@@ -59,66 +54,10 @@ You can help users with:
 - General programming questions
 
 Be concise, helpful, and provide working code examples when appropriate.`,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(
-          errorData.detail || `Failed to create agent: ${response.status}`,
-        );
-      }
-
-      const data = await response.json();
-      console.log('[AgentRuntimeCustomExample] Agent created:', data);
-      return data.id;
-    } catch (err) {
-      console.error('[AgentRuntimeCustomExample] Error creating agent:', err);
-      throw err;
-    }
-  }, [agentName, baseUrl]);
-
-  const initAgent = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log('[AgentRuntimeCustomExample] Creating new agent...');
-      const newAgentId = await createAgent();
-      if (newAgentId) {
-        setAgentId(newAgentId);
-      } else {
-        setError('Failed to create agent');
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to initialize agent';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [createAgent]);
-
-  useEffect(() => {
-    initAgent();
-  }, [initAgent]);
-
-  return { agentId, isLoading, error, retry: initAgent };
-}
-
-/**
- * Agent Runtime Custom Example Component
- *
- * Demonstrates the unified Chat component with AG-UI transport
- * and all necessary providers:
- * - QueryClientProvider for data fetching
- * - Auto-creates agent on the server if it doesn't exist
- */
-const AgentRuntimeCustomExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const { agentId, isLoading, error, retry } = useEnsureAgent(baseUrl);
+    },
+  });
+  const isLoading = !isReady && status !== 'error';
+  const retry = () => window.location.reload();
 
   return (
     <QueryClientProvider client={queryClient}>

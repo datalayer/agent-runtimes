@@ -112,3 +112,9 @@ export {
   type ChatInlineProps,
   type ChatInlineProtocolConfig,
 } from './ChatInline';
+
+// Generic full-page chat surface for a live agent runtime (with launching state)
+export {
+  AgentRuntimeChat,
+  type AgentRuntimeChatProps,
+} from '../agents/AgentRuntimeChat';

@@ -18,7 +18,7 @@ def create_jupyter_chat_agent(
     Create the main chat agent for JupyterLab.
 
     Args:
-        model: Full model string (e.g., "openai:gpt-4o", "azure-openai:gpt-4o-mini").
+        model: Full model string (e.g., "openai:gpt-4o", "azure-bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0").
         timeout: HTTP timeout in seconds for API requests (default: 60.0)
         mcp_server: Optional MCP server connection for Jupyter tools
 

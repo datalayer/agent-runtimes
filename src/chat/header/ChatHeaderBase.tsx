@@ -14,7 +14,14 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Text, Truncate } from '@primer/react';
+import {
+  Heading,
+  IconButton,
+  Text,
+  Tooltip,
+  ToggleSwitch,
+  Truncate,
+} from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
@@ -115,6 +122,12 @@ export interface ChatBaseHeaderProps {
   chatViewMode?: ChatViewMode;
   /** Callback when view mode changes */
   onChatViewModeChange?: (mode: ChatViewMode) => void;
+  /** Show the "Ephemeral Notebook" toggle in the header. */
+  showEphemeralNotebookToggle?: boolean;
+  /** Current open state of the ephemeral notebook. */
+  ephemeralNotebookOpen?: boolean;
+  /** Callback fired when the user toggles the ephemeral notebook. */
+  onToggleEphemeralNotebook?: (open: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +156,9 @@ export function ChatBaseHeader({
   onClear,
   chatViewMode,
   onChatViewModeChange,
+  showEphemeralNotebookToggle = false,
+  ephemeralNotebookOpen = false,
+  onToggleEphemeralNotebook,
 }: ChatBaseHeaderProps) {
   const effectiveIndicatorState =
     kernelIndicatorState ?? toRuntimeExecutionState(runtimeStatus);
@@ -175,6 +191,28 @@ export function ChatBaseHeader({
           }}
         >
           {brandIcon || <AiAgentIcon colored size={20} />}
+          {/* Runtime status indicator: shown between leading icon and title. */}
+          {kernel ? (
+            <KernelIndicator
+              kernel={kernel}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+              position="s"
+              bordered={false}
+            />
+          ) : (
+            <KernelIndicator
+              state={effectiveIndicatorState ?? 'undefined'}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+              position="s"
+              bordered={false}
+            />
+          )}
           {(title || subtitle) && (
             <Box
               sx={{
@@ -231,28 +269,6 @@ export function ChatBaseHeader({
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
-          {/* Runtime status indicator: always use shared KernelIndicator. */}
-          {kernel ? (
-            <KernelIndicator
-              kernel={kernel}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-              position="sw"
-              bordered={false}
-            />
-          ) : (
-            <KernelIndicator
-              state={effectiveIndicatorState ?? 'undefined'}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-              position="sw"
-              bordered={false}
-            />
-          )}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (
             <IconButton
@@ -280,6 +296,31 @@ export function ChatBaseHeader({
               size="small"
               onClick={headerButtons.onSettings}
             />
+          )}
+          {/* Ephemeral notebook toggle */}
+          {showEphemeralNotebookToggle && (
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+              }}
+            >
+              <Text
+                id="toggle-ephemeral-notebook"
+                sx={{ fontSize: 0, color: 'fg.muted' }}
+              >
+                Notebook
+              </Text>
+              <ToggleSwitch
+                size="small"
+                checked={ephemeralNotebookOpen}
+                aria-labelledby="toggle-ephemeral-notebook"
+                onClick={() =>
+                  onToggleEphemeralNotebook?.(!ephemeralNotebookOpen)
+                }
+              />
+            </Box>
           )}
           {/* View mode segmented toggle */}
           {chatViewMode && onChatViewModeChange && (
@@ -312,37 +353,40 @@ export function ChatBaseHeader({
                   },
                 ] as const
               ).map(({ mode, icon: ModeIcon, label }) => (
-                <Box
-                  key={mode}
-                  as="button"
-                  aria-label={label}
-                  title={label}
-                  onClick={() => onChatViewModeChange(mode)}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 26,
-                    height: 24,
-                    borderRadius: '4px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    bg:
-                      chatViewMode === mode ? 'canvas.default' : 'transparent',
-                    boxShadow: chatViewMode === mode ? 'shadow.small' : 'none',
-                    color: chatViewMode === mode ? 'fg.default' : 'fg.muted',
-                    transition: 'all 0.15s ease',
-                    '&:hover': {
-                      color: 'fg.default',
+                <Tooltip key={mode} text={label} direction="n">
+                  <Box
+                    as="button"
+                    aria-label={label}
+                    onClick={() => onChatViewModeChange(mode)}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 26,
+                      height: 24,
+                      borderRadius: '4px',
+                      border: 'none',
+                      cursor: 'pointer',
                       bg:
                         chatViewMode === mode
                           ? 'canvas.default'
-                          : 'neutral.subtle',
-                    },
-                  }}
-                >
-                  <ModeIcon size={14} />
-                </Box>
+                          : 'transparent',
+                      boxShadow:
+                        chatViewMode === mode ? 'shadow.small' : 'none',
+                      color: chatViewMode === mode ? 'fg.default' : 'fg.muted',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        color: 'fg.default',
+                        bg:
+                          chatViewMode === mode
+                            ? 'canvas.default'
+                            : 'neutral.subtle',
+                      },
+                    }}
+                  >
+                    <ModeIcon size={14} />
+                  </Box>
+                </Tooltip>
               ))}
             </Box>
           )}

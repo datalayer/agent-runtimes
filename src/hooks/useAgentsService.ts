@@ -41,7 +41,7 @@ export const useAgentsService = (baseUrlOverride = 'api/ai-agents/v1') => {
     { signal, baseUrl = baseUrlOverride }: RequestOptions = {},
   ) => {
     return requestDatalayer({
-      url: URLExt.join(configuration.aiagentsRunUrl, baseUrl, 'agents'),
+      url: URLExt.join(configuration.aiAgentsUrl, baseUrl, 'agents'),
       method: 'POST',
       body: {
         document_id: documentId,
@@ -60,7 +60,7 @@ export const useAgentsService = (baseUrlOverride = 'api/ai-agents/v1') => {
     baseUrl = baseUrlOverride,
   }: RequestOptions = {}) => {
     return requestDatalayer({
-      url: URLExt.join(configuration.aiagentsRunUrl, baseUrl, 'agents'),
+      url: URLExt.join(configuration.aiAgentsUrl, baseUrl, 'agents'),
       method: 'GET',
       signal,
     });
@@ -71,7 +71,7 @@ export const useAgentsService = (baseUrlOverride = 'api/ai-agents/v1') => {
   ) => {
     return requestDatalayer({
       url: URLExt.join(
-        configuration.aiagentsRunUrl,
+        configuration.aiAgentsUrl,
         baseUrl,
         'agents',
         documentId,
@@ -86,7 +86,7 @@ export const useAgentsService = (baseUrlOverride = 'api/ai-agents/v1') => {
   ) => {
     return requestDatalayer({
       url: URLExt.join(
-        configuration.aiagentsRunUrl,
+        configuration.aiAgentsUrl,
         baseUrl,
         'agents',
         documentId,
@@ -104,7 +104,7 @@ export const useAgentsService = (baseUrlOverride = 'api/ai-agents/v1') => {
   ) => {
     return requestDatalayer({
       url: URLExt.join(
-        configuration.aiagentsRunUrl,
+        configuration.aiAgentsUrl,
         baseUrl,
         'agents',
         documentId,

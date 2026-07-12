@@ -324,11 +324,11 @@ const resolveCloudRuntimeBaseUrlFromSpec = (
   }
 
   const preferredKeys = [
-    'runtimesRunUrl',
-    'runtimeRunUrl',
+    'runtimesUrl',
+    'runtimeUrl',
     'runtimes_url',
     'runtime_url',
-    'runUrl',
+    'datalayerUrl',
     'baseUrl',
     'endpoint',
   ];
@@ -537,7 +537,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const { token } = useSimpleAuthStore();
 
   const cloudCatalogBaseUrl = useMemo(() => {
-    const configured = normalizeHttpUrl(configuration?.runtimesRunUrl);
+    const configured = normalizeHttpUrl(configuration?.runtimesUrl);
     const envConfigured = normalizeHttpUrl(
       import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL,
     );
@@ -545,7 +545,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
       return configured;
     }
     return envConfigured || 'https://r1.datalayer.run';
-  }, [configuration?.runtimesRunUrl]);
+  }, [configuration?.runtimesUrl]);
 
   const isCloudMode = isCloudSpecSelection(selectedAgentId);
   const selectedSpec = selectedCloudSpec || selectedLibrarySpec;
@@ -1115,47 +1115,81 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
         ? getSpecId(selectedAgentId)
         : undefined;
 
-      const response = await fetch(`${baseUrl}/api/v1/agents`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: agentName,
-          description: description || `Agent created via UI (${agentLibrary})`,
-          goal: goal || undefined,
-          agent_library: agentLibrary,
-          transport: transport,
-          model: model,
-          system_prompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
-          system_prompt_codemode_addons:
-            systemPromptCodemodeAddons || undefined,
-          tools: tools,
-          sandbox_variant: sandboxVariant || undefined,
-          enable_skills: enableSkills,
-          enable_codemode: enableCodemode,
-          allow_direct_tool_calls: allowDirectToolCalls,
-          enable_tool_reranker: enableToolReranker,
-          selected_mcp_servers: selectedMcpServers,
-          skills: selectedSkills,
-          jupyter_sandbox: useJupyterSandbox ? jupyterSandboxUrl : undefined,
-          agent_spec: mergedSpecForLaunch,
-          ...(specId ? { agent_spec_id: specId } : {}),
-        }),
-      });
+      const createRequestBody = {
+        name: agentName,
+        description: description || `Agent created via UI (${agentLibrary})`,
+        goal: goal || undefined,
+        agent_library: agentLibrary,
+        transport: transport,
+        model: model,
+        system_prompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
+        system_prompt_codemode_addons: systemPromptCodemodeAddons || undefined,
+        tools: tools,
+        sandbox_variant: sandboxVariant || undefined,
+        enable_skills: enableSkills,
+        enable_codemode: enableCodemode,
+        allow_direct_tool_calls: allowDirectToolCalls,
+        enable_tool_reranker: enableToolReranker,
+        selected_mcp_servers: selectedMcpServers,
+        skills: selectedSkills,
+        jupyter_sandbox: useJupyterSandbox ? jupyterSandboxUrl : undefined,
+        agent_spec: mergedSpecForLaunch,
+        ...(specId ? { agent_spec_id: specId } : {}),
+      };
 
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(
-          errorData.detail || `Failed to create agent: ${response.status}`,
-        );
+      const tryCreate = async (): Promise<string> => {
+        const response = await fetch(`${baseUrl}/api/v1/agents`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(createRequestBody),
+        });
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ detail: 'Unknown error' }));
+          throw new Error(
+            errorData.detail || `Failed to create agent: ${response.status}`,
+          );
+        }
+
+        const data = await response.json();
+        console.log('[AgentRuntimeExample] Agent created:', data);
+        return data.id;
+      };
+
+      try {
+        return await tryCreate();
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to create agent';
+        const alreadyExists = /already exists/i.test(errorMessage);
+
+        // If the agent already exists, terminate (delete) it then retry once.
+        if (alreadyExists && agentName) {
+          console.warn(
+            `[AgentRuntimeExample] Agent '${agentName}' already exists, deleting and retrying create once.`,
+          );
+          const deleteResponse = await fetch(
+            `${baseUrl}/api/v1/agents/${encodeURIComponent(agentName)}`,
+            {
+              method: 'DELETE',
+            },
+          );
+
+          if (deleteResponse.ok) {
+            return await tryCreate();
+          }
+
+          throw new Error(
+            `Failed to delete existing agent '${agentName}' before retry: ${deleteResponse.status}`,
+          );
+        }
+
+        throw error;
       }
-
-      const data = await response.json();
-      console.log('[AgentRuntimeExample] Agent created:', data);
-      return data.id;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to create agent';
@@ -1581,7 +1615,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                           showModelSelector: true,
                           showToolsMenu: true,
                           showSkillsMenu: true,
-                          showInformation: false,
+                          showInformation: true,
                           codemodeEnabled: enableCodemode,
                           initialModel: model,
                           mcpServers: selectedMcpServers,

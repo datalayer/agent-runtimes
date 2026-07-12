@@ -46,6 +46,23 @@ export interface ToolSpec {
 }
 
 /**
+ * Binds a backend tool to a frontend renderer.
+ *
+ * Lets an agent declare, in its spec, which backend tool results should be
+ * rendered inline by the frontend, which renderer to use, and an optional CSS
+ * file to load. Frontend examples read this instead of hardcoding the tool
+ * name or CSS filename.
+ */
+export interface FrontendRenderToolSpec {
+  /** Name of the backend tool whose result is rendered inline */
+  tool: string;
+  /** Renderer key the frontend maps to a component */
+  renderer: string;
+  /** Optional CSS filename the frontend loads for this renderer */
+  css?: string;
+}
+
+/**
  * Specification for a frontend tool set.
  */
 export interface FrontendToolSpec {

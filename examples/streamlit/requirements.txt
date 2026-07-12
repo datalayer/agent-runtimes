@@ -1,0 +1,4 @@
+datalayer-core
+pydantic
+scikit-learn
+streamlit

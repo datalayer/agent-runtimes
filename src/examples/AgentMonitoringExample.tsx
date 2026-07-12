@@ -38,7 +38,8 @@ import { useAIAgentsWebSocket } from '../hooks';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
 import type { ContextSnapshotData } from '../types/context';
 import { parseAgentStreamMessage } from '../types/stream';
-import { useCoreStore } from '@datalayer/core/lib/state';
+import { useCoreStore } from '../state/substates';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
@@ -47,10 +48,8 @@ import type { McpToolsetsStatusResponse } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-example-agent';
 const AGENTSPEC_ID = 'example-monitoring';
-const DEFAULT_LOCAL_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
-const DATALAYER_RUN_URL_ENV = import.meta.env.DATALAYER_RUN_URL;
+const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -94,12 +93,12 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     GraphTelemetryData | undefined
   >(undefined);
 
-  const agentBaseUrl = DEFAULT_LOCAL_BASE_URL;
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
-    configuration?.otelRunUrl ||
-    configuration?.runUrl ||
+    configuration?.otelUrl ||
+    configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_RUN_URL_ENV ||
+    DATALAYER_URL_ENV ||
     'https://prod1.datalayer.run';
   const podName = agentId;
   // The OTEL service_name resource attribute is 'agent-runtimes' (the
@@ -195,7 +194,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, authFetch]);
+  }, [agentBaseUrl, agentName, authFetch]);
 
   const handleMonitoringStreamMessage = useCallback(
     (message: { raw?: unknown }) => {
@@ -288,7 +287,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          height: '100%',
           gap: 3,
         }}
       >
@@ -307,7 +306,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 60px)',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -377,7 +376,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               serviceName={otelServiceName}
               agentId={agentId}
               apiKey={token ?? undefined}
-              runUrl={otelBaseUrl}
+              datalayerUrl={otelBaseUrl}
               liveSystemPromptTokens={liveContextSnapshot?.systemPromptTokens}
               liveUserMessageTokens={liveContextSnapshot?.userMessageTokens}
               liveAgentMessageTokens={
@@ -403,7 +402,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               serviceName={otelServiceName}
               agentId={agentId}
               apiKey={token ?? undefined}
-              runUrl={otelBaseUrl}
+              datalayerUrl={otelBaseUrl}
               liveCumulativeUsd={liveCost?.cumulativeCostUsd}
               liveTimestampMs={monitorLastSnapshotAt}
               height={180}
@@ -603,7 +602,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             <TurnGraphChart
               serviceName={otelServiceName}
               agentId={agentId}
-              runUrl={otelBaseUrl}
+              datalayerUrl={otelBaseUrl}
               apiKey={token ?? undefined}
               autoRefreshMs={10_000}
               height={280}
@@ -616,7 +615,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 };
 
 const syncTokenToIamStore = (token: string) => {
-  import('@datalayer/core/lib/state').then(({ iamStore }) => {
+  import('../state/substates').then(({ iamStore }) => {
     iamStore.setState({ token });
   });
 };
@@ -635,7 +634,7 @@ const AgentMonitoringExample: React.FC = () => {
   const handleLogout = useCallback(() => {
     clearAuth();
     hasSynced.current = false;
-    import('@datalayer/core/lib/state').then(({ iamStore }) => {
+    import('../state/substates').then(({ iamStore }) => {
       iamStore.setState({ token: undefined });
     });
   }, [clearAuth]);
