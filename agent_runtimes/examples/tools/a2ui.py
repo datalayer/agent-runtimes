@@ -192,6 +192,95 @@ def _field_rule(field: A2uiField) -> dict[str, Any]:
     return rule
 
 
+def _field_checks(field: A2uiField) -> list[dict[str, Any]]:
+    """Build A2UI checks for a field so errors render inline by the control."""
+    value = {"path": f"/form/{field.id}"}
+    checks: list[dict[str, Any]] = []
+
+    if field.required:
+        checks.append(
+            {
+                "condition": {
+                    "call": "required",
+                    "args": {"value": value},
+                },
+                "message": f"{field.label} is required.",
+            }
+        )
+
+    if field.type == "email":
+        checks.append(
+            {
+                "condition": {
+                    "call": "email",
+                    "args": {"value": value},
+                },
+                "message": f"{field.label} must be a valid email address.",
+            }
+        )
+
+    if field.pattern and field.required:
+        checks.append(
+            {
+                "condition": {
+                    "call": "regex",
+                    "args": {
+                        "value": value,
+                        "pattern": field.pattern,
+                    },
+                },
+                "message": f"{field.label} is not in the expected format.",
+            }
+        )
+
+    return checks
+
+
+def _submit_checks(fields: list[A2uiField]) -> list[dict[str, Any]]:
+    """Build button checks so invalid forms cannot be submitted."""
+    conditions: list[dict[str, Any]] = []
+
+    for field in fields:
+        value = {"path": f"/form/{field.id}"}
+        if field.required:
+            conditions.append(
+                {
+                    "call": "required",
+                    "args": {"value": value},
+                }
+            )
+        if field.type == "email":
+            conditions.append(
+                {
+                    "call": "email",
+                    "args": {"value": value},
+                }
+            )
+        if field.pattern and field.required:
+            conditions.append(
+                {
+                    "call": "regex",
+                    "args": {
+                        "value": value,
+                        "pattern": field.pattern,
+                    },
+                }
+            )
+
+    if not conditions:
+        return []
+
+    return [
+        {
+            "condition": {
+                "call": "and",
+                "args": {"values": conditions},
+            },
+            "message": "Please fix the highlighted fields before submitting.",
+        }
+    ]
+
+
 def _field_components(
     field: A2uiField,
 ) -> tuple[list[dict[str, Any]], Optional[str]]:
@@ -210,6 +299,7 @@ def _field_components(
                 "component": "TextField",
                 "label": label,
                 "value": {"path": path},
+                "checks": _field_checks(field),
             }
         )
         return [base], None
@@ -221,6 +311,7 @@ def _field_components(
                 "label": label,
                 "variant": "longText",
                 "value": {"path": path},
+                "checks": _field_checks(field),
             }
         )
         return [base], None
@@ -241,6 +332,7 @@ def _field_components(
                     {"label": opt.label, "value": opt.value} for opt in options
                 ],
                 "value": {"path": path},
+                "checks": _field_checks(field),
             }
         )
         return [base], None
@@ -251,6 +343,7 @@ def _field_components(
                 "component": "CheckBox",
                 "label": label,
                 "value": {"path": path},
+                "checks": _field_checks(field),
             }
         )
         return [base], None
@@ -263,6 +356,7 @@ def _field_components(
                 "min": field.min if field.min is not None else 0,
                 "max": field.max if field.max is not None else 100,
                 "value": {"path": path},
+                "checks": _field_checks(field),
             }
         )
         return [base], None
@@ -275,6 +369,7 @@ def _field_components(
                 "enableDate": True,
                 "enableTime": field.type == "datetime",
                 "value": {"path": path},
+                "checks": _field_checks(field),
             }
         )
         return [base], None
@@ -401,6 +496,7 @@ async def render_a2ui_surface(
             "component": "Button",
             "variant": "primary",
             "child": "submit-label",
+            "checks": _submit_checks(fields),
             "action": {
                 "event": {
                     "name": "submit_a2ui_form",

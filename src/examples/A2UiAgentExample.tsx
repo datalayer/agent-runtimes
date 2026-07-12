@@ -702,10 +702,16 @@ const A2UiAgentExample: React.FC = () => {
           {/* Chat: drives the A2UI generation */}
           <Box
             sx={{
+              position: ['static', 'static', 'sticky'],
+              top: [0, 0, 3],
+              alignSelf: ['auto', 'auto', 'start'],
               border: '1px solid',
               borderColor: 'border.default',
               borderRadius: 2,
-              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              height: ['auto', 'auto', 'calc(100vh - 48px)'],
+              minHeight: [420, 520, 0],
               overflow: 'hidden',
               bg: 'canvas.default',
             }}
