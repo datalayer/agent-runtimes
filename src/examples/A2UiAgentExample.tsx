@@ -502,6 +502,9 @@ const A2UiAgentExample: React.FC = () => {
         <Box
           sx={{
             minHeight: '100vh',
+            height: ['auto', 'auto', '100dvh'],
+            boxSizing: 'border-box',
+            overflow: ['visible', 'visible', 'hidden'],
             display: 'grid',
             gridTemplateColumns: [
               '1fr',
@@ -520,6 +523,7 @@ const A2UiAgentExample: React.FC = () => {
               flexDirection: 'column',
               gap: 3,
               minHeight: 0,
+              overflowY: ['visible', 'visible', 'auto'],
             }}
           >
             <Box

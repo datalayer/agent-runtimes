@@ -194,7 +194,7 @@ def _field_rule(field: A2uiField) -> dict[str, Any]:
 
 def _field_checks(field: A2uiField) -> list[dict[str, Any]]:
     """Build A2UI checks for a field so errors render inline by the control."""
-    value = {"path": f"/form/{field.id}"}
+    value: dict[str, Any] = {"path": f"/form/{field.id}"}
     checks: list[dict[str, Any]] = []
 
     if field.required:
@@ -241,7 +241,7 @@ def _submit_checks(fields: list[A2uiField]) -> list[dict[str, Any]]:
     conditions: list[dict[str, Any]] = []
 
     for field in fields:
-        value = {"path": f"/form/{field.id}"}
+        value: dict[str, Any] = {"path": f"/form/{field.id}"}
         if field.required:
             conditions.append(
                 {
@@ -290,7 +290,7 @@ def _field_components(
     column before the control (fields with a native ``label`` return ``None``).
     """
     path = f"/form/{field.id}"
-    base = {"id": field.id}
+    base: dict[str, Any] = {"id": field.id}
     label = f"{field.label} *" if field.required else field.label
 
     if field.type in ("text", "email"):
