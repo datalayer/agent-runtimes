@@ -458,6 +458,7 @@ def _render_report(
         client=client,
         evalset_id=resolved_evalset_id,
         run_limit=run_limit,
+        billable_principal_uid=billable_principal_uid,
         account_uid=billable_principal_uid,
     )
     experiments = report.get("experiments") or []

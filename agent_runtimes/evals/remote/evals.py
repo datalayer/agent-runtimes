@@ -192,6 +192,7 @@ def build_eval_report(
     client: AgentClient,
     evalset_id: str,
     *,
+    billable_principal_uid: Optional[str] = None,
     account_uid: Optional[str] = None,
     run_limit: int = 50,
 ) -> dict[str, Any]:
@@ -206,6 +207,7 @@ def build_eval_report(
         client=client,
         evalset_id=evalset_id,
         run_limit=run_limit,
+        billable_principal_uid=billable_principal_uid,
         account_uid=account_uid,
     )
 
@@ -236,6 +238,7 @@ def write_eval_reports(
     client: AgentClient,
     evalset_id: str,
     *,
+    billable_principal_uid: Optional[str] = None,
     account_uid: Optional[str] = None,
     run_limit: int = 50,
     output_dir: str | Path = ".",
@@ -251,7 +254,11 @@ def write_eval_reports(
     from agent_runtimes.evals.remote.report import _timestamp_slug
 
     report = build_eval_report(
-        client, evalset_id, account_uid=account_uid, run_limit=run_limit
+        client,
+        evalset_id,
+        billable_principal_uid=billable_principal_uid,
+        account_uid=account_uid,
+        run_limit=run_limit,
     )
     markdown = render_eval_report_markdown(report, run_limit=run_limit)
 

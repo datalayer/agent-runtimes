@@ -73,6 +73,7 @@ def execute_evalset_spec(
     run_environment: str = "sdk",
     environment_name: str = DEFAULT_ENVIRONMENT_NAME,
     billable_principal_uid: Optional[str] = None,
+    account_uid: Optional[str] = None,
     credits_limit: float = 100.0,
     evalset_name: Optional[str] = None,
     backend_run_environment: str = "sdk",
@@ -117,6 +118,8 @@ def execute_evalset_spec(
         Runtime environment to launch cloud agents in (cloud only).
     billable_principal_uid : Optional[str]
         Optional billable principal UID context.
+    account_uid : Optional[str]
+        Optional account UID context.
     credits_limit : float
         Target credits budget used to size each cloud runtime reservation.
     evalset_name : Optional[str]
@@ -211,7 +214,8 @@ def execute_evalset_spec(
         name=resolved_name,
         run_environment=backend_run_environment,
         kind=run_mode,
-        account_uid=billable_principal_uid,
+        billable_principal_uid=billable_principal_uid,
+        account_uid=account_uid,
     )
     evalset_id = str((evalset_payload.get("evalset") or {}).get("id") or "")
     if not evalset_id:
@@ -239,7 +243,8 @@ def execute_evalset_spec(
             reports = write_eval_reports(
                 client,
                 evalset_id,
-                account_uid=billable_principal_uid,
+                billable_principal_uid=billable_principal_uid,
+                account_uid=account_uid,
             )
             result["report_markdown_path"] = str(reports.get("markdown_path") or "")
             if reports.get("csv_path") is not None:
@@ -316,7 +321,8 @@ def execute_evalset_spec(
                     "run_environment": run_environment,
                     "agent_spec_id": spec_id,
                 },
-                account_uid=billable_principal_uid,
+                billable_principal_uid=billable_principal_uid,
+                account_uid=account_uid,
             )
             experiment_id = str(
                 (experiment_payload.get("experiment") or {}).get("id") or ""
@@ -488,7 +494,8 @@ def execute_evalset_spec(
                     metrics=metrics,
                     summary=summary,
                     report=report,
-                    account_uid=billable_principal_uid,
+                    billable_principal_uid=billable_principal_uid,
+                    account_uid=account_uid,
                 )
                 run_id = str((run_payload.get("run") or {}).get("id") or "")
                 if not run_id:
@@ -506,7 +513,8 @@ def execute_evalset_spec(
             reports = write_eval_reports(
                 client,
                 evalset_id,
-                account_uid=billable_principal_uid,
+                billable_principal_uid=billable_principal_uid,
+                account_uid=account_uid,
             )
             result["report_markdown_path"] = str(reports.get("markdown_path") or "")
             if reports.get("csv_path") is not None:
