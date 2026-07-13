@@ -88,7 +88,9 @@ async def test_route_level_approve_execute_consume_persists_receipt(
         # 2. Approve it through the websocket decision entry point (which calls
         #    ``_update_approval``). No JWT credentials are registered, so no
         #    relay/inference is attempted.
-        approved = await _decide_approval_via_ws(created.id, approved=True, note="approved")
+        approved = await _decide_approval_via_ws(
+            created.id, approved=True, note="approved"
+        )
         assert approved.status == "approved"
 
         # 3. Reserve the approved envelope (approved -> executing) atomically,
