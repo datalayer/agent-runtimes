@@ -18,7 +18,6 @@ import {
   Heading,
   IconButton,
   Text,
-  ThemeProvider,
   Tooltip,
   ToggleSwitch,
   Truncate,
@@ -192,33 +191,28 @@ export function ChatBaseHeader({
           }}
         >
           {brandIcon || <AiAgentIcon colored size={20} />}
-          {/* Runtime status indicator: shown between leading icon and title.
-              Wrapped in a bare Primer ThemeProvider so the indicator's
-              portaled popover inherits the host color mode (mirrors the
-              PrincipalDetailsOverlay pattern). */}
-          <ThemeProvider>
-            {kernel ? (
-              <KernelIndicator
-                kernel={kernel}
-                environmentName={kernelEnvironmentName}
-                cpu={kernelCpu}
-                memory={kernelMemory}
-                gpu={kernelGpu}
-                position="s"
-                bordered={false}
-              />
-            ) : (
-              <KernelIndicator
-                state={effectiveIndicatorState ?? 'undefined'}
-                environmentName={kernelEnvironmentName}
-                cpu={kernelCpu}
-                memory={kernelMemory}
-                gpu={kernelGpu}
-                position="s"
-                bordered={false}
-              />
-            )}
-          </ThemeProvider>
+          {/* Runtime status indicator: shown between leading icon and title. */}
+          {kernel ? (
+            <KernelIndicator
+              kernel={kernel}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+              position="s"
+              bordered={false}
+            />
+          ) : (
+            <KernelIndicator
+              state={effectiveIndicatorState ?? 'undefined'}
+              environmentName={kernelEnvironmentName}
+              cpu={kernelCpu}
+              memory={kernelMemory}
+              gpu={kernelGpu}
+              position="s"
+              bordered={false}
+            />
+          )}
           {(title || subtitle) && (
             <Box
               sx={{

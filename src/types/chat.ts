@@ -77,10 +77,7 @@ export type EphemeralNotebookToolbarComponent = ComponentType<any>;
  * Tool call status for tool rendering
  */
 export type DisplayToolCallStatus =
-  | 'inProgress'
-  | 'executing'
-  | 'complete'
-  | 'error';
+  'inProgress' | 'executing' | 'complete' | 'error';
 
 /**
  * Response callback type for human-in-the-loop interactions
@@ -450,6 +447,15 @@ export interface ChatCommonProps {
   /** Initial open state of the ephemeral notebook. @default true */
   initialEphemeralNotebookOpen?: boolean;
 
+  /** Controlled callback for ephemeral notebook open-state changes. */
+  onEphemeralNotebookOpenChange?: (open: boolean) => void;
+
+  /** Collapse chat panel while keeping the ephemeral notebook visible. */
+  collapsed?: boolean;
+
+  /** Callback to reopen chat panel from collapsed notebook mode. */
+  onExpandFromCollapsed?: () => void;
+
   /**
    * Optional toolbar component used by the ephemeral notebook.
    * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
@@ -711,8 +717,7 @@ export interface ChatBaseProps {
    * the colour and tooltip remain in sync with the notebook runtime.
    */
   kernel?:
-    | import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection
-    | null;
+    import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection | null;
 
   /** Optional environment name displayed in kernel indicator details. */
   kernelEnvironmentName?: string;
@@ -918,6 +923,15 @@ export interface ChatBaseProps {
    * `enableEphemeralNotebook` is true. @default true
    */
   initialEphemeralNotebookOpen?: boolean;
+
+  /** Controlled callback for ephemeral notebook open-state changes. */
+  onEphemeralNotebookOpenChange?: (open: boolean) => void;
+
+  /** Collapse chat panel while keeping the ephemeral notebook visible. */
+  collapsed?: boolean;
+
+  /** Callback to reopen chat panel from collapsed notebook mode. */
+  onExpandFromCollapsed?: () => void;
 
   /**
    * Optional toolbar component used by the ephemeral notebook.

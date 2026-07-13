@@ -24,16 +24,19 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Text, Spinner } from '@primer/react';
+import { Text, Spinner, IconButton } from '@primer/react';
+import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
-import { notebookStore } from '@datalayer/jupyter-react';
+import { notebookStore, JupyterReactTheme } from '@datalayer/jupyter-react';
 import {
   Box,
   setupPrimerPortals,
   useThemeStore,
   getColorPalette,
+  getThemeConfig,
+  useSystemColorMode,
 } from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
@@ -80,6 +83,7 @@ import {
 } from '../../stores/agentRuntimeStore';
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
+import { FloatingBrandButton } from '../display/FloatingBrandButton';
 import { PoweredByTag } from '../display/PoweredByTag';
 import {
   ChatMessageList,
@@ -98,6 +102,72 @@ import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
 const sentPendingPromptKeys = new Set<string>();
+
+// JupyterReactTheme forwards unknown props (e.g. `style`) to its inner Primer
+// `BaseStyles`. `style` is not part of its typings, so we widen the type here.
+const ThemedJupyterReactTheme = JupyterReactTheme as unknown as React.FC<
+  React.PropsWithChildren<{
+    colormode?: 'light' | 'dark' | 'auto';
+    loadJupyterLabCss?: boolean;
+    theme?: Record<string, unknown>;
+    backgroundColor?: string;
+    style?: React.CSSProperties;
+  }>
+>;
+
+/**
+ * Theme boundary shared by every chat variant.
+ *
+ * Makes the chat follow the active Datalayer theme *variant* (matrix, earth,
+ * …) — its colours AND fonts — not merely the color mode, while keeping the
+ * jupyter-react Primer context required by `KernelIndicator`.
+ *
+ * Implementation notes:
+ * - We deliberately DON'T nest a `DatalayerThemeProvider` here. The host layout
+ *   already provides one, and it themes Primer portals by writing styles onto
+ *   `document.body`. Nesting another (especially one carrying layout styles
+ *   like `display: contents`) clobbers those body/portal styles and breaks
+ *   every overlay menu globally.
+ * - Instead we re-assert the variant's CSS custom properties (`--bgColor-*`,
+ *   `--fgColor-*`, `--fontStack-*`, …) INLINE on `JupyterReactTheme`'s
+ *   `BaseStyles`. Inline styles win over the `@primer/primitives`
+ *   `[data-color-mode]` rules that `JupyterReactTheme` re-scopes, so the chat
+ *   subtree renders in the selected theme (colours + fonts). `JupyterReactTheme`
+ *   also supplies the matching Primer theme object + resolved color mode for
+ *   jupyter-react components.
+ * - `display: contents` keeps the boundary from emitting a layout box (so the
+ *   chat height/flex chain is preserved); CSS custom properties and inherited
+ *   properties (color, font) still cascade through it.
+ */
+function ThemedChatBoundary({ children }: React.PropsWithChildren<unknown>) {
+  const colorMode = useThemeStore(s => s.colorMode);
+  const themeVariant = useThemeStore(s => s.theme);
+  const systemMode = useSystemColorMode();
+  const themeConfig = getThemeConfig(themeVariant);
+  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const modeStyles =
+    resolvedMode === 'dark'
+      ? themeConfig.themeStyles.dark
+      : themeConfig.themeStyles.light;
+  const themeBackground =
+    (modeStyles as Record<string, string>).backgroundColor ?? '';
+  return (
+    <ThemedJupyterReactTheme
+      colormode={resolvedMode}
+      theme={themeConfig.primerTheme}
+      backgroundColor={themeBackground}
+      loadJupyterLabCss={false}
+      style={{
+        ...(modeStyles as React.CSSProperties),
+        color: 'var(--fgColor-default)',
+        fontSize: 'var(--text-body-size-medium)',
+        display: 'contents',
+      }}
+    >
+      {children}
+    </ThemedJupyterReactTheme>
+  );
+}
 const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
 
 const isDevTraceEnabled = (): boolean => {
@@ -468,12 +538,18 @@ export function ChatBase(props: ChatBaseProps) {
   if (!existingQueryClient) {
     return (
       <QueryClientProvider client={internalQueryClient}>
-        <ChatBaseInner {...innerProps} />
+        <ThemedChatBoundary>
+          <ChatBaseInner {...innerProps} />
+        </ThemedChatBoundary>
       </QueryClientProvider>
     );
   }
 
-  return <ChatBaseInner {...innerProps} />;
+  return (
+    <ThemedChatBoundary>
+      <ChatBaseInner {...innerProps} />
+    </ThemedChatBoundary>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -549,6 +625,9 @@ function ChatBaseInner({
   frontendTools: frontendToolsProp,
   enableEphemeralNotebook = false,
   initialEphemeralNotebookOpen = true,
+  onEphemeralNotebookOpenChange,
+  collapsed = false,
+  onExpandFromCollapsed,
   ephemeralNotebookToolbar,
   // Tool invocation hooks
   onToolCallStart,
@@ -626,7 +705,15 @@ function ChatBaseInner({
   const [ephemeralNotebookOpen, setEphemeralNotebookOpen] = useState(
     enableEphemeralNotebook && initialEphemeralNotebookOpen,
   );
+  const handleEphemeralNotebookOpenChange = useCallback(
+    (open: boolean) => {
+      setEphemeralNotebookOpen(open);
+      onEphemeralNotebookOpenChange?.(open);
+    },
+    [onEphemeralNotebookOpenChange],
+  );
   const notebookVisible = enableEphemeralNotebook && ephemeralNotebookOpen;
+  const notebookCollapsed = notebookVisible && collapsed;
 
   // Track the ephemeral notebook's live kernel connection so the chat header
   // renders the same rich `KernelIndicator` details (kernel id, client id,
@@ -3520,6 +3607,39 @@ function ChatBaseInner({
     />
   ) : null;
 
+  // Shared header element. It is rendered either at the top of the chat (when
+  // no ephemeral notebook is shown) or INSIDE the chat body column (when the
+  // notebook is visible) so the header always follows the chat body across all
+  // view modes (docked sidebar, floating popup, floating-small).
+  const chatHeaderElement = showHeader ? (
+    <ChatBaseHeader
+      title={title}
+      subtitle={subtitle}
+      brandIcon={brandIcon}
+      headerContent={headerContent}
+      headerActions={headerActions}
+      showInformation={showInformation}
+      onInformationClick={onInformationClick}
+      padding={padding}
+      kernelIndicatorState={kernelIndicatorState}
+      runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
+      kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
+      kernelEnvironmentName={kernelEnvironmentName}
+      kernelCpu={kernelCpu}
+      kernelMemory={kernelMemory}
+      kernelGpu={kernelGpu}
+      headerButtons={headerButtons}
+      messageCount={messages.length}
+      onNewChat={handleNewChat}
+      onClear={handleClear}
+      chatViewMode={chatViewMode}
+      onChatViewModeChange={onChatViewModeChange}
+      showEphemeralNotebookToggle={enableEphemeralNotebook}
+      ephemeralNotebookOpen={ephemeralNotebookOpen}
+      onToggleEphemeralNotebook={handleEphemeralNotebookOpenChange}
+    />
+  ) : null;
+
   // ========================================================================
   // Render
   // ========================================================================
@@ -3540,35 +3660,11 @@ function ChatBaseInner({
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      {showHeader && (
-        <ChatBaseHeader
-          title={title}
-          subtitle={subtitle}
-          brandIcon={brandIcon}
-          headerContent={headerContent}
-          headerActions={headerActions}
-          showInformation={showInformation}
-          onInformationClick={onInformationClick}
-          padding={padding}
-          kernelIndicatorState={kernelIndicatorState}
-          runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
-          kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
-          kernelEnvironmentName={kernelEnvironmentName}
-          kernelCpu={kernelCpu}
-          kernelMemory={kernelMemory}
-          kernelGpu={kernelGpu}
-          headerButtons={headerButtons}
-          messageCount={messages.length}
-          onNewChat={handleNewChat}
-          onClear={handleClear}
-          chatViewMode={chatViewMode}
-          onChatViewModeChange={onChatViewModeChange}
-          showEphemeralNotebookToggle={enableEphemeralNotebook}
-          ephemeralNotebookOpen={ephemeralNotebookOpen}
-          onToggleEphemeralNotebook={setEphemeralNotebookOpen}
-        />
-      )}
+      {/* Header — shown at the top only when the ephemeral notebook is not
+          visible. When the notebook is visible the header is rendered inside
+          the chat body column (below) so it follows the chat across view
+          modes instead of staying pinned to the top. */}
+      {!notebookVisible && chatHeaderElement}
 
       {/* Tool approval banner (top-of-chat) */}
       {showToolApprovalBanner &&
@@ -3621,7 +3717,12 @@ function ChatBaseInner({
               overflow: 'hidden',
               ...(notebookChatFloating
                 ? null
-                : { borderRight: '1px solid', borderColor: 'border.default' }),
+                : notebookCollapsed
+                  ? null
+                  : {
+                      borderRight: '1px solid',
+                      borderColor: 'border.default',
+                    }),
             }}
           >
             <EphemeralNotebook
@@ -3635,55 +3736,88 @@ function ChatBaseInner({
 
           {/* Right: chat — docked as a sidebar, or floating over the notebook
               depending on the selected chat view mode. */}
-          <Box
-            sx={
-              notebookChatFloating
-                ? {
-                    position: 'absolute',
-                    right: 16,
-                    width: chatViewMode === 'floating-small' ? 360 : 440,
-                    maxWidth: 'calc(100% - 32px)',
-                    ...(chatViewMode === 'floating-small'
-                      ? { bottom: 16, height: '62%' }
-                      : { top: 16, bottom: 16 }),
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: 0,
-                    overflow: 'hidden',
-                    bg: 'canvas.default',
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    boxShadow: 'shadow.large',
-                    zIndex: 5,
-                  }
-                : {
-                    flexShrink: 0,
-                    width: 440,
-                    minWidth: 320,
-                    maxWidth: '48%',
-                    minHeight: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    bg: 'canvas.default',
-                  }
-            }
-          >
+          {!notebookCollapsed && (
             <Box
-              ref={messagesContainerRef}
-              sx={{
-                flex: 1,
-                minHeight: 0,
-                overflow: 'auto',
-                bg: 'canvas.default',
-              }}
+              sx={
+                notebookChatFloating
+                  ? {
+                      position: 'absolute',
+                      right: 16,
+                      width: chatViewMode === 'floating-small' ? 360 : 440,
+                      maxWidth: 'calc(100% - 32px)',
+                      ...(chatViewMode === 'floating-small'
+                        ? { bottom: 16, height: '62%' }
+                        : { top: 16, bottom: 16 }),
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 0,
+                      overflow: 'hidden',
+                      bg: 'canvas.default',
+                      border: '1px solid',
+                      borderColor: 'border.default',
+                      borderRadius: 2,
+                      boxShadow: 'shadow.large',
+                      zIndex: 5,
+                    }
+                  : {
+                      flexShrink: 0,
+                      width: 440,
+                      minWidth: 320,
+                      maxWidth: '48%',
+                      minHeight: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden',
+                      bg: 'canvas.default',
+                    }
+              }
             >
-              {messagesContent}
+              {/* Header lives inside the chat column when the notebook is shown
+                  so it follows the chat body across all view modes. */}
+              {chatHeaderElement}
+              <Box
+                ref={messagesContainerRef}
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflow: 'auto',
+                  bg: 'canvas.default',
+                }}
+              >
+                {messagesContent}
+              </Box>
+              {footerContent}
+              {inputToolbar}
             </Box>
-            {footerContent}
-            {inputToolbar}
-          </Box>
+          )}
+
+          {notebookCollapsed &&
+            onExpandFromCollapsed &&
+            (chatViewMode === 'sidebar' ? (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  zIndex: 6,
+                }}
+              >
+                <IconButton
+                  icon={SidebarExpandIcon}
+                  aria-label="Open chat"
+                  onClick={onExpandFromCollapsed}
+                  variant="default"
+                  size="small"
+                />
+              </Box>
+            ) : (
+              <FloatingBrandButton
+                isOpen={false}
+                onToggle={onExpandFromCollapsed}
+                position="bottom-right"
+                tooltip="Open chat"
+              />
+            ))}
         </Box>
       ) : (
         <>

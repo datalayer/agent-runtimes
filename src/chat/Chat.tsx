@@ -280,6 +280,9 @@ export function Chat({
   frontendTools,
   enableEphemeralNotebook,
   initialEphemeralNotebookOpen,
+  onEphemeralNotebookOpenChange,
+  collapsed = false,
+  onExpandFromCollapsed,
   ephemeralNotebookToolbar,
   onToolCallStart,
   onToolCallComplete,
@@ -670,6 +673,9 @@ export function Chat({
               frontendTools={frontendTools}
               enableEphemeralNotebook={enableEphemeralNotebook}
               initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
+              onEphemeralNotebookOpenChange={onEphemeralNotebookOpenChange}
+              collapsed={collapsed}
+              onExpandFromCollapsed={onExpandFromCollapsed}
               ephemeralNotebookToolbar={ephemeralNotebookToolbar}
               onToolCallStart={onToolCallStart}
               onToolCallComplete={onToolCallComplete}
