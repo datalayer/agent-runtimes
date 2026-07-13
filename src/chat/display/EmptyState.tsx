@@ -13,7 +13,13 @@
  */
 
 import { type ReactNode } from 'react';
-import { Text, LabelGroup, Label, Truncate } from '@primer/react';
+import {
+  Text,
+  LabelGroup,
+  Label,
+  Truncate,
+  ThemeProvider,
+} from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
@@ -67,54 +73,58 @@ export function ChatEmptyState({
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        p: 4,
-        color: 'fg.muted',
-        textAlign: 'center',
-        gap: 2,
-      }}
-    >
-      {emptyState?.icon || brandIcon || <AiAgentIcon colored size={48} />}
-      <Text sx={{ fontSize: 2 }}>
-        {emptyState?.title || 'Start a conversation'}
-      </Text>
-      {(emptyState?.subtitle || description) && (
-        <Text sx={{ fontSize: 1 }}>{emptyState?.subtitle || description}</Text>
-      )}
-      {suggestions && suggestions.length > 0 && (
-        <LabelGroup sx={{ mt: 2, justifyContent: 'center' }}>
-          {suggestions.map((suggestion, index) => (
-            <Label
-              key={index}
-              variant="accent"
-              title={suggestion.title}
-              sx={{
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                '&:hover': {
-                  bg: 'accent.emphasis',
-                  color: 'var(--button-primary-fgColor-rest)',
-                  borderColor: 'accent.emphasis',
-                },
-              }}
-              onClick={() => handleSuggestionClick(suggestion)}
-            >
-              <Box sx={{ width: 140, maxWidth: 140, minWidth: 140 }}>
-                <Truncate title={suggestion.title} maxWidth="100%">
-                  {suggestion.title}
-                </Truncate>
-              </Box>
-            </Label>
-          ))}
-        </LabelGroup>
-      )}
-    </Box>
+    <ThemeProvider>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          p: 4,
+          color: 'fg.muted',
+          textAlign: 'center',
+          gap: 2,
+        }}
+      >
+        {emptyState?.icon || brandIcon || <AiAgentIcon colored size={48} />}
+        <Text sx={{ fontSize: 2 }}>
+          {emptyState?.title || 'Start a conversation'}
+        </Text>
+        {(emptyState?.subtitle || description) && (
+          <Text sx={{ fontSize: 1 }}>
+            {emptyState?.subtitle || description}
+          </Text>
+        )}
+        {suggestions && suggestions.length > 0 && (
+          <LabelGroup sx={{ mt: 2, justifyContent: 'center' }}>
+            {suggestions.map((suggestion, index) => (
+              <Label
+                key={index}
+                variant="accent"
+                title={suggestion.title}
+                sx={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  '&:hover': {
+                    bg: 'accent.emphasis',
+                    color: 'var(--button-primary-fgColor-rest)',
+                    borderColor: 'accent.emphasis',
+                  },
+                }}
+                onClick={() => handleSuggestionClick(suggestion)}
+              >
+                <Box sx={{ width: 140, maxWidth: 140, minWidth: 140 }}>
+                  <Truncate title={suggestion.title} maxWidth="100%">
+                    {suggestion.title}
+                  </Truncate>
+                </Box>
+              </Label>
+            ))}
+          </LabelGroup>
+        )}
+      </Box>
+    </ThemeProvider>
   );
 }

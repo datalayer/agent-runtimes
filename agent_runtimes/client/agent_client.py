@@ -769,9 +769,9 @@ class AgentClient(
         snapshot_name: Optional[str] = None,
         agent_spec_id: Optional[str] = None,
         agent_spec: Optional[dict[str, Any]] = None,
-        billable_account_uid: Optional[str] = None,
-        billable_account_type: Optional[str] = None,
-        billable_account_handle: Optional[str] = None,
+        billable_principal_uid: Optional[str] = None,
+        billable_principal_type: Optional[str] = None,
+        billable_principal_handle: Optional[str] = None,
         api_key: Optional[str] = None,
     ) -> RuntimeService:
         """
@@ -840,9 +840,9 @@ class AgentClient(
                 agent_spec_id=agent_spec_id,
                 agent_spec=agent_spec,
                 credits_limit=credits_limit,
-                billable_account_uid=billable_account_uid,
-                billable_account_type=billable_account_type,
-                billable_account_handle=billable_account_handle,
+                billable_principal_uid=billable_principal_uid,
+                billable_principal_type=billable_principal_type,
+                billable_principal_handle=billable_principal_handle,
             )
         else:
             # Create runtime without snapshot
@@ -852,9 +852,9 @@ class AgentClient(
                 agent_spec_id=agent_spec_id,
                 agent_spec=agent_spec,
                 credits_limit=credits_limit,
-                billable_account_uid=billable_account_uid,
-                billable_account_type=billable_account_type,
-                billable_account_handle=billable_account_handle,
+                billable_principal_uid=billable_principal_uid,
+                billable_principal_type=billable_principal_type,
+                billable_principal_handle=billable_principal_handle,
             )
 
         # Process the response and create RuntimesService object

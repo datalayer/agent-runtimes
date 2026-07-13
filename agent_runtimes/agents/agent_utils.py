@@ -127,9 +127,9 @@ def create_cloud_agent_runtime(
     agent_spec: Optional[dict[str, Any]] = None,
     credits_limit: Optional[float] = None,
     time_reservation: Optional[int] = None,
-    billable_account_uid: Optional[str] = None,
-    billable_account_type: Optional[str] = None,
-    billable_account_handle: Optional[str] = None,
+    billable_principal_uid: Optional[str] = None,
+    billable_principal_type: Optional[str] = None,
+    billable_principal_handle: Optional[str] = None,
 ) -> Any:
     """Create a cloud agent runtime via the core client.
 
@@ -154,12 +154,12 @@ def create_cloud_agent_runtime(
         latter is not supplied.
     time_reservation : Optional[int]
         Explicit time reservation in minutes.
-    billable_account_uid : Optional[str]
-        Optional billable account UID used for runtime billing attribution.
-    billable_account_type : Optional[str]
-        Optional billable account type (user, organization, team).
-    billable_account_handle : Optional[str]
-        Optional billable account handle.
+    billable_principal_uid : Optional[str]
+        Optional billable principal UID used for runtime billing attribution.
+    billable_principal_type : Optional[str]
+        Optional billable principal type (user, organization, team).
+    billable_principal_handle : Optional[str]
+        Optional billable principal handle.
 
     Returns
     -------
@@ -189,9 +189,9 @@ def create_cloud_agent_runtime(
             time_reservation=int(time_reservation),
             agent_spec_id=None if agent_spec else agent_spec_id,
             agent_spec=agent_spec,
-            billable_account_uid=billable_account_uid,
-            billable_account_type=billable_account_type,
-            billable_account_handle=billable_account_handle,
+            billable_principal_uid=billable_principal_uid,
+            billable_principal_type=billable_principal_type,
+            billable_principal_handle=billable_principal_handle,
         )
     except Exception as exc:
         spec_hint = "inline spec payload" if agent_spec else (agent_spec_id or "<none>")

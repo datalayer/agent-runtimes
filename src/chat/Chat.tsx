@@ -21,7 +21,7 @@
 
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, Button, Spinner } from '@primer/react';
+import { Text, Button, Spinner, ThemeProvider } from '@primer/react';
 import { AlertIcon, SyncIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
@@ -478,209 +478,215 @@ export function Chat({
   // Render error state
   if (error) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <Box
-          className={className}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height,
-            p: 4,
-            bg: 'canvas.default',
-          }}
-        >
-          <AlertIcon size={48} />
-          <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
-            Connection Error
-          </Text>
-          <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
-          <Button
-            variant="primary"
-            sx={{ mt: 3 }}
-            leadingVisual={SyncIcon}
-            onClick={handleReconnect}
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <Box
+            className={className}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height,
+              p: 4,
+              bg: 'canvas.default',
+            }}
           >
-            Retry
-          </Button>
-        </Box>
-      </QueryClientProvider>
+            <AlertIcon size={48} />
+            <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
+              Connection Error
+            </Text>
+            <Text sx={{ mt: 1, color: 'fg.muted', fontSize: 1 }}>{error}</Text>
+            <Button
+              variant="primary"
+              sx={{ mt: 3 }}
+              leadingVisual={SyncIcon}
+              onClick={handleReconnect}
+            >
+              Retry
+            </Button>
+          </Box>
+        </QueryClientProvider>
+      </ThemeProvider>
     );
   }
 
   // Render loading state
   if (isInitializing || !protocolConfig) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <Box
-          className={className}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height,
-            p: 4,
-            bg: 'canvas.default',
-          }}
-        >
-          <Spinner size="large" />
-          <Text sx={{ mt: 3, color: 'fg.muted' }}>
-            Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
-          </Text>
-        </Box>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <Box
+            className={className}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height,
+              p: 4,
+              bg: 'canvas.default',
+            }}
+          >
+            <Spinner size="large" />
+            <Text sx={{ mt: 3, color: 'fg.muted' }}>
+              Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+            </Text>
+          </Box>
+        </QueryClientProvider>
+      </ThemeProvider>
     );
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Box
-        className={className}
-        sx={{
-          position: 'relative',
-          height,
-          bg: 'canvas.default',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
         <Box
+          className={className}
           sx={{
-            display: showDetails ? 'flex' : 'none',
+            position: 'relative',
+            height,
+            bg: 'canvas.default',
+            display: 'flex',
             flexDirection: 'column',
-            height: '100%',
           }}
         >
-          <AgentDetails
-            name={title || 'AI Agent'}
-            icon={brandIcon}
-            protocol={transport}
-            url={protocolConfig?.endpoint || baseUrl}
-            messageCount={messageCount}
-            agentId={agentId}
-            apiBase={baseUrl}
-            identityProviders={identityProviders}
-            onIdentityConnect={onIdentityConnect}
-            onIdentityDisconnect={onIdentityDisconnect}
-            onBack={handleBackFromDetails}
-            mcpStatusData={mcpStatusData}
-            codemodeStatusData={codemodeStatusData}
-          />
-        </Box>
-        {/* Chat view - shown/hidden via CSS to preserve message state */}
-        <Box
-          sx={{
-            display: showDetails ? 'none' : 'flex',
-            flexDirection: 'column',
-            height: '100%',
-          }}
-        >
-          {/* Error banner for sandbox/connection issues */}
-          {errorBanner && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                px: 3,
-                py: 2,
-                bg:
-                  errorBanner.variant === 'warning'
-                    ? 'attention.subtle'
-                    : 'danger.subtle',
-                borderBottom: '1px solid',
-                borderColor:
-                  errorBanner.variant === 'warning'
-                    ? 'attention.muted'
-                    : 'danger.muted',
-              }}
-            >
-              <AlertIcon
-                size={16}
-                fill={
-                  errorBanner.variant === 'warning'
-                    ? 'attention.fg'
-                    : 'danger.fg'
-                }
-              />
-              <Text
+          {/* Agent details view - shown/hidden via CSS to preserve chat state */}
+          <Box
+            sx={{
+              display: showDetails ? 'flex' : 'none',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+          >
+            <AgentDetails
+              name={title || 'AI Agent'}
+              icon={brandIcon}
+              protocol={transport}
+              url={protocolConfig?.endpoint || baseUrl}
+              messageCount={messageCount}
+              agentId={agentId}
+              apiBase={baseUrl}
+              identityProviders={identityProviders}
+              onIdentityConnect={onIdentityConnect}
+              onIdentityDisconnect={onIdentityDisconnect}
+              onBack={handleBackFromDetails}
+              mcpStatusData={mcpStatusData}
+              codemodeStatusData={codemodeStatusData}
+            />
+          </Box>
+          {/* Chat view - shown/hidden via CSS to preserve message state */}
+          <Box
+            sx={{
+              display: showDetails ? 'none' : 'flex',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+          >
+            {/* Error banner for sandbox/connection issues */}
+            {errorBanner && (
+              <Box
                 sx={{
-                  fontSize: 1,
-                  color:
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  px: 3,
+                  py: 2,
+                  bg:
                     errorBanner.variant === 'warning'
-                      ? 'attention.fg'
-                      : 'danger.fg',
-                  flex: 1,
+                      ? 'attention.subtle'
+                      : 'danger.subtle',
+                  borderBottom: '1px solid',
+                  borderColor:
+                    errorBanner.variant === 'warning'
+                      ? 'attention.muted'
+                      : 'danger.muted',
                 }}
               >
-                {errorBanner.message}
-              </Text>
-            </Box>
-          )}
-          <ChatBase
-            title={title}
-            subtitle={subtitle}
-            brandIcon={brandIcon}
-            showHeader={showHeader}
-            protocol={protocolConfig}
-            placeholder={placeholder}
-            description={description}
-            suggestions={suggestions}
-            submitOnSuggestionClick={submitOnSuggestionClick}
-            autoFocus={autoFocus}
-            runtimeId={runtimeId}
-            historyEndpoint={historyEndpoint}
-            pendingPrompt={pendingPrompt}
-            showInformation={showInformation}
-            onInformationClick={handleInformationClick}
-            headerContent={headerContent}
-            headerActions={headerActions}
-            showModelSelector={showModelSelector}
-            showToolsMenu={showToolsMenu}
-            showInput={showInput}
-            disableInputPrompt={disableInputPrompt}
-            overlay={overlay}
-            launching={launching}
-            launchingMessage={launchingMessage}
-            showSkillsMenu={showSkillsMenu}
-            showTokenUsage={showTokenUsage}
-            codemodeEnabled={codemodeEnabled}
-            onToggleCodemode={onToggleCodemode}
-            initialModel={initialModel}
-            availableModels={availableModels}
-            mcpServers={mcpServers}
-            initialSkills={initialSkills}
-            connectedIdentities={identitiesForChat}
-            onNewChat={handleNewChat}
-            onMessagesChange={handleMessagesChange}
-            headerButtons={headerButtons}
-            avatarConfig={avatarConfig}
-            backgroundColor="canvas.default"
-            focusTrigger={focusTrigger}
-            chatViewMode={chatViewMode}
-            onChatViewModeChange={onChatViewModeChange}
-            frontendTools={frontendTools}
-            enableEphemeralNotebook={enableEphemeralNotebook}
-            initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
-            ephemeralNotebookToolbar={ephemeralNotebookToolbar}
-            onToolCallStart={onToolCallStart}
-            onToolCallComplete={onToolCallComplete}
-            renderToolResult={renderToolResult}
-            hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-            contextSnapshot={contextSnapshot}
-            mcpStatusData={mcpStatusData}
-            sandboxStatusData={sandboxStatusData}
-            showToolApprovalBanner={showToolApprovalBanner}
-            pendingApprovals={pendingApprovals}
-            onApproveApproval={onApproveApproval}
-            onRejectApproval={onRejectApproval}
-          />
+                <AlertIcon
+                  size={16}
+                  fill={
+                    errorBanner.variant === 'warning'
+                      ? 'attention.fg'
+                      : 'danger.fg'
+                  }
+                />
+                <Text
+                  sx={{
+                    fontSize: 1,
+                    color:
+                      errorBanner.variant === 'warning'
+                        ? 'attention.fg'
+                        : 'danger.fg',
+                    flex: 1,
+                  }}
+                >
+                  {errorBanner.message}
+                </Text>
+              </Box>
+            )}
+            <ChatBase
+              title={title}
+              subtitle={subtitle}
+              brandIcon={brandIcon}
+              showHeader={showHeader}
+              protocol={protocolConfig}
+              placeholder={placeholder}
+              description={description}
+              suggestions={suggestions}
+              submitOnSuggestionClick={submitOnSuggestionClick}
+              autoFocus={autoFocus}
+              runtimeId={runtimeId}
+              historyEndpoint={historyEndpoint}
+              pendingPrompt={pendingPrompt}
+              showInformation={showInformation}
+              onInformationClick={handleInformationClick}
+              headerContent={headerContent}
+              headerActions={headerActions}
+              showModelSelector={showModelSelector}
+              showToolsMenu={showToolsMenu}
+              showInput={showInput}
+              disableInputPrompt={disableInputPrompt}
+              overlay={overlay}
+              launching={launching}
+              launchingMessage={launchingMessage}
+              showSkillsMenu={showSkillsMenu}
+              showTokenUsage={showTokenUsage}
+              codemodeEnabled={codemodeEnabled}
+              onToggleCodemode={onToggleCodemode}
+              initialModel={initialModel}
+              availableModels={availableModels}
+              mcpServers={mcpServers}
+              initialSkills={initialSkills}
+              connectedIdentities={identitiesForChat}
+              onNewChat={handleNewChat}
+              onMessagesChange={handleMessagesChange}
+              headerButtons={headerButtons}
+              avatarConfig={avatarConfig}
+              backgroundColor="canvas.default"
+              focusTrigger={focusTrigger}
+              chatViewMode={chatViewMode}
+              onChatViewModeChange={onChatViewModeChange}
+              frontendTools={frontendTools}
+              enableEphemeralNotebook={enableEphemeralNotebook}
+              initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
+              ephemeralNotebookToolbar={ephemeralNotebookToolbar}
+              onToolCallStart={onToolCallStart}
+              onToolCallComplete={onToolCallComplete}
+              renderToolResult={renderToolResult}
+              hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+              contextSnapshot={contextSnapshot}
+              mcpStatusData={mcpStatusData}
+              sandboxStatusData={sandboxStatusData}
+              showToolApprovalBanner={showToolApprovalBanner}
+              pendingApprovals={pendingApprovals}
+              onApproveApproval={onApproveApproval}
+              onRejectApproval={onRejectApproval}
+            />
+          </Box>
         </Box>
-      </Box>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

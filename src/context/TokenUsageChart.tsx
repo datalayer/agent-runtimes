@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
 import { toMetricValue } from '../hooks/useMonitoring';
+import { fetchOtelMetricRows } from '../hooks/useMonitoring';
 import { subscribeOtelWs } from './otelWsPool';
 import {
   agentRuntimeStore,
@@ -227,6 +228,7 @@ function extractTurnsFromRows(
 export interface TokenUsageChartProps {
   serviceName?: string;
   agentId?: string;
+  runtimeId?: string;
   apiKey?: string;
   datalayerUrl?: string;
   wsUrl?: string;
@@ -248,11 +250,9 @@ function extractServiceName(row: Record<string, unknown>): string | undefined {
     }
   }
 
-  const resourceAttributes = row.resource_attributes;
+  const resourceAttributes = parseResourceAttributes(row.resource_attributes);
   if (resourceAttributes && typeof resourceAttributes === 'object') {
-    const nested = (resourceAttributes as Record<string, unknown>)[
-      'service.name'
-    ];
+    const nested = resourceAttributes['service.name'];
     if (typeof nested === 'string' && nested.length > 0) {
       return nested;
     }
@@ -261,29 +261,111 @@ function extractServiceName(row: Record<string, unknown>): string | undefined {
   return undefined;
 }
 
-/** Extract `agent.id` from the `attributes` field of a metric row. */
-function extractAgentId(row: Record<string, unknown>): string | undefined {
-  const attrs = row.attributes;
+function parseAttributes(attrs: unknown): Record<string, unknown> {
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    return attrs as Record<string, unknown>;
+  }
   if (typeof attrs === 'string') {
     try {
       const parsed = JSON.parse(attrs);
-      if (typeof parsed === 'object' && parsed !== null) {
-        const aid = parsed['agent.id'];
-        if (typeof aid === 'string') return aid;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
       }
     } catch {
-      // ignore
+      // Ignore malformed attributes payloads.
     }
-  } else if (typeof attrs === 'object' && attrs !== null) {
-    const aid = (attrs as Record<string, unknown>)['agent.id'];
-    if (typeof aid === 'string') return aid;
   }
+  return {};
+}
+
+function parseResourceAttributes(attrs: unknown): Record<string, unknown> {
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    return attrs as Record<string, unknown>;
+  }
+  if (typeof attrs === 'string') {
+    try {
+      const parsed = JSON.parse(attrs);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Ignore malformed resource attributes payloads.
+    }
+  }
+  return {};
+}
+
+function extractRuntimeId(row: Record<string, unknown>): string | undefined {
+  const directCandidates = [
+    row.runtime_id,
+    row.runtime,
+    row.pod_name,
+    row.k8s_pod_name,
+  ];
+  for (const candidate of directCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  const attrs = parseAttributes(row.attributes);
+  const attrCandidates = [
+    attrs['runtime.id'],
+    attrs['runtime.pod_name'],
+    attrs['k8s.pod.name'],
+  ];
+  for (const candidate of attrCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  const resourceAttributes = parseResourceAttributes(row.resource_attributes);
+  const resourceCandidates = [
+    resourceAttributes['runtime.id'],
+    resourceAttributes['runtime.pod_name'],
+    resourceAttributes['k8s.pod.name'],
+  ];
+  for (const candidate of resourceCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function rowMatchesSource(
+  row: Record<string, unknown>,
+  serviceName?: string,
+  runtimeId?: string,
+): boolean {
+  const resolvedServiceName = String(serviceName || '').trim();
+  const resolvedRuntimeId = String(runtimeId || '').trim();
+  if (!resolvedServiceName && !resolvedRuntimeId) {
+    return true;
+  }
+
+  const serviceMatches =
+    resolvedServiceName.length > 0 &&
+    extractServiceName(row) === resolvedServiceName;
+  const runtimeMatches =
+    resolvedRuntimeId.length > 0 && extractRuntimeId(row) === resolvedRuntimeId;
+  return serviceMatches || runtimeMatches;
+}
+
+/** Extract `agent.id` from the `attributes` field of a metric row. */
+function extractAgentId(row: Record<string, unknown>): string | undefined {
+  const parsed = parseAttributes(row.attributes);
+  const aid = parsed['agent.id'];
+  if (typeof aid === 'string') return aid;
   return undefined;
 }
 
 export function TokenUsageChart({
   serviceName,
   agentId,
+  runtimeId,
   apiKey,
   datalayerUrl,
   wsUrl,
@@ -295,6 +377,8 @@ export function TokenUsageChart({
   liveTimestampMs,
   height = 160,
 }: TokenUsageChartProps) {
+  const cacheServiceKey =
+    String(serviceName || runtimeId || '').trim() || undefined;
   const monitoringCache = useAgentRuntimeStore(s => s.monitoringCache);
   const mergeTokenTurns = useAgentRuntimeStore(s => s.mergeTokenTurns);
   const appendLocalTokenTurnFull = useAgentRuntimeStore(
@@ -302,8 +386,8 @@ export function TokenUsageChart({
   );
 
   const cachedEntry = useMemo(
-    () => resolveMonitoringEntry(monitoringCache, serviceName, agentId),
-    [agentId, monitoringCache, serviceName],
+    () => resolveMonitoringEntry(monitoringCache, cacheServiceKey, agentId),
+    [agentId, cacheServiceKey, monitoringCache],
   );
   const [turns, setTurns] = useState<TurnPoint[]>([]);
   const initialTimestampMsRef = useRef<number>(Date.now());
@@ -314,7 +398,7 @@ export function TokenUsageChart({
 
   // ── Reset state on source switch ──────────────────────────────
   useEffect(() => {
-    if (!serviceName) {
+    if (!cacheServiceKey) {
       setTurns([]);
       initialTimestampMsRef.current = Date.now();
       cumulativeRef.current = { completions: 0, values: emptyValues() };
@@ -331,11 +415,103 @@ export function TokenUsageChart({
     cumulativeRef.current = latestTurn
       ? { completions: latestTurn.turnNumber, values: latestTurn.values }
       : { completions: 0, values: emptyValues() };
-  }, [agentId, cachedEntry, serviceName]);
+  }, [agentId, cacheServiceKey, cachedEntry]);
+
+  // Bootstrap chart with historical OTEL metrics so charts are populated even
+  // before the first websocket update arrives.
+  useEffect(() => {
+    if (!cacheServiceKey || !apiKey || !datalayerUrl) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadInitialMetrics = async () => {
+      try {
+        const metricNames = [COMPLETIONS_METRIC, ...SERIES.map(s => s.metric)];
+        const results = await Promise.all(
+          metricNames.map(metric =>
+            fetchOtelMetricRows({
+              metric,
+              serviceName,
+              datalayerUrl,
+              apiKey,
+              limit: 1000,
+            }),
+          ),
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        let rows = results.flat().filter(row => {
+          const castedRow = row as Record<string, unknown>;
+          if (!rowMatchesSource(castedRow, serviceName, runtimeId)) {
+            return false;
+          }
+          return !agentId || extractAgentId(castedRow) === agentId;
+        }) as Array<Record<string, unknown>>;
+
+        if (rows.length === 0 && runtimeId && !serviceName) {
+          rows = results.flat().filter(row => {
+            const castedRow = row as Record<string, unknown>;
+            return (
+              rowMatchesSource(castedRow, undefined, runtimeId) &&
+              (!agentId || extractAgentId(castedRow) === agentId)
+            );
+          }) as Array<Record<string, unknown>>;
+        }
+
+        const { turns: initialTurns, finalState } = extractTurnsFromRows(rows, {
+          completions: 0,
+          values: emptyValues(),
+        });
+
+        if (cancelled || initialTurns.length === 0) {
+          return;
+        }
+
+        cumulativeRef.current = finalState;
+        mergeTokenTurns({
+          serviceName: cacheServiceKey,
+          agentId,
+          turns: initialTurns.map(pointToLocalTokenTurn),
+        });
+
+        const mergedEntry = resolveMonitoringEntry(
+          agentRuntimeStore.getState().monitoringCache,
+          cacheServiceKey,
+          agentId,
+        );
+        if (mergedEntry) {
+          setTurns(mergedEntry.tokenTurns.map(localTokenTurnToPoint));
+        } else {
+          setTurns(initialTurns);
+        }
+      } catch {
+        // Fail open: websocket updates can still populate the chart.
+      }
+    };
+
+    void loadInitialMetrics();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    agentId,
+    apiKey,
+    cacheServiceKey,
+    datalayerUrl,
+    mergeTokenTurns,
+    runtimeId,
+    serviceName,
+  ]);
 
   // Apply immediate post-turn token totals from monitoring snapshots.
   useEffect(() => {
-    if (!serviceName) return;
+    if (!cacheServiceKey) return;
 
     const rawValues = [
       liveSystemPromptTokens,
@@ -367,7 +543,7 @@ export function TokenUsageChart({
         : Date.now();
 
     appendLocalTokenTurnFull({
-      serviceName,
+      serviceName: cacheServiceKey,
       agentId,
       timestampMs,
       systemPromptTokens,
@@ -380,7 +556,7 @@ export function TokenUsageChart({
 
     const mergedEntry = resolveMonitoringEntry(
       agentRuntimeStore.getState().monitoringCache,
-      serviceName,
+      cacheServiceKey,
       agentId,
     );
     if (mergedEntry) {
@@ -388,6 +564,7 @@ export function TokenUsageChart({
     }
   }, [
     agentId,
+    cacheServiceKey,
     appendLocalTokenTurnFull,
     liveAgentMessageTokens,
     liveSystemPromptTokens,
@@ -400,7 +577,7 @@ export function TokenUsageChart({
 
   // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
-    if (!serviceName || !apiKey) return;
+    if (!cacheServiceKey || !apiKey) return;
 
     const rawBaseUrl =
       wsUrl ||
@@ -435,8 +612,8 @@ export function TokenUsageChart({
       if (msg.signal !== 'metrics') return;
 
       const rows = Array.isArray(msg.data) ? msg.data : [];
-      let matchingRows = rows.filter(
-        row => extractServiceName(row) === serviceName,
+      let matchingRows = rows.filter(row =>
+        rowMatchesSource(row, serviceName, runtimeId),
       );
       // Filter by agent.id when specified.
       if (agentId) {
@@ -454,14 +631,14 @@ export function TokenUsageChart({
       if (newTurns.length > 0) {
         cumulativeRef.current = finalState;
         mergeTokenTurns({
-          serviceName,
+          serviceName: cacheServiceKey,
           agentId,
           turns: newTurns.map(pointToLocalTokenTurn),
         });
 
         const mergedEntry = resolveMonitoringEntry(
           agentRuntimeStore.getState().monitoringCache,
-          serviceName,
+          cacheServiceKey,
           agentId,
         );
         if (mergedEntry) {
@@ -473,7 +650,16 @@ export function TokenUsageChart({
     });
 
     return unsubscribe;
-  }, [agentId, apiKey, mergeTokenTurns, datalayerUrl, serviceName, wsUrl]);
+  }, [
+    agentId,
+    apiKey,
+    cacheServiceKey,
+    mergeTokenTurns,
+    datalayerUrl,
+    runtimeId,
+    serviceName,
+    wsUrl,
+  ]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {

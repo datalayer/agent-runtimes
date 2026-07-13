@@ -98,9 +98,9 @@ const MODE_CARDS: readonly ModeCard[] = [
 type AgentNodeConfiguration = {
   mode: AgentNodeMode;
   node_uid?: string;
-  billable_account_uid?: string;
-  billable_account_type?: string;
-  billable_account_handle?: string;
+  billable_principal_uid?: string;
+  billable_principal_type?: string;
+  billable_principal_handle?: string;
   sharing: Record<string, any>;
 };
 
@@ -367,7 +367,7 @@ export function AgentNode() {
   }, [iamUser]);
 
   const handleBillableAccountChange = useCallback((uid: string) => {
-    setConfiguration(prev => ({ ...prev, billable_account_uid: uid }));
+    setConfiguration(prev => ({ ...prev, billable_principal_uid: uid }));
   }, []);
 
   const handleSelectedAccountChange = useCallback(
@@ -375,8 +375,8 @@ export function AgentNode() {
       setSelectedBillableAccount(account);
       setConfiguration(prev => ({
         ...prev,
-        billable_account_type: account?.accountType,
-        billable_account_handle: account?.accountHandle,
+        billable_principal_type: account?.accountType,
+        billable_principal_handle: account?.accountHandle,
       }));
     },
     [],
@@ -1170,7 +1170,7 @@ export function AgentNode() {
 
                     {iamUser ? (
                       <BillableAccountSelect
-                        value={configuration.billable_account_uid || ''}
+                        value={configuration.billable_principal_uid || ''}
                         onChange={handleBillableAccountChange}
                         onSelectedAccountChange={handleSelectedAccountChange}
                         onAccountsResolved={handleAccountsResolved}
@@ -1181,7 +1181,7 @@ export function AgentNode() {
                           Run this agent under
                         </FormControl.Label>
                         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                          Loading billable accounts...
+                          Loading billable principals...
                         </Text>
                       </FormControl>
                     )}

@@ -57,7 +57,7 @@ If you are operating a Dockerized node, the local entrypoint is typically
 
 | Mode      | Purpose                                                     |
 | --------- | ----------------------------------------------------------- |
-| `private` | Owner-only execution under a selected billable account.     |
+| `private` | Owner-only execution under a selected billable principal.     |
 | `shared`  | Discoverable / usable by others per the sharing policy.     |
 | `sleep`   | Registered and visible but does not accept execution.       |
 
@@ -107,9 +107,9 @@ registry reflects the new state immediately.
 {
   "mode": "private",            // private | shared | sleep
   "node_uid": "01JABCDE...",    // ULID assigned by central service
-  "billable_account_uid": "...",
-  "billable_account_type": "...",
-  "billable_account_handle": "...",
+  "billable_principal_uid": "...",
+  "billable_principal_type": "...",
+  "billable_principal_handle": "...",
   "sharing": { /* sharing policy for shared mode */ }
 }
 ```
@@ -228,7 +228,7 @@ The `src/AgentNode.tsx` app exposes three steps:
 
 1. **Authentication** — sign in (token or API key). Configuration / Chat
    header entries are hidden until authenticated.
-2. **Configuration** — pick mode, billable account, and sharing policy.
+2. **Configuration** — pick mode, billable principal, and sharing policy.
    Also pick **Inference** provider (`local` or `datalayer`).
    When `datalayer` is selected, the UI shows available Bedrock Anthropic
    models returned by `/api/v1/configure/inference/models` as a read-only

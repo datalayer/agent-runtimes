@@ -203,18 +203,18 @@ def clusters_list(
         )
         billable = _format_scope_label(
             str(
-                item.get("billable_account_kind")
-                or ownership.get("billable_account_kind")
+                item.get("billable_principal_kind")
+                or ownership.get("billable_principal_kind")
                 or ""
             ),
             str(
-                item.get("billable_account_handle")
-                or ownership.get("billable_account_handle")
+                item.get("billable_principal_handle")
+                or ownership.get("billable_principal_handle")
                 or ""
             ),
             str(
-                item.get("billable_account_uid")
-                or ownership.get("billable_account_uid")
+                item.get("billable_principal_uid")
+                or ownership.get("billable_principal_uid")
                 or ""
             ),
             "account",

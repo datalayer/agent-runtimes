@@ -107,20 +107,20 @@ def _load_agent_spec(spec_source: str) -> dict[str, Any]:
     return parsed
 
 
-def _resolve_billable_account_details(
+def _resolve_billable_principal_details(
     *,
     client: AgentClient,
-    billable_account_uid: str,
+    billable_principal_uid: str,
 ) -> dict[str, str]:
     """Resolve account metadata from IAM whoami/memberships payloads.
 
-    When no explicit billable account UID is provided by the runtime payload,
+    When no explicit billable principal UID is provided by the runtime payload,
     fall back to the authenticated user profile from whoami.
     """
 
     resolved_token = str(client._get_api_key() or "").strip()
     if not resolved_token:
-        return {"uid": billable_account_uid} if billable_account_uid else {}
+        return {"uid": billable_principal_uid} if billable_principal_uid else {}
 
     iam_base = str(client.urls.iam_url).rstrip("/")
     headers = {"Authorization": f"Bearer {resolved_token}"}
@@ -139,7 +139,7 @@ def _resolve_billable_account_details(
         profile = payload.get("profile") or {}
         profile_uid = str(profile.get("uid") or "").strip()
         if profile_uid and (
-            not billable_account_uid or profile_uid == billable_account_uid
+            not billable_principal_uid or profile_uid == billable_principal_uid
         ):
             full_name = str(profile.get("name") or "").strip()
             if not full_name:
@@ -168,9 +168,9 @@ def _resolve_billable_account_details(
         memberships = memberships_payload.get("memberships") or []
         for membership in memberships:
             uid = str((membership or {}).get("uid") or "").strip()
-            if uid == billable_account_uid:
+            if uid == billable_principal_uid:
                 return {
-                    "uid": billable_account_uid,
+                    "uid": billable_principal_uid,
                     "handle": str((membership or {}).get("handle") or "").strip(),
                     "type": str((membership or {}).get("type") or "").strip(),
                     "name": str((membership or {}).get("name") or "").strip(),
@@ -179,7 +179,7 @@ def _resolve_billable_account_details(
                     ).strip(),
                 }
 
-    return {"uid": billable_account_uid} if billable_account_uid else {}
+    return {"uid": billable_principal_uid} if billable_principal_uid else {}
 
 
 def _resolve_agentspec_label(runtime_payload: dict[str, Any]) -> str:
@@ -318,9 +318,9 @@ def list_agents(
         runtimes = client.list_runtimes()
 
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billable_principal_details(
                 client=client,
-                billable_account_uid="",
+                billable_principal_uid="",
             ).get("uid")
             or ""
         ).strip()
@@ -346,9 +346,9 @@ def list_agents(
                     ownership_payload = {}
 
             billable_uid = str(
-                runtime_payload.get("billable_account_uid")
-                or ownership_payload.get("billable_account_uid")
-                or getattr(runtime, "billable_account_uid", "")
+                runtime_payload.get("billable_principal_uid")
+                or ownership_payload.get("billable_principal_uid")
+                or getattr(runtime, "billable_principal_uid", "")
                 or ""
             ).strip()
             if not billable_uid and authenticated_uid:
@@ -401,20 +401,20 @@ def create_agent_runtime(
         "--time-reservation",
         help="Time reservation in minutes for the runtime.",
     ),
-    billable_account_uid: Optional[str] = typer.Option(
+    billable_principal_uid: Optional[str] = typer.Option(
         None,
-        "--billable-account-uid",
+        "--billable-principal-uid",
         help="Account UID to bill the runtime to (org/team).",
     ),
-    billable_account_type: Optional[str] = typer.Option(
+    billable_principal_type: Optional[str] = typer.Option(
         None,
-        "--billable-account-type",
-        help="Billable account type: user, organization, or team.",
+        "--billable-principal-type",
+        help="Billable principal type: user, organization, or team.",
     ),
-    billable_account_handle: Optional[str] = typer.Option(
+    billable_principal_handle: Optional[str] = typer.Option(
         None,
-        "--billable-account-handle",
-        help="Billable account handle (informational).",
+        "--billable-principal-handle",
+        help="Billable principal handle (informational).",
     ),
     raw: bool = typer.Option(
         False,
@@ -536,15 +536,15 @@ def create_agent_runtime(
             time_reservation=final_time_reservation,
             agent_spec_id=resolved_spec_id,
             agent_spec=agent_spec_payload,
-            billable_account_uid=billable_account_uid,
-            billable_account_type=billable_account_type,
-            billable_account_handle=billable_account_handle,
+            billable_principal_uid=billable_principal_uid,
+            billable_principal_type=billable_principal_type,
+            billable_principal_handle=billable_principal_handle,
         )
 
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billable_principal_details(
                 client=client,
-                billable_account_uid="",
+                billable_principal_uid="",
             ).get("uid")
             or ""
         ).strip()
@@ -562,9 +562,9 @@ def create_agent_runtime(
                 ownership_payload = {}
 
         billable_uid = str(
-            created_runtime_payload.get("billable_account_uid")
-            or ownership_payload.get("billable_account_uid")
-            or billable_account_uid
+            created_runtime_payload.get("billable_principal_uid")
+            or ownership_payload.get("billable_principal_uid")
+            or billable_principal_uid
             or ""
         ).strip()
         if not billable_uid and authenticated_uid:
@@ -583,8 +583,8 @@ def create_agent_runtime(
                     "burning_rate": runtime.burning_rate,
                     "started_at": runtime.started_at,
                     "expired_at": runtime.expired_at,
-                    "billable_account_uid": billable_uid or None,
-                    "billable_account_uid_label": _billable_uid_label(
+                    "billable_principal_uid": billable_uid or None,
+                    "billable_principal_uid_label": _billable_uid_label(
                         billable_uid=billable_uid,
                         authenticated_uid=authenticated_uid,
                     ),
@@ -674,17 +674,17 @@ def get_agent_runtime(
         runtime = client.get_runtime(pod_name)
 
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billable_principal_details(
                 client=client,
-                billable_account_uid="",
+                billable_principal_uid="",
             ).get("uid")
             or ""
         ).strip()
 
         billable_uid = str(
-            runtime_payload.get("billable_account_uid")
-            or ownership_payload.get("billable_account_uid")
-            or getattr(runtime, "billable_account_uid", "")
+            runtime_payload.get("billable_principal_uid")
+            or ownership_payload.get("billable_principal_uid")
+            or getattr(runtime, "billable_principal_uid", "")
             or ""
         ).strip()
         if not billable_uid and authenticated_uid:
@@ -701,8 +701,8 @@ def get_agent_runtime(
             "token": runtime.jupyter_token,
             "started_at": runtime.started_at,
             "expired_at": runtime.expired_at,
-            "billable_account_uid": billable_uid or None,
-            "billable_account_uid_label": _billable_uid_label(
+            "billable_principal_uid": billable_uid or None,
+            "billable_principal_uid_label": _billable_uid_label(
                 billable_uid=billable_uid,
                 authenticated_uid=authenticated_uid,
             ),
@@ -963,48 +963,48 @@ def inspect_agent_runtime(
             console.print("[red]Runtime has no ingress endpoint.[/red]")
             raise typer.Exit(1)
 
-        billable_account_uid = str(
-            runtime_payload.get("billable_account_uid")
-            or ownership_payload.get("billable_account_uid")
+        billable_principal_uid = str(
+            runtime_payload.get("billable_principal_uid")
+            or ownership_payload.get("billable_principal_uid")
             or ""
         ).strip()
-        billable_account_handle = str(
-            runtime_payload.get("billable_account_handle")
-            or ownership_payload.get("billable_account_handle")
+        billable_principal_handle = str(
+            runtime_payload.get("billable_principal_handle")
+            or ownership_payload.get("billable_principal_handle")
             or ""
         ).strip()
-        billable_account_kind = str(
-            runtime_payload.get("billable_account_kind")
-            or ownership_payload.get("billable_account_kind")
-            or runtime_payload.get("billable_account_type")
-            or ownership_payload.get("billable_account_type")
+        billable_principal_kind = str(
+            runtime_payload.get("billable_principal_kind")
+            or ownership_payload.get("billable_principal_kind")
+            or runtime_payload.get("billable_principal_type")
+            or ownership_payload.get("billable_principal_type")
             or ""
         ).strip()
 
-        account_details = _resolve_billable_account_details(
+        account_details = _resolve_billable_principal_details(
             client=client,
-            billable_account_uid=billable_account_uid,
+            billable_principal_uid=billable_principal_uid,
         )
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billable_principal_details(
                 client=client,
-                billable_account_uid="",
+                billable_principal_uid="",
             ).get("uid")
             or ""
         ).strip()
-        billable_account_uid = str(
-            account_details.get("uid") or billable_account_uid or ""
+        billable_principal_uid = str(
+            account_details.get("uid") or billable_principal_uid or ""
         ).strip()
         display_billable_uid = _billable_uid_label(
-            billable_uid=billable_account_uid,
+            billable_uid=billable_principal_uid,
             authenticated_uid=authenticated_uid,
             rich=True,
         )
         resolved_handle = str(
-            account_details.get("handle") or billable_account_handle or ""
+            account_details.get("handle") or billable_principal_handle or ""
         ).strip()
         resolved_kind = str(
-            account_details.get("type") or billable_account_kind or ""
+            account_details.get("type") or billable_principal_kind or ""
         ).strip()
         resolved_name = str(account_details.get("name") or "").strip()
         resolved_description = str(account_details.get("description") or "").strip()

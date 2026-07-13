@@ -44,9 +44,9 @@ class RuntimesCreateMixin:
         from_snapshot_uid: Optional[str] = None,
         agent_spec_id: Optional[str] = None,
         agent_spec: Optional[dict[str, Any]] = None,
-        billable_account_uid: Optional[str] = None,
-        billable_account_type: Optional[str] = None,
-        billable_account_handle: Optional[str] = None,
+        billable_principal_uid: Optional[str] = None,
+        billable_principal_type: Optional[str] = None,
+        billable_principal_handle: Optional[str] = None,
     ) -> dict[str, Any]:
         """
         Create a Runtime with the given environment name.
@@ -72,12 +72,12 @@ class RuntimesCreateMixin:
             "environment_name": environment_name,
         }
 
-        resolved_billable_account_uid = (
-            billable_account_uid
+        resolved_billable_principal_uid = (
+            billable_principal_uid
             or os.environ.get("DATALAYER_ACCOUNT_UID")
-            or os.environ.get("DATALAYER_BILLABLE_ACCOUNT_UID")
+            or os.environ.get("DATALAYER_BILLABLE_PRINCIPAL_UID")
         )
-        resolved_billable_account_handle = billable_account_handle or os.environ.get(
+        resolved_billable_principal_handle = billable_principal_handle or os.environ.get(
             "DATALAYER_ACCOUNT_HANDLE"
         )
 
@@ -130,12 +130,12 @@ class RuntimesCreateMixin:
             if agent_spec:
                 body["agent_spec"] = agent_spec
 
-            if resolved_billable_account_uid:
-                body["billable_account_uid"] = resolved_billable_account_uid
-            if billable_account_type:
-                body["billable_account_type"] = billable_account_type
-            if resolved_billable_account_handle:
-                body["billable_account_handle"] = resolved_billable_account_handle
+            if resolved_billable_principal_uid:
+                body["billable_principal_uid"] = resolved_billable_principal_uid
+            if billable_principal_type:
+                body["billable_principal_type"] = billable_principal_type
+            if resolved_billable_principal_handle:
+                body["billable_principal_handle"] = resolved_billable_principal_handle
 
             runtime_url = "{}/api/runtimes/v1/runtimes".format(self.urls.runtimes_url)
             logger.debug(

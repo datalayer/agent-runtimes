@@ -84,14 +84,6 @@ def make_client(
     return AgentClient(urls=urls, api_key=(token or api_key))
 
 
-def resolve_billable_account_uid(
-    billable_account_uid: Optional[str],
-    account_uid: Optional[str],
-) -> Optional[str]:
-    """Resolve billable account UID with backwards-compatible fallback."""
-    return billable_account_uid or account_uid
-
-
 def load_evalset_spec(
     spec_file: str | Path,
     *,

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { buildOtelWebSocketUrl } from '@datalayer/core/lib/otel';
 import { toMetricValue } from '../hooks/useMonitoring';
+import { fetchOtelMetricRows } from '../hooks/useMonitoring';
 import { subscribeOtelWs } from './otelWsPool';
 import {
   agentRuntimeStore,
@@ -174,17 +175,90 @@ function extractServiceName(row: Record<string, unknown>): string | undefined {
     }
   }
 
-  const resourceAttributes = row.resource_attributes;
+  const resourceAttributes = parseResourceAttributes(row.resource_attributes);
   if (resourceAttributes && typeof resourceAttributes === 'object') {
-    const nested = (resourceAttributes as Record<string, unknown>)[
-      'service.name'
-    ];
+    const nested = resourceAttributes['service.name'];
     if (typeof nested === 'string' && nested.length > 0) {
       return nested;
     }
   }
 
   return undefined;
+}
+
+function parseResourceAttributes(attrs: unknown): Record<string, unknown> {
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    return attrs as Record<string, unknown>;
+  }
+  if (typeof attrs === 'string') {
+    try {
+      const parsed = JSON.parse(attrs);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Ignore malformed resource attributes payloads.
+    }
+  }
+  return {};
+}
+
+function extractRuntimeId(row: Record<string, unknown>): string | undefined {
+  const directCandidates = [
+    row.runtime_id,
+    row.runtime,
+    row.pod_name,
+    row.k8s_pod_name,
+  ];
+  for (const candidate of directCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  const attrs = parseAttributes(row.attributes);
+  const attrCandidates = [
+    attrs['runtime.id'],
+    attrs['runtime.pod_name'],
+    attrs['k8s.pod.name'],
+  ];
+  for (const candidate of attrCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  const resourceAttributes = parseResourceAttributes(row.resource_attributes);
+  const resourceCandidates = [
+    resourceAttributes['runtime.id'],
+    resourceAttributes['runtime.pod_name'],
+    resourceAttributes['k8s.pod.name'],
+  ];
+  for (const candidate of resourceCandidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function rowMatchesSource(
+  row: Record<string, unknown>,
+  serviceName?: string,
+  runtimeId?: string,
+): boolean {
+  const resolvedServiceName = String(serviceName || '').trim();
+  const resolvedRuntimeId = String(runtimeId || '').trim();
+  if (!resolvedServiceName && !resolvedRuntimeId) {
+    return true;
+  }
+  const serviceMatches =
+    resolvedServiceName.length > 0 &&
+    extractServiceName(row) === resolvedServiceName;
+  const runtimeMatches =
+    resolvedRuntimeId.length > 0 && extractRuntimeId(row) === resolvedRuntimeId;
+  return serviceMatches || runtimeMatches;
 }
 
 /** Extract `agent.id` from span/trace attributes. */
@@ -198,6 +272,7 @@ function extractAgentId(row: Record<string, unknown>): string | undefined {
 export interface CostUsageChartProps {
   serviceName?: string;
   agentId?: string;
+  runtimeId?: string;
   apiKey?: string;
   datalayerUrl?: string;
   wsUrl?: string;
@@ -209,6 +284,7 @@ export interface CostUsageChartProps {
 export function CostUsageChart({
   serviceName,
   agentId,
+  runtimeId,
   apiKey,
   datalayerUrl,
   wsUrl,
@@ -216,6 +292,8 @@ export function CostUsageChart({
   liveTimestampMs,
   height = 160,
 }: CostUsageChartProps) {
+  const cacheServiceKey =
+    String(serviceName || runtimeId || '').trim() || undefined;
   const monitoringCache = useAgentRuntimeStore(s => s.monitoringCache);
   const mergeCostPoints = useAgentRuntimeStore(s => s.mergeCostPoints);
   const upsertLocalCostPoint = useAgentRuntimeStore(
@@ -223,8 +301,8 @@ export function CostUsageChart({
   );
 
   const cachedEntry = useMemo(
-    () => resolveMonitoringEntry(monitoringCache, serviceName, agentId),
-    [agentId, monitoringCache, serviceName],
+    () => resolveMonitoringEntry(monitoringCache, cacheServiceKey, agentId),
+    [agentId, cacheServiceKey, monitoringCache],
   );
   const [points, setPoints] = useState<CostPoint[]>([]);
   const initialTimestampMsRef = useRef<number>(Date.now());
@@ -271,17 +349,100 @@ export function CostUsageChart({
 
   // ── Reset state on source switch ──────────────────────────────
   useEffect(() => {
-    if (!serviceName) {
+    if (!cacheServiceKey) {
       setPoints([]);
       return;
     }
     setPoints((cachedEntry?.costPoints ?? []).map(localPointToCostPoint));
     initialTimestampMsRef.current = Date.now();
-  }, [agentId, cachedEntry, serviceName]);
+  }, [agentId, cacheServiceKey, cachedEntry]);
+
+  // Bootstrap chart with existing OTEL cost metrics before websocket updates.
+  useEffect(() => {
+    if (!cacheServiceKey || !apiKey || !datalayerUrl) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadInitialMetrics = async () => {
+      try {
+        const [runRows, cumulativeRows] = await Promise.all([
+          fetchOtelMetricRows({
+            metric: COST_RUN_METRIC,
+            serviceName,
+            datalayerUrl,
+            apiKey,
+            limit: 1000,
+          }),
+          fetchOtelMetricRows({
+            metric: COST_CUMULATIVE_METRIC,
+            serviceName,
+            datalayerUrl,
+            apiKey,
+            limit: 1000,
+          }),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const rows = [...runRows, ...cumulativeRows].filter(row => {
+          const castedRow = row as Record<string, unknown>;
+          if (!rowMatchesSource(castedRow, serviceName, runtimeId)) {
+            return false;
+          }
+          return !agentId || extractAgentId(castedRow) === agentId;
+        }) as Array<Record<string, unknown>>;
+
+        const initialPoints = extractCostPoints(rows, agentId);
+        if (cancelled || initialPoints.length === 0) {
+          return;
+        }
+
+        mergeCostPoints({
+          serviceName: cacheServiceKey,
+          agentId,
+          points: initialPoints.map(point => ({
+            timestampMs: point.timestampMs,
+            cumulativeUsd: point.cumulativeUsd,
+          })),
+        });
+
+        const mergedEntry = resolveMonitoringEntry(
+          agentRuntimeStore.getState().monitoringCache,
+          cacheServiceKey,
+          agentId,
+        );
+        if (mergedEntry) {
+          setPoints(mergedEntry.costPoints.map(localPointToCostPoint));
+        } else {
+          setPoints(initialPoints);
+        }
+      } catch {
+        // Fail open: websocket updates can still populate the chart.
+      }
+    };
+
+    void loadInitialMetrics();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    agentId,
+    apiKey,
+    cacheServiceKey,
+    datalayerUrl,
+    mergeCostPoints,
+    runtimeId,
+    serviceName,
+  ]);
 
   // Apply immediate post-turn updates from the monitoring websocket snapshot.
   useEffect(() => {
-    if (!serviceName) return;
+    if (!cacheServiceKey) return;
     if (
       typeof liveCumulativeUsd !== 'number' ||
       !Number.isFinite(liveCumulativeUsd)
@@ -302,7 +463,7 @@ export function CostUsageChart({
     };
 
     upsertLocalCostPoint({
-      serviceName,
+      serviceName: cacheServiceKey,
       agentId,
       timestampMs,
       cumulativeUsd: livePoint.cumulativeUsd,
@@ -310,7 +471,7 @@ export function CostUsageChart({
 
     const mergedEntry = resolveMonitoringEntry(
       agentRuntimeStore.getState().monitoringCache,
-      serviceName,
+      cacheServiceKey,
       agentId,
     );
     if (mergedEntry) {
@@ -320,6 +481,7 @@ export function CostUsageChart({
     }
   }, [
     agentId,
+    cacheServiceKey,
     liveCumulativeUsd,
     liveTimestampMs,
     serviceName,
@@ -328,7 +490,7 @@ export function CostUsageChart({
 
   // ── WebSocket subscription (shared connection pool) ─────────
   useEffect(() => {
-    if (!serviceName || !apiKey) return;
+    if (!cacheServiceKey || !apiKey) return;
 
     const rawBaseUrl =
       wsUrl ||
@@ -363,8 +525,8 @@ export function CostUsageChart({
       if (msg.signal !== 'metrics') return;
 
       const rows = Array.isArray(msg.data) ? msg.data : [];
-      let matchingRows = rows.filter(
-        row => extractServiceName(row) === serviceName,
+      let matchingRows = rows.filter(row =>
+        rowMatchesSource(row, serviceName, runtimeId),
       );
       // Filter by agent.id when specified.
       if (agentId) {
@@ -377,7 +539,7 @@ export function CostUsageChart({
       const newPoints = extractCostPoints(matchingRows, agentId);
       if (newPoints.length > 0) {
         mergeCostPoints({
-          serviceName,
+          serviceName: cacheServiceKey,
           agentId,
           points: newPoints.map(point => ({
             timestampMs: point.timestampMs,
@@ -387,7 +549,7 @@ export function CostUsageChart({
 
         const mergedEntry = resolveMonitoringEntry(
           agentRuntimeStore.getState().monitoringCache,
-          serviceName,
+          cacheServiceKey,
           agentId,
         );
         if (mergedEntry) {
@@ -399,7 +561,16 @@ export function CostUsageChart({
     });
 
     return unsubscribe;
-  }, [agentId, apiKey, mergeCostPoints, datalayerUrl, serviceName, wsUrl]);
+  }, [
+    agentId,
+    apiKey,
+    cacheServiceKey,
+    mergeCostPoints,
+    datalayerUrl,
+    runtimeId,
+    serviceName,
+    wsUrl,
+  ]);
 
   // ── Chart options ─────────────────────────────────────────────
   const option = useMemo(() => {
