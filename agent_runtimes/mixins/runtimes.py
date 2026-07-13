@@ -77,8 +77,8 @@ class RuntimesCreateMixin:
             or os.environ.get("DATALAYER_ACCOUNT_UID")
             or os.environ.get("DATALAYER_BILLABLE_PRINCIPAL_UID")
         )
-        resolved_billable_principal_handle = billable_principal_handle or os.environ.get(
-            "DATALAYER_ACCOUNT_HANDLE"
+        resolved_billable_principal_handle = (
+            billable_principal_handle or os.environ.get("DATALAYER_ACCOUNT_HANDLE")
         )
 
         if given_name:
