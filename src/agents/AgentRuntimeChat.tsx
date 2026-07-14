@@ -22,7 +22,7 @@
  * @module agents/AgentRuntimeChat
  */
 
-import { type ReactNode, useEffect, useMemo } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state';
@@ -102,18 +102,19 @@ export function AgentRuntimeChat({
   const { token } = useIAMStore();
   const spec = useMemo(() => getAgentspecs(agentSpecId), [agentSpecId]);
 
-  const { runtime, isReady, endpoint, error } = useAgentRuntimes({
-    agentSpecId,
-    autoStart: launch,
-    autoCreateAgent: launch,
-    agentConfig: {
-      name: agentSpecId,
+  const { runtime, isReady, endpoint, error, createAgent, isCreating } =
+    useAgentRuntimes({
       agentSpecId,
-      model: spec?.model,
-      systemPrompt: spec?.systemPrompt,
-      ...agentConfig,
-    } as AgentConfig,
-  });
+      autoStart: launch,
+      autoCreateAgent: launch,
+      agentConfig: {
+        name: agentSpecId,
+        agentSpecId,
+        model: spec?.model,
+        systemPrompt: spec?.systemPrompt,
+        ...agentConfig,
+      } as AgentConfig,
+    });
 
   const resolvedTitle = title || spec?.name || 'Agent';
   const authToken = token ?? undefined;
@@ -127,7 +128,45 @@ export function AgentRuntimeChat({
   const launching = launch && !error && (!isReady || !endpoint);
   const launchingError = launch ? error : null;
   const runtimeBaseUrl = runtime?.agentBaseUrl || null;
-  const runtimeAgentId = runtime?.agentId || 'default';
+  const runtimeAgentId = runtime?.agentId || '';
+  const hasAssignedAgent = runtimeAgentId.trim().length > 0;
+  const assignmentAttemptedForPodRef = useRef<string | null>(null);
+  const isInteractiveReady =
+    launch && isReady && !!endpoint && hasAssignedAgent;
+
+  useEffect(() => {
+    const podName = String(runtime?.podName || '').trim();
+
+    if (!podName) {
+      assignmentAttemptedForPodRef.current = null;
+      return;
+    }
+
+    if (hasAssignedAgent) {
+      assignmentAttemptedForPodRef.current = podName;
+      return;
+    }
+
+    if (!launch || !isReady || !endpoint || !!error || isCreating) {
+      return;
+    }
+
+    if (assignmentAttemptedForPodRef.current === podName) {
+      return;
+    }
+
+    assignmentAttemptedForPodRef.current = podName;
+    void createAgent();
+  }, [
+    runtime?.podName,
+    hasAssignedAgent,
+    launch,
+    isReady,
+    endpoint,
+    error,
+    isCreating,
+    createAgent,
+  ]);
 
   const commonChatProps = {
     protocol,
@@ -170,7 +209,7 @@ export function AgentRuntimeChat({
   }
 
   // Live and ready: interactive chat wired to the runtime endpoint.
-  if (launch && isReady && endpoint) {
+  if (isInteractiveReady) {
     return (
       <Chat
         {...commonChatProps}
@@ -191,8 +230,14 @@ export function AgentRuntimeChat({
     <Chat
       {...commonChatProps}
       disableInputPrompt
-      launching={launching}
-      launchingMessage={`Launching your ${resolvedTitle} agent…`}
+      launching={
+        launching || (launch && isReady && !!endpoint && !hasAssignedAgent)
+      }
+      launchingMessage={
+        launch && isReady && !!endpoint && !hasAssignedAgent
+          ? `Assigning your ${resolvedTitle} agent…`
+          : `Launching your ${resolvedTitle} agent…`
+      }
       overlay={overlay}
     />
   );
