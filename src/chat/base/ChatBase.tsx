@@ -713,7 +713,8 @@ function ChatBaseInner({
     [onEphemeralNotebookOpenChange],
   );
   const notebookVisible = enableEphemeralNotebook && ephemeralNotebookOpen;
-  const notebookCollapsed = notebookVisible && collapsed;
+  const notebookCollapsed =
+    notebookVisible && collapsed && Boolean(onExpandFromCollapsed);
 
   // Track the ephemeral notebook's live kernel connection so the chat header
   // renders the same rich `KernelIndicator` details (kernel id, client id,

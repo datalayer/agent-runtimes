@@ -216,7 +216,13 @@ function extractRuntimeId(row: Record<string, unknown>): string | undefined {
     }
   }
 
-  const attrs = parseAttributes(row.attributes);
+  const parsedAttrs = parseAttributes(row.attributes);
+  const attrs =
+    parsedAttrs &&
+    typeof parsedAttrs === 'object' &&
+    !Array.isArray(parsedAttrs)
+      ? (parsedAttrs as Record<string, unknown>)
+      : {};
   const attrCandidates = [
     attrs['runtime.id'],
     attrs['runtime.pod_name'],

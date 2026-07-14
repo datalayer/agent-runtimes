@@ -149,7 +149,7 @@ def execute_evalset_spec(
         agent does not respond within this window the call is aborted, the case
         is recorded as failed, and execution continues with the next case. This
         avoids one hung request blocking all remaining cases/experiments/runs.
-        runs. Defaults to ``180`` (3 minutes per call).
+        Defaults to ``180`` (3 minutes per call).
     log : Optional[Callable[[str], None]]
         Optional logging callback (defaults to ``print``; pass ``None`` to
         silence progress output).
