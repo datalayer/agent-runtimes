@@ -211,10 +211,7 @@ export namespace A2UIExtension {
 
   /** A2UI message types */
   export type MessageType =
-    | 'beginRendering'
-    | 'surfaceUpdate'
-    | 'dataModelUpdate'
-    | 'deleteSurface';
+    'beginRendering' | 'surfaceUpdate' | 'dataModelUpdate' | 'deleteSurface';
 
   /** A2UI renderer theme */
   export interface Theme {

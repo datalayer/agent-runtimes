@@ -3522,6 +3522,20 @@ function ChatBaseInner({
     !!configQuery.data ||
     !!skillsQuery.data;
 
+  const resolvedDescription =
+    description || configQuery.data?.welcomeMessage || '';
+
+  const serverSuggestions = configQuery.data?.suggestions;
+  const resolvedSuggestions =
+    suggestions && suggestions.length > 0
+      ? suggestions
+      : Array.isArray(serverSuggestions) && serverSuggestions.length > 0
+        ? serverSuggestions
+            .map(item => String(item || '').trim())
+            .filter(Boolean)
+            .map(item => ({ title: item, message: item }))
+        : undefined;
+
   const messagesContent = children ? (
     children
   ) : (
@@ -3549,8 +3563,8 @@ function ChatBaseInner({
           <ChatEmptyState
             emptyState={emptyState}
             brandIcon={brandIcon}
-            description={description}
-            suggestions={suggestions}
+            description={resolvedDescription}
+            suggestions={resolvedSuggestions}
             submitOnSuggestionClick={submitOnSuggestionClick}
             onSuggestionSubmit={handleSuggestionSubmit}
             onSuggestionFill={handleSuggestionFill}

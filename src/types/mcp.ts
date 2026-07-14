@@ -74,11 +74,7 @@ export interface MCPServerManagerTool {
  * Aggregate status of all MCP servers.
  */
 export type McpAggregateStatus =
-  | 'none'
-  | 'not_started'
-  | 'starting'
-  | 'failed'
-  | 'started';
+  'none' | 'not_started' | 'starting' | 'failed' | 'started';
 
 /**
  * Per-server status entry returned by the MCP toolsets-status endpoint.

@@ -193,8 +193,4 @@ export type InferenceProviderFactory = (
  * Provider type identifiers
  */
 export type InferenceProviderType =
-  | 'datalayer'
-  | 'openai'
-  | 'anthropic'
-  | 'self-hosted'
-  | 'copilotkit';
+  'datalayer' | 'openai' | 'anthropic' | 'self-hosted' | 'copilotkit';

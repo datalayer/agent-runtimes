@@ -56,8 +56,7 @@ const NotebookMutationsServiceManager = () => {
         }
       | undefined;
     return ((adapter?.notebookPanel?.content?.model?.toJSON?.() as
-      | INotebookContent
-      | undefined) ?? nbformatExample) as INotebookContent;
+      INotebookContent | undefined) ?? nbformatExample) as INotebookContent;
   };
   const onSessionConnection: OnSessionConnection = (
     session: Session.ISessionConnection | undefined,

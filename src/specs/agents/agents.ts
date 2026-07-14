@@ -4832,7 +4832,7 @@ export const GALLERY_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/titanic/titanic.csv and replace a manual pivot-table workflow with reproducible notebook code and visuals.',
+    'Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then replace a manual pivot-table workflow in one notebook by producing: schema+missing values, survival breakdown, and one chart with a concise summary.',
   ],
   welcomeMessage:
     'Hi! I can help with replace excel pivot work. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',

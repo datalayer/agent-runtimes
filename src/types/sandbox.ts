@@ -44,10 +44,7 @@ export type SandboxWsMessage = SandboxWsStatus | SandboxInterruptAck;
  * Derived aggregate status for display purposes.
  */
 export type SandboxAggregateStatus =
-  | 'unavailable'
-  | 'stopped'
-  | 'idle'
-  | 'executing';
+  'unavailable' | 'stopped' | 'idle' | 'executing';
 
 /* ── Visual constants ──────────────────────────────────── */
 

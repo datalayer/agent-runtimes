@@ -33,12 +33,7 @@ export interface ToolApproval {
 }
 
 export type ToolApprovalStatus =
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'expired'
-  | 'auto_approved'
-  | 'deleted';
+  'pending' | 'approved' | 'rejected' | 'expired' | 'auto_approved' | 'deleted';
 
 export interface ToolApprovalFilters {
   /** Filter by agent ID */

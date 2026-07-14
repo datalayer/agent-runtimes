@@ -17,10 +17,7 @@ import {
 import { formatRelativeTime } from '@datalayer/core/lib/utils';
 
 export type ApprovalStatus =
-  | 'pending'
-  | 'approved'
-  | 'approved_with_changes'
-  | 'rejected';
+  'pending' | 'approved' | 'approved_with_changes' | 'rejected';
 type RiskLevel = 'low' | 'medium' | 'high';
 
 export const TOOL_APPROVAL_STATUS_CONFIG: Record<

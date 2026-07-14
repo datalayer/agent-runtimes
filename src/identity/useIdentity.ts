@@ -287,8 +287,7 @@ export function useIdentity(
 
             const providerName = event.data.provider;
             const identityFromPopup = event.data.identity as
-              | Identity
-              | undefined;
+              Identity | undefined;
 
             console.debug(
               '[Identity] Received oauth-callback-success for provider:',
@@ -328,8 +327,7 @@ export function useIdentity(
                   const identitiesArray = data.state?.identities || [];
                   const identitiesMap = new Map(identitiesArray);
                   const identity = identitiesMap.get(providerName) as
-                    | Identity
-                    | undefined;
+                    Identity | undefined;
 
                   if (identity) {
                     const currentIdentities =

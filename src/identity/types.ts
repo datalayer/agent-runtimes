@@ -13,13 +13,7 @@
  * Supported OAuth providers
  */
 export type OAuthProvider =
-  | 'github'
-  | 'google'
-  | 'kaggle'
-  | 'linkedin'
-  | 'slack'
-  | 'notion'
-  | 'custom';
+  'github' | 'google' | 'kaggle' | 'linkedin' | 'slack' | 'notion' | 'custom';
 
 /**
  * Authentication type for a provider
@@ -354,8 +348,7 @@ export interface TokenIdentityProviderConfig {
  * Supports both OAuth and token-based authentication.
  */
 export type IdentityProviderConfig =
-  | OAuthIdentityProviderConfig
-  | TokenIdentityProviderConfig;
+  OAuthIdentityProviderConfig | TokenIdentityProviderConfig;
 
 /**
  * Configuration for multiple identity providers.

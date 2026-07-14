@@ -10,10 +10,7 @@ import type { AgentStatus } from './agents';
  * Connection state enumeration
  */
 export type ConnectionState =
-  | 'connected'
-  | 'connecting'
-  | 'disconnected'
-  | 'error';
+  'connected' | 'connecting' | 'disconnected' | 'error';
 
 /**
  * Information about a connected agent runtime.

@@ -22,21 +22,13 @@ import type {
  * Supported protocol (communication protocols with agent backends)
  */
 export type Protocol =
-  | 'ag-ui'
-  | 'a2a'
-  | 'acp'
-  | 'vercel-ai'
-  | 'vercel-ai-jupyter';
+  'ag-ui' | 'a2a' | 'acp' | 'vercel-ai' | 'vercel-ai-jupyter';
 
 /**
  * Protocol connection state
  */
 export type ProtocolConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'error'
-  | 'reconnecting';
+  'disconnected' | 'connecting' | 'connected' | 'error' | 'reconnecting';
 
 /**
  * Protocol transport mechanism

@@ -851,6 +851,15 @@ class FrontendConfig(BaseModel):
         description="Whether tool approvals are disabled for new agent launches",
         alias="disableToolApprovals",
     )
+    suggestions: List[str] = Field(
+        default_factory=list,
+        description="Chat suggestions to show users what this agent can do",
+    )
+    welcome_message: Optional[str] = Field(
+        default=None,
+        description="Welcome message shown when the chat is empty",
+        alias="welcomeMessage",
+    )
 
 
 class SubAgentspecConfig(BaseModel):

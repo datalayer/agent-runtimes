@@ -427,6 +427,19 @@ async def get_configuration(
             if isinstance(spec_model, str) and spec_model.strip():
                 config.default_model = spec_model
 
+            if isinstance(spec, dict):
+                spec_welcome = spec.get("welcome_message") or spec.get("welcomeMessage")
+                if isinstance(spec_welcome, str) and spec_welcome.strip():
+                    config.welcome_message = spec_welcome.strip()
+
+                raw_suggestions = spec.get("suggestions")
+                if isinstance(raw_suggestions, list):
+                    config.suggestions = [
+                        str(item).strip()
+                        for item in raw_suggestions
+                        if isinstance(item, str) and str(item).strip()
+                    ]
+
         return config
 
     except Exception as e:

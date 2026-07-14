@@ -119,10 +119,7 @@ export interface ToolParameter {
  * Tool call status for render props
  */
 export type ToolRenderStatus =
-  | 'inProgress'
-  | 'executing'
-  | 'complete'
-  | 'failed';
+  'inProgress' | 'executing' | 'complete' | 'failed';
 
 /**
  * Props passed to tool render function
