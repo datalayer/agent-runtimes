@@ -37,7 +37,7 @@ from agent_runtimes.evals.remote.evaluators import (
     run_and_evaluate_evalset,
     run_case_evaluators,
 )
-from agent_runtimes.evals.remote.report import (
+from agent_runtimes.evals.report import (
     average_latest_pass_rate,
     collect_report_failures,
     iter_report_runs,

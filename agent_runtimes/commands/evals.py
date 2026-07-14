@@ -37,7 +37,7 @@ from agent_runtimes.evals.remote.evals import (
     parse_json_value as _parse_json_value,
 )
 from agent_runtimes.evals.remote.evaluators import evaluate_evalset
-from agent_runtimes.evals.remote.report import (
+from agent_runtimes.evals.report import (
     _now_iso,
     _parse_csv_values,
     _parse_evaluator_specs,

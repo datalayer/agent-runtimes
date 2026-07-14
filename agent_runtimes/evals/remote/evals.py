@@ -176,14 +176,14 @@ def watch_runs(
 
 def now_iso() -> str:
     """Return the current UTC timestamp in ISO-8601 form."""
-    from agent_runtimes.evals.remote.report import _now_iso
+    from agent_runtimes.evals.report import _now_iso
 
     return _now_iso()
 
 
 def timestamp_slug(raw_iso: str) -> str:
     """Return a filesystem-safe slug for an ISO-8601 timestamp."""
-    from agent_runtimes.evals.remote.report import _timestamp_slug
+    from agent_runtimes.evals.report import _timestamp_slug
 
     return _timestamp_slug(raw_iso)
 
@@ -201,7 +201,7 @@ def build_eval_report(
     Thin public facade over the report engine so callers do not import private
     CLI helpers.
     """
-    from agent_runtimes.evals.remote.report import _report_data
+    from agent_runtimes.evals.report import _report_data
 
     return _report_data(
         client=client,
@@ -219,14 +219,14 @@ def render_eval_report_markdown(
     colorize: bool = False,
 ) -> str:
     """Render a structured eval report as markdown."""
-    from agent_runtimes.evals.remote.report import _report_markdown
+    from agent_runtimes.evals.report import _report_markdown
 
     return _report_markdown(report, run_limit=run_limit, colorize=colorize)
 
 
 def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Path:
     """Write a structured eval report to a CSV file and return its path."""
-    from agent_runtimes.evals.remote.report import _write_report_csv
+    from agent_runtimes.evals.report import _write_report_csv
 
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -251,7 +251,7 @@ def write_eval_reports(
     Returns a dict with the structured ``report`` plus the written file paths.
     Shared by examples and integrations to avoid duplicating report I/O.
     """
-    from agent_runtimes.evals.remote.report import _timestamp_slug
+    from agent_runtimes.evals.report import _timestamp_slug
 
     report = build_eval_report(
         client,

@@ -324,7 +324,7 @@ def main_callback(
 
     if resolved_uid:
         os.environ["DATALAYER_ACCOUNT_UID"] = resolved_uid
-        os.environ["DATALAYER_BIILING_PRINCIPAL_UID"] = resolved_uid
+        os.environ["DATALAYER_BILLING_ENTITY_UID"] = resolved_uid
     if resolved_handle:
         os.environ["DATALAYER_ACCOUNT_HANDLE"] = resolved_handle
 

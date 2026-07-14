@@ -33,7 +33,7 @@ class EvalsMixin:
             billing_entity_uid
             or account_uid
             or os.environ.get("DATALAYER_ACCOUNT_UID")
-            or os.environ.get("DATALAYER_BIILING_PRINCIPAL_UID")
+            or os.environ.get("DATALAYER_BILLING_ENTITY_UID")
         )
         if resolved_account_uid:
             query["account_uid"] = resolved_account_uid

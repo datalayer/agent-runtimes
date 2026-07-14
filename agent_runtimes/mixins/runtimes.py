@@ -75,7 +75,7 @@ class RuntimesCreateMixin:
         resolved_billing_entity_uid = (
             billing_entity_uid
             or os.environ.get("DATALAYER_ACCOUNT_UID")
-            or os.environ.get("DATALAYER_BIILING_PRINCIPAL_UID")
+            or os.environ.get("DATALAYER_BILLING_ENTITY_UID")
         )
         resolved_billing_entity_handle = (
             billing_entity_handle or os.environ.get("DATALAYER_ACCOUNT_HANDLE")
@@ -86,9 +86,13 @@ class RuntimesCreateMixin:
 
         try:
             if credits_limit is None:
+                credits_query = {}
+                if resolved_billing_entity_uid:
+                    credits_query["billing_entity_uid"] = resolved_billing_entity_uid
                 response = self._fetch(
                     "{}/api/iam/v1/usage/credits".format(self.urls.iam_url),
                     method="GET",
+                    params=credits_query or None,
                 )
 
                 if response.status_code != 200:

@@ -187,7 +187,7 @@ async def _emit_interactive_live_eval_event(
     url = f"{base_url}/api/ai-agents/v1/evals/live/events"
     params: dict[str, Any] = {}
     billing_entity_uid = str(
-        os.environ.get("DATALAYER_BIILING_PRINCIPAL_UID") or ""
+        os.environ.get("DATALAYER_BILLING_ENTITY_UID") or ""
     ).strip()
     if billing_entity_uid:
         params["account_uid"] = billing_entity_uid
