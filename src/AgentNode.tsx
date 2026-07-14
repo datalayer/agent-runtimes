@@ -44,8 +44,8 @@ import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import {
-  BillableAccountSelect,
-  type BillableAccount,
+  BillingEntitySelect,
+  type BillingEntity,
 } from '@datalayer/core/lib/components/billing';
 import { ShareAccessComponent } from '@datalayer/core/lib/components/sharing';
 import { useAgentNodeThemeStore } from './agent-node/themeStore';
@@ -98,9 +98,9 @@ const MODE_CARDS: readonly ModeCard[] = [
 type AgentNodeConfiguration = {
   mode: AgentNodeMode;
   node_uid?: string;
-  billable_principal_uid?: string;
-  billable_principal_type?: string;
-  billable_principal_handle?: string;
+  billing_entity_uid?: string;
+  billing_entity_type?: string;
+  billing_entity_handle?: string;
   sharing: Record<string, any>;
 };
 
@@ -289,7 +289,7 @@ export function AgentNode() {
   const [configuration, setConfiguration] = useState<AgentNodeConfiguration>(
     DEFAULT_CONFIGURATION,
   );
-  const [, setSelectedBillableAccount] = useState<BillableAccount | undefined>(
+  const [, setSelectedBillingEntity] = useState<BillingEntity | undefined>(
     undefined,
   );
   const [isSaving, setIsSaving] = useState(false);
@@ -352,10 +352,10 @@ export function AgentNode() {
     [],
   );
 
-  // Refs kept in sync with state so the BillableAccountSelect callbacks
+  // Refs kept in sync with state so the BillingEntitySelect callbacks
   // (passed via stable identities) can read the latest values without
   // being re-created on every render — re-created callbacks made
-  // BillableAccountSelect re-fire onAccountsResolved and trigger an
+  // BillingEntitySelect re-fire onAccountsResolved and trigger an
   // infinite setState loop.
   const configurationRef = useRef(configuration);
   useEffect(() => {
@@ -366,17 +366,17 @@ export function AgentNode() {
     iamUserRef.current = iamUser;
   }, [iamUser]);
 
-  const handleBillableAccountChange = useCallback((uid: string) => {
-    setConfiguration(prev => ({ ...prev, billable_principal_uid: uid }));
+  const handleBillingEntityChange = useCallback((uid: string) => {
+    setConfiguration(prev => ({ ...prev, billing_entity_uid: uid }));
   }, []);
 
   const handleSelectedAccountChange = useCallback(
-    (account: BillableAccount | undefined) => {
-      setSelectedBillableAccount(account);
+    (account: BillingEntity | undefined) => {
+      setSelectedBillingEntity(account);
       setConfiguration(prev => ({
         ...prev,
-        billable_principal_type: account?.accountType,
-        billable_principal_handle: account?.accountHandle,
+        billing_entity_type: account?.accountType,
+        billing_entity_handle: account?.accountHandle,
       }));
     },
     [],
@@ -384,12 +384,12 @@ export function AgentNode() {
 
   const handleAccountsResolved = useCallback(
     (_state: {
-      accounts: BillableAccount[];
-      eligibleAccounts: BillableAccount[];
+      accounts: BillingEntity[];
+      eligibleAccounts: BillingEntity[];
       isLoading: boolean;
       hasEligibleAccount: boolean;
     }) => {
-      // BillableAccountSelect persists the chosen account in a cookie and
+      // BillingEntitySelect persists the chosen account in a cookie and
       // falls back to the personal account when none is stored, so the node
       // no longer needs to force an organization default here.
     },
@@ -1169,9 +1169,9 @@ export function AgentNode() {
                     </FormControl>
 
                     {iamUser ? (
-                      <BillableAccountSelect
-                        value={configuration.billable_principal_uid || ''}
-                        onChange={handleBillableAccountChange}
+                      <BillingEntitySelect
+                        value={configuration.billing_entity_uid || ''}
+                        onChange={handleBillingEntityChange}
                         onSelectedAccountChange={handleSelectedAccountChange}
                         onAccountsResolved={handleAccountsResolved}
                       />
@@ -1181,7 +1181,7 @@ export function AgentNode() {
                           Run this agent under
                         </FormControl.Label>
                         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                          Loading billable principals...
+                          Loading billing entitys...
                         </Text>
                       </FormControl>
                     )}

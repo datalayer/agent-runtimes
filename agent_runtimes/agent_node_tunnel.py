@@ -262,7 +262,7 @@ async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
 
         if get_agent_node_configuration is not None:
             try:
-                if not get_agent_node_configuration().billable_principal_uid:
+                if not get_agent_node_configuration().billing_entity_uid:
                     try:
                         await asyncio.wait_for(
                             stop_event.wait(), timeout=reconnect_seconds

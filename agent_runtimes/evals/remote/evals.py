@@ -192,7 +192,7 @@ def build_eval_report(
     client: AgentClient,
     evalset_id: str,
     *,
-    billable_principal_uid: Optional[str] = None,
+    billing_entity_uid: Optional[str] = None,
     account_uid: Optional[str] = None,
     run_limit: int = 50,
 ) -> dict[str, Any]:
@@ -207,7 +207,7 @@ def build_eval_report(
         client=client,
         evalset_id=evalset_id,
         run_limit=run_limit,
-        billable_principal_uid=billable_principal_uid,
+        billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
 
@@ -238,7 +238,7 @@ def write_eval_reports(
     client: AgentClient,
     evalset_id: str,
     *,
-    billable_principal_uid: Optional[str] = None,
+    billing_entity_uid: Optional[str] = None,
     account_uid: Optional[str] = None,
     run_limit: int = 50,
     output_dir: str | Path = ".",
@@ -256,7 +256,7 @@ def write_eval_reports(
     report = build_eval_report(
         client,
         evalset_id,
-        billable_principal_uid=billable_principal_uid,
+        billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
         run_limit=run_limit,
     )

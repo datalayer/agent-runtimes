@@ -73,10 +73,10 @@ def evals_callback(ctx: typer.Context) -> None:
 @app.command(name="ls")
 def evals_ls(
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     run_environment: Optional[str] = typer.Option(
         None, "--run-environment", help="Filter by run environment (ui/sdk)."
@@ -97,7 +97,7 @@ def evals_ls(
         q=q,
         limit=limit,
         offset=offset,
-        account_uid=billable_principal_uid,
+        account_uid=billing_entity_uid,
     )
     evalsets = [
         item
@@ -114,7 +114,7 @@ def evals_ls(
             evalset_id=evalset_id,
             limit=200,
             offset=0,
-            account_uid=billable_principal_uid,
+            account_uid=billing_entity_uid,
         )
         experiments_by_evalset[evalset_id] = [
             item
@@ -165,10 +165,10 @@ def evals_delete_top(
         False, "--yes", "-y", help="Skip the confirmation prompt."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
 ) -> None:
     """Delete an evalset and its associated experiments, runs, and cases."""
@@ -178,7 +178,7 @@ def evals_delete_top(
             abort=True,
         )
     client = _make_client(token=token)
-    payload = client.evals_delete_eval(evalset_id, account_uid=billable_principal_uid)
+    payload = client.evals_delete_eval(evalset_id, account_uid=billing_entity_uid)
     cascade = payload.get("cascade") or {}
     console.print(
         f"[green]Eval deleted:[/green] {evalset_id} "
@@ -191,10 +191,10 @@ def evals_delete_top(
 @evals_app.command(name="ls")
 def evals_list(
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     run_environment: Optional[str] = typer.Option(
         None, "--run-environment", help="Filter by run environment (ui/sdk)."
@@ -215,7 +215,7 @@ def evals_list(
         q=q,
         limit=limit,
         offset=offset,
-        account_uid=billable_principal_uid,
+        account_uid=billing_entity_uid,
     )
     if raw:
         console.print(payload)
@@ -282,10 +282,10 @@ def evals_create(
     ),
     tags: list[str] = typer.Option([], "--tag", help="Repeatable tag."),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
@@ -371,7 +371,7 @@ def evals_create(
         metadata=metadata,
         tags=resolved_tags,
         cases=cases,
-        account_uid=billable_principal_uid,
+        account_uid=billing_entity_uid,
     )
     if raw:
         typer.echo(json.dumps(payload))
@@ -386,15 +386,15 @@ def evals_create(
 def evals_delete(
     evalset_id: str = typer.Argument(..., help="Evalset ID."),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
 ) -> None:
     """Delete an evalset (cascade delete runs/experiments)."""
     client = _make_client(token=token)
-    payload = client.evals_delete_eval(evalset_id, account_uid=billable_principal_uid)
+    payload = client.evals_delete_eval(evalset_id, account_uid=billing_entity_uid)
     cascade = payload.get("cascade") or {}
     console.print(
         "[green]Eval deleted.[/green] "
@@ -410,10 +410,10 @@ def _render_report(
         50, "--run-limit", min=2, max=200, help="Runs fetched per experiment."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     output_file: Optional[str] = typer.Option(
         None, "--output", help="Write markdown report to file."
@@ -432,7 +432,7 @@ def _render_report(
         payload = client.evals_list_evals(
             limit=200,
             offset=0,
-            account_uid=billable_principal_uid,
+            account_uid=billing_entity_uid,
         )
         evalsets = [
             item for item in (payload.get("evalsets") or []) if isinstance(item, dict)
@@ -458,8 +458,8 @@ def _render_report(
         client=client,
         evalset_id=resolved_evalset_id,
         run_limit=run_limit,
-        billable_principal_uid=billable_principal_uid,
-        account_uid=billable_principal_uid,
+        billing_entity_uid=billing_entity_uid,
+        account_uid=billing_entity_uid,
     )
     experiments = report.get("experiments") or []
     if not experiments:
@@ -497,10 +497,10 @@ def evals_report(
         50, "--run-limit", min=2, max=200, help="Runs fetched per experiment."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     output_file: Optional[str] = typer.Option(
         None, "--output", help="Write markdown report to file."
@@ -517,7 +517,7 @@ def evals_report(
         evalset_id=evalset_id,
         run_limit=run_limit,
         token=token,
-        billable_principal_uid=billable_principal_uid,
+        billing_entity_uid=billing_entity_uid,
         output_file=output_file,
         export=export,
         raw=raw,
@@ -624,10 +624,10 @@ def experiments_list(
     limit: int = typer.Option(50, "--limit", min=1, max=200),
     offset: int = typer.Option(0, "--offset", min=0),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
@@ -638,7 +638,7 @@ def experiments_list(
         status=status,
         limit=limit,
         offset=offset,
-        account_uid=billable_principal_uid,
+        account_uid=billing_entity_uid,
     )
     if raw:
         console.print(payload)
@@ -689,10 +689,10 @@ def experiments_create(
     ),
     tags: list[str] = typer.Option([], "--tag", help="Repeatable tag."),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
@@ -761,7 +761,7 @@ def experiments_create(
             config=config_payload,
             summary=summary_payload,
             tags=resolved_tags,
-            account_uid=billable_principal_uid,
+            account_uid=billing_entity_uid,
         )
         payloads.append(payload)
 
@@ -803,10 +803,10 @@ def runs_list(
     limit: int = typer.Option(50, "--limit", min=1, max=200),
     offset: int = typer.Option(0, "--offset", min=0),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
@@ -816,7 +816,7 @@ def runs_list(
         experiment_id,
         limit=limit,
         offset=offset,
-        account_uid=billable_principal_uid,
+        account_uid=billing_entity_uid,
     )
     if raw:
         console.print(payload)
@@ -900,10 +900,10 @@ def runs_launch(
         None, "--ended-at", help="ISO timestamp override."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
 ) -> None:
     """Launch an evalset run on SaaS and tag it as CLI-launched."""
@@ -969,7 +969,7 @@ def runs_launch(
         metrics=metrics,
         summary=summary,
         report=report,
-        account_uid=billable_principal_uid,
+        account_uid=billing_entity_uid,
     )
     run = payload.get("run") or {}
     run_id = str(run.get("id", ""))
@@ -988,10 +988,10 @@ def runs_watch(
         600, "--timeout", min=5, help="Timeout in seconds."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
 ) -> None:
     """Watch a run until completion/failure."""
@@ -1000,7 +1000,7 @@ def runs_watch(
     last_status = ""
 
     while True:
-        payload = client.evals_get_run(run_id, account_uid=billable_principal_uid)
+        payload = client.evals_get_run(run_id, account_uid=billing_entity_uid)
         run = payload.get("run") or {}
         status = str(run.get("status", "unknown"))
         if status != last_status:
@@ -1031,10 +1031,10 @@ def live_targets(
     window: str = typer.Option("24h", "--window", help="Window: 1h, 6h, 24h, 7d, 30d."),
     limit: int = typer.Option(50, "--limit", min=1, max=200),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
-    billable_principal_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-principal-uid",
-        help="Billable principal UID context (organization/team/user).",
+        "--billing-entity-uid",
+        help="Billing Entity UID context (organization/team/user).",
     ),
     raw: bool = typer.Option(False, "--raw", help="Print raw JSON output."),
 ) -> None:
@@ -1043,7 +1043,7 @@ def live_targets(
     payload = client.evals_list_live_targets(
         window=window,
         limit=limit,
-        account_uid=billable_principal_uid,
+        account_uid=billing_entity_uid,
     )
     if raw:
         console.print(payload)

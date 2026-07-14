@@ -806,7 +806,7 @@ def _report_data(
     client: AgentClient,
     evalset_id: str,
     run_limit: int,
-    billable_principal_uid: Optional[str],
+    billing_entity_uid: Optional[str],
     account_uid: Optional[str],
 ) -> dict[str, Any]:
     evalset_record: dict[str, Any] = {}
@@ -814,7 +814,7 @@ def _report_data(
         q=evalset_id,
         limit=200,
         offset=0,
-        billable_principal_uid=billable_principal_uid,
+        billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
     for item in evalsets_payload.get("evalsets") or []:
@@ -826,7 +826,7 @@ def _report_data(
         evalset_id=evalset_id,
         limit=200,
         offset=0,
-        billable_principal_uid=billable_principal_uid,
+        billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
     experiments = experiments_payload.get("experiments") or []
@@ -866,7 +866,7 @@ def _report_data(
             experiment_id,
             limit=run_limit,
             offset=0,
-            billable_principal_uid=billable_principal_uid,
+            billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
         runs = runs_payload.get("runs") or []
@@ -925,7 +925,7 @@ def _report_data(
             ]
             compare_payload = client.evals_compare_runs(
                 latest_two_run_ids,
-                billable_principal_uid=billable_principal_uid,
+                billing_entity_uid=billing_entity_uid,
                 account_uid=account_uid,
             )
             compared_runs = compare_payload.get("runs") or []

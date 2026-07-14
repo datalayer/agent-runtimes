@@ -72,7 +72,7 @@ def execute_evalset_spec(
     run_limit: int = 1,
     run_environment: str = "sdk",
     environment_name: str = DEFAULT_ENVIRONMENT_NAME,
-    billable_principal_uid: Optional[str] = None,
+    billing_entity_uid: Optional[str] = None,
     account_uid: Optional[str] = None,
     credits_limit: float = 100.0,
     evalset_name: Optional[str] = None,
@@ -116,8 +116,8 @@ def execute_evalset_spec(
         Run-environment label stored on run summaries (for example ``sdk``).
     environment_name : str
         Runtime environment to launch cloud agents in (cloud only).
-    billable_principal_uid : Optional[str]
-        Optional billable principal UID context.
+    billing_entity_uid : Optional[str]
+        Optional billing entity UID context.
     account_uid : Optional[str]
         Optional account UID context.
     credits_limit : float
@@ -214,7 +214,7 @@ def execute_evalset_spec(
         name=resolved_name,
         run_environment=backend_run_environment,
         kind=run_mode,
-        billable_principal_uid=billable_principal_uid,
+        billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
     evalset_id = str((evalset_payload.get("evalset") or {}).get("id") or "")
@@ -243,7 +243,7 @@ def execute_evalset_spec(
             reports = write_eval_reports(
                 client,
                 evalset_id,
-                billable_principal_uid=billable_principal_uid,
+                billing_entity_uid=billing_entity_uid,
                 account_uid=account_uid,
             )
             result["report_markdown_path"] = str(reports.get("markdown_path") or "")
@@ -273,7 +273,7 @@ def execute_evalset_spec(
                     name=f"evals-{spec_id}-{uuid.uuid4().hex[:8]}",
                     agent_spec_id=spec_id,
                     time_reservation=reservation_minutes,
-                    billable_principal_uid=billable_principal_uid,
+                    billing_entity_uid=billing_entity_uid,
                 )
                 runtimes_by_spec[spec_id] = runtime
                 _emit(
@@ -321,7 +321,7 @@ def execute_evalset_spec(
                     "run_environment": run_environment,
                     "agent_spec_id": spec_id,
                 },
-                billable_principal_uid=billable_principal_uid,
+                billing_entity_uid=billing_entity_uid,
                 account_uid=account_uid,
             )
             experiment_id = str(
@@ -494,7 +494,7 @@ def execute_evalset_spec(
                     metrics=metrics,
                     summary=summary,
                     report=report,
-                    billable_principal_uid=billable_principal_uid,
+                    billing_entity_uid=billing_entity_uid,
                     account_uid=account_uid,
                 )
                 run_id = str((run_payload.get("run") or {}).get("id") or "")
@@ -513,7 +513,7 @@ def execute_evalset_spec(
             reports = write_eval_reports(
                 client,
                 evalset_id,
-                billable_principal_uid=billable_principal_uid,
+                billing_entity_uid=billing_entity_uid,
                 account_uid=account_uid,
             )
             result["report_markdown_path"] = str(reports.get("markdown_path") or "")

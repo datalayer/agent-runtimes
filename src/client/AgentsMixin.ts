@@ -469,13 +469,13 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
           user_account_handle: data.userAccountHandle || undefined,
-          billable_principal_uid: data.billablePrincipalUid || undefined,
-          billable_principal_type: data.billablePrincipalType || undefined,
-          billable_principal_handle: data.billablePrincipalHandle || undefined,
-          billable_source_organization_uid:
-            data.billableSourceOrganizationUid || undefined,
-          billable_source_organization_handle:
-            data.billableSourceOrganizationHandle || undefined,
+          billing_entity_uid: data.billingEntityUid || undefined,
+          billing_entity_type: data.billingEntityType || undefined,
+          billing_entity_handle: data.billingEntityHandle || undefined,
+          billing_source_organization_uid:
+            data.billingSourceOrganizationUid || undefined,
+          billing_source_organization_handle:
+            data.billingSourceOrganizationHandle || undefined,
           mount_home_folder: data.mountHomeFolder ?? false,
           volume_uids:
             normalizedVolumeUids.length > 0 ? normalizedVolumeUids : undefined,
