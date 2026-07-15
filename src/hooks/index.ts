@@ -215,6 +215,11 @@ export {
   toMetricValue,
 } from './useMonitoring';
 
+// Global top progress bar: a single shared store + a convenience hook so any
+// view can drive the one app-wide progress bar.
+export { useProgressStore, type ProgressState } from './useProgressStore';
+export { useProgressTask } from './useProgressTask';
+
 // Re-export core hooks so consumers can progressively migrate imports to
 // agent-runtimes without splitting runtime/content and IAM hook sources.
 export * from '@datalayer/core/lib/hooks';
