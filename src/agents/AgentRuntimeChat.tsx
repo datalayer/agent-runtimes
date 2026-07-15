@@ -291,10 +291,15 @@ export function AgentRuntimeChat({
     );
   }
 
-  // Strict path: do not mount Chat until endpoint + assignment are ready.
-  // This avoids default localhost fallback connections in launch states.
+  // Strict path: do not mount a live Chat until endpoint + assignment are
+  // ready. This avoids default localhost fallback connections in launch states.
+  //
+  // Anonymous visitors (overlay set) still get the full chat shell — including
+  // the ephemeral gallery notebook — rendered disabled underneath, with the
+  // centered sign-in gate on top. `autoConnect={false}` keeps it from opening
+  // any protocol connection while unauthenticated.
   if (overlay) {
-    return <>{overlay}</>;
+    return <Chat {...commonChatProps} autoConnect={false} overlay={overlay} />;
   }
 
   return null;

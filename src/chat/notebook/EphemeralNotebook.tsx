@@ -21,6 +21,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Spinner } from '@primer/react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
@@ -121,7 +122,7 @@ export function EphemeralNotebook({
   // deliberately NO fallback to "first running" or `runtimes[0]`: the ephemeral
   // notebook must bind to exactly the runtime assigned to this agent, or to
   // none at all (straight path).
-  const { runtimes } = useAgentsRuntimes();
+  const { runtimes, refetchRuntimes } = useAgentsRuntimes();
   const selectedRuntime = useMemo(() => {
     const preferredPod = String(runtimePodName || '').trim();
     if (!preferredPod) {
@@ -129,6 +130,26 @@ export function EphemeralNotebook({
     }
     return runtimes.find(rt => String(rt?.pod_name || '') === preferredPod);
   }, [runtimePodName, runtimes]);
+
+  // While the assigned pod has not yet appeared in the runtimes list, poll the
+  // list quickly instead of waiting for the default (10s) refresh interval.
+  // This is what makes the "Starting notebook…" state clear promptly once the
+  // agent runtime is ready, rather than lingering for several seconds.
+  const needsRuntimeLookup = Boolean(
+    String(runtimePodName || '').trim() && !selectedRuntime,
+  );
+  useEffect(() => {
+    if (!needsRuntimeLookup) {
+      return;
+    }
+    void refetchRuntimes();
+    const intervalId = window.setInterval(() => {
+      void refetchRuntimes();
+    }, 1000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [needsRuntimeLookup, refetchRuntimes]);
 
   const [runtimeServiceManager, setRuntimeServiceManager] =
     useState<ServiceManager.IManager | null>(null);
@@ -329,7 +350,18 @@ export function EphemeralNotebook({
           </JupyterReactTheme>
         </DatalayerThemeProvider>
       ) : (
-        <Box sx={{ p: 3, color: 'fg.muted' }}>Starting notebook…</Box>
+        <Box
+          sx={{
+            p: 3,
+            color: 'fg.muted',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <Spinner size="small" />
+          Starting notebook…
+        </Box>
       )}
     </Box>
   );
