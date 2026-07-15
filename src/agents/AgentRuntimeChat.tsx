@@ -123,14 +123,11 @@ export function AgentRuntimeChat({
     onRuntimeChange?.(runtime ?? null);
   }, [onRuntimeChange, runtime]);
 
-  // The chat is "launching" whenever we intend to launch but no live endpoint
-  // is ready yet (covers connecting, launching, and agent-creation phases).
-  const launching = launch && !error && (!isReady || !endpoint);
   const launchingError = launch ? error : null;
-  const runtimeBaseUrl = runtime?.agentBaseUrl || null;
   const runtimeAgentId = runtime?.agentId || '';
   const hasAssignedAgent = runtimeAgentId.trim().length > 0;
   const assignmentAttemptedForPodRef = useRef<string | null>(null);
+  const launchStateLogRef = useRef<string>('');
   const isInteractiveReady =
     launch && isReady && !!endpoint && hasAssignedAgent;
 
@@ -166,6 +163,76 @@ export function AgentRuntimeChat({
     error,
     isCreating,
     createAgent,
+  ]);
+
+  useEffect(() => {
+    if (!launch) {
+      return;
+    }
+
+    const state = launchingError
+      ? 'error'
+      : !isReady || !endpoint
+        ? 'waiting-endpoint'
+        : !hasAssignedAgent
+          ? 'waiting-assignment'
+          : 'ready';
+
+    const signature = [
+      state,
+      String(runtime?.podName || ''),
+      String(endpoint || ''),
+    ].join('|');
+    if (launchStateLogRef.current === signature) {
+      return;
+    }
+    launchStateLogRef.current = signature;
+
+    if (state === 'error') {
+      console.error('[AgentRuntimeChat] launch failed', {
+        agentSpecId,
+        podName: runtime?.podName,
+        endpoint,
+        error: launchingError,
+      });
+      return;
+    }
+
+    if (state === 'waiting-endpoint') {
+      console.info('[AgentRuntimeChat] waiting for runtime endpoint', {
+        agentSpecId,
+        podName: runtime?.podName,
+        isReady,
+        endpoint,
+      });
+      return;
+    }
+
+    if (state === 'waiting-assignment') {
+      console.info('[AgentRuntimeChat] waiting for agent assignment', {
+        agentSpecId,
+        podName: runtime?.podName,
+        endpoint,
+      });
+      return;
+    }
+
+    console.info('[AgentRuntimeChat] runtime ready', {
+      agentSpecId,
+      podName: runtime?.podName,
+      endpoint,
+      agentId: runtimeAgentId,
+    });
+  }, [
+    launch,
+    launchStateLogRef,
+    launchingError,
+    isReady,
+    endpoint,
+    hasAssignedAgent,
+    runtime?.podName,
+    runtimeAgentId,
+    agentSpecId,
   ]);
 
   const commonChatProps = {
@@ -213,34 +280,24 @@ export function AgentRuntimeChat({
     return (
       <Chat
         {...commonChatProps}
-        baseUrl={runtimeBaseUrl || endpoint}
+        baseUrl={endpoint}
         agentId={runtimeAgentId}
         runtimeId="default"
         authToken={authToken}
-        historyEndpoint={`${runtimeBaseUrl || endpoint}/api/v1/history`}
+        historyEndpoint={`${endpoint}/api/v1/history`}
         showTokenUsage
         autoFocus
       />
     );
   }
 
-  // Launching (or gated by `launch=false`): show the plain shell disabled with
-  // a spinner overlay, or an explicit overlay (e.g. sign-in) when provided.
-  return (
-    <Chat
-      {...commonChatProps}
-      disableInputPrompt
-      launching={
-        launching || (launch && isReady && !!endpoint && !hasAssignedAgent)
-      }
-      launchingMessage={
-        launch && isReady && !!endpoint && !hasAssignedAgent
-          ? `Assigning your ${resolvedTitle} agent…`
-          : `Launching your ${resolvedTitle} agent…`
-      }
-      overlay={overlay}
-    />
-  );
+  // Strict path: do not mount Chat until endpoint + assignment are ready.
+  // This avoids default localhost fallback connections in launch states.
+  if (overlay) {
+    return <>{overlay}</>;
+  }
+
+  return null;
 }
 
 export default AgentRuntimeChat;

@@ -37,7 +37,6 @@ import {
   CellSidebarButton,
   JupyterReactTheme,
   notebookStore,
-  useJupyter,
 } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 import type { EphemeralNotebookToolbarComponent } from '../../types/chat';
@@ -118,33 +117,17 @@ export function EphemeralNotebook({
   // Hash of the last content we persisted, so the poll only writes on change.
   const lastSavedHashRef = useRef<string>(JSON.stringify(initialNbformat));
 
-  // Fallback Jupyter manager used when no runtime sandbox is available.
-  const { serviceManager } = useJupyter({
-    startDefaultKernel: true,
-  });
-
-  // Resolve runtime sandboxes and attach to the first eligible one.
+  // Resolve the runtime sandbox strictly by its assigned pod name. There is
+  // deliberately NO fallback to "first running" or `runtimes[0]`: the ephemeral
+  // notebook must bind to exactly the runtime assigned to this agent, or to
+  // none at all (straight path).
   const { runtimes } = useAgentsRuntimes();
   const selectedRuntime = useMemo(() => {
     const preferredPod = String(runtimePodName || '').trim();
-    const byPod = (podName: string) =>
-      runtimes.find(rt => String(rt?.pod_name || '') === podName);
-    const isRunning = (status: string | undefined) =>
-      status === 'running' || status === 'resumed';
-
-    if (preferredPod) {
-      const exact = byPod(preferredPod);
-      if (exact) {
-        return exact;
-      }
+    if (!preferredPod) {
+      return undefined;
     }
-
-    const firstRunning = runtimes.find(rt => isRunning(rt?.status));
-    if (firstRunning) {
-      return firstRunning;
-    }
-
-    return runtimes[0];
+    return runtimes.find(rt => String(rt?.pod_name || '') === preferredPod);
   }, [runtimePodName, runtimes]);
 
   const [runtimeServiceManager, setRuntimeServiceManager] =
@@ -207,11 +190,12 @@ export function EphemeralNotebook({
     };
   }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
 
-  const activeServiceManager = runtimeServiceManager || serviceManager;
-  const activeKernelId = runtimeServiceManager ? runtimeKernelId : undefined;
-  const activeStartDefaultKernel = runtimeServiceManager
-    ? runtimeStartDefaultKernel
-    : true;
+  // Bind strictly to the agent runtime sandbox; there is NO local fallback
+  // kernel. The notebook executes on the agent's runtime or shows a waiting
+  // state until the runtime is ready.
+  const activeServiceManager = runtimeServiceManager;
+  const activeKernelId = runtimeKernelId;
+  const activeStartDefaultKernel = runtimeStartDefaultKernel;
   const ToolbarComponent = toolbarComponent || NotebookToolbar;
 
   useEffect(() => {

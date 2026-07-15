@@ -233,7 +233,7 @@ export function Chat({
   title,
   subtitle,
   brandIcon,
-  autoConnect: _autoConnect = true,
+  autoConnect = true,
   streaming: _streaming = true,
   onMessageSent: _onMessageSent,
   onMessageReceived: _onMessageReceived,
@@ -281,6 +281,9 @@ export function Chat({
   enableEphemeralNotebook,
   initialEphemeralNotebookOpen,
   onEphemeralNotebookOpenChange,
+  enableEphemeralDocument,
+  initialEphemeralSurfaceMode,
+  onEphemeralSurfaceModeChange,
   collapsed = false,
   onExpandFromCollapsed,
   ephemeralNotebookToolbar,
@@ -653,6 +656,7 @@ export function Chat({
               overlay={overlay}
               launching={launching}
               launchingMessage={launchingMessage}
+              autoConnect={autoConnect}
               showSkillsMenu={showSkillsMenu}
               showTokenUsage={showTokenUsage}
               codemodeEnabled={codemodeEnabled}
@@ -674,6 +678,9 @@ export function Chat({
               enableEphemeralNotebook={enableEphemeralNotebook}
               initialEphemeralNotebookOpen={initialEphemeralNotebookOpen}
               onEphemeralNotebookOpenChange={onEphemeralNotebookOpenChange}
+              enableEphemeralDocument={enableEphemeralDocument}
+              initialEphemeralSurfaceMode={initialEphemeralSurfaceMode}
+              onEphemeralSurfaceModeChange={onEphemeralSurfaceModeChange}
               collapsed={collapsed}
               onExpandFromCollapsed={onExpandFromCollapsed}
               ephemeralNotebookToolbar={ephemeralNotebookToolbar}

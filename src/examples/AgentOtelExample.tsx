@@ -52,6 +52,10 @@ import { Protocol } from '../types';
 // ─── Environment / defaults ────────────────────────────────────────────────
 
 const OTEL_BASE_URL_ENV: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
+// Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
+// read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
+const OTEL_IN_BASE_URL_ENV: string =
+  import.meta.env.VITE_OTEL_IN_BASE_URL ?? '';
 const DATALAYER_URL_ENV: string = import.meta.env.VITE_DATALAYER_URL ?? '';
 
 /**
@@ -245,6 +249,8 @@ const AgentOtelExampleInner: React.FC<{
 }> = ({ token }) => {
   const { configuration } = useCoreStore();
   const resolvedUrl =
+    configuration?.otelInUrl ||
+    OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
     configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||

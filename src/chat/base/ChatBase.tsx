@@ -59,7 +59,9 @@ import type {
   DisplayItem,
   ToolCallMessage,
   Suggestion,
+  EphemeralSurfaceMode,
 } from '../../types/chat';
+import type { FrontendToolDefinition } from '../../types/tools';
 import {
   internalQueryClient,
   isToolCallMessage,
@@ -96,6 +98,14 @@ import {
   type PendingApproval,
 } from '../tools';
 import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+// EphemeralDocument statically imports `@datalayer/jupyter-lexical` (which
+// initialises Lumino-backed nodes on load). Lazy-load it so notebook-only chats
+// never pull lexical into the bundle or trigger its module side effects.
+const EphemeralDocument = React.lazy(() =>
+  import('../document/EphemeralDocument').then(m => ({
+    default: m.EphemeralDocument,
+  })),
+);
 import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 
@@ -571,6 +581,7 @@ function ChatBaseInner({
   overlay,
   launching = false,
   launchingMessage,
+  autoConnect = true,
   codemodeEnabled = false,
   onToggleCodemode,
   initialModel,
@@ -626,6 +637,9 @@ function ChatBaseInner({
   enableEphemeralNotebook = false,
   initialEphemeralNotebookOpen = true,
   onEphemeralNotebookOpenChange,
+  enableEphemeralDocument = false,
+  initialEphemeralSurfaceMode,
+  onEphemeralSurfaceModeChange,
   collapsed = false,
   onExpandFromCollapsed,
   ephemeralNotebookToolbar,
@@ -702,19 +716,49 @@ function ChatBaseInner({
     [ephemeralNotebookId, setEphemeralNotebookModel],
   );
 
-  const [ephemeralNotebookOpen, setEphemeralNotebookOpen] = useState(
-    enableEphemeralNotebook && initialEphemeralNotebookOpen,
+  // ── Ephemeral document (in-memory Lexical) ──────────────────────────────
+  // Scoped to the same stable runtime identity as the notebook so the persisted
+  // document survives navigation away from and back to the runtime page.
+  const ephemeralDocumentId = notebookScopeId
+    ? `ephemeral-document-${notebookScopeId}`
+    : `ephemeral-document-${generatedNotebookIdRef.current}`;
+  const persistedEphemeralDocument = useAgentRuntimeStore(s =>
+    s.getEphemeralDocumentModel(ephemeralDocumentId),
   );
-  const handleEphemeralNotebookOpenChange = useCallback(
-    (open: boolean) => {
-      setEphemeralNotebookOpen(open);
-      onEphemeralNotebookOpenChange?.(open);
+  const setEphemeralDocumentModel = useAgentRuntimeStore(
+    s => s.setEphemeralDocumentModel,
+  );
+  const handleEphemeralDocumentChange = useCallback(
+    (model: string) => {
+      setEphemeralDocumentModel(ephemeralDocumentId, model);
     },
-    [onEphemeralNotebookOpenChange],
+    [ephemeralDocumentId, setEphemeralDocumentModel],
   );
-  const notebookVisible = enableEphemeralNotebook && ephemeralNotebookOpen;
-  const notebookCollapsed =
-    notebookVisible && collapsed && Boolean(onExpandFromCollapsed);
+
+  // ── Companion surface mode (none / notebook / document) ─────────────────
+  const defaultSurfaceMode: EphemeralSurfaceMode =
+    initialEphemeralSurfaceMode ??
+    (enableEphemeralNotebook && initialEphemeralNotebookOpen
+      ? 'notebook'
+      : 'none');
+  const [ephemeralSurfaceMode, setEphemeralSurfaceMode] =
+    useState<EphemeralSurfaceMode>(defaultSurfaceMode);
+  const handleEphemeralSurfaceModeChange = useCallback(
+    (mode: EphemeralSurfaceMode) => {
+      setEphemeralSurfaceMode(mode);
+      onEphemeralSurfaceModeChange?.(mode);
+      // Back-compat: keep the legacy notebook open-state callback in sync.
+      onEphemeralNotebookOpenChange?.(mode === 'notebook');
+    },
+    [onEphemeralSurfaceModeChange, onEphemeralNotebookOpenChange],
+  );
+  const notebookVisible =
+    enableEphemeralNotebook && ephemeralSurfaceMode === 'notebook';
+  const documentVisible =
+    enableEphemeralDocument && ephemeralSurfaceMode === 'document';
+  const surfaceVisible = notebookVisible || documentVisible;
+  const surfaceCollapsed =
+    surfaceVisible && collapsed && Boolean(onExpandFromCollapsed);
 
   // Track the ephemeral notebook's live kernel connection so the chat header
   // renders the same rich `KernelIndicator` details (kernel id, client id,
@@ -749,23 +793,42 @@ function ChatBaseInner({
       unsubscribe();
     };
   }, [notebookVisible, ephemeralNotebookId]);
-  // When the notebook is shown, the chat can be docked as a sidebar (default)
-  // or floated over the notebook, driven by the header view-mode toggle.
-  const notebookChatFloating =
-    notebookVisible &&
+  // When a companion surface is shown, the chat can be docked as a sidebar
+  // (default) or floated over it, driven by the header view-mode toggle.
+  const surfaceChatFloating =
+    surfaceVisible &&
     (chatViewMode === 'floating' || chatViewMode === 'floating-small');
 
   // Notebook frontend tools are always created (hooks must be unconditional)
   // but only merged into the tools sent to the agent while the notebook is
-  // visible, so the agent can manipulate the live notebook cells.
+  // visible, so the agent can manipulate the live notebook cells. Document
+  // (lexical) tools are reported upward by the lazily-loaded EphemeralDocument
+  // and merged in while the document is visible.
   const notebookTools = useNotebookTools(ephemeralNotebookId);
-  const frontendTools = useMemo(
-    () =>
-      notebookVisible
-        ? [...(frontendToolsProp || []), ...notebookTools]
-        : frontendToolsProp,
-    [notebookVisible, frontendToolsProp, notebookTools],
+  const [documentTools, setDocumentTools] = useState<FrontendToolDefinition[]>(
+    [],
   );
+  const handleDocumentToolsReady = useCallback(
+    (tools: FrontendToolDefinition[]) => {
+      setDocumentTools(tools);
+    },
+    [],
+  );
+  const frontendTools = useMemo(() => {
+    if (notebookVisible) {
+      return [...(frontendToolsProp || []), ...notebookTools];
+    }
+    if (documentVisible) {
+      return [...(frontendToolsProp || []), ...documentTools];
+    }
+    return frontendToolsProp;
+  }, [
+    notebookVisible,
+    documentVisible,
+    frontendToolsProp,
+    notebookTools,
+    documentTools,
+  ]);
 
   const aiAgentsBaseUrl = useMemo(
     () =>
@@ -1369,14 +1432,20 @@ function ChatBaseInner({
   const wsState = useAgentRuntimeWsState();
 
   // ---- Data queries ----
+  // Config-derived queries (models, skills, context, sandbox) must only run
+  // once the runtime endpoint exists. `autoConnect` is our single signal for
+  // "endpoint ready", so we gate every config query on it to avoid firing
+  // requests at a not-yet-created runtime during the launch overlay.
+  const configQueriesEnabled =
+    Boolean(protocol?.enableConfigQuery) && autoConnect;
   const configQuery = useConfig(
-    Boolean(protocol?.enableConfigQuery),
+    configQueriesEnabled,
     protocol?.configEndpoint,
     protocol?.authToken,
     protocol?.agentId,
   );
   const skillsQuery = useSkills(
-    Boolean(protocol?.enableConfigQuery) && showSkillsMenu,
+    configQueriesEnabled && showSkillsMenu,
     protocol?.configEndpoint,
     protocol?.authToken,
   );
@@ -1466,14 +1535,14 @@ function ChatBaseInner({
     return set;
   }, [localSkillApproval, skillsQuery.data]);
   const contextSnapshotQuery = useContextSnapshot(
-    Boolean(protocol?.enableConfigQuery) && showTokenUsage,
+    configQueriesEnabled && showTokenUsage,
     protocol?.configEndpoint,
     protocol?.agentId,
     protocol?.authToken,
   );
   const agentUsage = externalContextSnapshot ?? contextSnapshotQuery.data;
   const sandboxStatusQuery = useSandbox(
-    Boolean(protocol?.enableConfigQuery) && showHeader,
+    configQueriesEnabled && showHeader,
     protocol?.configEndpoint,
     protocol?.authToken,
     protocol?.agentId,
@@ -2317,6 +2386,10 @@ function ChatBaseInner({
   // ========================================================================
   useEffect(() => {
     if (!protocol) return;
+    // Skip opening a protocol connection when auto-connect is disabled (e.g.
+    // the runtime endpoint is still being created). The chat shell, companion
+    // surface and launching overlay still render; we simply do not connect.
+    if (!autoConnect) return;
 
     const adapter = createProtocolAdapter(protocol);
     if (!adapter) return;
@@ -2789,7 +2862,7 @@ function ChatBaseInner({
       adapterRef.current?.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [protocolKey, onStateUpdate, useStoreMode]);
+  }, [protocolKey, onStateUpdate, useStoreMode, autoConnect]);
 
   // Helper to run a frontend tool and send result back via adapter
   function executeFrontendTool(
@@ -3649,9 +3722,13 @@ function ChatBaseInner({
       onClear={handleClear}
       chatViewMode={chatViewMode}
       onChatViewModeChange={onChatViewModeChange}
-      showEphemeralNotebookToggle={enableEphemeralNotebook}
-      ephemeralNotebookOpen={ephemeralNotebookOpen}
-      onToggleEphemeralNotebook={handleEphemeralNotebookOpenChange}
+      showEphemeralSurfaceControl={
+        enableEphemeralNotebook || enableEphemeralDocument
+      }
+      enableEphemeralNotebookOption={enableEphemeralNotebook}
+      enableEphemeralDocumentOption={enableEphemeralDocument}
+      ephemeralSurfaceMode={ephemeralSurfaceMode}
+      onEphemeralSurfaceModeChange={handleEphemeralSurfaceModeChange}
     />
   ) : null;
 
@@ -3675,11 +3752,11 @@ function ChatBaseInner({
         overflow: 'hidden',
       }}
     >
-      {/* Header — shown at the top only when the ephemeral notebook is not
-          visible. When the notebook is visible the header is rendered inside
-          the chat body column (below) so it follows the chat across view
-          modes instead of staying pinned to the top. */}
-      {!notebookVisible && chatHeaderElement}
+      {/* Header — shown at the top only when no companion surface is visible.
+          When a surface (notebook/document) is visible the header is rendered
+          inside the chat body column (below) so it follows the chat across
+          view modes instead of staying pinned to the top. */}
+      {!surfaceVisible && chatHeaderElement}
 
       {/* Tool approval banner (top-of-chat) */}
       {showToolApprovalBanner &&
@@ -3711,7 +3788,7 @@ function ChatBaseInner({
       )}
 
       {/* Messages area */}
-      {notebookVisible ? (
+      {surfaceVisible ? (
         <Box
           sx={{
             flex: 1,
@@ -3721,7 +3798,7 @@ function ChatBaseInner({
             position: 'relative',
           }}
         >
-          {/* Left: in-memory ephemeral notebook (main pane) */}
+          {/* Left: in-memory companion surface (notebook or document). */}
           <Box
             sx={{
               flex: 1,
@@ -3730,9 +3807,9 @@ function ChatBaseInner({
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              ...(notebookChatFloating
+              ...(surfaceChatFloating
                 ? null
-                : notebookCollapsed
+                : surfaceCollapsed
                   ? null
                   : {
                       borderRight: '1px solid',
@@ -3740,21 +3817,37 @@ function ChatBaseInner({
                     }),
             }}
           >
-            <EphemeralNotebook
-              notebookId={ephemeralNotebookId}
-              runtimePodName={runtimeId || activeAgentId}
-              nbformat={persistedEphemeralNbformat ?? undefined}
-              onNbformatChange={handleEphemeralNotebookChange}
-              toolbarComponent={ephemeralNotebookToolbar}
-            />
+            {notebookVisible ? (
+              <EphemeralNotebook
+                notebookId={ephemeralNotebookId}
+                runtimePodName={runtimeId || activeAgentId}
+                nbformat={persistedEphemeralNbformat ?? undefined}
+                onNbformatChange={handleEphemeralNotebookChange}
+                toolbarComponent={ephemeralNotebookToolbar}
+              />
+            ) : (
+              <React.Suspense
+                fallback={
+                  <Box sx={{ p: 3, color: 'fg.muted' }}>Loading document…</Box>
+                }
+              >
+                <EphemeralDocument
+                  documentId={ephemeralDocumentId}
+                  runtimePodName={runtimeId || activeAgentId}
+                  content={persistedEphemeralDocument ?? undefined}
+                  onContentChange={handleEphemeralDocumentChange}
+                  onToolsReady={handleDocumentToolsReady}
+                />
+              </React.Suspense>
+            )}
           </Box>
 
-          {/* Right: chat — docked as a sidebar, or floating over the notebook
+          {/* Right: chat — docked as a sidebar, or floating over the surface
               depending on the selected chat view mode. */}
-          {!notebookCollapsed && (
+          {!surfaceCollapsed && (
             <Box
               sx={
-                notebookChatFloating
+                surfaceChatFloating
                   ? {
                       position: 'absolute',
                       right: 16,
@@ -3787,8 +3880,8 @@ function ChatBaseInner({
                     }
               }
             >
-              {/* Header lives inside the chat column when the notebook is shown
-                  so it follows the chat body across all view modes. */}
+              {/* Header lives inside the chat column when a companion surface
+                  is shown so it follows the chat body across all view modes. */}
               {chatHeaderElement}
               <Box
                 ref={messagesContainerRef}
@@ -3806,7 +3899,7 @@ function ChatBaseInner({
             </Box>
           )}
 
-          {notebookCollapsed &&
+          {surfaceCollapsed &&
             onExpandFromCollapsed &&
             (chatViewMode === 'sidebar' ? (
               <Box

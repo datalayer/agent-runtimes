@@ -67,6 +67,14 @@ export interface ToolCallCompleteContext {
  */
 export type ChatViewMode = 'floating' | 'floating-small' | 'sidebar';
 
+/**
+ * Companion "ephemeral surface" shown next to the chat.
+ * - 'none': chat only, no companion surface
+ * - 'notebook': in-memory Jupyter notebook
+ * - 'document': in-memory Lexical rich-text document
+ */
+export type EphemeralSurfaceMode = 'none' | 'notebook' | 'document';
+
 export type EphemeralNotebookToolbarComponent = ComponentType<any>;
 
 // ---------------------------------------------------------------------------
@@ -444,6 +452,22 @@ export interface ChatCommonProps {
    */
   enableEphemeralNotebook?: boolean;
 
+  /**
+   * Enable the in-memory "ephemeral document" (Lexical rich-text) companion
+   * surface. When enabled it appears as an option in the companion-surface
+   * segmented control alongside the notebook. @default false
+   */
+  enableEphemeralDocument?: boolean;
+
+  /**
+   * Initial companion surface shown next to the chat. Defaults to 'notebook'
+   * when `enableEphemeralNotebook` is true, otherwise 'none'.
+   */
+  initialEphemeralSurfaceMode?: EphemeralSurfaceMode;
+
+  /** Controlled callback for companion surface mode changes. */
+  onEphemeralSurfaceModeChange?: (mode: EphemeralSurfaceMode) => void;
+
   /** Initial open state of the ephemeral notebook. @default true */
   initialEphemeralNotebookOpen?: boolean;
 
@@ -657,6 +681,14 @@ export interface ChatBaseProps {
 
   /** Optional message shown next to the spinner while `launching` is true. */
   launchingMessage?: React.ReactNode;
+
+  /**
+   * Whether to auto-connect the chat protocol adapter on mount. Defaults to
+   * `true`. Set to `false` to render the chat shell (header, disabled input,
+   * companion notebook/document, launching overlay) without opening a protocol
+   * connection — e.g. while the agent runtime endpoint is still being created.
+   */
+  autoConnect?: boolean;
 
   /**
    * Optional overlay rendered above the chat surface (messages + input).
@@ -917,6 +949,22 @@ export interface ChatBaseProps {
    * the agent can drive the notebook cells. @default true
    */
   enableEphemeralNotebook?: boolean;
+
+  /**
+   * Enable the in-memory "ephemeral document" (Lexical rich-text) companion
+   * surface. When enabled it appears as an option in the companion-surface
+   * segmented control alongside the notebook. @default false
+   */
+  enableEphemeralDocument?: boolean;
+
+  /**
+   * Initial companion surface shown next to the chat. Defaults to 'notebook'
+   * when `enableEphemeralNotebook` is true, otherwise 'none'.
+   */
+  initialEphemeralSurfaceMode?: EphemeralSurfaceMode;
+
+  /** Controlled callback for companion surface mode changes. */
+  onEphemeralSurfaceModeChange?: (mode: EphemeralSurfaceMode) => void;
 
   /**
    * Initial open state of the ephemeral notebook toggle. Only relevant when

@@ -90,7 +90,7 @@ const toAgentRuntimesBaseUrl = (value?: string | null): string | undefined => {
   if (!normalized) {
     return undefined;
   }
-  return normalized.replace('/jupyter/server/', '/agent-runtimes/');
+  return normalized;
 };
 
 // Load configurations from DOM

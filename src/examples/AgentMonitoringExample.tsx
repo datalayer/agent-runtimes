@@ -49,6 +49,9 @@ import type { McpToolsetsStatusResponse } from '../types/mcp';
 const AGENT_NAME = 'monitoring-example-agent';
 const AGENTSPEC_ID = 'example-monitoring';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
+// Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
+// read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
+const OTEL_IN_BASE_URL_ENV = import.meta.env.VITE_OTEL_IN_BASE_URL;
 const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
@@ -95,6 +98,8 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
+    configuration?.otelInUrl ||
+    OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
     configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||

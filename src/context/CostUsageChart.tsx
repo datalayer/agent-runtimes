@@ -114,9 +114,7 @@ function extractCostPoints(
     );
   });
 
-  if (agentId) {
-    filtered = filtered.filter(row => extractAgentId(row) === agentId);
-  }
+  filtered = filtered.filter(row => agentIdMatches(row, agentId));
 
   const byTimestamp = new Map<string, Array<Record<string, unknown>>>();
   for (const row of filtered) {
@@ -139,26 +137,33 @@ function extractCostPoints(
     const cumulativeRows = groupRows.filter(
       r => r.metric_name === COST_CUMULATIVE_METRIC,
     );
-    if (cumulativeRows.length === 0) continue;
     const runRows = groupRows.filter(r => r.metric_name === COST_RUN_METRIC);
+    if (cumulativeRows.length === 0 && runRows.length === 0) continue;
 
-    // Cumulative metric values represent the running total. Repeated snapshot
-    // rows for the same timestamp should not be summed; keep the highest value.
-    const cumulativeUsd = cumulativeRows.reduce(
-      (max, row) => Math.max(max, toMetricValue(row)),
-      0,
-    );
-    const costUsd = runRows.reduce((sum, row) => sum + toMetricValue(row), 0);
+    // Resolve the running total for this timestamp. Preference order:
+    //   1. `agent.cost.cumulative_usd` attribute — the exact tracked total,
+    //      emitted on both the run counter and the cumulative histogram and
+    //      independent of the exporter's temporality.
+    //   2. The `cost.run.usd` counter value — exported with cumulative
+    //      temporality, so each data point already holds the running total.
+    //   3. The cumulative histogram metric value (least reliable, since a
+    //      histogram `sum` aggregates every recorded observation).
+    const attrCumulative = maxDefined(groupRows, extractCumulativeAttr);
+    const runCumulative = maxDefined(runRows, finiteMetricValue);
+    const histogramCumulative = maxDefined(cumulativeRows, finiteMetricValue);
 
-    if (!Number.isFinite(cumulativeUsd) || !Number.isFinite(costUsd)) continue;
+    const cumulativeUsd =
+      attrCumulative ?? runCumulative ?? histogramCumulative ?? 0;
+    if (!Number.isFinite(cumulativeUsd)) continue;
 
-    const timestampKey = rowTimestampKey(cumulativeRows[0]);
+    const anchorRow = cumulativeRows[0] ?? runRows[0];
+    const timestampKey = rowTimestampKey(anchorRow);
     if (!timestampKey) continue;
 
     points.push({
       timestampKey,
-      timestampMs: rowTimestampMs(cumulativeRows[0]),
-      costUsd,
+      timestampMs: rowTimestampMs(anchorRow),
+      costUsd: cumulativeUsd,
       cumulativeUsd,
     });
   }
@@ -273,6 +278,59 @@ function extractAgentId(row: Record<string, unknown>): string | undefined {
   const aid = attrs['agent.id'];
   if (typeof aid === 'string') return aid;
   return undefined;
+}
+
+/**
+ * Extract the exact cumulative cost (USD) carried on the metric attributes as
+ * `agent.cost.cumulative_usd`. This is emitted on every cost metric and is the
+ * authoritative running total regardless of the exporter's temporality.
+ */
+function extractCumulativeAttr(
+  row: Record<string, unknown>,
+): number | undefined {
+  const attrs = parseAttributes(row.attributes);
+  const candidate = attrs['agent.cost.cumulative_usd'];
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+    return candidate;
+  }
+  if (typeof candidate === 'string') {
+    const parsed = Number(candidate);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+/**
+ * Match a metric row against the requested agent. Rows fetched from the
+ * normalized metrics endpoint can arrive without attributes (so `agent.id`
+ * is unknown); those are kept because the service/runtime scope already
+ * narrows the data to this runtime's agent.
+ */
+function agentIdMatches(
+  row: Record<string, unknown>,
+  agentId?: string,
+): boolean {
+  if (!agentId) return true;
+  const rowAgentId = extractAgentId(row);
+  return rowAgentId === undefined || rowAgentId === agentId;
+}
+
+/** `toMetricValue` guarded to only return finite numbers. */
+function finiteMetricValue(row: Record<string, unknown>): number | undefined {
+  const value = toMetricValue(row);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** Reduce rows to the maximum value produced by `selector`, ignoring gaps. */
+function maxDefined(
+  rows: Array<Record<string, unknown>>,
+  selector: (row: Record<string, unknown>) => number | undefined,
+): number | undefined {
+  return rows.reduce<number | undefined>((max, row) => {
+    const value = selector(row);
+    if (value === undefined) return max;
+    return max === undefined ? value : Math.max(max, value);
+  }, undefined);
 }
 
 export interface CostUsageChartProps {
@@ -399,7 +457,7 @@ export function CostUsageChart({
           if (!rowMatchesSource(castedRow, serviceName, runtimeId)) {
             return false;
           }
-          return !agentId || extractAgentId(castedRow) === agentId;
+          return agentIdMatches(castedRow, agentId);
         }) as Array<Record<string, unknown>>;
 
         const initialPoints = extractCostPoints(rows, agentId);
@@ -534,12 +592,8 @@ export function CostUsageChart({
       let matchingRows = rows.filter(row =>
         rowMatchesSource(row, serviceName, runtimeId),
       );
-      // Filter by agent.id when specified.
-      if (agentId) {
-        matchingRows = matchingRows.filter(
-          row => extractAgentId(row) === agentId,
-        );
-      }
+      // Keep rows for this agent (or rows without an agent.id attribute).
+      matchingRows = matchingRows.filter(row => agentIdMatches(row, agentId));
       if (matchingRows.length === 0) return;
 
       const newPoints = extractCostPoints(matchingRows, agentId);
