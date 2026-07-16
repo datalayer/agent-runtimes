@@ -328,3 +328,40 @@ async def test_create_approval_mints_new_record_for_changed_args() -> None:
         assert record.tool_args == {"text": "danger"}
     finally:
         await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_create_approval_does_not_reuse_executing_record() -> None:
+    """An in-flight execution can never authorize a new tool attempt."""
+    await _reset_approvals()
+    try:
+        await _put_record(
+            ToolApprovalRecord(
+                id="approval-create-executing",
+                agent_id="agent-1",
+                pod_name="",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-create",
+                status="executing",
+                note=None,
+                execution_started_at=_now_iso(),
+                execution_tool_call_id="tool-create",
+                created_at=_now_iso(),
+                updated_at=_now_iso(),
+            )
+        )
+
+        record = await _create_approval(
+            ToolApprovalCreateRequest(
+                agent_id="agent-1",
+                tool_name="runtime_sensitive_echo",
+                tool_args={"text": "hello"},
+                tool_call_id="tool-create",
+            )
+        )
+
+        assert record.id != "approval-create-executing"
+        assert record.status == "pending"
+    finally:
+        await _reset_approvals()
