@@ -109,7 +109,7 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-def _lookup_billable_account_uid_by_handle(
+def _lookup_billing_entity_uid_by_handle(
     *, iam_url: str, access_token: str, account_handle: str
 ) -> Optional[str]:
     """Resolve an account handle to UID using IAM APIs."""
@@ -242,19 +242,19 @@ def main_callback(
             "omitted; otherwise built-in auth resolution is used."
         ),
     ),
-    billable_account_uid: str | None = typer.Option(
+    billing_entity_uid: str | None = typer.Option(
         None,
-        "--billable-account-uid",
+        "--billing-entity-uid",
         help=(
-            "Billable account UID context. Falls back to DATALAYER_ACCOUNT_UID "
+            "Billing Entity UID context. Falls back to DATALAYER_ACCOUNT_UID "
             "when omitted."
         ),
     ),
-    billable_account_handle: str | None = typer.Option(
+    billing_entity_handle: str | None = typer.Option(
         None,
-        "--billable-account-handle",
+        "--billing-entity-handle",
         help=(
-            "Billable account handle context. Falls back to DATALAYER_ACCOUNT_HANDLE "
+            "Billing Entity handle context. Falls back to DATALAYER_ACCOUNT_HANDLE "
             "when omitted and is resolved to UID via IAM lookup."
         ),
     ),
@@ -287,11 +287,11 @@ def main_callback(
             os.environ["DATALAYER_API_KEY"] = normalized_api_key
 
     resolved_uid = (
-        str(billable_account_uid or "").strip()
+        str(billing_entity_uid or "").strip()
         or str(os.environ.get("DATALAYER_ACCOUNT_UID") or "").strip()
     )
     resolved_handle = (
-        str(billable_account_handle or "").strip()
+        str(billing_entity_handle or "").strip()
         or str(os.environ.get("DATALAYER_ACCOUNT_HANDLE") or "").strip()
     )
 
@@ -307,24 +307,24 @@ def main_callback(
 
         if not resolved_token:
             raise typer.BadParameter(
-                "Cannot resolve --billable-account-handle without authentication. "
+                "Cannot resolve --billing-entity-handle without authentication. "
                 "Pass --api-key, set DATALAYER_API_KEY, or login first."
             )
 
-        resolved_from_handle = _lookup_billable_account_uid_by_handle(
+        resolved_from_handle = _lookup_billing_entity_uid_by_handle(
             iam_url=effective_iam_url,
             access_token=resolved_token,
             account_handle=resolved_handle,
         )
         if not resolved_from_handle:
             raise typer.BadParameter(
-                f"Could not resolve billable account handle '{resolved_handle}' to a UID."
+                f"Could not resolve billing entity handle '{resolved_handle}' to a UID."
             )
         resolved_uid = resolved_from_handle
 
     if resolved_uid:
         os.environ["DATALAYER_ACCOUNT_UID"] = resolved_uid
-        os.environ["DATALAYER_BILLABLE_ACCOUNT_UID"] = resolved_uid
+        os.environ["DATALAYER_BILLING_ENTITY_UID"] = resolved_uid
     if resolved_handle:
         os.environ["DATALAYER_ACCOUNT_HANDLE"] = resolved_handle
 

@@ -11,17 +11,15 @@ import { Box } from '@datalayer/primer-addons';
 import {
   AiModelIcon,
   TerminalIcon,
-  CommentDiscussionIcon,
   DatabaseIcon,
   KeyIcon,
   CodeIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   InfoIcon,
 } from '@primer/octicons-react';
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import type { MessageDetail } from './MessageHistory';
 
 /**
  * Tool detail from API
@@ -36,21 +34,6 @@ interface ToolDetail {
   isAsync: boolean;
   requiresApproval: boolean;
   sourceCode: string | null;
-}
-
-/**
- * Message detail from API
- */
-interface MessageDetail {
-  role: string;
-  content: string;
-  estimatedTokens: number;
-  timestamp: string | null;
-  inContext: boolean;
-  toolName: string | null;
-  toolCallId: string | null;
-  isToolCall: boolean;
-  isToolResult: boolean;
 }
 
 /**
@@ -306,94 +289,6 @@ function ToolDetailView({ tool }: { tool: ToolDetail }) {
 }
 
 /**
- * Message detail view component
- */
-function MessageDetailView({ message }: { message: MessageDetail }) {
-  const roleColors: Record<string, string> = {
-    user: 'accent.fg',
-    assistant: 'success.fg',
-    system: 'attention.fg',
-    tool: 'done.fg',
-  };
-
-  const roleIcons: Record<string, React.ElementType> = {
-    user: CommentDiscussionIcon,
-    assistant: AiModelIcon,
-    system: InfoIcon,
-    tool: TerminalIcon,
-  };
-
-  const RoleIcon = roleIcons[message.role] || CommentDiscussionIcon;
-
-  return (
-    <Box
-      sx={{
-        p: 2,
-        mb: 1,
-        bg: message.inContext ? 'canvas.default' : 'canvas.inset',
-        border: '1px solid',
-        borderColor: message.inContext ? 'border.default' : 'border.muted',
-        borderRadius: 2,
-        opacity: message.inContext ? 1 : 0.7,
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-        <RoleIcon size={14} />
-        <Text
-          sx={{
-            fontWeight: 'semibold',
-            fontSize: 0,
-            color: roleColors[message.role] || 'fg.default',
-            textTransform: 'capitalize',
-          }}
-        >
-          {message.role}
-        </Text>
-        {message.toolName && (
-          <Label size="small" variant="secondary">
-            {message.toolName}
-          </Label>
-        )}
-        {message.isToolCall && (
-          <Label size="small" variant="accent">
-            call
-          </Label>
-        )}
-        {message.isToolResult && (
-          <Label size="small" variant="success">
-            result
-          </Label>
-        )}
-        {message.inContext ? (
-          <CheckCircleIcon size={12} fill="var(--fgColor-success)" />
-        ) : (
-          <XCircleIcon size={12} fill="var(--fgColor-muted)" />
-        )}
-        <Text sx={{ fontSize: 0, color: 'fg.muted', ml: 'auto' }}>
-          {formatTokens(message.estimatedTokens)} tokens
-        </Text>
-      </Box>
-
-      <Text
-        sx={{
-          fontSize: 0,
-          fontFamily: 'mono',
-          display: 'block',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          maxHeight: 100,
-          overflow: 'auto',
-        }}
-      >
-        {message.content.length > 500
-          ? message.content.slice(0, 500) + '...'
-          : message.content}
-      </Text>
-    </Box>
-  );
-}
-
-/**
  * ContextInspector component displays full detailed context snapshot.
  */
 export function ContextInspector({
@@ -405,27 +300,6 @@ export function ContextInspector({
 
   // REST polling removed — data comes exclusively via WS `agent.snapshot`.
   const contextData = liveData;
-
-  // Separate messages by in_context status
-  const { inContextMessages, outOfContextMessages } = useMemo(() => {
-    if (!contextData?.messages) {
-      return { inContextMessages: [], outOfContextMessages: [] };
-    }
-    return {
-      inContextMessages: contextData.messages.filter(m => m.inContext),
-      outOfContextMessages: contextData.messages.filter(m => !m.inContext),
-    };
-  }, [contextData?.messages]);
-
-  const messageHistoryTokens = useMemo(() => {
-    if (!contextData?.messages) {
-      return 0;
-    }
-    return contextData.messages.reduce(
-      (sum, message) => sum + (message.estimatedTokens || 0),
-      0,
-    );
-  }, [contextData?.messages]);
 
   if (!hasLiveData) {
     return (
@@ -629,58 +503,6 @@ export function ContextInspector({
           contextData.tools.map((tool, idx) => (
             <ToolDetailView key={idx} tool={tool} />
           ))
-        )}
-      </CollapsibleSection>
-
-      {/* Message History */}
-      <CollapsibleSection
-        title="Message History"
-        icon={CommentDiscussionIcon}
-        count={contextData.messages.length}
-        tokens={messageHistoryTokens}
-      >
-        {contextData.messages.length === 0 ? (
-          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>No messages yet</Text>
-        ) : (
-          <>
-            {outOfContextMessages.length > 0 && (
-              <Box sx={{ mb: 3 }}>
-                <Text
-                  sx={{
-                    fontWeight: 'semibold',
-                    fontSize: 1,
-                    color: 'fg.muted',
-                    mb: 2,
-                    display: 'block',
-                  }}
-                >
-                  Out of Context ({outOfContextMessages.length})
-                </Text>
-                {outOfContextMessages.map((msg, idx) => (
-                  <MessageDetailView key={`out-${idx}`} message={msg} />
-                ))}
-              </Box>
-            )}
-
-            {inContextMessages.length > 0 && (
-              <Box>
-                <Text
-                  sx={{
-                    fontWeight: 'semibold',
-                    fontSize: 1,
-                    color: 'success.fg',
-                    mb: 2,
-                    display: 'block',
-                  }}
-                >
-                  In Context ({inContextMessages.length})
-                </Text>
-                {inContextMessages.map((msg, idx) => (
-                  <MessageDetailView key={`in-${idx}`} message={msg} />
-                ))}
-              </Box>
-            )}
-          </>
         )}
       </CollapsibleSection>
 

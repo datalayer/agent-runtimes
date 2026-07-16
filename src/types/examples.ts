@@ -9,11 +9,7 @@ import { Protocol } from './protocol';
  * Status of an example agent (for UI demos).
  */
 export type ExampleAgentStatus =
-  | 'starting'
-  | 'running'
-  | 'paused'
-  | 'terminated'
-  | 'archived';
+  'starting' | 'running' | 'paused' | 'terminated' | 'archived';
 
 export interface ExampleAgent {
   id: string;

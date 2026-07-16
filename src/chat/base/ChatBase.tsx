@@ -24,16 +24,19 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Text, Spinner } from '@primer/react';
+import { Text, Spinner, IconButton } from '@primer/react';
+import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
-import { notebookStore } from '@datalayer/jupyter-react';
+import { notebookStore, JupyterReactTheme } from '@datalayer/jupyter-react';
 import {
   Box,
   setupPrimerPortals,
   useThemeStore,
   getColorPalette,
+  getThemeConfig,
+  useSystemColorMode,
 } from '@datalayer/primer-addons';
 import { AlertIcon, PersonIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
@@ -56,7 +59,9 @@ import type {
   DisplayItem,
   ToolCallMessage,
   Suggestion,
+  EphemeralSurfaceMode,
 } from '../../types/chat';
+import type { FrontendToolDefinition } from '../../types/tools';
 import {
   internalQueryClient,
   isToolCallMessage,
@@ -80,6 +85,7 @@ import {
 } from '../../stores/agentRuntimeStore';
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
+import { FloatingBrandButton } from '../display/FloatingBrandButton';
 import { PoweredByTag } from '../display/PoweredByTag';
 import {
   ChatMessageList,
@@ -92,12 +98,86 @@ import {
   type PendingApproval,
 } from '../tools';
 import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+// EphemeralDocument statically imports `@datalayer/jupyter-lexical` (which
+// initialises Lumino-backed nodes on load). Lazy-load it so notebook-only chats
+// never pull lexical into the bundle or trigger its module side effects.
+const EphemeralDocument = React.lazy(() =>
+  import('../document/EphemeralDocument').then(m => ({
+    default: m.EphemeralDocument,
+  })),
+);
 import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
 const sentPendingPromptKeys = new Set<string>();
+
+// JupyterReactTheme forwards unknown props (e.g. `style`) to its inner Primer
+// `BaseStyles`. `style` is not part of its typings, so we widen the type here.
+const ThemedJupyterReactTheme = JupyterReactTheme as unknown as React.FC<
+  React.PropsWithChildren<{
+    colormode?: 'light' | 'dark' | 'auto';
+    loadJupyterLabCss?: boolean;
+    theme?: Record<string, unknown>;
+    backgroundColor?: string;
+    style?: React.CSSProperties;
+  }>
+>;
+
+/**
+ * Theme boundary shared by every chat variant.
+ *
+ * Makes the chat follow the active Datalayer theme *variant* (matrix, earth,
+ * …) — its colours AND fonts — not merely the color mode, while keeping the
+ * jupyter-react Primer context required by `KernelIndicator`.
+ *
+ * Implementation notes:
+ * - We deliberately DON'T nest a `DatalayerThemeProvider` here. The host layout
+ *   already provides one, and it themes Primer portals by writing styles onto
+ *   `document.body`. Nesting another (especially one carrying layout styles
+ *   like `display: contents`) clobbers those body/portal styles and breaks
+ *   every overlay menu globally.
+ * - Instead we re-assert the variant's CSS custom properties (`--bgColor-*`,
+ *   `--fgColor-*`, `--fontStack-*`, …) INLINE on `JupyterReactTheme`'s
+ *   `BaseStyles`. Inline styles win over the `@primer/primitives`
+ *   `[data-color-mode]` rules that `JupyterReactTheme` re-scopes, so the chat
+ *   subtree renders in the selected theme (colours + fonts). `JupyterReactTheme`
+ *   also supplies the matching Primer theme object + resolved color mode for
+ *   jupyter-react components.
+ * - `display: contents` keeps the boundary from emitting a layout box (so the
+ *   chat height/flex chain is preserved); CSS custom properties and inherited
+ *   properties (color, font) still cascade through it.
+ */
+function ThemedChatBoundary({ children }: React.PropsWithChildren<unknown>) {
+  const colorMode = useThemeStore(s => s.colorMode);
+  const themeVariant = useThemeStore(s => s.theme);
+  const systemMode = useSystemColorMode();
+  const themeConfig = getThemeConfig(themeVariant);
+  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const modeStyles =
+    resolvedMode === 'dark'
+      ? themeConfig.themeStyles.dark
+      : themeConfig.themeStyles.light;
+  const themeBackground =
+    (modeStyles as Record<string, string>).backgroundColor ?? '';
+  return (
+    <ThemedJupyterReactTheme
+      colormode={resolvedMode}
+      theme={themeConfig.primerTheme}
+      backgroundColor={themeBackground}
+      loadJupyterLabCss={false}
+      style={{
+        ...(modeStyles as React.CSSProperties),
+        color: 'var(--fgColor-default)',
+        fontSize: 'var(--text-body-size-medium)',
+        display: 'contents',
+      }}
+    >
+      {children}
+    </ThemedJupyterReactTheme>
+  );
+}
 const AI_AGENTS_API_PREFIX = '/api/ai-agents/v1';
 
 const isDevTraceEnabled = (): boolean => {
@@ -311,27 +391,97 @@ function extractChatMessagesFromFullContext(
   return rawMessages
     .map((msg, index) => {
       const role = String(msg.role || '').toLowerCase();
-      // Only hydrate conversational turns in the visible history.
-      // System/tool messages may contain internal prompts and metadata.
-      if (role !== 'user' && role !== 'assistant') {
-        return null;
-      }
 
       const timestampValue =
         typeof msg.timestamp === 'string' && msg.timestamp.length > 0
           ? msg.timestamp
           : new Date().toISOString();
-      const createdAt = new Date(timestampValue);
-      const content =
+      const createdAtRaw = new Date(timestampValue);
+      const createdAt = Number.isNaN(createdAtRaw.getTime())
+        ? new Date()
+        : createdAtRaw;
+
+      const rawContent =
         typeof msg.content === 'string'
           ? msg.content
           : JSON.stringify(msg.content ?? '');
 
+      const isToolCall = Boolean(msg.isToolCall);
+      const isToolResult = Boolean(msg.isToolResult);
+      const toolCallId =
+        typeof msg.toolCallId === 'string' && msg.toolCallId.length > 0
+          ? msg.toolCallId
+          : undefined;
+      const toolName =
+        typeof msg.toolName === 'string' && msg.toolName.length > 0
+          ? msg.toolName
+          : undefined;
+
+      // Tool-call turns arrive as assistant messages whose `content` is the
+      // JSON-encoded tool arguments. Reconstruct a structured `toolCalls`
+      // entry so it renders as a tool card (matching the live stream) instead
+      // of leaking raw JSON into the transcript.
+      if (isToolCall) {
+        let args: Record<string, unknown> = {};
+        if (rawContent) {
+          try {
+            const parsed = JSON.parse(rawContent);
+            if (
+              parsed &&
+              typeof parsed === 'object' &&
+              !Array.isArray(parsed)
+            ) {
+              args = parsed as Record<string, unknown>;
+            }
+          } catch {
+            args = {};
+          }
+        }
+        const resolvedToolCallId = toolCallId || `history-tc-${index}`;
+        return {
+          id: `history-toolcall-${index}-${timestampValue}`,
+          role: 'assistant',
+          content: '',
+          createdAt,
+          toolCalls: [
+            {
+              type: 'tool-call',
+              toolCallId: resolvedToolCallId,
+              toolName: toolName || 'tool',
+              args,
+              status: 'completed',
+            },
+          ],
+        } as ChatMessage;
+      }
+
+      // Tool results arrive as `role: 'tool'` messages; keep them (with the
+      // matching toolCallId) so `convertHistoryToDisplayItems` can merge the
+      // result into its tool card.
+      if (isToolResult || role === 'tool') {
+        return {
+          id: `history-toolresult-${index}-${timestampValue}`,
+          role: 'tool',
+          content: rawContent,
+          createdAt,
+          metadata: {
+            toolCallId,
+            toolName,
+          },
+        } as ChatMessage;
+      }
+
+      // Only hydrate conversational turns in the visible history.
+      // System messages may contain internal prompts and metadata.
+      if (role !== 'user' && role !== 'assistant') {
+        return null;
+      }
+
       return {
         id: `history-${role}-${index}-${timestampValue}`,
         role,
-        content,
-        createdAt: Number.isNaN(createdAt.getTime()) ? new Date() : createdAt,
+        content: rawContent,
+        createdAt,
       } as ChatMessage;
     })
     .filter((m): m is ChatMessage => m !== null);
@@ -468,12 +618,18 @@ export function ChatBase(props: ChatBaseProps) {
   if (!existingQueryClient) {
     return (
       <QueryClientProvider client={internalQueryClient}>
-        <ChatBaseInner {...innerProps} />
+        <ThemedChatBoundary>
+          <ChatBaseInner {...innerProps} />
+        </ThemedChatBoundary>
       </QueryClientProvider>
     );
   }
 
-  return <ChatBaseInner {...innerProps} />;
+  return (
+    <ThemedChatBoundary>
+      <ChatBaseInner {...innerProps} />
+    </ThemedChatBoundary>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -495,6 +651,7 @@ function ChatBaseInner({
   overlay,
   launching = false,
   launchingMessage,
+  autoConnect = true,
   codemodeEnabled = false,
   onToggleCodemode,
   initialModel,
@@ -549,6 +706,12 @@ function ChatBaseInner({
   frontendTools: frontendToolsProp,
   enableEphemeralNotebook = false,
   initialEphemeralNotebookOpen = true,
+  onEphemeralNotebookOpenChange,
+  enableEphemeralDocument = false,
+  initialEphemeralSurfaceMode,
+  onEphemeralSurfaceModeChange,
+  collapsed = false,
+  onExpandFromCollapsed,
   ephemeralNotebookToolbar,
   // Tool invocation hooks
   onToolCallStart,
@@ -623,10 +786,49 @@ function ChatBaseInner({
     [ephemeralNotebookId, setEphemeralNotebookModel],
   );
 
-  const [ephemeralNotebookOpen, setEphemeralNotebookOpen] = useState(
-    enableEphemeralNotebook && initialEphemeralNotebookOpen,
+  // ── Ephemeral document (in-memory Lexical) ──────────────────────────────
+  // Scoped to the same stable runtime identity as the notebook so the persisted
+  // document survives navigation away from and back to the runtime page.
+  const ephemeralDocumentId = notebookScopeId
+    ? `ephemeral-document-${notebookScopeId}`
+    : `ephemeral-document-${generatedNotebookIdRef.current}`;
+  const persistedEphemeralDocument = useAgentRuntimeStore(s =>
+    s.getEphemeralDocumentModel(ephemeralDocumentId),
   );
-  const notebookVisible = enableEphemeralNotebook && ephemeralNotebookOpen;
+  const setEphemeralDocumentModel = useAgentRuntimeStore(
+    s => s.setEphemeralDocumentModel,
+  );
+  const handleEphemeralDocumentChange = useCallback(
+    (model: string) => {
+      setEphemeralDocumentModel(ephemeralDocumentId, model);
+    },
+    [ephemeralDocumentId, setEphemeralDocumentModel],
+  );
+
+  // ── Companion surface mode (none / notebook / document) ─────────────────
+  const defaultSurfaceMode: EphemeralSurfaceMode =
+    initialEphemeralSurfaceMode ??
+    (enableEphemeralNotebook && initialEphemeralNotebookOpen
+      ? 'notebook'
+      : 'none');
+  const [ephemeralSurfaceMode, setEphemeralSurfaceMode] =
+    useState<EphemeralSurfaceMode>(defaultSurfaceMode);
+  const handleEphemeralSurfaceModeChange = useCallback(
+    (mode: EphemeralSurfaceMode) => {
+      setEphemeralSurfaceMode(mode);
+      onEphemeralSurfaceModeChange?.(mode);
+      // Back-compat: keep the legacy notebook open-state callback in sync.
+      onEphemeralNotebookOpenChange?.(mode === 'notebook');
+    },
+    [onEphemeralSurfaceModeChange, onEphemeralNotebookOpenChange],
+  );
+  const notebookVisible =
+    enableEphemeralNotebook && ephemeralSurfaceMode === 'notebook';
+  const documentVisible =
+    enableEphemeralDocument && ephemeralSurfaceMode === 'document';
+  const surfaceVisible = notebookVisible || documentVisible;
+  const surfaceCollapsed =
+    surfaceVisible && collapsed && Boolean(onExpandFromCollapsed);
 
   // Track the ephemeral notebook's live kernel connection so the chat header
   // renders the same rich `KernelIndicator` details (kernel id, client id,
@@ -661,23 +863,42 @@ function ChatBaseInner({
       unsubscribe();
     };
   }, [notebookVisible, ephemeralNotebookId]);
-  // When the notebook is shown, the chat can be docked as a sidebar (default)
-  // or floated over the notebook, driven by the header view-mode toggle.
-  const notebookChatFloating =
-    notebookVisible &&
+  // When a companion surface is shown, the chat can be docked as a sidebar
+  // (default) or floated over it, driven by the header view-mode toggle.
+  const surfaceChatFloating =
+    surfaceVisible &&
     (chatViewMode === 'floating' || chatViewMode === 'floating-small');
 
   // Notebook frontend tools are always created (hooks must be unconditional)
   // but only merged into the tools sent to the agent while the notebook is
-  // visible, so the agent can manipulate the live notebook cells.
+  // visible, so the agent can manipulate the live notebook cells. Document
+  // (lexical) tools are reported upward by the lazily-loaded EphemeralDocument
+  // and merged in while the document is visible.
   const notebookTools = useNotebookTools(ephemeralNotebookId);
-  const frontendTools = useMemo(
-    () =>
-      notebookVisible
-        ? [...(frontendToolsProp || []), ...notebookTools]
-        : frontendToolsProp,
-    [notebookVisible, frontendToolsProp, notebookTools],
+  const [documentTools, setDocumentTools] = useState<FrontendToolDefinition[]>(
+    [],
   );
+  const handleDocumentToolsReady = useCallback(
+    (tools: FrontendToolDefinition[]) => {
+      setDocumentTools(tools);
+    },
+    [],
+  );
+  const frontendTools = useMemo(() => {
+    if (notebookVisible) {
+      return [...(frontendToolsProp || []), ...notebookTools];
+    }
+    if (documentVisible) {
+      return [...(frontendToolsProp || []), ...documentTools];
+    }
+    return frontendToolsProp;
+  }, [
+    notebookVisible,
+    documentVisible,
+    frontendToolsProp,
+    notebookTools,
+    documentTools,
+  ]);
 
   const aiAgentsBaseUrl = useMemo(
     () =>
@@ -1281,14 +1502,20 @@ function ChatBaseInner({
   const wsState = useAgentRuntimeWsState();
 
   // ---- Data queries ----
+  // Config-derived queries (models, skills, context, sandbox) must only run
+  // once the runtime endpoint exists. `autoConnect` is our single signal for
+  // "endpoint ready", so we gate every config query on it to avoid firing
+  // requests at a not-yet-created runtime during the launch overlay.
+  const configQueriesEnabled =
+    Boolean(protocol?.enableConfigQuery) && autoConnect;
   const configQuery = useConfig(
-    Boolean(protocol?.enableConfigQuery),
+    configQueriesEnabled,
     protocol?.configEndpoint,
     protocol?.authToken,
     protocol?.agentId,
   );
   const skillsQuery = useSkills(
-    Boolean(protocol?.enableConfigQuery) && showSkillsMenu,
+    configQueriesEnabled && showSkillsMenu,
     protocol?.configEndpoint,
     protocol?.authToken,
   );
@@ -1378,14 +1605,14 @@ function ChatBaseInner({
     return set;
   }, [localSkillApproval, skillsQuery.data]);
   const contextSnapshotQuery = useContextSnapshot(
-    Boolean(protocol?.enableConfigQuery) && showTokenUsage,
+    configQueriesEnabled && showTokenUsage,
     protocol?.configEndpoint,
     protocol?.agentId,
     protocol?.authToken,
   );
   const agentUsage = externalContextSnapshot ?? contextSnapshotQuery.data;
   const sandboxStatusQuery = useSandbox(
-    Boolean(protocol?.enableConfigQuery) && showHeader,
+    configQueriesEnabled && showHeader,
     protocol?.configEndpoint,
     protocol?.authToken,
     protocol?.agentId,
@@ -2229,6 +2456,10 @@ function ChatBaseInner({
   // ========================================================================
   useEffect(() => {
     if (!protocol) return;
+    // Skip opening a protocol connection when auto-connect is disabled (e.g.
+    // the runtime endpoint is still being created). The chat shell, companion
+    // surface and launching overlay still render; we simply do not connect.
+    if (!autoConnect) return;
 
     const adapter = createProtocolAdapter(protocol);
     if (!adapter) return;
@@ -2701,7 +2932,7 @@ function ChatBaseInner({
       adapterRef.current?.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [protocolKey, onStateUpdate, useStoreMode]);
+  }, [protocolKey, onStateUpdate, useStoreMode, autoConnect]);
 
   // Helper to run a frontend tool and send result back via adapter
   function executeFrontendTool(
@@ -3434,6 +3665,20 @@ function ChatBaseInner({
     !!configQuery.data ||
     !!skillsQuery.data;
 
+  const resolvedDescription =
+    description || configQuery.data?.welcomeMessage || '';
+
+  const serverSuggestions = configQuery.data?.suggestions;
+  const resolvedSuggestions =
+    suggestions && suggestions.length > 0
+      ? suggestions
+      : Array.isArray(serverSuggestions) && serverSuggestions.length > 0
+        ? serverSuggestions
+            .map(item => String(item || '').trim())
+            .filter(Boolean)
+            .map(item => ({ title: item, message: item }))
+        : undefined;
+
   const messagesContent = children ? (
     children
   ) : (
@@ -3461,8 +3706,8 @@ function ChatBaseInner({
           <ChatEmptyState
             emptyState={emptyState}
             brandIcon={brandIcon}
-            description={description}
-            suggestions={suggestions}
+            description={resolvedDescription}
+            suggestions={resolvedSuggestions}
             submitOnSuggestionClick={submitOnSuggestionClick}
             onSuggestionSubmit={handleSuggestionSubmit}
             onSuggestionFill={handleSuggestionFill}
@@ -3520,6 +3765,43 @@ function ChatBaseInner({
     />
   ) : null;
 
+  // Shared header element. It is rendered either at the top of the chat (when
+  // no ephemeral notebook is shown) or INSIDE the chat body column (when the
+  // notebook is visible) so the header always follows the chat body across all
+  // view modes (docked sidebar, floating popup, floating-small).
+  const chatHeaderElement = showHeader ? (
+    <ChatBaseHeader
+      title={title}
+      subtitle={subtitle}
+      brandIcon={brandIcon}
+      headerContent={headerContent}
+      headerActions={headerActions}
+      showInformation={showInformation}
+      onInformationClick={onInformationClick}
+      padding={padding}
+      kernelIndicatorState={kernelIndicatorState}
+      runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
+      kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
+      kernelEnvironmentName={kernelEnvironmentName}
+      kernelCpu={kernelCpu}
+      kernelMemory={kernelMemory}
+      kernelGpu={kernelGpu}
+      headerButtons={headerButtons}
+      messageCount={messages.length}
+      onNewChat={handleNewChat}
+      onClear={handleClear}
+      chatViewMode={chatViewMode}
+      onChatViewModeChange={onChatViewModeChange}
+      showEphemeralSurfaceControl={
+        enableEphemeralNotebook || enableEphemeralDocument
+      }
+      enableEphemeralNotebookOption={enableEphemeralNotebook}
+      enableEphemeralDocumentOption={enableEphemeralDocument}
+      ephemeralSurfaceMode={ephemeralSurfaceMode}
+      onEphemeralSurfaceModeChange={handleEphemeralSurfaceModeChange}
+    />
+  ) : null;
+
   // ========================================================================
   // Render
   // ========================================================================
@@ -3540,35 +3822,11 @@ function ChatBaseInner({
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      {showHeader && (
-        <ChatBaseHeader
-          title={title}
-          subtitle={subtitle}
-          brandIcon={brandIcon}
-          headerContent={headerContent}
-          headerActions={headerActions}
-          showInformation={showInformation}
-          onInformationClick={onInformationClick}
-          padding={padding}
-          kernelIndicatorState={kernelIndicatorState}
-          runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
-          kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
-          kernelEnvironmentName={kernelEnvironmentName}
-          kernelCpu={kernelCpu}
-          kernelMemory={kernelMemory}
-          kernelGpu={kernelGpu}
-          headerButtons={headerButtons}
-          messageCount={messages.length}
-          onNewChat={handleNewChat}
-          onClear={handleClear}
-          chatViewMode={chatViewMode}
-          onChatViewModeChange={onChatViewModeChange}
-          showEphemeralNotebookToggle={enableEphemeralNotebook}
-          ephemeralNotebookOpen={ephemeralNotebookOpen}
-          onToggleEphemeralNotebook={setEphemeralNotebookOpen}
-        />
-      )}
+      {/* Header — shown at the top only when no companion surface is visible.
+          When a surface (notebook/document) is visible the header is rendered
+          inside the chat body column (below) so it follows the chat across
+          view modes instead of staying pinned to the top. */}
+      {!surfaceVisible && chatHeaderElement}
 
       {/* Tool approval banner (top-of-chat) */}
       {showToolApprovalBanner &&
@@ -3600,7 +3858,7 @@ function ChatBaseInner({
       )}
 
       {/* Messages area */}
-      {notebookVisible ? (
+      {surfaceVisible ? (
         <Box
           sx={{
             flex: 1,
@@ -3610,7 +3868,7 @@ function ChatBaseInner({
             position: 'relative',
           }}
         >
-          {/* Left: in-memory ephemeral notebook (main pane) */}
+          {/* Left: in-memory companion surface (notebook or document). */}
           <Box
             sx={{
               flex: 1,
@@ -3619,71 +3877,125 @@ function ChatBaseInner({
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              ...(notebookChatFloating
+              ...(surfaceChatFloating
                 ? null
-                : { borderRight: '1px solid', borderColor: 'border.default' }),
+                : surfaceCollapsed
+                  ? null
+                  : {
+                      borderRight: '1px solid',
+                      borderColor: 'border.default',
+                    }),
             }}
           >
-            <EphemeralNotebook
-              notebookId={ephemeralNotebookId}
-              runtimePodName={runtimeId || activeAgentId}
-              nbformat={persistedEphemeralNbformat ?? undefined}
-              onNbformatChange={handleEphemeralNotebookChange}
-              toolbarComponent={ephemeralNotebookToolbar}
-            />
+            {notebookVisible ? (
+              <EphemeralNotebook
+                notebookId={ephemeralNotebookId}
+                runtimePodName={runtimeId || activeAgentId}
+                nbformat={persistedEphemeralNbformat ?? undefined}
+                onNbformatChange={handleEphemeralNotebookChange}
+                toolbarComponent={ephemeralNotebookToolbar}
+              />
+            ) : (
+              <React.Suspense
+                fallback={
+                  <Box sx={{ p: 3, color: 'fg.muted' }}>Loading document…</Box>
+                }
+              >
+                <EphemeralDocument
+                  documentId={ephemeralDocumentId}
+                  runtimePodName={runtimeId || activeAgentId}
+                  content={persistedEphemeralDocument ?? undefined}
+                  onContentChange={handleEphemeralDocumentChange}
+                  onToolsReady={handleDocumentToolsReady}
+                />
+              </React.Suspense>
+            )}
           </Box>
 
-          {/* Right: chat — docked as a sidebar, or floating over the notebook
+          {/* Right: chat — docked as a sidebar, or floating over the surface
               depending on the selected chat view mode. */}
-          <Box
-            sx={
-              notebookChatFloating
-                ? {
-                    position: 'absolute',
-                    right: 16,
-                    width: chatViewMode === 'floating-small' ? 360 : 440,
-                    maxWidth: 'calc(100% - 32px)',
-                    ...(chatViewMode === 'floating-small'
-                      ? { bottom: 16, height: '62%' }
-                      : { top: 16, bottom: 16 }),
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: 0,
-                    overflow: 'hidden',
-                    bg: 'canvas.default',
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    boxShadow: 'shadow.large',
-                    zIndex: 5,
-                  }
-                : {
-                    flexShrink: 0,
-                    width: 440,
-                    minWidth: 320,
-                    maxWidth: '48%',
-                    minHeight: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    bg: 'canvas.default',
-                  }
-            }
-          >
+          {!surfaceCollapsed && (
             <Box
-              ref={messagesContainerRef}
-              sx={{
-                flex: 1,
-                minHeight: 0,
-                overflow: 'auto',
-                bg: 'canvas.default',
-              }}
+              sx={
+                surfaceChatFloating
+                  ? {
+                      position: 'absolute',
+                      right: 16,
+                      width: chatViewMode === 'floating-small' ? 360 : 440,
+                      maxWidth: 'calc(100% - 32px)',
+                      ...(chatViewMode === 'floating-small'
+                        ? { bottom: 16, height: '62%' }
+                        : { top: 16, bottom: 16 }),
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minHeight: 0,
+                      overflow: 'hidden',
+                      bg: 'canvas.default',
+                      border: '1px solid',
+                      borderColor: 'border.default',
+                      borderRadius: 2,
+                      boxShadow: 'shadow.large',
+                      zIndex: 5,
+                    }
+                  : {
+                      flexShrink: 0,
+                      width: 440,
+                      minWidth: 320,
+                      maxWidth: '48%',
+                      minHeight: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden',
+                      bg: 'canvas.default',
+                    }
+              }
             >
-              {messagesContent}
+              {/* Header lives inside the chat column when a companion surface
+                  is shown so it follows the chat body across all view modes. */}
+              {chatHeaderElement}
+              <Box
+                ref={messagesContainerRef}
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflow: 'auto',
+                  bg: 'canvas.default',
+                }}
+              >
+                {messagesContent}
+              </Box>
+              {footerContent}
+              {inputToolbar}
             </Box>
-            {footerContent}
-            {inputToolbar}
-          </Box>
+          )}
+
+          {surfaceCollapsed &&
+            onExpandFromCollapsed &&
+            (chatViewMode === 'sidebar' ? (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  zIndex: 6,
+                }}
+              >
+                <IconButton
+                  icon={SidebarExpandIcon}
+                  aria-label="Open chat"
+                  onClick={onExpandFromCollapsed}
+                  variant="default"
+                  size="small"
+                />
+              </Box>
+            ) : (
+              <FloatingBrandButton
+                isOpen={false}
+                onToggle={onExpandFromCollapsed}
+                position="bottom-right"
+                tooltip="Open chat"
+              />
+            ))}
         </Box>
       ) : (
         <>

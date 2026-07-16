@@ -26,7 +26,6 @@ from agent_runtimes.evals.remote.evals import (
     parse_json_file,
     parse_json_value,
     render_eval_report_markdown,
-    resolve_billable_account_uid,
     timestamp_slug,
     watch_runs,
     write_eval_report_csv,
@@ -38,12 +37,12 @@ from agent_runtimes.evals.remote.evaluators import (
     run_and_evaluate_evalset,
     run_case_evaluators,
 )
-from agent_runtimes.evals.remote.report import (
+from agent_runtimes.evals.remote.runner import execute_evalset_spec
+from agent_runtimes.evals.report import (
     average_latest_pass_rate,
     collect_report_failures,
     iter_report_runs,
 )
-from agent_runtimes.evals.remote.runner import execute_evalset_spec
 
 __all__ = [
     "average_latest_pass_rate",
@@ -60,7 +59,6 @@ __all__ = [
     "parse_json_file",
     "parse_json_value",
     "render_eval_report_markdown",
-    "resolve_billable_account_uid",
     "run_and_evaluate_evalset",
     "run_case_evaluators",
     "timestamp_slug",

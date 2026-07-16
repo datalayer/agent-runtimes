@@ -107,20 +107,20 @@ def _load_agent_spec(spec_source: str) -> dict[str, Any]:
     return parsed
 
 
-def _resolve_billable_account_details(
+def _resolve_billing_entity_details(
     *,
     client: AgentClient,
-    billable_account_uid: str,
+    billing_entity_uid: str,
 ) -> dict[str, str]:
     """Resolve account metadata from IAM whoami/memberships payloads.
 
-    When no explicit billable account UID is provided by the runtime payload,
+    When no explicit billing entity UID is provided by the runtime payload,
     fall back to the authenticated user profile from whoami.
     """
 
     resolved_token = str(client._get_api_key() or "").strip()
     if not resolved_token:
-        return {"uid": billable_account_uid} if billable_account_uid else {}
+        return {"uid": billing_entity_uid} if billing_entity_uid else {}
 
     iam_base = str(client.urls.iam_url).rstrip("/")
     headers = {"Authorization": f"Bearer {resolved_token}"}
@@ -139,7 +139,7 @@ def _resolve_billable_account_details(
         profile = payload.get("profile") or {}
         profile_uid = str(profile.get("uid") or "").strip()
         if profile_uid and (
-            not billable_account_uid or profile_uid == billable_account_uid
+            not billing_entity_uid or profile_uid == billing_entity_uid
         ):
             full_name = str(profile.get("name") or "").strip()
             if not full_name:
@@ -168,9 +168,9 @@ def _resolve_billable_account_details(
         memberships = memberships_payload.get("memberships") or []
         for membership in memberships:
             uid = str((membership or {}).get("uid") or "").strip()
-            if uid == billable_account_uid:
+            if uid == billing_entity_uid:
                 return {
-                    "uid": billable_account_uid,
+                    "uid": billing_entity_uid,
                     "handle": str((membership or {}).get("handle") or "").strip(),
                     "type": str((membership or {}).get("type") or "").strip(),
                     "name": str((membership or {}).get("name") or "").strip(),
@@ -179,7 +179,7 @@ def _resolve_billable_account_details(
                     ).strip(),
                 }
 
-    return {"uid": billable_account_uid} if billable_account_uid else {}
+    return {"uid": billing_entity_uid} if billing_entity_uid else {}
 
 
 def _resolve_agentspec_label(runtime_payload: dict[str, Any]) -> str:
@@ -196,16 +196,16 @@ def _resolve_agentspec_label(runtime_payload: dict[str, Any]) -> str:
     return "n/a"
 
 
-def _billable_uid_label(
+def _billing_uid_label(
     *,
-    billable_uid: str,
+    billing_uid: str,
     authenticated_uid: str,
     rich: bool = False,
 ) -> str:
-    """Human label for billable UID in text/raw outputs."""
-    if billable_uid and authenticated_uid and billable_uid == authenticated_uid:
+    """Human label for billing UID in text/raw outputs."""
+    if billing_uid and authenticated_uid and billing_uid == authenticated_uid:
         return "[bold green]me[/bold green]" if rich else "me"
-    return billable_uid or "n/a"
+    return billing_uid or "n/a"
 
 
 def _print_runtime_summary_panel(
@@ -318,9 +318,9 @@ def list_agents(
         runtimes = client.list_runtimes()
 
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billing_entity_details(
                 client=client,
-                billable_account_uid="",
+                billing_entity_uid="",
             ).get("uid")
             or ""
         ).strip()
@@ -329,7 +329,7 @@ def list_agents(
         table.add_column("ID", style="cyan", no_wrap=True)
         table.add_column("Name", style="cyan", no_wrap=True)
         table.add_column("Environment", style="cyan", no_wrap=True)
-        table.add_column("Billable Account UID", style="cyan", no_wrap=True)
+        table.add_column("Billing Entity UID", style="cyan", no_wrap=True)
         table.add_column("Expired At", style="cyan", no_wrap=True)
 
         for runtime in runtimes:
@@ -345,17 +345,17 @@ def list_agents(
                     runtime_payload = {}
                     ownership_payload = {}
 
-            billable_uid = str(
-                runtime_payload.get("billable_account_uid")
-                or ownership_payload.get("billable_account_uid")
-                or getattr(runtime, "billable_account_uid", "")
+            billing_uid = str(
+                runtime_payload.get("billing_entity_uid")
+                or ownership_payload.get("billing_entity_uid")
+                or getattr(runtime, "billing_entity_uid", "")
                 or ""
             ).strip()
-            if not billable_uid and authenticated_uid:
-                billable_uid = authenticated_uid
+            if not billing_uid and authenticated_uid:
+                billing_uid = authenticated_uid
 
-            display_billable_uid = _billable_uid_label(
-                billable_uid=billable_uid,
+            display_billing_uid = _billing_uid_label(
+                billing_uid=billing_uid,
                 authenticated_uid=authenticated_uid,
                 rich=True,
             )
@@ -365,7 +365,7 @@ def list_agents(
                 pod_name,
                 str(runtime.name or ""),
                 str(runtime.environment or ""),
-                display_billable_uid,
+                display_billing_uid,
                 "Never" if expired_at is None else timestamp_to_local_date(expired_at),
             )
 
@@ -401,20 +401,20 @@ def create_agent_runtime(
         "--time-reservation",
         help="Time reservation in minutes for the runtime.",
     ),
-    billable_account_uid: Optional[str] = typer.Option(
+    billing_entity_uid: Optional[str] = typer.Option(
         None,
-        "--billable-account-uid",
+        "--billing-entity-uid",
         help="Account UID to bill the runtime to (org/team).",
     ),
-    billable_account_type: Optional[str] = typer.Option(
+    billing_entity_type: Optional[str] = typer.Option(
         None,
-        "--billable-account-type",
-        help="Billable account type: user, organization, or team.",
+        "--billing-entity-type",
+        help="Billing Entity type: user, organization, or team.",
     ),
-    billable_account_handle: Optional[str] = typer.Option(
+    billing_entity_handle: Optional[str] = typer.Option(
         None,
-        "--billable-account-handle",
-        help="Billable account handle (informational).",
+        "--billing-entity-handle",
+        help="Billing Entity handle (informational).",
     ),
     raw: bool = typer.Option(
         False,
@@ -536,15 +536,15 @@ def create_agent_runtime(
             time_reservation=final_time_reservation,
             agent_spec_id=resolved_spec_id,
             agent_spec=agent_spec_payload,
-            billable_account_uid=billable_account_uid,
-            billable_account_type=billable_account_type,
-            billable_account_handle=billable_account_handle,
+            billing_entity_uid=billing_entity_uid,
+            billing_entity_type=billing_entity_type,
+            billing_entity_handle=billing_entity_handle,
         )
 
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billing_entity_details(
                 client=client,
-                billable_account_uid="",
+                billing_entity_uid="",
             ).get("uid")
             or ""
         ).strip()
@@ -561,14 +561,14 @@ def create_agent_runtime(
                 created_runtime_payload = {}
                 ownership_payload = {}
 
-        billable_uid = str(
-            created_runtime_payload.get("billable_account_uid")
-            or ownership_payload.get("billable_account_uid")
-            or billable_account_uid
+        billing_uid = str(
+            created_runtime_payload.get("billing_entity_uid")
+            or ownership_payload.get("billing_entity_uid")
+            or billing_entity_uid
             or ""
         ).strip()
-        if not billable_uid and authenticated_uid:
-            billable_uid = authenticated_uid
+        if not billing_uid and authenticated_uid:
+            billing_uid = authenticated_uid
 
         if raw:
             payload = {
@@ -583,9 +583,9 @@ def create_agent_runtime(
                     "burning_rate": runtime.burning_rate,
                     "started_at": runtime.started_at,
                     "expired_at": runtime.expired_at,
-                    "billable_account_uid": billable_uid or None,
-                    "billable_account_uid_label": _billable_uid_label(
-                        billable_uid=billable_uid,
+                    "billing_entity_uid": billing_uid or None,
+                    "billing_entity_uid_label": _billing_uid_label(
+                        billing_uid=billing_uid,
                         authenticated_uid=authenticated_uid,
                     ),
                 },
@@ -674,21 +674,21 @@ def get_agent_runtime(
         runtime = client.get_runtime(pod_name)
 
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billing_entity_details(
                 client=client,
-                billable_account_uid="",
+                billing_entity_uid="",
             ).get("uid")
             or ""
         ).strip()
 
-        billable_uid = str(
-            runtime_payload.get("billable_account_uid")
-            or ownership_payload.get("billable_account_uid")
-            or getattr(runtime, "billable_account_uid", "")
+        billing_uid = str(
+            runtime_payload.get("billing_entity_uid")
+            or ownership_payload.get("billing_entity_uid")
+            or getattr(runtime, "billing_entity_uid", "")
             or ""
         ).strip()
-        if not billable_uid and authenticated_uid:
-            billable_uid = authenticated_uid
+        if not billing_uid and authenticated_uid:
+            billing_uid = authenticated_uid
 
         runtime_dict = {
             "given_name": runtime.name,
@@ -701,9 +701,9 @@ def get_agent_runtime(
             "token": runtime.jupyter_token,
             "started_at": runtime.started_at,
             "expired_at": runtime.expired_at,
-            "billable_account_uid": billable_uid or None,
-            "billable_account_uid_label": _billable_uid_label(
-                billable_uid=billable_uid,
+            "billing_entity_uid": billing_uid or None,
+            "billing_entity_uid_label": _billing_uid_label(
+                billing_uid=billing_uid,
                 authenticated_uid=authenticated_uid,
             ),
         }
@@ -963,48 +963,48 @@ def inspect_agent_runtime(
             console.print("[red]Runtime has no ingress endpoint.[/red]")
             raise typer.Exit(1)
 
-        billable_account_uid = str(
-            runtime_payload.get("billable_account_uid")
-            or ownership_payload.get("billable_account_uid")
+        billing_entity_uid = str(
+            runtime_payload.get("billing_entity_uid")
+            or ownership_payload.get("billing_entity_uid")
             or ""
         ).strip()
-        billable_account_handle = str(
-            runtime_payload.get("billable_account_handle")
-            or ownership_payload.get("billable_account_handle")
+        billing_entity_handle = str(
+            runtime_payload.get("billing_entity_handle")
+            or ownership_payload.get("billing_entity_handle")
             or ""
         ).strip()
-        billable_account_kind = str(
-            runtime_payload.get("billable_account_kind")
-            or ownership_payload.get("billable_account_kind")
-            or runtime_payload.get("billable_account_type")
-            or ownership_payload.get("billable_account_type")
+        billing_entity_kind = str(
+            runtime_payload.get("billing_entity_kind")
+            or ownership_payload.get("billing_entity_kind")
+            or runtime_payload.get("billing_entity_type")
+            or ownership_payload.get("billing_entity_type")
             or ""
         ).strip()
 
-        account_details = _resolve_billable_account_details(
+        account_details = _resolve_billing_entity_details(
             client=client,
-            billable_account_uid=billable_account_uid,
+            billing_entity_uid=billing_entity_uid,
         )
         authenticated_uid = str(
-            _resolve_billable_account_details(
+            _resolve_billing_entity_details(
                 client=client,
-                billable_account_uid="",
+                billing_entity_uid="",
             ).get("uid")
             or ""
         ).strip()
-        billable_account_uid = str(
-            account_details.get("uid") or billable_account_uid or ""
+        billing_entity_uid = str(
+            account_details.get("uid") or billing_entity_uid or ""
         ).strip()
-        display_billable_uid = _billable_uid_label(
-            billable_uid=billable_account_uid,
+        display_billing_uid = _billing_uid_label(
+            billing_uid=billing_entity_uid,
             authenticated_uid=authenticated_uid,
             rich=True,
         )
         resolved_handle = str(
-            account_details.get("handle") or billable_account_handle or ""
+            account_details.get("handle") or billing_entity_handle or ""
         ).strip()
         resolved_kind = str(
-            account_details.get("type") or billable_account_kind or ""
+            account_details.get("type") or billing_entity_kind or ""
         ).strip()
         resolved_name = str(account_details.get("name") or "").strip()
         resolved_description = str(account_details.get("description") or "").strip()
@@ -1064,7 +1064,7 @@ def inspect_agent_runtime(
         summary.add_row("Pod", str(pod_name))
         summary.add_row("UID", str(refreshed.uid or ""))
         summary.add_row("Ingress", endpoint)
-        summary.add_row("Billable Account UID", display_billable_uid)
+        summary.add_row("Billing Entity UID", display_billing_uid)
         if kernel_endpoint_used:
             summary.add_row("Kernels", str(len(kernels)))
             summary.add_row("Kernel API", kernel_endpoint_used)
@@ -1073,10 +1073,10 @@ def inspect_agent_runtime(
             summary.add_row("Kernel API", "not exposed via ingress")
         console.print(summary)
 
-        account_table = Table(title="Billable Account")
+        account_table = Table(title="Billing Entity")
         account_table.add_column("Field", style="cyan")
         account_table.add_column("Value")
-        account_table.add_row("UID", display_billable_uid)
+        account_table.add_row("UID", display_billing_uid)
         account_table.add_row("Handle", resolved_handle or "n/a")
         account_table.add_row("Type", resolved_kind or "n/a")
         account_table.add_row("Name", resolved_name or "n/a")

@@ -330,8 +330,7 @@ function renderContentPart(
 
     case 'tool-result': {
       const result = part.result as
-        | { success?: boolean; error?: string; data?: unknown }
-        | undefined;
+        { success?: boolean; error?: string; data?: unknown } | undefined;
       const isSuccess =
         result && typeof result === 'object' && 'success' in result
           ? result.success

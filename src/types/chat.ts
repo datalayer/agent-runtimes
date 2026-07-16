@@ -67,6 +67,14 @@ export interface ToolCallCompleteContext {
  */
 export type ChatViewMode = 'floating' | 'floating-small' | 'sidebar';
 
+/**
+ * Companion "ephemeral surface" shown next to the chat.
+ * - 'none': chat only, no companion surface
+ * - 'notebook': in-memory Jupyter notebook
+ * - 'document': in-memory Lexical rich-text document
+ */
+export type EphemeralSurfaceMode = 'none' | 'notebook' | 'document';
+
 export type EphemeralNotebookToolbarComponent = ComponentType<any>;
 
 // ---------------------------------------------------------------------------
@@ -77,10 +85,7 @@ export type EphemeralNotebookToolbarComponent = ComponentType<any>;
  * Tool call status for tool rendering
  */
 export type DisplayToolCallStatus =
-  | 'inProgress'
-  | 'executing'
-  | 'complete'
-  | 'error';
+  'inProgress' | 'executing' | 'complete' | 'error';
 
 /**
  * Response callback type for human-in-the-loop interactions
@@ -447,8 +452,33 @@ export interface ChatCommonProps {
    */
   enableEphemeralNotebook?: boolean;
 
+  /**
+   * Enable the in-memory "ephemeral document" (Lexical rich-text) companion
+   * surface. When enabled it appears as an option in the companion-surface
+   * segmented control alongside the notebook. @default false
+   */
+  enableEphemeralDocument?: boolean;
+
+  /**
+   * Initial companion surface shown next to the chat. Defaults to 'notebook'
+   * when `enableEphemeralNotebook` is true, otherwise 'none'.
+   */
+  initialEphemeralSurfaceMode?: EphemeralSurfaceMode;
+
+  /** Controlled callback for companion surface mode changes. */
+  onEphemeralSurfaceModeChange?: (mode: EphemeralSurfaceMode) => void;
+
   /** Initial open state of the ephemeral notebook. @default true */
   initialEphemeralNotebookOpen?: boolean;
+
+  /** Controlled callback for ephemeral notebook open-state changes. */
+  onEphemeralNotebookOpenChange?: (open: boolean) => void;
+
+  /** Collapse chat panel while keeping the ephemeral notebook visible. */
+  collapsed?: boolean;
+
+  /** Callback to reopen chat panel from collapsed notebook mode. */
+  onExpandFromCollapsed?: () => void;
 
   /**
    * Optional toolbar component used by the ephemeral notebook.
@@ -653,6 +683,14 @@ export interface ChatBaseProps {
   launchingMessage?: React.ReactNode;
 
   /**
+   * Whether to auto-connect the chat protocol adapter on mount. Defaults to
+   * `true`. Set to `false` to render the chat shell (header, disabled input,
+   * companion notebook/document, launching overlay) without opening a protocol
+   * connection — e.g. while the agent runtime endpoint is still being created.
+   */
+  autoConnect?: boolean;
+
+  /**
    * Optional overlay rendered above the chat surface (messages + input).
    * Use this to show a gating UI such as a sign-in form for anonymous users
    * while keeping the chat visible and its controls disabled behind it.
@@ -711,8 +749,7 @@ export interface ChatBaseProps {
    * the colour and tooltip remain in sync with the notebook runtime.
    */
   kernel?:
-    | import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection
-    | null;
+    import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection | null;
 
   /** Optional environment name displayed in kernel indicator details. */
   kernelEnvironmentName?: string;
@@ -914,10 +951,35 @@ export interface ChatBaseProps {
   enableEphemeralNotebook?: boolean;
 
   /**
+   * Enable the in-memory "ephemeral document" (Lexical rich-text) companion
+   * surface. When enabled it appears as an option in the companion-surface
+   * segmented control alongside the notebook. @default false
+   */
+  enableEphemeralDocument?: boolean;
+
+  /**
+   * Initial companion surface shown next to the chat. Defaults to 'notebook'
+   * when `enableEphemeralNotebook` is true, otherwise 'none'.
+   */
+  initialEphemeralSurfaceMode?: EphemeralSurfaceMode;
+
+  /** Controlled callback for companion surface mode changes. */
+  onEphemeralSurfaceModeChange?: (mode: EphemeralSurfaceMode) => void;
+
+  /**
    * Initial open state of the ephemeral notebook toggle. Only relevant when
    * `enableEphemeralNotebook` is true. @default true
    */
   initialEphemeralNotebookOpen?: boolean;
+
+  /** Controlled callback for ephemeral notebook open-state changes. */
+  onEphemeralNotebookOpenChange?: (open: boolean) => void;
+
+  /** Collapse chat panel while keeping the ephemeral notebook visible. */
+  collapsed?: boolean;
+
+  /** Callback to reopen chat panel from collapsed notebook mode. */
+  onExpandFromCollapsed?: () => void;
 
   /**
    * Optional toolbar component used by the ephemeral notebook.

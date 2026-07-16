@@ -351,7 +351,7 @@ class UsageTracker:
             "total_tokens": 0.0,
             "requests": 0.0,
             "cached_tokens": 0.0,
-            "billable_tokens": 0.0,
+            "billing_tokens": 0.0,
             "codemode_tool_calls": 0.0,
             "mcp_tool_calls": 0.0,
         }

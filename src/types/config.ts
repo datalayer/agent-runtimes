@@ -73,6 +73,8 @@ export interface RemoteConfig {
   defaultModel?: string;
   builtinTools: BuiltinTool[];
   mcpServers?: MCPServerConfig[];
+  suggestions?: string[];
+  welcomeMessage?: string;
 }
 
 /**

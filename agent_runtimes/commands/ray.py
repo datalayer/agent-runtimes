@@ -182,7 +182,7 @@ def clusters_list(
     table.add_column("State")
     table.add_column("Workers")
     table.add_column("Principal")
-    table.add_column("Billable")
+    table.add_column("Billing")
 
     for item in items:
         metadata = item.get("metadata") or {}
@@ -201,20 +201,20 @@ def clusters_list(
             str(item.get("principal_uid") or ownership.get("principal_uid") or ""),
             "principal",
         )
-        billable = _format_scope_label(
+        billing = _format_scope_label(
             str(
-                item.get("billable_account_kind")
-                or ownership.get("billable_account_kind")
+                item.get("billing_entity_kind")
+                or ownership.get("billing_entity_kind")
                 or ""
             ),
             str(
-                item.get("billable_account_handle")
-                or ownership.get("billable_account_handle")
+                item.get("billing_entity_handle")
+                or ownership.get("billing_entity_handle")
                 or ""
             ),
             str(
-                item.get("billable_account_uid")
-                or ownership.get("billable_account_uid")
+                item.get("billing_entity_uid")
+                or ownership.get("billing_entity_uid")
                 or ""
             ),
             "account",
@@ -225,7 +225,7 @@ def clusters_list(
             str(status.get("state", "")),
             workers,
             principal,
-            billable,
+            billing,
         )
 
     console.print(table)

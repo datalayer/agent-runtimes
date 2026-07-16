@@ -134,8 +134,7 @@ export function RuntimeLauncherDialog(
   const { credits, refreshCredits } = useIAMStore();
 
   let navigate:
-    | ((location: string, e?: any, resetPortals?: boolean) => void)
-    | undefined;
+    ((location: string, e?: any, resetPortals?: boolean) => void) | undefined;
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     navigate = useNavigate();

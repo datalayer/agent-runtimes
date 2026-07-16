@@ -25,11 +25,7 @@ import { BaseInferenceProvider } from './BaseInferenceProvider';
  * Finish reason type for inference responses
  */
 export type FinishReason =
-  | 'stop'
-  | 'length'
-  | 'tool_calls'
-  | 'content_filter'
-  | 'error';
+  'stop' | 'length' | 'tool_calls' | 'content_filter' | 'error';
 
 /**
  * Datalayer-specific configuration

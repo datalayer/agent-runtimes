@@ -3,7 +3,7 @@
 
 """Local Agent Node configuration endpoints.
 
-Configuration (mode, billable account, sharing) plus the central-service
+Configuration (mode, billing entity, sharing) plus the central-service
 issued ``node_uid`` (ULID) are persisted locally so they survive restarts.
 The ``node_uid`` is *never* minted locally — the central
 ``datalayer-runtimes`` service assigns it on first ``/register`` and the
@@ -32,9 +32,9 @@ AgentNodeMode = Literal["private", "shared", "sleep"]
 class AgentNodeConfiguration(BaseModel):
     mode: AgentNodeMode = "sleep"
     node_uid: str | None = None
-    billable_account_uid: str | None = None
-    billable_account_type: str | None = None
-    billable_account_handle: str | None = None
+    billing_entity_uid: str | None = None
+    billing_entity_type: str | None = None
+    billing_entity_handle: str | None = None
     sharing: dict[str, Any] = Field(default_factory=dict)
 
 

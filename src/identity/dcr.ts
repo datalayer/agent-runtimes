@@ -57,10 +57,7 @@ export interface ClientRegistrationRequest {
   redirect_uris: string[];
   /** Requested authentication method for the token endpoint */
   token_endpoint_auth_method?:
-    | 'none'
-    | 'client_secret_basic'
-    | 'client_secret_post'
-    | 'private_key_jwt';
+    'none' | 'client_secret_basic' | 'client_secret_post' | 'private_key_jwt';
   /** Array of grant types the client will use */
   grant_types?: string[];
   /** Array of response types the client will use */

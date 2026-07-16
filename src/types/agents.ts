@@ -33,12 +33,7 @@ export type AgentStatus =
 
 /** Shared Primer Label variants for agent statuses. */
 export type AgentStatusColorVariant =
-  | 'secondary'
-  | 'attention'
-  | 'success'
-  | 'severe'
-  | 'accent'
-  | 'danger';
+  'secondary' | 'attention' | 'success' | 'severe' | 'accent' | 'danger';
 
 /** Shared Label variants for agent lifecycle statuses. */
 export const AGENT_STATUS_COLORS: Record<AgentStatus, AgentStatusColorVariant> =
@@ -106,9 +101,9 @@ export type AgentRuntimeData = {
   // ID of the agent spec used to create this runtime
   agent_spec_id?: string;
   // Account metadata charged for runtime usage
-  billable_account_uid?: string;
-  billable_account_type?: 'user' | 'organization' | 'team';
-  billable_account_handle?: string;
+  billing_entity_uid?: string;
+  billing_entity_type?: 'user' | 'organization' | 'team';
+  billing_entity_handle?: string;
   mount_home_folder?: boolean;
   volume_uid?: string;
   volume_uids?: string[];

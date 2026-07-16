@@ -8,10 +8,7 @@ The exporter is configured lazily and reads:
 
 - per-request user JWT token from transport route Authorization headers
 - ``DATALAYER_OTEL_SERVICE_NAME`` for service.name resource attribute
-- ``DATALAYER_OTLP_METRICS_URL`` / ``OTEL_EXPORTER_OTLP_METRICS_ENDPOINT``
-    (explicit metrics endpoint override)
-- ``DATALAYER_OTLP_URL`` / ``OTEL_EXPORTER_OTLP_ENDPOINT`` / ``DATALAYER_OTEL_URL``
-    (base OTLP endpoint)
+- ``DATALAYER_OTEL_URL`` (base OTEL endpoint)
 """
 
 from __future__ import annotations
@@ -181,12 +178,7 @@ def _token_cache_key(user_jwt_token: str | None) -> str:
 
 
 def _resolve_otlp_endpoint() -> str:
-    explicit = os.environ.get("DATALAYER_OTLP_URL") or os.environ.get(
-        "OTEL_EXPORTER_OTLP_ENDPOINT"
-    )
-    if explicit:
-        return explicit.rstrip("/")
-    # Prefer explicit OTEL base URL for cluster/environment-specific routing.
+    # Rely solely on the Datalayer OTEL base URL for cluster/environment routing.
     datalayer_url = (
         os.environ.get("DATALAYER_OTEL_URL")
         or os.environ.get("DATALAYER_URL")
@@ -207,11 +199,6 @@ def _resolve_datalayer_url_source() -> tuple[str, str]:
 
 
 def _resolve_otlp_metrics_endpoint() -> str | None:
-    explicit_metrics = os.environ.get("DATALAYER_OTLP_METRICS_URL") or os.environ.get(
-        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
-    )
-    if explicit_metrics:
-        return explicit_metrics.rstrip("/")
     return None
 
 
@@ -309,9 +296,9 @@ class PromptTurnMetricsEmitter:
             attrs["identity.provider"] = user_provider
         if identities_count is not None:
             attrs["identity.count"] = int(max(0, identities_count))
-        billable_account_uid = os.environ.get("DATALAYER_BILLABLE_ACCOUNT_UID")
-        if billable_account_uid:
-            attrs["billable_account_uid"] = billable_account_uid
+        billing_entity_uid = os.environ.get("DATALAYER_BILLING_ENTITY_UID")
+        if billing_entity_uid:
+            attrs["billing_entity_uid"] = billing_entity_uid
 
         resolved_input_tokens = max(
             int(input_tokens)

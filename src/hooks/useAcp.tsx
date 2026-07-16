@@ -42,10 +42,7 @@ import {
 
 // Connection state for UI
 export type ConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'error';
+  'disconnected' | 'connecting' | 'connected' | 'error';
 
 // Extract sessionUpdate discriminator for easier message handling
 export type SessionUpdateType = SessionUpdate extends {

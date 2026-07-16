@@ -49,6 +49,9 @@ import type { McpToolsetsStatusResponse } from '../types/mcp';
 const AGENT_NAME = 'monitoring-example-agent';
 const AGENTSPEC_ID = 'example-monitoring';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
+// Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
+// read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
+const OTEL_IN_BASE_URL_ENV = import.meta.env.VITE_OTEL_IN_BASE_URL;
 const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
@@ -95,6 +98,8 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
+    configuration?.otelInUrl ||
+    OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
     configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
@@ -204,56 +209,135 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           return;
         }
 
+        // Snapshot payloads may arrive with camelCase (TS types) or snake_case
+        // (Python backend) keys. Read both for consistency with the UI.
+        const asRecord = (value: unknown): Record<string, unknown> =>
+          value && typeof value === 'object'
+            ? (value as Record<string, unknown>)
+            : {};
+        const pick = (
+          source: Record<string, unknown>,
+          keys: string[],
+        ): unknown => {
+          for (const key of keys) {
+            const value = source[key];
+            if (value !== undefined && value !== null) {
+              return value;
+            }
+          }
+          return undefined;
+        };
+        const pickNumber = (
+          source: Record<string, unknown>,
+          keys: string[],
+          fallback = 0,
+        ): number => {
+          const value = pick(source, keys);
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : fallback;
+        };
+        const pickOptionalNumber = (
+          source: Record<string, unknown>,
+          keys: string[],
+        ): number | null => {
+          const value = pick(source, keys);
+          if (value === undefined || value === null) {
+            return null;
+          }
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        };
+
+        const payloadRecord = asRecord(stream.payload);
         const payload = stream.payload as unknown as AgentStreamSnapshotPayload;
-        if (payload.contextSnapshot) {
-          setLiveContext(payload.contextSnapshot as ContextSnapshotResponse);
-          setLiveContextSnapshot(
-            payload.contextSnapshot as ContextSnapshotData,
-          );
+        const contextSnapshot = pick(payloadRecord, [
+          'contextSnapshot',
+          'context_snapshot',
+        ]);
+        if (contextSnapshot) {
+          setLiveContext(contextSnapshot as ContextSnapshotResponse);
+          setLiveContextSnapshot(contextSnapshot as ContextSnapshotData);
           setMonitorLastSnapshotAt(Date.now());
         }
 
-        if (payload.mcpStatus !== undefined) {
-          setLiveMcpStatus(payload.mcpStatus ?? undefined);
+        const mcpStatus = pick(payloadRecord, ['mcpStatus', 'mcp_status']);
+        if (mcpStatus !== undefined) {
+          setLiveMcpStatus(
+            (mcpStatus as typeof payload.mcpStatus) ?? undefined,
+          );
         }
 
         if (payload.graphTelemetry) {
           setLiveGraphTelemetry(payload.graphTelemetry);
         }
 
-        const snapshotCost =
-          payload.contextSnapshot?.costUsage ?? payload.costUsage;
-        if (!snapshotCost) {
+        const snapshotCost = asRecord(
+          pick(asRecord(contextSnapshot), ['costUsage', 'cost_usage']) ??
+            pick(payloadRecord, ['costUsage', 'cost_usage']),
+        );
+        if (!snapshotCost || Object.keys(snapshotCost).length === 0) {
           return;
         }
 
+        const modelBreakdown = pick(snapshotCost, [
+          'modelBreakdown',
+          'model_breakdown',
+        ]);
+        const runs = pick(snapshotCost, ['runs']);
+
         setLiveCost({
           agentId,
-          lastTurnCostUsd: Number(snapshotCost.lastTurnCostUsd ?? 0),
-          cumulativeCostUsd: Number(snapshotCost.cumulativeCostUsd ?? 0),
-          perRunBudgetUsd:
-            snapshotCost.perRunBudgetUsd == null
-              ? null
-              : Number(snapshotCost.perRunBudgetUsd),
-          cumulativeBudgetUsd:
-            snapshotCost.cumulativeBudgetUsd == null
-              ? null
-              : Number(snapshotCost.cumulativeBudgetUsd),
-          requestCount: Number(snapshotCost.requestCount ?? 0),
-          totalTokensUsed: Number(snapshotCost.totalTokensUsed ?? 0),
-          modelBreakdown: Array.isArray(snapshotCost.modelBreakdown)
-            ? snapshotCost.modelBreakdown.map(item => ({
-                model: String(item.model ?? 'unknown'),
-                inputTokens: Number(item.inputTokens ?? 0),
-                outputTokens: Number(item.outputTokens ?? 0),
-                costUsd: Number(item.costUsd ?? 0),
-                requests: Number(item.requests ?? 0),
-              }))
+          lastTurnCostUsd: pickNumber(snapshotCost, [
+            'lastTurnCostUsd',
+            'last_turn_cost_usd',
+          ]),
+          cumulativeCostUsd: pickNumber(snapshotCost, [
+            'cumulativeCostUsd',
+            'cumulative_cost_usd',
+          ]),
+          perRunBudgetUsd: pickOptionalNumber(snapshotCost, [
+            'perRunBudgetUsd',
+            'per_run_budget_usd',
+          ]),
+          cumulativeBudgetUsd: pickOptionalNumber(snapshotCost, [
+            'cumulativeBudgetUsd',
+            'cumulative_budget_usd',
+          ]),
+          requestCount: pickNumber(snapshotCost, [
+            'requestCount',
+            'request_count',
+          ]),
+          totalTokensUsed: pickNumber(snapshotCost, [
+            'totalTokensUsed',
+            'total_tokens_used',
+          ]),
+          modelBreakdown: Array.isArray(modelBreakdown)
+            ? modelBreakdown.map(entry => {
+                const item = asRecord(entry);
+                return {
+                  model: String(pick(item, ['model']) ?? 'unknown'),
+                  inputTokens: pickNumber(item, [
+                    'inputTokens',
+                    'input_tokens',
+                  ]),
+                  outputTokens: pickNumber(item, [
+                    'outputTokens',
+                    'output_tokens',
+                  ]),
+                  costUsd: pickNumber(item, ['costUsd', 'cost_usd']),
+                  requests: pickNumber(item, ['requests']),
+                };
+              })
             : [],
-          runs: Array.isArray(snapshotCost.runs)
-            ? snapshotCost.runs.map(item => ({
-                pricingResolved: Boolean(item.pricingResolved),
-              }))
+          runs: Array.isArray(runs)
+            ? runs.map(entry => {
+                const item = asRecord(entry);
+                return {
+                  pricingResolved: Boolean(
+                    pick(item, ['pricingResolved', 'pricing_resolved']),
+                  ),
+                };
+              })
             : undefined,
         });
       } catch {

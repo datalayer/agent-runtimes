@@ -787,13 +787,13 @@ export function useCreateAgentRuntime() {
           agent_spec_id: data.agentSpecId || undefined,
           agent_spec: data.agentSpec || undefined,
           user_account_handle: data.userAccountHandle || undefined,
-          billable_account_uid: data.billableAccountUid || undefined,
-          billable_account_type: data.billableAccountType || undefined,
-          billable_account_handle: data.billableAccountHandle || undefined,
-          billable_source_organization_uid:
-            data.billableSourceOrganizationUid || undefined,
-          billable_source_organization_handle:
-            data.billableSourceOrganizationHandle || undefined,
+          billing_entity_uid: data.billingEntityUid || undefined,
+          billing_entity_type: data.billingEntityType || undefined,
+          billing_entity_handle: data.billingEntityHandle || undefined,
+          billing_source_organization_uid:
+            data.billingSourceOrganizationUid || undefined,
+          billing_source_organization_handle:
+            data.billingSourceOrganizationHandle || undefined,
           mount_home_folder: data.mountHomeFolder ?? false,
           volume_uids:
             normalizedVolumeUids.length > 0 ? normalizedVolumeUids : undefined,

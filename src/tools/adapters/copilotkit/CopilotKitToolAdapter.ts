@@ -217,11 +217,7 @@ function jsonSchemaToParameters(
       // Original logic for non-array types
       copilotType =
         (propSchema.type as
-          | 'string'
-          | 'number'
-          | 'boolean'
-          | 'object'
-          | undefined) || 'string';
+          'string' | 'number' | 'boolean' | 'object' | undefined) || 'string';
     }
 
     const param: CopilotKitParameter = {

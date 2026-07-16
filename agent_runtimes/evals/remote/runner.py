@@ -72,6 +72,7 @@ def execute_evalset_spec(
     run_limit: int = 1,
     run_environment: str = "sdk",
     environment_name: str = DEFAULT_ENVIRONMENT_NAME,
+    billing_entity_uid: Optional[str] = None,
     account_uid: Optional[str] = None,
     credits_limit: float = 100.0,
     evalset_name: Optional[str] = None,
@@ -115,8 +116,10 @@ def execute_evalset_spec(
         Run-environment label stored on run summaries (for example ``sdk``).
     environment_name : str
         Runtime environment to launch cloud agents in (cloud only).
+    billing_entity_uid : Optional[str]
+        Optional billing entity UID context.
     account_uid : Optional[str]
-        Optional billable account UID context.
+        Optional account UID context.
     credits_limit : float
         Target credits budget used to size each cloud runtime reservation.
     evalset_name : Optional[str]
@@ -136,7 +139,7 @@ def execute_evalset_spec(
         when ``auto_start_local_agent_runtime`` starts a new server.
     auto_start_local_agent_runtime : bool
         When ``execution_target='local'``, start a local ``agent-runtimes``
-        server on a free port and tear it down afterwards. When ``False``, the
+        server process automatically and terminate it during cleanup. The
         runner first attempts to reuse ``local_agent_base_url`` and will
         auto-start a local runtime only if that server is unreachable.
     local_agent_log_level : str
@@ -145,8 +148,8 @@ def execute_evalset_spec(
         Per-request timeout (seconds) for a single agent chat call. When an
         agent does not respond within this window the call is aborted, the case
         is recorded as failed, and execution continues with the next case. This
-        bounds hung agents without killing legitimately slow multi-agentspec
-        runs. Defaults to ``180`` (3 minutes per call).
+        avoids one hung request blocking all remaining cases/experiments/runs.
+        Defaults to ``180`` (3 minutes per call).
     log : Optional[Callable[[str], None]]
         Optional logging callback (defaults to ``print``; pass ``None`` to
         silence progress output).
@@ -211,6 +214,7 @@ def execute_evalset_spec(
         name=resolved_name,
         run_environment=backend_run_environment,
         kind=run_mode,
+        billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
     evalset_id = str((evalset_payload.get("evalset") or {}).get("id") or "")
@@ -239,6 +243,7 @@ def execute_evalset_spec(
             reports = write_eval_reports(
                 client,
                 evalset_id,
+                billing_entity_uid=billing_entity_uid,
                 account_uid=account_uid,
             )
             result["report_markdown_path"] = str(reports.get("markdown_path") or "")
@@ -268,7 +273,7 @@ def execute_evalset_spec(
                     name=f"evals-{spec_id}-{uuid.uuid4().hex[:8]}",
                     agent_spec_id=spec_id,
                     time_reservation=reservation_minutes,
-                    billable_account_uid=account_uid,
+                    billing_entity_uid=billing_entity_uid,
                 )
                 runtimes_by_spec[spec_id] = runtime
                 _emit(
@@ -316,6 +321,7 @@ def execute_evalset_spec(
                     "run_environment": run_environment,
                     "agent_spec_id": spec_id,
                 },
+                billing_entity_uid=billing_entity_uid,
                 account_uid=account_uid,
             )
             experiment_id = str(
@@ -488,6 +494,7 @@ def execute_evalset_spec(
                     metrics=metrics,
                     summary=summary,
                     report=report,
+                    billing_entity_uid=billing_entity_uid,
                     account_uid=account_uid,
                 )
                 run_id = str((run_payload.get("run") or {}).get("id") or "")
@@ -506,6 +513,7 @@ def execute_evalset_spec(
             reports = write_eval_reports(
                 client,
                 evalset_id,
+                billing_entity_uid=billing_entity_uid,
                 account_uid=account_uid,
             )
             result["report_markdown_path"] = str(reports.get("markdown_path") or "")

@@ -56,9 +56,7 @@ export interface AIAgentsWebSocketCloseInfo {
 }
 
 export type AIAgentsWebSocketConnectionState =
-  | 'connecting'
-  | 'connected'
-  | 'closed';
+  'connecting' | 'connected' | 'closed';
 
 /** Options for the WebSocket hook. */
 export interface UseAIAgentsWebSocketOptions {

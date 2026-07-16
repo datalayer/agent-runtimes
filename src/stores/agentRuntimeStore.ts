@@ -45,6 +45,7 @@ import type {
 import type { ContextSnapshotData } from '../types/context';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 import type { LoadedSkillInfo } from '../types/skills';
+import type { EphemeralSurfaceMode } from '../types/chat';
 
 // ---------------------------------------------------------------------------
 // Agent Registry types
@@ -129,6 +130,18 @@ export interface AgentRuntimeStoreState {
   monitoringCache: Record<string, MonitoringCacheEntry>;
   loadedSkillsByAgentId: Record<string, LoadedSkillInfo[]>;
   ephemeralNotebookModels: Record<string, INotebookContent>;
+  /**
+   * Persisted in-memory ephemeral document (Lexical) editor states, keyed by
+   * document id. The value is a serialized Lexical editor state (JSON string)
+   * so the document survives navigation away from and back to a runtime page.
+   */
+  ephemeralDocumentModels: Record<string, string>;
+  /**
+   * Persisted companion editor choice (`none` | `notebook` | `document`) keyed
+   * by runtime id, so the chosen editor is restored when navigating away from
+   * and back to a runtime page.
+   */
+  editorModeByRuntime: Record<string, EphemeralSurfaceMode>;
 }
 
 export interface AgentRuntimeStoreActions {
@@ -162,6 +175,11 @@ export interface AgentRuntimeStoreActions {
   ) => void;
   getEphemeralNotebookModel: (notebookId: string) => INotebookContent | null;
   clearEphemeralNotebookModel: (notebookId: string) => void;
+  setEphemeralDocumentModel: (documentId: string, model: string) => void;
+  getEphemeralDocumentModel: (documentId: string) => string | null;
+  clearEphemeralDocumentModel: (documentId: string) => void;
+  setEditorMode: (runtimeId: string, mode: EphemeralSurfaceMode) => void;
+  getEditorMode: (runtimeId: string) => EphemeralSurfaceMode | null;
 
   // ─── Runtime connection ──────────────────────────────────────────
   launchAgent: (options: LaunchAgentOptions) => Promise<AgentConnection>;
@@ -377,9 +395,11 @@ const initialWsState: Pick<
 
 const initialNotebookState: Pick<
   AgentRuntimeStoreState,
-  'ephemeralNotebookModels'
+  'ephemeralNotebookModels' | 'ephemeralDocumentModels' | 'editorModeByRuntime'
 > = {
   ephemeralNotebookModels: {},
+  ephemeralDocumentModels: {},
+  editorModeByRuntime: {},
 };
 
 const countPendingApprovals = (
@@ -553,6 +573,44 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             return { ephemeralNotebookModels: remaining };
           });
         },
+
+        setEphemeralDocumentModel: (documentId, model) => {
+          set(state => ({
+            ephemeralDocumentModels: {
+              ...state.ephemeralDocumentModels,
+              [documentId]: model,
+            },
+          }));
+        },
+
+        getEphemeralDocumentModel: documentId =>
+          get().ephemeralDocumentModels[documentId] ?? null,
+
+        clearEphemeralDocumentModel: documentId => {
+          set(state => {
+            if (!(documentId in state.ephemeralDocumentModels)) {
+              return {};
+            }
+            const { [documentId]: _removed, ...remaining } =
+              state.ephemeralDocumentModels;
+            return { ephemeralDocumentModels: remaining };
+          });
+        },
+
+        setEditorMode: (runtimeId, mode) => {
+          if (!runtimeId) {
+            return;
+          }
+          set(state => ({
+            editorModeByRuntime: {
+              ...state.editorModeByRuntime,
+              [runtimeId]: mode,
+            },
+          }));
+        },
+
+        getEditorMode: runtimeId =>
+          get().editorModeByRuntime[runtimeId] ?? null,
 
         // ── Runtime connection ────────────────────────────────────────
         ...initialRuntimeState,
@@ -1021,6 +1079,8 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             ...initialWsState,
             // Keep persisted notebook models across navigation/reset cycles.
             ephemeralNotebookModels: state.ephemeralNotebookModels,
+            ephemeralDocumentModels: state.ephemeralDocumentModels,
+            editorModeByRuntime: state.editorModeByRuntime,
           }));
         },
 
@@ -1038,6 +1098,8 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             ...initialWsState,
             // Preserve notebook models when the chat websocket reconnects.
             ephemeralNotebookModels: state.ephemeralNotebookModels,
+            ephemeralDocumentModels: state.ephemeralDocumentModels,
+            editorModeByRuntime: state.editorModeByRuntime,
           }));
         },
       }),
@@ -1059,6 +1121,8 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           monitoringCache: state.monitoringCache,
           loadedSkillsByAgentId: state.loadedSkillsByAgentId,
           ephemeralNotebookModels: state.ephemeralNotebookModels,
+          ephemeralDocumentModels: state.ephemeralDocumentModels,
+          editorModeByRuntime: state.editorModeByRuntime,
         }),
       },
     ),

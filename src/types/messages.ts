@@ -19,11 +19,7 @@ export type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
  * Tool call status for tracking execution state
  */
 export type ToolCallStatus =
-  | 'pending'
-  | 'executing'
-  | 'completed'
-  | 'failed'
-  | 'awaiting-approval';
+  'pending' | 'executing' | 'completed' | 'failed' | 'awaiting-approval';
 
 /**
  * Content part types for multi-modal messages

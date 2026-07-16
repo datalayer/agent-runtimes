@@ -18,6 +18,7 @@ export interface OtelQueryOptions {
   datalayerUrl?: string;
   apiKey?: string;
   limit?: number;
+  accountUid?: string;
 }
 
 interface MetricValueRow {
@@ -48,6 +49,7 @@ export async function fetchOtelMetricRows({
   datalayerUrl,
   apiKey,
   limit = 500,
+  accountUid,
 }: OtelQueryOptions): Promise<MetricValueRow[]> {
   if (!datalayerUrl || !apiKey) {
     return [];
@@ -61,6 +63,7 @@ export async function fetchOtelMetricRows({
     metricName: metric,
     serviceName,
     limit,
+    accountUid,
   });
   if (filtered.data.length > 0 || !serviceName) {
     return filtered.data;
@@ -69,6 +72,7 @@ export async function fetchOtelMetricRows({
   const fallback = await client.fetchMetrics({
     metricName: metric,
     limit,
+    accountUid,
   });
   return fallback.data;
 }
@@ -85,6 +89,7 @@ export interface OtelTotalTokensOptions {
   datalayerUrl?: string;
   apiKey?: string;
   limit?: number;
+  accountUid?: string;
 }
 
 export async function fetchOtelTotalTokens({
@@ -92,6 +97,7 @@ export async function fetchOtelTotalTokens({
   datalayerUrl,
   apiKey,
   limit = 500,
+  accountUid,
 }: OtelTotalTokensOptions): Promise<number> {
   const total = await fetchOtelMetricTotal({
     metric: 'agent_runtimes.prompt.turn.total_tokens',
@@ -99,6 +105,7 @@ export async function fetchOtelTotalTokens({
     datalayerUrl,
     apiKey,
     limit,
+    accountUid,
   });
   if (total > 0) {
     return total;
@@ -110,6 +117,7 @@ export async function fetchOtelTotalTokens({
     datalayerUrl,
     apiKey,
     limit,
+    accountUid,
   });
   const completion = await fetchOtelMetricTotal({
     metric: 'agent_runtimes.prompt.turn.completion_tokens',
@@ -117,6 +125,7 @@ export async function fetchOtelTotalTokens({
     datalayerUrl,
     apiKey,
     limit,
+    accountUid,
   });
   return prompt + completion;
 }
@@ -126,6 +135,7 @@ export function useOtelTotalTokens({
   datalayerUrl,
   apiKey,
   limit = 500,
+  accountUid,
 }: OtelTotalTokensOptions): string {
   const [tokensLabel, setTokensLabel] = useState('-');
 
@@ -139,6 +149,7 @@ export function useOtelTotalTokens({
           datalayerUrl,
           apiKey,
           limit,
+          accountUid,
         });
         if (cancelled) {
           return;
@@ -160,7 +171,7 @@ export function useOtelTotalTokens({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, limit, datalayerUrl, serviceName]);
+  }, [apiKey, limit, datalayerUrl, serviceName, accountUid]);
 
   return tokensLabel;
 }

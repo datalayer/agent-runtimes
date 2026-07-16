@@ -17,9 +17,9 @@ import { createPortal } from 'react-dom';
 import { IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
-  SidebarCollapseIcon,
-  SidebarExpandIcon,
   XIcon,
+  SidebarExpandIcon,
+  SidebarCollapseIcon,
 } from '@primer/octicons-react';
 import {
   useChatKeyboardShortcuts,
@@ -271,13 +271,7 @@ export function ChatSidebar({
   // Collapse toggle button for header
   const collapseButton = (
     <IconButton
-      icon={
-        isMobile
-          ? XIcon
-          : position === 'right'
-            ? SidebarCollapseIcon
-            : SidebarExpandIcon
-      }
+      icon={XIcon}
       aria-label={`Close sidebar${shortcutHint ? ` (${shortcutHint})` : ''}`}
       onClick={handleToggle}
       variant="invisible"
