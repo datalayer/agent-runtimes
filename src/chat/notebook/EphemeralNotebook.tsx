@@ -37,6 +37,7 @@ import {
   CellSidebarButton,
   JupyterReactTheme,
   notebookStore,
+  disposeServiceManager,
 } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 import { useProgressTask } from '../../hooks/useProgressTask';
@@ -206,7 +207,7 @@ export function EphemeralNotebook({
     return () => {
       cancelled = true;
       if (manager) {
-        manager.dispose();
+        disposeServiceManager(manager);
       }
     };
   }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);

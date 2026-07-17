@@ -58,7 +58,11 @@ import {
   useSystemColorMode,
   useThemeStore,
 } from '@datalayer/primer-addons';
-import { JupyterReactTheme, Kernel } from '@datalayer/jupyter-react';
+import {
+  JupyterReactTheme,
+  Kernel,
+  disposeServiceManager,
+} from '@datalayer/jupyter-react';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,
@@ -286,7 +290,7 @@ export function EphemeralDocument({
     return () => {
       cancelled = true;
       if (manager) {
-        manager.dispose();
+        disposeServiceManager(manager);
       }
     };
   }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);

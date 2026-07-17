@@ -46,6 +46,7 @@ import {
 } from '@datalayer/primer-addons';
 import {
   JupyterReactTheme,
+  disposeServiceManager,
   loadJupyterConfig,
   createServerSettings,
   getJupyterServerUrl,
@@ -396,6 +397,7 @@ export const AgentLexical: React.FC = () => {
   // Verify the agent exists AND initialise the Jupyter service manager
   useEffect(() => {
     let cancelled = false;
+    let managerForCleanup: ServiceManager.IManager | null = null;
 
     const init = async () => {
       try {
@@ -433,11 +435,15 @@ export const AgentLexical: React.FC = () => {
           getJupyterServerToken(),
         );
         const manager = new ServiceManager({ serverSettings });
+        managerForCleanup = manager;
         await manager.ready;
 
         if (!cancelled) {
           setServiceManager(manager);
           setIsReady(true);
+        } else {
+          disposeServiceManager(manager);
+          managerForCleanup = null;
         }
       } catch (err) {
         if (!cancelled) {
@@ -449,6 +455,10 @@ export const AgentLexical: React.FC = () => {
     init();
     return () => {
       cancelled = true;
+      if (managerForCleanup) {
+        disposeServiceManager(managerForCleanup);
+        managerForCleanup = null;
+      }
     };
   }, [agentId]);
 

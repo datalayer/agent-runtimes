@@ -367,7 +367,25 @@ export function useAIAgentsWebSocket(
         clearTimeout(reconnectTimer.current);
         reconnectTimer.current = null;
       }
-      wsRef.current?.close();
+      if (wsRef.current) {
+        // Avoid "WebSocket is closed before the connection is established"
+        // warnings during teardown races while still in CONNECTING.
+        if (wsRef.current.readyState === WebSocket.CONNECTING) {
+          const pending = wsRef.current;
+          pending.onopen = () => {
+            try {
+              pending.close();
+            } catch {
+              // no-op
+            }
+          };
+          pending.onerror = () => {
+            // no-op: expected while tearing down a pending handshake
+          };
+        } else {
+          wsRef.current.close();
+        }
+      }
       wsRef.current = null;
       setConnectionState('closed');
     };

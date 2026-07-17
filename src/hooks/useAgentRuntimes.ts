@@ -825,12 +825,70 @@ export function useDeleteAgentRuntime() {
   const { requestDatalayer } = useDatalayer({ notifyOnError: false });
   const queryClient = useQueryClient();
 
+  const getErrorStatus = (error: unknown): number | undefined => {
+    if (!error || typeof error !== 'object') {
+      return undefined;
+    }
+    const response = (error as { response?: { status?: number } }).response;
+    return typeof response?.status === 'number' ? response.status : undefined;
+  };
+
+  const getErrorText = (error: unknown): string => {
+    if (!error || typeof error !== 'object') {
+      return '';
+    }
+    const responseData = (
+      error as {
+        response?: { data?: { detail?: string; message?: string } };
+        message?: string;
+      }
+    ).response?.data;
+    return String(
+      responseData?.detail ||
+        responseData?.message ||
+        (error as { message?: string }).message ||
+        '',
+    ).toLowerCase();
+  };
+
   return useMutation({
     mutationFn: async (podName: string) => {
-      return requestDatalayer({
-        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
-        method: 'DELETE',
-      });
+      try {
+        return await requestDatalayer({
+          url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
+          method: 'DELETE',
+        });
+      } catch (error) {
+        const status = getErrorStatus(error);
+        const message = getErrorText(error);
+        const maybeAlreadyDeleted =
+          status === 404 ||
+          message.includes('no reservation') ||
+          message.includes('unknown reservation') ||
+          message.includes('not found');
+
+        if (!maybeAlreadyDeleted) {
+          throw error;
+        }
+
+        // The backend can return an IAM reservation error even after the pod
+        // has already been deleted successfully. Confirm state by checking if
+        // the runtime detail endpoint still exists.
+        try {
+          await requestDatalayer({
+            url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
+            method: 'GET',
+          });
+          // Runtime still exists: propagate original DELETE failure.
+          throw error;
+        } catch (checkError) {
+          const checkStatus = getErrorStatus(checkError);
+          if (checkStatus === 404) {
+            return { success: true, recovered: true } as const;
+          }
+          throw error;
+        }
+      }
     },
     onSuccess: (_data, podName) => {
       // Prune the pod from the runtimes store immediately so the remote service
@@ -963,6 +1021,10 @@ export interface UseAgentsRuntimesReturn {
   runtimesError: unknown;
   refetchRuntimes: () => Promise<{ data?: AgentRuntimeData[] }>;
   refreshRuntimes: () => void;
+  terminateRuntimeByPod: (
+    podName: string,
+    options?: { beforeTerminate?: () => void | Promise<void> },
+  ) => Promise<unknown>;
   deleteRuntimeByPod: (podName: string) => Promise<unknown>;
   createRuntime: (
     data: CreateAgentRuntimeRequest,
@@ -989,6 +1051,23 @@ export function useAgentsRuntimes(
   const deleteRuntimeMutation = useDeleteAgentRuntime();
   const refreshRuntimes = useRefreshAgentRuntimes();
 
+  const terminateRuntimeByPod = useCallback(
+    async (
+      podName: string,
+      options?: { beforeTerminate?: () => void | Promise<void> },
+    ) => {
+      const normalizedPodName = String(podName || '').trim();
+      if (!normalizedPodName) {
+        return;
+      }
+      if (options?.beforeTerminate) {
+        await options.beforeTerminate();
+      }
+      return deleteRuntimeMutation.mutateAsync(normalizedPodName);
+    },
+    [deleteRuntimeMutation],
+  );
+
   return useMemo(
     () => ({
       runtimes: runtimesQuery.data ?? EMPTY_RUNTIMES,
@@ -997,8 +1076,9 @@ export function useAgentsRuntimes(
       runtimesError: runtimesQuery.error,
       refetchRuntimes: () => runtimesQuery.refetch(),
       refreshRuntimes,
+      terminateRuntimeByPod,
       deleteRuntimeByPod: async (podName: string) =>
-        deleteRuntimeMutation.mutateAsync(podName),
+        terminateRuntimeByPod(podName),
       createRuntime: async (data: CreateAgentRuntimeRequest) =>
         createRuntimeMutation.mutateAsync(data),
     }),
@@ -1009,6 +1089,7 @@ export function useAgentsRuntimes(
       runtimesQuery.error,
       runtimesQuery.refetch,
       refreshRuntimes,
+      terminateRuntimeByPod,
       createRuntimeMutation,
       deleteRuntimeMutation,
     ],

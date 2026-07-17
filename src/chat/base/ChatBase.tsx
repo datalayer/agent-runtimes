@@ -25,6 +25,7 @@ import React, {
   useState,
 } from 'react';
 import { Text, Spinner, IconButton } from '@primer/react';
+import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
@@ -112,6 +113,71 @@ import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
 const sentPendingPromptKeys = new Set<string>();
+
+/**
+ * Inline skeleton placeholder rendered inside the companion surface (notebook
+ * or document) while the agent runtime is still launching and the real
+ * ephemeral notebook/document is not yet ready. Shown in place of the surface
+ * content (never as an overlay) so structure appears as early as possible.
+ */
+function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
+  return (
+    <Box
+      aria-label={
+        mode === 'notebook' ? 'Preparing notebook…' : 'Preparing document…'
+      }
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+        p: 4,
+      }}
+    >
+      {mode === 'notebook' ? (
+        <>
+          {/* A few placeholder "cells". */}
+          {[0, 1, 2].map(i => (
+            <Box
+              key={i}
+              sx={{
+                p: 3,
+                border: '1px solid',
+                borderColor: 'border.muted',
+                borderRadius: 2,
+                bg: 'canvas.subtle',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              <SkeletonText lines={1} />
+              <SkeletonText lines={i === 0 ? 2 : 3} />
+            </Box>
+          ))}
+        </>
+      ) : (
+        <Box
+          sx={{
+            maxWidth: 860,
+            width: '100%',
+            mx: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}
+        >
+          <SkeletonText lines={1} />
+          <SkeletonText lines={4} />
+          <SkeletonText lines={3} />
+          <SkeletonText lines={5} />
+        </Box>
+      )}
+    </Box>
+  );
+}
 
 // JupyterReactTheme forwards unknown props (e.g. `style`) to its inner Primer
 // `BaseStyles`. `style` is not part of its typings, so we widen the type here.
@@ -3887,7 +3953,11 @@ function ChatBaseInner({
                     }),
             }}
           >
-            {notebookVisible ? (
+            {launching || overlay ? (
+              <CompanionSurfaceSkeleton
+                mode={notebookVisible ? 'notebook' : 'document'}
+              />
+            ) : notebookVisible ? (
               <EphemeralNotebook
                 notebookId={ephemeralNotebookId}
                 runtimePodName={runtimeId || activeAgentId}
@@ -4057,7 +4127,8 @@ function ChatBaseInner({
       {/* Launching overlay — shown while the agent runtime is still starting.
           Keeps the plain chat shell visible (header, disabled input, disabled
           controls) with a centered spinner so the view appears immediately
-          when the agent begins to be created. */}
+          when the agent begins to be created. The companion surface renders its
+          own inline skeletons underneath. */}
       {launching && !overlay && (
         <Box
           sx={{
