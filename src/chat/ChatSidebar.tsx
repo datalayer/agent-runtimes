@@ -391,27 +391,31 @@ export function ChatSidebar({
       <Box
         ref={sidebarRef}
         className={className}
+        // Frequently-changing pixel dimensions (resizable width and the
+        // viewport-derived height that updates on scroll/resize) are applied
+        // via the inline `style` prop instead of `sx`. Passing them through
+        // `sx` makes styled-components generate a brand-new, never-reused class
+        // for every unique pixel value, quickly exceeding its 200-class warning
+        // threshold on the shared Box styled component.
+        style={
+          isMobile
+            ? { width: '100%', height: '100%' }
+            : {
+                width: typeof width === 'number' ? `${width}px` : width,
+                height: desktopViewportHeight
+                  ? `${desktopViewportHeight}px`
+                  : 'calc(100dvh - 8px)',
+                maxHeight: desktopViewportHeight
+                  ? `${desktopViewportHeight}px`
+                  : 'calc(100dvh - 8px)',
+              }
+        }
         sx={{
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           alignSelf: 'stretch',
-          width: isMobile
-            ? '100%'
-            : typeof width === 'number'
-              ? `${width}px`
-              : width,
-          height: isMobile
-            ? '100%'
-            : desktopViewportHeight
-              ? `${desktopViewportHeight}px`
-              : 'calc(100dvh - 8px)',
           minHeight: 0,
-          maxHeight: isMobile
-            ? '100%'
-            : desktopViewportHeight
-              ? `${desktopViewportHeight}px`
-              : 'calc(100dvh - 8px)',
           marginBlock: isMobile ? 0 : '4px',
           flex: isMobile ? '1 1 auto' : '0 0 auto',
           bg: 'canvas.default',

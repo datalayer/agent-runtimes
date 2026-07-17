@@ -21,7 +21,6 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Spinner } from '@primer/react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
@@ -40,6 +39,7 @@ import {
   notebookStore,
 } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { useProgressTask } from '../../hooks/useProgressTask';
 import type { EphemeralNotebookToolbarComponent } from '../../types/chat';
 
 /**
@@ -219,6 +219,11 @@ export function EphemeralNotebook({
   const activeStartDefaultKernel = runtimeStartDefaultKernel;
   const ToolbarComponent = toolbarComponent || NotebookToolbar;
 
+  const isRuntimeStarting = Boolean(
+    String(runtimePodName || '').trim() && !activeServiceManager,
+  );
+  useProgressTask(`ephemeral-notebook-start-${notebookId}`, isRuntimeStarting);
+
   useEffect(() => {
     // Read the CURRENT live notebook model straight from the notebook store.
     // The `NotebookAdapter` exposes `notebook` (the widget, whose `.model` is
@@ -349,20 +354,7 @@ export function EphemeralNotebook({
             </Box>
           </JupyterReactTheme>
         </DatalayerThemeProvider>
-      ) : (
-        <Box
-          sx={{
-            p: 3,
-            color: 'fg.muted',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
-        >
-          <Spinner size="small" />
-          Starting notebook…
-        </Box>
-      )}
+      ) : null}
     </Box>
   );
 }

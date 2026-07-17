@@ -36,6 +36,22 @@ function useBaseUrl(): string {
   return config?.aiAgentsUrl ?? DEFAULT_SERVICE_URLS.AI_AGENTS;
 }
 
+/**
+ * Redact sensitive query params (e.g. the auth `token`) from a WebSocket URL
+ * before logging it.
+ */
+function redactWsUrl(wsUrl: string): string {
+  try {
+    const url = new URL(wsUrl);
+    if (url.searchParams.has('token')) {
+      url.searchParams.set('token', 'REDACTED');
+    }
+    return url.toString();
+  } catch {
+    return wsUrl.replace(/([?&]token=)[^&]*/gi, '$1REDACTED');
+  }
+}
+
 // ─── Types ───────────────────────────────────────────────────────────
 
 /** A message pushed by the server. */
@@ -220,7 +236,7 @@ export function useAIAgentsWebSocket(
         setReconnectAttempt(0);
         setConnectionState('connected');
         setLastClose(null);
-        console.debug('[ws:connect] url=%s', wsUrl);
+        console.debug('[ws:connect] url=%s', redactWsUrl(wsUrl));
         onOpenRef.current?.();
 
         // Subscribe to extra channels.

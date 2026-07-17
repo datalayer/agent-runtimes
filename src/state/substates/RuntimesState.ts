@@ -43,6 +43,14 @@ export type RuntimesState = {
    */
   refreshRuntimePods: () => Promise<void>;
   /**
+   * Remove a runtime pod from the local state by its pod name.
+   *
+   * Used to prune a pod immediately after it is deleted, without waiting for
+   * the next `refreshRuntimePods()` poll tick. This lets the remote service
+   * managers dispose right away and stop polling the (now dead) pod ingress.
+   */
+  removeRuntimePod: (podName: string) => void;
+  /**
    * Cached runtime models.
    */
   runtimeModels: readonly IRuntimeModel[];
@@ -123,6 +131,19 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
       }
     },
     /**
+     * Remove a runtime pod by its pod name.
+     */
+    removeRuntimePod: (podName: string) => {
+      if (!podName) {
+        return;
+      }
+      const current = get().runtimePods;
+      const next = current.filter(pod => pod.pod_name !== podName);
+      if (next.length !== current.length) {
+        set({ runtimePods: next });
+      }
+    },
+    /**
      * Cached runtime models.
      */
     runtimeModels: [],
@@ -131,12 +152,13 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
      */
     addRuntimeModel: (model: IRuntimeModel) => {
       const kernels = get().runtimeModels;
-      // TODO
-      // We need to review the IRuntimeModel/IRuntimePod/Kernel.IModel and their id/uid handling.
-      // The id is the kernel id, which is no more always present for some reasons.
-      // So we need to also check the uid of the model.
+      // Identity check: a runtime may not have a kernel `id` yet (it appears
+      // only once a kernel is attached), so fall back to the stable pod `uid`.
+      // See the IRuntimeModel / IRuntimePod / Kernel.IModel docs in models/Runtime.ts.
       const index = kernels.findIndex(
-        m => (model.id === m.id || (model as any).uid === (m as any).uid) ?? -1,
+        m =>
+          (model.id && model.id === m.id) ||
+          (!!model.uid && model.uid === m.uid),
       );
       if (index < 0) {
         set({ runtimeModels: [...kernels, model] });

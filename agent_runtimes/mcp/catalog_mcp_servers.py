@@ -207,6 +207,29 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
     required_env_vars=["KAGGLE_TOKEN:0.0.1"],
 )
 
+ODOO_MCP_SERVER_0_0_1 = MCPServer(
+    id="odoo",
+    version="0.0.1",
+    name="Odoo",
+    description="Odoo ERP operations (search, invoices, journals, reconciliations)",
+    icon="server",
+    emoji="📚",
+    command="uvx",
+    args=[
+        "mcp-server-odoo",
+    ],
+    transport="stdio",
+    enabled=True,
+    tools=[],
+    env={
+        "ODOO_URL": "${ODOO_URL}",
+        "ODOO_API_KEY": "${ODOO_API_KEY}",
+        "ODOO_DB": "${ODOO_DB}",
+        "ODOO_LOCALE": "${ODOO_LOCALE}",
+    },
+    required_env_vars=[],
+)
+
 SALESFORCE_MCP_SERVER_0_0_1 = MCPServer(
     id="salesforce",
     version="0.0.1",
@@ -294,6 +317,7 @@ MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
     "huggingface": HUGGINGFACE_MCP_SERVER_0_0_1,
     "kaggle": KAGGLE_MCP_SERVER_0_0_1,
+    "odoo": ODOO_MCP_SERVER_0_0_1,
     "salesforce": SALESFORCE_MCP_SERVER_0_0_1,
     "slack": SLACK_MCP_SERVER_0_0_1,
     "tavily": TAVILY_MCP_SERVER_0_0_1,

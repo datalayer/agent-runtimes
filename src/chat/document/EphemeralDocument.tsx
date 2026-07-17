@@ -89,6 +89,7 @@ import {
 import { editorConfig } from '../../examples/lexical/editorConfig';
 import { useLexicalTools } from '../../tools/adapters/agent-runtimes/lexicalHooks';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { useProgressTask } from '../../hooks/useProgressTask';
 import type { FrontendToolDefinition } from '../../types/tools';
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
@@ -291,6 +292,10 @@ export function EphemeralDocument({
   }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
 
   const activeServiceManager = runtimeServiceManager;
+  const isRuntimeStarting = Boolean(
+    String(runtimePodName || '').trim() && !activeServiceManager,
+  );
+  useProgressTask(`ephemeral-document-start-${documentId}`, isRuntimeStarting);
 
   // Build the initial config once per documentId, without the demo content so
   // the document starts empty and is either restored or filled by the agent.
@@ -466,9 +471,7 @@ export function EphemeralDocument({
             </Box>
           </JupyterReactTheme>
         </DatalayerThemeProvider>
-      ) : (
-        <Box sx={{ p: 3, color: 'fg.muted' }}>Starting document…</Box>
-      )}
+      ) : null}
     </Box>
   );
 }

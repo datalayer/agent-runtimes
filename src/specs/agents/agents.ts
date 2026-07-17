@@ -21,11 +21,13 @@ import {
   GITHUB_MCP_SERVER_0_0_1,
   GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
   KAGGLE_MCP_SERVER_0_0_1,
+  ODOO_MCP_SERVER_0_0_1,
   SALESFORCE_MCP_SERVER_0_0_1,
   SLACK_MCP_SERVER_0_0_1,
   TAVILY_MCP_SERVER_0_0_1,
 } from '../mcpServers';
 import {
+  ACCOUNTING_SKILL_SPEC_0_0_1,
   CRAWL_SKILL_SPEC_0_0_1,
   EVENTS_SKILL_SPEC_0_0_1,
   GITHUB_SKILL_SPEC_0_0_1,
@@ -73,6 +75,8 @@ const MCP_SERVER_MAP: Record<string, any> = {
   'google-workspace': GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
   'kaggle:0.0.1': KAGGLE_MCP_SERVER_0_0_1,
   kaggle: KAGGLE_MCP_SERVER_0_0_1,
+  'odoo:0.0.1': ODOO_MCP_SERVER_0_0_1,
+  odoo: ODOO_MCP_SERVER_0_0_1,
   'salesforce:0.0.1': SALESFORCE_MCP_SERVER_0_0_1,
   salesforce: SALESFORCE_MCP_SERVER_0_0_1,
   'slack:0.0.1': SLACK_MCP_SERVER_0_0_1,
@@ -85,6 +89,8 @@ const MCP_SERVER_MAP: Record<string, any> = {
  * Map skill IDs to SkillSpec objects, converting to AgentSkillSpec shape.
  */
 const SKILL_MAP: Record<string, any> = {
+  'accounting:0.0.1': ACCOUNTING_SKILL_SPEC_0_0_1,
+  accounting: ACCOUNTING_SKILL_SPEC_0_0_1,
   'crawl:0.0.1': CRAWL_SKILL_SPEC_0_0_1,
   crawl: CRAWL_SKILL_SPEC_0_0_1,
   'events:0.0.1': EVENTS_SKILL_SPEC_0_0_1,
@@ -3333,6 +3339,62 @@ export const FINANCIAL_AGENTSPEC_0_0_1: Agentspec = {
   guardrails: undefined,
   evals: undefined,
   codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const GALLERY_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'gallery-accountant',
+  version: '0.0.1',
+  name: 'Accountant',
+  description: `Work with Odoo accounting data to reconcile invoices and payments, analyze journal balances, and prepare close-ready summaries.`,
+  tags: ['gallery', 'accounting', 'finance', 'odoo', 'reconciliation'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
+  skills: [
+    SKILL_MAP['accounting:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['accounting:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'book',
+  emoji: '🧮',
+  color: '#1F883D',
+  suggestions: [
+    'Connect to Odoo and list unpaid customer invoices older than 30 days, grouped by customer with totals and top delinquencies.',
+    'Compare posted payments against open invoices for this month and flag likely reconciliation mismatches with proposed next checks.',
+    'Build a close summary with journal balance deltas versus last month and highlight unusual movements.',
+  ],
+  welcomeMessage:
+    'Hi! I am your Accountant agent for Odoo workflows. I can help reconcile invoices and payments, analyze journals, and prepare close-ready summaries.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a specialized assistant for this gallery workflow: Accountant. Objective: Use Odoo data to perform accounting workflows including reconciliation, aging analysis, journal checks, and close summaries. Use the Odoo MCP server for ERP operations and the notebook/runtime tools for calculations and structured outputs. Keep results concise, auditable, and action-oriented.`,
+  systemPromptCodemodeAddons: `Prefer deterministic steps, preserve traceability of calculations, and present clear exceptions with recommended follow-up actions.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
   output: undefined,
   advanced: undefined,
   authorizationPolicy: undefined,
@@ -6650,6 +6712,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'extract-data-from-files': EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1,
   'financial-viz': FINANCIAL_VIZ_AGENTSPEC_0_0_1,
   financial: FINANCIAL_AGENTSPEC_0_0_1,
+  'gallery-accountant': GALLERY_ACCOUNTANT_AGENTSPEC_0_0_1,
   'gallery-agent-critic-loop-for-analysis':
     GALLERY_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1,
   'gallery-agent-reviews-sql': GALLERY_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1,

@@ -3896,11 +3896,7 @@ function ChatBaseInner({
                 toolbarComponent={ephemeralNotebookToolbar}
               />
             ) : (
-              <React.Suspense
-                fallback={
-                  <Box sx={{ p: 3, color: 'fg.muted' }}>Loading document…</Box>
-                }
-              >
+              <React.Suspense fallback={null}>
                 <EphemeralDocument
                   documentId={ephemeralDocumentId}
                   runtimePodName={runtimeId || activeAgentId}

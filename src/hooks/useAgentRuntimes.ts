@@ -20,6 +20,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
 import { useIAMStore } from '@datalayer/core/lib/state';
+import { runtimesStore } from '../state';
 import {
   agentRuntimeStore,
   useAgentRuntimeStore,
@@ -832,6 +833,11 @@ export function useDeleteAgentRuntime() {
       });
     },
     onSuccess: (_data, podName) => {
+      // Prune the pod from the runtimes store immediately so the remote service
+      // managers dispose right away and stop polling the now-dead pod ingress
+      // (otherwise `/api/kernels` requests keep firing until the next
+      // `refreshRuntimePods()` poll tick, producing CORS errors).
+      runtimesStore.getState().removeRuntimePod(podName);
       queryClient.setQueriesData(
         { queryKey: agentQueryKeys.agentRuntimes.lists() },
         (current: AgentRuntimeData[] | undefined) => {

@@ -18,6 +18,24 @@ from agent_runtimes.types import SkillSpec
 # Skill Definitions
 # ============================================================================
 
+ACCOUNTING_SKILL_SPEC_0_0_1 = SkillSpec(
+    id="accounting",
+    version="0.0.1",
+    name="Accounting Skill",
+    description="Accounting analysis workflows for reconciliation, close, variance, and audit-ready summaries",
+    module="agent_skills.skills.accounting",
+    package=None,
+    method=None,
+    path=None,
+    envvars=[],
+    optional_env_vars=[],
+    dependencies=["pandas>=2.0.0"],
+    tags=["accounting", "finance", "reconciliation", "close"],
+    icon="book",
+    emoji="🧮",
+    enabled=True,
+)
+
 CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     id="crawl",
     version="0.0.1",
@@ -131,6 +149,7 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
 # ============================================================================
 
 SKILLS_CATALOG: Dict[str, SkillSpec] = {
+    "accounting": ACCOUNTING_SKILL_SPEC_0_0_1,
     "crawl": CRAWL_SKILL_SPEC_0_0_1,
     "events": EVENTS_SKILL_SPEC_0_0_1,
     "github": GITHUB_SKILL_SPEC_0_0_1,
