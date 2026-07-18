@@ -3,7 +3,7 @@
 
 """A2UI support assistant agent helpers."""
 
-from .agent import handle_support_action, run_support_assistant
+from .support_assistant_agent import handle_support_action, run_support_assistant
 
 __all__ = [
     "run_support_assistant",

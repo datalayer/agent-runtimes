@@ -5,14 +5,13 @@ SHELL=/bin/bash
 
 .DEFAULT_GOAL := default
 
-
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
 	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-lexical jupyter-server agent-serve \
-	docker-build docker-push docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
+	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
-	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
+	loop-chat loop-chat-simple loop-chat-data-acquisition loop-chat-financial loop-chat-demo loop-chat-demo-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
@@ -23,6 +22,7 @@ AGENT_SERVE_NAME ?= dla-1
 AGENT_SERVE_PROTOCOL ?= vercel-ai
 
 DOCKER_IMAGE ?= datalayer/agent-nodes
+AGENT_RUNTIME_IMAGE ?= datalayer/agent-runtime
 DOCKER_TAG ?= latest
 DOCKER_PLATFORM ?=
 
@@ -312,13 +312,21 @@ agent-serve: # agent-server
 	  --port 8765 \
 	  --debug
 
-docker-build: ## build Docker image (override DOCKER_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
-	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile .
+docker-build: ## build Agent Node Docker image (override DOCKER_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
+	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile.agent-node .
 
 docker-push: ## push Docker image
 	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
 
 docker-release: docker-build docker-push ## build and push Docker image
+
+agent-runtime-docker-build: ## build Agent Runtime (headless) Docker image (override AGENT_RUNTIME_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
+	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(AGENT_RUNTIME_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile.agent-runtime .
+
+agent-runtime-docker-push: ## push Agent Runtime Docker image
+	docker push $(AGENT_RUNTIME_IMAGE):$(DOCKER_TAG)
+
+agent-runtime-docker-release: agent-runtime-docker-build agent-runtime-docker-push ## build and push Agent Runtime Docker image
 
 node-agent-artifact-build: ## build frontend artifacts for agent-node Docker image
 	VITE_APP_TARGET=agent-node $(MAKE) build
@@ -348,36 +356,36 @@ agents: # agents
 	  --host 0.0.0.0 \
 	  --port 8765
 
-ag-chat: # ag-chat
+loop-chat: # loop-chat
 	@$(BEDROCK_ENV) \
-		ag chat --eggs
+		loop chat --eggs
 
-ag-chat-simple: # ag-chat-simple
+loop-chat-simple: # loop-chat-simple
 	@$(BEDROCK_ENV) \
-		ag chat --eggs --agentspec-id demo-simple
+		loop chat --eggs --agentspec-id demo-simple
 
-ag-chat-data-acquisition: # ag-chat-data-acquisition KAGGLE_TOKEN and TAVILY_API_KEY must be set in env
+loop-chat-data-acquisition: # loop-chat-data-acquisition KAGGLE_TOKEN and TAVILY_API_KEY must be set in env
 	@$(BEDROCK_ENV) \
-		ag chat --eggs --agentspec-id data-acquisition
+		loop chat --eggs --agentspec-id data-acquisition
 
-ag-chat-financial: # ag-chat-financial ALPHA_VANTAGE_API_KEY must be set in env
+loop-chat-financial: # loop-chat-financial ALPHA_VANTAGE_API_KEY must be set in env
 	@$(BEDROCK_ENV) \
-		ag chat --eggs --agentspec-id financial
+		loop chat --eggs --agentspec-id financial
 
-ag-chat-demo: # ag-chat-demo
+loop-chat-demo: # loop-chat-demo
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		ag chat \
+		loop chat \
 		  --eggs \
 		  --suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
 		  --agentspec-id information-routing
 
-ag-chat-demo-nocodemode: # ag-chat-demo-nocodemode
+loop-chat-demo-nocodemode: # loop-chat-demo-nocodemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		ag chat \
+		loop chat \
 		--eggs \
 		--agentspec-id information-routing \
 		--suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \

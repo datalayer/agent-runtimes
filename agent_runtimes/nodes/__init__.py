@@ -1,4 +1,4 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Scripts for the Streamlit sklearn example application."""
+"""Local Agent Node background services (health, sync, tunnel)."""

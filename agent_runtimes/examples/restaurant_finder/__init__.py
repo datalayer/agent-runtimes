@@ -3,7 +3,7 @@
 
 """A2UI Restaurant Finder agent using pydantic-ai."""
 
-from .agent import (
+from .restaurant_finder_agent import (
     RestaurantDeps,
     create_restaurant_agent,
     handle_a2ui_action,

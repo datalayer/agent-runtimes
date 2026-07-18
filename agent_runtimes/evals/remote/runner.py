@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2025 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 # Copyright (c) 2023-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
@@ -23,13 +20,15 @@ import uuid
 from typing import Any, Callable, Optional
 from urllib.parse import urlparse
 
-from agent_runtimes.agents import (
+from agent_runtimes.client.agent_client import (
     LocalAgentRuntime,
+    ensure_local_agent,
+    start_local_agent_runtime,
+)
+from agent_runtimes.utils.agent_utils import (
     compute_time_reservation_minutes,
     create_cloud_agent_runtime,
-    ensure_local_agent,
     resolve_environment_burning_rate,
-    start_local_agent_runtime,
     teardown_agent_execution_resources,
 )
 from agent_runtimes.client import AgentClient

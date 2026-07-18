@@ -1,10 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2025 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
-"""Notebook and code file utilities for Datalayer Core."""
+"""Notebook and code file utilities."""
 
 import typing as t
 from pathlib import Path

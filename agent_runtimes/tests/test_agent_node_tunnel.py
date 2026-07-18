@@ -9,7 +9,7 @@ from typing import cast
 
 import pytest
 
-from agent_runtimes import agent_node_tunnel as tunnel
+from agent_runtimes.nodes import agent_node_tunnel as tunnel
 from agent_runtimes.adapters.base import AgentContext, AgentResponse, BaseAgent
 from agent_runtimes.routes import acp as acp_route
 

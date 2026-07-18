@@ -156,7 +156,7 @@ Adds owner identity, status, timestamps, capabilities, plus the latest
 
 ## Synchronization Loop
 
-The background sync task in `agent_runtimes/agent_node_sync.py`:
+The background sync task in `agent_runtimes/nodes/agent_node_sync.py`:
 
 1. Registers with the central service. On first call, omits `node_id`;
    captures the assigned ULID from the response and persists it.
