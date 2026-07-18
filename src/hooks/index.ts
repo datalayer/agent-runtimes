@@ -119,7 +119,17 @@ export {
   AGENT_QUERY_OPTIONS,
   useAgentLifecycleStore,
   getAgentLifecycleKey,
+  markRuntimePodDeleted,
+  clearRuntimePodDeleted,
 } from './useAgentRuntimes';
+
+/**
+ * Central registry of ServiceManagers connected to agent sandbox pods.
+ */
+export {
+  registerSandboxServiceManager,
+  disposeSandboxServiceManagers,
+} from '../services/sandboxServiceManagers';
 
 /**
  * Agent-runtime WebSocket stream hook.

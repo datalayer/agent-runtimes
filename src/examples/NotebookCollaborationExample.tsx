@@ -168,7 +168,7 @@ const NotebookCollaborationExample = (
               </Box>
               {serviceManager ? (
                 <Notebook
-                  id={`${NOTEBOOK_ID}-collab-1`}
+                  id={NOTEBOOK_ID}
                   height="calc(100vh - 280px)"
                   nbformat={nbformat}
                   readonly={readonly}
@@ -203,7 +203,7 @@ const NotebookCollaborationExample = (
               </Box>
               {serviceManager ? (
                 <Notebook
-                  id={`${NOTEBOOK_ID}-collab-2`}
+                  id={NOTEBOOK_ID}
                   height="calc(100vh - 280px)"
                   nbformat={nbformat}
                   readonly={readonly}

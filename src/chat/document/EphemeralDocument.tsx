@@ -93,6 +93,7 @@ import {
 import { editorConfig } from '../../examples/lexical/editorConfig';
 import { useLexicalTools } from '../../tools/adapters/agent-runtimes/lexicalHooks';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
 import { useProgressTask } from '../../hooks/useProgressTask';
 import type { FrontendToolDefinition } from '../../types/tools';
 
@@ -244,6 +245,7 @@ export function EphemeralDocument({
   useEffect(() => {
     let cancelled = false;
     let manager: ServiceManager | null = null;
+    let unregisterManager: (() => void) | null = null;
 
     const connectRuntime = async () => {
       const baseUrl = String(selectedRuntime?.url || '').trim();
@@ -263,6 +265,12 @@ export function EphemeralDocument({
           appendToken: true,
         });
         manager = new ServiceManager({ serverSettings });
+        // Central sandbox registry: runtime terminate/pause disposes this
+        // manager immediately so its pollers cannot hit the dead pod ingress.
+        unregisterManager = registerSandboxServiceManager(
+          String(selectedRuntime?.pod_name || ''),
+          manager,
+        );
         await manager.ready;
         const kernelConnection = await manager.kernels.startNew();
         if (!cancelled) {
@@ -289,6 +297,7 @@ export function EphemeralDocument({
 
     return () => {
       cancelled = true;
+      unregisterManager?.();
       if (manager) {
         disposeServiceManager(manager);
       }

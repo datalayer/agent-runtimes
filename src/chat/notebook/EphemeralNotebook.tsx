@@ -40,6 +40,7 @@ import {
   disposeServiceManager,
 } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
 import { useProgressTask } from '../../hooks/useProgressTask';
 import type { EphemeralNotebookToolbarComponent } from '../../types/chat';
 
@@ -163,6 +164,7 @@ export function EphemeralNotebook({
   useEffect(() => {
     let cancelled = false;
     let manager: ServiceManager | null = null;
+    let unregisterManager: (() => void) | null = null;
 
     const connectRuntime = async () => {
       const baseUrl = String(selectedRuntime?.url || '').trim();
@@ -184,6 +186,12 @@ export function EphemeralNotebook({
           appendToken: true,
         });
         manager = new ServiceManager({ serverSettings });
+        // Central sandbox registry: runtime terminate/pause disposes this
+        // manager immediately so its pollers cannot hit the dead pod ingress.
+        unregisterManager = registerSandboxServiceManager(
+          String(selectedRuntime?.pod_name || ''),
+          manager,
+        );
         await manager.ready;
         await manager.kernels.refreshRunning();
         const runningKernel = [...manager.kernels.running()][0];
@@ -206,6 +214,7 @@ export function EphemeralNotebook({
 
     return () => {
       cancelled = true;
+      unregisterManager?.();
       if (manager) {
         disposeServiceManager(manager);
       }

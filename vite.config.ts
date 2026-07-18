@@ -257,9 +257,19 @@ export default defineConfig(({ mode, command }) => {
       '@jupyterlab/rendermime',
       '@jupyterlab/translation',
       '@jupyterlab/ui-components',
+      // Pre-bundle mathjax-full so esbuild resolves its CommonJS named exports
+      // (e.g. `import { mathjax }`) to real values instead of undefined, and so
+      // the esbuildOptions.define below replaces its __dirname references.
+      'mathjax-full',
     ],
     exclude: ['keytar', '@vscode/keytar'],
     esbuildOptions: {
+      // Ensure Node globals referenced by CJS deps (mathjax-full) are also
+      // replaced during dependency pre-bundling, matching the top-level define.
+      define: {
+        __dirname: JSON.stringify('/'),
+        __filename: JSON.stringify('/index.js'),
+      },
       loader: {
         '.whl': 'text',
         '.lexical': 'json',
@@ -359,6 +369,13 @@ export default defineConfig(({ mode, command }) => {
     define: {
       global: 'globalThis',
       __webpack_public_path__: '""',
+      // mathjax-full (and a few other CJS deps) reference Node's __dirname /
+      // __filename at module scope. In production these are patched by the
+      // `patch-node-references-in-bundle` plugin (generateBundle), but that
+      // hook does not run under `vite serve`, so define them here to cover dev
+      // mode too. Value mirrors the production patch ('/').
+      __dirname: JSON.stringify('/'),
+      __filename: JSON.stringify('/index.js'),
     },
     assetsInclude: ['**/*.whl', '**/*.raw.css', '**/*.lexical'],
     build,

@@ -3769,15 +3769,17 @@ function ChatBaseInner({
         messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
         onRespond={handleRespond}
         emptyContent={
-          <ChatEmptyState
-            emptyState={emptyState}
-            brandIcon={brandIcon}
-            description={resolvedDescription}
-            suggestions={resolvedSuggestions}
-            submitOnSuggestionClick={submitOnSuggestionClick}
-            onSuggestionSubmit={handleSuggestionSubmit}
-            onSuggestionFill={handleSuggestionFill}
-          />
+          launching ? null : (
+            <ChatEmptyState
+              emptyState={emptyState}
+              brandIcon={brandIcon}
+              description={resolvedDescription}
+              suggestions={resolvedSuggestions}
+              submitOnSuggestionClick={submitOnSuggestionClick}
+              onSuggestionSubmit={handleSuggestionSubmit}
+              onSuggestionFill={handleSuggestionFill}
+            />
+          )
         }
       />
     </Box>

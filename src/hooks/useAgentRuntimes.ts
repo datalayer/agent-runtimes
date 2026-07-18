@@ -44,6 +44,7 @@ import type {
   CreateRuntimeApiResponse,
 } from '../types/agents-lifecycle';
 import { ServiceManager } from '@jupyterlab/services/lib/manager';
+import { disposeSandboxServiceManagers } from '../services/sandboxServiceManagers';
 
 export type RuntimeCreationTarget = 'backend-services' | 'local-agent-runtimes';
 
@@ -154,6 +155,65 @@ export const agentQueryKeys = {
 // ═══════════════════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Session tombstones for runtime pods deleted from this client.
+ *
+ * After a DELETE succeeds, the control plane can keep returning the pod
+ * (status \"running\") for a few seconds. Without a tombstone, the immediate
+ * list refetch re-adds the dead pod to the query cache (and re-seeds the
+ * per-pod detail cache), so consumers rebuild Jupyter `ServiceManager`s
+ * against the dead ingress — producing endless CORS `/api/kernels` errors.
+ *
+ * Entries expire after a TTL so a pod that legitimately reappears later
+ * (e.g. resumed from a checkpoint under the same pod name) is not hidden
+ * forever; resume/create mutations also clear the tombstone eagerly.
+ */
+const DELETED_POD_TOMBSTONE_TTL_MS = 5 * 60 * 1000;
+const deletedRuntimePodTombstones = new Map<string, number>();
+
+/** Mark a runtime pod as deleted by this client (tombstone). */
+export function markRuntimePodDeleted(podName: string): void {
+  const normalized = String(podName || '').trim();
+  if (normalized) {
+    deletedRuntimePodTombstones.set(normalized, Date.now());
+    // Centralized teardown: dispose every ServiceManager any surface opened
+    // against this pod's sandbox so their kernelspecs/sessions/users pollers
+    // stop immediately instead of waiting for query-cache propagation.
+    disposeSandboxServiceManagers(normalized);
+  }
+}
+
+/** Clear a deleted-pod tombstone (pod legitimately exists again). */
+export function clearRuntimePodDeleted(podName: string): void {
+  deletedRuntimePodTombstones.delete(String(podName || '').trim());
+}
+
+/** Statuses that imply a live pod the client would connect to. */
+const LIVE_RUNTIME_STATUSES = new Set<AgentStatus>([
+  'running',
+  'resumed',
+  'starting',
+  'resuming',
+]);
+
+/**
+ * True when a runtime record is a stale control-plane echo of a pod this
+ * client already deleted: tombstoned, within TTL, and claiming a live status.
+ * Checkpoint-synthesised `paused` records pass through (no live pod to poll).
+ */
+function isStaleDeletedRuntime(runtime: AgentRuntimeData): boolean {
+  const podName = String((runtime as any)?.pod_name || '').trim();
+  const deletedAt = deletedRuntimePodTombstones.get(podName);
+  if (deletedAt === undefined) {
+    return false;
+  }
+  if (Date.now() - deletedAt > DELETED_POD_TOMBSTONE_TTL_MS) {
+    deletedRuntimePodTombstones.delete(podName);
+    return false;
+  }
+  return LIVE_RUNTIME_STATUSES.has(runtime.status as AgentStatus);
+}
 
 const RUNTIME_STATUS_MAP: Record<string, AgentStatus> = {
   resume: 'resumed',
@@ -712,7 +772,10 @@ export function useAgentRuntimesQuery(
       if (resp.success && resp.runtimes) {
         const agentRuntimes = (resp.runtimes as Record<string, any>[])
           .filter(rt => rt.environment_name === 'ai-agents-env')
-          .map(toAgentRuntimeData);
+          .map(toAgentRuntimeData)
+          // Drop stale echoes of pods deleted from this client so consumers
+          // never reconnect a ServiceManager to a dead ingress (CORS spam).
+          .filter(runtime => !isStaleDeletedRuntime(runtime));
         agentRuntimes.forEach((runtime: AgentRuntimeData) => {
           queryClient.setQueryData(
             agentQueryKeys.agentRuntimes.detail(runtime.pod_name),
@@ -746,7 +809,13 @@ export function useAgentRuntimeByPodName(podName: string | undefined) {
         method: 'GET',
       });
       if (resp.runtime) {
-        return toAgentRuntimeData(resp.runtime as Record<string, any>);
+        const runtime = toAgentRuntimeData(resp.runtime as Record<string, any>);
+        if (isStaleDeletedRuntime(runtime)) {
+          // Stale echo of a pod deleted from this client — surface as an
+          // error so the poll stops and consumers tear the connection down.
+          throw new Error('Agent runtime deleted');
+        }
+        return runtime;
       }
       throw new Error('Failed to fetch agent runtime');
     },
@@ -805,6 +874,8 @@ export function useCreateAgentRuntime() {
     onSuccess: resp => {
       if (resp.success && resp.runtime) {
         const mapped = toAgentRuntimeData(resp.runtime as Record<string, any>);
+        // A fresh runtime legitimately exists — drop any stale tombstone.
+        clearRuntimePodDeleted(mapped.pod_name);
         queryClient.setQueryData(
           agentQueryKeys.agentRuntimes.detail(mapped.pod_name),
           mapped,
@@ -891,6 +962,9 @@ export function useDeleteAgentRuntime() {
       }
     },
     onSuccess: (_data, podName) => {
+      // Tombstone the pod so refetches that still echo it from the control
+      // plane (deletion lag) do not re-add it to the caches below.
+      markRuntimePodDeleted(podName);
       // Prune the pod from the runtimes store immediately so the remote service
       // managers dispose right away and stop polling the now-dead pod ingress
       // (otherwise `/api/kernels` requests keep firing until the next
