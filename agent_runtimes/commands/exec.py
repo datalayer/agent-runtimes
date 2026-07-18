@@ -23,7 +23,7 @@ from rich.table import Table
 
 from agent_runtimes.client import AgentClient
 from agent_runtimes.console.manager import RuntimeManager
-from agent_runtimes.utils.notebook import get_cells
+from agent_runtimes.utils.notebook_utils import get_cells
 
 # Create the main Typer app for exec functionality
 app = typer.Typer(

@@ -35,7 +35,7 @@ from agent_runtimes.sandboxes.code_sandbox_snapshots import (
     as_code_sandbox_snapshots,
     create_snapshot,
 )
-from agent_runtimes.utils.notebook import get_cells
+from agent_runtimes.utils.notebook_utils import get_cells
 
 
 class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
