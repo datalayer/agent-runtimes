@@ -8,10 +8,10 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-lexical jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
-	loop-chat loop-chat-simple loop-chat-data-acquisition loop-chat-financial loop-chat-demo loop-chat-demo-nocodemode
+	loop-chat loop-chat-simple loop-chat-data-acquisition loop-chat-financial loop-chat-demo loop-chat-example-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
@@ -293,8 +293,14 @@ agent-nodes-proxy: agent-nodes\:proxy ## alias for agent-nodes:proxy
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook
 
-agent-lexical: # agent-lexical - open agent-lexical.html with vite dev server
-	$(BEDROCK_ENV) npm run start:agent-lexical
+agent-document: # agent-document - open agent-document.html with vite dev server
+	$(BEDROCK_ENV) npm run start:agent-document
+
+dev-notebook: ## dev-notebook – /notebook UI in DEV mode (agent-runtimes server + jupyter-server + vite serving agent-notebook.html)
+	$(BEDROCK_ENV) npm run start:agent-notebook
+
+dev-document: ## dev-document – /document UI in DEV mode (agent-runtimes server + jupyter-server + vite serving agent-document.html)
+	$(BEDROCK_ENV) npm run start:agent-document
 
 jupyter-server: # jupyter-server
 	npm run jupyter:start
@@ -356,13 +362,17 @@ agents: # agents
 	  --host 0.0.0.0 \
 	  --port 8765
 
+loop: # loop
+	@$(BEDROCK_ENV) \
+		loop --eggs --agentspec-id example-simple
+
 loop-chat: # loop-chat
 	@$(BEDROCK_ENV) \
 		loop chat --eggs
 
 loop-chat-simple: # loop-chat-simple
 	@$(BEDROCK_ENV) \
-		loop chat --eggs --agentspec-id demo-simple
+		loop chat --eggs --agentspec-id example-simple
 
 loop-chat-data-acquisition: # loop-chat-data-acquisition KAGGLE_TOKEN and TAVILY_API_KEY must be set in env
 	@$(BEDROCK_ENV) \
@@ -381,7 +391,7 @@ loop-chat-demo: # loop-chat-demo
 		  --suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
 		  --agentspec-id information-routing
 
-loop-chat-demo-nocodemode: # loop-chat-demo-nocodemode
+loop-chat-example-nocodemode: # loop-chat-example-nocodemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \

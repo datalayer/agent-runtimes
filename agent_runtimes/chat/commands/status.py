@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 NAME = "status"
 ALIASES: list[str] = []
 DESCRIPTION = (
-    "Show agent-runtimes chat status including model, tokens, and connectivity"
+    "Show loop status including model, tokens, and connectivity"
 )
 SHORTCUT = "escape s"
 

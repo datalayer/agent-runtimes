@@ -53,7 +53,7 @@ def build_commands(
     from . import (
         agents,
         browser,
-        browser_lexical,
+        browser_document,
         browser_notebook,
         clear,
         cls,
@@ -87,7 +87,7 @@ def build_commands(
         cls,
         browser,
         browser_notebook,
-        browser_lexical,
+        browser_document,
         suggestions,
     ]
 

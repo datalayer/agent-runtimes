@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 NAME = "exit"
 ALIASES = ["quit", "q"]
-DESCRIPTION = "Exit agent-runtimes chat"
+DESCRIPTION = "Exit loop"
 SHORTCUT = "escape q"
 
 
@@ -35,7 +35,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     tux.console.print()
     tux.console.print(GOODBYE_MESSAGE, style=STYLE_ACCENT)
     tux.console.print(
-        "   [link=https://datalayer.ai]https://datalayer.ai[/link]", style=STYLE_MUTED
+        "[link=https://datalayer.ai]https://datalayer.ai[/link]", style=STYLE_MUTED
     )
     tux.console.print()
     return None

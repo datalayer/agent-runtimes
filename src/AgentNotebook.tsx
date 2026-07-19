@@ -32,18 +32,17 @@ import {
   JupyterReactTheme,
   disposeServiceManager,
   loadJupyterConfig,
-  createServerSettings,
   getJupyterServerUrl,
   getJupyterServerToken,
   setJupyterServerUrl,
   setJupyterServerToken,
 } from '@datalayer/jupyter-react';
-import { ServiceManager } from '@jupyterlab/services';
+import { ServiceManager, ServerConnection } from '@jupyterlab/services';
 import { Chat } from './chat';
 import { useNotebookTools } from './tools/adapters/agent-runtimes/notebookHooks';
 import { DEFAULT_MODEL } from './specs';
 
-import MatplotlibNotebook from './examples/utils/notebooks/Matplotlib.ipynb.json';
+import EmptyNotebook from './examples/utils/notebooks/Empty.ipynb.json';
 
 import '../style/primer-primitives.css';
 
@@ -60,6 +59,11 @@ function getAgentId(): string {
   return getQueryParam('agentId') || 'default';
 }
 
+interface ResolvedJupyterConfig {
+  baseUrl: string;
+  token: string;
+}
+
 /**
  * Initialise Jupyter configuration.
  *
@@ -67,16 +71,19 @@ function getAgentId(): string {
  *   1. Query parameters (jupyterBaseUrl / jupyterToken)
  *   2. <script id="jupyter-config-data"> block in the HTML page
  */
-function initJupyterConfig() {
+function initJupyterConfig(): ResolvedJupyterConfig {
   // Load embedded config first
   loadJupyterConfig();
 
   // Override with query parameters when supplied by codeai
   const qBaseUrl = getQueryParam('jupyterBaseUrl');
-  const qToken = getQueryParam('jupyterToken');
+  const qToken = getQueryParam('jupyterToken') || getQueryParam('token');
 
   if (qBaseUrl) setJupyterServerUrl(qBaseUrl);
   if (qToken) setJupyterServerToken(qToken);
+
+  let resolvedBaseUrl = qBaseUrl || getJupyterServerUrl();
+  let resolvedToken = qToken || getJupyterServerToken();
 
   // Also check for jupyter-config-data embedded in the page (may contain
   // values injected at build/serve time)
@@ -84,12 +91,46 @@ function initJupyterConfig() {
   if (el?.textContent) {
     try {
       const cfg = JSON.parse(el.textContent);
-      if (!qBaseUrl && cfg.baseUrl) setJupyterServerUrl(cfg.baseUrl);
-      if (!qToken && cfg.token) setJupyterServerToken(cfg.token);
+      if (!qBaseUrl && cfg.baseUrl) {
+        setJupyterServerUrl(cfg.baseUrl);
+        resolvedBaseUrl = cfg.baseUrl;
+      }
+      if (!qToken && cfg.token) {
+        setJupyterServerToken(cfg.token);
+        resolvedToken = cfg.token;
+      }
     } catch {
       // ignore
     }
   }
+
+  return {
+    baseUrl: resolvedBaseUrl,
+    token: resolvedToken,
+  };
+}
+
+function buildServerSettings(
+  baseUrl: string,
+  token: string,
+): ServerConnection.ISettings {
+  const wsUrl = baseUrl.replace(/^http/, 'ws');
+  const authenticatedFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!token) {
+      return fetch(input, init);
+    }
+    const headers = new Headers(init?.headers || undefined);
+    headers.set('Authorization', `token ${token}`);
+    return fetch(input, { ...init, headers });
+  };
+
+  return ServerConnection.makeSettings({
+    baseUrl,
+    wsUrl,
+    token,
+    appendToken: !!token,
+    fetch: authenticatedFetch,
+  });
 }
 
 // ─── Notebook panel ─────────────────────────────────────────────────────────
@@ -112,7 +153,7 @@ const NotebookPanel: React.FC<NotebookPanelProps> = ({ serviceManager }) => (
     <JupyterReactTheme>
       <Box sx={{ height: '100vh' }}>
         <Notebook
-          nbformat={MatplotlibNotebook as any}
+          nbformat={EmptyNotebook as any}
           id={NOTEBOOK_ID}
           serviceManager={serviceManager}
           height="100vh"
@@ -226,11 +267,10 @@ export const AgentNotebook: React.FC = () => {
         }
 
         // 2. Initialise Jupyter
-        initJupyterConfig();
-
-        const serverSettings = createServerSettings(
-          getJupyterServerUrl(),
-          getJupyterServerToken(),
+        const jupyterConfig = initJupyterConfig();
+        const serverSettings = buildServerSettings(
+          jupyterConfig.baseUrl,
+          jupyterConfig.token,
         );
         const manager = new ServiceManager({ serverSettings });
         managerForCleanup = manager;

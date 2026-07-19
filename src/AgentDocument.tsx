@@ -4,14 +4,14 @@
  */
 
 /**
- * AgentLexical
+ * AgentDocument
  *
- * Standalone Lexical editor + chat interface served at /static/agent-lexical.html.
+ * Standalone Lexical editor + chat interface served at /static/agent-document.html.
  * Connects to the agent-runtimes AG-UI endpoint and provides a Lexical
  * rich-text editor alongside the Chat component with lexical tools registered.
  *
  * The page is opened by codeai with a URL like:
- *   http://127.0.0.1:<port>/static/agent-lexical.html?agentId=<id>
+ *   http://127.0.0.1:<port>/static/agent-document.html?agentId=<id>
  *
  * Query parameters:
  *   - agentId: the agent identifier (required, set by codeai)
@@ -48,7 +48,6 @@ import {
   JupyterReactTheme,
   disposeServiceManager,
   loadJupyterConfig,
-  createServerSettings,
   getJupyterServerUrl,
   getJupyterServerToken,
   setJupyterServerUrl,
@@ -76,7 +75,7 @@ import {
   TableCellResizerPlugin,
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
-import { ServiceManager } from '@jupyterlab/services';
+import { ServiceManager, ServerConnection } from '@jupyterlab/services';
 import { Chat } from './chat';
 import { ChatInlinePlugin } from './lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from './lexical/useChatInlineToolbarItems';
@@ -91,7 +90,7 @@ import '../style/primer-primitives.css';
 setupPrimerPortals();
 
 const BASE_URL = window.location.origin;
-const LEXICAL_ID = 'agent-lexical';
+const DOCUMENT_ID = 'agent-document';
 
 function getQueryParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name);
@@ -101,6 +100,11 @@ function getAgentId(): string {
   return getQueryParam('agentId') || 'default';
 }
 
+interface ResolvedJupyterConfig {
+  baseUrl: string;
+  token: string;
+}
+
 /**
  * Initialise Jupyter configuration.
  *
@@ -108,25 +112,62 @@ function getAgentId(): string {
  *   1. Query parameters (jupyterBaseUrl / jupyterToken)
  *   2. <script id="jupyter-config-data"> block in the HTML page
  */
-function initJupyterConfig() {
+function initJupyterConfig(): ResolvedJupyterConfig {
   loadJupyterConfig();
 
   const qBaseUrl = getQueryParam('jupyterBaseUrl');
-  const qToken = getQueryParam('jupyterToken');
+  const qToken = getQueryParam('jupyterToken') || getQueryParam('token');
 
   if (qBaseUrl) setJupyterServerUrl(qBaseUrl);
   if (qToken) setJupyterServerToken(qToken);
+
+  let resolvedBaseUrl = qBaseUrl || getJupyterServerUrl();
+  let resolvedToken = qToken || getJupyterServerToken();
 
   const el = document.getElementById('jupyter-config-data');
   if (el?.textContent) {
     try {
       const cfg = JSON.parse(el.textContent);
-      if (!qBaseUrl && cfg.baseUrl) setJupyterServerUrl(cfg.baseUrl);
-      if (!qToken && cfg.token) setJupyterServerToken(cfg.token);
+      if (!qBaseUrl && cfg.baseUrl) {
+        setJupyterServerUrl(cfg.baseUrl);
+        resolvedBaseUrl = cfg.baseUrl;
+      }
+      if (!qToken && cfg.token) {
+        setJupyterServerToken(cfg.token);
+        resolvedToken = cfg.token;
+      }
     } catch {
       // ignore
     }
   }
+
+  return {
+    baseUrl: resolvedBaseUrl,
+    token: resolvedToken,
+  };
+}
+
+function buildServerSettings(
+  baseUrl: string,
+  token: string,
+): ServerConnection.ISettings {
+  const wsUrl = baseUrl.replace(/^http/, 'ws');
+  const authenticatedFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!token) {
+      return fetch(input, init);
+    }
+    const headers = new Headers(init?.headers || undefined);
+    headers.set('Authorization', `token ${token}`);
+    return fetch(input, { ...init, headers });
+  };
+
+  return ServerConnection.makeSettings({
+    baseUrl,
+    wsUrl,
+    token,
+    appendToken: !!token,
+    fetch: authenticatedFetch,
+  });
 }
 
 // ─── Lexical plugins ────────────────────────────────────────────────────────
@@ -198,7 +239,7 @@ function LexicalToolsPlugin({
 }: {
   onToolsReady: (tools: ReturnType<typeof useLexicalTools>) => void;
 }) {
-  const tools = useLexicalTools(LEXICAL_ID);
+  const tools = useLexicalTools(DOCUMENT_ID);
 
   useEffect(() => {
     onToolsReady(tools);
@@ -251,7 +292,7 @@ const LexicalPanel = React.memo(function LexicalPanel({
     >
       <Box sx={{ padding: 3 }}>
         <LexicalConfigProvider
-          lexicalId={LEXICAL_ID}
+          lexicalId={DOCUMENT_ID}
           serviceManager={serviceManager}
         >
           <LexicalToolsPlugin onToolsReady={onToolsReady} />
@@ -379,7 +420,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
-export const AgentLexical: React.FC = () => {
+export const AgentDocument: React.FC = () => {
   const [agentId] = useState(getAgentId);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -428,11 +469,10 @@ export const AgentLexical: React.FC = () => {
         }
 
         // 2. Initialise Jupyter
-        initJupyterConfig();
-
-        const serverSettings = createServerSettings(
-          getJupyterServerUrl(),
-          getJupyterServerToken(),
+        const jupyterConfig = initJupyterConfig();
+        const serverSettings = buildServerSettings(
+          jupyterConfig.baseUrl,
+          jupyterConfig.token,
         );
         const manager = new ServiceManager({ serverSettings });
         managerForCleanup = manager;
@@ -533,4 +573,4 @@ export const AgentLexical: React.FC = () => {
   );
 };
 
-export default AgentLexical;
+export default AgentDocument;

@@ -4,9 +4,9 @@
  */
 
 import { createRoot } from 'react-dom/client';
-import { AgentLexical } from './AgentLexical';
+import { AgentDocument } from './AgentDocument';
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  createRoot(rootElement).render(<AgentLexical />);
+  createRoot(rootElement).render(<AgentDocument />);
 }

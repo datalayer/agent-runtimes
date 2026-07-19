@@ -5,25 +5,38 @@
 #
 # BSD 3-Clause License
 
-"""Slash command: /browser-lexical - Open the Agent Lexical UI in the browser."""
+"""Slash command: /document - Open the Agent Lexical UI in the browser."""
 
 from __future__ import annotations
 
+import os
 import webbrowser
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..tux import CliTux
 
-NAME = "browser-lexical"
-ALIASES: list[str] = []
+NAME = "document"
+ALIASES: list[str] = ["browser-document", "browser-lexical"]
 DESCRIPTION = "Open the Agent Lexical UI in your browser"
 SHORTCUT = "escape l"
 
 
 async def execute(tux: "CliTux") -> Optional[str]:
-    """Open the Agent Lexical web UI (lexical editor + chat) in the default browser."""
-    url = f"{tux.server_url}/static/agent-lexical.html?agentId={tux.agent_id}"
+    """Open the Agent Lexical web UI (lexical editor + chat) in the default browser.
+
+    In dev mode (set ``AGENT_RUNTIMES_DEV_UI=1``) the page is loaded from the
+    Vite dev server (default ``http://localhost:5173``, override with
+    ``AGENT_RUNTIMES_DEV_UI_URL``) instead of the built ``/static`` bundle. The
+    dev server proxies ``/api`` to the backend, so the chat still connects.
+    """
+    if os.environ.get("AGENT_RUNTIMES_DEV_UI", "").lower() in ("1", "true", "yes", "on"):
+        dev_base = os.environ.get(
+            "AGENT_RUNTIMES_DEV_UI_URL", "http://localhost:5173"
+        ).rstrip("/")
+        url = f"{dev_base}/html/agent-document.html?agentId={tux.agent_id}"
+    else:
+        url = f"{tux.server_url}/static/agent-document.html?agentId={tux.agent_id}"
     if tux.jupyter_url:
         # Forward Jupyter connection info so the page can reach the kernel
         import urllib.parse

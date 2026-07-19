@@ -54,19 +54,21 @@ DIM = "\033[2m"
 RESET = "\033[0m"
 
 # Goodbye message displayed on exit
-GOODBYE_MESSAGE = "🤖 Thank you for using Agent Runtimes. See you soon!"
+GOODBYE_MESSAGE = "Thank you for using LOOP. See you soon! ☰☰☰☰☰☰☰☰☰☰☰☰☰"
 
 # ASCII Art Banner with Datalayer brand colors
 BANNER = f"""
 {GREEN_DARK}{BOLD}╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   {GREEN_LIGHT}AG CHAT{WHITE}                                                       {GREEN_DARK}║
+║   {GREEN_LIGHT}LOOP{WHITE}                                                        {GREEN_DARK}║
+║                                                               ║
 ║   {WHITE}AI-Powered Data Assistant                                   {GREEN_DARK}║
+║                                                               ║
 ║   {WHITE}Cheaper • Faster • Collaborative                            {GREEN_DARK}║
 ║                                                               ║
 ║   {GREEN_DARK}🤖 Data Analysis  {GREEN_MEDIUM}📊 Data Science  {GREEN_LIGHT}📓 Software Development  {GREEN_DARK}║
 ║                                                               ║
-║   {GRAY}Type /exit to quit  •  Type / for commands                  {GREEN_DARK}║
+║   {GRAY}/exit to quit  •  / for commands                            {GREEN_DARK}║
 ╚═══════════════════════════════════════════════════════════════╝{RESET}
 """
 

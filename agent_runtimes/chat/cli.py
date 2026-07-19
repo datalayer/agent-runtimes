@@ -479,8 +479,8 @@ def _pick_agentspec_interactive() -> str:
     """Show available agent specs and let the user pick one interactively.
 
     Specs are split into two groups:
-      ● Valid   – enabled with all required env vars present (selectable)
-      ○ Invalid – disabled or missing env vars (shown for reference, not selectable)
+            ○ Invalid – disabled or missing env vars (shown first for reference)
+            ● Valid   – enabled with all required env vars present (selectable)
 
     The first valid spec is proposed as the default (press Enter to select it).
 
@@ -494,22 +494,24 @@ def _pick_agentspec_interactive() -> str:
         print(f"{GREEN_DARK}[ERROR]{RESET} No agent specs found", file=sys.stderr)
         raise typer.Exit(1)
 
-    # Partition into valid (enabled + all env vars) and the rest, each sorted by id
+    # Partition into valid (enabled + all env vars) and the rest, each sorted by id.
+    # Display invalid first, then valid, while keeping selection restricted to valid.
     valid_specs = sorted(
         [s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id
     )
     other_specs = sorted(
         [s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id
     )
-    ordered = valid_specs + other_specs
+    ordered = other_specs + valid_specs
     valid_count = len(valid_specs)
+    invalid_count = len(other_specs)
 
-    # Default is the first valid spec (index 0) when available
-    default_idx: Optional[int] = 0 if valid_count > 0 else None
+    # Default is the first valid spec in the combined list when available.
+    default_idx: Optional[int] = invalid_count if valid_count > 0 else None
 
     print(f"\n{GREEN_LIGHT}Available Agent Specs:{RESET}\n")
     for i, spec in enumerate(ordered, 1):
-        is_valid = i <= valid_count
+        is_valid = (i - 1) >= invalid_count
         bullet = f" {GREEN_MEDIUM}●{RESET}" if is_valid else f" {GRAY}○{RESET}"
         default_marker = (
             f" {GREEN_LIGHT}(default){RESET}" if (i - 1) == default_idx else ""
@@ -548,7 +550,7 @@ def _pick_agentspec_interactive() -> str:
     while True:
         try:
             choice = input(
-                f"{GREEN_MEDIUM}Choose an agent spec [1-{valid_count}]{default_display}: {RESET}"
+                f"{GREEN_MEDIUM}Choose an agent spec [1-{len(ordered)}]{default_display}: {RESET}"
             ).strip()
             if not choice:
                 if default_idx is not None:
@@ -557,7 +559,7 @@ def _pick_agentspec_interactive() -> str:
                     return chosen.id
                 continue
             idx = int(choice) - 1
-            if 0 <= idx < valid_count:
+            if invalid_count <= idx < len(ordered):
                 chosen = ordered[idx]
                 print(f"\n{GREEN_LIGHT}Selected:{RESET} {chosen.id}\n")
                 return chosen.id
@@ -566,11 +568,11 @@ def _pick_agentspec_interactive() -> str:
                     f"{GRAY}Agent spec #{choice} is not available (disabled or missing env vars).{RESET}"
                 )
                 print(
-                    f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}"
+                    f"{GRAY}Please choose a valid (●) spec or press Enter for the default.{RESET}"
                 )
             else:
                 print(
-                    f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}"
+                    f"{GRAY}Please enter a number between 1 and {len(ordered)}.{RESET}"
                 )
         except ValueError:
             # Allow typing the spec ID directly (only valid ones)
@@ -654,13 +656,13 @@ def main_callback(
 
     Examples:
 
-        agent-runtimes chat                        # Pick agent spec interactively
+        loop                        # Pick agent spec interactively
 
-        agent-runtimes chat --agentspec-id crawler # Use specific agent spec
+        loop --agentspec-id crawler # Use specific agent spec
 
-        agent-runtimes chat "What is Python?"      # Single query mode
+        loop "What is Python?"      # Single query mode
 
-        agent-runtimes chat -a crawler "Search for AI trends"  # Single query with specific agent
+        loop -a crawler "Search for AI trends"  # Single query with specific agent
     """
     # If a subcommand was invoked, don't run the default behavior
     if ctx.invoked_subcommand is not None:
@@ -963,11 +965,11 @@ def connect(
 
     Examples:
 
-        agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/my-agent/
+        loop connect http://localhost:8000/api/v1/ag-ui/my-agent/
 
-        agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
+        loop connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
 
-        agent-runtimes chat connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
+        loop connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
     """
     try:
         from agent_runtimes.transports.clients import ACPClient, AGUIClient
@@ -1156,9 +1158,9 @@ def agents(
 
     Examples:
 
-        agent-runtimes chat agents
+        loop agents
 
-        agent-runtimes chat agents --server https://agents.datalayer.ai
+        loop agents --server https://agents.datalayer.ai
     """
     import httpx
 

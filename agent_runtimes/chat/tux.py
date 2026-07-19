@@ -265,7 +265,7 @@ class CliTux:
         left_content = Text()
         left_content.append(f"\n  Welcome back {username}!\n\n", style=STYLE_WHITE)
         left_content.append(logo)
-        left_content.append("\n  agent-runtimes chat\n", style=STYLE_MUTED)
+        left_content.append("\n  loop\n", style=STYLE_MUTED)
         left_content.append(f"  {cwd}\n", style=STYLE_MUTED)
 
         # Right panel content - tips
@@ -280,7 +280,7 @@ class CliTux:
         right_content.append("/status - Check connection status\n", style=STYLE_MUTED)
         right_content.append("/clear - Start fresh conversation\n", style=STYLE_MUTED)
         right_content.append(
-            "/exit - Exit from agent-runtimes chat\n", style=STYLE_MUTED
+            "/exit - Exit from loop\n", style=STYLE_MUTED
         )
 
         # Create side-by-side layout
@@ -396,7 +396,7 @@ class CliTux:
             # Unknown command - show error with hint
             self.console.print(f"Unknown command: /{cmd_name}", style=STYLE_ERROR)
             self.console.print(
-                "Type /help to see available commands, or start typing / to see suggestions.",
+                "/help to see available commands, or start typing / to see suggestions.",
                 style=STYLE_MUTED,
             )
             return ""  # Handled (error shown)
