@@ -99,6 +99,8 @@ async def startup_info(request: Request) -> dict[str, Any]:
             sandbox_block["jupyter_url"] = status["jupyter_url"]
         if status.get("jupyter_token"):
             sandbox_block["jupyter_token"] = status["jupyter_token"]
+        if status.get("kernel_id"):
+            sandbox_block["kernel_id"] = status["kernel_id"]
         if status.get("mcp_proxy_url"):
             sandbox_block["mcp_proxy_url"] = status["mcp_proxy_url"]
         sandbox_block["sandbox_running"] = status.get("sandbox_running", False)

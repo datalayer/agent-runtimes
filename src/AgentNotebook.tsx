@@ -23,13 +23,17 @@ import React, { useEffect, useState } from 'react';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import {
+  AppearanceControlsWithStore,
   Box,
+  createThemeStore,
   DatalayerThemeProvider,
   setupPrimerPortals,
+  themeConfigs,
 } from '@datalayer/primer-addons';
 import {
   Notebook,
   JupyterReactTheme,
+  notebookStore,
   disposeServiceManager,
   loadJupyterConfig,
   getJupyterServerUrl,
@@ -38,6 +42,7 @@ import {
   setJupyterServerToken,
 } from '@datalayer/jupyter-react';
 import { ServiceManager, ServerConnection } from '@jupyterlab/services';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { Chat } from './chat';
 import { useNotebookTools } from './tools/adapters/agent-runtimes/notebookHooks';
 import { DEFAULT_MODEL } from './specs';
@@ -50,6 +55,15 @@ setupPrimerPortals();
 
 const BASE_URL = window.location.origin;
 const NOTEBOOK_ID = 'agent-notebook';
+const NOTEBOOK_THEME_STORAGE_KEY = 'agent-runtimes-agent-notebook-theme';
+
+const useAgentNotebookThemeStore = createThemeStore(
+  NOTEBOOK_THEME_STORAGE_KEY,
+  {
+    colorMode: 'auto',
+    theme: 'earth',
+  },
+);
 
 function getQueryParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name);
@@ -57,6 +71,11 @@ function getQueryParam(name: string): string | null {
 
 function getAgentId(): string {
   return getQueryParam('agentId') || 'default';
+}
+
+function getKernelId(): string | undefined {
+  const kernelId = getQueryParam('kernelId') || getQueryParam('kernel_id');
+  return kernelId || undefined;
 }
 
 interface ResolvedJupyterConfig {
@@ -133,13 +152,58 @@ function buildServerSettings(
   });
 }
 
+// ─── Notebook kernel tracking ───────────────────────────────────────────────
+
+/**
+ * Track the live kernel connection of the notebook running on the sandbox.
+ *
+ * The kernel connection is created asynchronously by the `<Notebook>` adapter
+ * after it mounts (and can change on restart), so we read it from the notebook
+ * store, polling and subscribing to store mutations. The resolved connection is
+ * fed to the chat header's `<KernelIndicator>` so it reflects the sandbox.
+ */
+function useNotebookKernel(
+  notebookId: string,
+  active: boolean,
+): IKernelConnection | null {
+  const [kernel, setKernel] = useState<IKernelConnection | null>(null);
+  useEffect(() => {
+    if (!active) {
+      setKernel(null);
+      return;
+    }
+    const readKernel = (): IKernelConnection | null => {
+      const notebook = notebookStore.getState().selectNotebook(notebookId);
+      const adapter = notebook?.adapter as
+        { kernel?: IKernelConnection | null } | undefined;
+      return adapter?.kernel ?? null;
+    };
+    const sync = () => {
+      const next = readKernel();
+      setKernel(prev => (prev?.id === next?.id ? prev : next));
+    };
+    sync();
+    const intervalId = window.setInterval(sync, 750);
+    const unsubscribe = notebookStore.subscribe(sync);
+    return () => {
+      window.clearInterval(intervalId);
+      unsubscribe();
+    };
+  }, [notebookId, active]);
+  return kernel;
+}
+
 // ─── Notebook panel ─────────────────────────────────────────────────────────
 
 interface NotebookPanelProps {
   serviceManager: ServiceManager.IManager;
+  kernelId?: string;
 }
 
-const NotebookPanel: React.FC<NotebookPanelProps> = ({ serviceManager }) => (
+const NotebookPanel: React.FC<NotebookPanelProps> = ({
+  serviceManager,
+  kernelId,
+}) => (
   <Box
     sx={{
       flex: 1,
@@ -156,9 +220,10 @@ const NotebookPanel: React.FC<NotebookPanelProps> = ({ serviceManager }) => (
           nbformat={EmptyNotebook as any}
           id={NOTEBOOK_ID}
           serviceManager={serviceManager}
+          kernelId={kernelId}
           height="100vh"
           cellSidebarMargin={120}
-          startDefaultKernel={true}
+          startDefaultKernel={!kernelId}
         />
       </Box>
     </JupyterReactTheme>
@@ -169,9 +234,10 @@ const NotebookPanel: React.FC<NotebookPanelProps> = ({ serviceManager }) => (
 
 interface ChatPanelProps {
   agentId: string;
+  kernel?: IKernelConnection | null;
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ agentId }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, kernel }) => {
   // Register notebook tools so the agent can manipulate cells
   const notebookTools = useNotebookTools(NOTEBOOK_ID);
 
@@ -202,6 +268,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId }) => {
         frontendTools={notebookTools}
         autoFocus
         runtimeId={agentId}
+        kernel={kernel}
         historyEndpoint={`${BASE_URL}/api/v1/history`}
         suggestions={[
           {
@@ -228,10 +295,20 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId }) => {
 
 export const AgentNotebook: React.FC = () => {
   const [agentId] = useState(getAgentId);
+  const [kernelId] = useState(getKernelId);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceManager, setServiceManager] =
     useState<ServiceManager.IManager | null>(null);
+  const { colorMode, theme } = useAgentNotebookThemeStore();
+  const themeConfig = themeConfigs[theme];
+
+  // Live kernel connection from the notebook running on the sandbox, wired to
+  // the chat header's kernel indicator.
+  const notebookKernel = useNotebookKernel(
+    NOTEBOOK_ID,
+    Boolean(serviceManager),
+  );
 
   // Verify the agent exists AND initialise the Jupyter service manager
   useEffect(() => {
@@ -303,7 +380,11 @@ export const AgentNotebook: React.FC = () => {
   // Loading
   if (!isReady && !error) {
     return (
-      <DatalayerThemeProvider>
+      <DatalayerThemeProvider
+        colorMode={colorMode}
+        theme={themeConfig.primerTheme}
+        themeStyles={themeConfig.themeStyles}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -325,7 +406,11 @@ export const AgentNotebook: React.FC = () => {
   // Error
   if (error) {
     return (
-      <DatalayerThemeProvider>
+      <DatalayerThemeProvider
+        colorMode={colorMode}
+        theme={themeConfig.primerTheme}
+        themeStyles={themeConfig.themeStyles}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -349,18 +434,35 @@ export const AgentNotebook: React.FC = () => {
 
   // Ready — notebook + chat side-by-side
   return (
-    <DatalayerThemeProvider>
+    <DatalayerThemeProvider
+      colorMode={colorMode}
+      theme={themeConfig.primerTheme}
+      themeStyles={themeConfig.themeStyles}
+    >
       <Box
         sx={{
           display: 'flex',
+          position: 'relative',
           height: '100vh',
           width: '100vw',
           overflow: 'hidden',
           bg: 'canvas.default',
         }}
       >
-        {serviceManager && <NotebookPanel serviceManager={serviceManager} />}
-        <ChatPanel agentId={agentId} />
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 2,
+            right: 3,
+            zIndex: 100,
+          }}
+        >
+          <AppearanceControlsWithStore useStore={useAgentNotebookThemeStore} />
+        </Box>
+        {serviceManager && (
+          <NotebookPanel serviceManager={serviceManager} kernelId={kernelId} />
+        )}
+        <ChatPanel agentId={agentId} kernel={notebookKernel} />
       </Box>
     </DatalayerThemeProvider>
   );

@@ -295,6 +295,7 @@ export function Chat({
   mcpStatusData,
   codemodeStatusData,
   sandboxStatusData,
+  kernel,
   showToolApprovalBanner,
   pendingApprovals,
   onApproveApproval,
@@ -691,6 +692,7 @@ export function Chat({
               contextSnapshot={contextSnapshot}
               mcpStatusData={mcpStatusData}
               sandboxStatusData={sandboxStatusData}
+              kernel={kernel}
               showToolApprovalBanner={showToolApprovalBanner}
               pendingApprovals={pendingApprovals}
               onApproveApproval={onApproveApproval}

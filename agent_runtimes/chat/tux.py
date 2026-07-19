@@ -236,10 +236,65 @@ class CliTux:
         except ValueError:
             return str(cwd)
 
+    @staticmethod
+    def _truncate_middle(text: str, max_len: int) -> str:
+        """Truncate ``text`` to ``max_len`` chars, keeping both ends."""
+        if max_len <= 1 or len(text) <= max_len:
+            return text
+        keep = max_len - 1  # room for the ellipsis
+        head = (keep + 1) // 2
+        tail = keep - head
+        return f"{text[:head]}…{text[-tail:]}" if tail else f"{text[:keep]}…"
+
+    def _get_display_name(self) -> str:
+        """Resolve a friendly display name for the welcome banner.
+
+        Best-effort: prefers the authenticated Datalayer profile's full name,
+        otherwise falls back to a friendly form of the OS username. The lookup
+        is time-bounded so it never noticeably blocks startup.
+        """
+        from datalayer_core.utils.handles import format_friendly_handle
+
+        name = self._resolve_datalayer_name()
+        if name:
+            return name
+        return format_friendly_handle(self._get_username())
+
+    def _resolve_datalayer_name(self) -> Optional[str]:
+        """Look up the logged-in Datalayer user's display name (best-effort)."""
+        import concurrent.futures
+
+        def _lookup() -> Optional[str]:
+            try:
+                from datalayer_core.client.client import DatalayerClient
+                from datalayer_core.utils.handles import format_display_name
+
+                profile = DatalayerClient()._get_profile()
+                if not isinstance(profile, dict):
+                    return None
+                user = profile.get("profile")
+                if not isinstance(user, dict):
+                    user = profile
+                name = format_display_name(
+                    user.get("first_name_t") or user.get("first_name"),
+                    user.get("last_name_t") or user.get("last_name"),
+                    user.get("handle_s") or user.get("handle"),
+                )
+                return name if name and name != "unknown" else None
+            except Exception:
+                return None
+
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(_lookup).result(timeout=1.5)
+        except Exception:
+            return None
+
     def show_welcome(self) -> None:
         """Display the welcome banner."""
-        username = self._get_username()
+        display_name = self._get_display_name()
         cwd = self._get_cwd()
+
 
         from . import __version__
 
@@ -263,10 +318,9 @@ class CliTux:
 
         # Left panel content
         left_content = Text()
-        left_content.append(f"\n  Welcome back {username}!\n\n", style=STYLE_WHITE)
+        left_content.append(f"\n  Welcome back {display_name}!\n\n", style=STYLE_WHITE)
         left_content.append(logo)
         left_content.append("\n  loop\n", style=STYLE_MUTED)
-        left_content.append(f"  {cwd}\n", style=STYLE_MUTED)
 
         # Right panel content - tips
         right_content = Text()
@@ -275,7 +329,6 @@ class CliTux:
         right_content.append("/", style=STYLE_PRIMARY)
         right_content.append(" to see all commands\n", style=STYLE_MUTED)
         right_content.append("─" * 40 + "\n", style=STYLE_MUTED)
-        right_content.append("Slash Commands\n", style=STYLE_WHITE)
         right_content.append("/context - View context usage\n", style=STYLE_MUTED)
         right_content.append("/status - Check connection status\n", style=STYLE_MUTED)
         right_content.append("/clear - Start fresh conversation\n", style=STYLE_MUTED)
@@ -296,7 +349,7 @@ class CliTux:
         )
 
         # Create the main panel
-        title = f" Agent Runtimes Chat {version} "
+        title = f" LOOP {version} "
 
         main_panel = Panel(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -307,7 +360,12 @@ class CliTux:
         )
 
         self.console.print(main_panel)
+        # Current working directory, shown full-width beneath the box and
+        # truncated (keeping both ends) only if it overflows the terminal.
+        path_line = self._truncate_middle(cwd, max(10, self.console.width - 2))
+        self.console.print(f" {path_line}", style=STYLE_MUTED)
         self.console.print()
+
 
     def _create_key_bindings(self) -> KeyBindings:
         """Create keyboard shortcuts for slash commands.

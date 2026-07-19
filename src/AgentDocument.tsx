@@ -40,9 +40,12 @@ import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import {
+  AppearanceControlsWithStore,
   Box,
+  createThemeStore,
   DatalayerThemeProvider,
   setupPrimerPortals,
+  themeConfigs,
 } from '@datalayer/primer-addons';
 import {
   JupyterReactTheme,
@@ -76,6 +79,7 @@ import {
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
 import { ServiceManager, ServerConnection } from '@jupyterlab/services';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { Chat } from './chat';
 import { ChatInlinePlugin } from './lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from './lexical/useChatInlineToolbarItems';
@@ -91,6 +95,15 @@ setupPrimerPortals();
 
 const BASE_URL = window.location.origin;
 const DOCUMENT_ID = 'agent-document';
+const DOCUMENT_THEME_STORAGE_KEY = 'agent-runtimes-agent-document-theme';
+
+const useAgentDocumentThemeStore = createThemeStore(
+  DOCUMENT_THEME_STORAGE_KEY,
+  {
+    colorMode: 'auto',
+    theme: 'earth',
+  },
+);
 
 function getQueryParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name);
@@ -98,6 +111,11 @@ function getQueryParam(name: string): string | null {
 
 function getAgentId(): string {
   return getQueryParam('agentId') || 'default';
+}
+
+function getKernelId(): string | undefined {
+  const kernelId = getQueryParam('kernelId') || getQueryParam('kernel_id');
+  return kernelId || undefined;
 }
 
 interface ResolvedJupyterConfig {
@@ -219,8 +237,24 @@ function CodeHighlightPlugin() {
   return null;
 }
 
-function KernelPluginsInner() {
-  const { defaultKernel } = useJupyter();
+function KernelPluginsInner({
+  kernelId,
+  onKernelReady,
+}: {
+  kernelId?: string;
+  onKernelReady?: (kernel: IKernelConnection | null) => void;
+}) {
+  const { defaultKernel } = useJupyter({
+    useRunningKernelId: kernelId,
+    startDefaultKernel: !kernelId,
+  });
+
+  // Lift the live kernel connection of the document's sandbox up so the chat
+  // header's kernel indicator reflects it. `defaultKernel` is created
+  // asynchronously and can change on restart.
+  useEffect(() => {
+    onKernelReady?.(defaultKernel?.connection ?? null);
+  }, [defaultKernel, onKernelReady]);
 
   return (
     <>
@@ -252,12 +286,16 @@ function LexicalToolsPlugin({
 
 interface LexicalPanelProps {
   serviceManager: ServiceManager.IManager;
+  kernelId?: string;
   onToolsReady: (tools: ReturnType<typeof useLexicalTools>) => void;
+  onKernelReady: (kernel: IKernelConnection | null) => void;
 }
 
 const LexicalPanel = React.memo(function LexicalPanel({
   serviceManager,
+  kernelId,
   onToolsReady,
+  onKernelReady,
 }: LexicalPanelProps) {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
@@ -331,7 +369,10 @@ const LexicalPanel = React.memo(function LexicalPanel({
               <JupyterCellPlugin />
               {/* Wrap kernel plugins with Jupyter provider */}
               <JupyterReactTheme>
-                <KernelPluginsInner />
+                <KernelPluginsInner
+                  kernelId={kernelId}
+                  onKernelReady={onKernelReady}
+                />
               </JupyterReactTheme>
               {floatingAnchorElem && (
                 <>
@@ -367,9 +408,10 @@ const LexicalPanel = React.memo(function LexicalPanel({
 interface ChatPanelProps {
   agentId: string;
   tools: ReturnType<typeof useLexicalTools>;
+  kernel?: IKernelConnection | null;
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools, kernel }) => {
   return (
     <Box
       sx={{
@@ -384,7 +426,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
         protocol="ag-ui"
         baseUrl={BASE_URL}
         agentId={agentId}
-        title="Agent Lexical"
+        title="Agent Document"
         placeholder="Ask about the document..."
         description="Chat with the agent to manipulate the document"
         showHeader={true}
@@ -397,6 +439,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
         frontendTools={tools}
         autoFocus
         runtimeId={agentId}
+        kernel={kernel}
         historyEndpoint={`${BASE_URL}/api/v1/history`}
         suggestions={[
           {
@@ -422,11 +465,16 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
 
 export const AgentDocument: React.FC = () => {
   const [agentId] = useState(getAgentId);
+  const [kernelId] = useState(getKernelId);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceManager, setServiceManager] =
     useState<ServiceManager.IManager | null>(null);
   const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
+  const [documentKernel, setDocumentKernel] =
+    useState<IKernelConnection | null>(null);
+  const { colorMode, theme } = useAgentDocumentThemeStore();
+  const themeConfig = themeConfigs[theme];
 
   const handleToolsReady = useCallback(
     (newTools: ReturnType<typeof useLexicalTools>) => {
@@ -434,6 +482,10 @@ export const AgentDocument: React.FC = () => {
     },
     [],
   );
+
+  const handleKernelReady = useCallback((kernel: IKernelConnection | null) => {
+    setDocumentKernel(prev => (prev?.id === kernel?.id ? prev : kernel));
+  }, []);
 
   // Verify the agent exists AND initialise the Jupyter service manager
   useEffect(() => {
@@ -452,7 +504,7 @@ export const AgentDocument: React.FC = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name: agentId,
-              description: 'Agent created by Agent Lexical page',
+              description: 'Agent created by Agent Document page',
               agent_library: 'pydantic-ai',
               transport: 'ag-ui',
               model: DEFAULT_MODEL,
@@ -505,7 +557,11 @@ export const AgentDocument: React.FC = () => {
   // Loading
   if (!isReady && !error) {
     return (
-      <DatalayerThemeProvider>
+      <DatalayerThemeProvider
+        colorMode={colorMode}
+        theme={themeConfig.primerTheme}
+        themeStyles={themeConfig.themeStyles}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -527,7 +583,11 @@ export const AgentDocument: React.FC = () => {
   // Error
   if (error) {
     return (
-      <DatalayerThemeProvider>
+      <DatalayerThemeProvider
+        colorMode={colorMode}
+        theme={themeConfig.primerTheme}
+        themeStyles={themeConfig.themeStyles}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -551,23 +611,40 @@ export const AgentDocument: React.FC = () => {
 
   // Ready — lexical editor + chat side-by-side
   return (
-    <DatalayerThemeProvider>
+    <DatalayerThemeProvider
+      colorMode={colorMode}
+      theme={themeConfig.primerTheme}
+      themeStyles={themeConfig.themeStyles}
+    >
       <Box
         sx={{
           display: 'flex',
+          position: 'relative',
           height: '100vh',
           width: '100vw',
           overflow: 'hidden',
           bg: 'canvas.default',
         }}
       >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 2,
+            right: 3,
+            zIndex: 100,
+          }}
+        >
+          <AppearanceControlsWithStore useStore={useAgentDocumentThemeStore} />
+        </Box>
         {serviceManager && (
           <LexicalPanel
             serviceManager={serviceManager}
+            kernelId={kernelId}
             onToolsReady={handleToolsReady}
+            onKernelReady={handleKernelReady}
           />
         )}
-        <ChatPanel agentId={agentId} tools={tools} />
+        <ChatPanel agentId={agentId} tools={tools} kernel={documentKernel} />
       </Box>
     </DatalayerThemeProvider>
   );

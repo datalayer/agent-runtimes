@@ -900,11 +900,22 @@ class CodeSandboxManager:
         else:
             python_path = str(Path(generated_path).resolve().parent)
 
+        kernel_id = None
+        if self._sandbox is not None:
+            kernel_id = getattr(self._sandbox, "kernel_id", None) or getattr(
+                self._sandbox, "_kernel_id", None
+            )
+            if not kernel_id:
+                kernel_model = getattr(self._sandbox, "kernel", None)
+                if isinstance(kernel_model, dict):
+                    kernel_id = kernel_model.get("id")
+
         return {
             "variant": self._config.variant,
             "jupyter_url": self._config.jupyter_url,
             "jupyter_token": self._config.jupyter_token,
             "jupyter_token_set": self._config.jupyter_token is not None,
+            "kernel_id": kernel_id,
             "sandbox_running": self._sandbox is not None,
             "agent_sandboxes": list(self._agent_sandboxes.keys()),
             "generated_path": generated_path,

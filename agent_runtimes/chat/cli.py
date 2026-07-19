@@ -80,7 +80,6 @@ from .banner import (
     # Legacy colors
     BOLD,
     DIM,
-    GOODBYE_MESSAGE,
     GRAY,
     GREEN_DARK,
     GREEN_LIGHT,
@@ -88,6 +87,7 @@ from .banner import (
     RED,
     RESET,
     WHITE,
+    print_goodbye,
     show_banner,
 )
 
@@ -427,22 +427,26 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
     """
     lines: list[str] = []
 
-    lines.append(f"  {GREEN_MEDIUM}Runtime{RESET}  http://{host}:{port}")
+    def add_row(label: str, value: str) -> None:
+        # Keep values vertically aligned regardless of label length.
+        lines.append(f"  {GREEN_MEDIUM}{label:<13}{RESET} {value}")
+
+    add_row("Agent Runtime", f"http://{host}:{port}")
 
     if info:
         agent_info = info.get("agent", {})
         sandbox_info = info.get("sandbox", {})
 
         if agent_info.get("protocol"):
-            lines.append(f"  {GREEN_MEDIUM}Protocol{RESET} {agent_info['protocol']}")
+            add_row("Protocol", str(agent_info["protocol"]))
         if agent_info.get("model"):
-            lines.append(f"  {GREEN_MEDIUM}Model{RESET}    {agent_info['model']}")
+            add_row("Model", str(agent_info["model"]))
         if agent_info.get("codemode"):
-            lines.append(f"  {GREEN_MEDIUM}Codemode{RESET} enabled")
+            add_row("Codemode", "enabled")
 
         variant = sandbox_info.get("variant")
         if variant:
-            sandbox_line = f"  {GREEN_MEDIUM}Sandbox{RESET}  {variant}"
+            sandbox_line = str(variant)
             jupyter_url = sandbox_info.get("jupyter_url")
             if jupyter_url:
                 sandbox_line += f"  {GRAY}({jupyter_url}){RESET}"
@@ -451,15 +455,19 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
                 jupyter_port = sandbox_info.get("jupyter_port")
                 if jupyter_host and jupyter_port:
                     sandbox_line += f"  {GRAY}({jupyter_host}:{jupyter_port}){RESET}"
-            lines.append(sandbox_line)
+            add_row("Code Sandbox", sandbox_line)
+
+            kernel_id = sandbox_info.get("kernel_id")
+            if str(variant).lower() == "jupyter" and kernel_id:
+                add_row("Kernel ID", str(kernel_id))
 
         skills = agent_info.get("skills", [])
         if skills:
-            lines.append(f"  {GREEN_MEDIUM}Skills{RESET}   {', '.join(skills)}")
+            add_row("Skills", ", ".join(skills))
 
         mcp_servers = agent_info.get("mcp_servers", [])
         if mcp_servers:
-            lines.append(f"  {GREEN_MEDIUM}MCP{RESET}      {', '.join(mcp_servers)}")
+            add_row("MCP", ", ".join(mcp_servers))
 
     return "\n".join(lines)
 
@@ -847,11 +855,7 @@ def main_callback(
         raise
     except KeyboardInterrupt:
         _cleanup_subprocess()
-        print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-        print(
-            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-        )
-        print()
+        print_goodbye()
         raise typer.Exit(0)
     except Exception as e:
         _cleanup_subprocess()
@@ -1018,11 +1022,7 @@ async def _remote_chat_loop_acp(url: str) -> None:
                         continue
 
                     if user_input.lower() in ("quit", "exit", "q"):
-                        print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                        print(
-                            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                        )
-                        print()
+                        print_goodbye()
                         break
 
                     # Show spinner while waiting
@@ -1055,11 +1055,7 @@ async def _remote_chat_loop_acp(url: str) -> None:
                     print()
 
                 except KeyboardInterrupt:
-                    print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                    print(
-                        f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                    )
-                    print()
+                    print_goodbye()
                     break
 
     except ConnectionRefusedError:
@@ -1093,11 +1089,7 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
                         continue
 
                     if user_input.lower() in ("quit", "exit", "q"):
-                        print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                        print(
-                            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                        )
-                        print()
+                        print_goodbye()
                         break
 
                     # Show spinner while waiting
@@ -1134,11 +1126,7 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
                     print()
 
                 except KeyboardInterrupt:
-                    print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                    print(
-                        f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                    )
-                    print()
+                    print_goodbye()
                     break
 
     except ConnectionRefusedError:

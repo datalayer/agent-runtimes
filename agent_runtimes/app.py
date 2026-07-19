@@ -941,10 +941,18 @@ async def _create_and_register_cli_agent(
         jupyter_port = getattr(shared_sandbox, "_port", None)
         jupyter_server_url = getattr(shared_sandbox, "_server_url", None)
         jupyter_token = getattr(shared_sandbox, "_token", None)
+        kernel_id = getattr(shared_sandbox, "kernel_id", None) or getattr(
+            shared_sandbox, "_kernel_id", None
+        )
+        if not kernel_id:
+            kernel_model = getattr(shared_sandbox, "kernel", None)
+            if isinstance(kernel_model, dict):
+                kernel_id = kernel_model.get("id")
         startup_info["sandbox"]["jupyter_host"] = jupyter_host
         startup_info["sandbox"]["jupyter_port"] = jupyter_port
         startup_info["sandbox"]["jupyter_url"] = jupyter_server_url
         startup_info["sandbox"]["jupyter_token"] = jupyter_token
+        startup_info["sandbox"]["kernel_id"] = kernel_id
     elif effective_variant == "jupyter" and jupyter_sandbox_url:
         startup_info["sandbox"]["jupyter_url"] = jupyter_sandbox_url
 
