@@ -61,6 +61,7 @@ from .routes import (
     mcp_proxy_router,
     mcp_router,
     mcp_ui_router,
+    sandbox_router,
     set_a2a_app,
     start_a2a_task_managers,
     stop_a2a_task_managers,
@@ -1392,6 +1393,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(configure_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
+    app.include_router(sandbox_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)

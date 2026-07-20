@@ -29,6 +29,7 @@ from rich.style import Style
 from rich.text import Text
 
 from .commands import SlashCommand, build_commands
+from .execution import TuxExecutionGateway
 
 # Rich styles matching Datalayer brand
 # Brand color reference (from BRAND_MANUAL.md):
@@ -170,6 +171,7 @@ class CliTux:
         eggs: bool = False,
         jupyter_url: Optional[str] = None,
         extra_suggestions: Optional[list[str]] = None,
+        startup_message: Optional[str] = None,
     ):
         """Initialize the TUX.
 
@@ -180,6 +182,7 @@ class CliTux:
             eggs: Enable Easter egg commands
             jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
             extra_suggestions: Additional suggestions provided via --suggestions flag
+            startup_message: Optional startup summary line shown right after banner
         """
         self.agent_url = agent_url
         self.server_url = server_url.rstrip("/")
@@ -196,6 +199,8 @@ class CliTux:
         self._agui_client: Optional[Any] = (
             None  # Persistent AG-UI client for conversation history
         )
+        self._executor = TuxExecutionGateway(agent_id, server_url=self.server_url)
+        self.startup_message = startup_message
 
         # Initialize slash commands
         self.commands: dict[str, SlashCommand] = build_commands(
@@ -252,12 +257,53 @@ class CliTux:
             ) as live:
                 while not stop_event.is_set():
                     glyph, style = frames[frame_idx]
-                    live.update(Text(f"  {glyph}", style=style))
+                    live.update(Text(glyph, style=style))
                     frame_idx = (frame_idx + 1) % len(frames)
                     await asyncio.sleep(0.12)
         except Exception:
             # Never let the indicator break the response flow.
             pass
+
+    async def _handle_local_shell(self, command: str) -> None:
+        """Execute a local shell command (prefix ``!``) and print output."""
+        if not command.strip():
+            self.console.print("Empty shell command.", style=STYLE_WARNING)
+            return
+
+        self.console.print(f"$ {command}", style=STYLE_PRIMARY)
+        result = await self._executor.run_local_shell(command)
+
+        if result.stdout:
+            self.console.print(result.stdout.rstrip("\n"), markup=False)
+        if result.stderr:
+            self.console.print(result.stderr.rstrip("\n"), style=STYLE_ERROR, markup=False)
+
+        status_style = STYLE_ACCENT if result.success else STYLE_ERROR
+        self.console.print(f"exit: {result.exit_code}", style=status_style)
+        self.console.print()
+
+    async def _handle_sandbox_code(self, code: str) -> None:
+        """Execute sandbox Python code (prefix ``!!``) and print output."""
+        if not code.strip():
+            self.console.print("Empty sandbox code.", style=STYLE_WARNING)
+            return
+
+        self.console.print("sandbox python:", style=STYLE_PRIMARY)
+        self.console.print(code, style=STYLE_MUTED, markup=False)
+
+        result = await self._executor.run_sandbox_python(code)
+
+        if result.stdout:
+            self.console.print(result.stdout.rstrip("\n"), markup=False)
+        if result.stderr:
+            self.console.print(result.stderr.rstrip("\n"), style=STYLE_ERROR, markup=False)
+        if result.result is not None:
+            self.console.print(str(result.result), style=STYLE_MUTED, markup=False)
+
+        status_text = "ok" if result.success else "error"
+        status_style = STYLE_ACCENT if result.success else STYLE_ERROR
+        self.console.print(f"sandbox: {status_text}", style=status_style)
+        self.console.print()
 
     def _get_username(self) -> str:
         """Get the current username."""
@@ -768,7 +814,7 @@ class CliTux:
                     break
 
                 if event.type == EventType.TEXT_MESSAGE_CONTENT:
-                    await _clear_waiting_indicator(show_bullet=True)
+                    await _clear_waiting_indicator(show_bullet=False)
                     content = event.delta or ""
                     response_text += content
                     self.console.print(content, end="", markup=False)
@@ -1020,12 +1066,25 @@ class CliTux:
             pass
 
         self.show_welcome()
+        if self.startup_message:
+            # The message carries raw ANSI color codes; parse them so Rich
+            # renders the colors instead of printing the escape sequences.
+            self.console.print(Text.from_ansi(self.startup_message))
+            self.console.print()
 
         while self.running:
             try:
                 user_input = await self.show_prompt()
 
                 if not user_input:
+                    continue
+
+                # Local shell execution: !<command>
+                if user_input.startswith("!!"):
+                    await self._handle_sandbox_code(user_input[2:].lstrip())
+                    continue
+                if user_input.startswith("!"):
+                    await self._handle_local_shell(user_input[1:].lstrip())
                     continue
 
                 # Check for slash commands
@@ -1055,6 +1114,7 @@ async def run_tux(
     eggs: bool = False,
     jupyter_url: Optional[str] = None,
     extra_suggestions: Optional[list[str]] = None,
+    startup_message: Optional[str] = None,
 ) -> None:
     """Run the Agent Runtimes Chat assistant TUX.
 
@@ -1065,6 +1125,7 @@ async def run_tux(
         eggs: Enable Easter egg commands
         jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
         extra_suggestions: Additional suggestions provided via --suggestions flag
+        startup_message: Optional startup summary line shown right after banner
     """
     tux = CliTux(
         agent_url,
@@ -1073,5 +1134,6 @@ async def run_tux(
         eggs=eggs,
         jupyter_url=jupyter_url,
         extra_suggestions=extra_suggestions,
+        startup_message=startup_message,
     )
     await tux.run()

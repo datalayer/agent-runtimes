@@ -937,40 +937,60 @@ def main_callback(
                     _ready_line = f" - {_desc_line}"
 
                 # Capability summary appended to the same confirmation line.
-                _summary_parts: list[str] = []
-                if _spec is not None:
-                    _mcp_count = len(getattr(_spec, "mcp_servers", []) or [])
-                    if _mcp_count:
-                        _summary_parts.append(
-                            f"{_mcp_count} MCP server{'s' if _mcp_count != 1 else ''}"
-                        )
-                    _skill_count = len(getattr(_spec, "skills", []) or [])
-                    if _skill_count:
-                        _summary_parts.append(
-                            f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
-                        )
-                    if getattr(_spec, "sandbox_variant", None) == "jupyter":
-                        _summary_parts.append("Jupyter sandbox")
+                # Prefer the ACTUAL running state reported by /health/startup
+                # (mcp servers / skills started via CLI flags or catalog are not
+                # in the static spec), falling back to the spec when unavailable.
+                _agent_info = (startup_info or {}).get("agent", {}) or {}
+                _sandbox_info = (startup_info or {}).get("sandbox", {}) or {}
+
+                _mcp_list = _agent_info.get("mcp_servers")
+                if _mcp_list is None and _spec is not None:
+                    _mcp_list = [
+                        getattr(m, "id", m)
+                        for m in (getattr(_spec, "mcp_servers", []) or [])
+                    ]
+                _mcp_count = len(_mcp_list or [])
+
+                _skill_list = _agent_info.get("skills")
+                if _skill_list is None and _spec is not None:
+                    _skill_list = list(getattr(_spec, "skills", []) or [])
+                _skill_count = len(_skill_list or [])
+
+                _sandbox_variant = _sandbox_info.get("variant")
+                if not _sandbox_variant and _spec is not None:
+                    _sandbox_variant = getattr(_spec, "sandbox_variant", None)
+
+                _codemode_on = bool(_agent_info.get("codemode"))
+                if not _codemode_on and _spec is not None:
                     _codemode = getattr(_spec, "codemode", None)
                     _codemode_on = bool(
                         _codemode.get("enabled")
                         if isinstance(_codemode, dict)
                         else _codemode
                     )
-                    if _codemode_on and not codemode_disabled:
-                        _summary_parts.append("Code Mode")
+
+                _summary_parts: list[str] = [
+                    f"{_mcp_count} MCP server{'s' if _mcp_count != 1 else ''}"
+                ]
+                if _skill_count:
+                    _summary_parts.append(
+                        f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
+                    )
+                if str(_sandbox_variant or "").lower() == "jupyter":
+                    _summary_parts.append("Jupyter sandbox")
+                if _codemode_on and not codemode_disabled:
+                    _summary_parts.append("Code Mode")
                 _summary_line = (
                     f" {GRAY}({' • '.join(_summary_parts)}){RESET}"
                     if _summary_parts
                     else ""
                 )
-                print(
+                startup_message = (
                     f"{GREEN_MEDIUM}●{RESET} {WHITE}Agent {GREEN_LIGHT}{_agent_label}{RESET}"
                     f"{WHITE} is started and ready{RESET}"
                     f"{GRAY}{_ready_line}{RESET}"
                     f"{_summary_line}"
                 )
-                print()
 
 
                 # Extract Jupyter URL for the /jupyter slash command
@@ -1009,6 +1029,7 @@ def main_callback(
                             eggs=eggs,
                             jupyter_url=jupyter_url,
                             extra_suggestions=extra_suggestions,
+                            startup_message=startup_message,
                         )
                     )
                 finally:
