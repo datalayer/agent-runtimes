@@ -974,8 +974,7 @@ class CodeSandboxManager:
         return {
             "variant": self._config.variant,
             "jupyter_url": self._config.jupyter_url or details["jupyter_url"],
-            "jupyter_token": self._config.jupyter_token
-            or details["jupyter_token"],
+            "jupyter_token": self._config.jupyter_token or details["jupyter_token"],
             "jupyter_token_set": (
                 self._config.jupyter_token is not None
                 or details["jupyter_token"] is not None

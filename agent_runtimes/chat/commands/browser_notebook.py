@@ -30,7 +30,12 @@ async def execute(tux: "CliTux") -> Optional[str]:
     ``AGENT_RUNTIMES_DEV_UI_URL``) instead of the built ``/static`` bundle. The
     dev server proxies ``/api`` to the backend, so the chat still connects.
     """
-    if os.environ.get("AGENT_RUNTIMES_DEV_UI", "").lower() in ("1", "true", "yes", "on"):
+    if os.environ.get("AGENT_RUNTIMES_DEV_UI", "").lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
         dev_base = os.environ.get(
             "AGENT_RUNTIMES_DEV_UI_URL", "http://localhost:5173"
         ).rstrip("/")

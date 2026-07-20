@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Benchmark functions for comparing PyTorch CPU vs GPU performance."""
+
 import os
 import time
 from typing import Any

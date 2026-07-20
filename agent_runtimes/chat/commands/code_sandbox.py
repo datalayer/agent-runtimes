@@ -43,9 +43,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{tux.server_url}/health/startup", timeout=5.0
-            )
+            response = await client.get(f"{tux.server_url}/health/startup", timeout=5.0)
             response.raise_for_status()
             sandbox = response.json().get("sandbox", {}) or {}
     except Exception as exc:  # noqa: BLE001

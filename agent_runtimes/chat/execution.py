@@ -66,8 +66,7 @@ class TuxExecutionGateway:
 
         def _run() -> subprocess.CompletedProcess[str]:
             return subprocess.run(
-                command,
-                shell=True,
+                ["/bin/bash", "-lc", command],
                 capture_output=True,
                 text=True,
             )

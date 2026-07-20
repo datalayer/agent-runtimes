@@ -311,7 +311,7 @@ async def wrap_agui_stream_with_approvals(
                         try:
                             event = json_mod.loads(data_str)
                         except Exception:
-                            continue
+                            event = None
                         if not isinstance(event, dict):
                             continue
                         event_type = event.get("type")

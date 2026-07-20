@@ -162,7 +162,7 @@ async def about_animation(console: Console) -> None:
                         break
                     offset = base_offset + step
 
-                # Sub-frame 1: Feet move first
+                    # Sub-frame 1: Feet move first
                     frame = Text.from_markup(f"""
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -185,7 +185,7 @@ async def about_animation(console: Console) -> None:
                         escaped = True
                         break
 
-                # Sub-frame 2: Layer 3 moves
+                    # Sub-frame 2: Layer 3 moves
                     frame = Text.from_markup(f"""
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -208,7 +208,7 @@ async def about_animation(console: Console) -> None:
                         escaped = True
                         break
 
-                # Sub-frame 3: Layer 2 moves
+                    # Sub-frame 3: Layer 2 moves
                     frame = Text.from_markup(f"""
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -231,7 +231,7 @@ async def about_animation(console: Console) -> None:
                         escaped = True
                         break
 
-                # Sub-frame 4: Layer 1 (top) moves - logo fully shifted
+                    # Sub-frame 4: Layer 1 (top) moves - logo fully shifted
                     frame = Text.from_markup(f"""
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]

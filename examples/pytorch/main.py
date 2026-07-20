@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """PyTorch GPU vs CPU benchmark example using the Datalayer Client."""
+
 from pathlib import Path
 
 from dotenv import load_dotenv

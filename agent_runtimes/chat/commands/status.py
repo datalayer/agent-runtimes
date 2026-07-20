@@ -22,9 +22,7 @@ if TYPE_CHECKING:
 
 NAME = "status"
 ALIASES: list[str] = []
-DESCRIPTION = (
-    "Show loop status including model, tokens, and connectivity"
-)
+DESCRIPTION = "Show loop status including model, tokens, and connectivity"
 SHORTCUT = "escape s"
 
 
@@ -145,7 +143,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
             f"{mcp_count} MCP server{'s' if mcp_count != 1 else ''}"
         ]
         if skill_count:
-            summary_parts.append(f"{skill_count} skill{'s' if skill_count != 1 else ''}")
+            summary_parts.append(
+                f"{skill_count} skill{'s' if skill_count != 1 else ''}"
+            )
         if sandbox_variant == "jupyter":
             summary_parts.append("Jupyter sandbox")
         if codemode_on:

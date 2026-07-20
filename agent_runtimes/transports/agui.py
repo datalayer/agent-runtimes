@@ -192,6 +192,7 @@ class AGUITransport(BaseTransport):
                 Endpoint to run the agent with per-request model override support.
                 """
                 import time
+
                 from starlette.responses import StreamingResponse
 
                 request_start = time.perf_counter()
@@ -362,9 +363,7 @@ class AGUITransport(BaseTransport):
                     usage_event_payload = {
                         "type": "usage",
                         "usage": {
-                            "input_tokens": int(
-                                getattr(usage, "input_tokens", 0) or 0
-                            ),
+                            "input_tokens": int(getattr(usage, "input_tokens", 0) or 0),
                             "output_tokens": int(
                                 getattr(usage, "output_tokens", 0) or 0
                             ),

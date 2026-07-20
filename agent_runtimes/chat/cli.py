@@ -63,7 +63,11 @@ def _cleanup_subprocess() -> None:
 def _cleanup_subprocess_with_spinner(message: str = "Terminating agent...") -> None:
     """Clean up subprocess while showing a transient spinner when interactive."""
     global _subprocess_ref
-    if _subprocess_ref is None or not _subprocess_ref.is_alive() or not sys.stdout.isatty():
+    if (
+        _subprocess_ref is None
+        or not _subprocess_ref.is_alive()
+        or not sys.stdout.isatty()
+    ):
         _cleanup_subprocess()
         return
 
@@ -666,9 +670,7 @@ def _pick_agentspec_interactive() -> str:
                     f"{GRAY}Please choose a valid (●) spec or press Enter for the default.{RESET}"
                 )
             else:
-                print(
-                    f"{GRAY}Please enter a number between 1 and {max_choice}.{RESET}"
-                )
+                print(f"{GRAY}Please enter a number between 1 and {max_choice}.{RESET}")
         except ValueError:
             # Allow typing the spec ID directly (only valid ones)
             matching = [s for s in valid_specs if s.id == choice]
@@ -681,10 +683,11 @@ def _pick_agentspec_interactive() -> str:
                 print(
                     f"{GRAY}Agent spec '{choice}' is not available (disabled or missing env vars).{RESET}"
                 )
-            elif (
-                not show_all_specs
-                and choice.lower() in {"show-all", "show-all-specs", "all"}
-            ):
+            elif not show_all_specs and choice.lower() in {
+                "show-all",
+                "show-all-specs",
+                "all",
+            }:
                 show_all_specs = True
             else:
                 print(
@@ -783,9 +786,7 @@ def main_callback(
         pass
 
     extra_suggestions = (
-        [s.strip() for s in suggestions.split(",") if s.strip()]
-        if suggestions
-        else []
+        [s.strip() for s in suggestions.split(",") if s.strip()] if suggestions else []
     )
 
     # Resolve agent spec: use provided ID or pick interactively
@@ -854,10 +855,11 @@ def main_callback(
         else:
             # Interactive mode: start server and launch TUX
             if agent_id:
-                from .tux import CliTux
                 from rich.console import Console
                 from rich.live import Live
                 from rich.spinner import Spinner
+
+                from .tux import CliTux
 
                 # Show the unified LOOP banner immediately before startup.
                 preview_tux = CliTux(
@@ -996,7 +998,6 @@ def main_callback(
                     f"{GRAY}{_ready_line}{RESET}"
                     f"{_summary_line}"
                 )
-
 
                 # Extract Jupyter URL for the /jupyter slash command
                 jupyter_url = None

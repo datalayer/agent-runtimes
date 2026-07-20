@@ -370,22 +370,20 @@ loop-simple: # loop-simple
 	@$(BEDROCK_ENV) \
 		loop --eggs --agentspec-id example-simple
 
-loop-demo: # loop-demo
+loop-demo-codemode: # loop-demo-codemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		loop chat \
-		  --eggs \
+		loop \
 		  --suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
-		  --agentspec-id information-routing
+		  --agentspec-id gallery-information-routing
 
-loop-example-nocodemode: # loop-example-nocodemode
+loop-demo-nocodemode: # loop-demo-nocodemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		loop chat \
-		--eggs \
-		--agentspec-id information-routing \
+		loop \
+		--agentspec-id gallery-information-routing \
 		--suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
 		--no-codemode
 

@@ -357,7 +357,9 @@ class TestShortOptions:
     def test_short_agent_name_option(self) -> None:
         """Test -n short option for --agent-name."""
         with patch("uvicorn.run"):
-            result = runner.invoke(app, ["serve", "-a", VALID_AGENT_ID, "-n", "my-agent"])
+            result = runner.invoke(
+                app, ["serve", "-a", VALID_AGENT_ID, "-n", "my-agent"]
+            )
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_AGENT_NAME") == "my-agent"
 

@@ -87,6 +87,7 @@ def print_goodbye(console: Any = None) -> None:
     else:
         print(f"\n{format_goodbye()}\n")
 
+
 # ASCII Art Banner with Datalayer brand colors
 BANNER = f"""
 {GREEN_MEDIUM}{BOLD}╔═══════════════════════════════════════════════════════════════╗

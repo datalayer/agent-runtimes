@@ -276,7 +276,9 @@ class CliTux:
         if result.stdout:
             self.console.print(result.stdout.rstrip("\n"), markup=False)
         if result.stderr:
-            self.console.print(result.stderr.rstrip("\n"), style=STYLE_ERROR, markup=False)
+            self.console.print(
+                result.stderr.rstrip("\n"), style=STYLE_ERROR, markup=False
+            )
 
         status_style = STYLE_ACCENT if result.success else STYLE_ERROR
         self.console.print(f"exit: {result.exit_code}", style=status_style)
@@ -296,7 +298,9 @@ class CliTux:
         if result.stdout:
             self.console.print(result.stdout.rstrip("\n"), markup=False)
         if result.stderr:
-            self.console.print(result.stderr.rstrip("\n"), style=STYLE_ERROR, markup=False)
+            self.console.print(
+                result.stderr.rstrip("\n"), style=STYLE_ERROR, markup=False
+            )
         if result.result is not None:
             self.console.print(str(result.result), style=STYLE_MUTED, markup=False)
 
@@ -329,7 +333,9 @@ class CliTux:
         return f"{text[:head]}…{text[-tail:]}" if tail else f"{text[:keep]}…"
 
     @staticmethod
-    def _extract_tokens_from_payload(payload: Any) -> tuple[Optional[int], Optional[int]]:
+    def _extract_tokens_from_payload(
+        payload: Any,
+    ) -> tuple[Optional[int], Optional[int]]:
         """Best-effort extraction of input/output tokens from AG-UI event payloads.
 
         Handles snake_case/camelCase fields and common nesting patterns like
@@ -438,7 +444,6 @@ class CliTux:
         display_name = self._get_display_name()
         cwd = self._get_cwd()
 
-
         from . import __version__
 
         version = __version__.__version__
@@ -535,7 +540,6 @@ class CliTux:
         path_line = self._truncate_middle(cwd, max(10, self.console.width - 2))
         self.console.print(f" {path_line}", style=STYLE_MUTED)
         self.console.print()
-
 
     def _create_key_bindings(self) -> KeyBindings:
         """Create keyboard shortcuts for slash commands.
@@ -702,7 +706,7 @@ class CliTux:
                     try:
                         msg = json.loads(raw)
                     except Exception:
-                        continue
+                        msg = None
                     if not isinstance(msg, dict):
                         continue
                     payload = msg.get("payload") or {}
@@ -944,10 +948,12 @@ class CliTux:
                     sum_output_tokens = _to_int(data.get("sumResponseOutputTokens"), 0)
                     if sum_input_tokens == 0 and sum_output_tokens == 0:
                         sum_input_tokens = _to_int(
-                            session_usage.get("inputTokens"), self.stats.total_input_tokens
+                            session_usage.get("inputTokens"),
+                            self.stats.total_input_tokens,
                         )
                         sum_output_tokens = _to_int(
-                            session_usage.get("outputTokens"), self.stats.total_output_tokens
+                            session_usage.get("outputTokens"),
+                            self.stats.total_output_tokens,
                         )
 
                     # Fallbacks when turnUsage is not populated by the provider.

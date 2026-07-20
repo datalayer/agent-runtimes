@@ -32,8 +32,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
-from .nodes.agent_node_sync import run_agent_node_sync
-from .nodes.agent_node_tunnel import run_agent_node_tunnel
 from .mcp import (
     ensure_config_mcp_toolsets_event,
     get_mcp_lifecycle_manager,
@@ -45,6 +43,8 @@ from .mcp import (
 from .mcp.catalog_mcp_servers import get_catalog_server
 from .models.models import resolve_model_for_inference_provider
 from .node_mode import is_node_enabled
+from .nodes.agent_node_sync import run_agent_node_sync
+from .nodes.agent_node_tunnel import run_agent_node_tunnel
 from .routes import (
     a2a_protocol_router,
     a2ui_router,
