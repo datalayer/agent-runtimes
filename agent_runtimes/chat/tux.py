@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""Terminal UX (TUX) for the Agent Runtimes Chat assistant."""
+"""Terminal UX (TUX) for theLoop assistant."""
 
 import asyncio
 import getpass
@@ -161,7 +161,7 @@ class SessionStats:
 
 
 class CliTux:
-    """Terminal UX for the Agent Runtimes Chat assistant."""
+    """Terminal UX for theLoop assistant."""
 
     def __init__(
         self,
@@ -1116,7 +1116,7 @@ async def run_tux(
     extra_suggestions: Optional[list[str]] = None,
     startup_message: Optional[str] = None,
 ) -> None:
-    """Run the Agent Runtimes Chat assistant TUX.
+    """Run theLoop assistant TUX.
 
     Args:
         agent_url: URL of the AG-UI agent endpoint

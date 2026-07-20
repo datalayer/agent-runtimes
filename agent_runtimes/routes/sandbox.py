@@ -81,8 +81,6 @@ async def execute_sandbox_code(
     if request.agent_id:
         sandbox = manager.get_agent_sandbox(request.agent_id)
     if sandbox is None:
-        sandbox = manager._active_sandbox()
-    if sandbox is None:
         sandbox = manager.get_managed_sandbox()
 
     client = CodeSandboxClient(sandbox)

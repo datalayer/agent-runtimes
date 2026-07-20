@@ -11,40 +11,58 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+import httpx
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
 NAME = "skills"
 ALIASES: list[str] = []
-DESCRIPTION = "List available skills (requires codemode enabled)"
+DESCRIPTION = "List available skills (requires an active sandbox)"
 SHORTCUT = "escape k"
 
 
 async def execute(tux: "CliTux") -> Optional[str]:
-    """List available skills (requires codemode enabled)."""
+    """List available skills (requires an active sandbox)."""
     from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
 
-    # First check if codemode is enabled
+    # Query server-side status for the active agent.
     try:
-        from agent_runtimes.streams.loop import build_codemode_status
-
-        status_data = build_codemode_status()
-        if status_data is None:
-            tux.console.print("[red]Error: could not get codemode status[/red]")
-            return None
+        async with httpx.AsyncClient() as client:
+            status_url = f"{tux.server_url}/api/v1/configure/codemode/status"
+            response = await client.get(
+                status_url,
+                params={"agent_id": tux.agent_id},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            status_data = response.json()
     except Exception as e:
-        tux.console.print(f"[red]Error checking codemode status: {e}[/red]")
+        tux.console.print(f"[red]Error checking skills status: {e}[/red]")
         return None
 
-    codemode_enabled = status_data.get("enabled", False)
+    sandbox = status_data.get("sandbox") if isinstance(status_data, dict) else None
+    sandbox_variant = ""
+    sandbox_running = False
+    if isinstance(sandbox, dict):
+        sandbox_variant = str(sandbox.get("variant") or "").strip().lower()
+        sandbox_running = bool(sandbox.get("sandbox_running"))
+        # Jupyter sandboxes can be considered available when connected,
+        # even if sandbox_running is not explicitly reported.
+        if sandbox_variant == "jupyter" and bool(sandbox.get("jupyter_connected")):
+            sandbox_running = True
 
-    if not codemode_enabled:
+    if not sandbox_running:
         tux.console.print()
-        tux.console.print("● Codemode is disabled", style=STYLE_WARNING)
+        tux.console.print("● Sandbox is not available", style=STYLE_WARNING)
         tux.console.print(
-            "  Skills are only available when codemode is enabled.", style=STYLE_MUTED
+            "  Skills are available only when an active sandbox is available.",
+            style=STYLE_MUTED,
         )
-        tux.console.print("  Use /codemode-toggle to enable it.", style=STYLE_MUTED)
+        tux.console.print(
+            "  Start or attach a sandbox, then run /skills again.",
+            style=STYLE_MUTED,
+        )
         tux.console.print()
         return None
 

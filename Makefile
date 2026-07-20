@@ -368,7 +368,7 @@ loop: # loop
 
 loop-simple: # loop-simple
 	@$(BEDROCK_ENV) \
-		loop--eggs --agentspec-id example-simple
+		loop --eggs --agentspec-id example-simple
 
 loop-demo: # loop-demo
 	@$(BEDROCK_ENV) \

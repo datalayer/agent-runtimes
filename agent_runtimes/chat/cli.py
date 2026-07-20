@@ -202,7 +202,7 @@ from agent_runtimes.specs.models import DEFAULT_MODEL
 # Define the embedded assistant agent used when no remote runtime is selected.
 agent = Agent(
     DEFAULT_MODEL.value,
-    instructions="""You are the Agent Runtimes Chat assistant, a helpful AI specialized in code analysis,
+    instructions="""You are theLoop assistant, a helpful AI specialized in code analysis,
     Jupyter notebooks, and data science workflows. You help users with:
     - Writing and debugging code
     - Analyzing Jupyter notebooks
@@ -1139,7 +1139,7 @@ async def _run_single_query_ag_ui(url: str, query: str) -> str:
 
 @app.command()
 def version() -> None:
-    """Show Agent Runtimes Chat assistant version information."""
+    """ShowLoop assistant version information."""
     _show_version()
 
 

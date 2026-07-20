@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""Animation modules for Agent Runtimes Chat TUX Easter eggs."""
+"""Animation modules forLoop TUX Easter eggs."""
 
 from .about import about_animation
 from .gif import gif_animation

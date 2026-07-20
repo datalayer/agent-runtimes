@@ -28,12 +28,15 @@ async def execute(tux: "CliTux") -> Optional[str]:
 
     # First get current status
     try:
-        from agent_runtimes.streams.loop import build_codemode_status
-
-        current_status = build_codemode_status()
-        if current_status is None:
-            tux.console.print("[red]Error: could not get codemode status[/red]")
-            return None
+        async with httpx.AsyncClient() as client:
+            status_url = f"{tux.server_url}/api/v1/configure/codemode/status"
+            status_response = await client.get(
+                status_url,
+                params={"agent_id": tux.agent_id},
+                timeout=10.0,
+            )
+            status_response.raise_for_status()
+            current_status = status_response.json()
     except Exception as e:
         tux.console.print(f"[red]Error checking codemode status: {e}[/red]")
         return None
@@ -47,7 +50,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
             url = f"{tux.server_url}/api/v1/configure/codemode/toggle"
             response = await client.post(
                 url,
-                json={"enabled": new_enabled},
+                json={"enabled": new_enabled, "agent_id": tux.agent_id},
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -64,9 +67,16 @@ async def execute(tux: "CliTux") -> Optional[str]:
         tux.console.print(
             "  Enhanced code capabilities are now active.", style=STYLE_MUTED
         )
-        tux.console.print("  Use /skills to see available skills.", style=STYLE_MUTED)
+        tux.console.print(
+            "  Tools can now be executed via the code sandbox.",
+            style=STYLE_MUTED,
+        )
     else:
         tux.console.print("● Codemode disabled", style=STYLE_WARNING)
         tux.console.print("  Standard mode is now active.", style=STYLE_MUTED)
+        tux.console.print(
+            "  Tools will now be executed by MCP servers.",
+            style=STYLE_MUTED,
+        )
     tux.console.print()
     return None

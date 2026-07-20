@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""About/logo animation for Agent Runtimes Chat TUX."""
+"""About/logo animation forLoop TUX."""
 
 import asyncio
 import time
