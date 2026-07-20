@@ -57,7 +57,7 @@ RESET = "\033[0m"
 # bars) is the Datalayer logo. Keep this centralized and render it everywhere
 # via ``print_goodbye`` so the message stays consistent.
 GOODBYE_URL = "https://datalayer.ai"
-GOODBYE_MESSAGE = "☰ Keep looping ⟳ your agents stay warm — See you soon at Datalayer!"
+GOODBYE_MESSAGE = "⟳ Keep looping — Your agents stay warm ☰ See you soon at Datalayer!"
 
 
 def _osc8_link(url: str, label: str | None = None) -> str:

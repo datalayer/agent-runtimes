@@ -109,7 +109,7 @@ async def about_animation(console: Console) -> None:
             initial,
             border_style=STYLE_PRIMARY,
             title=" LOOP ⟳ 0.0.2 ",
-            subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
+            subtitle="",
         )
 
     escaped = False
@@ -138,7 +138,7 @@ async def about_animation(console: Console) -> None:
                             frame,
                             border_style=STYLE_PRIMARY,
                             title=" LOOP ⟳ 0.0.2 ",
-                            subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
+                            subtitle="",
                         )
                     )
                     await asyncio.sleep(0.15)
@@ -176,7 +176,7 @@ async def about_animation(console: Console) -> None:
                             frame,
                             border_style=STYLE_PRIMARY,
                             title=" LOOP ⟳ 0.0.2 ",
-                            subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
+                            subtitle="",
                         )
                     )
                     await asyncio.sleep(0.08)
@@ -199,7 +199,7 @@ async def about_animation(console: Console) -> None:
                             frame,
                             border_style=STYLE_PRIMARY,
                             title=" LOOP ⟳ 0.0.2 ",
-                            subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
+                            subtitle="",
                         )
                     )
                     await asyncio.sleep(0.08)
@@ -222,7 +222,7 @@ async def about_animation(console: Console) -> None:
                             frame,
                             border_style=STYLE_PRIMARY,
                             title=" LOOP ⟳ 0.0.2 ",
-                            subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
+                            subtitle="",
                         )
                     )
                     await asyncio.sleep(0.08)
@@ -245,7 +245,7 @@ async def about_animation(console: Console) -> None:
                             frame,
                             border_style=STYLE_PRIMARY,
                             title=" LOOP ⟳ 0.0.2 ",
-                            subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
+                            subtitle="",
                         )
                     )
                     await asyncio.sleep(0.08)
@@ -323,7 +323,7 @@ async def about_animation(console: Console) -> None:
                                 frame,
                                 border_style=STYLE_PRIMARY,
                                 title=" LOOP ⟳ 0.0.2 ",
-                                subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
+                                subtitle="",
                             )
                         )
                         await asyncio.sleep(0.15)

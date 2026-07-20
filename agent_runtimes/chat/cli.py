@@ -933,7 +933,7 @@ def main_callback(
                 _agent_emoji = (
                     str(getattr(_spec, "emoji", "") or "").strip() if _spec else ""
                 )
-                _agent_prefix = f"{_agent_emoji} " if _agent_emoji else ""
+                _agent_prefix = f"{_agent_emoji}  " if _agent_emoji else ""
                 _ready_line = ""
                 if _spec and _spec.description:
                     _desc_line = _spec.description.strip().split("\n")[0]
@@ -991,8 +991,8 @@ def main_callback(
                     else ""
                 )
                 startup_message = (
-                    f"{GREEN_MEDIUM}●{RESET} {WHITE}Agent {GREEN_LIGHT}{_agent_prefix}{_agent_label}{RESET}"
-                    f"{WHITE} is started and ready{RESET}"
+                    f"{GREEN_MEDIUM}●{RESET} {BOLD}{WHITE}Agent {RESET}{GREEN_LIGHT}{_agent_prefix}{_agent_label}{RESET}"
+                    f"{BOLD}{WHITE} is started and ready{RESET}"
                     f"{GRAY}{_ready_line}{RESET}"
                     f"{_summary_line}"
                 )
