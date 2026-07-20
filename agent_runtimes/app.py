@@ -363,7 +363,10 @@ async def _create_and_register_cli_agent(
         # For Jupyter sandboxes, always use HTTP proxy if not already set
         if not mcp_proxy_url and shared_sandbox is not None:
             if hasattr(shared_sandbox, "_server_url"):
-                mcp_proxy_url = "http://localhost:8765/api/v1/mcp/proxy"
+                mcp_proxy_url = os.getenv(
+                    "AGENT_RUNTIMES_MCP_PROXY_URL",
+                    "http://localhost:8765/api/v1/mcp/proxy",
+                )
                 logger.info(
                     f"Using default MCP proxy URL for Jupyter sandbox: {mcp_proxy_url}"
                 )

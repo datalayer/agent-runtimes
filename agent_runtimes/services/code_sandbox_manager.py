@@ -568,7 +568,10 @@ class CodeSandboxManager:
         # Use 127.0.0.1 for local development (works for both local process and container)
         # In K8s, this should be explicitly set to the service name (e.g., http://agent-runtimes:8765)
         if mcp_proxy_url is None:
-            mcp_proxy_url = "http://127.0.0.1:8765/api/v1/mcp/proxy"
+            mcp_proxy_url = os.getenv(
+                "AGENT_RUNTIMES_MCP_PROXY_URL",
+                "http://127.0.0.1:8765/api/v1/mcp/proxy",
+            )
 
         self.configure(
             variant="jupyter",

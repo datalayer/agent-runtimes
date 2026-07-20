@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""Slash command: /browser - Open the Agent chat UI in the browser."""
+"""Slash command: /chat - Open the Agent chat UI in the browser."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ..tux import CliTux
 
-NAME = "browser"
-ALIASES: list[str] = []
+NAME = "chat"
+ALIASES: list[str] = ["browser"]
 DESCRIPTION = "Open the Agent chat UI in your browser"
 SHORTCUT = "escape w"
 
@@ -24,6 +24,10 @@ SHORTCUT = "escape w"
 async def execute(tux: "CliTux") -> Optional[str]:
     """Open the Agent chat web UI in the default browser."""
     url = f"{tux.server_url}/static/agent.html?agentId={tux.agent_id}"
-    tux.console.print(f"  Opening [bold cyan]{url}[/bold cyan]")
+    tux.console.print()
+    tux.console.print(
+        f"  [link={url}][bold white on rgb(22,160,133)] Open Chat [/][/link]"
+    )
+    tux.console.print()
     webbrowser.open(url)
     return None

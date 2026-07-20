@@ -320,6 +320,15 @@ def _run_agent_runtime_server(
     if port_value is not None:
         port_value.value = actual_port
 
+    # Point the codemode MCP proxy at this server's actual port. The loop
+    # binds to a random free port, so the hardcoded 8765 default would make the
+    # sandbox's tool calls unreachable ("Connection error to MCP proxy at
+    # http://localhost:8765..."). Respect an explicit override if already set.
+    os.environ.setdefault(
+        "AGENT_RUNTIMES_MCP_PROXY_URL",
+        f"http://127.0.0.1:{actual_port}/api/v1/mcp/proxy",
+    )
+
     # Load agent spec to get MCP servers and sandbox variant
     # Keep empty by default so specs with no MCP servers do not start any.
     mcp_servers_str = ""
