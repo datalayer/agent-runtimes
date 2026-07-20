@@ -60,6 +60,30 @@ def _cleanup_subprocess() -> None:
         _subprocess_ref = None
 
 
+def _cleanup_subprocess_with_spinner(message: str = "Terminating agent...") -> None:
+    """Clean up subprocess while showing a transient spinner when interactive."""
+    global _subprocess_ref
+    if _subprocess_ref is None or not _subprocess_ref.is_alive() or not sys.stdout.isatty():
+        _cleanup_subprocess()
+        return
+
+    try:
+        from rich.console import Console
+        from rich.live import Live
+        from rich.spinner import Spinner as RichSpinner
+
+        console = Console()
+        with Live(
+            RichSpinner("dots", text=f"[bold cyan]{message}[/bold cyan]", style="cyan"),
+            console=console,
+            transient=True,
+            refresh_per_second=12,
+        ):
+            _cleanup_subprocess()
+    except Exception:
+        _cleanup_subprocess()
+
+
 def _signal_handler(signum: int, frame: Any) -> None:
     """Handle signals by cleaning up subprocess and exiting."""
     _cleanup_subprocess()
@@ -749,22 +773,29 @@ def main_callback(
 
     global _subprocess_ref
 
-    # Show ASCII banner early (before agent selection)
-    from .banner import RESET as BANNER_RESET
+    # Optional animated splash (default startup uses the rich welcome panel only)
     from .banner import show_banner
 
     if banner or banner_all:
         show_banner(splash=banner, splash_all=banner_all)
     else:
-        if sys.stdout.isatty():
-            print(BANNER)
-            print(
-                f"{DIM}Powered by Datalayer  •  \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{BANNER_RESET}\n"
-            )
+        pass
 
     # Resolve agent spec: use provided ID or pick interactively
     agent_id = agentspec_id
     if agent_id is None:
+        # Render the same rich LOOP banner style before the first agentspec
+        # selection question so startup uses a single visual language.
+        from .tux import CliTux
+
+        preview_tux = CliTux(
+            agent_url="http://127.0.0.1:0/api/v1/ag-ui/chat/",
+            server_url="http://127.0.0.1:0",
+            agent_id=DEFAULT_RUNTIME_AGENT_NAME,
+            eggs=eggs,
+            extra_suggestions=extra_suggestions,
+        )
+        preview_tux.show_welcome()
         agent_id = _pick_agentspec_interactive()
 
     try:
@@ -816,9 +847,26 @@ def main_callback(
         else:
             # Interactive mode: start server and launch TUX
             if agent_id:
+                from .tux import CliTux
                 from rich.console import Console
                 from rich.live import Live
                 from rich.spinner import Spinner
+
+                preview_suggestions = (
+                    [s.strip() for s in suggestions.split(",") if s.strip()]
+                    if suggestions
+                    else []
+                )
+
+                # Show the unified LOOP banner immediately before startup.
+                preview_tux = CliTux(
+                    agent_url="http://127.0.0.1:0/api/v1/ag-ui/chat/",
+                    server_url="http://127.0.0.1:0",
+                    agent_id=DEFAULT_RUNTIME_AGENT_NAME,
+                    eggs=eggs,
+                    extra_suggestions=preview_suggestions,
+                )
+                preview_tux.show_welcome()
 
                 # Show starting message with spinner
                 console = Console()
@@ -912,7 +960,7 @@ def main_callback(
                         )
                     )
                 finally:
-                    _cleanup_subprocess()
+                    _cleanup_subprocess_with_spinner("Terminating agent...")
             else:
                 # Fall back to local agent
                 agent.to_cli_sync(prog_name="agent-runtimes chat")

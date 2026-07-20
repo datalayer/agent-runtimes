@@ -23,7 +23,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style as PTStyle
 from rich.box import ROUNDED
 from rich.columns import Columns
-from rich.console import Console
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
@@ -415,9 +415,13 @@ class CliTux:
 
         # Left panel content
         left_content = Text()
-        left_content.append("\n", style=STYLE_MUTED)
         left_content.append(logo)
-        left_content.append(f"\n  Welcome back {display_name}!\n", style=STYLE_WHITE)
+        left_content.append("\n", style=STYLE_MUTED)
+        left_content.append(f"  Welcome back {display_name}!\n", style=STYLE_WHITE)
+        left_content.append(
+            "  https://datalayer.ai\n",
+            style=Style(color="rgb(26,188,156)", underline=True, link="https://datalayer.ai"),
+        )
 
         # Right panel content - tips
         right_content = Text()
@@ -426,12 +430,18 @@ class CliTux:
         right_content.append("/", style=STYLE_PRIMARY)
         right_content.append(" to see all commands\n", style=STYLE_MUTED)
         right_content.append("─" * 40 + "\n", style=STYLE_MUTED)
-        right_content.append("/context - View context usage\n", style=STYLE_MUTED)
-        right_content.append("/status - Check connection status\n", style=STYLE_MUTED)
-        right_content.append("/clear - Start fresh conversation\n", style=STYLE_MUTED)
-        right_content.append(
-            "/exit - Exit from loop\n", style=STYLE_MUTED
-        )
+
+        def _append_tip(command: str, description: str, is_last: bool = False) -> None:
+            right_content.append(f"{command:<9}", style=STYLE_PRIMARY)
+            if is_last:
+                right_content.append(f"- {description}", style=STYLE_MUTED)
+            else:
+                right_content.append(f"- {description}\n", style=STYLE_MUTED)
+
+        _append_tip("/context", "View context usage")
+        _append_tip("/status", "Check connection status")
+        _append_tip("/clear", "Start fresh conversation")
+        _append_tip("/exit", "Exit from loop", is_last=True)
 
         # Create side-by-side layout
         inner_panel_height = 10
@@ -448,11 +458,20 @@ class CliTux:
             height=inner_panel_height,
         )
 
+        # Footer row beneath the two inner panels.
+        footer_left = Text(" AI-Powered Data Assistant", style=STYLE_MUTED)
+        footer_right = Text(" Cheaper • Faster • Collaborative", style=STYLE_MUTED)
+
         # Create the main panel
-        title = f" ⟳ LOOP {version} "
+        title = f" LOOP ⟳ {version} "
+
+        content = Group(
+            Columns([left_panel, right_panel], equal=False, expand=True),
+            Columns([footer_left, footer_right], equal=False, expand=True),
+        )
 
         main_panel = Panel(
-            Columns([left_panel, right_panel], equal=False, expand=True),
+            content,
             title=title,
             title_align="left",
             border_style=STYLE_PRIMARY,
