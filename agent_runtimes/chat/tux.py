@@ -418,9 +418,13 @@ class CliTux:
         left_content.append(logo)
         left_content.append("\n", style=STYLE_MUTED)
         left_content.append(f"  Welcome back {display_name}!\n", style=STYLE_WHITE)
+        left_content.append("\n", style=STYLE_MUTED)
+        left_content.append("  ", style=STYLE_MUTED)
         left_content.append(
-            "  https://datalayer.ai\n",
-            style=Style(color="rgb(26,188,156)", underline=True, link="https://datalayer.ai"),
+            "https://datalayer.ai\n",
+            style=Style(
+                color="rgb(26,188,156)", underline=True, link="https://datalayer.ai"
+            ),
         )
 
         # Right panel content - tips
@@ -430,6 +434,7 @@ class CliTux:
         right_content.append("/", style=STYLE_PRIMARY)
         right_content.append(" to see all commands\n", style=STYLE_MUTED)
         right_content.append("─" * 40 + "\n", style=STYLE_MUTED)
+        right_content.append("\n", style=STYLE_MUTED)
 
         def _append_tip(command: str, description: str, is_last: bool = False) -> None:
             right_content.append(f"{command:<9}", style=STYLE_PRIMARY)
@@ -444,7 +449,7 @@ class CliTux:
         _append_tip("/exit", "Exit from loop", is_last=True)
 
         # Create side-by-side layout
-        inner_panel_height = 10
+        inner_panel_height = 11
         left_panel = Panel(
             left_content,
             border_style=STYLE_SECONDARY,

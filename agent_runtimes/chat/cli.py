@@ -921,6 +921,28 @@ def main_callback(
                 print(_format_startup_info("127.0.0.1", actual_port, startup_info))
                 print()
 
+                # Confirmation message based on the selected agent spec.
+                try:
+                    from agent_runtimes.specs.agents import get_agent_spec
+
+                    _spec = get_agent_spec(agent_id)
+                except Exception:
+                    _spec = None
+                _agent_label = _spec.name if _spec and _spec.name else agent_id
+                _ready_hint = "help you with your data tasks"
+                if _spec and _spec.description:
+                    _desc_line = _spec.description.strip().split("\n")[0]
+                    if _desc_line:
+                        _desc_line = _desc_line[0].lower() + _desc_line[1:]
+                        if len(_desc_line) > 90:
+                            _desc_line = _desc_line[:87].rstrip() + "..."
+                        _ready_hint = _desc_line
+                print(
+                    f"{GREEN_MEDIUM}●{RESET} {WHITE}Agent {GREEN_LIGHT}{_agent_label}{RESET}"
+                    f"{WHITE} is started and ready to {_ready_hint}{RESET}"
+                )
+                print()
+
                 # Extract Jupyter URL for the /jupyter slash command
                 jupyter_url = None
                 if startup_info:
