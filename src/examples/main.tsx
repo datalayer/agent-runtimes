@@ -1039,7 +1039,8 @@ const ExampleAppThemed: React.FC<{
 
                 // Classify each example into a named group.
                 const groupOf = (id: string): string => {
-                  if (id === 'AgentspecsExample') return 'Personas';
+                  if (id === 'AgentspecsExample' || id === 'AgentLoopExample')
+                    return 'Personas';
                   if (id.startsWith('A2Ui')) return 'A2UI';
                   if (id.startsWith('AgUi')) return 'AG-UI';
                   if (id.startsWith('CopilotKit')) return 'CopilotKit';
@@ -1076,8 +1077,22 @@ const ExampleAppThemed: React.FC<{
                     grouped.set(g, [ex]);
                   }
                 }
-                for (const list of grouped.values()) {
-                  list.sort((a, b) => a.title.localeCompare(b.title));
+                for (const [groupName, list] of grouped.entries()) {
+                  if (groupName === 'Personas') {
+                    const personaOrder = (id: string): number => {
+                      if (id === 'AgentspecsExample') return 0;
+                      if (id === 'AgentLoopExample') return 1;
+                      return 2;
+                    };
+                    list.sort((a, b) => {
+                      const orderDelta =
+                        personaOrder(a.id) - personaOrder(b.id);
+                      if (orderDelta !== 0) return orderDelta;
+                      return a.title.localeCompare(b.title);
+                    });
+                  } else {
+                    list.sort((a, b) => a.title.localeCompare(b.title));
+                  }
                 }
 
                 const nodes: React.ReactNode[] = [];

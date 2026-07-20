@@ -202,6 +202,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'inference', 'provider', 'runtime'],
   ),
   makeEntry(
+    'AgentLoopExample',
+    () => import('./AgentLoopExample'),
+    'Define and launch an agent execution loop (observe/think/act/evaluate) over a live notebook, driven by generic loop specs.',
+    ['example', 'agent', 'loop', 'notebook', 'agentspecs'],
+  ),
+  makeEntry(
     'AgentToolApprovalsExample',
     () => import('./AgentToolApprovalsExample'),
     'Tool approval workflows and manual decisions.',
