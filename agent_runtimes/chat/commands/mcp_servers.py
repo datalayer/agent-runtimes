@@ -54,11 +54,18 @@ async def execute(tux: "CliTux") -> Optional[str]:
         tux.console.print(f"  {status} {server_name}", style=STYLE_ACCENT)
 
         if tools:
-            tool_names = [t.get("name", "?") for t in tools[:5]]
-            tools_str = ", ".join(tool_names)
-            if len(tools) > 5:
-                tools_str += f" (+{len(tools) - 5} more)"
-            tux.console.print(f"    Tools: {tools_str}", style=STYLE_MUTED)
+            tux.console.print(f"    Tools ({len(tools)}):", style=STYLE_MUTED)
+            for tool in tools:
+                tool_name = tool.get("name", "?")
+                tool_desc = (tool.get("description") or "").strip()
+                if not tool_desc:
+                    tool_desc = "No description"
+                tux.console.print(
+                    f"      - {tool_name}: {tool_desc}",
+                    style=STYLE_MUTED,
+                )
+        else:
+            tux.console.print("    Tools (0)", style=STYLE_MUTED)
 
     tux.console.print()
     return None

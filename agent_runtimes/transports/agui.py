@@ -314,6 +314,8 @@ class AGUITransport(BaseTransport):
                 # Apply per-turn enablement to backend guardrail state.
                 try:
                     from agent_runtimes.streams.loop import (
+                        get_known_mcp_tool_names,
+                        has_agent_mcp_tool_selection,
                         set_agent_enabled_mcp_tool_names,
                         set_agent_turn_enabled_skills,
                     )
@@ -323,6 +325,17 @@ class AGUITransport(BaseTransport):
                             transport_self._agent_id,
                             builtin_tools_from_request,
                         )
+                    elif not has_agent_mcp_tool_selection(transport_self._agent_id):
+                        # AG-UI clients (including TUX) may omit builtinTools.
+                        # Seed a first-turn MCP selection from all discovered
+                        # MCP tools so approval-driven flows can execute tools
+                        # instead of being blocked as "disabled by user selection".
+                        known_mcp_tools = sorted(get_known_mcp_tool_names())
+                        if known_mcp_tools:
+                            set_agent_enabled_mcp_tool_names(
+                                transport_self._agent_id,
+                                known_mcp_tools,
+                            )
                     if isinstance(skills_from_request, list):
                         set_agent_turn_enabled_skills(
                             transport_self._agent_id,

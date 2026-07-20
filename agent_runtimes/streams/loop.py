@@ -214,6 +214,16 @@ def get_agent_enabled_mcp_tool_names(agent_id: str | None) -> set[str]:
     return names
 
 
+def has_agent_mcp_tool_selection(agent_id: str | None) -> bool:
+    """Return True when an explicit MCP tool selection exists for an agent.
+
+    This indicates the user/client has intentionally sent a selection update
+    (for example via ``builtinTools`` or monitoring websocket controls). When
+    False, callers may seed a sensible default selection for first-turn flows.
+    """
+    return _stream_key(agent_id) in _MCP_ENABLED_TOOLS_BY_AGENT
+
+
 def get_known_mcp_tool_names() -> set[str]:
     """Return all known MCP tool names currently discovered by lifecycle manager."""
     names: set[str] = set()

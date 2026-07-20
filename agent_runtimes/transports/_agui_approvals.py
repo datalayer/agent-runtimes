@@ -29,7 +29,7 @@ from typing import Any, AsyncIterator
 try:  # pragma: no cover - httpx is always present in runtime
     import httpx
 except Exception:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    httpx = None
 
 logger = logging.getLogger(__name__)
 

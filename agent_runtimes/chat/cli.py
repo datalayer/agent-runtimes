@@ -782,6 +782,12 @@ def main_callback(
     else:
         pass
 
+    extra_suggestions = (
+        [s.strip() for s in suggestions.split(",") if s.strip()]
+        if suggestions
+        else []
+    )
+
     # Resolve agent spec: use provided ID or pick interactively
     agent_id = agentspec_id
     if agent_id is None:
@@ -853,19 +859,13 @@ def main_callback(
                 from rich.live import Live
                 from rich.spinner import Spinner
 
-                preview_suggestions = (
-                    [s.strip() for s in suggestions.split(",") if s.strip()]
-                    if suggestions
-                    else []
-                )
-
                 # Show the unified LOOP banner immediately before startup.
                 preview_tux = CliTux(
                     agent_url="http://127.0.0.1:0/api/v1/ag-ui/chat/",
                     server_url="http://127.0.0.1:0",
                     agent_id=DEFAULT_RUNTIME_AGENT_NAME,
                     eggs=eggs,
-                    extra_suggestions=preview_suggestions,
+                    extra_suggestions=extra_suggestions,
                 )
                 preview_tux.show_welcome()
 
@@ -1021,11 +1021,6 @@ def main_callback(
                     # Use Rich-based TUX
                     from .tux import run_tux
 
-                    extra_suggestions = (
-                        [s.strip() for s in suggestions.split(",") if s.strip()]
-                        if suggestions
-                        else []
-                    )
                     asyncio.run(
                         run_tux(
                             url,
