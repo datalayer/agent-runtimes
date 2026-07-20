@@ -521,14 +521,55 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
     return "\n".join(lines)
 
 
-def _spec_has_valid_env(spec: Any) -> bool:
-    """Return True when a spec is enabled and all its required env vars are set."""
+def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
+    """Return model IDs available from current env vars.
+
+    Returns:
+        (available_ids, available_display_lines, total_model_specs)
+    """
+    try:
+        from agent_runtimes.specs.models import check_env_vars_available, list_models
+    except Exception:
+        return set(), [], 0
+
+    available_ids: set[str] = set()
+    available_lines: list[str] = []
+    models = list_models()
+    for model in sorted(models, key=lambda m: m.id):
+        if check_env_vars_available(list(model.required_env_vars or [])):
+            available_ids.add(model.id)
+            available_lines.append(f"{model.id} ({model.name})")
+    return available_ids, available_lines, len(models)
+
+
+def _spec_has_valid_env(spec: Any, available_model_ids: set[str] | None = None) -> bool:
+    """Return True when a spec is enabled and all required env vars are set.
+
+    Validation includes:
+    - spec is enabled
+    - MCP server required env vars are present
+    - model required env vars are present (when model exists in catalog)
+    """
     if not spec.enabled:
         return False
+
     for mcp in spec.mcp_servers:
         for var in mcp.required_env_vars:
             if not os.environ.get(var):
                 return False
+
+    if available_model_ids is not None and getattr(spec, "model", None):
+        try:
+            from agent_runtimes.specs.models import get_model
+
+            model_ref = str(spec.model)
+            model_spec = get_model(model_ref)
+            # Only gate on catalog models; unknown/custom models remain allowed.
+            if model_spec is not None and model_spec.id not in available_model_ids:
+                return False
+        except Exception:
+            pass
+
     return True
 
 
@@ -583,13 +624,35 @@ def _pick_agentspec_interactive() -> str:
                 )
                 raise typer.Exit(1)
 
-        # Partition into valid (enabled + all env vars) and the rest, each sorted by id.
+        # Resolve model credentials from env vars and list available model specs.
+        available_model_ids, available_model_lines, total_models = (
+            _available_model_ids_by_env()
+        )
+
+        print()
+        if total_models > 0:
+            print(
+                f"{GREEN_LIGHT}Model specs available by env vars:{RESET} "
+                f"{len(available_model_ids)}/{total_models}"
+            )
+            if available_model_lines:
+                for line in available_model_lines:
+                    print(f"       {GREEN_MEDIUM}●{RESET} {WHITE}{line}{RESET}")
+            else:
+                print(f"       {RED}No model specs are currently available.{RESET}")
+            print(
+                f"{GRAY}Only agents whose model requirements are available are selectable.{RESET}"
+            )
+
+        # Partition into valid (enabled + MCP/model env vars) and the rest, each sorted by id.
         # Display invalid first, then valid, while keeping selection restricted to valid.
         valid_specs = sorted(
-            [s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id
+            [s for s in specs if _spec_has_valid_env(s, available_model_ids)],
+            key=lambda s: s.id,
         )
         other_specs = sorted(
-            [s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id
+            [s for s in specs if not _spec_has_valid_env(s, available_model_ids)],
+            key=lambda s: s.id,
         )
         ordered = other_specs + valid_specs
         valid_count = len(valid_specs)
@@ -598,7 +661,7 @@ def _pick_agentspec_interactive() -> str:
         if valid_count == 0:
             print(f"\n{RED}No valid agent specs available.{RESET}")
             print(
-                f"{GRAY}Enable a spec and/or set the required environment variables.{RESET}"
+                f"{GRAY}Enable a spec and/or set the required MCP/model environment variables.{RESET}"
             )
             raise typer.Exit(1)
 
@@ -640,6 +703,23 @@ def _pick_agentspec_interactive() -> str:
                         env_parts.append(f"{RED}{var}{RESET}")
                 print(f"       {' '.join(env_parts)}")
 
+            model_ref = str(getattr(spec, "model", "") or "")
+            if model_ref:
+                try:
+                    from agent_runtimes.specs.models import get_model
+
+                    model_spec = get_model(model_ref)
+                except Exception:
+                    model_spec = None
+                if model_spec is not None:
+                    model_ok = model_spec.id in available_model_ids
+                    model_color = GREEN_LIGHT if model_ok else RED
+                    print(
+                        f"       model: {model_color}{model_spec.id}{RESET}"
+                    )
+                else:
+                    print(f"       model: {GRAY}{model_ref} (custom/unknown){RESET}")
+
         show_all_index: Optional[int] = None
         if not show_all_specs:
             show_all_index = len(ordered) + 1
@@ -673,7 +753,7 @@ def _pick_agentspec_interactive() -> str:
                 return chosen.id
             elif 0 <= idx < len(ordered):
                 print(
-                    f"{GRAY}Agent spec #{choice} is not available (disabled or missing env vars).{RESET}"
+                    f"{GRAY}Agent spec #{choice} is not available (disabled or missing MCP/model env vars).{RESET}"
                 )
                 print(
                     f"{GRAY}Please choose a valid (●) spec or press Enter for the default.{RESET}"
@@ -690,7 +770,7 @@ def _pick_agentspec_interactive() -> str:
             invalid_match = [s for s in other_specs if s.id == choice]
             if invalid_match:
                 print(
-                    f"{GRAY}Agent spec '{choice}' is not available (disabled or missing env vars).{RESET}"
+                    f"{GRAY}Agent spec '{choice}' is not available (disabled or missing MCP/model env vars).{RESET}"
                 )
             elif not show_all_specs and choice.lower() in {
                 "show-all",
@@ -908,6 +988,17 @@ def main_callback(
                             text=f"[bold cyan]Waiting for agent runtime '{agent_id}' on port {actual_port}...[/bold cyan]",
                             style="cyan",
                         )
+                    )
+
+                    # Show available model IDs on one line while the runtime starts.
+                    _available_model_ids, _, _ = _available_model_ids_by_env()
+                    _available_models_line = (
+                        ", ".join(sorted(_available_model_ids))
+                        if _available_model_ids
+                        else "none"
+                    )
+                    console.print(
+                        f"[dim]Available model IDs: {_available_models_line}[/dim]"
                     )
 
                     # Wait for server to be ready
