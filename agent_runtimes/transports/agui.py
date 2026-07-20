@@ -84,17 +84,32 @@ class AGUITransport(BaseTransport):
         main_app.mount("/agentic_chat", app)
     """
 
-    def __init__(self, agent: BaseAgent, agent_id: str | None = None, **kwargs: Any):
+    def __init__(
+        self,
+        agent: BaseAgent,
+        agent_id: str | None = None,
+        has_approval_tools: bool = False,
+        approval_tool_ids: list[str] | None = None,
+        **kwargs: Any,
+    ):
         """Initialize the AG-UI adapter.
 
         Args:
             agent: The agent to adapt.
             agent_id: Agent ID for usage tracking.
+            has_approval_tools: Whether any tool requires human approval.
+            approval_tool_ids: Tool IDs (versioned or base names) that require
+                approval; used to intercept deferred tool calls and create
+                pending approval records for parity with the Vercel AI transport.
             **kwargs: Additional arguments passed to AGUIAdapter.dispatch_request.
         """
         super().__init__(agent)
         self._agui_kwargs = kwargs
         self._app: "Starlette | None" = None
+        self._approval_tool_ids: list[str] = list(approval_tool_ids or [])
+        self._has_approval_tools: bool = has_approval_tools or bool(
+            self._approval_tool_ids
+        )
         # Get agent_id from adapter if available
         if agent_id:
             self._agent_id = agent_id
@@ -275,6 +290,22 @@ class AGUITransport(BaseTransport):
                         return {"type": "http.request", "body": body_bytes}
 
                     request = Request(request.scope, receive)
+
+                    # On continuation turns, resolve any deferred approval
+                    # decisions carried in the request body before the agent
+                    # re-runs the deferred tool (parity with Vercel AI).
+                    if transport_self._has_approval_tools and isinstance(body, dict):
+                        try:
+                            from .vercel_ai import _presignal_deferred_approvals
+
+                            await _presignal_deferred_approvals(
+                                body, transport_self._agent_id
+                            )
+                        except Exception as presignal_err:
+                            logger.debug(
+                                "[AG-UI] Could not presignal deferred approvals: %s",
+                                presignal_err,
+                            )
                 except (json.JSONDecodeError, Exception) as e:
                     logger.debug(
                         f"Could not extract model/identities from AG-UI request body: {e}"
@@ -526,6 +557,22 @@ class AGUITransport(BaseTransport):
                         response, "body_iterator"
                     ):
                         original_iter = response.body_iterator
+
+                        # Intercept deferred tool calls that require approval and
+                        # create pending approval records (parity with Vercel AI).
+                        if transport_self._has_approval_tools and (
+                            transport_self._approval_tool_ids
+                        ):
+                            from ._agui_approvals import (
+                                wrap_agui_stream_with_approvals,
+                            )
+
+                            original_iter = wrap_agui_stream_with_approvals(
+                                original_iter,
+                                approval_tool_ids=transport_self._approval_tool_ids,
+                                agent_id=transport_self._agent_id,
+                                user_jwt_token=metric_user_jwt_token,
+                            )
 
                         async def _iter_with_usage_tail() -> AsyncIterator[bytes]:
                             async for chunk in original_iter:

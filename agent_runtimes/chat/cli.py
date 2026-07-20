@@ -929,19 +929,49 @@ def main_callback(
                 except Exception:
                     _spec = None
                 _agent_label = _spec.name if _spec and _spec.name else agent_id
-                _ready_hint = "help you with your data tasks"
+                _ready_line = ""
                 if _spec and _spec.description:
                     _desc_line = _spec.description.strip().split("\n")[0]
-                    if _desc_line:
-                        _desc_line = _desc_line[0].lower() + _desc_line[1:]
-                        if len(_desc_line) > 90:
-                            _desc_line = _desc_line[:87].rstrip() + "..."
-                        _ready_hint = _desc_line
+                    if len(_desc_line) > 90:
+                        _desc_line = _desc_line[:87].rstrip() + "..."
+                    _ready_line = f" - {_desc_line}"
+
+                # Capability summary appended to the same confirmation line.
+                _summary_parts: list[str] = []
+                if _spec is not None:
+                    _mcp_count = len(getattr(_spec, "mcp_servers", []) or [])
+                    if _mcp_count:
+                        _summary_parts.append(
+                            f"{_mcp_count} MCP server{'s' if _mcp_count != 1 else ''}"
+                        )
+                    _skill_count = len(getattr(_spec, "skills", []) or [])
+                    if _skill_count:
+                        _summary_parts.append(
+                            f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
+                        )
+                    if getattr(_spec, "sandbox_variant", None) == "jupyter":
+                        _summary_parts.append("Jupyter sandbox")
+                    _codemode = getattr(_spec, "codemode", None)
+                    _codemode_on = bool(
+                        _codemode.get("enabled")
+                        if isinstance(_codemode, dict)
+                        else _codemode
+                    )
+                    if _codemode_on and not codemode_disabled:
+                        _summary_parts.append("Code Mode")
+                _summary_line = (
+                    f" {GRAY}({' • '.join(_summary_parts)}){RESET}"
+                    if _summary_parts
+                    else ""
+                )
                 print(
                     f"{GREEN_MEDIUM}●{RESET} {WHITE}Agent {GREEN_LIGHT}{_agent_label}{RESET}"
-                    f"{WHITE} is started and ready to {_ready_hint}{RESET}"
+                    f"{WHITE} is started and ready{RESET}"
+                    f"{GRAY}{_ready_line}{RESET}"
+                    f"{_summary_line}"
                 )
                 print()
+
 
                 # Extract Jupyter URL for the /jupyter slash command
                 jupyter_url = None

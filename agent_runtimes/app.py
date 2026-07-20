@@ -836,7 +836,11 @@ async def _create_and_register_cli_agent(
     if protocol == "ag-ui":
         # Register with AG-UI
         try:
-            agui_adapter = AGUITransport(agent, agent_id=agent_id)
+            agui_adapter = AGUITransport(
+                agent,
+                agent_id=agent_id,
+                approval_tool_ids=approval_tool_ids or [],
+            )
             register_agui_agent(agent_id, agui_adapter)
             logger.info(f"Registered agent with AG-UI: {agent_id}")
 

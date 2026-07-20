@@ -583,6 +583,121 @@ class CliTux:
             )
             return ""  # Handled (error shown)
 
+    def _approvals_ws_url(self) -> str:
+        """Build the tool-approvals websocket URL for this agent."""
+        base = self.server_url
+        if base.startswith("https://"):
+            base = "wss://" + base[len("https://") :]
+        elif base.startswith("http://"):
+            base = "ws://" + base[len("http://") :]
+        return f"{base}/api/v1/tool-approvals/ws?agent_id={self.agent_id}"
+
+    async def _prompt_tool_approval(
+        self, tool_name: str, tool_args: dict[str, Any]
+    ) -> bool:
+        """Prompt the user in the terminal to approve or deny a tool call.
+
+        Returns ``True`` when approved, ``False`` when denied.
+        """
+        self.console.print()
+        self.console.print(
+            f"  🔒 Tool '{tool_name}' requires your approval",
+            style=STYLE_WARNING,
+        )
+        if isinstance(tool_args, dict) and tool_args:
+            preview_parts: list[str] = []
+            for key, value in tool_args.items():
+                text = str(value)
+                if len(text) > 50:
+                    text = text[:50] + "…"
+                preview_parts.append(f"{key}={text}")
+            preview = ", ".join(preview_parts)
+            if preview:
+                self.console.print(f"    ({preview})", style=STYLE_MUTED)
+
+        def _ask() -> bool:
+            try:
+                from rich.prompt import Confirm
+
+                return Confirm.ask("  Approve?", default=False, console=self.console)
+            except Exception:
+                return False
+
+        approved = await asyncio.to_thread(_ask)
+        if approved:
+            self.console.print("    ✓ Approved", style=STYLE_ACCENT)
+        else:
+            self.console.print("    ✗ Denied", style=STYLE_ERROR)
+        return approved
+
+    async def _watch_approvals(self, stop_event: asyncio.Event) -> None:
+        """Background task: surface pending tool approvals during a run.
+
+        Connects to the server's tool-approvals websocket, watches monitoring
+        snapshots for pending approvals, prompts the user to approve or deny
+        each one in the terminal, and relays the decision back over the socket
+        so the (blocked) run can continue.
+        """
+        try:
+            from websockets.asyncio.client import connect as ws_connect
+        except Exception:
+            return
+
+        handled: set[str] = set()
+        try:
+            async with ws_connect(self._approvals_ws_url()) as ws:
+                while not stop_event.is_set():
+                    try:
+                        raw = await asyncio.wait_for(ws.recv(), timeout=0.5)
+                    except asyncio.TimeoutError:
+                        continue
+                    except Exception:
+                        break
+                    try:
+                        msg = json.loads(raw)
+                    except Exception:
+                        continue
+                    if not isinstance(msg, dict):
+                        continue
+                    payload = msg.get("payload") or {}
+                    approvals = payload.get("approvals") or []
+                    if not isinstance(approvals, list):
+                        continue
+                    for appr in approvals:
+                        if not isinstance(appr, dict):
+                            continue
+                        approval_id = appr.get("id")
+                        status = appr.get("status")
+                        if status != "pending" or not isinstance(approval_id, str):
+                            continue
+                        if approval_id in handled:
+                            continue
+                        handled.add(approval_id)
+                        tool_name = (
+                            appr.get("tool_name") or appr.get("toolName") or "tool"
+                        )
+                        tool_args = appr.get("tool_args") or appr.get("toolArgs") or {}
+                        tool_call_id = appr.get("tool_call_id") or appr.get(
+                            "toolCallId"
+                        )
+                        approved = await self._prompt_tool_approval(
+                            tool_name,
+                            tool_args if isinstance(tool_args, dict) else {},
+                        )
+                        decision: dict[str, Any] = {
+                            "type": "tool_approval_decision",
+                            "approvalId": approval_id,
+                            "approved": approved,
+                        }
+                        if isinstance(tool_call_id, str) and tool_call_id:
+                            decision["toolCallId"] = tool_call_id
+                        try:
+                            await ws.send(json.dumps(decision))
+                        except Exception:
+                            return
+        except Exception:
+            return
+
     async def send_message(self, message: str) -> None:
         """Send a message to the agent and stream the response."""
         from ag_ui.core import EventType
@@ -631,6 +746,12 @@ class CliTux:
             stream_input_tokens: Optional[int] = None
             stream_output_tokens: Optional[int] = None
             run_finished = False
+
+            # Watch for pending tool approvals in the background and prompt the
+            # user in the terminal. The run blocks server-side until a decision
+            # is relayed, so this keeps the terminal interactive during approval.
+            approval_stop = asyncio.Event()
+            approval_task = asyncio.create_task(self._watch_approvals(approval_stop))
 
             async for event in client.run(message):
                 # Extract token usage directly from AG-UI events when available.
@@ -729,6 +850,14 @@ class CliTux:
                     break
 
             await _clear_waiting_indicator(show_bullet=False)
+
+            # Stop the approval watcher now that the run is complete.
+            approval_stop.set()
+            approval_task.cancel()
+            try:
+                await approval_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
             self.console.print()
 
@@ -837,6 +966,18 @@ class CliTux:
             self.console.print("[red]Error: Could not connect to agent server[/red]")
         except Exception as e:
             self.console.print(f"[red]Error: {e}[/red]")
+        finally:
+            # Ensure the approval watcher is always torn down.
+            _appr_task = locals().get("approval_task")
+            _appr_stop = locals().get("approval_stop")
+            if _appr_stop is not None:
+                _appr_stop.set()
+            if _appr_task is not None and not _appr_task.done():
+                _appr_task.cancel()
+                try:
+                    await _appr_task
+                except (asyncio.CancelledError, Exception):
+                    pass
 
     def _show_tool_calls_summary(self) -> None:
         """Show a brief summary line of tool calls made."""
