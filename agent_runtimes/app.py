@@ -807,12 +807,17 @@ async def _create_and_register_cli_agent(
     from .routes.agents import _agentspecs
 
     _agentspecs[agent_id] = {
+        "id": getattr(agent_spec, "id", agent_id),
+        "version": getattr(agent_spec, "version", "0.0.1"),
         "name": agent_spec.name,
         "description": agent_spec.description,
+        "tags": list(getattr(agent_spec, "tags", []) or []),
+        "enabled": bool(getattr(agent_spec, "enabled", True)),
         "agent_library": "pydantic-ai",
         "transport": protocol,
         "model": model,
         "inference_provider": inference_provider,
+        "mcp_servers": [s.id for s in all_mcp_servers] if all_mcp_servers else [],
         "system_prompt": agent_spec.system_prompt
         or agent_spec.description
         or "You are a helpful AI assistant.",
@@ -821,6 +826,15 @@ async def _create_and_register_cli_agent(
         "enable_skills": len(skills) > 0,
         "skills": list(skills) if skills else [],
         "tools": list(agent_spec.tools) if agent_spec.tools else [],
+        "frontend_tools": list(getattr(agent_spec, "frontend_tools", []) or []),
+        "icon": getattr(agent_spec, "icon", None),
+        "emoji": getattr(agent_spec, "emoji", None),
+        "color": getattr(agent_spec, "color", None),
+        "suggestions": list(getattr(agent_spec, "suggestions", []) or []),
+        "welcome_message": getattr(agent_spec, "welcome_message", None),
+        "welcome_notebook": getattr(agent_spec, "welcome_notebook", None),
+        "welcome_document": getattr(agent_spec, "welcome_document", None),
+        "sandbox_variant": effective_variant,
         "jupyter_sandbox": jupyter_sandbox_url,
     }
     logger.info(f"Stored creation spec for CLI agent '{agent_id}'")

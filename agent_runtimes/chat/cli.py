@@ -317,7 +317,8 @@ def _run_agent_runtime_server(
         port_value.value = actual_port
 
     # Load agent spec to get MCP servers and sandbox variant
-    mcp_servers_str = "tavily"  # Default fallback
+    # Keep empty by default so specs with no MCP servers do not start any.
+    mcp_servers_str = ""
     sandbox_variant = "jupyter"  # Default interactive CLI sandbox variant
     agent_spec = get_agent_spec(agent_id)
     if agent_spec:
@@ -929,6 +930,10 @@ def main_callback(
                 except Exception:
                     _spec = None
                 _agent_label = _spec.name if _spec and _spec.name else agent_id
+                _agent_emoji = (
+                    str(getattr(_spec, "emoji", "") or "").strip() if _spec else ""
+                )
+                _agent_prefix = f"{_agent_emoji} " if _agent_emoji else ""
                 _ready_line = ""
                 if _spec and _spec.description:
                     _desc_line = _spec.description.strip().split("\n")[0]
@@ -986,7 +991,7 @@ def main_callback(
                     else ""
                 )
                 startup_message = (
-                    f"{GREEN_MEDIUM}●{RESET} {WHITE}Agent {GREEN_LIGHT}{_agent_label}{RESET}"
+                    f"{GREEN_MEDIUM}●{RESET} {WHITE}Agent {GREEN_LIGHT}{_agent_prefix}{_agent_label}{RESET}"
                     f"{WHITE} is started and ready{RESET}"
                     f"{GRAY}{_ready_line}{RESET}"
                     f"{_summary_line}"

@@ -33,6 +33,7 @@ async def about_animation(console: Console) -> None:
         "[bold white]AI Agents for Data Analysis[/bold white]\n"
         "[dim]────────────────────────────────────[/dim]\n"
         "[dim]Cheaper • Faster • Collaborative[/dim]\n"
+        "[dim]────────────────────────────────────[/dim]\n"
         "[link=https://datalayer.ai][cyan]https://datalayer.ai[/cyan][/link]"
     )
     frames = [
@@ -97,17 +98,17 @@ async def about_animation(console: Console) -> None:
 
     def _initial_static_panel() -> Panel:
         initial = Text.from_markup(f"""
-   [cyan]▄▄▄▄▄▄[/cyan]
-   [cyan]▄▄▄▄▄▄[/cyan]
-   [cyan]▄▄▄▄▄▄[/cyan]
-   [cyan]▀    ▀[/cyan]
+   [rgb(46,204,113)]▄▄[/rgb(46,204,113)][rgb(22,160,133)]▄▄▄▄[/rgb(22,160,133)]
+   [rgb(46,204,113)]▄▄▄[/rgb(46,204,113)][rgb(22,160,133)]▄▄▄[/rgb(22,160,133)]
+   [rgb(46,204,113)]▄▄▄▄[/rgb(46,204,113)][rgb(22,160,133)]▄▄[/rgb(22,160,133)]
+   [rgb(46,204,113)]▀[/rgb(46,204,113)][rgb(22,160,133)]    ▀[/rgb(22,160,133)]
 
 {tagline}
 """)
         return Panel(
             initial,
             border_style=STYLE_PRIMARY,
-            title=" Datalayer ",
+            title=" LOOP ⟳ 0.0.2 ",
             subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
         )
 
@@ -136,7 +137,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" Datalayer ",
+                            title=" LOOP ⟳ 0.0.2 ",
                             subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
                         )
                     )
@@ -174,7 +175,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" Datalayer ",
+                            title=" LOOP ⟳ 0.0.2 ",
                             subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
                         )
                     )
@@ -197,7 +198,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" Datalayer ",
+                            title=" LOOP ⟳ 0.0.2 ",
                             subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
                         )
                     )
@@ -220,7 +221,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" Datalayer ",
+                            title=" LOOP ⟳ 0.0.2 ",
                             subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
                         )
                     )
@@ -243,7 +244,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" Datalayer ",
+                            title=" LOOP ⟳ 0.0.2 ",
                             subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
                         )
                     )
@@ -321,7 +322,7 @@ async def about_animation(console: Console) -> None:
                             Panel(
                                 frame,
                                 border_style=STYLE_PRIMARY,
-                                title=" Datalayer ",
+                                title=" LOOP ⟳ 0.0.2 ",
                                 subtitle="[link=https://datalayer.ai]https://datalayer.ai[/link]",
                             )
                         )

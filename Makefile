@@ -11,7 +11,7 @@ SHELL=/bin/bash
 	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
-	loop-chat loop-chat-simple loop-chat-data-acquisition loop-chat-financial loop-chat-demo loop-chat-example-nocodemode
+	loop loop-simple loop-data-acquisition loop-financial loop-demo loop-example-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
@@ -364,25 +364,13 @@ agents: # agents
 
 loop: # loop
 	@$(BEDROCK_ENV) \
-		loop --eggs --agentspec-id example-simple
+		loop --eggs --agentspec-id example-full
 
-loop-chat: # loop-chat
+loop-simple: # loop-simple
 	@$(BEDROCK_ENV) \
-		loop chat --eggs
+		loop--eggs --agentspec-id example-simple
 
-loop-chat-simple: # loop-chat-simple
-	@$(BEDROCK_ENV) \
-		loop chat --eggs --agentspec-id example-simple
-
-loop-chat-data-acquisition: # loop-chat-data-acquisition KAGGLE_TOKEN and TAVILY_API_KEY must be set in env
-	@$(BEDROCK_ENV) \
-		loop chat --eggs --agentspec-id data-acquisition
-
-loop-chat-financial: # loop-chat-financial ALPHA_VANTAGE_API_KEY must be set in env
-	@$(BEDROCK_ENV) \
-		loop chat --eggs --agentspec-id financial
-
-loop-chat-demo: # loop-chat-demo
+loop-demo: # loop-demo
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
@@ -391,7 +379,7 @@ loop-chat-demo: # loop-chat-demo
 		  --suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
 		  --agentspec-id information-routing
 
-loop-chat-example-nocodemode: # loop-chat-example-nocodemode
+loop-example-nocodemode: # loop-example-nocodemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
