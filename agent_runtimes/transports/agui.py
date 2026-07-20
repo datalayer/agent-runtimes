@@ -84,17 +84,32 @@ class AGUITransport(BaseTransport):
         main_app.mount("/agentic_chat", app)
     """
 
-    def __init__(self, agent: BaseAgent, agent_id: str | None = None, **kwargs: Any):
+    def __init__(
+        self,
+        agent: BaseAgent,
+        agent_id: str | None = None,
+        has_approval_tools: bool = False,
+        approval_tool_ids: list[str] | None = None,
+        **kwargs: Any,
+    ):
         """Initialize the AG-UI adapter.
 
         Args:
             agent: The agent to adapt.
             agent_id: Agent ID for usage tracking.
+            has_approval_tools: Whether any tool requires human approval.
+            approval_tool_ids: Tool IDs (versioned or base names) that require
+                approval; used to intercept deferred tool calls and create
+                pending approval records for parity with the Vercel AI transport.
             **kwargs: Additional arguments passed to AGUIAdapter.dispatch_request.
         """
         super().__init__(agent)
         self._agui_kwargs = kwargs
         self._app: "Starlette | None" = None
+        self._approval_tool_ids: list[str] = list(approval_tool_ids or [])
+        self._has_approval_tools: bool = has_approval_tools or bool(
+            self._approval_tool_ids
+        )
         # Get agent_id from adapter if available
         if agent_id:
             self._agent_id = agent_id
@@ -178,9 +193,12 @@ class AGUITransport(BaseTransport):
                 """
                 import time
 
+                from starlette.responses import StreamingResponse
+
                 request_start = time.perf_counter()
                 request_prompt = ""
                 metric_emitted = False
+                usage_event_payload: dict[str, Any] | None = None
                 # Extract model and identities from request body if provided
                 model: str | None = None
                 builtin_tools_from_request: list[str] | None = None
@@ -273,6 +291,22 @@ class AGUITransport(BaseTransport):
                         return {"type": "http.request", "body": body_bytes}
 
                     request = Request(request.scope, receive)
+
+                    # On continuation turns, resolve any deferred approval
+                    # decisions carried in the request body before the agent
+                    # re-runs the deferred tool (parity with Vercel AI).
+                    if transport_self._has_approval_tools and isinstance(body, dict):
+                        try:
+                            from .vercel_ai import _presignal_deferred_approvals
+
+                            await _presignal_deferred_approvals(
+                                body, transport_self._agent_id
+                            )
+                        except Exception as presignal_err:
+                            logger.debug(
+                                "[AG-UI] Could not presignal deferred approvals: %s",
+                                presignal_err,
+                            )
                 except (json.JSONDecodeError, Exception) as e:
                     logger.debug(
                         f"Could not extract model/identities from AG-UI request body: {e}"
@@ -281,6 +315,8 @@ class AGUITransport(BaseTransport):
                 # Apply per-turn enablement to backend guardrail state.
                 try:
                     from agent_runtimes.streams.loop import (
+                        get_known_mcp_tool_names,
+                        has_agent_mcp_tool_selection,
                         set_agent_enabled_mcp_tool_names,
                         set_agent_turn_enabled_skills,
                     )
@@ -290,6 +326,17 @@ class AGUITransport(BaseTransport):
                             transport_self._agent_id,
                             builtin_tools_from_request,
                         )
+                    elif not has_agent_mcp_tool_selection(transport_self._agent_id):
+                        # AG-UI clients (including TUX) may omit builtinTools.
+                        # Seed a first-turn MCP selection from all discovered
+                        # MCP tools so approval-driven flows can execute tools
+                        # instead of being blocked as "disabled by user selection".
+                        known_mcp_tools = sorted(get_known_mcp_tool_names())
+                        if known_mcp_tools:
+                            set_agent_enabled_mcp_tool_names(
+                                transport_self._agent_id,
+                                known_mcp_tools,
+                            )
                     if isinstance(skills_from_request, list):
                         set_agent_turn_enabled_skills(
                             transport_self._agent_id,
@@ -312,6 +359,20 @@ class AGUITransport(BaseTransport):
                     )
                     usage = result.usage()
                     logger.info(f"[AG-UI on_complete] Usage object: {usage}")
+                    nonlocal usage_event_payload
+                    usage_event_payload = {
+                        "type": "usage",
+                        "usage": {
+                            "input_tokens": int(getattr(usage, "input_tokens", 0) or 0),
+                            "output_tokens": int(
+                                getattr(usage, "output_tokens", 0) or 0
+                            ),
+                            "total_tokens": int(
+                                (getattr(usage, "input_tokens", 0) or 0)
+                                + (getattr(usage, "output_tokens", 0) or 0)
+                            ),
+                        },
+                    }
                     response_text_chunks: list[str] = []
                     total_tool_calls = 0
                     nonlocal metric_emitted
@@ -486,7 +547,7 @@ class AGUITransport(BaseTransport):
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
 
                 try:
-                    return await AGUIAdapter.dispatch_request(
+                    response = await AGUIAdapter.dispatch_request(
                         request,
                         agent=pydantic_agent,
                         model=model,
@@ -494,6 +555,50 @@ class AGUITransport(BaseTransport):
                         on_complete=on_complete,
                         **agui_kwargs,
                     )
+
+                    # Attach authoritative usage (from pydantic result.usage())
+                    # as a final SSE event so clients can report exact per-turn
+                    # token counts without waiting on snapshot propagation.
+                    #
+                    # ``usage_event_payload`` is populated by ``on_complete``,
+                    # which only runs *while* the response streams (after this
+                    # point). The tail generator therefore reads the payload
+                    # after the original iterator is exhausted, when
+                    # ``on_complete`` has already produced the usage data.
+                    if isinstance(response, StreamingResponse) and hasattr(
+                        response, "body_iterator"
+                    ):
+                        original_iter = response.body_iterator
+
+                        # Intercept deferred tool calls that require approval and
+                        # create pending approval records (parity with Vercel AI).
+                        if transport_self._has_approval_tools and (
+                            transport_self._approval_tool_ids
+                        ):
+                            from ._agui_approvals import (
+                                wrap_agui_stream_with_approvals,
+                            )
+
+                            original_iter = wrap_agui_stream_with_approvals(
+                                original_iter,
+                                approval_tool_ids=transport_self._approval_tool_ids,
+                                agent_id=transport_self._agent_id,
+                                user_jwt_token=metric_user_jwt_token,
+                            )
+
+                        async def _iter_with_usage_tail() -> AsyncIterator[bytes]:
+                            async for chunk in original_iter:
+                                if isinstance(chunk, bytes):
+                                    yield chunk
+                                else:
+                                    yield str(chunk).encode("utf-8")
+                            if usage_event_payload is not None:
+                                payload = json.dumps(usage_event_payload)
+                                yield f"data: {payload}\n\n".encode("utf-8")
+
+                        response.body_iterator = _iter_with_usage_tail()
+
+                    return response
                 except asyncio.CancelledError:
                     if not metric_emitted:
                         record_prompt_turn_completion(

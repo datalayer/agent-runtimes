@@ -53,10 +53,11 @@ def build_commands(
     from . import (
         agents,
         browser,
-        browser_lexical,
+        browser_document,
         browser_notebook,
         clear,
         cls,
+        code_sandbox,
         codemode_toggle,
         context,
         context_export,
@@ -81,13 +82,14 @@ def build_commands(
         tools,
         mcp_servers,
         skills,
+        code_sandbox,
         codemode_toggle,
         context_export,
         tools_last,
         cls,
         browser,
         browser_notebook,
-        browser_lexical,
+        browser_document,
         suggestions,
     ]
 

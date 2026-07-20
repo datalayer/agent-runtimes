@@ -2127,7 +2127,11 @@ async def create_agent(
         # Register with the specified transport
         if request.transport == "ag-ui":
             try:
-                agui_adapter = AGUITransport(agent, agent_id=agent_id)
+                agui_adapter = AGUITransport(
+                    agent,
+                    agent_id=agent_id,
+                    approval_tool_ids=approval_tool_ids or [],
+                )
                 register_agui_agent(agent_id, agui_adapter)
                 logger.info(f"Registered agent with AG-UI: {agent_id}")
 
@@ -2674,7 +2678,19 @@ async def update_agent_transport(
     # Register with new transport
     if new_transport == "ag-ui":
         try:
-            agui_adapter = AGUITransport(agent, agent_id=agent_id)
+            _switch_spec = _agentspecs.get(agent_id, {})
+            _switch_tools = _switch_spec.get("tools") or []
+            _switch_disable = _switch_spec.get("disable_tool_approvals")
+            _switch_approval_ids = (
+                tools_requiring_approval_ids(_switch_tools)
+                if not _is_tool_approvals_disabled(_switch_disable)
+                else []
+            )
+            agui_adapter = AGUITransport(
+                agent,
+                agent_id=agent_id,
+                approval_tool_ids=_switch_approval_ids or [],
+            )
             register_agui_agent(agent_id, agui_adapter)
             # Dynamically add the AG-UI mount
             agui_app = get_agui_app(agent_id)

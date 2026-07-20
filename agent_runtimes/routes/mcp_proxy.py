@@ -117,6 +117,83 @@ class ToolCallResponse(BaseModel):
     is_error: bool = False
 
 
+def _mcp_result_to_response(raw: Any) -> ToolCallResponse:
+    """Convert a raw MCP tool result into a :class:`ToolCallResponse`.
+
+    Codemode registries return the MCP result as a plain ``dict`` (or the
+    sentinel ``{"error": ...}`` on failure), so this normalises the various
+    shapes into the response model used by the proxy endpoint.
+    """
+    if isinstance(raw, dict) and set(raw.keys()) == {"error"}:
+        return ToolCallResponse(success=False, error=str(raw["error"]))
+
+    if isinstance(raw, dict):
+        result_dict = raw
+    elif hasattr(raw, "model_dump"):
+        result_dict = raw.model_dump(by_alias=True, exclude_none=True)
+    elif hasattr(raw, "__dict__"):
+        result_dict = raw.__dict__
+    else:
+        result_dict = {"content": raw}
+
+    is_error = bool(result_dict.get("is_error", result_dict.get("isError", False)))
+    content = result_dict.get("content", [])
+
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                text_parts.append(item.get("text", ""))
+            elif isinstance(item, str):
+                text_parts.append(item)
+            elif hasattr(item, "text"):
+                text_parts.append(item.text)
+        result_data: Any = "\n".join(text_parts) if text_parts else content
+    else:
+        result_data = content
+
+    return ToolCallResponse(
+        success=not is_error,
+        result=result_data,
+        is_error=is_error,
+        error=str(result_data) if is_error else None,
+    )
+
+
+async def _try_codemode_tool_call(
+    server_name: str,
+    tool_name: str,
+    arguments: dict[str, Any],
+) -> ToolCallResponse | None:
+    """Serve a proxied tool call from a codemode tool registry.
+
+    Under codemode the MCP servers are owned by each agent's ``CodemodeToolset``
+    registry rather than the MCP lifecycle manager, so the lifecycle-based
+    lookup finds nothing.  This surfaces those registries so tool calls proxied
+    from the sandbox can still be served.  Returns *None* when no codemode
+    registry provides the requested server (so the caller can fall through to
+    the normal 404 handling).
+    """
+    try:
+        from agent_runtimes.streams.loop import _iter_codemode_registries
+    except Exception:
+        return None
+
+    qualified = f"{server_name}__{tool_name}"
+    for registry in _iter_codemode_registries():
+        servers = getattr(registry, "servers", []) or []
+        if server_name not in servers:
+            continue
+        logger.info(f"[MCP Proxy] Serving '{qualified}' via codemode registry")
+        try:
+            raw = await registry.call_tool(qualified, arguments)
+        except Exception as exc:
+            logger.error(f"[MCP Proxy] Codemode tool call failed: {exc}", exc_info=True)
+            return ToolCallResponse(success=False, error=str(exc))
+        return _mcp_result_to_response(raw)
+    return None
+
+
 @router.post("/{server_name}/tools/{tool_name}", response_model=ToolCallResponse)
 async def proxy_tool_call(
     server_name: str,
@@ -175,6 +252,14 @@ async def proxy_tool_call(
             instance = lifecycle_manager.get_running_server(server_name, is_config=True)
 
         if instance is None:
+            # Codemode manages MCP servers in per-agent registries rather than
+            # the lifecycle manager, so fall back to those before giving up.
+            codemode_response = await _try_codemode_tool_call(
+                server_name, tool_name, request.arguments
+            )
+            if codemode_response is not None:
+                return codemode_response
+
             # List available servers for debugging
             all_servers = lifecycle_manager.get_all_running_servers()
             available = [s.server_id for s in all_servers]

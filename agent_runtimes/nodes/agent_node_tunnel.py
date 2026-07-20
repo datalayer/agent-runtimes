@@ -23,7 +23,7 @@ def _node_id() -> str:
     if configured:
         return configured
     try:
-        from .routes.agent_node import get_agent_node_configuration
+        from ..routes.agent_node import get_agent_node_configuration
 
         persisted = (get_agent_node_configuration().node_uid or "").strip()
         if persisted:
@@ -48,7 +48,7 @@ def _runtimes_url() -> str:
     if env_url:
         return env_url
     try:
-        from .routes.agent_node import get_runtime_credentials
+        from ..routes.agent_node import get_runtime_credentials
 
         return (get_runtime_credentials().get("runtimes_url") or "").strip().rstrip("/")
     except Exception:
@@ -60,7 +60,7 @@ def _auth_token() -> str:
     # For websocket auth we prefer the UI session token (runtime credentials),
     # then fall back to env API key when no interactive session exists.
     try:
-        from .routes.agent_node import get_runtime_credentials
+        from ..routes.agent_node import get_runtime_credentials
 
         runtime_token = (get_runtime_credentials().get("token") or "").strip()
         if runtime_token:
@@ -185,8 +185,8 @@ def _extract_prompt(chat_payload: dict[str, Any]) -> str:
 
 async def _run_local_chat_request(chat_payload: dict[str, Any]) -> dict[str, Any]:
     """Execute a tunneled chat payload against the local registered agent."""
-    from .adapters.base import AgentContext
-    from .routes.acp import _agents
+    from ..adapters.base import AgentContext
+    from ..routes.acp import _agents
 
     prompt = _extract_prompt(chat_payload)
     if not prompt:
@@ -238,7 +238,7 @@ async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
         return
 
     try:
-        from .routes.agent_node import get_agent_node_configuration
+        from ..routes.agent_node import get_agent_node_configuration
     except Exception:  # noqa: BLE001
         get_agent_node_configuration = None  # type: ignore[assignment]
 

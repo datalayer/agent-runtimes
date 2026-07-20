@@ -72,6 +72,6 @@ The exec module uses the modern `DatalayerClient` and `RuntimeManager` to:
 
 The exec functionality is implemented in:
 - `agent_runtimes/commands/exec.py`: Main Typer-based CLI commands
-- Uses `datalayer_core/utils/notebook.get_cells()` for file parsing
+- Uses `agent_runtimes/utils/notebook_utils.get_cells()` for file parsing
 - Uses `agent_runtimes/console/manager.RuntimeManager` for code sandbox connection
 - Integrates with the main CLI via `agent_runtimes/__main__.py`

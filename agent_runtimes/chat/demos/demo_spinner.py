@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Demo script showing Agent Runtimes Chat spinner behavior in realistic scenarios.
+Demo script showingLoop spinner behavior in realistic scenarios.
 This simulates different operation durations to showcase the spinner animation.
 """
 
@@ -49,7 +49,7 @@ async def demo_scenario(
 async def main() -> None:
     """Run all demo scenarios."""
     print(f"\n{MAGENTA}{BOLD}╔════════════════════════════════════════════════╗")
-    print("║  Agent Runtimes Chat Spinner Demo               ║")
+    print("║ Loop Spinner Demo               ║")
     print(f"╚════════════════════════════════════════════════╝{RESET}\n")
 
     # Different realistic scenarios

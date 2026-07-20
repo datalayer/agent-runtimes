@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""GIF animation (black hole) for Agent Runtimes Chat TUX."""
+"""GIF animation (black hole) forLoop TUX."""
 
 import asyncio
 import shutil
@@ -107,15 +107,18 @@ async def gif_animation(console: Console) -> None:
         start_time = time.time()
         duration = 5.0
 
+        stop_requested = False
+
         with (
             raw_terminal(),
             Live(console=console, refresh_per_second=12, transient=True) as live,
         ):
-            while time.time() - start_time < duration:
+            while time.time() - start_time < duration and not stop_requested:
                 if check_escape_pressed():
                     break
                 for i, frame in enumerate(frames):
                     if check_escape_pressed():
+                        stop_requested = True
                         break
                     if time.time() - start_time >= duration:
                         break

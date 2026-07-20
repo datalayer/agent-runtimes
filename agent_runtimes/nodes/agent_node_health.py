@@ -12,7 +12,7 @@ import sys
 import time
 from typing import Any
 
-from .routes.agent_node import get_agent_node_configuration
+from ..routes.agent_node import get_agent_node_configuration
 
 try:  # psutil is optional; degrade gracefully when missing.
     import psutil

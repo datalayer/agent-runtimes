@@ -58,7 +58,11 @@ import {
   useSystemColorMode,
   useThemeStore,
 } from '@datalayer/primer-addons';
-import { JupyterReactTheme, Kernel } from '@datalayer/jupyter-react';
+import {
+  JupyterReactTheme,
+  Kernel,
+  disposeServiceManager,
+} from '@datalayer/jupyter-react';
 import {
   ComponentPickerMenuPlugin,
   JupyterCellPlugin,
@@ -89,6 +93,8 @@ import {
 import { editorConfig } from '../../examples/lexical/editorConfig';
 import { useLexicalTools } from '../../tools/adapters/agent-runtimes/lexicalHooks';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
+import { useProgressTask } from '../../hooks/useProgressTask';
 import type { FrontendToolDefinition } from '../../types/tools';
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
@@ -239,6 +245,7 @@ export function EphemeralDocument({
   useEffect(() => {
     let cancelled = false;
     let manager: ServiceManager | null = null;
+    let unregisterManager: (() => void) | null = null;
 
     const connectRuntime = async () => {
       const baseUrl = String(selectedRuntime?.url || '').trim();
@@ -258,6 +265,12 @@ export function EphemeralDocument({
           appendToken: true,
         });
         manager = new ServiceManager({ serverSettings });
+        // Central sandbox registry: runtime terminate/pause disposes this
+        // manager immediately so its pollers cannot hit the dead pod ingress.
+        unregisterManager = registerSandboxServiceManager(
+          String(selectedRuntime?.pod_name || ''),
+          manager,
+        );
         await manager.ready;
         const kernelConnection = await manager.kernels.startNew();
         if (!cancelled) {
@@ -284,13 +297,18 @@ export function EphemeralDocument({
 
     return () => {
       cancelled = true;
+      unregisterManager?.();
       if (manager) {
-        manager.dispose();
+        disposeServiceManager(manager);
       }
     };
   }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
 
   const activeServiceManager = runtimeServiceManager;
+  const isRuntimeStarting = Boolean(
+    String(runtimePodName || '').trim() && !activeServiceManager,
+  );
+  useProgressTask(`ephemeral-document-start-${documentId}`, isRuntimeStarting);
 
   // Build the initial config once per documentId, without the demo content so
   // the document starts empty and is either restored or filled by the agent.
@@ -466,9 +484,7 @@ export function EphemeralDocument({
             </Box>
           </JupyterReactTheme>
         </DatalayerThemeProvider>
-      ) : (
-        <Box sx={{ p: 3, color: 'fg.muted' }}>Starting document…</Box>
-      )}
+      ) : null}
     </Box>
   );
 }

@@ -561,6 +561,21 @@ export interface ChatCommonProps {
   /** Optional sandbox status override for immediate UI updates. */
   sandboxStatusData?: SandboxWsStatus | null;
 
+  /**
+   * Live kernel connection of the companion notebook/document sandbox.
+   * When provided, it is forwarded to the chat header's `<KernelIndicator>`
+   * so the indicator reflects the surface's runtime.
+   */
+  kernel?:
+    import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection | null;
+
+  /**
+   * Disable ChatBase's internal JupyterReactTheme wrapper.
+   * Use this when the host page already provides a JupyterReactTheme boundary.
+   * @default false
+   */
+  disableInternalJupyterTheme?: boolean;
+
   // ============ Tool Approval Banner ============
 
   /**
@@ -750,6 +765,13 @@ export interface ChatBaseProps {
    */
   kernel?:
     import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection | null;
+
+  /**
+   * Disable ChatBase's internal JupyterReactTheme wrapper.
+   * Use this when the host page already provides a JupyterReactTheme boundary.
+   * @default false
+   */
+  disableInternalJupyterTheme?: boolean;
 
   /** Optional environment name displayed in kernel indicator details. */
   kernelEnvironmentName?: string;

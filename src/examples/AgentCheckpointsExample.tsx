@@ -65,10 +65,10 @@ import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import {
+  useAgentsRuntimes,
   useAgentRuntimes,
   useAgentRuntimesQuery,
   useRefreshAgentRuntimes,
-  useDeleteAgentRuntime,
 } from '../hooks/useAgentRuntimes';
 import { useAgentLifecycle } from '../hooks/useCheckpoints';
 import { useDeletePausedAgentRuntime } from '../hooks/useCheckpoints';
@@ -210,10 +210,9 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
   // Agent runtimes from the focused hook
   const { data: agentRuntimes } = useAgentRuntimesQuery();
+  const { terminateRuntimeByPod } = useAgentsRuntimes();
   const refetchRuntimes = useRefreshAgentRuntimes();
-  const deleteRuntimeMutation = useDeleteAgentRuntime();
   const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();
-  const deleteRuntimeByPod = deleteRuntimeMutation.mutateAsync;
   const deletePausedRuntimeByPod = deletePausedRuntimeMutation.mutateAsync;
 
   const [isStarting, setIsStarting] = useState(false);
@@ -373,7 +372,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
         if (agent.status === 'paused') {
           await deletePausedRuntimeByPod(agent.podName);
         } else {
-          await deleteRuntimeByPod(agent.podName);
+          await terminateRuntimeByPod(agent.podName);
         }
         // Ensure sidebar terminate resets to the home state like header terminate.
         if (isCurrentRuntime || isLastKnownRuntime) {
@@ -388,7 +387,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     },
     [
       deletePausedRuntimeByPod,
-      deleteRuntimeByPod,
+      terminateRuntimeByPod,
       refreshAgents,
       refreshCheckpoints,
       runningAgents,

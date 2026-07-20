@@ -4,14 +4,14 @@
  */
 
 /**
- * AgentLexical
+ * AgentDocument
  *
- * Standalone Lexical editor + chat interface served at /static/agent-lexical.html.
+ * Standalone Lexical editor + chat interface served at /static/agent-document.html.
  * Connects to the agent-runtimes AG-UI endpoint and provides a Lexical
  * rich-text editor alongside the Chat component with lexical tools registered.
  *
  * The page is opened by codeai with a URL like:
- *   http://127.0.0.1:<port>/static/agent-lexical.html?agentId=<id>
+ *   http://127.0.0.1:<port>/static/agent-document.html?agentId=<id>
  *
  * Query parameters:
  *   - agentId: the agent identifier (required, set by codeai)
@@ -40,14 +40,18 @@ import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { Text, Spinner } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import {
+  AppearanceControlsWithStore,
   Box,
+  createThemeStore,
   DatalayerThemeProvider,
   setupPrimerPortals,
+  themeConfigs,
+  useSystemColorMode,
 } from '@datalayer/primer-addons';
 import {
   JupyterReactTheme,
+  disposeServiceManager,
   loadJupyterConfig,
-  createServerSettings,
   getJupyterServerUrl,
   getJupyterServerToken,
   setJupyterServerUrl,
@@ -75,7 +79,8 @@ import {
   TableCellResizerPlugin,
   TablePlugin,
 } from '@datalayer/jupyter-lexical';
-import { ServiceManager } from '@jupyterlab/services';
+import { ServiceManager, ServerConnection } from '@jupyterlab/services';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { Chat } from './chat';
 import { ChatInlinePlugin } from './lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from './lexical/useChatInlineToolbarItems';
@@ -90,7 +95,16 @@ import '../style/primer-primitives.css';
 setupPrimerPortals();
 
 const BASE_URL = window.location.origin;
-const LEXICAL_ID = 'agent-lexical';
+const DOCUMENT_ID = 'agent-document';
+const DOCUMENT_THEME_STORAGE_KEY = 'agent-runtimes-agent-document-theme';
+
+const useAgentDocumentThemeStore = createThemeStore(
+  DOCUMENT_THEME_STORAGE_KEY,
+  {
+    colorMode: 'auto',
+    theme: 'earth',
+  },
+);
 
 function getQueryParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name);
@@ -100,6 +114,36 @@ function getAgentId(): string {
   return getQueryParam('agentId') || 'default';
 }
 
+function getKernelId(): string | undefined {
+  const kernelId = getQueryParam('kernelId') || getQueryParam('kernel_id');
+  return kernelId || undefined;
+}
+
+interface ResolvedJupyterConfig {
+  baseUrl: string;
+  token: string;
+}
+
+async function fetchStartupKernelId(): Promise<string | undefined> {
+  try {
+    const resp = await fetch(`${BASE_URL}/health/startup`);
+    if (!resp.ok) {
+      return undefined;
+    }
+    const payload = await resp.json();
+    const sandbox = payload?.sandbox;
+    if (sandbox?.variant !== 'jupyter') {
+      return undefined;
+    }
+    const kernelId = sandbox?.kernel_id;
+    return typeof kernelId === 'string' && kernelId.length > 0
+      ? kernelId
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Initialise Jupyter configuration.
  *
@@ -107,25 +151,62 @@ function getAgentId(): string {
  *   1. Query parameters (jupyterBaseUrl / jupyterToken)
  *   2. <script id="jupyter-config-data"> block in the HTML page
  */
-function initJupyterConfig() {
+function initJupyterConfig(): ResolvedJupyterConfig {
   loadJupyterConfig();
 
   const qBaseUrl = getQueryParam('jupyterBaseUrl');
-  const qToken = getQueryParam('jupyterToken');
+  const qToken = getQueryParam('jupyterToken') || getQueryParam('token');
 
   if (qBaseUrl) setJupyterServerUrl(qBaseUrl);
   if (qToken) setJupyterServerToken(qToken);
+
+  let resolvedBaseUrl = qBaseUrl || getJupyterServerUrl();
+  let resolvedToken = qToken || getJupyterServerToken();
 
   const el = document.getElementById('jupyter-config-data');
   if (el?.textContent) {
     try {
       const cfg = JSON.parse(el.textContent);
-      if (!qBaseUrl && cfg.baseUrl) setJupyterServerUrl(cfg.baseUrl);
-      if (!qToken && cfg.token) setJupyterServerToken(cfg.token);
+      if (!qBaseUrl && cfg.baseUrl) {
+        setJupyterServerUrl(cfg.baseUrl);
+        resolvedBaseUrl = cfg.baseUrl;
+      }
+      if (!qToken && cfg.token) {
+        setJupyterServerToken(cfg.token);
+        resolvedToken = cfg.token;
+      }
     } catch {
       // ignore
     }
   }
+
+  return {
+    baseUrl: resolvedBaseUrl,
+    token: resolvedToken,
+  };
+}
+
+function buildServerSettings(
+  baseUrl: string,
+  token: string,
+): ServerConnection.ISettings {
+  const wsUrl = baseUrl.replace(/^http/, 'ws');
+  const authenticatedFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!token) {
+      return fetch(input, init);
+    }
+    const headers = new Headers(init?.headers || undefined);
+    headers.set('Authorization', `token ${token}`);
+    return fetch(input, { ...init, headers });
+  };
+
+  return ServerConnection.makeSettings({
+    baseUrl,
+    wsUrl,
+    token,
+    appendToken: !!token,
+    fetch: authenticatedFetch,
+  });
 }
 
 // ─── Lexical plugins ────────────────────────────────────────────────────────
@@ -177,8 +258,27 @@ function CodeHighlightPlugin() {
   return null;
 }
 
-function KernelPluginsInner() {
-  const { defaultKernel } = useJupyter();
+function KernelPluginsInner({
+  serviceManager,
+  kernelId,
+  onKernelReady,
+}: {
+  serviceManager: ServiceManager.IManager;
+  kernelId?: string;
+  onKernelReady?: (kernel: IKernelConnection | null) => void;
+}) {
+  const { defaultKernel } = useJupyter({
+    serviceManager,
+    useRunningKernelId: kernelId,
+    startDefaultKernel: !kernelId,
+  });
+
+  // Lift the live kernel connection of the document's sandbox up so the chat
+  // header's kernel indicator reflects it. `defaultKernel` is created
+  // asynchronously and can change on restart.
+  useEffect(() => {
+    onKernelReady?.(defaultKernel?.connection ?? null);
+  }, [defaultKernel, onKernelReady]);
 
   return (
     <>
@@ -197,7 +297,7 @@ function LexicalToolsPlugin({
 }: {
   onToolsReady: (tools: ReturnType<typeof useLexicalTools>) => void;
 }) {
-  const tools = useLexicalTools(LEXICAL_ID);
+  const tools = useLexicalTools(DOCUMENT_ID);
 
   useEffect(() => {
     onToolsReady(tools);
@@ -210,12 +310,20 @@ function LexicalToolsPlugin({
 
 interface LexicalPanelProps {
   serviceManager: ServiceManager.IManager;
+  kernelId?: string;
+  colormode: 'light' | 'dark';
+  backgroundColor?: string;
   onToolsReady: (tools: ReturnType<typeof useLexicalTools>) => void;
+  onKernelReady: (kernel: IKernelConnection | null) => void;
 }
 
 const LexicalPanel = React.memo(function LexicalPanel({
   serviceManager,
+  kernelId,
+  colormode,
+  backgroundColor,
   onToolsReady,
+  onKernelReady,
 }: LexicalPanelProps) {
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
@@ -250,7 +358,7 @@ const LexicalPanel = React.memo(function LexicalPanel({
     >
       <Box sx={{ padding: 3 }}>
         <LexicalConfigProvider
-          lexicalId={LEXICAL_ID}
+          lexicalId={DOCUMENT_ID}
           serviceManager={serviceManager}
         >
           <LexicalToolsPlugin onToolsReady={onToolsReady} />
@@ -288,8 +396,15 @@ const LexicalPanel = React.memo(function LexicalPanel({
               <TableCellResizerPlugin />
               <JupyterCellPlugin />
               {/* Wrap kernel plugins with Jupyter provider */}
-              <JupyterReactTheme>
-                <KernelPluginsInner />
+              <JupyterReactTheme
+                colormode={colormode}
+                backgroundColor={backgroundColor}
+              >
+                <KernelPluginsInner
+                  serviceManager={serviceManager}
+                  kernelId={kernelId}
+                  onKernelReady={onKernelReady}
+                />
               </JupyterReactTheme>
               {floatingAnchorElem && (
                 <>
@@ -325,9 +440,10 @@ const LexicalPanel = React.memo(function LexicalPanel({
 interface ChatPanelProps {
   agentId: string;
   tools: ReturnType<typeof useLexicalTools>;
+  kernel?: IKernelConnection | null;
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools, kernel }) => {
   return (
     <Box
       sx={{
@@ -342,19 +458,21 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
         protocol="ag-ui"
         baseUrl={BASE_URL}
         agentId={agentId}
-        title="Agent Lexical"
+        title="Agent Document"
         placeholder="Ask about the document..."
         description="Chat with the agent to manipulate the document"
         showHeader={true}
-        height="100vh"
+        height="100%"
         showModelSelector={true}
         showToolsMenu={true}
         showSkillsMenu={true}
         showTokenUsage={true}
         showInformation={true}
+        disableInternalJupyterTheme={true}
         frontendTools={tools}
         autoFocus
         runtimeId={agentId}
+        kernel={kernel}
         historyEndpoint={`${BASE_URL}/api/v1/history`}
         suggestions={[
           {
@@ -378,13 +496,29 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools }) => {
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
-export const AgentLexical: React.FC = () => {
+export const AgentDocument: React.FC = () => {
   const [agentId] = useState(getAgentId);
+  const [kernelId, setKernelId] = useState<string | undefined>(getKernelId);
+  const [kernelResolved, setKernelResolved] = useState<boolean>(() =>
+    Boolean(getKernelId()),
+  );
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceManager, setServiceManager] =
     useState<ServiceManager.IManager | null>(null);
   const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
+  const [documentKernel, setDocumentKernel] =
+    useState<IKernelConnection | null>(null);
+  const { colorMode, theme } = useAgentDocumentThemeStore();
+  const themeConfig = themeConfigs[theme];
+  const systemMode = useSystemColorMode();
+  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const modeStyles =
+    resolvedMode === 'dark'
+      ? themeConfig.themeStyles.dark
+      : themeConfig.themeStyles.light;
+  const themeBackground =
+    (modeStyles as Record<string, string>).backgroundColor ?? '';
 
   const handleToolsReady = useCallback(
     (newTools: ReturnType<typeof useLexicalTools>) => {
@@ -393,9 +527,14 @@ export const AgentLexical: React.FC = () => {
     [],
   );
 
+  const handleKernelReady = useCallback((kernel: IKernelConnection | null) => {
+    setDocumentKernel(prev => (prev?.id === kernel?.id ? prev : kernel));
+  }, []);
+
   // Verify the agent exists AND initialise the Jupyter service manager
   useEffect(() => {
     let cancelled = false;
+    let managerForCleanup: ServiceManager.IManager | null = null;
 
     const init = async () => {
       try {
@@ -409,7 +548,7 @@ export const AgentLexical: React.FC = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name: agentId,
-              description: 'Agent created by Agent Lexical page',
+              description: 'Agent created by Agent Document page',
               agent_library: 'pydantic-ai',
               transport: 'ag-ui',
               model: DEFAULT_MODEL,
@@ -426,18 +565,21 @@ export const AgentLexical: React.FC = () => {
         }
 
         // 2. Initialise Jupyter
-        initJupyterConfig();
-
-        const serverSettings = createServerSettings(
-          getJupyterServerUrl(),
-          getJupyterServerToken(),
+        const jupyterConfig = initJupyterConfig();
+        const serverSettings = buildServerSettings(
+          jupyterConfig.baseUrl,
+          jupyterConfig.token,
         );
         const manager = new ServiceManager({ serverSettings });
+        managerForCleanup = manager;
         await manager.ready;
 
         if (!cancelled) {
           setServiceManager(manager);
           setIsReady(true);
+        } else {
+          disposeServiceManager(manager);
+          managerForCleanup = null;
         }
       } catch (err) {
         if (!cancelled) {
@@ -449,13 +591,46 @@ export const AgentLexical: React.FC = () => {
     init();
     return () => {
       cancelled = true;
+      if (managerForCleanup) {
+        disposeServiceManager(managerForCleanup);
+        managerForCleanup = null;
+      }
     };
   }, [agentId]);
+
+  // If kernelId is not provided via URL, reuse the startup sandbox kernel when
+  // available so lexical cells run in the same code sandbox as the agent.
+  useEffect(() => {
+    if (kernelId) {
+      setKernelResolved(true);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const startupKernelId = await fetchStartupKernelId();
+      if (cancelled) {
+        return;
+      }
+      if (startupKernelId) {
+        setKernelId(startupKernelId);
+      }
+      // Mark resolution complete even when no sandbox kernel exists so the
+      // editor can fall back to a default kernel instead of hanging.
+      setKernelResolved(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kernelId]);
 
   // Loading
   if (!isReady && !error) {
     return (
-      <DatalayerThemeProvider>
+      <DatalayerThemeProvider
+        colorMode={colorMode}
+        theme={themeConfig.primerTheme}
+        themeStyles={themeConfig.themeStyles}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -477,7 +652,11 @@ export const AgentLexical: React.FC = () => {
   // Error
   if (error) {
     return (
-      <DatalayerThemeProvider>
+      <DatalayerThemeProvider
+        colorMode={colorMode}
+        theme={themeConfig.primerTheme}
+        themeStyles={themeConfig.themeStyles}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -501,26 +680,58 @@ export const AgentLexical: React.FC = () => {
 
   // Ready — lexical editor + chat side-by-side
   return (
-    <DatalayerThemeProvider>
+    <DatalayerThemeProvider
+      colorMode={colorMode}
+      theme={themeConfig.primerTheme}
+      themeStyles={themeConfig.themeStyles}
+    >
       <Box
         sx={{
           display: 'flex',
+          flexDirection: 'column',
           height: '100vh',
           width: '100vw',
           overflow: 'hidden',
           bg: 'canvas.default',
         }}
       >
-        {serviceManager && (
-          <LexicalPanel
-            serviceManager={serviceManager}
-            onToolsReady={handleToolsReady}
-          />
-        )}
-        <ChatPanel agentId={agentId} tools={tools} />
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            px: 3,
+            py: 2,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+            flexShrink: 0,
+          }}
+        >
+          <AppearanceControlsWithStore useStore={useAgentDocumentThemeStore} />
+        </Box>
+        <Box
+          sx={{
+            display: 'flex',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {serviceManager && kernelResolved && (
+            <LexicalPanel
+              serviceManager={serviceManager}
+              kernelId={kernelId}
+              colormode={resolvedMode}
+              backgroundColor={themeBackground}
+              onToolsReady={handleToolsReady}
+              onKernelReady={handleKernelReady}
+            />
+          )}
+          <ChatPanel agentId={agentId} tools={tools} kernel={documentKernel} />
+        </Box>
       </Box>
     </DatalayerThemeProvider>
   );
 };
 
-export default AgentLexical;
+export default AgentDocument;

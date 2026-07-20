@@ -26,8 +26,8 @@ def _terminate_runtime_with_core(
     """Terminate a cloud runtime via datalayer-core primitives."""
     from datalayer_core.utils.urls import DatalayerURLs
 
-    from agent_runtimes.agents import terminate_cloud_agent_runtime
     from agent_runtimes.client import AgentClient
+    from agent_runtimes.utils.agent_utils import terminate_cloud_agent_runtime
 
     urls = DatalayerURLs.from_environment(
         datalayer_url=runtime_base_url,

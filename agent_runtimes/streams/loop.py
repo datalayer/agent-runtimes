@@ -125,8 +125,118 @@ def build_mcp_status() -> dict[str, Any] | None:
         return None
 
 
-def _build_default_mcp_enabled_tools_by_server() -> dict[str, list[str]]:
-    """Build default enabled MCP tools per server from lifecycle state."""
+def _iter_codemode_registries(agent_id: str | None = None) -> list[Any]:
+    """Return codemode tool registries for registered agents.
+
+    Under codemode the MCP servers are managed by each agent's
+    ``CodemodeToolset`` (which owns its own ``ToolRegistry``) rather than the
+    MCP lifecycle manager.  This surfaces those registries so MCP tool names
+    remain discoverable for listing commands and the tool-selection guardrail.
+    """
+    registries: list[Any] = []
+    try:
+        from agent_runtimes.routes.acp import _agents as _agent_registry
+    except Exception:
+        return registries
+
+    if agent_id:
+        entry = _agent_registry.get(agent_id)
+        entries = [entry] if entry is not None else []
+    else:
+        entries = list(_agent_registry.values())
+
+    for entry in entries:
+        adapter_obj = entry[0] if entry else None
+        toolsets = getattr(adapter_obj, "_non_mcp_toolsets", None)
+        if not toolsets:
+            continue
+        for toolset in toolsets:
+            if "Codemode" not in type(toolset).__name__:
+                continue
+            registry = getattr(toolset, "registry", None)
+            if registry is not None and hasattr(registry, "list_tools"):
+                registries.append(registry)
+    return registries
+
+
+def _codemode_registry_tools(registry: Any) -> list[Any]:
+    """Return all tools (including deferred) from a codemode registry."""
+    try:
+        return list(registry.list_tools(include_deferred=True))
+    except TypeError:
+        try:
+            return list(registry.list_tools())
+        except Exception:
+            return []
+    except Exception:
+        return []
+
+
+def _build_codemode_mcp_tools_by_server(
+    agent_id: str | None = None,
+) -> dict[str, list[str]]:
+    """Build enabled MCP tools per server from codemode registries."""
+    result: dict[str, set[str]] = {}
+    for registry in _iter_codemode_registries(agent_id):
+        for tool in _codemode_registry_tools(registry):
+            name = getattr(tool, "name", "") or ""
+            if not name:
+                continue
+            server = getattr(tool, "server_name", "") or ""
+            bare = name.split("__", 1)[1] if "__" in name else name
+            server_id = server or (name.split("__", 1)[0] if "__" in name else "")
+            if not server_id:
+                continue
+            result.setdefault(server_id, set()).add(bare)
+    return {server_id: sorted(names) for server_id, names in result.items()}
+
+
+def get_codemode_mcp_tools_detailed(
+    agent_id: str | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Return codemode-discovered MCP tools grouped by server for display.
+
+    Each tool dict carries ``name`` (bare tool name), ``description``,
+    ``enabled`` and ``inputSchema`` keys so listing commands and the
+    ``/mcp/servers`` route can surface codemode-managed servers, which the MCP
+    lifecycle manager does not track.
+    """
+    result: dict[str, list[dict[str, Any]]] = {}
+    seen: dict[str, set[str]] = {}
+    for registry in _iter_codemode_registries(agent_id):
+        for tool in _codemode_registry_tools(registry):
+            name = getattr(tool, "name", "") or ""
+            if not name:
+                continue
+            server = getattr(tool, "server_name", "") or (
+                name.split("__", 1)[0] if "__" in name else ""
+            )
+            if not server:
+                continue
+            bare = name.split("__", 1)[1] if "__" in name else name
+            server_seen = seen.setdefault(server, set())
+            if bare in server_seen:
+                continue
+            server_seen.add(bare)
+            result.setdefault(server, []).append(
+                {
+                    "name": bare,
+                    "description": getattr(tool, "description", "") or "",
+                    "enabled": True,
+                    "inputSchema": getattr(tool, "input_schema", {}) or {},
+                }
+            )
+    return result
+
+
+def _build_default_mcp_enabled_tools_by_server(
+    agent_id: str | None = None,
+) -> dict[str, list[str]]:
+    """Build default enabled MCP tools per server from lifecycle state.
+
+    Includes codemode-managed MCP servers, which are not tracked by the MCP
+    lifecycle manager (codemode owns its own tool registry).
+    """
     result: dict[str, list[str]] = {}
     try:
         from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
@@ -140,7 +250,12 @@ def _build_default_mcp_enabled_tools_by_server() -> dict[str, list[str]]:
                 enabled_tool_names = [t.name for t in instance.tools]
             result[instance.server_id] = sorted(set(enabled_tool_names))
     except Exception:
-        return {}
+        result = {}
+
+    for server_id, tool_names in _build_codemode_mcp_tools_by_server(agent_id).items():
+        merged = set(result.get(server_id, [])) | set(tool_names)
+        result[server_id] = sorted(merged)
+
     return result
 
 
@@ -164,7 +279,7 @@ def _get_agent_mcp_enabled_tools_by_server(
         if projected:
             return projected
 
-    return _build_default_mcp_enabled_tools_by_server()
+    return _build_default_mcp_enabled_tools_by_server(agent_id)
 
 
 def get_agent_mcp_enabled_tools_by_server(
@@ -214,6 +329,16 @@ def get_agent_enabled_mcp_tool_names(agent_id: str | None) -> set[str]:
     return names
 
 
+def has_agent_mcp_tool_selection(agent_id: str | None) -> bool:
+    """Return True when an explicit MCP tool selection exists for an agent.
+
+    This indicates the user/client has intentionally sent a selection update
+    (for example via ``builtinTools`` or monitoring websocket controls). When
+    False, callers may seed a sensible default selection for first-turn flows.
+    """
+    return _stream_key(agent_id) in _MCP_ENABLED_TOOLS_BY_AGENT
+
+
 def get_known_mcp_tool_names() -> set[str]:
     """Return all known MCP tool names currently discovered by lifecycle manager."""
     names: set[str] = set()
@@ -231,7 +356,21 @@ def get_known_mcp_tool_names() -> set[str]:
                 if isinstance(tool_name, str) and tool_name.strip():
                     names.add(tool_name.strip())
     except Exception:
-        return set()
+        names = set()
+
+    # Codemode-managed MCP tools are not tracked by the lifecycle manager.
+    # Include both the qualified ``server__tool`` name and the bare tool name
+    # so guardrail resolution (which matches either form) works reliably.
+    for registry in _iter_codemode_registries():
+        for tool in _codemode_registry_tools(registry):
+            name = getattr(tool, "name", None)
+            if not isinstance(name, str) or not name.strip():
+                continue
+            stripped = name.strip()
+            names.add(stripped)
+            if "__" in stripped:
+                names.add(stripped.split("__", 1)[1])
+
     return names
 
 
@@ -429,7 +568,12 @@ def _build_all_mcp_tools_by_server() -> dict[str, set[str]]:
                     names.add(tool_name.strip())
             result[instance.server_id] = names
     except Exception:
-        return {}
+        result = {}
+
+    # Codemode-managed MCP servers are not tracked by the lifecycle manager.
+    for server_id, tool_names in _build_codemode_mcp_tools_by_server().items():
+        result.setdefault(server_id, set()).update(tool_names)
+
     return result
 
 

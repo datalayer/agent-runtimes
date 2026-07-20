@@ -12,14 +12,14 @@ import socket
 
 import httpx
 
-from .agent_node_health import collect_health
-from .routes.agent_node import (
+from ..routes.agent_node import (
     get_agent_node_configuration,
     get_runtime_credentials,
     register_credentials_change_callback,
     register_mode_change_callback,
     set_agent_node_uid,
 )
+from .agent_node_health import collect_health
 
 logger = logging.getLogger(__name__)
 

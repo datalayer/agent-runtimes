@@ -28,6 +28,17 @@ if TYPE_CHECKING:
 
 DEFAULT_RUNTIME_AGENT_NAME = "chat"
 
+# Narrow interactive selection to the gallery context set by default. This keeps
+# the picker focused while preserving the existing valid/env/sort logic.
+DEFAULT_AGENTSPEC_CONTEXT_IDS: tuple[str, ...] = (
+    "example-simple",
+    "gallery-accountant",
+    "gallery-analyze-excel-spreadsheet",
+    "gallery-agent-critic-loop-for-analysis",
+    "gallery-ai-explains-notebook-output",
+    "gallery-replace-excel-pivot-work",
+)
+
 
 # Global reference to subprocess for cleanup
 _subprocess_ref: Optional[multiprocessing.Process] = None
@@ -47,6 +58,34 @@ def _cleanup_subprocess() -> None:
         except Exception:
             pass
         _subprocess_ref = None
+
+
+def _cleanup_subprocess_with_spinner(message: str = "Terminating agent...") -> None:
+    """Clean up subprocess while showing a transient spinner when interactive."""
+    global _subprocess_ref
+    if (
+        _subprocess_ref is None
+        or not _subprocess_ref.is_alive()
+        or not sys.stdout.isatty()
+    ):
+        _cleanup_subprocess()
+        return
+
+    try:
+        from rich.console import Console
+        from rich.live import Live
+        from rich.spinner import Spinner as RichSpinner
+
+        console = Console()
+        with Live(
+            RichSpinner("dots", text=f"[bold cyan]{message}[/bold cyan]", style="cyan"),
+            console=console,
+            transient=True,
+            refresh_per_second=12,
+        ):
+            _cleanup_subprocess()
+    except Exception:
+        _cleanup_subprocess()
 
 
 def _signal_handler(signum: int, frame: Any) -> None:
@@ -80,7 +119,6 @@ from .banner import (
     # Legacy colors
     BOLD,
     DIM,
-    GOODBYE_MESSAGE,
     GRAY,
     GREEN_DARK,
     GREEN_LIGHT,
@@ -88,6 +126,7 @@ from .banner import (
     RED,
     RESET,
     WHITE,
+    print_goodbye,
     show_banner,
 )
 
@@ -167,7 +206,7 @@ from agent_runtimes.specs.models import DEFAULT_MODEL
 # Define the embedded assistant agent used when no remote runtime is selected.
 agent = Agent(
     DEFAULT_MODEL.value,
-    instructions="""You are the Agent Runtimes Chat assistant, a helpful AI specialized in code analysis,
+    instructions="""You are theLoop assistant, a helpful AI specialized in code analysis,
     Jupyter notebooks, and data science workflows. You help users with:
     - Writing and debugging code
     - Analyzing Jupyter notebooks
@@ -281,8 +320,18 @@ def _run_agent_runtime_server(
     if port_value is not None:
         port_value.value = actual_port
 
+    # Point the codemode MCP proxy at this server's actual port. The loop
+    # binds to a random free port, so the hardcoded 8765 default would make the
+    # sandbox's tool calls unreachable ("Connection error to MCP proxy at
+    # http://localhost:8765..."). Respect an explicit override if already set.
+    os.environ.setdefault(
+        "AGENT_RUNTIMES_MCP_PROXY_URL",
+        f"http://127.0.0.1:{actual_port}/api/v1/mcp/proxy",
+    )
+
     # Load agent spec to get MCP servers and sandbox variant
-    mcp_servers_str = "tavily"  # Default fallback
+    # Keep empty by default so specs with no MCP servers do not start any.
+    mcp_servers_str = ""
     sandbox_variant = "jupyter"  # Default interactive CLI sandbox variant
     agent_spec = get_agent_spec(agent_id)
     if agent_spec:
@@ -427,22 +476,26 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
     """
     lines: list[str] = []
 
-    lines.append(f"  {GREEN_MEDIUM}Runtime{RESET}  http://{host}:{port}")
+    def add_row(label: str, value: str) -> None:
+        # Keep values vertically aligned regardless of label length.
+        lines.append(f"  {GREEN_MEDIUM}{label:<13}{RESET} {value}")
+
+    add_row("Agent Runtime", f"http://{host}:{port}")
 
     if info:
         agent_info = info.get("agent", {})
         sandbox_info = info.get("sandbox", {})
 
         if agent_info.get("protocol"):
-            lines.append(f"  {GREEN_MEDIUM}Protocol{RESET} {agent_info['protocol']}")
+            add_row("Protocol", str(agent_info["protocol"]))
         if agent_info.get("model"):
-            lines.append(f"  {GREEN_MEDIUM}Model{RESET}    {agent_info['model']}")
+            add_row("Model", str(agent_info["model"]))
         if agent_info.get("codemode"):
-            lines.append(f"  {GREEN_MEDIUM}Codemode{RESET} enabled")
+            add_row("Codemode", "enabled")
 
         variant = sandbox_info.get("variant")
         if variant:
-            sandbox_line = f"  {GREEN_MEDIUM}Sandbox{RESET}  {variant}"
+            sandbox_line = str(variant)
             jupyter_url = sandbox_info.get("jupyter_url")
             if jupyter_url:
                 sandbox_line += f"  {GRAY}({jupyter_url}){RESET}"
@@ -451,15 +504,19 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
                 jupyter_port = sandbox_info.get("jupyter_port")
                 if jupyter_host and jupyter_port:
                     sandbox_line += f"  {GRAY}({jupyter_host}:{jupyter_port}){RESET}"
-            lines.append(sandbox_line)
+            add_row("Code Sandbox", sandbox_line)
+
+            kernel_id = sandbox_info.get("kernel_id")
+            if str(variant).lower() == "jupyter" and kernel_id:
+                add_row("Kernel ID", str(kernel_id))
 
         skills = agent_info.get("skills", [])
         if skills:
-            lines.append(f"  {GREEN_MEDIUM}Skills{RESET}   {', '.join(skills)}")
+            add_row("Skills", ", ".join(skills))
 
         mcp_servers = agent_info.get("mcp_servers", [])
         if mcp_servers:
-            lines.append(f"  {GREEN_MEDIUM}MCP{RESET}      {', '.join(mcp_servers)}")
+            add_row("MCP", ", ".join(mcp_servers))
 
     return "\n".join(lines)
 
@@ -475,12 +532,29 @@ def _spec_has_valid_env(spec: Any) -> bool:
     return True
 
 
+def _parse_agentspec_context_ids() -> list[str]:
+    """Return agent spec IDs to expose in interactive selection.
+
+    Environment overrides (comma-separated IDs):
+    - ``LOOP_AGENTSPEC_CONTEXT_IDS``
+    - ``DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS``
+
+    If no override is provided, defaults to ``DEFAULT_AGENTSPEC_CONTEXT_IDS``.
+    """
+    raw = os.environ.get("LOOP_AGENTSPEC_CONTEXT_IDS") or os.environ.get(
+        "DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS"
+    )
+    if raw is None:
+        return list(DEFAULT_AGENTSPEC_CONTEXT_IDS)
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
 def _pick_agentspec_interactive() -> str:
     """Show available agent specs and let the user pick one interactively.
 
     Specs are split into two groups:
-      ● Valid   – enabled with all required env vars present (selectable)
-      ○ Invalid – disabled or missing env vars (shown for reference, not selectable)
+            ○ Invalid – disabled or missing env vars (shown first for reference)
+            ● Valid   – enabled with all required env vars present (selectable)
 
     The first valid spec is proposed as the default (press Enter to select it).
 
@@ -489,66 +563,97 @@ def _pick_agentspec_interactive() -> str:
     """
     from agent_runtimes.specs.agents import list_agentspecs
 
-    specs = list_agentspecs()
-    if not specs:
+    all_specs = list_agentspecs()
+    if not all_specs:
         print(f"{GREEN_DARK}[ERROR]{RESET} No agent specs found", file=sys.stderr)
         raise typer.Exit(1)
 
-    # Partition into valid (enabled + all env vars) and the rest, each sorted by id
-    valid_specs = sorted(
-        [s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id
-    )
-    other_specs = sorted(
-        [s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id
-    )
-    ordered = valid_specs + other_specs
-    valid_count = len(valid_specs)
+    context_ids = _parse_agentspec_context_ids()
+    context_set = set(context_ids)
+    show_all_specs = False
 
-    # Default is the first valid spec (index 0) when available
-    default_idx: Optional[int] = 0 if valid_count > 0 else None
-
-    print(f"\n{GREEN_LIGHT}Available Agent Specs:{RESET}\n")
-    for i, spec in enumerate(ordered, 1):
-        is_valid = i <= valid_count
-        bullet = f" {GREEN_MEDIUM}●{RESET}" if is_valid else f" {GRAY}○{RESET}"
-        default_marker = (
-            f" {GREEN_LIGHT}(default){RESET}" if (i - 1) == default_idx else ""
-        )
-        num_color = GREEN_MEDIUM if is_valid else GRAY
-        print(
-            f"  {num_color}{i:>3}.{RESET}{bullet} {WHITE}{spec.id}{RESET}{default_marker}"
-        )
-        if spec.description:
-            desc_line = spec.description.strip().split("\n")[0]
-            if len(desc_line) > 70:
-                desc_line = desc_line[:67] + "..."
-            print(f"       {GRAY}{desc_line}{RESET}")
-        # Show required env vars with availability status
-        env_vars: set[str] = set()
-        for mcp in spec.mcp_servers:
-            env_vars.update(mcp.required_env_vars)
-        if env_vars:
-            env_parts: list[str] = []
-            for var in sorted(env_vars):
-                if os.environ.get(var):
-                    env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
-                else:
-                    env_parts.append(f"{RED}{var}{RESET}")
-            print(f"       {' '.join(env_parts)}")
-
-    if valid_count == 0:
-        print(f"\n{RED}No valid agent specs available.{RESET}")
-        print(
-            f"{GRAY}Enable a spec and/or set the required environment variables.{RESET}"
-        )
-        raise typer.Exit(1)
-
-    default_display = f" [{default_idx + 1}]" if default_idx is not None else ""
-    print()
     while True:
+        specs = all_specs
+        if not show_all_specs and context_ids:
+            specs = [s for s in all_specs if s.id in context_set]
+            if not specs:
+                print(
+                    f"{GREEN_DARK}[ERROR]{RESET} No agent specs found in LOOP_AGENTSPEC_CONTEXT_IDS filter",
+                    file=sys.stderr,
+                )
+                raise typer.Exit(1)
+
+        # Partition into valid (enabled + all env vars) and the rest, each sorted by id.
+        # Display invalid first, then valid, while keeping selection restricted to valid.
+        valid_specs = sorted(
+            [s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id
+        )
+        other_specs = sorted(
+            [s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id
+        )
+        ordered = other_specs + valid_specs
+        valid_count = len(valid_specs)
+        invalid_count = len(other_specs)
+
+        if valid_count == 0:
+            print(f"\n{RED}No valid agent specs available.{RESET}")
+            print(
+                f"{GRAY}Enable a spec and/or set the required environment variables.{RESET}"
+            )
+            raise typer.Exit(1)
+
+        # Default preference: example-simple when valid, otherwise first valid spec.
+        default_idx: Optional[int] = None
+        for i, spec in enumerate(ordered):
+            if i >= invalid_count and spec.id == "example-simple":
+                default_idx = i
+                break
+        if default_idx is None:
+            default_idx = invalid_count
+
+        print(f"\n{GREEN_LIGHT}Selected Agentspecs:{RESET}\n")
+        for i, spec in enumerate(ordered, 1):
+            is_valid = (i - 1) >= invalid_count
+            bullet = f" {GREEN_MEDIUM}●{RESET}" if is_valid else f" {GRAY}○{RESET}"
+            default_marker = (
+                f" {GREEN_LIGHT}(default){RESET}" if (i - 1) == default_idx else ""
+            )
+            num_color = GREEN_MEDIUM if is_valid else GRAY
+            print(
+                f"  {num_color}{i:>3}.{RESET}{bullet} {WHITE}{spec.id}{RESET}{default_marker}"
+            )
+            if spec.description:
+                desc_line = spec.description.strip().split("\n")[0]
+                if len(desc_line) > 70:
+                    desc_line = desc_line[:67] + "..."
+                print(f"       {GRAY}{desc_line}{RESET}")
+            # Show required env vars with availability status
+            env_vars: set[str] = set()
+            for mcp in spec.mcp_servers:
+                env_vars.update(mcp.required_env_vars)
+            if env_vars:
+                env_parts: list[str] = []
+                for var in sorted(env_vars):
+                    if os.environ.get(var):
+                        env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
+                    else:
+                        env_parts.append(f"{RED}{var}{RESET}")
+                print(f"       {' '.join(env_parts)}")
+
+        show_all_index: Optional[int] = None
+        if not show_all_specs:
+            show_all_index = len(ordered) + 1
+            print(
+                f"  {GREEN_MEDIUM}{show_all_index:>3}.{RESET} {GREEN_MEDIUM}●{RESET} {WHITE}show-all-specs{RESET}"
+            )
+            print(f"       {GRAY}Show the complete spec list{RESET}")
+
+        default_display = f" [{default_idx + 1}]" if default_idx is not None else ""
+        max_choice = len(ordered) + (1 if show_all_index is not None else 0)
+        print()
         try:
             choice = input(
-                f"{GREEN_MEDIUM}Choose an agent spec [1-{valid_count}]{default_display}: {RESET}"
+                f"{GREEN_MEDIUM}Choose an agentspec [1-{max_choice}]{default_display}: {RESET}"
             ).strip()
             if not choice:
                 if default_idx is not None:
@@ -557,7 +662,12 @@ def _pick_agentspec_interactive() -> str:
                     return chosen.id
                 continue
             idx = int(choice) - 1
-            if 0 <= idx < valid_count:
+
+            if show_all_index is not None and idx == (show_all_index - 1):
+                show_all_specs = True
+                continue
+
+            if invalid_count <= idx < len(ordered):
                 chosen = ordered[idx]
                 print(f"\n{GREEN_LIGHT}Selected:{RESET} {chosen.id}\n")
                 return chosen.id
@@ -566,12 +676,10 @@ def _pick_agentspec_interactive() -> str:
                     f"{GRAY}Agent spec #{choice} is not available (disabled or missing env vars).{RESET}"
                 )
                 print(
-                    f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}"
+                    f"{GRAY}Please choose a valid (●) spec or press Enter for the default.{RESET}"
                 )
             else:
-                print(
-                    f"{GRAY}Please enter a number between 1 and {valid_count}.{RESET}"
-                )
+                print(f"{GRAY}Please enter a number between 1 and {max_choice}.{RESET}")
         except ValueError:
             # Allow typing the spec ID directly (only valid ones)
             matching = [s for s in valid_specs if s.id == choice]
@@ -584,6 +692,12 @@ def _pick_agentspec_interactive() -> str:
                 print(
                     f"{GRAY}Agent spec '{choice}' is not available (disabled or missing env vars).{RESET}"
                 )
+            elif not show_all_specs and choice.lower() in {
+                "show-all",
+                "show-all-specs",
+                "all",
+            }:
+                show_all_specs = True
             else:
                 print(
                     f"{GRAY}Invalid input. Enter a number or a valid agent spec ID.{RESET}"
@@ -654,13 +768,13 @@ def main_callback(
 
     Examples:
 
-        agent-runtimes chat                        # Pick agent spec interactively
+        loop                        # Pick agent spec interactively
 
-        agent-runtimes chat --agentspec-id crawler # Use specific agent spec
+        loop --agentspec-id crawler # Use specific agent spec
 
-        agent-runtimes chat "What is Python?"      # Single query mode
+        loop "What is Python?"      # Single query mode
 
-        agent-runtimes chat -a crawler "Search for AI trends"  # Single query with specific agent
+        loop -a crawler "Search for AI trends"  # Single query with specific agent
     """
     # If a subcommand was invoked, don't run the default behavior
     if ctx.invoked_subcommand is not None:
@@ -672,22 +786,33 @@ def main_callback(
 
     global _subprocess_ref
 
-    # Show ASCII banner early (before agent selection)
-    from .banner import RESET as BANNER_RESET
+    # Optional animated splash (default startup uses the rich welcome panel only)
     from .banner import show_banner
 
     if banner or banner_all:
         show_banner(splash=banner, splash_all=banner_all)
     else:
-        if sys.stdout.isatty():
-            print(BANNER)
-            print(
-                f"{DIM}Powered by Datalayer  •  \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{BANNER_RESET}\n"
-            )
+        pass
+
+    extra_suggestions = (
+        [s.strip() for s in suggestions.split(",") if s.strip()] if suggestions else []
+    )
 
     # Resolve agent spec: use provided ID or pick interactively
     agent_id = agentspec_id
     if agent_id is None:
+        # Render the same rich LOOP banner style before the first agentspec
+        # selection question so startup uses a single visual language.
+        from .tux import CliTux
+
+        preview_tux = CliTux(
+            agent_url="http://127.0.0.1:0/api/v1/ag-ui/chat/",
+            server_url="http://127.0.0.1:0",
+            agent_id=DEFAULT_RUNTIME_AGENT_NAME,
+            eggs=eggs,
+            extra_suggestions=extra_suggestions,
+        )
+        preview_tux.show_welcome()
         agent_id = _pick_agentspec_interactive()
 
     try:
@@ -743,6 +868,18 @@ def main_callback(
                 from rich.live import Live
                 from rich.spinner import Spinner
 
+                from .tux import CliTux
+
+                # Show the unified LOOP banner immediately before startup.
+                preview_tux = CliTux(
+                    agent_url="http://127.0.0.1:0/api/v1/ag-ui/chat/",
+                    server_url="http://127.0.0.1:0",
+                    agent_id=DEFAULT_RUNTIME_AGENT_NAME,
+                    eggs=eggs,
+                    extra_suggestions=extra_suggestions,
+                )
+                preview_tux.show_welcome()
+
                 # Show starting message with spinner
                 console = Console()
                 with Live(
@@ -796,6 +933,81 @@ def main_callback(
                 print(_format_startup_info("127.0.0.1", actual_port, startup_info))
                 print()
 
+                # Confirmation message based on the selected agent spec.
+                try:
+                    from agent_runtimes.specs.agents import get_agent_spec
+
+                    _spec = get_agent_spec(agent_id)
+                except Exception:
+                    _spec = None
+                _agent_label = _spec.name if _spec and _spec.name else agent_id
+                _agent_emoji = (
+                    str(getattr(_spec, "emoji", "") or "").strip() if _spec else ""
+                )
+                _agent_prefix = f"{_agent_emoji}  " if _agent_emoji else ""
+                _ready_line = ""
+                if _spec and _spec.description:
+                    _desc_line = _spec.description.strip().split("\n")[0]
+                    if len(_desc_line) > 90:
+                        _desc_line = _desc_line[:87].rstrip() + "..."
+                    _ready_line = f" - {_desc_line}"
+
+                # Capability summary appended to the same confirmation line.
+                # Prefer the ACTUAL running state reported by /health/startup
+                # (mcp servers / skills started via CLI flags or catalog are not
+                # in the static spec), falling back to the spec when unavailable.
+                _agent_info = (startup_info or {}).get("agent", {}) or {}
+                _sandbox_info = (startup_info or {}).get("sandbox", {}) or {}
+
+                _mcp_list = _agent_info.get("mcp_servers")
+                if _mcp_list is None and _spec is not None:
+                    _mcp_list = [
+                        getattr(m, "id", m)
+                        for m in (getattr(_spec, "mcp_servers", []) or [])
+                    ]
+                _mcp_count = len(_mcp_list or [])
+
+                _skill_list = _agent_info.get("skills")
+                if _skill_list is None and _spec is not None:
+                    _skill_list = list(getattr(_spec, "skills", []) or [])
+                _skill_count = len(_skill_list or [])
+
+                _sandbox_variant = _sandbox_info.get("variant")
+                if not _sandbox_variant and _spec is not None:
+                    _sandbox_variant = getattr(_spec, "sandbox_variant", None)
+
+                _codemode_on = bool(_agent_info.get("codemode"))
+                if not _codemode_on and _spec is not None:
+                    _codemode = getattr(_spec, "codemode", None)
+                    _codemode_on = bool(
+                        _codemode.get("enabled")
+                        if isinstance(_codemode, dict)
+                        else _codemode
+                    )
+
+                _summary_parts: list[str] = [
+                    f"{_mcp_count} MCP server{'s' if _mcp_count != 1 else ''}"
+                ]
+                if _skill_count:
+                    _summary_parts.append(
+                        f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
+                    )
+                if str(_sandbox_variant or "").lower() == "jupyter":
+                    _summary_parts.append("Jupyter sandbox")
+                if _codemode_on and not codemode_disabled:
+                    _summary_parts.append("Code Mode")
+                _summary_line = (
+                    f" {GRAY}({' • '.join(_summary_parts)}){RESET}"
+                    if _summary_parts
+                    else ""
+                )
+                startup_message = (
+                    f"{GREEN_MEDIUM}●{RESET} {BOLD}{WHITE}Agent {RESET}{GREEN_LIGHT}{_agent_prefix}{_agent_label}{RESET}"
+                    f"{BOLD}{WHITE} is started and ready{RESET}"
+                    f"{GRAY}{_ready_line}{RESET}"
+                    f"{_summary_line}"
+                )
+
                 # Extract Jupyter URL for the /jupyter slash command
                 jupyter_url = None
                 if startup_info:
@@ -819,11 +1031,6 @@ def main_callback(
                     # Use Rich-based TUX
                     from .tux import run_tux
 
-                    extra_suggestions = (
-                        [s.strip() for s in suggestions.split(",") if s.strip()]
-                        if suggestions
-                        else []
-                    )
                     asyncio.run(
                         run_tux(
                             url,
@@ -832,10 +1039,11 @@ def main_callback(
                             eggs=eggs,
                             jupyter_url=jupyter_url,
                             extra_suggestions=extra_suggestions,
+                            startup_message=startup_message,
                         )
                     )
                 finally:
-                    _cleanup_subprocess()
+                    _cleanup_subprocess_with_spinner("Terminating agent...")
             else:
                 # Fall back to local agent
                 agent.to_cli_sync(prog_name="agent-runtimes chat")
@@ -845,11 +1053,7 @@ def main_callback(
         raise
     except KeyboardInterrupt:
         _cleanup_subprocess()
-        print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-        print(
-            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-        )
-        print()
+        print_goodbye()
         raise typer.Exit(0)
     except Exception as e:
         _cleanup_subprocess()
@@ -940,7 +1144,7 @@ async def _run_single_query_ag_ui(url: str, query: str) -> str:
 
 @app.command()
 def version() -> None:
-    """Show Agent Runtimes Chat assistant version information."""
+    """ShowLoop assistant version information."""
     _show_version()
 
 
@@ -963,11 +1167,11 @@ def connect(
 
     Examples:
 
-        agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/my-agent/
+        loop connect http://localhost:8000/api/v1/ag-ui/my-agent/
 
-        agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
+        loop connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
 
-        agent-runtimes chat connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
+        loop connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
     """
     try:
         from agent_runtimes.transports.clients import ACPClient, AGUIClient
@@ -1016,11 +1220,7 @@ async def _remote_chat_loop_acp(url: str) -> None:
                         continue
 
                     if user_input.lower() in ("quit", "exit", "q"):
-                        print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                        print(
-                            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                        )
-                        print()
+                        print_goodbye()
                         break
 
                     # Show spinner while waiting
@@ -1053,11 +1253,7 @@ async def _remote_chat_loop_acp(url: str) -> None:
                     print()
 
                 except KeyboardInterrupt:
-                    print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                    print(
-                        f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                    )
-                    print()
+                    print_goodbye()
                     break
 
     except ConnectionRefusedError:
@@ -1091,11 +1287,7 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
                         continue
 
                     if user_input.lower() in ("quit", "exit", "q"):
-                        print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                        print(
-                            f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                        )
-                        print()
+                        print_goodbye()
                         break
 
                     # Show spinner while waiting
@@ -1132,11 +1324,7 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
                     print()
 
                 except KeyboardInterrupt:
-                    print(f"\n{GREEN_LIGHT}{GOODBYE_MESSAGE}{RESET}")
-                    print(
-                        f"   {GRAY}\033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
-                    )
-                    print()
+                    print_goodbye()
                     break
 
     except ConnectionRefusedError:
@@ -1156,9 +1344,9 @@ def agents(
 
     Examples:
 
-        agent-runtimes chat agents
+        loop agents
 
-        agent-runtimes chat agents --server https://agents.datalayer.ai
+        loop agents --server https://agents.datalayer.ai
     """
     import httpx
 

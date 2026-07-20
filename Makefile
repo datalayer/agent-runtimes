@@ -5,14 +5,13 @@ SHELL=/bin/bash
 
 .DEFAULT_GOAL := default
 
-
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-lexical jupyter-server agent-serve \
-	docker-build docker-push docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
+	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
-	ag-chat ag-chat-simple ag-chat-data-acquisition ag-chat-financial ag-chat-demo ag-chat-demo-nocodemode
+	loop loop-simple loop-data-acquisition loop-financial loop-demo loop-example-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
@@ -23,6 +22,7 @@ AGENT_SERVE_NAME ?= dla-1
 AGENT_SERVE_PROTOCOL ?= vercel-ai
 
 DOCKER_IMAGE ?= datalayer/agent-nodes
+AGENT_RUNTIME_IMAGE ?= datalayer/agent-runtime
 DOCKER_TAG ?= latest
 DOCKER_PLATFORM ?=
 
@@ -164,6 +164,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/envvars.py \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/memory.py \
+	agent_runtimes/specs/loops.py \
 	agent_runtimes/specs/guardrails.py \
 	agent_runtimes/specs/benchmarks.py \
 	agent_runtimes/specs/evals.py \
@@ -293,8 +294,14 @@ agent-nodes-proxy: agent-nodes\:proxy ## alias for agent-nodes:proxy
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook
 
-agent-lexical: # agent-lexical - open agent-lexical.html with vite dev server
-	$(BEDROCK_ENV) npm run start:agent-lexical
+agent-document: # agent-document - open agent-document.html with vite dev server
+	$(BEDROCK_ENV) npm run start:agent-document
+
+dev-notebook: ## dev-notebook – /notebook UI in DEV mode (agent-runtimes server + jupyter-server + vite serving agent-notebook.html)
+	$(BEDROCK_ENV) npm run start:agent-notebook
+
+dev-document: ## dev-document – /document UI in DEV mode (agent-runtimes server + jupyter-server + vite serving agent-document.html)
+	$(BEDROCK_ENV) npm run start:agent-document
 
 jupyter-server: # jupyter-server
 	npm run jupyter:start
@@ -312,13 +319,21 @@ agent-serve: # agent-server
 	  --port 8765 \
 	  --debug
 
-docker-build: ## build Docker image (override DOCKER_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
-	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile .
+docker-build: ## build Agent Node Docker image (override DOCKER_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
+	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile.agent-node .
 
 docker-push: ## push Docker image
 	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
 
 docker-release: docker-build docker-push ## build and push Docker image
+
+agent-runtime-docker-build: ## build Agent Runtime (headless) Docker image (override AGENT_RUNTIME_IMAGE/DOCKER_TAG/DOCKER_PLATFORM)
+	docker build $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),) -t $(AGENT_RUNTIME_IMAGE):$(DOCKER_TAG) -f docker/Dockerfile.agent-runtime .
+
+agent-runtime-docker-push: ## push Agent Runtime Docker image
+	docker push $(AGENT_RUNTIME_IMAGE):$(DOCKER_TAG)
+
+agent-runtime-docker-release: agent-runtime-docker-build agent-runtime-docker-push ## build and push Agent Runtime Docker image
 
 node-agent-artifact-build: ## build frontend artifacts for agent-node Docker image
 	VITE_APP_TARGET=agent-node $(MAKE) build
@@ -348,38 +363,28 @@ agents: # agents
 	  --host 0.0.0.0 \
 	  --port 8765
 
-ag-chat: # ag-chat
+loop: # loop
 	@$(BEDROCK_ENV) \
-		ag chat --eggs
+		loop --eggs --agentspec-id example-full
 
-ag-chat-simple: # ag-chat-simple
+loop-simple: # loop-simple
 	@$(BEDROCK_ENV) \
-		ag chat --eggs --agentspec-id demo-simple
+		loop --eggs --agentspec-id example-simple
 
-ag-chat-data-acquisition: # ag-chat-data-acquisition KAGGLE_TOKEN and TAVILY_API_KEY must be set in env
-	@$(BEDROCK_ENV) \
-		ag chat --eggs --agentspec-id data-acquisition
-
-ag-chat-financial: # ag-chat-financial ALPHA_VANTAGE_API_KEY must be set in env
-	@$(BEDROCK_ENV) \
-		ag chat --eggs --agentspec-id financial
-
-ag-chat-demo: # ag-chat-demo
+loop-demo-codemode: # loop-demo-codemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		ag chat \
-		  --eggs \
+		loop \
 		  --suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
-		  --agentspec-id information-routing
+		  --agentspec-id gallery-information-routing
 
-ag-chat-demo-nocodemode: # ag-chat-demo-nocodemode
+loop-demo-nocodemode: # loop-demo-nocodemode
 	@$(BEDROCK_ENV) \
 	GOOGLE_OAUTH_CLIENT_ID=${OPENTEAMS_DEMO_GOOGLE_CLIENT_ID} \
 	GOOGLE_OAUTH_CLIENT_SECRET=${OPENTEAMS_DEMO_GOOGLE_CLIENT_SECRET} \
-		ag chat \
-		--eggs \
-		--agentspec-id information-routing \
+		loop \
+		--agentspec-id gallery-information-routing \
 		--suggestions "List files located in the sales-data folder of my Google Drive account (eric@datalayer.io),Aggregate all CSV files located in the sales-data folder of my Google Drive account (eric@datalayer.io) into a single file named sales_21-25.csv and save this aggregated file in the sales-data directory of the echarles/openteams-codemode-demo repository." \
 		--no-codemode
 
@@ -445,6 +450,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \
 	  --python-output agent_runtimes/specs/memory.py \
 	  --typescript-output src/specs/memory.ts
+	$(call step,Generating loop specifications)
+	python scripts/codegen/generate_loops.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/loops \
+	  --python-output agent_runtimes/specs/loops.py \
+	  --typescript-output src/specs/loops.ts
 	$(call step,Generating guardrail specifications)
 	python scripts/codegen/generate_guardrails.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/guardrails \

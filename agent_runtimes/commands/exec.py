@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2025 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Execution application for running code in Datalayer code sandboxes."""
 
 from __future__ import annotations
@@ -26,7 +23,7 @@ from rich.table import Table
 
 from agent_runtimes.client import AgentClient
 from agent_runtimes.console.manager import RuntimeManager
-from agent_runtimes.utils.notebook import get_cells
+from agent_runtimes.utils.notebook_utils import get_cells
 
 # Create the main Typer app for exec functionality
 app = typer.Typer(

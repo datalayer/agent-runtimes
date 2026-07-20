@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""About/logo animation for Agent Runtimes Chat TUX."""
+"""About/logo animation forLoop TUX."""
 
 import asyncio
 import time
@@ -29,7 +29,13 @@ async def about_animation(console: Console) -> None:
         console: Rich Console instance for output.
     """
     # Simple Datalayer logo animation frames with tagline
-    tagline = "[bold white]AI Agents for Data Analysis[/bold white]\n[dim]Cheaper • Faster • Collaborative[/dim]"
+    tagline = (
+        "[bold white]AI Agents for Data Analysis[/bold white]\n"
+        "[dim]────────────────────────────────────[/dim]\n"
+        "[dim]Cheaper • Faster • Collaborative[/dim]\n"
+        "[dim]────────────────────────────────────[/dim]\n"
+        "[link=https://datalayer.ai][cyan]https://datalayer.ai[/cyan][/link]"
+    )
     frames = [
         # Frame 1
         Text.from_markup(f"""
@@ -88,8 +94,25 @@ async def about_animation(console: Console) -> None:
     ]
 
     console.print()
-
     console.print()
+
+    def _initial_static_panel() -> Panel:
+        initial = Text.from_markup(f"""
+   [rgb(46,204,113)]▄▄[/rgb(46,204,113)][rgb(22,160,133)]▄▄▄▄[/rgb(22,160,133)]
+   [rgb(46,204,113)]▄▄▄[/rgb(46,204,113)][rgb(22,160,133)]▄▄▄[/rgb(22,160,133)]
+   [rgb(46,204,113)]▄▄▄▄[/rgb(46,204,113)][rgb(22,160,133)]▄▄[/rgb(22,160,133)]
+   [rgb(46,204,113)]▀[/rgb(46,204,113)][rgb(22,160,133)]    ▀[/rgb(22,160,133)]
+
+{tagline}
+""")
+        return Panel(
+            initial,
+            border_style=STYLE_PRIMARY,
+            title=" LOOP ⟳ 0.0.2 ",
+            subtitle="",
+        )
+
+    escaped = False
 
     try:
         with (
@@ -102,21 +125,25 @@ async def about_animation(console: Console) -> None:
 
             while time.time() - start_time < duration:
                 if check_escape_pressed():
-                    return
+                    escaped = True
+                    break
                 for frame in frames:
                     if check_escape_pressed():
-                        return
+                        escaped = True
+                        break
                     if time.time() - start_time >= duration:
                         break
                     live.update(
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" Datalayer ",
-                            subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                            title=" LOOP ⟳ 0.0.2 ",
+                            subtitle="",
                         )
                     )
                     await asyncio.sleep(0.15)
+                if escaped:
+                    break
 
             # Phase 2: Walking animation - logo moves right
             # Each step: feet move, then layer 3, then layer 2, then layer 1
@@ -128,13 +155,15 @@ async def about_animation(console: Console) -> None:
 
             base_offset = 3  # Starting offset (spaces before logo)
 
-            for step in range(22):  # 22 steps to the right
-                if check_escape_pressed():
-                    return
-                offset = base_offset + step
+            if not escaped:
+                for step in range(22):  # 22 steps to the right
+                    if check_escape_pressed():
+                        escaped = True
+                        break
+                    offset = base_offset + step
 
-                # Sub-frame 1: Feet move first
-                frame = Text.from_markup(f"""
+                    # Sub-frame 1: Feet move first
+                    frame = Text.from_markup(f"""
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -142,18 +171,22 @@ async def about_animation(console: Console) -> None:
 
 {tagline}
 """)
-                live.update(
-                    Panel(
-                        frame,
-                        border_style=STYLE_PRIMARY,
-                        title=" Datalayer ",
-                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    live.update(
+                        Panel(
+                            frame,
+                            border_style=STYLE_PRIMARY,
+                            title=" LOOP ⟳ 0.0.2 ",
+                            subtitle="",
+                        )
                     )
-                )
-                await asyncio.sleep(0.08)
+                    await asyncio.sleep(0.08)
 
-                # Sub-frame 2: Layer 3 moves
-                frame = Text.from_markup(f"""
+                    if check_escape_pressed():
+                        escaped = True
+                        break
+
+                    # Sub-frame 2: Layer 3 moves
+                    frame = Text.from_markup(f"""
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -161,18 +194,22 @@ async def about_animation(console: Console) -> None:
 
 {tagline}
 """)
-                live.update(
-                    Panel(
-                        frame,
-                        border_style=STYLE_PRIMARY,
-                        title=" Datalayer ",
-                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    live.update(
+                        Panel(
+                            frame,
+                            border_style=STYLE_PRIMARY,
+                            title=" LOOP ⟳ 0.0.2 ",
+                            subtitle="",
+                        )
                     )
-                )
-                await asyncio.sleep(0.08)
+                    await asyncio.sleep(0.08)
 
-                # Sub-frame 3: Layer 2 moves
-                frame = Text.from_markup(f"""
+                    if check_escape_pressed():
+                        escaped = True
+                        break
+
+                    # Sub-frame 3: Layer 2 moves
+                    frame = Text.from_markup(f"""
 {" " * offset}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -180,18 +217,22 @@ async def about_animation(console: Console) -> None:
 
 {tagline}
 """)
-                live.update(
-                    Panel(
-                        frame,
-                        border_style=STYLE_PRIMARY,
-                        title=" Datalayer ",
-                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    live.update(
+                        Panel(
+                            frame,
+                            border_style=STYLE_PRIMARY,
+                            title=" LOOP ⟳ 0.0.2 ",
+                            subtitle="",
+                        )
                     )
-                )
-                await asyncio.sleep(0.08)
+                    await asyncio.sleep(0.08)
 
-                # Sub-frame 4: Layer 1 (top) moves - logo fully shifted
-                frame = Text.from_markup(f"""
+                    if check_escape_pressed():
+                        escaped = True
+                        break
+
+                    # Sub-frame 4: Layer 1 (top) moves - logo fully shifted
+                    frame = Text.from_markup(f"""
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
 {" " * (offset + 1)}[bright_green]▄▄▄▄▄▄[/bright_green]
@@ -199,15 +240,15 @@ async def about_animation(console: Console) -> None:
 
 {tagline}
 """)
-                live.update(
-                    Panel(
-                        frame,
-                        border_style=STYLE_PRIMARY,
-                        title=" Datalayer ",
-                        subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    live.update(
+                        Panel(
+                            frame,
+                            border_style=STYLE_PRIMARY,
+                            title=" LOOP ⟳ 0.0.2 ",
+                            subtitle="",
+                        )
                     )
-                )
-                await asyncio.sleep(0.08)
+                    await asyncio.sleep(0.08)
 
             # Phase 3: Blinking for 2 seconds at final position
             final_offset = base_offset + 22
@@ -266,25 +307,31 @@ async def about_animation(console: Console) -> None:
 """),
             ]
 
-            while time.time() - start_time < duration:
-                if check_escape_pressed():
-                    return
-                for frame in final_frames:
+            if not escaped:
+                while time.time() - start_time < duration:
                     if check_escape_pressed():
-                        return
-                    if time.time() - start_time >= duration:
+                        escaped = True
                         break
-                    live.update(
-                        Panel(
-                            frame,
-                            border_style=STYLE_PRIMARY,
-                            title=" Datalayer ",
-                            subtitle="[link=https://datalayer.ai]datalayer.ai[/link]",
+                    for frame in final_frames:
+                        if check_escape_pressed():
+                            escaped = True
+                            break
+                        if time.time() - start_time >= duration:
+                            break
+                        live.update(
+                            Panel(
+                                frame,
+                                border_style=STYLE_PRIMARY,
+                                title=" LOOP ⟳ 0.0.2 ",
+                                subtitle="",
+                            )
                         )
-                    )
-                    await asyncio.sleep(0.15)
+                        await asyncio.sleep(0.15)
+                    if escaped:
+                        break
 
     except KeyboardInterrupt:
         pass
 
+    console.print(_initial_static_panel())
     console.print()

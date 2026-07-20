@@ -16,7 +16,12 @@ import { useMemo, useState, useCallback } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import { useCoreStore, useDatalayer } from '@datalayer/core';
-import { agentQueryKeys, AGENT_QUERY_OPTIONS } from './useAgentRuntimes';
+import {
+  agentQueryKeys,
+  AGENT_QUERY_OPTIONS,
+  clearRuntimePodDeleted,
+} from './useAgentRuntimes';
+import { disposeSandboxServiceManagers } from '../services/sandboxServiceManagers';
 import type {
   CheckpointMode,
   AgentStatus,
@@ -173,7 +178,10 @@ export function useResumePausedAgentRuntime() {
         method: 'POST',
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, podName) => {
+      // The pod can come back under the same name — drop any delete tombstone
+      // so the runtimes queries do not filter the resumed runtime out.
+      clearRuntimePodDeleted(podName);
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.all(),
       });
@@ -234,7 +242,10 @@ export function usePauseAgent() {
 
       return resp;
     },
-    onSuccess: () => {
+    onSuccess: (_data, params) => {
+      // Pausing tears the pod down: dispose every ServiceManager any surface
+      // opened against the sandbox so their pollers stop immediately.
+      disposeSandboxServiceManagers(params.podName);
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.all(),
       });
@@ -267,7 +278,10 @@ export function useResumeAgent() {
         ...(params.checkpointId ? { checkpoint_id: params.checkpointId } : {}),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, params) => {
+      // The pod can come back under the same name — drop any delete tombstone
+      // so the runtimes queries do not filter the resumed runtime out.
+      clearRuntimePodDeleted(params.podName);
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.all(),
       });

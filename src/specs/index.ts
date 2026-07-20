@@ -14,6 +14,7 @@ export * from './teams';
 export * from './envvars';
 export * from './evals';
 export * from './guardrails';
+export * from './loops';
 export * from './mcpServers';
 export * from './memory';
 export * from './models';

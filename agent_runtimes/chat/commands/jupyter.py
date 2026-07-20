@@ -29,7 +29,11 @@ async def execute(tux: "CliTux") -> Optional[str]:
         base = tux.jupyter_url.split("?")[0].rstrip("/") + "/api"
         query = tux.jupyter_url.split("?")[1] if "?" in tux.jupyter_url else None
         url = f"{base}?{query}" if query else base
-        tux.console.print(f"  Opening [bold cyan]{url}[/bold cyan]")
+        tux.console.print()
+        tux.console.print(
+            f"  [link={url}][bold white on rgb(22,160,133)] Open Jupyter [/][/link]"
+        )
+        tux.console.print()
         webbrowser.open(url)
     else:
         tux.console.print("  [yellow]No Jupyter server available.[/yellow]")

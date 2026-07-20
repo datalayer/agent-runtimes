@@ -295,10 +295,12 @@ export function Chat({
   mcpStatusData,
   codemodeStatusData,
   sandboxStatusData,
+  kernel,
   showToolApprovalBanner,
   pendingApprovals,
   onApproveApproval,
   onRejectApproval,
+  disableInternalJupyterTheme = false,
 }: ChatProps) {
   const resolvedAgentId =
     typeof agentId === 'string' && agentId.trim().length > 0
@@ -691,10 +693,12 @@ export function Chat({
               contextSnapshot={contextSnapshot}
               mcpStatusData={mcpStatusData}
               sandboxStatusData={sandboxStatusData}
+              kernel={kernel}
               showToolApprovalBanner={showToolApprovalBanner}
               pendingApprovals={pendingApprovals}
               onApproveApproval={onApproveApproval}
               onRejectApproval={onRejectApproval}
+              disableInternalJupyterTheme={disableInternalJupyterTheme}
             />
           </Box>
         </Box>

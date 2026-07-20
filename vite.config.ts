@@ -12,7 +12,6 @@ import path from 'path';
 import { defineConfig, loadEnv, type ServerOptions } from 'vite';
 import { treatAsCommonjs } from 'vite-plugin-treat-umd-as-commonjs';
 import wasm from 'vite-plugin-wasm';
-import topLevelAwait from 'vite-plugin-top-level-await';
 
 /**
  * Resolve the `loro-crdt` base64 entry point.
@@ -54,7 +53,6 @@ export default defineConfig(({ mode, command }) => {
   const plugins = [
     react(),
     wasm(),
-    topLevelAwait(),
     treatAsCommonjs(),
     // After build, move HTML files from dist/html/ to dist/ so the FastAPI
     // StaticFiles mount can serve them at /static/agent.html etc.
@@ -138,7 +136,11 @@ export default defineConfig(({ mode, command }) => {
             changed = true;
           }
           if (code.includes('__dirname')) {
-            code = code.replace(/\b__dirname\b/g, '"/"');
+            // Only replace bare `__dirname` identifier references (from
+            // mathjax-full's CJS build). Do NOT touch member accesses such as
+            // `globalThis.__dirname`, which are valid property reads — blindly
+            // replacing those produces `globalThis."/"` (a syntax error).
+            code = code.replace(/(?<!\.)\b__dirname\b/g, '"/"');
             changed = true;
           }
           if (changed) c.code = code;
@@ -204,6 +206,21 @@ export default defineConfig(({ mode, command }) => {
         }
       : {
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
+          // Dev-mode proxy so the standalone agent pages (agent.html,
+          // agent-notebook.html, agent-document.html, agent-node.html) served by
+          // Vite can reach the agent-runtimes backend. In production these
+          // pages are served from the backend origin itself (under /static),
+          // so `window.location.origin` already points at the API; in dev the
+          // Vite origin differs, so we forward the backend API routes here.
+          proxy: {
+            '/api': {
+              target:
+                env.VITE_AGENT_RUNTIMES_SERVER_URL ||
+                'http://localhost:8765',
+              changeOrigin: true,
+              ws: true,
+            },
+          },
         };
 
   const build: any = {
@@ -236,7 +253,7 @@ export default defineConfig(({ mode, command }) => {
       agent: path.resolve(__dirname, 'html/agent.html'),
       'agent-node': path.resolve(__dirname, 'html/agent-node.html'),
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
-      'agent-lexical': path.resolve(__dirname, 'html/agent-lexical.html'),
+      'agent-document': path.resolve(__dirname, 'html/agent-document.html'),
     };
   }
 
@@ -257,9 +274,19 @@ export default defineConfig(({ mode, command }) => {
       '@jupyterlab/rendermime',
       '@jupyterlab/translation',
       '@jupyterlab/ui-components',
+      // Pre-bundle mathjax-full so esbuild resolves its CommonJS named exports
+      // (e.g. `import { mathjax }`) to real values instead of undefined, and so
+      // the esbuildOptions.define below replaces its __dirname references.
+      'mathjax-full',
     ],
     exclude: ['keytar', '@vscode/keytar'],
     esbuildOptions: {
+      // Ensure Node globals referenced by CJS deps (mathjax-full) are also
+      // replaced during dependency pre-bundling, matching the top-level define.
+      define: {
+        __dirname: JSON.stringify('/'),
+        __filename: JSON.stringify('/index.js'),
+      },
       loader: {
         '.whl': 'text',
         '.lexical': 'json',
@@ -359,6 +386,13 @@ export default defineConfig(({ mode, command }) => {
     define: {
       global: 'globalThis',
       __webpack_public_path__: '""',
+      // mathjax-full (and a few other CJS deps) reference Node's __dirname /
+      // __filename at module scope. In production these are patched by the
+      // `patch-node-references-in-bundle` plugin (generateBundle), but that
+      // hook does not run under `vite serve`, so define them here to cover dev
+      // mode too. Value mirrors the production patch ('/').
+      __dirname: JSON.stringify('/'),
+      __filename: JSON.stringify('/index.js'),
     },
     assetsInclude: ['**/*.whl', '**/*.raw.css', '**/*.lexical'],
     build,

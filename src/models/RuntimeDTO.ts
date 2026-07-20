@@ -12,36 +12,17 @@
 import { updateRuntime } from '../api/runtimes/runtimes';
 import type { AgentRuntimesClient as DatalayerClient } from '../client/AgentRuntimesClient';
 import { CodeSandboxSnapshotDTO } from './CodeSandboxSnapshotDTO';
+import type { IRuntimePod } from './Runtime';
 import { validateJSON } from '@datalayer/core/lib/api/utils/validation';
 
 /**
  * Represents a running instance of a computing environment.
- * @interface RuntimeData
+ *
+ * Alias of the canonical {@link IRuntimePod} (see `Runtime.ts`) so the raw
+ * snake_case pod payload is defined in a single place. Kept as a named export
+ * for the Datalayer Client's public API surface.
  */
-export interface RuntimeData {
-  /** Kubernetes pod name for the runtime instance */
-  pod_name: string;
-  /** Unique identifier for the runtime */
-  uid: string;
-  /** Name of the environment this runtime is based on */
-  environment_name: string;
-  /** Title of the environment for display */
-  environment_title: string;
-  /** Type of runtime - notebook, terminal, or job */
-  type: string;
-  /** Credits consumed per second */
-  burning_rate: number;
-  /** User-friendly name for the runtime */
-  given_name: string;
-  /** Authentication token for accessing the runtime */
-  token: string;
-  /** Ingress URL for accessing the runtime */
-  ingress: string;
-  /** ISO 8601 timestamp of when the runtime started */
-  started_at: string;
-  /** ISO 8601 timestamp of when the runtime will expire */
-  expired_at: string;
-}
+export type RuntimeData = IRuntimePod;
 
 /**
  * Stable public interface for Runtime data.

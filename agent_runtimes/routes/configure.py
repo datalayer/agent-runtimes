@@ -1334,3 +1334,24 @@ async def toggle_codemode(request: CodemodeToggleRequest) -> dict[str, Any]:
         "adapters_failed": adapters_failed,
         "message": f"Codemode {'enabled' if request.enabled else 'disabled'} for {adapters_updated} agent(s).",
     }
+
+
+@router.get("/codemode/status")
+async def get_codemode_status(
+    agent_id: str | None = Query(
+        default=None,
+        description="Optional agent id to resolve codemode status for a specific running agent",
+    ),
+) -> dict[str, Any]:
+    """Return current codemode status from the running server process.
+
+    This endpoint is intended for interactive clients (e.g. TUX slash
+    commands) so they can query a single source of truth instead of relying on
+    in-process state from a separate CLI process.
+    """
+    from agent_runtimes.streams.loop import build_codemode_status
+
+    status = build_codemode_status(agent_id=agent_id)
+    if status is None:
+        raise HTTPException(status_code=500, detail="Could not resolve codemode status")
+    return status

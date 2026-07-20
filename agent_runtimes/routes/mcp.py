@@ -271,13 +271,46 @@ async def get_servers() -> list[dict[str, Any]]:
         running_instances = lifecycle_manager.get_all_running_servers()
 
         if running_instances:
-            servers = [instance.config.model_dump() for instance in running_instances]
+            servers: list[dict[str, Any]] = []
+            for instance in running_instances:
+                server_dict = instance.config.model_dump(by_alias=True)
+                # Use live discovered tools from the running instance (not
+                # only static config.tools) so CLI views reflect real MCP
+                # capabilities at runtime.
+                server_dict["tools"] = [
+                    {
+                        "name": tool.name,
+                        "description": tool.description or "",
+                        "enabled": tool.enabled,
+                        "inputSchema": tool.input_schema,
+                    }
+                    for tool in instance.tools
+                ]
+                server_dict["isRunning"] = instance.is_running
+                server_dict["isAvailable"] = bool(instance.tools)
+                servers.append(server_dict)
             return servers
 
-        # Fallback to mcp_manager (old path, for backward compatibility)
+        # Fallback to mcp_manager (old path, for backward compatibility).
+        # Under codemode the lifecycle manager is empty (codemode owns the MCP
+        # servers), so enrich each server with codemode-discovered tools.
         mcp_manager = get_mcp_manager()
-        servers = mcp_manager.get_servers()
-        return [s.model_dump() for s in servers]
+        fallback_servers = mcp_manager.get_servers()
+
+        from agent_runtimes.streams.loop import get_codemode_mcp_tools_detailed
+
+        codemode_tools_by_server = get_codemode_mcp_tools_detailed()
+
+        result: list[dict[str, Any]] = []
+        for server in fallback_servers:
+            server_dict = server.model_dump(by_alias=True)
+            codemode_tools = codemode_tools_by_server.get(server.id, [])
+            if codemode_tools and not server_dict.get("tools"):
+                server_dict["tools"] = codemode_tools
+                server_dict["isRunning"] = True
+                server_dict["isAvailable"] = True
+            result.append(server_dict)
+        return result
 
     except Exception as e:
         logger.error(f"Error getting MCP servers: {e}", exc_info=True)

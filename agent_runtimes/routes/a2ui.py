@@ -72,7 +72,7 @@ async def restaurant_query(request: A2UIQueryRequest) -> list[dict[str, Any]]:
     """
     try:
         # Import here to avoid circular imports and ensure module is loaded
-        from agent_runtimes.agents.restaurant_finder import (
+        from agent_runtimes.examples.restaurant_finder import (
             handle_a2ui_action,
             run_restaurant_agent,
         )
@@ -129,7 +129,7 @@ async def restaurant_health() -> dict[str, Any]:
     """Health check for the A2UI restaurant endpoint."""
     try:
         # Import to check availability
-        from agent_runtimes.agents import restaurant_finder  # noqa: F401
+        from agent_runtimes.examples import restaurant_finder  # noqa: F401
 
         return {
             "status": "healthy",
@@ -152,7 +152,7 @@ async def support_assistant_query(request: A2UIQueryRequest) -> list[dict[str, A
     Action requests process A2UI button events from that workflow.
     """
     try:
-        from agent_runtimes.agents.support_assistant import (
+        from agent_runtimes.examples.support_assistant import (
             handle_support_action,
             run_support_assistant,
         )
@@ -207,7 +207,7 @@ async def support_assistant_query(request: A2UIQueryRequest) -> list[dict[str, A
 async def support_assistant_health() -> dict[str, Any]:
     """Health check for the A2UI support assistant endpoint."""
     try:
-        from agent_runtimes.agents import support_assistant  # noqa: F401
+        from agent_runtimes.examples import support_assistant  # noqa: F401
 
         return {
             "status": "healthy",

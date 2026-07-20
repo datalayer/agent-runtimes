@@ -18,6 +18,25 @@ import type { SkillSpec } from '../types';
 // Skill Definitions
 // ============================================================================
 
+export const ACCOUNTING_SKILL_SPEC_0_0_1: SkillSpec = {
+  id: 'accounting',
+  version: '0.0.1',
+  name: 'Accounting Skill',
+  description:
+    'Accounting analysis workflows for reconciliation, close, variance, and audit-ready summaries',
+  module: 'agent_skills.skills.accounting',
+  package: undefined,
+  method: undefined,
+  path: undefined,
+  requiredEnvVars: [],
+  optionalEnvVars: [],
+  dependencies: ['pandas>=2.0.0'],
+  tags: ['accounting', 'finance', 'reconciliation', 'close'],
+  icon: 'book',
+  emoji: '🧮',
+  enabled: true,
+};
+
 export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   id: 'crawl',
   version: '0.0.1',
@@ -132,6 +151,7 @@ export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
 // ============================================================================
 
 export const SKILLS_CATALOG: Record<string, SkillSpec> = {
+  accounting: ACCOUNTING_SKILL_SPEC_0_0_1,
   crawl: CRAWL_SKILL_SPEC_0_0_1,
   events: EVENTS_SKILL_SPEC_0_0_1,
   github: GITHUB_SKILL_SPEC_0_0_1,

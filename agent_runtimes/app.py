@@ -32,8 +32,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
-from .agent_node_sync import run_agent_node_sync
-from .agent_node_tunnel import run_agent_node_tunnel
 from .mcp import (
     ensure_config_mcp_toolsets_event,
     get_mcp_lifecycle_manager,
@@ -45,6 +43,8 @@ from .mcp import (
 from .mcp.catalog_mcp_servers import get_catalog_server
 from .models.models import resolve_model_for_inference_provider
 from .node_mode import is_node_enabled
+from .nodes.agent_node_sync import run_agent_node_sync
+from .nodes.agent_node_tunnel import run_agent_node_tunnel
 from .routes import (
     a2a_protocol_router,
     a2ui_router,
@@ -61,6 +61,7 @@ from .routes import (
     mcp_proxy_router,
     mcp_router,
     mcp_ui_router,
+    sandbox_router,
     set_a2a_app,
     start_a2a_task_managers,
     stop_a2a_task_managers,
@@ -362,7 +363,10 @@ async def _create_and_register_cli_agent(
         # For Jupyter sandboxes, always use HTTP proxy if not already set
         if not mcp_proxy_url and shared_sandbox is not None:
             if hasattr(shared_sandbox, "_server_url"):
-                mcp_proxy_url = "http://localhost:8765/api/v1/mcp/proxy"
+                mcp_proxy_url = os.getenv(
+                    "AGENT_RUNTIMES_MCP_PROXY_URL",
+                    "http://localhost:8765/api/v1/mcp/proxy",
+                )
                 logger.info(
                     f"Using default MCP proxy URL for Jupyter sandbox: {mcp_proxy_url}"
                 )
@@ -806,12 +810,17 @@ async def _create_and_register_cli_agent(
     from .routes.agents import _agentspecs
 
     _agentspecs[agent_id] = {
+        "id": getattr(agent_spec, "id", agent_id),
+        "version": getattr(agent_spec, "version", "0.0.1"),
         "name": agent_spec.name,
         "description": agent_spec.description,
+        "tags": list(getattr(agent_spec, "tags", []) or []),
+        "enabled": bool(getattr(agent_spec, "enabled", True)),
         "agent_library": "pydantic-ai",
         "transport": protocol,
         "model": model,
         "inference_provider": inference_provider,
+        "mcp_servers": [s.id for s in all_mcp_servers] if all_mcp_servers else [],
         "system_prompt": agent_spec.system_prompt
         or agent_spec.description
         or "You are a helpful AI assistant.",
@@ -820,6 +829,15 @@ async def _create_and_register_cli_agent(
         "enable_skills": len(skills) > 0,
         "skills": list(skills) if skills else [],
         "tools": list(agent_spec.tools) if agent_spec.tools else [],
+        "frontend_tools": list(getattr(agent_spec, "frontend_tools", []) or []),
+        "icon": getattr(agent_spec, "icon", None),
+        "emoji": getattr(agent_spec, "emoji", None),
+        "color": getattr(agent_spec, "color", None),
+        "suggestions": list(getattr(agent_spec, "suggestions", []) or []),
+        "welcome_message": getattr(agent_spec, "welcome_message", None),
+        "welcome_notebook": getattr(agent_spec, "welcome_notebook", None),
+        "welcome_document": getattr(agent_spec, "welcome_document", None),
+        "sandbox_variant": effective_variant,
         "jupyter_sandbox": jupyter_sandbox_url,
     }
     logger.info(f"Stored creation spec for CLI agent '{agent_id}'")
@@ -836,7 +854,11 @@ async def _create_and_register_cli_agent(
     if protocol == "ag-ui":
         # Register with AG-UI
         try:
-            agui_adapter = AGUITransport(agent, agent_id=agent_id)
+            agui_adapter = AGUITransport(
+                agent,
+                agent_id=agent_id,
+                approval_tool_ids=approval_tool_ids or [],
+            )
             register_agui_agent(agent_id, agui_adapter)
             logger.info(f"Registered agent with AG-UI: {agent_id}")
 
@@ -941,10 +963,18 @@ async def _create_and_register_cli_agent(
         jupyter_port = getattr(shared_sandbox, "_port", None)
         jupyter_server_url = getattr(shared_sandbox, "_server_url", None)
         jupyter_token = getattr(shared_sandbox, "_token", None)
+        kernel_id = getattr(shared_sandbox, "kernel_id", None) or getattr(
+            shared_sandbox, "_kernel_id", None
+        )
+        if not kernel_id:
+            kernel_model = getattr(shared_sandbox, "kernel", None)
+            if isinstance(kernel_model, dict):
+                kernel_id = kernel_model.get("id")
         startup_info["sandbox"]["jupyter_host"] = jupyter_host
         startup_info["sandbox"]["jupyter_port"] = jupyter_port
         startup_info["sandbox"]["jupyter_url"] = jupyter_server_url
         startup_info["sandbox"]["jupyter_token"] = jupyter_token
+        startup_info["sandbox"]["kernel_id"] = kernel_id
     elif effective_variant == "jupyter" and jupyter_sandbox_url:
         startup_info["sandbox"]["jupyter_url"] = jupyter_sandbox_url
 
@@ -1226,7 +1256,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                     sandbox_variant=sandbox_variant,
                 )
                 # Store startup info on app.state so the /health/startup
-                # endpoint can expose it to CLI consumers (e.g. agent-runtimes chat).
+                # endpoint can expose it to CLI consumers (e.g. loop).
                 app.state.startup_info = startup_info
             else:
                 logger.warning(
@@ -1380,6 +1410,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(configure_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
+    app.include_router(sandbox_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_legacy_router)
     app.include_router(tool_approvals_ws_router)

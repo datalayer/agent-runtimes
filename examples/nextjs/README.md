@@ -88,7 +88,7 @@ This example showcases:
 ### Environments Page (`/environments`)
 
 - View all available compute environments
-- See environmentspecifications (language, description)
+- See environment specifications (language, description)
 - Visual icons for each environment type
 
 ### Viewer Page (`/viewer`)

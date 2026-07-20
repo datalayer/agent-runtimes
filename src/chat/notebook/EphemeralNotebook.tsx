@@ -21,7 +21,6 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Spinner } from '@primer/react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
@@ -38,8 +37,11 @@ import {
   CellSidebarButton,
   JupyterReactTheme,
   notebookStore,
+  disposeServiceManager,
 } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
+import { useProgressTask } from '../../hooks/useProgressTask';
 import type { EphemeralNotebookToolbarComponent } from '../../types/chat';
 
 /**
@@ -162,6 +164,7 @@ export function EphemeralNotebook({
   useEffect(() => {
     let cancelled = false;
     let manager: ServiceManager | null = null;
+    let unregisterManager: (() => void) | null = null;
 
     const connectRuntime = async () => {
       const baseUrl = String(selectedRuntime?.url || '').trim();
@@ -183,6 +186,12 @@ export function EphemeralNotebook({
           appendToken: true,
         });
         manager = new ServiceManager({ serverSettings });
+        // Central sandbox registry: runtime terminate/pause disposes this
+        // manager immediately so its pollers cannot hit the dead pod ingress.
+        unregisterManager = registerSandboxServiceManager(
+          String(selectedRuntime?.pod_name || ''),
+          manager,
+        );
         await manager.ready;
         await manager.kernels.refreshRunning();
         const runningKernel = [...manager.kernels.running()][0];
@@ -205,8 +214,9 @@ export function EphemeralNotebook({
 
     return () => {
       cancelled = true;
+      unregisterManager?.();
       if (manager) {
-        manager.dispose();
+        disposeServiceManager(manager);
       }
     };
   }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
@@ -218,6 +228,11 @@ export function EphemeralNotebook({
   const activeKernelId = runtimeKernelId;
   const activeStartDefaultKernel = runtimeStartDefaultKernel;
   const ToolbarComponent = toolbarComponent || NotebookToolbar;
+
+  const isRuntimeStarting = Boolean(
+    String(runtimePodName || '').trim() && !activeServiceManager,
+  );
+  useProgressTask(`ephemeral-notebook-start-${notebookId}`, isRuntimeStarting);
 
   useEffect(() => {
     // Read the CURRENT live notebook model straight from the notebook store.
@@ -349,20 +364,7 @@ export function EphemeralNotebook({
             </Box>
           </JupyterReactTheme>
         </DatalayerThemeProvider>
-      ) : (
-        <Box
-          sx={{
-            p: 3,
-            color: 'fg.muted',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
-        >
-          <Spinner size="small" />
-          Starting notebook…
-        </Box>
-      )}
+      ) : null}
     </Box>
   );
 }

@@ -27,14 +27,40 @@ export class RuntimeUnreachable extends Error {
 export type IRuntimeLocation = 'browser' | 'local' | string;
 
 /**
- * Runtime model.
+ * A live runtime.
+ *
+ * Composition of the control-plane runtime pod ({@link IRuntimePod}) and the
+ * JupyterLab kernel model ({@link Kernel.IModel}, e.g. `id`, `name`,
+ * `execution_state`). This is the canonical shape used across the app once a
+ * pod has an attached kernel: `IRuntimePod` supplies the pod/control-plane
+ * fields (snake_case) and `Kernel.IModel` supplies the live kernel fields.
+ *
+ * Note on identity: `Kernel.IModel.id` is the *kernel* id (only present once a
+ * kernel is attached), while {@link IRuntimePod.uid} is the stable *pod* id.
+ * Prefer `uid` for pod identity and `id` for kernel identity.
  */
 export interface IRuntimeModel extends IRuntimePod, Kernel.IModel {}
 
 /**
- * Runtime pod.
+ * A runtime pod as returned by the Datalayer control-plane.
+ *
+ * This is the canonical snake_case transport shape for a runtime pod. The
+ * Datalayer Client's `RuntimeData` (see `RuntimeDTO.ts`) is a type alias of
+ * this interface, so there is a single source of truth for the pod payload.
+ * It is the source of the pod-level fields composed into {@link IRuntimeModel}.
+ *
+ * It is distinct from {@link IRuntimeDesc}, which is the camelCase,
+ * location-agnostic UI descriptor used by pickers/launchers - do not merge the
+ * two (see `IRuntimeDesc`).
  */
 export interface IRuntimePod {
+  /**
+   * Stable runtime pod identifier (ULID) assigned by the control-plane.
+   *
+   * Distinct from the kernel `id` carried by {@link Kernel.IModel}: a pod may
+   * exist before a kernel is attached, so prefer `uid` for pod identity.
+   */
+  uid: string;
   /**
    * Environment display name
    */
@@ -82,7 +108,18 @@ export interface IRuntimePod {
 }
 
 /**
- * Runtime description.
+ * Runtime description (UI layer).
+ *
+ * A lightweight, camelCase, location-agnostic descriptor used by the runtime
+ * pickers/launchers to describe a *desired or selected* runtime across all
+ * locations (browser / local / remote). It is intentionally kept separate from
+ * {@link IRuntimePod}:
+ *  - naming: camelCase (UI) vs snake_case (backend transport);
+ *  - scope: spans all {@link IRuntimeLocation}s vs remote pod only;
+ *  - lifecycle: a selection/description (may not exist yet) vs a concrete
+ *    running pod.
+ * Map between the two at the boundary (e.g. `podName` <-> `pod_name`,
+ * `burningRate` <-> `burning_rate`) rather than merging them.
  */
 export interface IRuntimeDesc {
   /**

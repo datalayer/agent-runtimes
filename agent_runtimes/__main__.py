@@ -98,7 +98,11 @@ app = typer.Typer(
     name="agent-runtimes",
     help="Agent Runtimes CLI - manage and query ai agents",
     add_completion=True,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+    },
 )
 
 
@@ -149,8 +153,15 @@ def _lookup_billing_entity_uid_by_handle(
     return None
 
 
-@app.callback()
+@app.callback(
+    invoke_without_command=True,
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+    },
+)
 def main_callback(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -258,6 +269,53 @@ def main_callback(
             "when omitted and is resolved to UID via IAM lookup."
         ),
     ),
+    eggs: bool = typer.Option(
+        False,
+        "--eggs",
+        help="Enable Easter egg commands in default chat mode.",
+    ),
+    agentspec_id: str | None = typer.Option(
+        None,
+        "--agentspec-id",
+        "-a",
+        help="Agent spec ID to use when defaulting to chat mode.",
+    ),
+    port: int | None = typer.Option(
+        None,
+        "--port",
+        "-p",
+        help="Port for chat runtime server when defaulting to chat mode.",
+    ),
+    banner: bool = typer.Option(
+        False,
+        "--banner",
+        "-b",
+        help="Show chat banner when defaulting to chat mode.",
+    ),
+    banner_all: bool = typer.Option(
+        False,
+        "--banner-all",
+        "-B",
+        help="Show full chat banner animations when defaulting to chat mode.",
+    ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        "-d",
+        help="Enable chat debug mode when defaulting to chat mode.",
+    ),
+    codemode_disabled: bool = typer.Option(
+        False,
+        "--codemode-disabled",
+        "--no-codemode",
+        help="Disable codemode when defaulting to chat mode.",
+    ),
+    suggestions: str | None = typer.Option(
+        None,
+        "--suggestions",
+        "-s",
+        help="Extra suggestions (comma-separated) when defaulting to chat mode.",
+    ),
 ) -> None:
     """Main callback to handle global options."""
     overrides = {
@@ -327,6 +385,33 @@ def main_callback(
         os.environ["DATALAYER_BILLING_ENTITY_UID"] = resolved_uid
     if resolved_handle:
         os.environ["DATALAYER_ACCOUNT_HANDLE"] = resolved_handle
+
+    # When no subcommand is given, default to the interactive `chat` command
+    # so that running `loop` behaves like running `loop chat`.
+    if ctx.invoked_subcommand is None:
+        from agent_runtimes.chat.cli import app as chat_app
+
+        chat_args: list[str] = []
+        if eggs:
+            chat_args.append("--eggs")
+        if agentspec_id:
+            chat_args.extend(["--agentspec-id", agentspec_id])
+        if port is not None:
+            chat_args.extend(["--port", str(port)])
+        if banner:
+            chat_args.append("--banner")
+        if banner_all:
+            chat_args.append("--banner-all")
+        if debug:
+            chat_args.append("--debug")
+        if codemode_disabled:
+            chat_args.append("--no-codemode")
+        if suggestions:
+            chat_args.extend(["--suggestions", suggestions])
+        # Forward any additional CLI args to chat so `loop --<chat-option>`
+        # behaves like `loop chat --<chat-option>`.
+        chat_args.extend(ctx.args)
+        chat_app(args=chat_args)
 
 
 # Register the interactive assistant CLI under `agent-runtimes chat`.

@@ -5,7 +5,7 @@
 #
 # BSD 3-Clause License
 
-"""Banner and animation utilities for the Agent Runtimes Chat assistant."""
+"""Banner and animation utilities for theLoop assistant."""
 
 import io
 import random
@@ -53,20 +53,52 @@ BOLD = "\033[1m"
 DIM = "\033[2m"
 RESET = "\033[0m"
 
-# Goodbye message displayed on exit
-GOODBYE_MESSAGE = "🤖 Thank you for using Agent Runtimes. See you soon!"
+# Goodbye shown on exit. A single, inviting line. The ☰ mark (three stacked
+# bars) is the Datalayer logo. Keep this centralized and render it everywhere
+# via ``print_goodbye`` so the message stays consistent.
+GOODBYE_URL = "https://datalayer.ai"
+GOODBYE_MESSAGE = "☰ Keep looping ⟳ Your agents stay warm. See you soon at Datalayer!"
+
+
+def _osc8_link(url: str, label: str | None = None) -> str:
+    """Return an OSC-8 terminal hyperlink for raw ANSI output."""
+    return f"\033]8;;{url}\033\\{label or url}\033]8;;\033\\"
+
+
+def format_goodbye() -> str:
+    """Return the one-line, colorized goodbye for raw ANSI terminals."""
+    return f"{GREEN_LIGHT}{GOODBYE_MESSAGE}  {GRAY}· {_osc8_link(GOODBYE_URL)}{RESET}"
+
+
+def print_goodbye(console: Any = None) -> None:
+    """Print the centralized goodbye message on a single line.
+
+    Renders through a Rich ``Console`` when one is provided, otherwise falls
+    back to a plain ``print`` with an OSC-8 hyperlink. A blank line is added
+    above and below for breathing room.
+    """
+    if console is not None:
+        console.print()
+        console.print(
+            f"[#2ECC71]{GOODBYE_MESSAGE}[/#2ECC71]  "
+            f"[#59595C]· [link={GOODBYE_URL}]{GOODBYE_URL}[/link][/#59595C]"
+        )
+        console.print()
+    else:
+        print(f"\n{format_goodbye()}\n")
+
 
 # ASCII Art Banner with Datalayer brand colors
 BANNER = f"""
-{GREEN_DARK}{BOLD}╔═══════════════════════════════════════════════════════════════╗
+{GREEN_MEDIUM}{BOLD}╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   {GREEN_LIGHT}AG CHAT{WHITE}                                                       {GREEN_DARK}║
-║   {WHITE}AI-Powered Data Assistant                                   {GREEN_DARK}║
-║   {WHITE}Cheaper • Faster • Collaborative                            {GREEN_DARK}║
+║   {GREEN_LIGHT}{BOLD}LOOP ⟳{WHITE}                                                      {GREEN_MEDIUM}║
 ║                                                               ║
-║   {GREEN_DARK}🤖 Data Analysis  {GREEN_MEDIUM}📊 Data Science  {GREEN_LIGHT}📓 Software Development  {GREEN_DARK}║
+║   {GREEN_MEDIUM}AI-Powered Data Assistant                                   {GREEN_MEDIUM}║
 ║                                                               ║
-║   {GRAY}Type /exit to quit  •  Type / for commands                  {GREEN_DARK}║
+║   {GREEN_TEXT}Cheaper • Faster • Collaborative                            {GREEN_MEDIUM}║
+║                                                               ║
+║   {GRAY}Type {GREEN_LIGHT}/{GRAY} for commands  •  {GREEN_LIGHT}/exit{GRAY} to quit                       {GREEN_MEDIUM}║
 ╚═══════════════════════════════════════════════════════════════╝{RESET}
 """
 
@@ -311,7 +343,7 @@ BANNER_HEIGHT = BANNER.count("\n") + 2  # +2 for the "Powered by" line and extra
 
 
 def show_banner(splash: bool = False, splash_all: bool = False) -> None:
-    """Display the Agent Runtimes Chat welcome banner with optional animations.
+    """Display theLoop welcome banner with optional animations.
 
     Args:
         splash: If True, show Matrix rain animation before banner.

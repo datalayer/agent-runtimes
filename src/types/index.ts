@@ -25,6 +25,7 @@ export * from './execution';
 export * from './extensions';
 export * from './guardrails';
 export * from './inference';
+export * from './loops';
 export * from './mcp';
 export * from './memory';
 export * from './messages';
