@@ -300,6 +300,7 @@ export function Chat({
   pendingApprovals,
   onApproveApproval,
   onRejectApproval,
+  disableInternalJupyterTheme = false,
 }: ChatProps) {
   const resolvedAgentId =
     typeof agentId === 'string' && agentId.trim().length > 0
@@ -697,6 +698,7 @@ export function Chat({
               pendingApprovals={pendingApprovals}
               onApproveApproval={onApproveApproval}
               onRejectApproval={onRejectApproval}
+              disableInternalJupyterTheme={disableInternalJupyterTheme}
             />
           </Box>
         </Box>

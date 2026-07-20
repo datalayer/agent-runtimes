@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 NAME = "rain"
 ALIASES: list[str] = []
 DESCRIPTION = "Matrix rain animation"
-SHORTCUT = "escape r"
+SHORTCUT = None
 
 
 async def execute(tux: "CliTux") -> Optional[str]:

@@ -28,6 +28,17 @@ if TYPE_CHECKING:
 
 DEFAULT_RUNTIME_AGENT_NAME = "chat"
 
+# Narrow interactive selection to the gallery context set by default. This keeps
+# the picker focused while preserving the existing valid/env/sort logic.
+DEFAULT_AGENTSPEC_CONTEXT_IDS: tuple[str, ...] = (
+    "example-simple",
+    "gallery-accountant",
+    "gallery-analyze-excel-spreadsheet",
+    "gallery-agent-critic-loop-for-analysis",
+    "gallery-ai-explains-notebook-output",
+    "gallery-replace-excel-pivot-work",
+)
+
 
 # Global reference to subprocess for cleanup
 _subprocess_ref: Optional[multiprocessing.Process] = None
@@ -483,6 +494,23 @@ def _spec_has_valid_env(spec: Any) -> bool:
     return True
 
 
+def _parse_agentspec_context_ids() -> list[str]:
+    """Return agent spec IDs to expose in interactive selection.
+
+    Environment overrides (comma-separated IDs):
+    - ``LOOP_AGENTSPEC_CONTEXT_IDS``
+    - ``DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS``
+
+    If no override is provided, defaults to ``DEFAULT_AGENTSPEC_CONTEXT_IDS``.
+    """
+    raw = os.environ.get("LOOP_AGENTSPEC_CONTEXT_IDS") or os.environ.get(
+        "DATALAYER_LOOP_AGENTSPEC_CONTEXT_IDS"
+    )
+    if raw is None:
+        return list(DEFAULT_AGENTSPEC_CONTEXT_IDS)
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
 def _pick_agentspec_interactive() -> str:
     """Show available agent specs and let the user pick one interactively.
 
@@ -497,68 +525,97 @@ def _pick_agentspec_interactive() -> str:
     """
     from agent_runtimes.specs.agents import list_agentspecs
 
-    specs = list_agentspecs()
-    if not specs:
+    all_specs = list_agentspecs()
+    if not all_specs:
         print(f"{GREEN_DARK}[ERROR]{RESET} No agent specs found", file=sys.stderr)
         raise typer.Exit(1)
 
-    # Partition into valid (enabled + all env vars) and the rest, each sorted by id.
-    # Display invalid first, then valid, while keeping selection restricted to valid.
-    valid_specs = sorted(
-        [s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id
-    )
-    other_specs = sorted(
-        [s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id
-    )
-    ordered = other_specs + valid_specs
-    valid_count = len(valid_specs)
-    invalid_count = len(other_specs)
+    context_ids = _parse_agentspec_context_ids()
+    context_set = set(context_ids)
+    show_all_specs = False
 
-    # Default is the first valid spec in the combined list when available.
-    default_idx: Optional[int] = invalid_count if valid_count > 0 else None
-
-    print(f"\n{GREEN_LIGHT}Available Agent Specs:{RESET}\n")
-    for i, spec in enumerate(ordered, 1):
-        is_valid = (i - 1) >= invalid_count
-        bullet = f" {GREEN_MEDIUM}●{RESET}" if is_valid else f" {GRAY}○{RESET}"
-        default_marker = (
-            f" {GREEN_LIGHT}(default){RESET}" if (i - 1) == default_idx else ""
-        )
-        num_color = GREEN_MEDIUM if is_valid else GRAY
-        print(
-            f"  {num_color}{i:>3}.{RESET}{bullet} {WHITE}{spec.id}{RESET}{default_marker}"
-        )
-        if spec.description:
-            desc_line = spec.description.strip().split("\n")[0]
-            if len(desc_line) > 70:
-                desc_line = desc_line[:67] + "..."
-            print(f"       {GRAY}{desc_line}{RESET}")
-        # Show required env vars with availability status
-        env_vars: set[str] = set()
-        for mcp in spec.mcp_servers:
-            env_vars.update(mcp.required_env_vars)
-        if env_vars:
-            env_parts: list[str] = []
-            for var in sorted(env_vars):
-                if os.environ.get(var):
-                    env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
-                else:
-                    env_parts.append(f"{RED}{var}{RESET}")
-            print(f"       {' '.join(env_parts)}")
-
-    if valid_count == 0:
-        print(f"\n{RED}No valid agent specs available.{RESET}")
-        print(
-            f"{GRAY}Enable a spec and/or set the required environment variables.{RESET}"
-        )
-        raise typer.Exit(1)
-
-    default_display = f" [{default_idx + 1}]" if default_idx is not None else ""
-    print()
     while True:
+        specs = all_specs
+        if not show_all_specs and context_ids:
+            specs = [s for s in all_specs if s.id in context_set]
+            if not specs:
+                print(
+                    f"{GREEN_DARK}[ERROR]{RESET} No agent specs found in LOOP_AGENTSPEC_CONTEXT_IDS filter",
+                    file=sys.stderr,
+                )
+                raise typer.Exit(1)
+
+        # Partition into valid (enabled + all env vars) and the rest, each sorted by id.
+        # Display invalid first, then valid, while keeping selection restricted to valid.
+        valid_specs = sorted(
+            [s for s in specs if _spec_has_valid_env(s)], key=lambda s: s.id
+        )
+        other_specs = sorted(
+            [s for s in specs if not _spec_has_valid_env(s)], key=lambda s: s.id
+        )
+        ordered = other_specs + valid_specs
+        valid_count = len(valid_specs)
+        invalid_count = len(other_specs)
+
+        if valid_count == 0:
+            print(f"\n{RED}No valid agent specs available.{RESET}")
+            print(
+                f"{GRAY}Enable a spec and/or set the required environment variables.{RESET}"
+            )
+            raise typer.Exit(1)
+
+        # Default preference: example-simple when valid, otherwise first valid spec.
+        default_idx: Optional[int] = None
+        for i, spec in enumerate(ordered):
+            if i >= invalid_count and spec.id == "example-simple":
+                default_idx = i
+                break
+        if default_idx is None:
+            default_idx = invalid_count
+
+        print(f"\n{GREEN_LIGHT}Selected Agentspecs:{RESET}\n")
+        for i, spec in enumerate(ordered, 1):
+            is_valid = (i - 1) >= invalid_count
+            bullet = f" {GREEN_MEDIUM}●{RESET}" if is_valid else f" {GRAY}○{RESET}"
+            default_marker = (
+                f" {GREEN_LIGHT}(default){RESET}" if (i - 1) == default_idx else ""
+            )
+            num_color = GREEN_MEDIUM if is_valid else GRAY
+            print(
+                f"  {num_color}{i:>3}.{RESET}{bullet} {WHITE}{spec.id}{RESET}{default_marker}"
+            )
+            if spec.description:
+                desc_line = spec.description.strip().split("\n")[0]
+                if len(desc_line) > 70:
+                    desc_line = desc_line[:67] + "..."
+                print(f"       {GRAY}{desc_line}{RESET}")
+            # Show required env vars with availability status
+            env_vars: set[str] = set()
+            for mcp in spec.mcp_servers:
+                env_vars.update(mcp.required_env_vars)
+            if env_vars:
+                env_parts: list[str] = []
+                for var in sorted(env_vars):
+                    if os.environ.get(var):
+                        env_parts.append(f"{GREEN_LIGHT}{var}{RESET}")
+                    else:
+                        env_parts.append(f"{RED}{var}{RESET}")
+                print(f"       {' '.join(env_parts)}")
+
+        show_all_index: Optional[int] = None
+        if not show_all_specs:
+            show_all_index = len(ordered) + 1
+            print(
+                f"  {GREEN_MEDIUM}{show_all_index:>3}.{RESET} {GREEN_MEDIUM}●{RESET} {WHITE}show-all-specs{RESET}"
+            )
+            print(f"       {GRAY}Show the complete spec list{RESET}")
+
+        default_display = f" [{default_idx + 1}]" if default_idx is not None else ""
+        max_choice = len(ordered) + (1 if show_all_index is not None else 0)
+        print()
         try:
             choice = input(
-                f"{GREEN_MEDIUM}Choose an agent spec [1-{len(ordered)}]{default_display}: {RESET}"
+                f"{GREEN_MEDIUM}Choose an agentspec [1-{max_choice}]{default_display}: {RESET}"
             ).strip()
             if not choice:
                 if default_idx is not None:
@@ -567,6 +624,11 @@ def _pick_agentspec_interactive() -> str:
                     return chosen.id
                 continue
             idx = int(choice) - 1
+
+            if show_all_index is not None and idx == (show_all_index - 1):
+                show_all_specs = True
+                continue
+
             if invalid_count <= idx < len(ordered):
                 chosen = ordered[idx]
                 print(f"\n{GREEN_LIGHT}Selected:{RESET} {chosen.id}\n")
@@ -580,7 +642,7 @@ def _pick_agentspec_interactive() -> str:
                 )
             else:
                 print(
-                    f"{GRAY}Please enter a number between 1 and {len(ordered)}.{RESET}"
+                    f"{GRAY}Please enter a number between 1 and {max_choice}.{RESET}"
                 )
         except ValueError:
             # Allow typing the spec ID directly (only valid ones)
@@ -594,6 +656,11 @@ def _pick_agentspec_interactive() -> str:
                 print(
                     f"{GRAY}Agent spec '{choice}' is not available (disabled or missing env vars).{RESET}"
                 )
+            elif (
+                not show_all_specs
+                and choice.lower() in {"show-all", "show-all-specs", "all"}
+            ):
+                show_all_specs = True
             else:
                 print(
                     f"{GRAY}Invalid input. Enter a number or a valid agent spec ID.{RESET}"

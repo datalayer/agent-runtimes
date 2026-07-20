@@ -398,6 +398,67 @@ class CodeSandboxManager:
         """Check if the current variant is Jupyter-based."""
         return self._config.variant == "jupyter"
 
+    def _active_sandbox(self) -> "Sandbox | None":
+        """Return the sandbox that reflects the live execution context.
+
+        In CLI / ``loop`` mode the sandbox is created per agent and stored in
+        ``_agent_sandboxes`` rather than the global ``_sandbox``.  Prefer the
+        global sandbox when present, otherwise fall back to the first per-agent
+        sandbox so that status reporting (kernel id, running state) is accurate.
+        """
+        if self._sandbox is not None:
+            return self._sandbox
+        for sandbox in self._agent_sandboxes.values():
+            if sandbox is not None:
+                return sandbox
+        return None
+
+    @staticmethod
+    def _sandbox_connection_details(
+        sandbox: "Sandbox | None",
+    ) -> dict[str, Any]:
+        """Best-effort extraction of a sandbox's live Jupyter/kernel details.
+
+        Different sandbox implementations expose their kernel id in different
+        ways.  ``JupyterSandbox`` keeps a ``jupyter_kernel_client.KernelClient``
+        in ``_client`` whose ``id`` is the live kernel id, so we probe several
+        well-known attributes to remain robust across variants.
+        """
+        details: dict[str, Any] = {
+            "kernel_id": None,
+            "kernel_name": None,
+            "jupyter_url": None,
+            "jupyter_token": None,
+            "username": None,
+        }
+        if sandbox is None:
+            return details
+
+        client = getattr(sandbox, "_client", None)
+
+        kernel_id = getattr(sandbox, "kernel_id", None) or getattr(
+            sandbox, "_kernel_id", None
+        )
+        if not kernel_id and client is not None:
+            kernel_id = getattr(client, "id", None)
+        if not kernel_id:
+            kernel_model = getattr(sandbox, "kernel", None)
+            if isinstance(kernel_model, dict):
+                kernel_id = kernel_model.get("id")
+        details["kernel_id"] = kernel_id or None
+
+        server_url = getattr(sandbox, "_server_url", None)
+        if not server_url and client is not None:
+            server_url = getattr(client, "server_url", None)
+        details["jupyter_url"] = server_url or None
+
+        details["jupyter_token"] = getattr(sandbox, "_token", None) or None
+
+        if client is not None:
+            details["username"] = getattr(client, "username", None) or None
+
+        return details
+
     def configure(
         self,
         variant: SandboxVariant | None = None,
@@ -900,23 +961,29 @@ class CodeSandboxManager:
         else:
             python_path = str(Path(generated_path).resolve().parent)
 
-        kernel_id = None
-        if self._sandbox is not None:
-            kernel_id = getattr(self._sandbox, "kernel_id", None) or getattr(
-                self._sandbox, "_kernel_id", None
-            )
-            if not kernel_id:
-                kernel_model = getattr(self._sandbox, "kernel", None)
-                if isinstance(kernel_model, dict):
-                    kernel_id = kernel_model.get("id")
+        # Resolve the live execution context.  In CLI / ``loop`` mode the
+        # sandbox lives in ``_agent_sandboxes`` (per-agent) rather than the
+        # global ``_sandbox``, so inspect both to report an accurate kernel id
+        # and running state.  Without this, ``/health/startup`` reports
+        # ``kernel_id: null`` and the notebook/document editors each fall back
+        # to starting their OWN default kernel, diverging from the sandbox
+        # kernel used by the agent.
+        active_sandbox = self._active_sandbox()
+        details = self._sandbox_connection_details(active_sandbox)
 
         return {
             "variant": self._config.variant,
-            "jupyter_url": self._config.jupyter_url,
-            "jupyter_token": self._config.jupyter_token,
-            "jupyter_token_set": self._config.jupyter_token is not None,
-            "kernel_id": kernel_id,
-            "sandbox_running": self._sandbox is not None,
+            "jupyter_url": self._config.jupyter_url or details["jupyter_url"],
+            "jupyter_token": self._config.jupyter_token
+            or details["jupyter_token"],
+            "jupyter_token_set": (
+                self._config.jupyter_token is not None
+                or details["jupyter_token"] is not None
+            ),
+            "kernel_id": details["kernel_id"],
+            "kernel_name": details["kernel_name"],
+            "username": details["username"],
+            "sandbox_running": active_sandbox is not None,
             "agent_sandboxes": list(self._agent_sandboxes.keys()),
             "generated_path": generated_path,
             "skills_path": skills_path,

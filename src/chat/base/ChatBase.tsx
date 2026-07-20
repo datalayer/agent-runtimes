@@ -647,6 +647,7 @@ export function ChatBase(props: ChatBaseProps) {
     agentRuntimeConfig,
     protocol: protocolProp,
     useStore: useStoreMode = true,
+    disableInternalJupyterTheme = false,
   } = props;
 
   // Resolve protocol: string Protocol overrides type in agentRuntimeConfig or
@@ -681,21 +682,22 @@ export function ChatBase(props: ChatBaseProps) {
     useStore: effectiveUseStoreMode,
   };
 
+  const content = <ChatBaseInner {...innerProps} />;
+  const wrappedContent = disableInternalJupyterTheme ? (
+    content
+  ) : (
+    <ThemedChatBoundary>{content}</ThemedChatBoundary>
+  );
+
   if (!existingQueryClient) {
     return (
       <QueryClientProvider client={internalQueryClient}>
-        <ThemedChatBoundary>
-          <ChatBaseInner {...innerProps} />
-        </ThemedChatBoundary>
+        {wrappedContent}
       </QueryClientProvider>
     );
   }
 
-  return (
-    <ThemedChatBoundary>
-      <ChatBaseInner {...innerProps} />
-    </ThemedChatBoundary>
-  );
+  return wrappedContent;
 }
 
 // ---------------------------------------------------------------------------

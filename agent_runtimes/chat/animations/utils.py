@@ -33,8 +33,15 @@ def check_escape_pressed() -> bool:
     Returns:
         True if ESCAPE was pressed, False otherwise.
     """
-    if select.select([sys.stdin], [], [], 0)[0]:
+    # Drain all currently available input bytes/chars. This is more reliable
+    # than a single-char read because terminals may buffer escape sequences.
+    # If ESC is present anywhere in what was typed, stop the animation.
+    saw_escape = False
+    while select.select([sys.stdin], [], [], 0)[0]:
         char = sys.stdin.read(1)
+        if not char:
+            break
         if char == "\x1b":  # ESCAPE character
-            return True
-    return False
+            saw_escape = True
+            continue
+    return saw_escape

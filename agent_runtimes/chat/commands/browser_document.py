@@ -50,6 +50,10 @@ async def execute(tux: "CliTux") -> Optional[str]:
         url += f"&jupyterBaseUrl={urllib.parse.quote(base, safe='')}"
         if token:
             url += f"&jupyterToken={urllib.parse.quote(token, safe='')}"
-    tux.console.print(f"  Opening [bold cyan]{url}[/bold cyan]")
+    tux.console.print()
+    tux.console.print(
+        f"  [link={url}][bold white on rgb(22,160,133)] Open Document [/][/link]"
+    )
+    tux.console.print()
     webbrowser.open(url)
     return None

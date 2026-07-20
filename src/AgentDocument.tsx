@@ -46,6 +46,7 @@ import {
   DatalayerThemeProvider,
   setupPrimerPortals,
   themeConfigs,
+  useSystemColorMode,
 } from '@datalayer/primer-addons';
 import {
   JupyterReactTheme,
@@ -121,6 +122,26 @@ function getKernelId(): string | undefined {
 interface ResolvedJupyterConfig {
   baseUrl: string;
   token: string;
+}
+
+async function fetchStartupKernelId(): Promise<string | undefined> {
+  try {
+    const resp = await fetch(`${BASE_URL}/health/startup`);
+    if (!resp.ok) {
+      return undefined;
+    }
+    const payload = await resp.json();
+    const sandbox = payload?.sandbox;
+    if (sandbox?.variant !== 'jupyter') {
+      return undefined;
+    }
+    const kernelId = sandbox?.kernel_id;
+    return typeof kernelId === 'string' && kernelId.length > 0
+      ? kernelId
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -238,13 +259,16 @@ function CodeHighlightPlugin() {
 }
 
 function KernelPluginsInner({
+  serviceManager,
   kernelId,
   onKernelReady,
 }: {
+  serviceManager: ServiceManager.IManager;
   kernelId?: string;
   onKernelReady?: (kernel: IKernelConnection | null) => void;
 }) {
   const { defaultKernel } = useJupyter({
+    serviceManager,
     useRunningKernelId: kernelId,
     startDefaultKernel: !kernelId,
   });
@@ -287,6 +311,8 @@ function LexicalToolsPlugin({
 interface LexicalPanelProps {
   serviceManager: ServiceManager.IManager;
   kernelId?: string;
+  colormode: 'light' | 'dark';
+  backgroundColor?: string;
   onToolsReady: (tools: ReturnType<typeof useLexicalTools>) => void;
   onKernelReady: (kernel: IKernelConnection | null) => void;
 }
@@ -294,6 +320,8 @@ interface LexicalPanelProps {
 const LexicalPanel = React.memo(function LexicalPanel({
   serviceManager,
   kernelId,
+  colormode,
+  backgroundColor,
   onToolsReady,
   onKernelReady,
 }: LexicalPanelProps) {
@@ -368,8 +396,12 @@ const LexicalPanel = React.memo(function LexicalPanel({
               <TableCellResizerPlugin />
               <JupyterCellPlugin />
               {/* Wrap kernel plugins with Jupyter provider */}
-              <JupyterReactTheme>
+              <JupyterReactTheme
+                colormode={colormode}
+                backgroundColor={backgroundColor}
+              >
                 <KernelPluginsInner
+                  serviceManager={serviceManager}
                   kernelId={kernelId}
                   onKernelReady={onKernelReady}
                 />
@@ -430,12 +462,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools, kernel }) => {
         placeholder="Ask about the document..."
         description="Chat with the agent to manipulate the document"
         showHeader={true}
-        height="100vh"
+        height="100%"
         showModelSelector={true}
         showToolsMenu={true}
         showSkillsMenu={true}
         showTokenUsage={true}
         showInformation={true}
+        disableInternalJupyterTheme={true}
         frontendTools={tools}
         autoFocus
         runtimeId={agentId}
@@ -465,7 +498,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ agentId, tools, kernel }) => {
 
 export const AgentDocument: React.FC = () => {
   const [agentId] = useState(getAgentId);
-  const [kernelId] = useState(getKernelId);
+  const [kernelId, setKernelId] = useState<string | undefined>(getKernelId);
+  const [kernelResolved, setKernelResolved] = useState<boolean>(() =>
+    Boolean(getKernelId()),
+  );
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceManager, setServiceManager] =
@@ -475,6 +511,14 @@ export const AgentDocument: React.FC = () => {
     useState<IKernelConnection | null>(null);
   const { colorMode, theme } = useAgentDocumentThemeStore();
   const themeConfig = themeConfigs[theme];
+  const systemMode = useSystemColorMode();
+  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const modeStyles =
+    resolvedMode === 'dark'
+      ? themeConfig.themeStyles.dark
+      : themeConfig.themeStyles.light;
+  const themeBackground =
+    (modeStyles as Record<string, string>).backgroundColor ?? '';
 
   const handleToolsReady = useCallback(
     (newTools: ReturnType<typeof useLexicalTools>) => {
@@ -554,6 +598,31 @@ export const AgentDocument: React.FC = () => {
     };
   }, [agentId]);
 
+  // If kernelId is not provided via URL, reuse the startup sandbox kernel when
+  // available so lexical cells run in the same code sandbox as the agent.
+  useEffect(() => {
+    if (kernelId) {
+      setKernelResolved(true);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const startupKernelId = await fetchStartupKernelId();
+      if (cancelled) {
+        return;
+      }
+      if (startupKernelId) {
+        setKernelId(startupKernelId);
+      }
+      // Mark resolution complete even when no sandbox kernel exists so the
+      // editor can fall back to a default kernel instead of hanging.
+      setKernelResolved(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kernelId]);
+
   // Loading
   if (!isReady && !error) {
     return (
@@ -619,7 +688,7 @@ export const AgentDocument: React.FC = () => {
       <Box
         sx={{
           display: 'flex',
-          position: 'relative',
+          flexDirection: 'column',
           height: '100vh',
           width: '100vw',
           overflow: 'hidden',
@@ -628,23 +697,38 @@ export const AgentDocument: React.FC = () => {
       >
         <Box
           sx={{
-            position: 'absolute',
-            top: 2,
-            right: 3,
-            zIndex: 100,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            px: 3,
+            py: 2,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+            flexShrink: 0,
           }}
         >
           <AppearanceControlsWithStore useStore={useAgentDocumentThemeStore} />
         </Box>
-        {serviceManager && (
-          <LexicalPanel
-            serviceManager={serviceManager}
-            kernelId={kernelId}
-            onToolsReady={handleToolsReady}
-            onKernelReady={handleKernelReady}
-          />
-        )}
-        <ChatPanel agentId={agentId} tools={tools} kernel={documentKernel} />
+        <Box
+          sx={{
+            display: 'flex',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {serviceManager && kernelResolved && (
+            <LexicalPanel
+              serviceManager={serviceManager}
+              kernelId={kernelId}
+              colormode={resolvedMode}
+              backgroundColor={themeBackground}
+              onToolsReady={handleToolsReady}
+              onKernelReady={handleKernelReady}
+            />
+          )}
+          <ChatPanel agentId={agentId} tools={tools} kernel={documentKernel} />
+        </Box>
       </Box>
     </DatalayerThemeProvider>
   );

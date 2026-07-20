@@ -177,10 +177,12 @@ class AGUITransport(BaseTransport):
                 Endpoint to run the agent with per-request model override support.
                 """
                 import time
+                from starlette.responses import StreamingResponse
 
                 request_start = time.perf_counter()
                 request_prompt = ""
                 metric_emitted = False
+                usage_event_payload: dict[str, Any] | None = None
                 # Extract model and identities from request body if provided
                 model: str | None = None
                 builtin_tools_from_request: list[str] | None = None
@@ -312,6 +314,22 @@ class AGUITransport(BaseTransport):
                     )
                     usage = result.usage()
                     logger.info(f"[AG-UI on_complete] Usage object: {usage}")
+                    nonlocal usage_event_payload
+                    usage_event_payload = {
+                        "type": "usage",
+                        "usage": {
+                            "input_tokens": int(
+                                getattr(usage, "input_tokens", 0) or 0
+                            ),
+                            "output_tokens": int(
+                                getattr(usage, "output_tokens", 0) or 0
+                            ),
+                            "total_tokens": int(
+                                (getattr(usage, "input_tokens", 0) or 0)
+                                + (getattr(usage, "output_tokens", 0) or 0)
+                            ),
+                        },
+                    }
                     response_text_chunks: list[str] = []
                     total_tool_calls = 0
                     nonlocal metric_emitted
@@ -486,7 +504,7 @@ class AGUITransport(BaseTransport):
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
 
                 try:
-                    return await AGUIAdapter.dispatch_request(
+                    response = await AGUIAdapter.dispatch_request(
                         request,
                         agent=pydantic_agent,
                         model=model,
@@ -494,6 +512,34 @@ class AGUITransport(BaseTransport):
                         on_complete=on_complete,
                         **agui_kwargs,
                     )
+
+                    # Attach authoritative usage (from pydantic result.usage())
+                    # as a final SSE event so clients can report exact per-turn
+                    # token counts without waiting on snapshot propagation.
+                    #
+                    # ``usage_event_payload`` is populated by ``on_complete``,
+                    # which only runs *while* the response streams (after this
+                    # point). The tail generator therefore reads the payload
+                    # after the original iterator is exhausted, when
+                    # ``on_complete`` has already produced the usage data.
+                    if isinstance(response, StreamingResponse) and hasattr(
+                        response, "body_iterator"
+                    ):
+                        original_iter = response.body_iterator
+
+                        async def _iter_with_usage_tail() -> AsyncIterator[bytes]:
+                            async for chunk in original_iter:
+                                if isinstance(chunk, bytes):
+                                    yield chunk
+                                else:
+                                    yield str(chunk).encode("utf-8")
+                            if usage_event_payload is not None:
+                                payload = json.dumps(usage_event_payload)
+                                yield f"data: {payload}\n\n".encode("utf-8")
+
+                        response.body_iterator = _iter_with_usage_tail()
+
+                    return response
                 except asyncio.CancelledError:
                     if not metric_emitted:
                         record_prompt_turn_completion(

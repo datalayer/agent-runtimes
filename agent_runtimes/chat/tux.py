@@ -223,6 +223,42 @@ class CliTux:
             return f"{tokens / 1000:.1f}k"
         return str(tokens)
 
+    async def _animate_waiting_dot(self, stop_event: asyncio.Event) -> None:
+        """Animate a pulsing green activity dot until ``stop_event`` is set.
+
+        Uses Rich ``Live`` so the color/redraw is handled reliably across
+        terminals (manual ``\\r`` reprints could drop the color escape and
+        render as plain text on light backgrounds).
+        """
+        from rich.live import Live
+        from rich.text import Text
+
+        # Glyph size + brightness pulse for a clear fade in/out. Kept on the
+        # bright end of the palette so it stays visible on light themes.
+        frames: list[tuple[str, str]] = [
+            ("·", "rgb(22,160,133)"),
+            ("•", "rgb(26,188,156)"),
+            ("●", "rgb(46,204,113)"),
+            ("⬤", "bold rgb(46,204,113)"),
+            ("●", "rgb(46,204,113)"),
+            ("•", "rgb(26,188,156)"),
+        ]
+        frame_idx = 0
+        try:
+            with Live(
+                console=self.console,
+                refresh_per_second=16,
+                transient=True,
+            ) as live:
+                while not stop_event.is_set():
+                    glyph, style = frames[frame_idx]
+                    live.update(Text(f"  {glyph}", style=style))
+                    frame_idx = (frame_idx + 1) % len(frames)
+                    await asyncio.sleep(0.12)
+        except Exception:
+            # Never let the indicator break the response flow.
+            pass
+
     def _get_username(self) -> str:
         """Get the current username."""
         return getpass.getuser()
@@ -245,6 +281,67 @@ class CliTux:
         head = (keep + 1) // 2
         tail = keep - head
         return f"{text[:head]}…{text[-tail:]}" if tail else f"{text[:keep]}…"
+
+    @staticmethod
+    def _extract_tokens_from_payload(payload: Any) -> tuple[Optional[int], Optional[int]]:
+        """Best-effort extraction of input/output tokens from AG-UI event payloads.
+
+        Handles snake_case/camelCase fields and common nesting patterns like
+        ``usage`` and ``contextSnapshot.turnUsage``.
+        """
+
+        def _as_int(value: Any) -> Optional[int]:
+            try:
+                if value is None:
+                    return None
+                return int(value)
+            except Exception:
+                return None
+
+        def _from_dict(d: dict[str, Any]) -> tuple[Optional[int], Optional[int]]:
+            # Direct fields
+            in_tok = _as_int(d.get("input_tokens"))
+            out_tok = _as_int(d.get("output_tokens"))
+            if in_tok is None:
+                in_tok = _as_int(d.get("inputTokens"))
+            if out_tok is None:
+                out_tok = _as_int(d.get("outputTokens"))
+
+            # Nested usage objects
+            usage = d.get("usage")
+            if isinstance(usage, dict):
+                if in_tok is None:
+                    in_tok = _as_int(usage.get("input_tokens"))
+                if out_tok is None:
+                    out_tok = _as_int(usage.get("output_tokens"))
+                if in_tok is None:
+                    in_tok = _as_int(usage.get("inputTokens"))
+                if out_tok is None:
+                    out_tok = _as_int(usage.get("outputTokens"))
+
+            # Snapshot/delta path used by monitoring payloads
+            context_snapshot = d.get("contextSnapshot")
+            if isinstance(context_snapshot, dict):
+                turn_usage = context_snapshot.get("turnUsage")
+                if isinstance(turn_usage, dict):
+                    if in_tok is None:
+                        in_tok = _as_int(turn_usage.get("inputTokens"))
+                    if out_tok is None:
+                        out_tok = _as_int(turn_usage.get("outputTokens"))
+
+            # Also support top-level turnUsage payloads
+            turn_usage = d.get("turnUsage")
+            if isinstance(turn_usage, dict):
+                if in_tok is None:
+                    in_tok = _as_int(turn_usage.get("inputTokens"))
+                if out_tok is None:
+                    out_tok = _as_int(turn_usage.get("outputTokens"))
+
+            return in_tok, out_tok
+
+        if isinstance(payload, dict):
+            return _from_dict(payload)
+        return None, None
 
     def _get_display_name(self) -> str:
         """Resolve a friendly display name for the welcome banner.
@@ -318,9 +415,9 @@ class CliTux:
 
         # Left panel content
         left_content = Text()
-        left_content.append(f"\n  Welcome back {display_name}!\n\n", style=STYLE_WHITE)
+        left_content.append("\n", style=STYLE_MUTED)
         left_content.append(logo)
-        left_content.append("\n  loop\n", style=STYLE_MUTED)
+        left_content.append(f"\n  Welcome back {display_name}!\n", style=STYLE_WHITE)
 
         # Right panel content - tips
         right_content = Text()
@@ -337,19 +434,22 @@ class CliTux:
         )
 
         # Create side-by-side layout
+        inner_panel_height = 10
         left_panel = Panel(
             left_content,
             border_style=STYLE_SECONDARY,
             width=40,
+            height=inner_panel_height,
         )
         right_panel = Panel(
             right_content,
             border_style=STYLE_SECONDARY,
             width=50,
+            height=inner_panel_height,
         )
 
         # Create the main panel
-        title = f" LOOP {version} "
+        title = f" ⟳ LOOP {version} "
 
         main_panel = Panel(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -484,20 +584,52 @@ class CliTux:
                 await asyncio.sleep(0.1)
 
             self.console.print()
-            # Use a colored bullet (blink doesn't work in most terminals)
-            self.console.print("● ", style=STYLE_PRIMARY, end="")
+            waiting_stop = asyncio.Event()
+            waiting_task = asyncio.create_task(self._animate_waiting_dot(waiting_stop))
+            waiting_cleared = False
+
+            async def _clear_waiting_indicator(show_bullet: bool = False) -> None:
+                nonlocal waiting_cleared
+                if waiting_cleared:
+                    return
+                waiting_stop.set()
+                try:
+                    await waiting_task
+                except Exception:
+                    pass
+                waiting_cleared = True
+                if show_bullet:
+                    self.console.print("● ", style=STYLE_PRIMARY, end="")
 
             response_text = ""
-            input_tokens = 0
-            output_tokens = 0
+            turn_input_tokens = 0
+            turn_output_tokens = 0
+            stream_input_tokens: Optional[int] = None
+            stream_output_tokens: Optional[int] = None
+            run_finished = False
 
             async for event in client.run(message):
+                # Extract token usage directly from AG-UI events when available.
+                in_tok, out_tok = self._extract_tokens_from_payload(event.data)
+                if in_tok is not None:
+                    stream_input_tokens = in_tok
+                if out_tok is not None:
+                    stream_output_tokens = out_tok
+
+                # The server appends an authoritative ``usage`` event (derived
+                # from pydantic-ai's ``result.usage()``) *after* RUN_FINISHED.
+                # Once that trailing event has been consumed, stop reading.
+                if run_finished and (in_tok is not None or out_tok is not None):
+                    break
+
                 if event.type == EventType.TEXT_MESSAGE_CONTENT:
+                    await _clear_waiting_indicator(show_bullet=True)
                     content = event.delta or ""
                     response_text += content
                     self.console.print(content, end="", markup=False)
 
                 elif event.type == EventType.TOOL_CALL_START:
+                    await _clear_waiting_indicator(show_bullet=False)
                     # Start of a new tool call
                     # Use event properties which handle both camelCase and snake_case
                     tool_call_id = event.tool_call_id or ""
@@ -555,13 +687,24 @@ class CliTux:
                     current_tool_call = None
 
                 elif event.type == EventType.RUN_FINISHED:
-                    break
+                    await _clear_waiting_indicator(show_bullet=False)
+                    # Do not break immediately: the server emits a trailing
+                    # ``usage`` event (authoritative pydantic-ai
+                    # ``result.usage()``) right after RUN_FINISHED. Mark the run
+                    # finished and keep draining so that event is consumed. The
+                    # loop stops once the usage tokens are captured (see the
+                    # top of the loop) or the SSE stream closes.
+                    run_finished = True
+                    continue
 
                 elif event.type == EventType.RUN_ERROR:
+                    await _clear_waiting_indicator(show_bullet=False)
                     if current_tool_call:
                         current_tool_call.status = "error"
                     self.console.print(f"\n[red]Error: {event.error}[/red]")
                     break
+
+            await _clear_waiting_indicator(show_bullet=False)
 
             self.console.print()
 
@@ -573,17 +716,74 @@ class CliTux:
             try:
                 from agent_runtimes.context.session import get_agent_context_snapshot
 
+                def _to_int(value: Any, default: int = 0) -> int:
+                    try:
+                        if value is None:
+                            return default
+                        return int(value)
+                    except Exception:
+                        return default
+
                 snapshot = get_agent_context_snapshot(self.agent_id)
                 if snapshot is not None:
                     data = snapshot.to_dict()
-                    input_tokens = data.get("sumResponseInputTokens", 0)
-                    output_tokens = data.get("sumResponseOutputTokens", 0)
+                    turn_usage = data.get("turnUsage") or {}
+                    session_usage = data.get("sessionUsage") or {}
+
+                    # Prefer explicit per-turn usage (most accurate for the footer).
+                    turn_input_tokens = _to_int(turn_usage.get("inputTokens"), 0)
+                    turn_output_tokens = _to_int(turn_usage.get("outputTokens"), 0)
+
+                    # Highest-priority source: stream events from this exact turn.
+                    if stream_input_tokens is not None:
+                        turn_input_tokens = stream_input_tokens
+                    if stream_output_tokens is not None:
+                        turn_output_tokens = stream_output_tokens
+
+                    # Session totals for /status and aggregate tracking.
+                    sum_input_tokens = _to_int(data.get("sumResponseInputTokens"), 0)
+                    sum_output_tokens = _to_int(data.get("sumResponseOutputTokens"), 0)
+                    if sum_input_tokens == 0 and sum_output_tokens == 0:
+                        sum_input_tokens = _to_int(
+                            session_usage.get("inputTokens"), self.stats.total_input_tokens
+                        )
+                        sum_output_tokens = _to_int(
+                            session_usage.get("outputTokens"), self.stats.total_output_tokens
+                        )
+
+                    # Fallbacks when turnUsage is not populated by the provider.
+                    if turn_input_tokens == 0 and turn_output_tokens == 0:
+                        model_input_tokens = _to_int(data.get("modelInputTokens"), 0)
+                        model_output_tokens = _to_int(data.get("modelOutputTokens"), 0)
+                        if model_input_tokens > 0 or model_output_tokens > 0:
+                            turn_input_tokens = model_input_tokens
+                            turn_output_tokens = model_output_tokens
+                        else:
+                            turn_input_tokens = max(
+                                0, sum_input_tokens - self.stats.total_input_tokens
+                            )
+                            turn_output_tokens = max(
+                                0, sum_output_tokens - self.stats.total_output_tokens
+                            )
+
+                    input_tokens = sum_input_tokens
+                    output_tokens = sum_output_tokens
                     self.model_name = (
                         data.get("modelName", self.model_name) or self.model_name
                     )
                     self.context_window = data.get("contextWindow", self.context_window)
+                else:
+                    input_tokens = self.stats.total_input_tokens
+                    output_tokens = self.stats.total_output_tokens
             except Exception:
-                pass
+                input_tokens = self.stats.total_input_tokens
+                output_tokens = self.stats.total_output_tokens
+
+            # Final stream fallback if snapshot retrieval failed or was stale.
+            if stream_input_tokens is not None:
+                turn_input_tokens = stream_input_tokens
+            if stream_output_tokens is not None:
+                turn_output_tokens = stream_output_tokens
 
             # Update stats
             self.stats.total_input_tokens = input_tokens
@@ -594,7 +794,7 @@ class CliTux:
             usage_line.append("─" * 80, style=STYLE_MUTED)
             self.console.print(usage_line)
 
-            total = input_tokens + output_tokens
+            total = turn_input_tokens + turn_output_tokens
             elapsed = time.monotonic() - turn_start
             if elapsed < 60:
                 time_str = f"{elapsed:.1f}s"
@@ -603,7 +803,7 @@ class CliTux:
                 time_str = f"{int(minutes)}m {secs:.0f}s"
             self.console.print(
                 f"  {self._format_tokens(total)} tokens used · "
-                f"{self._format_tokens(input_tokens)} in / {self._format_tokens(output_tokens)} out · "
+                f"{self._format_tokens(turn_input_tokens)} in / {self._format_tokens(turn_output_tokens)} out · "
                 f"{time_str}",
                 style=STYLE_MUTED,
             )
