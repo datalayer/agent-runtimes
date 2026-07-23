@@ -9,7 +9,7 @@
 Code Sandbox Manager for Agent Runtimes.
 
 This module provides a centralized manager for code sandbox instances,
-allowing runtime configuration of the sandbox variant (eval or jupyter).
+allowing runtime configuration of the sandbox variant.
 
 It also provides :class:`ManagedSandbox`, a transparent proxy that
 delegates every call to the manager's current sandbox.  All consumers
@@ -55,7 +55,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-SandboxVariant = Literal["eval", "jupyter"]
+SandboxVariant = Literal[
+    "eval",
+    "jupyter",
+    "docker",
+    "datalayer",
+    "colab",
+    "monty",
+    "modal",
+]
 
 
 @dataclass
@@ -337,11 +345,13 @@ class CodeSandboxManager:
     - Automatic sandbox lifecycle management (start/stop)
     - Per-agent sandbox isolation (each agent gets its own sandbox)
 
-    The manager supports three sandbox variants:
+        The manager supports sandbox variants:
     - eval: Uses Python exec() for code execution (default)
     - jupyter: Connects to an *existing* Jupyter server (URL required)
     - jupyter: Delegates to code_sandboxes to start its own Jupyter server
       on a random free port (no external URL needed)
+        - docker, datalayer, colab, monty, modal: Delegated to the
+            code_sandboxes variant factory.
     """
 
     _instance: CodeSandboxManager | None = None
@@ -764,7 +774,9 @@ class CodeSandboxManager:
             return JupyterSandbox()
 
         else:
-            raise ValueError(f"Unknown sandbox variant: {effective_variant}")
+            from code_sandboxes import Sandbox as CodeSandbox
+
+            return CodeSandbox.create(variant=effective_variant)
 
     def stop(self) -> None:
         """Stop the current sandbox if running."""
@@ -795,7 +807,7 @@ class CodeSandboxManager:
 
         Args:
             agent_id: Unique agent identifier.
-            variant: The sandbox variant (``"eval"`` or ``"jupyter"``).
+            variant: The sandbox variant.
             env_vars: Environment variables to inject into the sandbox
                 after it starts.
 
