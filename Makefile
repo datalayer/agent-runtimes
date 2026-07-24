@@ -11,6 +11,7 @@ SHELL=/bin/bash
 	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
+	specs-sandbox-variants \
 	loop loop-simple loop-data-acquisition loop-financial loop-demo loop-example-nocodemode
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
@@ -151,9 +152,9 @@ EXAMPLES_LOCAL_ENV = \
 	VITE_BASE_URL_CODEMODE=http://localhost:8766
 
 BEDROCK_ENV = \
-	AWS_ACCESS_KEY_ID=${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID} \
-	AWS_SECRET_ACCESS_KEY=${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY} \
-	AWS_DEFAULT_REGION=${DATALAYER_BEDROCK_AWS_DEFAULT_REGION}
+	AWS_ACCESS_KEY_ID=$${DATALAYER_BEDROCK_AWS_ACCESS_KEY_ID:-$${AWS_ACCESS_KEY_ID}} \
+	AWS_SECRET_ACCESS_KEY=$${DATALAYER_BEDROCK_AWS_SECRET_ACCESS_KEY:-$${AWS_SECRET_ACCESS_KEY}} \
+	AWS_DEFAULT_REGION=$${DATALAYER_BEDROCK_AWS_DEFAULT_REGION:-$${AWS_DEFAULT_REGION}}
 
 RUFF_TARGETS = \
 	agent_runtimes/specs/agents/ \
@@ -391,7 +392,12 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
+
+specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
+	$(call step,Generating sandbox variant example agents)
+	python scripts/codegen/generate_sandbox_agents.py \
+	  --agents-dir $(AGENTSPECS_DIR)/agentspecs/agents
 
 specs-clone: ## clone/update agentspecs repository
 	$(call step,Cloning agentspecs repository ($(AGENTSPECS_BRANCH)))

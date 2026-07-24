@@ -247,6 +247,9 @@ print(result)
 - `keywords`/`limit` on `list_tool_names`: faster, filtered discovery.
 - `include_deferred` on `search_tools`/`list_tool_names`: control discovery of tools marked `defer_loading`.
 - `max_tool_calls`: optional per-run safety cap on tool invocations inside `execute_code`.
+- `AGENT_RUNTIMES_SANDBOX_GPU`: optional GPU flavor / accelerator hint forwarded
+    to code-sandboxes (for example `T4` or `A100`; for Kaggle batch, values like
+    `NvidiaTeslaT4` or aliases such as `T4`).
 
 ## `allow_direct_tool_calls`
 - **What it does:** Controls whether the `call_tool` shortcut is exposed. When off, all tool usage flows through `execute_code`, which keeps execution auditable and code-first.

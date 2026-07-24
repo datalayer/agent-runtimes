@@ -181,6 +181,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Code mode execution and tool orchestration example.',
   ),
   makeEntry(
+    'AgentCodeSandboxesExample',
+    () => import('./AgentCodeSandboxesExample'),
+    'Launch sandbox-variant agent specs and compare code execution across backends.',
+    ['example', 'agent', 'sandbox', 'codemode'],
+  ),
+  makeEntry(
     'AgentEvalsExample',
     () => import('./AgentEvalsExample'),
     'Evaluation workflows for agent outputs.',

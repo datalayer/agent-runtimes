@@ -9,7 +9,7 @@
 Code Sandbox Manager for Agent Runtimes.
 
 This module provides a centralized manager for code sandbox instances,
-allowing runtime configuration of the sandbox variant (eval or jupyter).
+allowing runtime configuration of the sandbox variant.
 
 It also provides :class:`ManagedSandbox`, a transparent proxy that
 delegates every call to the manager's current sandbox.  All consumers
@@ -55,7 +55,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-SandboxVariant = Literal["eval", "jupyter"]
+SandboxVariant = Literal[
+    "eval",
+    "jupyter",
+    "docker",
+    "datalayer",
+    "colab",
+    "monty",
+    "modal",
+]
 
 
 @dataclass
@@ -229,9 +237,10 @@ class ManagedSandbox:
         envs: Optional[dict[str, str]] = None,
         timeout: Optional[float] = None,
     ) -> AsyncIterator[Any]:
-        return await self._sandbox().run_code_streaming_async(
+        async for item in self._sandbox().run_code_streaming_async(
             code, language=language, context=context, envs=envs, timeout=timeout
-        )
+        ):
+            yield item
 
     def create_context(self, name: Optional[str] = None) -> Any:
         return self._sandbox().create_context(name=name)
@@ -337,11 +346,13 @@ class CodeSandboxManager:
     - Automatic sandbox lifecycle management (start/stop)
     - Per-agent sandbox isolation (each agent gets its own sandbox)
 
-    The manager supports three sandbox variants:
+        The manager supports sandbox variants:
     - eval: Uses Python exec() for code execution (default)
     - jupyter: Connects to an *existing* Jupyter server (URL required)
     - jupyter: Delegates to code_sandboxes to start its own Jupyter server
       on a random free port (no external URL needed)
+        - docker, datalayer, colab, monty, modal: Delegated to the
+            code_sandboxes variant factory.
     """
 
     _instance: CodeSandboxManager | None = None
@@ -734,11 +745,17 @@ class CodeSandboxManager:
             ValueError: If configuration is invalid.
         """
         effective_variant = variant or self._config.variant
+        try:
+            from code_sandboxes import Sandbox as CodeSandbox
+        except (ImportError, AttributeError):
+            CodeSandbox = None
 
         if effective_variant == "eval":
-            from code_sandboxes.eval_sandbox import EvalSandbox
+            if CodeSandbox is None:
+                from code_sandboxes.eval_sandbox import EvalSandbox
 
-            return EvalSandbox()
+                return EvalSandbox()
+            return CodeSandbox.create(variant="eval")
 
         elif effective_variant == "jupyter":
             # In sidecar mode, companion must provide a concrete Jupyter URL.
@@ -751,20 +768,34 @@ class CodeSandboxManager:
                     "Jupyter sidecar mode requires jupyter_url before sandbox start"
                 )
 
-            from code_sandboxes.jupyter_sandbox import JupyterSandbox
-
             if self._config.jupyter_url:
-                return JupyterSandbox(
+                if CodeSandbox is None:
+                    from code_sandboxes.jupyter_sandbox import JupyterSandbox
+
+                    return JupyterSandbox(
+                        server_url=self._config.jupyter_url,
+                        token=self._config.jupyter_token,
+                    )
+                return CodeSandbox.create(
+                    variant="jupyter",
                     server_url=self._config.jupyter_url,
                     token=self._config.jupyter_token,
                 )
 
             # No external URL configured: let code_sandboxes start its own
             # local Jupyter server on a free port.
-            return JupyterSandbox()
+            if CodeSandbox is None:
+                from code_sandboxes.jupyter_sandbox import JupyterSandbox
+
+                return JupyterSandbox()
+            return CodeSandbox.create(variant="jupyter")
 
         else:
-            raise ValueError(f"Unknown sandbox variant: {effective_variant}")
+            if CodeSandbox is None:
+                raise ImportError(
+                    "code_sandboxes.Sandbox is required for non-jupyter/eval variants"
+                )
+            return CodeSandbox.create(variant=effective_variant)
 
     def stop(self) -> None:
         """Stop the current sandbox if running."""
@@ -795,7 +826,7 @@ class CodeSandboxManager:
 
         Args:
             agent_id: Unique agent identifier.
-            variant: The sandbox variant (``"eval"`` or ``"jupyter"``).
+            variant: The sandbox variant.
             env_vars: Environment variables to inject into the sandbox
                 after it starts.
 

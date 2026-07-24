@@ -44,6 +44,13 @@ class SandboxExecuteRequest(BaseModel):
     timeout: Optional[float] = Field(
         default=None, description="Execution timeout in seconds."
     )
+    stream: bool = Field(
+        default=False,
+        description=(
+            "When true, execute via sandbox streaming API and aggregate streamed "
+            "events into the response."
+        ),
+    )
 
 
 class SandboxExecuteResponse(BaseModel):
@@ -85,6 +92,41 @@ async def execute_sandbox_code(
 
     client = CodeSandboxClient(sandbox)
     try:
+        if request.stream and hasattr(client, "execute_code_streaming_async"):
+            stdout_lines: list[str] = []
+            stderr_lines: list[str] = []
+            results: list[str] = []
+            error: str | None = None
+
+            async for event in client.execute_code_streaming_async(
+                request.code,
+                language=request.language,
+                timeout=request.timeout,
+            ):
+                if hasattr(event, "line"):
+                    line = getattr(event, "line", "") or ""
+                    if bool(getattr(event, "error", False)):
+                        stderr_lines.append(line)
+                    else:
+                        stdout_lines.append(line)
+                elif hasattr(event, "data"):
+                    data = getattr(event, "data", {}) or {}
+                    text = data.get("text/plain")
+                    if text is not None:
+                        results.append(str(text))
+                elif hasattr(event, "name") and hasattr(event, "value"):
+                    error = f"{getattr(event, 'name', 'Error')}: {getattr(event, 'value', '')}"
+
+            return SandboxExecuteResponse(
+                success=error is None,
+                execution_ok=True,
+                stdout="\n".join(stdout_lines),
+                stderr="\n".join(stderr_lines),
+                results=results,
+                error=error,
+                variant=str(client.variant) if client.variant else None,
+            )
+
         outcome = await client.execute_code_async(
             request.code,
             language=request.language,

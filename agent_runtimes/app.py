@@ -703,6 +703,11 @@ async def _create_and_register_cli_agent(
                     allow_direct_tool_calls=False,
                     **(
                         {}
+                        if os.getenv("AGENT_RUNTIMES_SANDBOX_GPU") is None
+                        else {"sandbox_gpu": os.getenv("AGENT_RUNTIMES_SANDBOX_GPU")}
+                    ),
+                    **(
+                        {}
                         if mcp_proxy_url is None
                         else {"mcp_proxy_url": mcp_proxy_url}
                     ),

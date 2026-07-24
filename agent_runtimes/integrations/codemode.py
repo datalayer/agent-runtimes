@@ -55,6 +55,7 @@ class CodemodeIntegration:
         mcp_manager: Optional[MCPManager] = None,
         skills_path: str = "./skills",
         sandbox_variant: str = "eval",
+        sandbox_gpu: str | None = None,
     ):
         """
         Initialize the integration.
@@ -63,10 +64,13 @@ class CodemodeIntegration:
             mcp_manager: Optional MCPManager from agent-runtimes.
             skills_path: Directory for skill storage.
             sandbox_variant: Sandbox type for code execution.
+            sandbox_gpu: Optional GPU flavor / accelerator for supported
+                sandbox variants.
         """
         self.mcp_manager = mcp_manager or get_mcp_manager()
         self.skills_path = skills_path
         self.sandbox_variant = sandbox_variant
+        self.sandbox_gpu = sandbox_gpu
 
         # Lazy imports for optional dependencies
         self._registry = None
@@ -124,6 +128,11 @@ class CodemodeIntegration:
             config = CodeModeConfig(
                 skills_path=self.skills_path,
                 sandbox_variant=self.sandbox_variant,
+                **(
+                    {}
+                    if self.sandbox_gpu is None
+                    else {"sandbox_gpu": self.sandbox_gpu}
+                ),
                 **({} if mcp_proxy_url is None else {"mcp_proxy_url": mcp_proxy_url}),
             )
             self._executor = CodeModeExecutor(self._registry, config)
