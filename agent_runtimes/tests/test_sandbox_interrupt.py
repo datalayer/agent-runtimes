@@ -6,7 +6,7 @@
 import asyncio
 import sys
 import types
-from typing import Any
+from typing import Any, AsyncGenerator
 
 import pytest
 
@@ -36,7 +36,9 @@ class DummySandbox:
         self._executing = False
         return True
 
-    async def run_code_streaming_async(self, *args: Any, **kwargs: Any):
+    async def run_code_streaming_async(
+        self, *args: Any, **kwargs: Any
+    ) -> AsyncGenerator[str, None]:
         _ = (args, kwargs)
         for item in ["a", "b", "c"]:
             await asyncio.sleep(0)
@@ -176,7 +178,7 @@ class TestCodeSandboxManagerSidecarGuard:
             @staticmethod
             def create(
                 *, variant: str, server_url: str | None = None, token: str | None = None
-            ):
+            ) -> dict[str, str | None]:
                 return {
                     "variant": variant,
                     "server_url": server_url,

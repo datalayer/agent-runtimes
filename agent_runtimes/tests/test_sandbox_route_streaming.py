@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import sys
 from types import SimpleNamespace
+from typing import AsyncGenerator
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -19,20 +21,20 @@ from agent_runtimes.routes import sandbox as sandbox_route
 
 
 class _FakeManager:
-    def get_agent_sandbox(self, _agent_id):
+    def get_agent_sandbox(self, _agent_id: str) -> None:
         return None
 
-    def get_managed_sandbox(self):
+    def get_managed_sandbox(self) -> object:
         return object()
 
 
 class _FakeStreamingClient:
-    def __init__(self, _sandbox):
+    def __init__(self, _sandbox: object) -> None:
         self.variant = "kaggle"
 
     async def execute_code_streaming_async(
-        self, code: str, language: str = "python", timeout=None
-    ):
+        self, code: str, language: str = "python", timeout: int | None = None
+    ) -> AsyncGenerator[SimpleNamespace, None]:
         _ = (code, language, timeout)
         yield SimpleNamespace(line="[kaggle] status: RUNNING", error=False)
         yield SimpleNamespace(line="hello", error=False)
@@ -41,8 +43,8 @@ class _FakeStreamingClient:
 
 class _FakeSyncClient(_FakeStreamingClient):
     async def execute_code_async(
-        self, code: str, language: str = "python", timeout=None
-    ):
+        self, code: str, language: str = "python", timeout: int | None = None
+    ) -> SimpleNamespace:
         _ = (code, language, timeout)
         return SimpleNamespace(
             success=True,
@@ -60,7 +62,7 @@ def _build_client() -> TestClient:
     return TestClient(app)
 
 
-def test_execute_route_streaming_aggregates_events(monkeypatch):
+def test_execute_route_streaming_aggregates_events(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
         lambda: _FakeManager(),
@@ -86,7 +88,7 @@ def test_execute_route_streaming_aggregates_events(monkeypatch):
     assert payload["variant"] == "kaggle"
 
 
-def test_execute_route_non_streaming_path(monkeypatch):
+def test_execute_route_non_streaming_path(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
         lambda: _FakeManager(),
