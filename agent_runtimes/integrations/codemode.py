@@ -128,7 +128,11 @@ class CodemodeIntegration:
             config = CodeModeConfig(
                 skills_path=self.skills_path,
                 sandbox_variant=self.sandbox_variant,
-                **({} if self.sandbox_gpu is None else {"sandbox_gpu": self.sandbox_gpu}),
+                **(
+                    {}
+                    if self.sandbox_gpu is None
+                    else {"sandbox_gpu": self.sandbox_gpu}
+                ),
                 **({} if mcp_proxy_url is None else {"mcp_proxy_url": mcp_proxy_url}),
             )
             self._executor = CodeModeExecutor(self._registry, config)

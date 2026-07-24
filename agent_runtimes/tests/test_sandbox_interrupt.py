@@ -174,7 +174,9 @@ class TestCodeSandboxManagerSidecarGuard:
 
         class DummySandbox:
             @staticmethod
-            def create(*, variant: str, server_url: str | None = None, token: str | None = None):
+            def create(
+                *, variant: str, server_url: str | None = None, token: str | None = None
+            ):
                 return {
                     "variant": variant,
                     "server_url": server_url,
@@ -207,7 +209,9 @@ class TestCodeSandboxManagerSidecarGuard:
         fake_module = types.ModuleType("code_sandboxes.jupyter_sandbox")
 
         class DummyJupyterSandbox:
-            def __init__(self, server_url: str | None = None, token: str | None = None) -> None:
+            def __init__(
+                self, server_url: str | None = None, token: str | None = None
+            ) -> None:
                 self.server_url = server_url
                 self.token = token
 

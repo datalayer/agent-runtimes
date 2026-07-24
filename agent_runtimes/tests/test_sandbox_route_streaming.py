@@ -27,7 +27,9 @@ class _FakeStreamingClient:
     def __init__(self, _sandbox):
         self.variant = "kaggle"
 
-    async def execute_code_streaming_async(self, code: str, language: str = "python", timeout=None):
+    async def execute_code_streaming_async(
+        self, code: str, language: str = "python", timeout=None
+    ):
         _ = (code, language, timeout)
         yield SimpleNamespace(line="[kaggle] status: RUNNING", error=False)
         yield SimpleNamespace(line="hello", error=False)
@@ -35,7 +37,9 @@ class _FakeStreamingClient:
 
 
 class _FakeSyncClient(_FakeStreamingClient):
-    async def execute_code_async(self, code: str, language: str = "python", timeout=None):
+    async def execute_code_async(
+        self, code: str, language: str = "python", timeout=None
+    ):
         _ = (code, language, timeout)
         return SimpleNamespace(
             success=True,
@@ -58,7 +62,11 @@ def test_execute_route_streaming_aggregates_events(monkeypatch):
         "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
         lambda: _FakeManager(),
     )
-    monkeypatch.setitem(sys.modules, "code_sandboxes", SimpleNamespace(CodeSandboxClient=_FakeSyncClient))
+    monkeypatch.setitem(
+        sys.modules,
+        "code_sandboxes",
+        SimpleNamespace(CodeSandboxClient=_FakeSyncClient),
+    )
 
     client = _build_client()
     response = client.post(
@@ -80,7 +88,11 @@ def test_execute_route_non_streaming_path(monkeypatch):
         "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
         lambda: _FakeManager(),
     )
-    monkeypatch.setitem(sys.modules, "code_sandboxes", SimpleNamespace(CodeSandboxClient=_FakeSyncClient))
+    monkeypatch.setitem(
+        sys.modules,
+        "code_sandboxes",
+        SimpleNamespace(CodeSandboxClient=_FakeSyncClient),
+    )
 
     client = _build_client()
     response = client.post(

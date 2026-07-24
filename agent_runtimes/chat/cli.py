@@ -714,9 +714,7 @@ def _pick_agentspec_interactive() -> str:
                 if model_spec is not None:
                     model_ok = model_spec.id in available_model_ids
                     model_color = GREEN_LIGHT if model_ok else RED
-                    print(
-                        f"       model: {model_color}{model_spec.id}{RESET}"
-                    )
+                    print(f"       model: {model_color}{model_spec.id}{RESET}")
                 else:
                     print(f"       model: {GRAY}{model_ref} (custom/unknown){RESET}")
 
