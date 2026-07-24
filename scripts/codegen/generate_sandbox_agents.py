@@ -13,13 +13,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-
 VARIANTS: tuple[str, ...] = (
     "eval",
     "jupyter",
     "docker",
     "datalayer",
     "colab",
+    "kaggle",
     "monty",
     "modal",
 )
@@ -32,6 +32,7 @@ def _emoji_for_variant(variant: str) -> str:
         "docker": "C",
         "datalayer": "D",
         "colab": "E",
+        "kaggle": "H",
         "monty": "F",
         "modal": "G",
     }

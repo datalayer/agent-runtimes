@@ -3,6 +3,7 @@
 
 """Tests for sandbox interrupt and execution status features."""
 
+import asyncio
 import sys
 import types
 from typing import Any
@@ -34,6 +35,12 @@ class DummySandbox:
         self.interrupt_called = True
         self._executing = False
         return True
+
+    async def run_code_streaming_async(self, *args: Any, **kwargs: Any):
+        _ = (args, kwargs)
+        for item in ["a", "b", "c"]:
+            await asyncio.sleep(0)
+            yield item
 
 
 class TestManagedSandboxInterrupt:
@@ -82,6 +89,18 @@ class TestManagedSandboxInterrupt:
         managed = ManagedSandbox(manager)
         result = managed.interrupt()
         assert result is False
+
+    @pytest.mark.asyncio
+    async def test_run_code_streaming_async_yields_items(self) -> None:
+        sandbox = DummySandbox(executing=False)
+        manager = self._make_manager_with_sandbox(sandbox)
+        managed = ManagedSandbox(manager)
+
+        observed = []
+        async for item in managed.run_code_streaming_async("print('hi')"):
+            observed.append(item)
+
+        assert observed == ["a", "b", "c"]
 
 
 class TestSandboxStatusEndpoint:
@@ -142,3 +161,62 @@ class TestCodeSandboxManagerSidecarGuard:
 
         sandbox = manager._create_sandbox()
         assert isinstance(sandbox, DummyJupyterSandbox)
+
+    def test_jupyter_with_url_uses_high_level_factory(self, monkeypatch: Any) -> None:
+        manager = CodeSandboxManager()
+        manager.configure(
+            variant="jupyter",
+            jupyter_url="http://localhost:8888",
+            jupyter_token="MY_TOKEN",
+        )
+
+        fake_package = types.ModuleType("code_sandboxes")
+
+        class DummySandbox:
+            @staticmethod
+            def create(*, variant: str, server_url: str | None = None, token: str | None = None):
+                return {
+                    "variant": variant,
+                    "server_url": server_url,
+                    "token": token,
+                }
+
+        fake_package.Sandbox = DummySandbox
+        monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
+
+        sandbox = manager._create_sandbox()
+
+        assert sandbox == {
+            "variant": "jupyter",
+            "server_url": "http://localhost:8888",
+            "token": "MY_TOKEN",
+        }
+
+    def test_jupyter_with_url_falls_back_when_sandbox_symbol_missing(
+        self, monkeypatch: Any
+    ) -> None:
+        manager = CodeSandboxManager()
+        manager.configure(
+            variant="jupyter",
+            jupyter_url="http://localhost:8888",
+            jupyter_token="MY_TOKEN",
+        )
+
+        fake_package = types.ModuleType("code_sandboxes")
+        fake_package.__path__ = []
+        fake_module = types.ModuleType("code_sandboxes.jupyter_sandbox")
+
+        class DummyJupyterSandbox:
+            def __init__(self, server_url: str | None = None, token: str | None = None) -> None:
+                self.server_url = server_url
+                self.token = token
+
+        fake_module.JupyterSandbox = DummyJupyterSandbox
+        monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
+        monkeypatch.setitem(sys.modules, "code_sandboxes.jupyter_sandbox", fake_module)
+
+        sandbox = manager._create_sandbox()
+
+        assert isinstance(sandbox, DummyJupyterSandbox)
+        assert sandbox.server_url == "http://localhost:8888"
+        assert sandbox.token == "MY_TOKEN"

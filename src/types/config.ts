@@ -57,7 +57,7 @@ export interface AgentConfig {
   inferenceProvider?: string;
   /** Enable codemode if supported by the selected spec/runtime. */
   enableCodemode?: boolean;
-  /** Optional sandbox variant (e.g. eval, jupyter). */
+  /** Optional sandbox variant (e.g. eval, jupyter, kaggle). */
   sandboxVariant?: string;
   /** Optional Jupyter sandbox URL for jupyter-backed sandbox mode. */
   jupyterSandbox?: string;

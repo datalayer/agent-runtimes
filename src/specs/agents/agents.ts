@@ -1910,6 +1910,62 @@ export const EXAMPLE_SANDBOX_JUPYTER_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_SANDBOX_KAGGLE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-sandbox-kaggle',
+  version: '0.0.1',
+  name: 'Example Sandbox Kaggle Agent',
+  description: `Demonstration agent configured to run codemode code execution with the 'kaggle' sandbox variant.`,
+  tags: ['sandbox', 'codemode', 'kaggle'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'package',
+  emoji: 'H',
+  color: '#1F6FEB',
+  suggestions: [
+    "Use execute_code to print('sandbox variant: kaggle')",
+    'Use execute_code to compute sum(i*i for i in range(20))',
+    'Use execute_code to load pandas and build a small DataFrame',
+  ],
+  welcomeMessage:
+    "You're connected to the kaggle sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'kaggle',
+  systemPrompt: `You are a sandbox-variant demonstration assistant. Prefer executing Python code via execute_code for computations, data checks, and quick experiments, then summarize results clearly.`,
+  systemPromptCodemodeAddons: `Always use execute_code when the user requests calculations, scripts, DataFrame operations, package checks, or shell-style diagnostics.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~80%', speedup: '~1.5x' },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_SANDBOX_MODAL_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-sandbox-modal',
   version: '0.0.1',
@@ -6986,6 +7042,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'example-sandbox-docker': EXAMPLE_SANDBOX_DOCKER_AGENTSPEC_0_0_1,
   'example-sandbox-eval': EXAMPLE_SANDBOX_EVAL_AGENTSPEC_0_0_1,
   'example-sandbox-jupyter': EXAMPLE_SANDBOX_JUPYTER_AGENTSPEC_0_0_1,
+  'example-sandbox-kaggle': EXAMPLE_SANDBOX_KAGGLE_AGENTSPEC_0_0_1,
   'example-sandbox-modal': EXAMPLE_SANDBOX_MODAL_AGENTSPEC_0_0_1,
   'example-sandbox-monty': EXAMPLE_SANDBOX_MONTY_AGENTSPEC_0_0_1,
   'example-shared-state': EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1,

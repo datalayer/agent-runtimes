@@ -17,7 +17,14 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { Chat } from '../chat';
 
 type SandboxVariant =
-  'eval' | 'jupyter' | 'docker' | 'datalayer' | 'colab' | 'monty' | 'modal';
+  | 'eval'
+  | 'jupyter'
+  | 'docker'
+  | 'datalayer'
+  | 'colab'
+  | 'kaggle'
+  | 'monty'
+  | 'modal';
 
 interface SandboxSpecOption {
   variant: SandboxVariant;
@@ -55,7 +62,15 @@ const SANDBOX_SPEC_OPTIONS: SandboxSpecOption[] = [
     variant: 'colab',
     specId: 'example-sandbox-colab',
     title: 'Colab Sandbox',
-    description: 'Google Colab runtime bridge for remote notebook kernels.',
+    description:
+      'Google Colab runtime connector (reuse an already-running kernel).',
+  },
+  {
+    variant: 'kaggle',
+    specId: 'example-sandbox-kaggle',
+    title: 'Kaggle Sandbox',
+    description:
+      'Kaggle runtime connector (create kernel with API token or attach existing).',
   },
   {
     variant: 'monty',

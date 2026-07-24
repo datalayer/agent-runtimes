@@ -237,9 +237,10 @@ class ManagedSandbox:
         envs: Optional[dict[str, str]] = None,
         timeout: Optional[float] = None,
     ) -> AsyncIterator[Any]:
-        return await self._sandbox().run_code_streaming_async(
+        async for item in self._sandbox().run_code_streaming_async(
             code, language=language, context=context, envs=envs, timeout=timeout
-        )
+        ):
+            yield item
 
     def create_context(self, name: Optional[str] = None) -> Any:
         return self._sandbox().create_context(name=name)
@@ -744,11 +745,17 @@ class CodeSandboxManager:
             ValueError: If configuration is invalid.
         """
         effective_variant = variant or self._config.variant
+        try:
+            from code_sandboxes import Sandbox as CodeSandbox
+        except (ImportError, AttributeError):
+            CodeSandbox = None
 
         if effective_variant == "eval":
-            from code_sandboxes.eval_sandbox import EvalSandbox
+            if CodeSandbox is None:
+                from code_sandboxes.eval_sandbox import EvalSandbox
 
-            return EvalSandbox()
+                return EvalSandbox()
+            return CodeSandbox.create(variant="eval")
 
         elif effective_variant == "jupyter":
             # In sidecar mode, companion must provide a concrete Jupyter URL.
@@ -761,21 +768,33 @@ class CodeSandboxManager:
                     "Jupyter sidecar mode requires jupyter_url before sandbox start"
                 )
 
-            from code_sandboxes.jupyter_sandbox import JupyterSandbox
-
             if self._config.jupyter_url:
-                return JupyterSandbox(
+                if CodeSandbox is None:
+                    from code_sandboxes.jupyter_sandbox import JupyterSandbox
+
+                    return JupyterSandbox(
+                        server_url=self._config.jupyter_url,
+                        token=self._config.jupyter_token,
+                    )
+                return CodeSandbox.create(
+                    variant="jupyter",
                     server_url=self._config.jupyter_url,
                     token=self._config.jupyter_token,
                 )
 
             # No external URL configured: let code_sandboxes start its own
             # local Jupyter server on a free port.
-            return JupyterSandbox()
+            if CodeSandbox is None:
+                from code_sandboxes.jupyter_sandbox import JupyterSandbox
+
+                return JupyterSandbox()
+            return CodeSandbox.create(variant="jupyter")
 
         else:
-            from code_sandboxes import Sandbox as CodeSandbox
-
+            if CodeSandbox is None:
+                raise ImportError(
+                    "code_sandboxes.Sandbox is required for non-jupyter/eval variants"
+                )
             return CodeSandbox.create(variant=effective_variant)
 
     def stop(self) -> None:

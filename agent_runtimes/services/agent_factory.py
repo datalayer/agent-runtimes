@@ -411,6 +411,10 @@ def create_codemode_toolset(
         if effective_variant:
             config_kwargs["sandbox_variant"] = effective_variant
 
+        sandbox_gpu = os.getenv("AGENT_RUNTIMES_SANDBOX_GPU")
+        if sandbox_gpu:
+            config_kwargs["sandbox_gpu"] = sandbox_gpu
+
         # When discovery tools are disabled, treat this as sandbox-only mode
         # and prevent the executor from materializing ``generated/`` bindings
         # or extending the sandbox ``sys.path``.
