@@ -62,7 +62,9 @@ def _build_client() -> TestClient:
     return TestClient(app)
 
 
-def test_execute_route_streaming_aggregates_events(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_execute_route_streaming_aggregates_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
         lambda: _FakeManager(),
