@@ -45,6 +45,11 @@ class AgentNodeConfiguration(BaseModel):
     # the user has signed in, so the node-local UI and the SaaS gallery view
     # join the same room. Owned/persisted by the node like ``node_uid``.
     collaboration_notebook_uid: str | None = None
+    # Spacer *lexical* document uid used as the shared RTC collaboration room for
+    # the ephemeral document (Lexical/Loro). Distinct from the notebook room
+    # above and provisioned alongside it, so the node-local UI and the SaaS
+    # gallery view join the same Loro room for rich-text editing.
+    collaboration_document_uid: str | None = None
 
 
 def _state_path() -> Path:
@@ -183,6 +188,9 @@ def set_agent_node_configuration(
                 "collaboration_notebook_uid": (
                     _CURRENT_CONFIGURATION.collaboration_notebook_uid
                 ),
+                "collaboration_document_uid": (
+                    _CURRENT_CONFIGURATION.collaboration_document_uid
+                ),
             }
         )
         previous_mode = _CURRENT_CONFIGURATION.mode
@@ -226,6 +234,27 @@ def set_collaboration_notebook_uid(notebook_uid: str) -> AgentNodeConfiguration:
             return _CURRENT_CONFIGURATION
         _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
             update={"collaboration_notebook_uid": cleaned}
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    return _CURRENT_CONFIGURATION
+
+
+def set_collaboration_document_uid(document_uid: str) -> AgentNodeConfiguration:
+    """Persist the spacer lexical uid used as the RTC document collaboration room.
+
+    Provisioned once, alongside the notebook room, after the node registers and
+    credentials are available. A no-op when the uid is unchanged so repeated
+    sync ticks do not rewrite the on-disk state.
+    """
+    global _CURRENT_CONFIGURATION
+    cleaned = (document_uid or "").strip()
+    if not cleaned:
+        return _CURRENT_CONFIGURATION
+    with _LOCK:
+        if _CURRENT_CONFIGURATION.collaboration_document_uid == cleaned:
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={"collaboration_document_uid": cleaned}
         )
         _write_to_disk(_CURRENT_CONFIGURATION)
     return _CURRENT_CONFIGURATION

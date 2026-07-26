@@ -21,6 +21,7 @@ import httpx
 from ..routes.agent_node import (
     get_agent_node_configuration,
     get_runtime_credentials,
+    set_collaboration_document_uid,
     set_collaboration_notebook_uid,
 )
 
@@ -99,17 +100,47 @@ async def _create_notebook(
     return None
 
 
-async def ensure_collaboration_room(node_id: str | None = None) -> str | None:
-    """Ensure this node has a spacer notebook room, provisioning it if needed.
+async def _create_lexical(
+    client: httpx.AsyncClient,
+    space_uid: str,
+    name: str,
+) -> str | None:
+    """Create a spacer lexical document in the given space and return its uid."""
+    response = await client.post(
+        f"{_SPACER_API_PREFIX}/lexicals",
+        data={
+            "name": name,
+            "description": "Agent Node collaborative document.",
+            "spaceId": space_uid,
+            "documentType": "lexical",
+        },
+    )
+    response.raise_for_status()
+    body = response.json()
+    document = body.get("document") if isinstance(body, dict) else None
+    if isinstance(document, dict):
+        uid = str(document.get("uid") or "").strip()
+        return uid or None
+    return None
 
-    Returns the collaboration notebook uid, or ``None`` when it could not be
-    provisioned (missing credentials/spacer URL, or a spacer error). Idempotent:
-    a uid already present in the configuration is returned without any network
-    call so repeated sync ticks are cheap.
+
+async def ensure_collaboration_room(node_id: str | None = None) -> str | None:
+    """Ensure this node has its spacer collaboration rooms, provisioning if needed.
+
+    Provisions two shared rooms in the user's library space: a *notebook* room
+    (for the ephemeral notebook, pycrdt) and a *lexical* room (for the ephemeral
+    document, Loro). Returns the collaboration notebook uid, or ``None`` when it
+    could not be provisioned (missing credentials/spacer URL, or a spacer error).
+
+    Idempotent: each room is only created when its uid is absent, so once both
+    are persisted repeated sync ticks make no network call. A partially
+    provisioned node (only one uid present) provisions just the missing room.
     """
-    existing = get_agent_node_configuration().collaboration_notebook_uid
-    if existing:
-        return existing
+    config = get_agent_node_configuration()
+    notebook_uid = config.collaboration_notebook_uid
+    document_uid = config.collaboration_document_uid
+    if notebook_uid and document_uid:
+        return notebook_uid
 
     base_url = _spacer_base_url()
     token = _auth_token()
@@ -120,13 +151,13 @@ async def ensure_collaboration_room(node_id: str | None = None) -> str | None:
             bool(base_url),
             bool(token),
         )
-        return None
+        return notebook_uid
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
     }
-    name = f"Agent Node {node_id}" if node_id else "Agent Node Notebook"
+    name = f"Agent Node {node_id}" if node_id else "Agent Node"
     try:
         async with httpx.AsyncClient(
             base_url=base_url,
@@ -136,18 +167,33 @@ async def ensure_collaboration_room(node_id: str | None = None) -> str | None:
             space_uid = await _resolve_library_space_uid(client)
             if not space_uid:
                 logger.warning(
-                    "Could not resolve a library space for collaboration room"
+                    "Could not resolve a library space for collaboration rooms"
                 )
-                return None
-            notebook_uid = await _create_notebook(client, space_uid, name)
+                return notebook_uid
+            if not notebook_uid:
+                notebook_uid = await _create_notebook(client, space_uid, name)
+                if notebook_uid:
+                    set_collaboration_notebook_uid(notebook_uid)
+                    logger.info(
+                        "Provisioned collaboration notebook room %s", notebook_uid
+                    )
+                else:
+                    logger.warning(
+                        "Spacer did not return a notebook uid for collaboration room"
+                    )
+            if not document_uid:
+                document_uid = await _create_lexical(client, space_uid, name)
+                if document_uid:
+                    set_collaboration_document_uid(document_uid)
+                    logger.info(
+                        "Provisioned collaboration document room %s", document_uid
+                    )
+                else:
+                    logger.warning(
+                        "Spacer did not return a lexical uid for collaboration room"
+                    )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to provision collaboration room: %s", exc)
-        return None
+        return notebook_uid
 
-    if not notebook_uid:
-        logger.warning("Spacer did not return a notebook uid for collaboration room")
-        return None
-
-    set_collaboration_notebook_uid(notebook_uid)
-    logger.info("Provisioned collaboration notebook room %s", notebook_uid)
     return notebook_uid

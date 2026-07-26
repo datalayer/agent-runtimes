@@ -90,6 +90,10 @@ import {
   CommentsProvider,
   commentTheme,
 } from '@datalayer/jupyter-lexical';
+import {
+  createWebsocketProvider,
+  LoroCollaborationPlugin,
+} from '@datalayer/lexical-loro';
 import { editorConfig } from '../../examples/lexical/editorConfig';
 import { useLexicalTools } from '../../tools/adapters/agent-runtimes/lexicalHooks';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
@@ -99,6 +103,34 @@ import type { FrontendToolDefinition } from '../../types/tools';
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 import '@datalayer/jupyter-lexical/style/index.css';
+
+/**
+ * Real-time collaboration configuration for the ephemeral document.
+ *
+ * When supplied, the Lexical editor state is backed by a shared Loro CRDT
+ * document synchronised over a WebSocket (the spacer lexical endpoint) instead
+ * of the in-memory / persisted local state. Every peer that joins the same
+ * `roomId` edits the same document — this is how an Agent Node and the SaaS UI
+ * share a live document. The caller owns the room/identity lifecycle.
+ */
+export interface EphemeralDocumentCollaboration {
+  /**
+   * WebSocket URL of the Loro collaboration server, e.g.
+   * `wss://…/api/spacer/v1/lexical/ws`.
+   */
+  websocketUrl: string;
+  /** Shared collaboration room / document id joined by all peers. */
+  roomId: string;
+  /** Optional identity used for collaborative presence (cursors / awareness). */
+  identity?: {
+    userId?: string;
+    handle?: string;
+    displayName?: string;
+    initials?: string;
+    avatarUrl?: string;
+    color?: string;
+  };
+}
 
 export interface EphemeralDocumentProps {
   /**
@@ -114,6 +146,13 @@ export interface EphemeralDocumentProps {
   onContentChange?: (content: string) => void;
   /** Reports the lexical frontend tools so the parent can pass them to the agent. */
   onToolsReady?: (tools: FrontendToolDefinition[]) => void;
+  /**
+   * Optional real-time collaboration configuration. When supplied the document
+   * joins a shared Loro room over WebSocket so its state transits over RTC
+   * (e.g. between an Agent Node and the SaaS UI) rather than living purely in
+   * local memory.
+   */
+  collaboration?: EphemeralDocumentCollaboration;
 }
 
 /**
@@ -201,7 +240,42 @@ export function EphemeralDocument({
   content,
   onContentChange,
   onToolsReady,
+  collaboration,
 }: EphemeralDocumentProps) {
+  // Real-time collaboration is active only when both a WebSocket endpoint and a
+  // room id are supplied. In that mode the shared Loro CRDT is the single source
+  // of truth: local content-seeding and undo history are disabled so the local
+  // editor never diverges from (or fights) the collaborative document.
+  const isCollaborative = Boolean(
+    collaboration?.websocketUrl && collaboration?.roomId,
+  );
+  const collaborationName =
+    collaboration?.identity?.displayName ||
+    collaboration?.identity?.handle ||
+    collaboration?.identity?.userId;
+  const collaborationColor = collaboration?.identity?.color;
+  const collaborationAwarenessData = useMemo(
+    () => ({
+      user: {
+        id: collaboration?.identity?.userId,
+        username:
+          collaboration?.identity?.userId ||
+          collaboration?.identity?.handle ||
+          collaboration?.identity?.displayName,
+        name:
+          collaboration?.identity?.handle ||
+          collaboration?.identity?.displayName,
+        display_name:
+          collaboration?.identity?.displayName ||
+          collaboration?.identity?.handle,
+        initials: collaboration?.identity?.initials,
+        color: collaboration?.identity?.color,
+        avatar_url: collaboration?.identity?.avatarUrl,
+        handle: collaboration?.identity?.handle,
+      },
+    }),
+    [collaboration?.identity],
+  );
   // Capture the restore seed ONCE per documentId so parent re-renders don't
   // remount the composer (which reads `initialConfig` a single time).
   const initialContentRef = useRef<string | undefined>(content);
@@ -417,6 +491,18 @@ export function EphemeralDocument({
                         />
                         <div className="editor-container">
                           <div className="editor-inner">
+                            {isCollaborative && collaboration ? (
+                              <LoroCollaborationPlugin
+                                id={collaboration.roomId}
+                                providerFactory={createWebsocketProvider}
+                                websocketUrl={collaboration.websocketUrl}
+                                shouldBootstrap
+                                showCollaborators
+                                username={collaborationName}
+                                cursorColor={collaborationColor}
+                                awarenessData={collaborationAwarenessData}
+                              />
+                            ) : null}
                             <LexicalStatePlugin />
                             <RichTextPlugin
                               contentEditable={
@@ -431,8 +517,10 @@ export function EphemeralDocument({
                               }
                               ErrorBoundary={LexicalErrorBoundary}
                             />
-                            <OnChangePlugin onChange={handleChange} />
-                            <HistoryPlugin />
+                            {!isCollaborative && (
+                              <OnChangePlugin onChange={handleChange} />
+                            )}
+                            {!isCollaborative && <HistoryPlugin />}
                             <AutoFocusPlugin />
                             <ListPlugin />
                             <CheckListPlugin />
@@ -442,7 +530,9 @@ export function EphemeralDocument({
                             <MarkdownShortcutPlugin
                               transformers={TRANSFORMERS}
                             />
-                            <LoadContentPlugin content={initialContent} />
+                            {!isCollaborative && (
+                              <LoadContentPlugin content={initialContent} />
+                            )}
                             <CodeHighlightPlugin />
                             <ImagesPlugin captionsEnabled={false} />
                             <ExcalidrawPlugin />

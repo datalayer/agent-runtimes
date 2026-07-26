@@ -308,6 +308,8 @@ export function Chat({
   ephemeralNotebookToolbar,
   ephemeralNotebookCollaborationProvider,
   ephemeralNotebookCollaborationDocumentId,
+  ephemeralDocumentCollaboration,
+  ephemeralRuntimeOverride,
   onToolCallStart,
   onToolCallComplete,
   renderToolResult,
@@ -729,6 +731,8 @@ export function Chat({
               ephemeralNotebookCollaborationDocumentId={
                 ephemeralNotebookCollaborationDocumentId
               }
+              ephemeralDocumentCollaboration={ephemeralDocumentCollaboration}
+              ephemeralRuntimeOverride={ephemeralRuntimeOverride}
               onToolCallStart={onToolCallStart}
               onToolCallComplete={onToolCallComplete}
               renderToolResult={renderToolResult}

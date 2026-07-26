@@ -107,6 +107,7 @@ type AgentNodeConfiguration = {
   sharing: Record<string, any>;
   active_agent_id?: string;
   collaboration_notebook_uid?: string;
+  collaboration_document_uid?: string;
 };
 
 const DEFAULT_CONFIGURATION: AgentNodeConfiguration = {
@@ -320,6 +321,44 @@ export function AgentNode() {
       'https://prod1.datalayer.run';
     return new DatalayerCollaborationProvider({ datalayerUrl, token });
   }, [ephemeralCollaborationDocumentId, token]);
+
+  // ── Ephemeral document RTC (shared Lexical/Loro room with the SaaS UI) ────
+  // The node provisions a spacer *lexical* room (distinct from the notebook
+  // room) on registration and stores its uid as `collaboration_document_uid`.
+  // Both peers join that Loro room over the spacer lexical WebSocket. The token
+  // is embedded in the ws URL (createWebsocketProvider forwards it as a query
+  // param) so the spacer authenticates the connection.
+  const collaborationDocumentUser = useIAMStore(state => state.user) as
+    | Record<string, any>
+    | null
+    | undefined;
+  const ephemeralDocumentCollaboration = useMemo(() => {
+    const documentRoomId = configuration.collaboration_document_uid;
+    if (!token || !documentRoomId) {
+      return undefined;
+    }
+    const datalayerUrl =
+      (import.meta as any).env?.VITE_DATALAYER_URL ||
+      'https://prod1.datalayer.run';
+    const wsSpacer = String(datalayerUrl).replace(/^http/, 'ws');
+    const websocketUrl = `${wsSpacer}/api/spacer/v1/lexical/ws?token=${encodeURIComponent(
+      token,
+    )}`;
+    const u = collaborationDocumentUser;
+    return {
+      websocketUrl,
+      roomId: documentRoomId,
+      identity: u
+        ? {
+            userId: u.uid,
+            handle: u.handle,
+            displayName: u.displayName,
+            initials: u.initials,
+            avatarUrl: u.avatarUrl,
+          }
+        : undefined,
+    };
+  }, [configuration.collaboration_document_uid, token, collaborationDocumentUser]);
 
   const [inferenceProvider, setInferenceProvider] =
     useState<InferenceProvider>('datalayer');
@@ -1312,6 +1351,9 @@ export function AgentNode() {
                   }
                   ephemeralNotebookCollaborationDocumentId={
                     ephemeralCollaborationDocumentId
+                  }
+                  ephemeralDocumentCollaboration={
+                    ephemeralDocumentCollaboration
                   }
                   historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
                 />

@@ -8,7 +8,7 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-nodes-local agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-nodes-local agent-node-local agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	specs-sandbox-variants \
@@ -308,6 +308,8 @@ agent-nodes-local: ## agent-nodes-local – run a real Agent Node (Python server
 	AGENT_RUNTIMES_NODE=true \
 	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
 		python -m agent_runtimes serve --node --host 0.0.0.0 --port 8765 --log-level info
+
+agent-node-local: agent-nodes-local ## alias for agent-nodes-local
 
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook

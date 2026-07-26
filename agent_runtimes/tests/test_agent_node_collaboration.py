@@ -74,6 +74,10 @@ async def test_ensure_collaboration_room_provisions_and_persists(
             body = request.content.decode()
             assert "space-lib" in body
             return httpx.Response(200, json={"notebook": {"uid": "nb-room-123"}})
+        if request.url.path.endswith("/lexicals"):
+            body = request.content.decode()
+            assert "space-lib" in body
+            return httpx.Response(200, json={"document": {"uid": "doc-room-123"}})
         return httpx.Response(404)
 
     _install_mock_client(monkeypatch, handler)
@@ -85,8 +89,17 @@ async def test_ensure_collaboration_room_provisions_and_persists(
         node_cfg.get_agent_node_configuration().collaboration_notebook_uid
         == "nb-room-123"
     )
-    # Exactly the two expected calls: space resolution then notebook creation.
-    assert [r.method for r in requests] == ["GET", "POST"]
+    assert (
+        node_cfg.get_agent_node_configuration().collaboration_document_uid
+        == "doc-room-123"
+    )
+    # Space resolution, then notebook creation, then lexical creation.
+    assert [r.method for r in requests] == ["GET", "POST", "POST"]
+    assert [r.url.path.split("/")[-1] for r in requests] == [
+        "me",
+        "notebooks",
+        "lexicals",
+    ]
 
 
 @pytest.mark.asyncio
@@ -98,9 +111,10 @@ async def test_ensure_collaboration_room_is_idempotent_without_network(
     monkeypatch.setenv("DATALAYER_SPACER_URL", "https://spacer.example")
     monkeypatch.setenv("DATALAYER_API_KEY", "test-token")
     node_cfg.set_collaboration_notebook_uid("existing-room")
+    node_cfg.set_collaboration_document_uid("existing-doc-room")
 
     def handler(request: httpx.Request) -> httpx.Response:  # pragma: no cover
-        raise AssertionError("no network call expected when uid already set")
+        raise AssertionError("no network call expected when uids already set")
 
     _install_mock_client(monkeypatch, handler)
 
@@ -150,6 +164,9 @@ async def test_ensure_collaboration_room_falls_back_to_first_space(
         if request.url.path.endswith("/notebooks"):
             assert "space-first" in request.content.decode()
             return httpx.Response(200, json={"notebook": {"uid": "nb-first"}})
+        if request.url.path.endswith("/lexicals"):
+            assert "space-first" in request.content.decode()
+            return httpx.Response(200, json={"document": {"uid": "doc-first"}})
         return httpx.Response(404)
 
     _install_mock_client(monkeypatch, handler)

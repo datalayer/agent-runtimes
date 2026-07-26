@@ -71,6 +71,25 @@ const EPHEMERAL_NOTEBOOK_CONTENT: INotebookContent = {
   nbformat_minor: 5,
 };
 
+/**
+ * Explicit runtime endpoint used to bind an ephemeral notebook kernel without
+ * resolving a pod from the user's runtimes list. Used to reach an agent node's
+ * Jupyter server through the runtimes tunnel HTTP/WebSocket proxy.
+ */
+export interface EphemeralRuntimeOverride {
+  /** REST base URL, e.g. `https://.../agent-nodes/{nodeId}/jupyter`. */
+  baseUrl: string;
+  /**
+   * WebSocket base URL. Defaults to `baseUrl` with the http(s) scheme swapped
+   * for ws(s). For the tunnel proxy this is the `/ws` sibling of `baseUrl`.
+   */
+  wsUrl?: string;
+  /** Bearer/JWT token appended to requests (`appendToken`). */
+  token?: string;
+  /** Stable identifier used for the sandbox service-manager registry. */
+  podName?: string;
+}
+
 export interface EphemeralNotebookProps {
   /**
    * Notebook identifier. Must match the id passed to `useNotebookTools` so the
@@ -79,6 +98,14 @@ export interface EphemeralNotebookProps {
   notebookId: string;
   /** Preferred runtime pod name to bind the notebook kernel to. */
   runtimePodName?: string;
+  /**
+   * Explicit runtime endpoint override. When supplied, the notebook binds its
+   * kernel to this endpoint directly instead of resolving a pod from the user's
+   * runtimes list. This is how a SaaS browser reaches an agent node's Jupyter
+   * server through the runtimes tunnel proxy: `baseUrl` points at
+   * `.../agent-nodes/{nodeId}/jupyter` and `wsUrl` at its `/ws` sibling.
+   */
+  runtimeOverride?: EphemeralRuntimeOverride;
   /** Left margin reserved for the cell sidebar (default 120). */
   cellSidebarMargin?: number;
   /** Optional persisted notebook model to restore when mounting. */
@@ -103,6 +130,7 @@ export interface EphemeralNotebookProps {
 export function EphemeralNotebook({
   notebookId,
   runtimePodName,
+  runtimeOverride,
   cellSidebarMargin = 120,
   nbformat,
   onNbformatChange,
@@ -135,7 +163,7 @@ export function EphemeralNotebook({
   // notebook must bind to exactly the runtime assigned to this agent, or to
   // none at all (straight path).
   const { runtimes, refetchRuntimes } = useAgentsRuntimes();
-  const selectedRuntime = useMemo(() => {
+  const podResolvedRuntime = useMemo(() => {
     const preferredPod = String(runtimePodName || '').trim();
     if (!preferredPod) {
       return undefined;
@@ -143,12 +171,32 @@ export function EphemeralNotebook({
     return runtimes.find(rt => String(rt?.pod_name || '') === preferredPod);
   }, [runtimePodName, runtimes]);
 
+  // An explicit endpoint override wins over the pod lookup: it lets a SaaS
+  // browser bind the kernel through the runtimes tunnel proxy (the node's
+  // Jupyter server is not directly reachable, so no pod exists in the list).
+  const selectedRuntime = useMemo(() => {
+    const overrideBaseUrl = String(runtimeOverride?.baseUrl || '').trim();
+    if (overrideBaseUrl) {
+      return {
+        url: overrideBaseUrl,
+        wsUrl: String(runtimeOverride?.wsUrl || '').trim() || undefined,
+        token: String(runtimeOverride?.token || '').trim(),
+        pod_name:
+          String(runtimeOverride?.podName || '').trim() || 'agent-node-proxy',
+      };
+    }
+    return podResolvedRuntime;
+  }, [runtimeOverride, podResolvedRuntime]);
+
   // While the assigned pod has not yet appeared in the runtimes list, poll the
   // list quickly instead of waiting for the default (10s) refresh interval.
   // This is what makes the "Starting notebook…" state clear promptly once the
-  // agent runtime is ready, rather than lingering for several seconds.
+  // agent runtime is ready, rather than lingering for several seconds. The
+  // override path binds immediately, so no polling is needed there.
   const needsRuntimeLookup = Boolean(
-    String(runtimePodName || '').trim() && !selectedRuntime,
+    !runtimeOverride?.baseUrl &&
+      String(runtimePodName || '').trim() &&
+      !selectedRuntime,
   );
   useEffect(() => {
     if (!needsRuntimeLookup) {
@@ -189,9 +237,13 @@ export function EphemeralNotebook({
 
       try {
         const token = String(selectedRuntime?.token || '').trim();
+        const wsUrl =
+          String(
+            (selectedRuntime as { wsUrl?: string })?.wsUrl || '',
+          ).trim() || baseUrl.replace(/^http/, 'ws');
         const serverSettings = ServerConnection.makeSettings({
           baseUrl,
-          wsUrl: baseUrl.replace(/^http/, 'ws'),
+          wsUrl,
           token,
           appendToken: true,
         });
@@ -229,7 +281,12 @@ export function EphemeralNotebook({
         disposeServiceManager(manager);
       }
     };
-  }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
+  }, [
+    selectedRuntime?.pod_name,
+    selectedRuntime?.url,
+    selectedRuntime?.token,
+    (selectedRuntime as { wsUrl?: string })?.wsUrl,
+  ]);
 
   // Bind strictly to the agent runtime sandbox; there is NO local fallback
   // kernel. The notebook executes on the agent's runtime or shows a waiting
@@ -240,7 +297,9 @@ export function EphemeralNotebook({
   const ToolbarComponent = toolbarComponent || NotebookToolbar;
 
   const isRuntimeStarting = Boolean(
-    String(runtimePodName || '').trim() && !activeServiceManager,
+    (String(runtimePodName || '').trim() ||
+      String(runtimeOverride?.baseUrl || '').trim()) &&
+      !activeServiceManager,
   );
   useProgressTask(`ephemeral-notebook-start-${notebookId}`, isRuntimeStarting);
 

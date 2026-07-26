@@ -19,6 +19,8 @@ import type { AgentRuntimeConfig } from './config';
 import type { SandboxWsStatus } from './sandbox';
 import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
+import type { EphemeralRuntimeOverride } from '../chat/notebook/EphemeralNotebook';
+import type { EphemeralDocumentCollaboration } from '../chat/document/EphemeralDocument';
 
 // ---------------------------------------------------------------------------
 // Tool invocation hooks
@@ -501,6 +503,23 @@ export interface ChatCommonProps {
    * Node and the SaaS UI) share the same collaborative room and tool scope.
    */
   ephemeralNotebookCollaborationDocumentId?: string;
+
+  /**
+   * Optional real-time collaboration configuration for the ephemeral document
+   * (Lexical). When supplied the document joins a shared Loro room over
+   * WebSocket so its rich-text state transits over RTC (e.g. between an Agent
+   * Node and the SaaS UI). Its `roomId` also becomes the document id so all
+   * peers share the same collaborative room and lexical tool scope.
+   */
+  ephemeralDocumentCollaboration?: EphemeralDocumentCollaboration;
+
+  /**
+   * Explicit runtime endpoint for the ephemeral notebook kernel. When set, the
+   * notebook binds its kernel to this endpoint directly instead of resolving a
+   * pod from the user's runtimes list — used to reach an Agent Node's Jupyter
+   * server through the runtimes tunnel HTTP/WebSocket proxy.
+   */
+  ephemeralRuntimeOverride?: EphemeralRuntimeOverride;
 
   /** Pre-hook: fires when a tool call starts executing */
   onToolCallStart?: (context: ToolCallStartContext) => void;
@@ -1039,6 +1058,23 @@ export interface ChatBaseProps {
    * Node and the SaaS UI) share the same collaborative room and tool scope.
    */
   ephemeralNotebookCollaborationDocumentId?: string;
+
+  /**
+   * Optional real-time collaboration configuration for the ephemeral document
+   * (Lexical). When supplied the document joins a shared Loro room over
+   * WebSocket so its rich-text state transits over RTC (e.g. between an Agent
+   * Node and the SaaS UI). Its `roomId` also becomes the document id so all
+   * peers share the same collaborative room and lexical tool scope.
+   */
+  ephemeralDocumentCollaboration?: EphemeralDocumentCollaboration;
+
+  /**
+   * Explicit runtime endpoint for the ephemeral notebook kernel. When set, the
+   * notebook binds its kernel to this endpoint directly instead of resolving a
+   * pod from the user's runtimes list — used to reach an Agent Node's Jupyter
+   * server through the runtimes tunnel HTTP/WebSocket proxy.
+   */
+  ephemeralRuntimeOverride?: EphemeralRuntimeOverride;
 
   // ============ Identity/Authorization Support ============
 

@@ -783,6 +783,8 @@ function ChatBaseInner({
   ephemeralNotebookToolbar,
   ephemeralNotebookCollaborationProvider,
   ephemeralNotebookCollaborationDocumentId,
+  ephemeralDocumentCollaboration,
+  ephemeralRuntimeOverride,
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
@@ -865,10 +867,15 @@ function ChatBaseInner({
 
   // ── Ephemeral document (in-memory Lexical) ──────────────────────────────
   // Scoped to the same stable runtime identity as the notebook so the persisted
-  // document survives navigation away from and back to the runtime page.
-  const ephemeralDocumentId = notebookScopeId
-    ? `ephemeral-document-${notebookScopeId}`
-    : `ephemeral-document-${generatedNotebookIdRef.current}`;
+  // document survives navigation away from and back to the runtime page. When a
+  // collaboration room is supplied it becomes the document id directly so BOTH
+  // peers join the same Loro room AND the agent's lexical tools (scoped by this
+  // same id) drive the shared document.
+  const ephemeralDocumentId =
+    ephemeralDocumentCollaboration?.roomId ||
+    (notebookScopeId
+      ? `ephemeral-document-${notebookScopeId}`
+      : `ephemeral-document-${generatedNotebookIdRef.current}`);
   const persistedEphemeralDocument = useAgentRuntimeStore(s =>
     s.getEphemeralDocumentModel(ephemeralDocumentId),
   );
@@ -3974,6 +3981,7 @@ function ChatBaseInner({
               <EphemeralNotebook
                 notebookId={ephemeralNotebookId}
                 runtimePodName={runtimeId || activeAgentId}
+                runtimeOverride={ephemeralRuntimeOverride}
                 nbformat={persistedEphemeralNbformat ?? undefined}
                 onNbformatChange={handleEphemeralNotebookChange}
                 toolbarComponent={ephemeralNotebookToolbar}
@@ -3987,6 +3995,7 @@ function ChatBaseInner({
                   content={persistedEphemeralDocument ?? undefined}
                   onContentChange={handleEphemeralDocumentChange}
                   onToolsReady={handleDocumentToolsReady}
+                  collaboration={ephemeralDocumentCollaboration}
                 />
               </React.Suspense>
             )}
