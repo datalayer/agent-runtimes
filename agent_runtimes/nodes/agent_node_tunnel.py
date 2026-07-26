@@ -92,7 +92,9 @@ def _build_tunnel_url() -> str:
     return f"{ws_base}/api/runtimes/v1/agent-nodes/tunnel/ws?{query}"
 
 
-async def _handle_message(websocket: Any, message: str) -> None:
+async def _handle_message(
+    websocket: Any, message: str, proxy: Any | None = None
+) -> None:
     """Handle one inbound tunnel message and emit ack/response events."""
     try:
         payload = json.loads(message)
@@ -104,6 +106,27 @@ async def _handle_message(websocket: Any, message: str) -> None:
         payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
     )
     type_value = str(envelope.get("type") or payload.get("type") or "ui_message")
+
+    # Jupyter proxy frames are high-volume and self-correlated; they must not be
+    # acked (that would double tunnel traffic and pollute the reverse buffer).
+    if type_value in ("http.request", "ws.open", "ws.send", "ws.close"):
+        if proxy is None:
+            return
+        channel_id = envelope.get("channel_id") or payload.get("channel_id")
+        inner = (
+            envelope.get("payload")
+            if isinstance(envelope.get("payload"), dict)
+            else {}
+        )
+        if type_value == "http.request":
+            asyncio.create_task(proxy.handle_http_request(request_id, inner))
+        elif type_value == "ws.open":
+            asyncio.create_task(proxy.handle_ws_open(channel_id, inner))
+        elif type_value == "ws.send":
+            asyncio.create_task(proxy.handle_ws_send(channel_id, inner))
+        else:
+            asyncio.create_task(proxy.handle_ws_close(channel_id))
+        return
 
     # Acknowledge every tunneled message so the reverse path is exercised.
     await websocket.send(
@@ -295,25 +318,34 @@ async def run_agent_node_tunnel(stop_event: asyncio.Event) -> None:
                 tunnel_url, open_timeout=15.0, close_timeout=5.0
             ) as websocket:
                 logger.info("Agent node tunnel connected")
-                while not stop_event.is_set():
-                    try:
-                        incoming = await asyncio.wait_for(
-                            websocket.recv(), timeout=20.0
-                        )
-                        if isinstance(incoming, str):
-                            await _handle_message(websocket, incoming)
-                    except asyncio.TimeoutError:
-                        await websocket.send(
-                            json.dumps(
-                                {
-                                    "type": "heartbeat",
-                                    "payload": {
-                                        "node_id": _node_id(),
-                                        "status": "connected",
-                                    },
-                                }
+                from .agent_node_kernel_proxy import (
+                    NodeKernelProxy,
+                    build_send_frame,
+                )
+
+                proxy = NodeKernelProxy(build_send_frame(websocket))
+                try:
+                    while not stop_event.is_set():
+                        try:
+                            incoming = await asyncio.wait_for(
+                                websocket.recv(), timeout=20.0
                             )
-                        )
+                            if isinstance(incoming, str):
+                                await _handle_message(websocket, incoming, proxy)
+                        except asyncio.TimeoutError:
+                            await websocket.send(
+                                json.dumps(
+                                    {
+                                        "type": "heartbeat",
+                                        "payload": {
+                                            "node_id": _node_id(),
+                                            "status": "connected",
+                                        },
+                                    }
+                                )
+                            )
+                finally:
+                    await proxy.aclose()
         except Exception as exc:
             logger.warning("Agent node tunnel connection failed: %s", exc)
             if "403" in str(exc):
