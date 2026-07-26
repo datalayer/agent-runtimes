@@ -3992,6 +3992,7 @@ function ChatBaseInner({
                 <EphemeralDocument
                   documentId={ephemeralDocumentId}
                   runtimePodName={runtimeId || activeAgentId}
+                  runtimeOverride={ephemeralRuntimeOverride}
                   content={persistedEphemeralDocument ?? undefined}
                   onContentChange={handleEphemeralDocumentChange}
                   onToolsReady={handleDocumentToolsReady}

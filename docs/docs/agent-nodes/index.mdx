@@ -368,21 +368,21 @@ returned to the configuration view.
 
 ```bash
 # Local UI + Python server
-make agent-nodes
+make agent-node
 
 # Local UI + Python against a local plane stack
-make agent-nodes:proxy
+make agent-node-local
 
 # Run a real Agent Node against `plane local` services: registers to the
 # local runtimes service with heartbeat/health, then is evicted on stop.
-make agent-nodes-local
+make agent-node-dist
 
 # Dockerized runtime
 make agent-nodes-docker-build DOCKER_TAG=dev
 docker run --rm -p 8765:8765 datalayer/agent-nodes:dev
 ```
 
-For local proxy development, `make agent-nodes:proxy` exports both
+For local proxy development, `make agent-node-local` exports both
 `DATALAYER_AI_INFERENCE_URL` and `VITE_DATALAYER_AI_INFERENCE_URL` to the
 local ai-inference service (`http://localhost:4450` by default).
 
@@ -414,4 +414,4 @@ local ai-inference service (`http://localhost:4450` by default).
 6. UI supports navigation from a node row/detail to chat via the selected
    node.
 7. Docker image launches node UI + server with all three modes.
-8. `make agent-nodes` supports easy local UI + Python development.
+8. `make agent-node` supports easy local UI + Python development.

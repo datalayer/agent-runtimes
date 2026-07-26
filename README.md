@@ -182,7 +182,7 @@ make examples
 For focused Agent Node development, run:
 
 ```bash
-make agent-nodes
+make agent-node
 ```
 
 This target starts both:
@@ -202,7 +202,7 @@ Expected central visibility semantics:
 To run Agent Node with local service URLs preconfigured, use:
 
 ```bash
-make agent-nodes:proxy
+make agent-node-local
 ```
 
 This target applies the `PLANE_LOCAL_*_URL` mappings and exports both
@@ -217,7 +217,7 @@ Prerequisites:
 Override any local service URL if needed:
 
 ```bash
-PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-nodes:proxy
+PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-node-local
 ```
 
 ### Docker build notes

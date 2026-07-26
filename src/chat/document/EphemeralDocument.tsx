@@ -58,6 +58,7 @@ import {
   useSystemColorMode,
   useThemeStore,
 } from '@datalayer/primer-addons';
+import { Spinner, Text } from '@primer/react';
 import {
   JupyterReactTheme,
   Kernel,
@@ -100,6 +101,7 @@ import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
 import { useProgressTask } from '../../hooks/useProgressTask';
 import type { FrontendToolDefinition } from '../../types/tools';
+import type { EphemeralRuntimeOverride } from '../notebook/EphemeralNotebook';
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 import '@datalayer/jupyter-lexical/style/index.css';
@@ -140,6 +142,8 @@ export interface EphemeralDocumentProps {
   documentId: string;
   /** Preferred runtime pod name to bind the document kernel to. */
   runtimePodName?: string;
+  /** Optional explicit runtime endpoint (agent-node tunnel proxy path). */
+  runtimeOverride?: EphemeralRuntimeOverride;
   /** Optional persisted Lexical editor state (JSON string) to restore. */
   content?: string;
   /** Callback fired when the document's editor state changes. */
@@ -237,6 +241,7 @@ function DocumentToolbar({
 export function EphemeralDocument({
   documentId,
   runtimePodName,
+  runtimeOverride,
   content,
   onContentChange,
   onToolsReady,
@@ -299,14 +304,42 @@ export function EphemeralDocument({
   // Resolve the runtime sandbox strictly by its assigned pod name. There is
   // deliberately NO local fallback kernel: the ephemeral document executes on
   // exactly the runtime assigned to this agent, or shows a waiting state.
-  const { runtimes } = useAgentsRuntimes();
+  const { runtimes, refetchRuntimes } = useAgentsRuntimes();
   const selectedRuntime = useMemo(() => {
+    const overrideBaseUrl = String(runtimeOverride?.baseUrl || '').trim();
+    if (overrideBaseUrl) {
+      return {
+        url: overrideBaseUrl,
+        wsUrl: String(runtimeOverride?.wsUrl || '').trim() || undefined,
+        token: String(runtimeOverride?.token || '').trim(),
+        pod_name:
+          String(runtimeOverride?.podName || '').trim() || 'agent-node-proxy',
+      };
+    }
     const preferredPod = String(runtimePodName || '').trim();
     if (!preferredPod) {
       return undefined;
     }
     return runtimes.find(rt => String(rt?.pod_name || '') === preferredPod);
-  }, [runtimePodName, runtimes]);
+  }, [runtimeOverride, runtimePodName, runtimes]);
+
+  const needsRuntimeLookup = Boolean(
+    !runtimeOverride?.baseUrl &&
+      String(runtimePodName || '').trim() &&
+      !selectedRuntime,
+  );
+  useEffect(() => {
+    if (!needsRuntimeLookup) {
+      return;
+    }
+    void refetchRuntimes();
+    const intervalId = window.setInterval(() => {
+      void refetchRuntimes();
+    }, 1000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [needsRuntimeLookup, refetchRuntimes]);
 
   const [runtimeServiceManager, setRuntimeServiceManager] =
     useState<ServiceManager.IManager | null>(null);
@@ -332,9 +365,12 @@ export function EphemeralDocument({
       }
       try {
         const token = String(selectedRuntime?.token || '').trim();
+        const wsUrl =
+          String((selectedRuntime as { wsUrl?: string })?.wsUrl || '').trim() ||
+          baseUrl.replace(/^http/, 'ws');
         const serverSettings = ServerConnection.makeSettings({
           baseUrl,
-          wsUrl: baseUrl.replace(/^http/, 'ws'),
+          wsUrl,
           token,
           appendToken: true,
         });
@@ -380,7 +416,9 @@ export function EphemeralDocument({
 
   const activeServiceManager = runtimeServiceManager;
   const isRuntimeStarting = Boolean(
-    String(runtimePodName || '').trim() && !activeServiceManager,
+    (String(runtimePodName || '').trim() ||
+      String(runtimeOverride?.baseUrl || '').trim()) &&
+      !activeServiceManager,
   );
   useProgressTask(`ephemeral-document-start-${documentId}`, isRuntimeStarting);
 
@@ -463,15 +501,40 @@ export function EphemeralDocument({
                 inset: 0,
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'auto',
+                minHeight: 0,
+                overflow: 'hidden',
                 overscrollBehaviorY: 'contain',
                 padding: 2,
                 '& .editor-shell': {
                   backgroundColor: themeBackground,
                   borderRadius: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0,
+                  flex: 1,
                 },
-                '& .editor-container': { backgroundColor: themeBackground },
-                '& .editor-inner': { backgroundColor: themeBackground },
+                '& .editor-container': {
+                  backgroundColor: themeBackground,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0,
+                  flex: 1,
+                },
+                '& .editor-inner': {
+                  backgroundColor: themeBackground,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0,
+                  flex: 1,
+                },
+                '& .editor-scroller': {
+                  minHeight: 0,
+                  flex: 1,
+                  overflow: 'auto',
+                },
+                '& .editor': {
+                  minHeight: '100%',
+                },
                 '& .editor-input': { backgroundColor: themeBackground },
                 '& [role="toolbar"][aria-label="Editor toolbar"]': {
                   backgroundColor: themeBackground,
@@ -574,6 +637,22 @@ export function EphemeralDocument({
             </Box>
           </JupyterReactTheme>
         </DatalayerThemeProvider>
+      ) : isRuntimeStarting ? (
+        <Box
+          sx={{
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            color: 'fg.muted',
+          }}
+        >
+          <Spinner size="small" />
+          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+            Starting document...
+          </Text>
+        </Box>
       ) : null}
     </Box>
   );

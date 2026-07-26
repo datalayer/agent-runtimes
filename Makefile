@@ -8,7 +8,7 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-nodes-local agent-node-local agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	specs-sandbox-variants \
@@ -275,7 +275,7 @@ examples-proxy: examples\:proxy ## alias for examples:proxy
 agent: # agent - open agent.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent
 
-agent-nodes: ## agent-nodes – develop Agent Node UI + local server
+agent-node: ## agent-node – develop Agent Node UI + local server (Vite HMR + Python), prod backend
 	$(BEDROCK_ENV) \
 	DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
 	VITE_DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
@@ -283,16 +283,14 @@ agent-nodes: ## agent-nodes – develop Agent Node UI + local server
 	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
 		npm run start:agent-node
 
-agent-nodes\:proxy: ## agent-nodes:proxy – Agent Node dev against local `plane local` services (PLANE_LOCAL_*_URL defaults)
+agent-node-local: ## agent-node-local – Agent Node dev (Vite HMR + Python) against local `plane local` services (PLANE_LOCAL_*_URL defaults)
 	$(BEDROCK_ENV) \
 	$(EXAMPLES_PROXY_ENV) \
 	AGENT_RUNTIMES_NODE=true \
 	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
 		npm run start:agent-node
 
-agent-nodes-proxy: agent-nodes\:proxy ## alias for agent-nodes:proxy
-
-agent-nodes-local: ## agent-nodes-local – run a real Agent Node (Python server + built UI) against `plane local` services; registers to runtimes ($(PLANE_LOCAL_RUNTIMES_URL)) with heartbeat/health, then evicted when stopped
+agent-node-dist: ## agent-node-dist – run a real Agent Node (Python server + built UI, no Vite) against `plane local` services; registers to runtimes ($(PLANE_LOCAL_RUNTIMES_URL)) with heartbeat/health, then evicted when stopped
 	@if [ ! -d dist ] && [ ! -d agent_runtimes/static/dist ]; then \
 		echo "No built frontend found — running 'npm run build' first (one-time)..."; \
 		$(MAKE) build; \
@@ -308,8 +306,6 @@ agent-nodes-local: ## agent-nodes-local – run a real Agent Node (Python server
 	AGENT_RUNTIMES_NODE=true \
 	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
 		python -m agent_runtimes serve --node --host 0.0.0.0 --port 8765 --log-level info
-
-agent-node-local: agent-nodes-local ## alias for agent-nodes-local
 
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook

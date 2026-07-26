@@ -64,6 +64,74 @@ const AGENT_RUNTIMES_BASE_URL = (
   window.location.origin
 ).replace(/\/$/, '');
 
+const DEFAULT_DATALAYER_URL = 'https://prod1.datalayer.run';
+
+/**
+ * localStorage key recording that the user explicitly signed out. When set, the
+ * UI must not silently re-authenticate from the env-supplied DATALAYER_API_KEY
+ * via /auth/bootstrap, so the sign-out survives a page refresh.
+ */
+const AUTO_BOOTSTRAP_DISABLED_KEY = 'agent-node-auto-bootstrap-disabled';
+
+/** Persist (or clear) the signed-out intent in localStorage. */
+function setAutoBootstrapDisabled(disabled: boolean): void {
+  try {
+    if (disabled) {
+      window.localStorage.setItem(AUTO_BOOTSTRAP_DISABLED_KEY, 'true');
+    } else {
+      window.localStorage.removeItem(AUTO_BOOTSTRAP_DISABLED_KEY);
+    }
+  } catch {
+    // Ignore storage failures (private mode, disabled storage, etc.).
+  }
+}
+
+/**
+ * Read a service URL from the server-injected `datalayer-config-data` script
+ * tag. The agent-runtimes Python server injects this tag (populated from the
+ * `DATALAYER_*_URL` environment variables, e.g. from `plane local`) when it
+ * serves the built agent pages. Reading it at runtime lets the node target the
+ * configured services (IAM, runtimes, ...) instead of the build-time-baked
+ * `VITE_DATALAYER_URL`, which defaults to production because `make build` runs
+ * without the local environment.
+ */
+const getConfigUrlFromDocument = (
+  ...keys: string[]
+): string | undefined => {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+  const el = document.getElementById('datalayer-config-data');
+  if (!el?.textContent) {
+    return undefined;
+  }
+  try {
+    const config = JSON.parse(el.textContent);
+    for (const key of keys) {
+      const value = config?.[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.replace(/\/$/, '');
+      }
+    }
+  } catch {
+    // Ignore malformed config; fall back to env / default.
+  }
+  return undefined;
+};
+
+/** Resolve the base Datalayer URL: injected config → VITE env → production. */
+const resolveDatalayerUrl = (): string =>
+  getConfigUrlFromDocument('datalayerUrl', 'iamUrl') ||
+  (import.meta as any).env?.VITE_DATALAYER_URL ||
+  DEFAULT_DATALAYER_URL;
+
+/** Resolve the runtimes URL: injected config → VITE env → base Datalayer URL. */
+const resolveRuntimesUrl = (): string =>
+  getConfigUrlFromDocument('runtimesUrl') ||
+  (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL ||
+  resolveDatalayerUrl();
+
+
 type AgentNodeMode = 'private' | 'shared' | 'sleep';
 type Step = 'auth' | 'config' | 'gallery' | 'chat' | 'profile';
 
@@ -273,6 +341,7 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
 export function AgentNode() {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const tokenForCore = token ?? undefined;
+  const signInLoginUrl = `${resolveDatalayerUrl()}/api/iam/v1/login`;
   const queryClient = useQueryClient();
   const iamUser = useIAMStore(state => state.user);
   const { colorMode, theme: themeVariant } = useAgentNodeThemeStore();
@@ -292,7 +361,21 @@ export function AgentNode() {
 
   const [step, setStep] = useState<Step>('auth');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('default');
-  const [disableAutoBootstrap, setDisableAutoBootstrap] = useState(false);
+  // Persisted across refreshes: once the user explicitly signs out we must
+  // not silently re-authenticate them from the env-supplied DATALAYER_API_KEY
+  // via /auth/bootstrap. Initialise from localStorage so the intent survives a
+  // page reload (React state alone resets to false on refresh).
+  const [disableAutoBootstrap, setDisableAutoBootstrap] = useState<boolean>(
+    () => {
+      try {
+        return (
+          window.localStorage.getItem(AUTO_BOOTSTRAP_DISABLED_KEY) === 'true'
+        );
+      } catch {
+        return false;
+      }
+    },
+  );
   const [configuration, setConfiguration] = useState<AgentNodeConfiguration>(
     DEFAULT_CONFIGURATION,
   );
@@ -316,9 +399,7 @@ export function AgentNode() {
     if (!ephemeralCollaborationDocumentId || !token) {
       return undefined;
     }
-    const datalayerUrl =
-      (import.meta as any).env?.VITE_DATALAYER_URL ||
-      'https://prod1.datalayer.run';
+    const datalayerUrl = resolveDatalayerUrl();
     return new DatalayerCollaborationProvider({ datalayerUrl, token });
   }, [ephemeralCollaborationDocumentId, token]);
 
@@ -337,9 +418,7 @@ export function AgentNode() {
     if (!token || !documentRoomId) {
       return undefined;
     }
-    const datalayerUrl =
-      (import.meta as any).env?.VITE_DATALAYER_URL ||
-      'https://prod1.datalayer.run';
+    const datalayerUrl = resolveDatalayerUrl();
     const wsSpacer = String(datalayerUrl).replace(/^http/, 'ws');
     const websocketUrl = `${wsSpacer}/api/spacer/v1/lexical/ws?token=${encodeURIComponent(
       token,
@@ -360,12 +439,39 @@ export function AgentNode() {
     };
   }, [configuration.collaboration_document_uid, token, collaborationDocumentUser]);
 
+  // Bind the ephemeral notebook kernel through the central runtimes tunnel
+  // proxy so the local node UI can reach the node's Jupyter server the same
+  // way as the SaaS Agent Node chat.
+  const ephemeralRuntimeOverride = useMemo(() => {
+    const nodeId = String(configuration.node_uid || '').trim();
+    const authToken = String(token || '').trim();
+    if (!nodeId || !authToken) {
+      return undefined;
+    }
+    const runtimesUrl = resolveRuntimesUrl();
+    if (!runtimesUrl) {
+      return undefined;
+    }
+    const base = `${runtimesUrl}/api/runtimes/v1/agent-nodes/${encodeURIComponent(
+      nodeId,
+    )}/jupyter`;
+    const wsBase = base.replace(/^http/, 'ws');
+    return {
+      baseUrl: base,
+      wsUrl: `${wsBase}/ws`,
+      token: authToken,
+      podName: `agent-node-${nodeId}`,
+    };
+  }, [configuration.node_uid, token]);
+
   const [inferenceProvider, setInferenceProvider] =
     useState<InferenceProvider>('datalayer');
   const [inferenceModels, setInferenceModels] = useState<string[]>([]);
   const [inferenceDefaultModel, setInferenceDefaultModel] = useState<
     string | null
   >(null);
+  const [configurationLoaded, setConfigurationLoaded] = useState(false);
+  const chatRestoreAttemptRef = useRef<string>('');
   type BannerKind = 'success' | 'info' | 'warning' | 'error';
   type BannerState = { id: number; kind: BannerKind; message: string };
   const [banner, setBanner] = useState<BannerState | null>(null);
@@ -393,11 +499,7 @@ export function AgentNode() {
 
   const pushCredentials = useCallback(
     (authToken: string | null, payloadToken: string | null = authToken) => {
-      const datalayerUrl =
-        (import.meta as any).env?.VITE_DATALAYER_URL ||
-        'https://prod1.datalayer.run';
-      const runtimesUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || datalayerUrl;
+      const runtimesUrl = resolveRuntimesUrl();
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -473,6 +575,7 @@ export function AgentNode() {
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
         );
         if (!response.ok) {
+          setConfigurationLoaded(true);
           return;
         }
         const payload = await response.json();
@@ -486,6 +589,8 @@ export function AgentNode() {
         }
       } catch {
         // Ignore initial-load failures in local development.
+      } finally {
+        setConfigurationLoaded(true);
       }
     };
     load();
@@ -590,7 +695,7 @@ export function AgentNode() {
         }
         if (data?.has_key && data?.token) {
           setAuth(String(data.token), String(data.handle || 'api-key-user'));
-          setStep('config');
+          setStep('gallery');
         }
       } catch {
         // Best-effort; fall back to the sign-in screen.
@@ -615,12 +720,10 @@ export function AgentNode() {
 
   useEffect(() => {
     import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
-      const datalayerUrl =
-        (import.meta as any).env?.VITE_DATALAYER_URL ||
-        'https://prod1.datalayer.run';
-      const runtimesUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || datalayerUrl;
+      const datalayerUrl = resolveDatalayerUrl();
+      const runtimesUrl = resolveRuntimesUrl();
       const aiInferenceUrl =
+        getConfigUrlFromDocument('aiInferenceUrl') ||
         (import.meta as any).env?.VITE_DATALAYER_AI_INFERENCE_URL ||
         datalayerUrl;
       // Seed all per-service URLs to match the main UI login behavior.
@@ -665,34 +768,81 @@ export function AgentNode() {
   }, [token, step]);
 
   useEffect(() => {
+    if (!token || !configurationLoaded) {
+      return;
+    }
+    const activeAgentId = (configuration.active_agent_id || '').trim();
+    if (!activeAgentId) {
+      return;
+    }
+    const restoreKey = `${activeAgentId}`;
+    if (chatRestoreAttemptRef.current === restoreKey) {
+      return;
+    }
+    chatRestoreAttemptRef.current = restoreKey;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(`${AGENT_RUNTIMES_BASE_URL}/api/v1/agents`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          return;
+        }
+        const payload = await response.json().catch(() => null);
+        if (cancelled) {
+          return;
+        }
+        const agents: Array<Record<string, any>> = Array.isArray(payload)
+          ? payload
+          : payload?.agents || payload?.items || [];
+        const running = agents.some(agent => {
+          const id = String(agent?.agent_id || agent?.id || '').trim();
+          return id === activeAgentId;
+        });
+        if (running) {
+          setSelectedAgentId(activeAgentId);
+          setConfiguration(prev =>
+            prev.mode === 'private' ? prev : { ...prev, mode: 'private' }
+          );
+          setStep('chat');
+        }
+      } catch {
+        // Best-effort restore only.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, configurationLoaded, configuration.active_agent_id]);
+
+  useEffect(() => {
     // If a persisted session is already authenticated on first load,
-    // skip the auth screen and land on the main configuration view.
+    // skip the auth screen and land on the agents gallery.
     if (token && step === 'auth') {
-      setStep('config');
+      setStep('gallery');
     }
   }, [token, step]);
 
   useEffect(() => {
-    if (
-      (step === 'chat' || step === 'gallery') &&
-      configuration.mode !== 'private'
-    ) {
+    if (step === 'chat' && configuration.mode !== 'private') {
       setStep('config');
     }
   }, [step, configuration.mode]);
 
   const handleSignIn = (newToken: string, handle: string) => {
+    setAutoBootstrapDisabled(false);
     setDisableAutoBootstrap(false);
     setAuth(newToken, handle);
-    setStep('config');
+    setStep('gallery');
   };
 
   // API keys are exchanged for a session token before login so billing and
   // plans endpoints (/api/iam/v1/plans/*) resolve the correct paid plan.
   const handleApiKeySignIn = async (apiKey: string) => {
-    const datalayerUrl =
-      (import.meta as any).env?.VITE_DATALAYER_URL ||
-      'https://prod1.datalayer.run';
+    const datalayerUrl = resolveDatalayerUrl();
     try {
       const resp = await fetch(`${datalayerUrl}/api/iam/v1/login`, {
         method: 'POST',
@@ -713,6 +863,9 @@ export function AgentNode() {
   };
 
   const handleSignOut = () => {
+    // Persist the signed-out intent so a refresh does not re-bootstrap the
+    // session from the env-supplied DATALAYER_API_KEY.
+    setAutoBootstrapDisabled(true);
     setDisableAutoBootstrap(true);
     // Clear backend fallback credentials while still authenticated.
     void pushCredentials(token, null).catch(() => {
@@ -781,8 +934,8 @@ export function AgentNode() {
   const isStepEnabled = (nextStep: Step) => {
     if (nextStep === 'auth') return true;
     if (!token) return false;
-    if (nextStep === 'chat' || nextStep === 'gallery')
-      return configuration.mode === 'private';
+    if (nextStep === 'gallery') return true;
+    if (nextStep === 'chat') return configuration.mode === 'private';
     return true;
   };
 
@@ -842,6 +995,37 @@ export function AgentNode() {
         >
           <PageLayout.Header>
             <PageHeader>
+              <PageHeader.TitleArea>
+                <PageHeader.Title>
+                  <Box
+                    as="a"
+                    href="https://datalayer.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Datalayer website"
+                    sx={{ display: 'inline-flex', alignItems: 'center' }}
+                  >
+                    <DatalayerLogoText
+                      size={24}
+                      inverse
+                      variant={themeVariant}
+                      colorMode={colorMode}
+                      primaryColor={logoColors.primary}
+                      secondaryColor={logoColors.secondary}
+                      textColor={logoColors.textColor}
+                      primaryGradient={logoColors.primaryGradient}
+                      secondaryGradient={logoColors.secondaryGradient}
+                      gradient={true}
+                    />
+                  </Box>
+                </PageHeader.Title>
+                {token && (
+                  <Text sx={{ color: 'fg.muted', fontSize: 1, mt: 1 }}>
+                    Configure Private/Shared/Sleep mode, then chat from this
+                    node.
+                  </Text>
+                )}
+              </PageHeader.TitleArea>
               <PageHeader.Actions>
                 <Box
                   sx={{
@@ -873,9 +1057,6 @@ export function AgentNode() {
                       </>
                     )}
                   </Box>
-                  <AppearanceControlsWithStore
-                    useStore={useAgentNodeThemeStore}
-                  />
                   {!token ? (
                     <Button
                       size="small"
@@ -894,6 +1075,11 @@ export function AgentNode() {
                         gap: 1,
                       }}
                     >
+                      <StepEntry
+                        entryStep="profile"
+                        label="Profile"
+                        leadingVisual={PersonIcon}
+                      />
                       <Box
                         sx={{
                           textAlign: 'left',
@@ -907,11 +1093,6 @@ export function AgentNode() {
                           onTokenExpired={handleSignOut}
                         />
                       </Box>
-                      <StepEntry
-                        entryStep="profile"
-                        label="Profile"
-                        leadingVisual={PersonIcon}
-                      />
                       <Button
                         size="small"
                         variant="invisible"
@@ -923,26 +1104,9 @@ export function AgentNode() {
                       </Button>
                     </Box>
                   )}
-                  <Box
-                    as="a"
-                    href="https://datalayer.ai"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Open Datalayer website"
-                    sx={{ display: 'inline-flex', alignItems: 'center' }}
-                  >
-                    <DatalayerLogoText
-                      size={24}
-                      variant={themeVariant}
-                      colorMode={colorMode}
-                      primaryColor={logoColors.primary}
-                      secondaryColor={logoColors.secondary}
-                      textColor={logoColors.textColor}
-                      primaryGradient={logoColors.primaryGradient}
-                      secondaryGradient={logoColors.secondaryGradient}
-                      gradient={true}
-                    />
-                  </Box>
+                  <AppearanceControlsWithStore
+                    useStore={useAgentNodeThemeStore}
+                  />
                 </Box>
               </PageHeader.Actions>
             </PageHeader>
@@ -1002,20 +1166,22 @@ export function AgentNode() {
                 </Text>
               </Box>
             </Box>
-            <Box sx={{ mb: 3 }}>
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}
-              >
-                <Box sx={{ color: 'fg.muted', display: 'inline-flex' }}>
-                  <KeyAsteriskIcon size={18} />
+            {!token && (
+              <Box sx={{ mb: 3 }}>
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}
+                >
+                  <Box sx={{ color: 'fg.muted', display: 'inline-flex' }}>
+                    <KeyAsteriskIcon size={18} />
+                  </Box>
+                  <Heading sx={{ fontSize: 3, m: 0 }}>Agent Node</Heading>
                 </Box>
-                <Heading sx={{ fontSize: 3, m: 0 }}>Agent Node</Heading>
+                <Text sx={{ color: 'fg.muted' }}>
+                  Authenticate, configure Private/Shared/Sleep mode, then chat
+                  from this node.
+                </Text>
               </Box>
-              <Text sx={{ color: 'fg.muted' }}>
-                Authenticate, configure Private/Shared/Sleep mode, then chat
-                from this node.
-              </Text>
-            </Box>
+            )}
 
             {step === 'auth' && (
               <Box
@@ -1044,8 +1210,12 @@ export function AgentNode() {
                     '& > div > div': {
                       width: '100%',
                       bg: 'canvas.default',
+                      border: '1px solid',
                       borderColor: `${cfg.brandColor}66`,
                       boxShadow: `0 0 0 1px ${cfg.brandColor}2B`,
+                      borderRadius: 2,
+                      px: [3, 4],
+                      py: [3, 4],
                     },
                     '& h2, & h3': {
                       color: cfg.brandColor,
@@ -1053,6 +1223,7 @@ export function AgentNode() {
                   }}
                 >
                   <SignInSimple
+                    loginUrl={signInLoginUrl}
                     onSignIn={handleSignIn}
                     onApiKeySignIn={handleApiKeySignIn}
                     title="Agent Node"
@@ -1308,12 +1479,31 @@ export function AgentNode() {
                 baseUrl={AGENT_RUNTIMES_BASE_URL}
                 token={token}
                 activeAgentId={configuration.active_agent_id}
+                onLaunchError={message => {
+                  showBanner('error', message);
+                }}
                 onLaunched={agentId => {
                   setSelectedAgentId(agentId);
-                  setConfiguration(prev => ({
-                    ...prev,
+                  const nextConfiguration = {
+                    ...configuration,
                     active_agent_id: agentId,
-                  }));
+                    mode: 'private' as const,
+                  };
+                  setConfiguration(nextConfiguration);
+                  // Persist mode=private so Chat stays enabled and the node
+                  // advertises the active agent state to the sync loop.
+                  void fetch(
+                    `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(nextConfiguration),
+                    },
+                  ).catch(() => {
+                    // Best-effort persistence; local state already switched.
+                  });
                   setStep('chat');
                 }}
               />
@@ -1345,7 +1535,8 @@ export function AgentNode() {
                   autoFocus
                   enableEphemeralNotebook
                   enableEphemeralDocument
-                  runtimeId={selectedAgentId}
+                  initialEphemeralSurfaceMode="notebook"
+                  runtimeId={configuration.node_uid || selectedAgentId}
                   ephemeralNotebookCollaborationProvider={
                     ephemeralNotebookCollaborationProvider
                   }
@@ -1355,6 +1546,7 @@ export function AgentNode() {
                   ephemeralDocumentCollaboration={
                     ephemeralDocumentCollaboration
                   }
+                  ephemeralRuntimeOverride={ephemeralRuntimeOverride}
                   historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
                 />
               </Box>

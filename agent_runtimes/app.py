@@ -14,9 +14,11 @@ Provides a configurable FastAPI application with:
 
 import asyncio
 import contextlib
+import json
 import logging
 import multiprocessing as mp
 import os
+import re
 import sys
 import tempfile
 from contextlib import asynccontextmanager
@@ -27,7 +29,7 @@ from typing import Any, AsyncGenerator
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
@@ -1487,6 +1489,88 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Fallback: check for a dist/ directory packaged inside the module
         _dist_dir = Path(__file__).resolve().parent / "static" / "dist"
     if _dist_dir.is_dir():
+        # Inject a `datalayer-config-data` script tag into the built agent HTML
+        # pages before serving them. Vite bakes no runtime config into these
+        # pages, so without this the frontend cannot discover the IAM URL and
+        # login falls back to the server origin (e.g. http://localhost:8765)
+        # instead of the configured IAM server (e.g. `plane local` on :9700).
+        #
+        # This mirrors how the `ui` project seeds `datalayer-config-data`
+        # (iamUrl, runtimesUrl, ...) in its served HTML for `make ai` vs
+        # `make ai-local`. Here the URLs are resolved at serve time from the
+        # DATALAYER_*_URL environment variables via DatalayerURLs.
+        _config_tag_re = re.compile(
+            r'<script id="datalayer-config-data"[^>]*>.*?</script>',
+            re.DOTALL,
+        )
+        _head_open_re = re.compile(r"<head[^>]*>")
+
+        def _build_datalayer_config() -> dict[str, Any]:
+            from datalayer_core.utils.urls import DatalayerURLs
+
+            urls = DatalayerURLs.from_environment()
+            return {
+                "datalayerUrl": urls.datalayer_url,
+                "iamUrl": urls.iam_url,
+                "runtimesUrl": urls.runtimes_url,
+                "spacerUrl": urls.spacer_url,
+                "libraryUrl": urls.library_url,
+                "aiAgentsUrl": urls.ai_agents_url,
+                "aiInferenceUrl": urls.ai_inference_url,
+                "mcpServersUrl": urls.mcp_server_url,
+                "otelUrl": urls.otel_url,
+                "growthUrl": urls.growth_url,
+                "successUrl": urls.success_url,
+                "supportUrl": urls.support_url,
+                "loadConfigurationFromServer": False,
+            }
+
+        def _render_page_with_config(page_path: Path) -> str:
+            html = page_path.read_text(encoding="utf-8")
+            config_json = json.dumps(_build_datalayer_config(), indent=2)
+            script_tag = (
+                '<script id="datalayer-config-data" type="application/json">\n'
+                f"{config_json}\n"
+                "    </script>"
+            )
+            if _config_tag_re.search(html):
+                return _config_tag_re.sub(script_tag, html, count=1)
+            head_match = _head_open_re.search(html)
+            if head_match:
+                idx = head_match.end()
+                return f"{html[:idx]}\n    {script_tag}{html[idx:]}"
+            return f"{script_tag}\n{html}"
+
+        def _make_page_handler(page_name: str) -> Any:
+            async def _handler() -> HTMLResponse:
+                page_path = _dist_dir / page_name
+                if not page_path.is_file():
+                    return HTMLResponse(status_code=404, content="Not found")
+                return HTMLResponse(_render_page_with_config(page_path))
+
+            return _handler
+
+        # Explicit routes for the built agent HTML entry pages. Registered
+        # BEFORE the StaticFiles mounts so they take precedence for these
+        # specific files while the mounts keep serving JS/CSS/asset bundles.
+        for _page in (
+            "agent-node.html",
+            "agent.html",
+            "agent-notebook.html",
+            "agent-document.html",
+            "index.html",
+        ):
+            _page_handler = _make_page_handler(_page)
+            app.add_api_route(
+                f"/html/{_page}", _page_handler, methods=["GET"], include_in_schema=False
+            )
+            app.add_api_route(
+                f"/static/{_page}",
+                _page_handler,
+                methods=["GET"],
+                include_in_schema=False,
+            )
+
         # Mount AFTER all API routes so it never shadows them.
         # html=True enables serving index.html for directory requests.
         app.mount(

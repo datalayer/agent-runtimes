@@ -62,6 +62,7 @@ def _state_path() -> Path:
 _LOCK = threading.Lock()
 _MODE_CHANGE_CALLBACKS: list[Any] = []
 _CREDENTIALS_CHANGE_CALLBACKS: list[Any] = []
+_CONFIGURATION_CHANGE_CALLBACKS: list[Any] = []
 
 
 # In-process credentials supplied by the Agent Node UI after the user signs in.
@@ -88,6 +89,11 @@ def register_credentials_change_callback(callback: Any) -> None:
     _CREDENTIALS_CHANGE_CALLBACKS.append(callback)
 
 
+def register_configuration_change_callback(callback: Any) -> None:
+    """Register a callable invoked whenever persisted configuration changes."""
+    _CONFIGURATION_CHANGE_CALLBACKS.append(callback)
+
+
 def _notify_mode_change(new_mode: str) -> None:
     for callback in list(_MODE_CHANGE_CALLBACKS):
         try:
@@ -102,6 +108,14 @@ def _notify_credentials_change() -> None:
             callback()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Credentials change callback failed: %s", exc)
+
+
+def _notify_configuration_change() -> None:
+    for callback in list(_CONFIGURATION_CHANGE_CALLBACKS):
+        try:
+            callback()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Configuration change callback failed: %s", exc)
 
 
 def get_runtime_credentials() -> dict[str, str | None]:
@@ -182,6 +196,7 @@ def set_agent_node_configuration(
     """
     global _CURRENT_CONFIGURATION
     with _LOCK:
+        previous = _CURRENT_CONFIGURATION
         merged = configuration.model_copy(
             update={
                 "node_uid": _CURRENT_CONFIGURATION.node_uid,
@@ -196,9 +211,12 @@ def set_agent_node_configuration(
         previous_mode = _CURRENT_CONFIGURATION.mode
         _CURRENT_CONFIGURATION = merged
         _write_to_disk(merged)
+        configuration_changed = merged != previous
         mode_changed = merged.mode != previous_mode
     if mode_changed:
         _notify_mode_change(merged.mode)
+    if configuration_changed:
+        _notify_configuration_change()
     return _CURRENT_CONFIGURATION
 
 
@@ -276,6 +294,7 @@ def set_active_agent_id(agent_id: str | None) -> AgentNodeConfiguration:
             update={"active_agent_id": cleaned}
         )
         _write_to_disk(_CURRENT_CONFIGURATION)
+    _notify_configuration_change()
     return _CURRENT_CONFIGURATION
 
 

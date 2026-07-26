@@ -42,6 +42,8 @@ export type AgentNodeGalleryProps = {
   activeAgentId?: string | null;
   /** Called with the launched agent id once it is running and set active. */
   onLaunched: (agentId: string) => void;
+  /** Optional callback used by parent to display launch errors (e.g. toast). */
+  onLaunchError?: (message: string) => void;
 };
 
 const GRID_TEMPLATE = ['1fr', '1fr 1fr', '1fr 1fr 1fr'];
@@ -58,6 +60,7 @@ export function AgentNodeGallery({
   token,
   activeAgentId,
   onLaunched,
+  onLaunchError,
 }: AgentNodeGalleryProps): JSX.Element {
   const [specs, setSpecs] = useState<AgentspecSummary[]>([]);
   const [running, setRunning] = useState<RunningAgent[]>([]);
@@ -132,23 +135,56 @@ export function AgentNodeGallery({
         // not spawn duplicates on the node.
         let agentId = runningBySpec.get(spec.id) || null;
         if (!agentId) {
+          const requestedName = spec.id;
           const createResponse = await fetch(`${baseUrl}/api/v1/agents`, {
             method: 'POST',
             headers: authHeaders,
-            body: JSON.stringify({ agent_spec_id: spec.id }),
+            // Keep local node launches aligned with the working examples:
+            // POST /api/v1/agents requires `name` and optionally agent_spec_id.
+            body: JSON.stringify({
+              name: requestedName,
+              agent_spec_id: spec.id,
+            }),
           });
-          if (!createResponse.ok) {
+          if (!createResponse.ok && createResponse.status === 409) {
+            // If the named agent already exists, reload running agents and try
+            // to reuse the matching instance instead of failing the launch.
+            const reloadResponse = await fetch(`${baseUrl}/api/v1/agents`, {
+              headers: authHeaders,
+            });
+            if (reloadResponse.ok) {
+              const reloadPayload = await reloadResponse
+                .json()
+                .catch(() => null);
+              const nextRunning: RunningAgent[] = Array.isArray(reloadPayload)
+                ? reloadPayload
+                : reloadPayload?.agents || reloadPayload?.items || [];
+              setRunning(nextRunning);
+              const existing = nextRunning.find(candidate => {
+                const candidateId = candidate.agent_id || candidate.id || '';
+                return (
+                  candidate.agent_spec_id === spec.id ||
+                  candidate.name === requestedName ||
+                  candidateId === requestedName
+                );
+              });
+              agentId = existing?.agent_id || existing?.id || null;
+            }
+          }
+          if (!createResponse.ok && !agentId) {
             throw new Error(
               `Failed to launch agent (${createResponse.status})`,
             );
           }
-          const createPayload = await createResponse.json().catch(() => null);
-          agentId =
-            createPayload?.agent_id ||
-            createPayload?.id ||
-            createPayload?.agent?.agent_id ||
-            createPayload?.agent?.id ||
-            null;
+          if (!agentId && createResponse.ok) {
+            const createPayload = await createResponse.json().catch(() => null);
+            agentId =
+              createPayload?.agent_id ||
+              createPayload?.id ||
+              createPayload?.agent?.agent_id ||
+              createPayload?.agent?.id ||
+              null;
+          }
         }
         if (!agentId) {
           throw new Error('Launch did not return an agent id.');
@@ -168,12 +204,14 @@ export function AgentNodeGallery({
         }
         onLaunched(agentId);
       } catch (reason: any) {
-        setError(reason?.message || 'Unable to launch agent.');
+        const message = reason?.message || 'Unable to launch agent.';
+        setError(message);
+        onLaunchError?.(message);
       } finally {
         setLaunchingId(null);
       }
     },
-    [authHeaders, baseUrl, onLaunched, runningBySpec],
+    [authHeaders, baseUrl, onLaunched, onLaunchError, runningBySpec],
   );
 
   if (loading) {
