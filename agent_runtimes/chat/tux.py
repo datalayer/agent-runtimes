@@ -519,7 +519,7 @@ class CliTux:
         footer_right = Text(" Cheaper • Faster • Collaborative", style=STYLE_MUTED)
 
         # Create the main panel
-        title = f" LOOP ⟳ {version} "
+        title = f" ☰ LOOP ⟳ {version} "
 
         content = Group(
             Columns([left_panel, right_panel], equal=False, expand=True),

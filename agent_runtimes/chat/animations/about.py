@@ -108,7 +108,7 @@ async def about_animation(console: Console) -> None:
         return Panel(
             initial,
             border_style=STYLE_PRIMARY,
-            title=" LOOP ⟳ 0.0.2 ",
+            title=" ☰ LOOP ⟳ 0.0.2 ",
             subtitle="",
         )
 
@@ -137,7 +137,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -175,7 +175,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -198,7 +198,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -221,7 +221,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -244,7 +244,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -322,7 +322,7 @@ async def about_animation(console: Console) -> None:
                             Panel(
                                 frame,
                                 border_style=STYLE_PRIMARY,
-                                title=" LOOP ⟳ 0.0.2 ",
+                                title=" ☰ LOOP ⟳ 0.0.2 ",
                                 subtitle="",
                             )
                         )
