@@ -36,6 +36,15 @@ class AgentNodeConfiguration(BaseModel):
     billing_entity_type: str | None = None
     billing_entity_handle: str | None = None
     sharing: dict[str, Any] = Field(default_factory=dict)
+    # Id of the agent chosen from the gallery and launched on this node. The
+    # tunnel routes incoming chat requests to this agent by default so remote
+    # prompts (from the main UI) reach the agent the user selected.
+    active_agent_id: str | None = None
+    # Spacer document (notebook) uid used as the shared RTC collaboration room
+    # for the ephemeral notebook. Provisioned once, after the node registers and
+    # the user has signed in, so the node-local UI and the SaaS gallery view
+    # join the same room. Owned/persisted by the node like ``node_uid``.
+    collaboration_notebook_uid: str | None = None
 
 
 def _state_path() -> Path:
@@ -169,7 +178,12 @@ def set_agent_node_configuration(
     global _CURRENT_CONFIGURATION
     with _LOCK:
         merged = configuration.model_copy(
-            update={"node_uid": _CURRENT_CONFIGURATION.node_uid}
+            update={
+                "node_uid": _CURRENT_CONFIGURATION.node_uid,
+                "collaboration_notebook_uid": (
+                    _CURRENT_CONFIGURATION.collaboration_notebook_uid
+                ),
+            }
         )
         previous_mode = _CURRENT_CONFIGURATION.mode
         _CURRENT_CONFIGURATION = merged
@@ -196,6 +210,46 @@ def set_agent_node_uid(node_uid: str) -> AgentNodeConfiguration:
     return _CURRENT_CONFIGURATION
 
 
+def set_collaboration_notebook_uid(notebook_uid: str) -> AgentNodeConfiguration:
+    """Persist the spacer notebook uid used as the RTC collaboration room.
+
+    Provisioned once after the node registers and credentials are available.
+    A no-op when the uid is unchanged so repeated sync ticks do not rewrite
+    the on-disk state.
+    """
+    global _CURRENT_CONFIGURATION
+    cleaned = (notebook_uid or "").strip()
+    if not cleaned:
+        return _CURRENT_CONFIGURATION
+    with _LOCK:
+        if _CURRENT_CONFIGURATION.collaboration_notebook_uid == cleaned:
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={"collaboration_notebook_uid": cleaned}
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    return _CURRENT_CONFIGURATION
+
+
+def set_active_agent_id(agent_id: str | None) -> AgentNodeConfiguration:
+    """Persist the id of the agent chosen from the gallery on this node.
+
+    The tunnel routes remote chat requests to this agent by default, so
+    updating it re-points prompts coming from the main UI to the newly
+    launched agent without rewriting the rest of the configuration.
+    """
+    global _CURRENT_CONFIGURATION
+    cleaned = (agent_id or "").strip() or None
+    with _LOCK:
+        if _CURRENT_CONFIGURATION.active_agent_id == cleaned:
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={"active_agent_id": cleaned}
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    return _CURRENT_CONFIGURATION
+
+
 @router.get("/configuration")
 def get_configuration_endpoint() -> dict[str, Any]:
     return {
@@ -212,6 +266,29 @@ def set_configuration_endpoint(body: AgentNodeConfiguration) -> dict[str, Any]:
         "success": True,
         "message": "Agent node configuration updated",
         "configuration": updated.model_dump(),
+    }
+
+
+class AgentNodeActiveAgentBody(BaseModel):
+    agent_id: str | None = None
+
+
+@router.get("/active-agent")
+def get_active_agent_endpoint() -> dict[str, Any]:
+    return {
+        "success": True,
+        "message": "Active agent loaded",
+        "active_agent_id": get_agent_node_configuration().active_agent_id,
+    }
+
+
+@router.post("/active-agent")
+def set_active_agent_endpoint(body: AgentNodeActiveAgentBody) -> dict[str, Any]:
+    updated = set_active_agent_id(body.agent_id)
+    return {
+        "success": True,
+        "message": "Active agent updated",
+        "active_agent_id": updated.active_agent_id,
     }
 
 

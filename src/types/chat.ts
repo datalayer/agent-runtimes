@@ -10,6 +10,7 @@
  */
 
 import type { ComponentType, ReactNode } from 'react';
+import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import type { ChatMessage, MessageHandler } from './messages';
 import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
@@ -485,6 +486,21 @@ export interface ChatCommonProps {
    * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
    */
   ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
+
+  /**
+   * Optional real-time collaboration provider for the ephemeral notebook.
+   * When supplied, the notebook joins a shared collaborative room so its state
+   * transits over RTC (e.g. between an Agent Node and the SaaS UI) instead of
+   * the tunnel. The caller owns the provider lifecycle.
+   */
+  ephemeralNotebookCollaborationProvider?: ICollaborationProvider;
+
+  /**
+   * Explicit collaboration room / document id for the ephemeral notebook. When
+   * set it becomes the notebook id directly so multiple peers (e.g. an Agent
+   * Node and the SaaS UI) share the same collaborative room and tool scope.
+   */
+  ephemeralNotebookCollaborationDocumentId?: string;
 
   /** Pre-hook: fires when a tool call starts executing */
   onToolCallStart?: (context: ToolCallStartContext) => void;
@@ -1008,6 +1024,21 @@ export interface ChatBaseProps {
    * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
    */
   ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
+
+  /**
+   * Optional real-time collaboration provider for the ephemeral notebook.
+   * When supplied, the notebook joins a shared collaborative room so its state
+   * transits over RTC (e.g. between an Agent Node and the SaaS UI) instead of
+   * the tunnel. The caller owns the provider lifecycle.
+   */
+  ephemeralNotebookCollaborationProvider?: ICollaborationProvider;
+
+  /**
+   * Explicit collaboration room / document id for the ephemeral notebook. When
+   * set it becomes the notebook id directly so multiple peers (e.g. an Agent
+   * Node and the SaaS UI) share the same collaborative room and tool scope.
+   */
+  ephemeralNotebookCollaborationDocumentId?: string;
 
   // ============ Identity/Authorization Support ============
 

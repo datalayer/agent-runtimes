@@ -19,6 +19,7 @@ from ..routes.agent_node import (
     register_mode_change_callback,
     set_agent_node_uid,
 )
+from .agent_node_collaboration import ensure_collaboration_room
 from .agent_node_health import collect_health
 
 logger = logging.getLogger(__name__)
@@ -214,6 +215,9 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
             try:
                 node_id = await _register(client)
                 if node_id:
+                    # Provision (once) the shared spacer notebook room so the
+                    # heartbeat below carries its uid to the central service.
+                    await ensure_collaboration_room(node_id)
                     await _heartbeat(client, node_id)
                     now = loop.time()
                     needs_health = (

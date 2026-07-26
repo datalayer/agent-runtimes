@@ -8,7 +8,7 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
+	examples examples\:prod examples\:proxy examples-proxy agent agent-nodes agent-nodes\:proxy agent-nodes-proxy agent-nodes-local agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	specs-sandbox-variants \
@@ -291,6 +291,23 @@ agent-nodes\:proxy: ## agent-nodes:proxy – Agent Node dev against local `plane
 		npm run start:agent-node
 
 agent-nodes-proxy: agent-nodes\:proxy ## alias for agent-nodes:proxy
+
+agent-nodes-local: ## agent-nodes-local – run a real Agent Node (Python server + built UI) against `plane local` services; registers to runtimes ($(PLANE_LOCAL_RUNTIMES_URL)) with heartbeat/health, then evicted when stopped
+	@if [ ! -d dist ] && [ ! -d agent_runtimes/static/dist ]; then \
+		echo "No built frontend found — running 'npm run build' first (one-time)..."; \
+		$(MAKE) build; \
+	fi
+	@echo ""
+	@echo "Starting local Agent Node at http://localhost:8765"
+	@echo "Registering to local runtimes: $(PLANE_LOCAL_RUNTIMES_URL)"
+	@echo "Prerequisite: run 'plane local' in another terminal so IAM ($(PLANE_LOCAL_IAM_URL)) and runtimes ($(PLANE_LOCAL_RUNTIMES_URL)) are up."
+	@echo "Stop with Ctrl-C — the node stops sending health and is evicted from the runtimes registry."
+	@echo ""
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_PROXY_ENV) \
+	AGENT_RUNTIMES_NODE=true \
+	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
+		python -m agent_runtimes serve --node --host 0.0.0.0 --port 8765 --log-level info
 
 agent-notebook: # agent-notebook - open agent-notebook.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent-notebook

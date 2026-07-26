@@ -123,6 +123,22 @@ export interface ChatProps extends ChatCommonProps {
   /** Base URL of the server (for HTTP-based protocols) */
   baseUrl?: string;
 
+  /**
+   * Explicit endpoint URL override. When set, it is used verbatim instead of
+   * deriving `${baseUrl}${getEndpointPath(protocol, agentId)}`. Useful for
+   * proxied endpoints such as the Agent Node tunnel proxy.
+   */
+  endpoint?: string;
+
+  /**
+   * Explicit config endpoint override. When provided (including `null`/empty
+   * to disable), it replaces the default `${baseUrl}/api/v1/configure`.
+   */
+  configEndpoint?: string;
+
+  /** Override whether the protocol queries the backend for models/tools. */
+  enableConfigQuery?: boolean;
+
   /** WebSocket URL (for WebSocket-based protocols like ACP) */
   wsUrl?: string;
 
@@ -226,6 +242,9 @@ export function Chat({
   protocol: transport,
   extensions: _extensions,
   baseUrl = 'http://localhost:8765',
+  endpoint: endpointProp,
+  configEndpoint: configEndpointProp,
+  enableConfigQuery: enableConfigQueryProp,
   wsUrl,
   agentId,
   authToken: authTokenProp,
@@ -287,6 +306,8 @@ export function Chat({
   collapsed = false,
   onExpandFromCollapsed,
   ephemeralNotebookToolbar,
+  ephemeralNotebookCollaborationProvider,
+  ephemeralNotebookCollaborationDocumentId,
   onToolCallStart,
   onToolCallComplete,
   renderToolResult,
@@ -400,6 +421,11 @@ export function Chat({
         }
       }
 
+      // Explicit endpoint override (e.g. Agent Node tunnel proxy).
+      if (endpointProp) {
+        endpoint = endpointProp;
+      }
+
       return {
         config: {
           type: getProtocolType(transport),
@@ -408,13 +434,15 @@ export function Chat({
           authToken,
           options,
           // Enable config query for all protocols to fetch models and tools
-          enableConfigQuery: true,
+          enableConfigQuery: enableConfigQueryProp ?? true,
           // For Jupyter-based transports, use Jupyter requestAPI (configEndpoint undefined)
           // For FastAPI-based transports, use direct fetch to the configure endpoint
           configEndpoint:
-            transport === 'vercel-ai-jupyter'
-              ? undefined // Use Jupyter requestAPI
-              : `${baseUrl}/api/v1/configure`,
+            configEndpointProp !== undefined
+              ? configEndpointProp
+              : transport === 'vercel-ai-jupyter'
+                ? undefined // Use Jupyter requestAPI
+                : `${baseUrl}/api/v1/configure`,
         },
         error: null,
       };
@@ -425,7 +453,16 @@ export function Chat({
         error: err instanceof Error ? err.message : 'Failed to configure',
       };
     }
-  }, [transport, baseUrl, wsUrl, resolvedAgentId, authTokenProp]);
+  }, [
+    transport,
+    baseUrl,
+    wsUrl,
+    resolvedAgentId,
+    authTokenProp,
+    endpointProp,
+    configEndpointProp,
+    enableConfigQueryProp,
+  ]);
 
   const protocolConfig = protocolConfigResult.config;
 
@@ -686,6 +723,12 @@ export function Chat({
               collapsed={collapsed}
               onExpandFromCollapsed={onExpandFromCollapsed}
               ephemeralNotebookToolbar={ephemeralNotebookToolbar}
+              ephemeralNotebookCollaborationProvider={
+                ephemeralNotebookCollaborationProvider
+              }
+              ephemeralNotebookCollaborationDocumentId={
+                ephemeralNotebookCollaborationDocumentId
+              }
               onToolCallStart={onToolCallStart}
               onToolCallComplete={onToolCallComplete}
               renderToolResult={renderToolResult}

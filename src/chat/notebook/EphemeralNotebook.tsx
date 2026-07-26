@@ -39,6 +39,7 @@ import {
   notebookStore,
   disposeServiceManager,
 } from '@datalayer/jupyter-react';
+import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
 import { useProgressTask } from '../../hooks/useProgressTask';
@@ -86,6 +87,14 @@ export interface EphemeralNotebookProps {
   onNbformatChange?: (content: INotebookContent) => void;
   /** Optional toolbar component override. */
   toolbarComponent?: EphemeralNotebookToolbarComponent;
+  /**
+   * Optional real-time collaboration provider. When supplied, the notebook
+   * joins a shared collaborative room (the ydoc becomes the source of truth)
+   * and the local in-memory persistence poll is disabled. This is how a node's
+   * notebook state transits to the SaaS UI (and back) over RTC instead of the
+   * tunnel.
+   */
+  collaborationProvider?: ICollaborationProvider;
 }
 
 /**
@@ -98,6 +107,7 @@ export function EphemeralNotebook({
   nbformat,
   onNbformatChange,
   toolbarComponent,
+  collaborationProvider,
 }: EphemeralNotebookProps) {
   // The `nbformat` passed to the `Notebook` component MUST stay a stable
   // reference for the lifetime of a given `notebookId`: the underlying
@@ -235,6 +245,12 @@ export function EphemeralNotebook({
   useProgressTask(`ephemeral-notebook-start-${notebookId}`, isRuntimeStarting);
 
   useEffect(() => {
+    // When a collaboration provider is active the shared ydoc is the single
+    // source of truth and is synced remotely; the local in-memory persistence
+    // poll would fight it, so it is disabled in that mode.
+    if (collaborationProvider) {
+      return;
+    }
     // Read the CURRENT live notebook model straight from the notebook store.
     // The `NotebookAdapter` exposes `notebook` (the widget, whose `.model` is
     // the `INotebookModel`) and `panel` (`panel.content.model`). There is NO
@@ -360,6 +376,7 @@ export function EphemeralNotebook({
                 cellSidebarMargin={cellSidebarMargin}
                 extensions={extensions}
                 Toolbar={ToolbarComponent}
+                collaborationProvider={collaborationProvider}
               />
             </Box>
           </JupyterReactTheme>

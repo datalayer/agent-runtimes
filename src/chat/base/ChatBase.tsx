@@ -781,6 +781,8 @@ function ChatBaseInner({
   collapsed = false,
   onExpandFromCollapsed,
   ephemeralNotebookToolbar,
+  ephemeralNotebookCollaborationProvider,
+  ephemeralNotebookCollaborationDocumentId,
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
@@ -838,9 +840,16 @@ function ChatBaseInner({
   // agent id. This keeps the persisted notebook model addressable by the same
   // key when navigating away from and back to the same runtime page.
   const notebookScopeId = runtimeId || protocolConfig?.agentId || activeAgentId;
-  const ephemeralNotebookId = notebookScopeId
-    ? `ephemeral-notebook-${notebookScopeId}`
-    : generatedNotebookIdRef.current;
+  // When an explicit collaboration document id is supplied (e.g. an Agent Node
+  // sharing a room with the SaaS UI), it becomes the notebook id directly so
+  // BOTH peers join the same collaborative room AND the agent's notebook tools
+  // (scoped by this same id) drive the shared notebook. Otherwise fall back to
+  // the derived, per-runtime in-memory id.
+  const ephemeralNotebookId =
+    ephemeralNotebookCollaborationDocumentId ||
+    (notebookScopeId
+      ? `ephemeral-notebook-${notebookScopeId}`
+      : generatedNotebookIdRef.current);
   const persistedEphemeralNbformat = useAgentRuntimeStore(s =>
     s.getEphemeralNotebookModel(ephemeralNotebookId),
   );
@@ -3968,6 +3977,7 @@ function ChatBaseInner({
                 nbformat={persistedEphemeralNbformat ?? undefined}
                 onNbformatChange={handleEphemeralNotebookChange}
                 toolbarComponent={ephemeralNotebookToolbar}
+                collaborationProvider={ephemeralNotebookCollaborationProvider}
               />
             ) : (
               <React.Suspense fallback={null}>

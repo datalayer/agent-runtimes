@@ -35,6 +35,7 @@ import {
   PeopleIcon,
   PersonIcon,
   GearIcon,
+  RocketIcon,
   SignInIcon,
   SignOutIcon,
   type Icon as OcticonIcon,
@@ -49,7 +50,9 @@ import {
 } from '@datalayer/core/lib/components/billing';
 import { ShareAccessComponent } from '@datalayer/core/lib/components/sharing';
 import { useAgentNodeThemeStore } from './agent-node/themeStore';
+import { AgentNodeGallery } from './agent-node/AgentNodeGallery';
 import { Chat } from './chat';
+import { DatalayerCollaborationProvider } from './collaboration';
 
 import '../style/primer-primitives.css';
 
@@ -62,7 +65,7 @@ const AGENT_RUNTIMES_BASE_URL = (
 ).replace(/\/$/, '');
 
 type AgentNodeMode = 'private' | 'shared' | 'sleep';
-type Step = 'auth' | 'config' | 'chat' | 'profile';
+type Step = 'auth' | 'config' | 'gallery' | 'chat' | 'profile';
 
 type ModeCard = {
   mode: AgentNodeMode;
@@ -102,6 +105,8 @@ type AgentNodeConfiguration = {
   billing_entity_type?: string;
   billing_entity_handle?: string;
   sharing: Record<string, any>;
+  active_agent_id?: string;
+  collaboration_notebook_uid?: string;
 };
 
 const DEFAULT_CONFIGURATION: AgentNodeConfiguration = {
@@ -285,6 +290,7 @@ export function AgentNode() {
   const authGradient = cfg.cardGradient[resolvedMode];
 
   const [step, setStep] = useState<Step>('auth');
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('default');
   const [disableAutoBootstrap, setDisableAutoBootstrap] = useState(false);
   const [configuration, setConfiguration] = useState<AgentNodeConfiguration>(
     DEFAULT_CONFIGURATION,
@@ -294,6 +300,27 @@ export function AgentNode() {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Ephemeral notebook RTC (shared room with the SaaS UI) ───────────────
+  // The node provisions a spacer notebook room on registration and stores its
+  // uid in the configuration. When present, both the node-local chat and the
+  // SaaS gallery view join that room so the agent's notebook edits transit via
+  // RTC instead of the tunnel. Absent (e.g. before sign-in) the ephemeral
+  // notebook stays in-memory, unchanged.
+  const ephemeralCollaborationDocumentId =
+    token && configuration.collaboration_notebook_uid
+      ? configuration.collaboration_notebook_uid
+      : undefined;
+  const ephemeralNotebookCollaborationProvider = useMemo(() => {
+    if (!ephemeralCollaborationDocumentId || !token) {
+      return undefined;
+    }
+    const datalayerUrl =
+      (import.meta as any).env?.VITE_DATALAYER_URL ||
+      'https://prod1.datalayer.run';
+    return new DatalayerCollaborationProvider({ datalayerUrl, token });
+  }, [ephemeralCollaborationDocumentId, token]);
+
   const [inferenceProvider, setInferenceProvider] =
     useState<InferenceProvider>('datalayer');
   const [inferenceModels, setInferenceModels] = useState<string[]>([]);
@@ -415,6 +442,9 @@ export function AgentNode() {
           ...(payload?.configuration || {}),
         };
         setConfiguration(loadedConfiguration);
+        if (loadedConfiguration.active_agent_id) {
+          setSelectedAgentId(loadedConfiguration.active_agent_id);
+        }
       } catch {
         // Ignore initial-load failures in local development.
       }
@@ -604,7 +634,10 @@ export function AgentNode() {
   }, [token, step]);
 
   useEffect(() => {
-    if (step === 'chat' && configuration.mode !== 'private') {
+    if (
+      (step === 'chat' || step === 'gallery') &&
+      configuration.mode !== 'private'
+    ) {
       setStep('config');
     }
   }, [step, configuration.mode]);
@@ -690,9 +723,12 @@ export function AgentNode() {
         ...(payload?.configuration || {}),
       };
       setConfiguration(saved);
+      if (saved.active_agent_id) {
+        setSelectedAgentId(saved.active_agent_id);
+      }
       showBanner('success', 'Agent Node configuration saved.');
       if (saved.mode === 'private') {
-        setStep('chat');
+        setStep('gallery');
       }
     } catch (reason: any) {
       const message = reason?.message || 'Unable to save configuration.';
@@ -706,7 +742,8 @@ export function AgentNode() {
   const isStepEnabled = (nextStep: Step) => {
     if (nextStep === 'auth') return true;
     if (!token) return false;
-    if (nextStep === 'chat') return configuration.mode === 'private';
+    if (nextStep === 'chat' || nextStep === 'gallery')
+      return configuration.mode === 'private';
     return true;
   };
 
@@ -783,6 +820,11 @@ export function AgentNode() {
                           entryStep="chat"
                           label="Chat"
                           leadingVisual={CommentIcon}
+                        />
+                        <StepEntry
+                          entryStep="gallery"
+                          label="Agents"
+                          leadingVisual={RocketIcon}
                         />
                         <StepEntry
                           entryStep="config"
@@ -1222,6 +1264,22 @@ export function AgentNode() {
 
             {step === 'profile' && <AgentNodeProfileView token={token} />}
 
+            {step === 'gallery' && (
+              <AgentNodeGallery
+                baseUrl={AGENT_RUNTIMES_BASE_URL}
+                token={token}
+                activeAgentId={configuration.active_agent_id}
+                onLaunched={agentId => {
+                  setSelectedAgentId(agentId);
+                  setConfiguration(prev => ({
+                    ...prev,
+                    active_agent_id: agentId,
+                  }));
+                  setStep('chat');
+                }}
+              />
+            )}
+
             {step === 'chat' && (
               <Box
                 sx={{
@@ -1234,7 +1292,7 @@ export function AgentNode() {
                 <Chat
                   protocol="ag-ui"
                   baseUrl={AGENT_RUNTIMES_BASE_URL}
-                  agentId="default"
+                  agentId={selectedAgentId}
                   title="Agent Node Chat"
                   placeholder="Send a message..."
                   description="Node-local chat"
@@ -1246,7 +1304,15 @@ export function AgentNode() {
                   showTokenUsage={true}
                   showInformation={true}
                   autoFocus
-                  runtimeId="default"
+                  enableEphemeralNotebook
+                  enableEphemeralDocument
+                  runtimeId={selectedAgentId}
+                  ephemeralNotebookCollaborationProvider={
+                    ephemeralNotebookCollaborationProvider
+                  }
+                  ephemeralNotebookCollaborationDocumentId={
+                    ephemeralCollaborationDocumentId
+                  }
                   historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
                 />
               </Box>

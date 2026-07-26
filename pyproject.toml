@@ -43,7 +43,7 @@ dependencies = [
     "httpx>=0.28.0",
     "google-auth>=2.52.0",
     "google-api-core>=2.30.3",
-    "jupyter-kernel-client>=0.0.9",
+    "jupyter-kernel-client>=1.0.0",
     "nbformat",
     "jupyter-server>=2.10,<3",
     "logfire>=4.32.1",

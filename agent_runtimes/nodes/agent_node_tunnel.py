@@ -183,6 +183,24 @@ def _extract_prompt(chat_payload: dict[str, Any]) -> str:
     return ""
 
 
+def _resolve_default_agent_id() -> str:
+    """Return the agent id the tunnel should route chat requests to by default.
+
+    Prefers the agent chosen from the gallery and persisted in the node
+    configuration (``active_agent_id``), then falls back to the
+    ``AGENT_NODE_AGENT_ID`` environment variable, then ``"default"``.
+    """
+    try:
+        from ..routes.agent_node import get_agent_node_configuration
+
+        active = (get_agent_node_configuration().active_agent_id or "").strip()
+        if active:
+            return active
+    except Exception:  # noqa: BLE001 - config is best-effort here
+        pass
+    return (os.environ.get("AGENT_NODE_AGENT_ID") or "default").strip()
+
+
 async def _run_local_chat_request(chat_payload: dict[str, Any]) -> dict[str, Any]:
     """Execute a tunneled chat payload against the local registered agent."""
     from ..adapters.base import AgentContext
@@ -193,7 +211,7 @@ async def _run_local_chat_request(chat_payload: dict[str, Any]) -> dict[str, Any
         raise ValueError("Missing prompt text in tunneled chat request")
 
     requested_agent_id = str(chat_payload.get("agent_id") or "").strip()
-    default_agent_id = (os.environ.get("AGENT_NODE_AGENT_ID") or "default").strip()
+    default_agent_id = _resolve_default_agent_id()
     agent_id = requested_agent_id or default_agent_id
 
     adapter_entry = _agents.get(agent_id)

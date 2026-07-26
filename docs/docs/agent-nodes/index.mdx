@@ -53,6 +53,92 @@ If you are operating a Dockerized node, the local entrypoint is typically
 6. **One docker image** launches `agent-runtimes` + Agent Node UI supporting
    all three modes.
 
+## System Architecture
+
+An Agent Node never exposes an inbound port to the internet. Instead it dials
+**out** to Datalayer Runtimes and holds a persistent WebSocket tunnel. All
+control (register/heartbeat/health) and data (chat) traffic flows through
+that outbound connection, brokered by the central service.
+
+```
+                         Datalayer Runtimes (control plane + hub)
+                         ┌──────────────────────────────────────┐
+   Central UI (SaaS,     │  registry (_REGISTRY)                 │
+   VS Code, JupyterLab)  │  tunnels  (_TUNNELS)                  │
+        │                │                                      │
+        │ 1. POST .../{node_id}/ag-ui (RunAgentInput)           │
+        ▼                │                                      │
+   ┌─────────┐  AG-UI    │  ┌────────────┐   queue    ┌───────┐ │        ┌──────────────┐
+   │  Chat   │──SSE──────┼─▶│ ag-ui proxy│──────────▶ │tunnel │ │  WS    │  Agent Node  │
+   │  view   │◀──────────┼──│  endpoint  │◀────────── │ state │◀┼════════│ (agent-      │
+   └─────────┘  events   │  └────────────┘  reverse   └───────┘ │ outbound│  runtimes)   │
+                         │                   events             │  dial   └──────┬───────┘
+                         └──────────────────────────────────────┘                │
+                                                                          active agent
+                                                                        (ephemeral nb/doc)
+```
+
+### Registration & health (control plane)
+
+The node's background sync task dials the central service and keeps the
+registry fresh:
+
+1. `POST /register` (no `node_id` on first call) → service mints a ULID and
+   returns it; node persists it as `node_uid`.
+2. `POST /heartbeat` and `POST /health` on a cadence, plus an immediate
+   `health` on any mode change.
+3. Missing beacons → node marked **stale**, then **evicted** from
+   `_REGISTRY` after `DATALAYER_AGENT_NODE_EVICT_SECONDS` (its `_TUNNELS`
+   entry is discarded too).
+
+### The tunnel (data plane)
+
+The tunnel is a per-node, owner-scoped **request/response** channel held in
+`_TUNNELS` as a `TunnelState`:
+
+- `queue_to_node` — messages waiting to be delivered to the node.
+- `reverse_events` — a bounded deque of events coming back from the node.
+- `connected` / `last_seen_at` — liveness for the WebSocket.
+
+The node connects `GET .../tunnel/ws` and pumps both directions:
+
+1. UI/proxy enqueues `{type: "chat.request", payload, request_id}` →
+   appended to `queue_to_node` and recorded as a `ui_to_node` event.
+2. The node's WS loop receives `{"type": "ui_message", request_id, payload}`,
+   runs the request against its **active agent** (`_resolve_default_agent_id`)
+   using an ephemeral notebook/document, and replies with
+   `{"type": "chat.response", request_id, payload: {text, usage, metadata}}`
+   (or `chat.error`).
+3. The server WS handler appends that reply as a `node_to_ui` reverse event
+   carrying the same `request_id`.
+
+Correlation is by `request_id`, so concurrent chats over one tunnel do not
+cross wires.
+
+### The AG-UI proxy (protocol bridge)
+
+The tunnel is request/response, but chat clients speak streaming **AG-UI SSE**.
+`POST /api/runtimes/v1/agent-nodes/{node_id}/ag-ui` bridges the two so the
+central Chat view can point at a normal endpoint URL — no client awareness of
+the tunnel required:
+
+1. Authenticate the caller and resolve a **visible** node (`404` if none,
+   `409` if the node is in `sleep` mode).
+2. Parse the `RunAgentInput` body (`threadId`, `runId`, `messages`), extract
+   the prompt, and enqueue a `chat.request` on the tunnel with a fresh
+   `request_id`.
+3. Return a `StreamingResponse` (`text/event-stream`) that immediately emits
+   `RUN_STARTED`, then `_await_tunnel_response()` polls `reverse_events` for a
+   matching `node_to_ui` reply.
+4. On success, wrap the returned text as one `TEXT_MESSAGE_START` /
+   `TEXT_MESSAGE_CONTENT` (`delta = text`) / `TEXT_MESSAGE_END`, then
+   `RUN_FINISHED`. On `chat.error` or a
+   `DATALAYER_AGENT_NODE_AGUI_TIMEOUT_SECONDS` timeout, emit `RUN_ERROR`.
+
+The same node also serves **node-local** chat directly from its own UI; both
+paths target the node's active agent, so behaviour is identical whether the
+prompt arrives over the tunnel or locally.
+
 ## Modes
 
 | Mode      | Purpose                                                     |
@@ -107,6 +193,7 @@ registry reflects the new state immediately.
 {
   "mode": "private",            // private | shared | sleep
   "node_uid": "01JABCDE...",    // ULID assigned by central service
+  "active_agent_id": "default", // agent selected in the gallery to serve chat
   "billing_entity_uid": "...",
   "billing_entity_type": "...",
   "billing_entity_handle": "...",
@@ -181,6 +268,9 @@ when the new mode differs from the persisted one.
 - `POST /api/v1/agent-node/configuration` — replace configuration. The
   `node_uid` is owned by the central service and is **never** overwritten
   by this endpoint; only `set_agent_node_uid()` updates it.
+- `GET  /api/v1/agent-node/active-agent` — read the node's active agent id.
+- `POST /api/v1/agent-node/active-agent` — set the active agent id (the
+  agent that chat sessions target). Persisted in the node configuration.
 - `GET  /api/v1/configure/inference/provider` — read effective runtime
    inference provider (`local | datalayer`).
 - `PUT  /api/v1/configure/inference/provider` — update runtime inference
@@ -201,8 +291,25 @@ when the new mode differs from the persisted one.
 - `GET  /api/runtimes/v1/agent-nodes` — list visible nodes (own + others
   shared).
 - `GET  /api/runtimes/v1/agent-nodes/{node_id}` — fetch one node.
+- `POST /api/runtimes/v1/agent-nodes/{node_id}/ag-ui` — AG-UI compatible
+  chat proxy. Accepts a standard `RunAgentInput` body, forwards the prompt
+  over the tunnel to the node's active agent, and streams the reply back as
+  AG-UI SSE events (`RUN_STARTED`, `TEXT_MESSAGE_START/CONTENT/END`,
+  `RUN_FINISHED`; `RUN_ERROR` on timeout or node error). Returns `409` when
+  the node is in `sleep` mode. Timeout is controlled by
+  `DATALAYER_AGENT_NODE_AGUI_TIMEOUT_SECONDS` (default `180`). This is what the
+  central UI's node **Chat** view points at, so the node never needs an
+  inbound public endpoint.
 - Tunnel endpoints: `GET .../tunnel/ws`, `POST .../{node_id}/tunnel/messages`,
   `GET .../{node_id}/tunnel/events`, `GET .../{node_id}/tunnel/status`.
+
+### Registry Eviction
+
+The central registry tracks `last_seen_at` per node from register / heartbeat
+/ health calls. Nodes that stop reporting are first surfaced as **stale** and
+then **evicted** after `DATALAYER_AGENT_NODE_EVICT_SECONDS` (default `300`) so the UI
+only lists reachable nodes. An evicted node that restarts simply
+re-registers with its persisted `node_uid`.
 
 ## Environment Variables
 
@@ -216,6 +323,9 @@ when the new mode differs from the persisted one.
 | `AGENT_NODE_STATE_PATH`           | Override for the persisted configuration JSON.             |
 | `AGENT_NODE_HEARTBEAT_SECONDS`    | Heartbeat cadence (default `20`).                          |
 | `AGENT_NODE_HEALTH_SECONDS`       | Health cadence (default `60`).                             |
+| `DATALAYER_AGENT_NODE_EVICT_SECONDS` | Central grace period before a silent node is evicted (default `300`). |
+| `AGENT_NODE_AGENT_ID`             | Fallback active agent id when none is set in configuration. |
+| `DATALAYER_AGENT_NODE_AGUI_TIMEOUT_SECONDS` | Central AG-UI proxy wait for a node reply (default `180`). |
 | `AGENT_RUNTIMES_VERSION`          | Embedded in heartbeat / health payloads.                   |
 | `AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE` | Runtime override for `local` / `datalayer`.     |
 | `DATALAYER_AI_INFERENCE_URL`      | Base URL for datalayer-ai-inference (default local `:4450`). |
@@ -224,20 +334,27 @@ when the new mode differs from the persisted one.
 
 ## UI Flow (Node-Local)
 
-The `src/AgentNode.tsx` app exposes three steps:
+The `src/AgentNode.tsx` app exposes these steps:
 
-1. **Authentication** — sign in (token or API key). Configuration / Chat
-   header entries are hidden until authenticated.
+1. **Authentication** — sign in (token or API key). Configuration / Agents /
+   Chat header entries are hidden until authenticated.
 2. **Configuration** — pick mode, billing entity, and sharing policy.
    Also pick **Inference** provider (`local` or `datalayer`).
    When `datalayer` is selected, the UI shows available Bedrock Anthropic
    models returned by `/api/v1/configure/inference/models` as a read-only
    selector. The active option is preselected from model metadata/defaults,
    and model switching is intentionally locked in this view.
-3. **Chat** — node-local AG-UI chat. Only enabled when
+3. **Agents** — an agent **gallery** built from the library
+   (`GET /api/v1/agents/library`) and running agents (`GET /api/v1/agents`).
+   Launching a card starts (or reuses) the agent and calls
+   `POST /api/v1/agent-node/active-agent` to mark it active. The active agent
+   is what chat targets; an **Active** badge shows the current selection.
+4. **Chat** — node-local AG-UI chat against the active agent, backed by an
+   **ephemeral notebook and document**. Only enabled when
    `configuration.mode === 'private'`.
 
-If mode is changed away from `private` while in the chat view, the user is
+In `private` mode the flow is Configuration → Agents → Chat. If mode is
+changed away from `private` while in the Agents or Chat view, the user is
 returned to the configuration view.
 
 ## Security and Authorization
@@ -255,6 +372,10 @@ make agent-nodes
 
 # Local UI + Python against a local plane stack
 make agent-nodes:proxy
+
+# Run a real Agent Node against `plane local` services: registers to the
+# local runtimes service with heartbeat/health, then is evicted on stop.
+make agent-nodes-local
 
 # Dockerized runtime
 make agent-nodes-docker-build DOCKER_TAG=dev
