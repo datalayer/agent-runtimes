@@ -9,7 +9,7 @@ SHELL=/bin/bash
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
 	examples examples\:prod examples\:proxy examples-proxy agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
-	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agents-docker-build agent-nodes-docker-build agent-nodes-docker-push agent-nodes-docker-start agent-nodes-docker-stop agent-nodes-docker-logs \
+	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	specs-sandbox-variants \
 	loop loop-simple loop-data-acquisition loop-financial loop-demo loop-example-nocodemode
@@ -22,7 +22,7 @@ AGENT_SERVE_ID ?= data-acquisition
 AGENT_SERVE_NAME ?= dla-1
 AGENT_SERVE_PROTOCOL ?= vercel-ai
 
-DOCKER_IMAGE ?= datalayer/agent-nodes
+DOCKER_IMAGE ?= datalayer/agent-node
 AGENT_RUNTIME_IMAGE ?= datalayer/agent-runtime
 DOCKER_TAG ?= latest
 DOCKER_PLATFORM ?=
@@ -356,25 +356,25 @@ agent-runtime-docker-release: agent-runtime-docker-build agent-runtime-docker-pu
 node-agent-artifact-build: ## build frontend artifacts for agent-node Docker image
 	VITE_APP_TARGET=agent-node $(MAKE) build
 
-node-agents-docker-build: node-agent-artifact-build docker-build ## build node-agents Docker image from prebuilt artifacts
+node-agent-docker-build: node-agent-artifact-build docker-build ## build agent-node Docker image from prebuilt artifacts
 
-agent-nodes-docker-build: node-agents-docker-build ## alias for node-agents-docker-build
+agent-node-docker-build: node-agent-docker-build ## alias for node-agent-docker-build
 
-agent-nodes-docker-push: docker-push ## push Agent Nodes Docker image (defaults: DOCKER_IMAGE=datalayer/agent-nodes, DOCKER_TAG=latest)
+agent-node-docker-push: docker-push ## push Agent Node Docker image (defaults: DOCKER_IMAGE=datalayer/agent-node, DOCKER_TAG=latest)
 
-agent-nodes-docker-start: ## start Agent Node Docker container detached (persisted until explicit stop); name=agent-nodes-example
-	@docker rm -f agent-nodes-example >/dev/null 2>&1 || true
-	docker run -d --name agent-nodes-example -p 8765:8765 -e AGENT_RUNTIMES_NODE=true -e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer $(DOCKER_IMAGE):$(DOCKER_TAG)
+agent-node-docker-start: ## start Agent Node Docker container detached (persisted until explicit stop); name=agent-node-example
+	@docker rm -f agent-node-example >/dev/null 2>&1 || true
+	docker run -d --name agent-node-example -p 8765:8765 -e AGENT_RUNTIMES_NODE=true -e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer $(DOCKER_IMAGE):$(DOCKER_TAG)
 	@echo ""
 	@echo "Agent Node started. Connect at: http://localhost:8765"
-	@echo "Stop with: make agent-nodes-docker-stop"
-	@echo "Logs with: make agent-nodes-docker-logs"
+	@echo "Stop with: make agent-node-docker-stop"
+	@echo "Logs with: make agent-node-docker-logs"
 
-agent-nodes-docker-stop: ## force-stop and delete the agent-nodes-example Docker container
-	docker rm -f agent-nodes-example
+agent-node-docker-stop: ## force-stop and delete the agent-node-example Docker container
+	docker rm -f agent-node-example
 
-agent-nodes-docker-logs: ## tail logs from the agent-nodes-example Docker container
-	docker logs -f agent-nodes-example
+agent-node-docker-logs: ## tail logs from the agent-node-example Docker container
+	docker logs -f agent-node-example
 
 agents: # agents
 	agent-runtimes list-agents \
