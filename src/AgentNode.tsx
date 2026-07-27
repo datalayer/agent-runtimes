@@ -65,6 +65,29 @@ const AGENT_RUNTIMES_BASE_URL = (
   window.location.origin
 ).replace(/\/$/, '');
 
+/**
+ * LOCAL Jupyter sandbox endpoint shared by the node's agent and the chat's
+ * ephemeral notebook/document surfaces. When set (node-local dev, injected via
+ * `VITE_JUPYTER_SANDBOX_URL`), the surfaces bind their kernel straight to this
+ * Jupyter server — no proxy or tunnel — exactly like `NotebookAgentExample`.
+ * Parsed once into a clean base URL + token for `ServerConnection`.
+ */
+const LOCAL_JUPYTER_SANDBOX = (() => {
+  const raw = String(import.meta.env.VITE_JUPYTER_SANDBOX_URL || '').trim();
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    const url = new URL(raw);
+    const token = url.searchParams.get('token') || undefined;
+    url.searchParams.delete('token');
+    const baseUrl = `${url.origin}${url.pathname}`.replace(/\/$/, '');
+    return { baseUrl, token };
+  } catch {
+    return { baseUrl: raw.replace(/\/$/, ''), token: undefined };
+  }
+})();
+
 const DEFAULT_DATALAYER_URL = 'https://prod1.datalayer.run';
 
 /**
@@ -493,11 +516,35 @@ export function AgentNode() {
     string | undefined
   >(undefined);
   useEffect(() => {
-    if (step !== 'chat' || !hasActiveAgent) {
+    const selected = String(selectedAgentId || '').trim();
+    if (step !== 'chat' || !selected || selected === 'default') {
       setSandboxRuntimeOverride(undefined);
       setSandboxEnvironmentName(undefined);
       return;
     }
+
+    // Fast path: in node-local dev the agent's Jupyter sandbox is a LOCAL
+    // server whose URL/token are known up front (VITE_JUPYTER_SANDBOX_URL).
+    // Bind the ephemeral surfaces straight to it — no /health/startup polling,
+    // no proxy, no tunnel — mirroring NotebookAgentExample.
+    if (LOCAL_JUPYTER_SANDBOX?.baseUrl) {
+      setSandboxEnvironmentName('Local Agent Sandbox');
+      setSandboxRuntimeOverride(prev => {
+        if (
+          prev?.baseUrl === LOCAL_JUPYTER_SANDBOX.baseUrl &&
+          (prev?.token || '') === (LOCAL_JUPYTER_SANDBOX.token || '')
+        ) {
+          return prev;
+        }
+        return {
+          baseUrl: LOCAL_JUPYTER_SANDBOX.baseUrl,
+          token: LOCAL_JUPYTER_SANDBOX.token || undefined,
+          podName: 'agent-node-sandbox',
+        };
+      });
+      return;
+    }
+
     let cancelled = false;
     let intervalId: number | null = null;
 
@@ -559,7 +606,7 @@ export function AgentNode() {
       cancelled = true;
       stopPolling();
     };
-  }, [step, hasActiveAgent]);
+  }, [step, selectedAgentId]);
 
   // ── Agent spec info for the chat header (title/description/suggestions) ──
   // Mirrors the `ui` runtime chat view: the chat header shows the agent spec's

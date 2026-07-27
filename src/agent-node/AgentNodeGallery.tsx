@@ -59,8 +59,59 @@ export type AgentNodeGalleryProps = {
 const GRID_TEMPLATE = ['1fr', '1fr 1fr', '1fr 1fr 1fr'];
 
 /**
+ * URL (optionally with `?token=`) of the LOCAL Jupyter server that the node's
+ * agents should use as their `jupyter` code sandbox. This mirrors
+ * `NotebookAgentExample`: the agent and the chat's ephemeral notebook share the
+ * same local Jupyter server directly — no proxy or tunnel is involved. When it
+ * is undefined (e.g. SaaS deployments) the launch falls back to the backend's
+ * default sandbox configuration.
+ */
+const LOCAL_JUPYTER_SANDBOX_URL: string | undefined =
+  import.meta.env.VITE_JUPYTER_SANDBOX_URL || undefined;
+
+/**
  * Agent gallery picker shown on the Agent Node.
- *
+      if (!createResponse.ok && createResponse.status === 409) {
+        // If the named agent already exists, reload running agents and try
+        // to reuse the matching instance instead of failing the launch.
+        const reloadResponse = await fetch(`${baseUrl}/api/v1/agents`, {
+          headers: authHeaders,
+        });
+        if (reloadResponse.ok) {
+          const reloadPayload = await reloadResponse
+            .json()
+            .catch(() => null);
+          const nextRunning: RunningAgent[] = Array.isArray(reloadPayload)
+            ? reloadPayload
+            : reloadPayload?.agents || reloadPayload?.items || [];
+          setRunning(nextRunning);
+          const existing = nextRunning.find(candidate => {
+            const candidateId = candidate.agent_id || candidate.id || '';
+            return (
+              candidate.agent_spec_id === spec.id ||
+              candidate.name === requestedName ||
+              candidateId === requestedName
+            );
+          });
+          agentId = existing?.agent_id || existing?.id || null;
+        
+          // If a same-name agent exists but is not tied to this spec,
+          // recreate it so configure/spec lookups and sandbox settings
+          // match the selected gallery card.
+          if (existing && existing.agent_spec_id !== spec.id) {
+            const staleId = String(existing.agent_id || existing.id || '').trim();
+            if (staleId) {
+              await fetch(
+                `${baseUrl}/api/v1/agents/${encodeURIComponent(staleId)}`,
+                {
+                  method: 'DELETE',
+                  headers: authHeaders,
+                },
+              );
+            }
+            agentId = null;
+          }
+        }
  * Sources cards from the agentspec library and highlights the agent that is
  * already running on the node. Launching a card creates the agent locally and
  * marks it active so tunneled prompts from the main UI reach it.
@@ -193,6 +244,11 @@ export function AgentNodeGallery({
             body: JSON.stringify({
               name: requestedName,
               agent_spec_id: spec.id,
+              sandbox_variant: 'jupyter',
+              sandboxVariant: 'jupyter',
+              ...(LOCAL_JUPYTER_SANDBOX_URL
+                ? { jupyter_sandbox: LOCAL_JUPYTER_SANDBOX_URL }
+                : {}),
             }),
           });
           if (!createResponse.ok && createResponse.status === 409) {
@@ -263,6 +319,11 @@ export function AgentNodeGallery({
               body: JSON.stringify({
                 name: requestedName,
                 agent_spec_id: spec.id,
+                sandbox_variant: 'jupyter',
+                sandboxVariant: 'jupyter',
+                ...(LOCAL_JUPYTER_SANDBOX_URL
+                  ? { jupyter_sandbox: LOCAL_JUPYTER_SANDBOX_URL }
+                  : {}),
               }),
             });
             if (!recreateResponse.ok) {
@@ -284,12 +345,24 @@ export function AgentNodeGallery({
         }
 
         // Best-effort guard: if spec metadata is missing for this agent id,
-        // recreate once from the selected spec to avoid configure/spec 404s.
+        // or if it is not configured with a jupyter sandbox, recreate once
+        // from the selected spec so notebook/document chat surfaces can bind
+        // a live local kernel.
         const specResponse = await fetch(
           `${baseUrl}/api/v1/configure/agents/${encodeURIComponent(agentId)}/spec`,
           { headers: authHeaders },
         );
-        if (specResponse.status === 404) {
+        let mustRecreateForSandbox = false;
+        if (specResponse.ok) {
+          const specPayload = await specResponse.json().catch(() => null);
+          const variant = String(
+            specPayload?.sandbox_variant || specPayload?.sandboxVariant || '',
+          )
+            .trim()
+            .toLowerCase();
+          mustRecreateForSandbox = variant !== 'jupyter';
+        }
+        if (specResponse.status === 404 || mustRecreateForSandbox) {
           await fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
             method: 'DELETE',
             headers: authHeaders,
@@ -300,6 +373,11 @@ export function AgentNodeGallery({
             body: JSON.stringify({
               name: spec.id,
               agent_spec_id: spec.id,
+              sandbox_variant: 'jupyter',
+              sandboxVariant: 'jupyter',
+              ...(LOCAL_JUPYTER_SANDBOX_URL
+                ? { jupyter_sandbox: LOCAL_JUPYTER_SANDBOX_URL }
+                : {}),
             }),
           });
           if (!recreateResponse.ok) {
