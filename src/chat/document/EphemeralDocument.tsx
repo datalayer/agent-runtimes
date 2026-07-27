@@ -529,6 +529,14 @@ export function EphemeralDocument({
                   flexDirection: 'column',
                   minHeight: 0,
                   flex: 1,
+                  // The shared lexical stylesheet caps `.editor-shell` at
+                  // `max-width: 1100px; margin: 20px auto`, which leaves the
+                  // ephemeral document narrow and centered. Take the full
+                  // wrapping box width instead (matching the ui LiterateEditor,
+                  // whose root is `.editor-container` with no such cap).
+                  maxWidth: 'none',
+                  width: '100%',
+                  margin: 0,
                 },
                 '& .editor-container': {
                   backgroundColor: themeBackground,
@@ -536,6 +544,9 @@ export function EphemeralDocument({
                   flexDirection: 'column',
                   minHeight: 0,
                   flex: 1,
+                  width: '100%',
+                  maxWidth: 'none',
+                  margin: 0,
                 },
                 '& .editor-inner': {
                   backgroundColor: themeBackground,
@@ -543,16 +554,33 @@ export function EphemeralDocument({
                   flexDirection: 'column',
                   minHeight: 0,
                   flex: 1,
+                  width: '100%',
+                  maxWidth: 'none',
                 },
                 '& .editor-scroller': {
                   minHeight: 0,
                   flex: 1,
                   overflow: 'auto',
+                  width: '100%',
+                  maxWidth: 'none',
                 },
                 '& .editor': {
                   minHeight: '100%',
+                  width: '100%',
+                  maxWidth: 'none',
+                  margin: 0,
                 },
-                '& .editor-input': { backgroundColor: themeBackground },
+                '& .editor-input': {
+                  backgroundColor: themeBackground,
+                  width: '100%',
+                  maxWidth: 'none',
+                  margin: 0,
+                },
+                '& .ContentEditable__root': {
+                  width: '100%',
+                  maxWidth: 'none',
+                  margin: 0,
+                },
                 '& [role="toolbar"][aria-label="Editor toolbar"]': {
                   backgroundColor: themeBackground,
                 },

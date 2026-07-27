@@ -191,7 +191,6 @@ export function AgentNodeGallery({
   }, [running]);
 
   const normalizedActiveAgentId = String(activeAgentId || '').trim();
-  const hasActiveAgent = normalizedActiveAgentId.length > 0;
 
   const activeAgent = useMemo(() => {
     if (!normalizedActiveAgentId) {
@@ -204,6 +203,9 @@ export function AgentNodeGallery({
       }) || null
     );
   }, [running, normalizedActiveAgentId]);
+
+  // An "active" agent must be both configured and currently running.
+  const hasActiveAgent = Boolean(normalizedActiveAgentId && activeAgent);
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredSpecs = useMemo(() => {
@@ -244,6 +246,7 @@ export function AgentNodeGallery({
             body: JSON.stringify({
               name: requestedName,
               agent_spec_id: spec.id,
+              transport: 'ag-ui',
               sandbox_variant: 'jupyter',
               sandboxVariant: 'jupyter',
               ...(LOCAL_JUPYTER_SANDBOX_URL
@@ -319,6 +322,7 @@ export function AgentNodeGallery({
               body: JSON.stringify({
                 name: requestedName,
                 agent_spec_id: spec.id,
+                transport: 'ag-ui',
                 sandbox_variant: 'jupyter',
                 sandboxVariant: 'jupyter',
                 ...(LOCAL_JUPYTER_SANDBOX_URL
@@ -373,6 +377,7 @@ export function AgentNodeGallery({
             body: JSON.stringify({
               name: spec.id,
               agent_spec_id: spec.id,
+              transport: 'ag-ui',
               sandbox_variant: 'jupyter',
               sandboxVariant: 'jupyter',
               ...(LOCAL_JUPYTER_SANDBOX_URL

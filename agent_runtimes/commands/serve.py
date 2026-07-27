@@ -164,6 +164,111 @@ class ServeError(Exception):
     pass
 
 
+def start_node_jupyter_server(host: str = "127.0.0.1") -> Optional["object"]:
+    """Start a local Jupyter server for Agent Node mode.
+
+    In Agent Node mode (e.g. the packaged Docker image), the ephemeral notebook
+    and Lexical document editors need a real kernel/contents backend. This spawns
+    a Jupyter server as a child process and exports ``AGENT_NODE_JUPYTER_URL`` /
+    ``AGENT_NODE_JUPYTER_TOKEN`` so the node kernel proxy can reach it.
+
+    If an external Jupyter server is already configured (via
+    ``AGENT_NODE_JUPYTER_URL``), this is a no-op.
+
+    Args:
+        host: Host the agent-runtimes server binds to (used only for logging).
+
+    Returns:
+        The spawned ``subprocess.Popen`` handle, or ``None`` if no server was
+        started (already configured, or Jupyter is not installed).
+    """
+    import atexit
+    import secrets
+    import subprocess
+    import sys
+
+    # Respect an externally provided Jupyter server.
+    if (os.environ.get("AGENT_NODE_JUPYTER_URL") or "").strip():
+        logger.info(
+            "Agent Node: using externally configured Jupyter server "
+            "(AGENT_NODE_JUPYTER_URL set); not starting a local one"
+        )
+        return None
+
+    base_url = os.environ.get("AGENT_NODE_JUPYTER_BASE_URL", "/api/jupyter-server/")
+    if not base_url.startswith("/"):
+        base_url = "/" + base_url
+    if not base_url.endswith("/"):
+        base_url = base_url + "/"
+
+    token = (os.environ.get("AGENT_NODE_JUPYTER_TOKEN") or "").strip()
+    if not token:
+        token = secrets.token_hex(32)
+
+    root_dir = os.environ.get("AGENT_NODE_JUPYTER_ROOT") or os.getcwd()
+
+    # Resolve a bindable port (default 8888, search forward if taken).
+    try:
+        desired_port = int(os.environ.get("AGENT_NODE_JUPYTER_PORT", "8888"))
+    except ValueError:
+        desired_port = 8888
+    jupyter_host = os.environ.get("AGENT_NODE_JUPYTER_HOST", "127.0.0.1")
+    if is_port_free(jupyter_host, desired_port):
+        jupyter_port = desired_port
+    else:
+        jupyter_port = find_free_port(jupyter_host, desired_port)
+        logger.info(
+            f"Agent Node: Jupyter port {desired_port} in use, using {jupyter_port}"
+        )
+
+    command = [
+        sys.executable,
+        "-m",
+        "jupyter",
+        "server",
+        f"--ServerApp.ip={jupyter_host}",
+        f"--ServerApp.port={jupyter_port}",
+        f"--ServerApp.base_url={base_url}",
+        f"--IdentityProvider.token={token}",
+        "--ServerApp.disable_check_xsrf=True",
+        "--ServerApp.allow_origin=*",
+        "--ServerApp.open_browser=False",
+        f"--ServerApp.root_dir={root_dir}",
+    ]
+
+    try:
+        proc = subprocess.Popen(command)  # noqa: S603
+    except FileNotFoundError:
+        logger.warning(
+            "Agent Node: Jupyter is not installed; ephemeral notebook/document "
+            "editors will not have a kernel backend"
+        )
+        return None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Agent Node: failed to start Jupyter server: {exc}")
+        return None
+
+    local_url = f"http://{jupyter_host}:{jupyter_port}{base_url.rstrip('/')}"
+    os.environ["AGENT_NODE_JUPYTER_URL"] = local_url
+    os.environ["AGENT_NODE_JUPYTER_TOKEN"] = token
+    logger.info(f"Agent Node: started local Jupyter server at {local_url}")
+
+    def _terminate() -> None:
+        if proc.poll() is not None:
+            return
+        try:
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+        except Exception:  # noqa: BLE001
+            pass
+
+    atexit.register(_terminate)
+    return proc
+
+
 def serve_server(
     host: str = "127.0.0.1",
     port: int = 0,
@@ -332,6 +437,13 @@ def serve_server(
     os.environ["AGENT_RUNTIMES_NODE"] = "true" if node else "false"
     if node:
         logger.info("Agent Node mode enabled (--node)")
+        # Start a local Jupyter server so the ephemeral notebook / Lexical
+        # document editors have a real kernel + contents backend. Skipped when
+        # an external Jupyter server is already configured via
+        # AGENT_NODE_JUPYTER_URL, and when running under uvicorn's reload
+        # watcher (the reloader spawns a child that inherits this env).
+        if not reload:
+            start_node_jupyter_server(host)
 
     os.environ["AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS"] = (
         "true" if disable_tool_approvals else "false"
