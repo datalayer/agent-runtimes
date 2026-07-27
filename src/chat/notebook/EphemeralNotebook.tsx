@@ -24,12 +24,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
-  Box,
   DatalayerThemeProvider,
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
 } from '@datalayer/primer-addons';
+import { Box } from '@primer/react';
 import {
   Notebook,
   NotebookToolbar,

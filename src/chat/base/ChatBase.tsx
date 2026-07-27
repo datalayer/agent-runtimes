@@ -24,7 +24,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Text, Spinner, IconButton } from '@primer/react';
+import { Box, Text, Spinner, IconButton } from '@primer/react';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -32,7 +32,6 @@ import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { notebookStore, JupyterReactTheme } from '@datalayer/jupyter-react';
 import {
-  Box,
   setupPrimerPortals,
   useThemeStore,
   getColorPalette,
@@ -947,6 +946,22 @@ function ChatBaseInner({
       unsubscribe();
     };
   }, [notebookVisible, ephemeralNotebookId]);
+  // Track the ephemeral document's live kernel connection the same way, so the
+  // header's kernel indicator reflects the real connected kernel while the
+  // document surface is active (instead of the "disconnected" placeholder).
+  const [documentKernel, setDocumentKernel] =
+    useState<IKernelConnection | null>(null);
+  const handleDocumentKernelChange = useCallback(
+    (next: IKernelConnection | null) => {
+      setDocumentKernel(prev => (prev?.id === next?.id ? prev : next));
+    },
+    [],
+  );
+  useEffect(() => {
+    if (!documentVisible) {
+      setDocumentKernel(null);
+    }
+  }, [documentVisible]);
   // When a companion surface is shown, the chat can be docked as a sidebar
   // (default) or floated over it, driven by the header view-mode toggle.
   const surfaceChatFloating =
@@ -3867,7 +3882,13 @@ function ChatBaseInner({
       padding={padding}
       kernelIndicatorState={kernelIndicatorState}
       runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
-      kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
+      kernel={
+        notebookVisible
+          ? (notebookKernel ?? kernel)
+          : documentVisible
+            ? (documentKernel ?? kernel)
+            : kernel
+      }
       kernelEnvironmentName={kernelEnvironmentName}
       kernelCpu={kernelCpu}
       kernelMemory={kernelMemory}
@@ -3996,6 +4017,7 @@ function ChatBaseInner({
                   content={persistedEphemeralDocument ?? undefined}
                   onContentChange={handleEphemeralDocumentChange}
                   onToolsReady={handleDocumentToolsReady}
+                  onKernelChange={handleDocumentKernelChange}
                   collaboration={ephemeralDocumentCollaboration}
                 />
               </React.Suspense>

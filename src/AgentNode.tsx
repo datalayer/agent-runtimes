@@ -6,7 +6,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Box,
   DatalayerLogoText,
   DatalayerThemeProvider,
   getLogoColors,
@@ -18,6 +17,7 @@ import {
   ActionList,
   ActionMenu,
   Avatar,
+  Box,
   Button,
   FormControl,
   Heading,
@@ -36,7 +36,6 @@ import {
   PersonIcon,
   GearIcon,
   RocketIcon,
-  SignInIcon,
   SignOutIcon,
   type Icon as OcticonIcon,
 } from '@primer/octicons-react';
@@ -52,6 +51,8 @@ import { ShareAccessComponent } from '@datalayer/core/lib/components/sharing';
 import { useAgentNodeThemeStore } from './agent-node/themeStore';
 import { AgentNodeGallery } from './agent-node/AgentNodeGallery';
 import { Chat } from './chat';
+import type { EphemeralRuntimeOverride } from './chat/notebook/EphemeralNotebook';
+import type { Suggestion } from './types/chat';
 import { DatalayerCollaborationProvider } from './collaboration';
 
 import '../style/primer-primitives.css';
@@ -131,6 +132,12 @@ const resolveRuntimesUrl = (): string =>
   (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL ||
   resolveDatalayerUrl();
 
+/** Resolve the spacer URL: injected config → VITE env → base Datalayer URL. */
+const resolveSpacerUrl = (): string =>
+  getConfigUrlFromDocument('spacerUrl') ||
+  (import.meta as any).env?.VITE_DATALAYER_SPACER_URL ||
+  resolveDatalayerUrl();
+
 
 type AgentNodeMode = 'private' | 'shared' | 'sleep';
 type Step = 'auth' | 'config' | 'gallery' | 'chat' | 'profile';
@@ -206,7 +213,13 @@ type InferenceModelResponse = {
  * but assembled exclusively from core building blocks so agent-runtimes does
  * not pull in the `ui` package.
  */
-function AgentNodeProfileView({ token }: { token: string | null }) {
+function AgentNodeProfileView({
+  token,
+  onTokenExpired,
+}: {
+  token: string | null;
+  onTokenExpired?: () => void;
+}) {
   const user = useIAMStore(state => state.user);
 
   const display = useMemo(() => {
@@ -261,6 +274,13 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
       ) : (
         <>
           <Heading sx={{ fontSize: 2, mb: 2 }}>Identity</Heading>
+          <Box sx={{ textAlign: 'left' }}>
+            <UserBadge
+              token={token}
+              variant="small"
+              onTokenExpired={onTokenExpired}
+            />
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             {display.avatarUrl ? (
               <Avatar
@@ -399,8 +419,11 @@ export function AgentNode() {
     if (!ephemeralCollaborationDocumentId || !token) {
       return undefined;
     }
-    const datalayerUrl = resolveDatalayerUrl();
-    return new DatalayerCollaborationProvider({ datalayerUrl, token });
+    const spacerUrl = resolveSpacerUrl();
+    return new DatalayerCollaborationProvider({
+      datalayerUrl: spacerUrl,
+      token,
+    });
   }, [ephemeralCollaborationDocumentId, token]);
 
   // ── Ephemeral document RTC (shared Lexical/Loro room with the SaaS UI) ────
@@ -418,8 +441,8 @@ export function AgentNode() {
     if (!token || !documentRoomId) {
       return undefined;
     }
-    const datalayerUrl = resolveDatalayerUrl();
-    const wsSpacer = String(datalayerUrl).replace(/^http/, 'ws');
+    const spacerUrl = resolveSpacerUrl();
+    const wsSpacer = String(spacerUrl).replace(/^http/, 'ws');
     const websocketUrl = `${wsSpacer}/api/spacer/v1/lexical/ws?token=${encodeURIComponent(
       token,
     )}`;
@@ -439,31 +462,6 @@ export function AgentNode() {
     };
   }, [configuration.collaboration_document_uid, token, collaborationDocumentUser]);
 
-  // Bind the ephemeral notebook kernel through the central runtimes tunnel
-  // proxy so the local node UI can reach the node's Jupyter server the same
-  // way as the SaaS Agent Node chat.
-  const ephemeralRuntimeOverride = useMemo(() => {
-    const nodeId = String(configuration.node_uid || '').trim();
-    const authToken = String(token || '').trim();
-    if (!nodeId || !authToken) {
-      return undefined;
-    }
-    const runtimesUrl = resolveRuntimesUrl();
-    if (!runtimesUrl) {
-      return undefined;
-    }
-    const base = `${runtimesUrl}/api/runtimes/v1/agent-nodes/${encodeURIComponent(
-      nodeId,
-    )}/jupyter`;
-    const wsBase = base.replace(/^http/, 'ws');
-    return {
-      baseUrl: base,
-      wsUrl: `${wsBase}/ws`,
-      token: authToken,
-      podName: `agent-node-${nodeId}`,
-    };
-  }, [configuration.node_uid, token]);
-
   const [inferenceProvider, setInferenceProvider] =
     useState<InferenceProvider>('datalayer');
   const [inferenceModels, setInferenceModels] = useState<string[]>([]);
@@ -472,6 +470,167 @@ export function AgentNode() {
   >(null);
   const [configurationLoaded, setConfigurationLoaded] = useState(false);
   const chatRestoreAttemptRef = useRef<string>('');
+  const hasActiveAgent = Boolean(
+    String(configuration.active_agent_id || '').trim(),
+  );
+
+  // ── Local sandbox runtime override for the ephemeral surfaces ─────────────
+  // In the node-local webapp the agent's Jupyter sandbox is a LOCAL server, not
+  // a Kubernetes pod resolvable by `pod_name`, so the ephemeral notebook and
+  // document surfaces cannot bind their kernel through the runtimes pod lookup.
+  // Instead we read the live sandbox Jupyter endpoint from `/health/startup`
+  // and pass it as an explicit override so the surfaces connect a service
+  // manager straight to the sandbox kernel. This is what makes the surfaces
+  // actually render and the chat header's kernel indicator reflect the sandbox
+  // kernel (rather than the browser/Pyodide placeholder).
+  const [sandboxRuntimeOverride, setSandboxRuntimeOverride] = useState<
+    EphemeralRuntimeOverride | undefined
+  >(undefined);
+  // Environment name shown in the chat header's kernel indicator details, so
+  // it reads e.g. "Local Agent Sandbox (python3)" instead of the indicator's
+  // generic "browser-runtime" placeholder once the local sandbox is bound.
+  const [sandboxEnvironmentName, setSandboxEnvironmentName] = useState<
+    string | undefined
+  >(undefined);
+  useEffect(() => {
+    if (step !== 'chat' || !hasActiveAgent) {
+      setSandboxRuntimeOverride(undefined);
+      setSandboxEnvironmentName(undefined);
+      return;
+    }
+    let cancelled = false;
+    let intervalId: number | null = null;
+
+    const stopPolling = () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const poll = async () => {
+      try {
+        const resp = await fetch(`${AGENT_RUNTIMES_BASE_URL}/health/startup`);
+        if (!resp.ok) {
+          return;
+        }
+        const payload = await resp.json();
+        const sandbox = payload?.sandbox;
+        const jupyterUrl = String(sandbox?.jupyter_url || '').trim();
+        if (sandbox?.variant !== 'jupyter' || !jupyterUrl) {
+          return;
+        }
+        const jupyterToken = String(sandbox?.jupyter_token || '').trim();
+        if (cancelled) {
+          return;
+        }
+        const kernelName = String(sandbox?.kernel_name || '').trim();
+        setSandboxEnvironmentName(
+          kernelName
+            ? `Local Agent Sandbox (${kernelName})`
+            : 'Local Agent Sandbox',
+        );
+        setSandboxRuntimeOverride(prev => {
+          if (
+            prev?.baseUrl === jupyterUrl &&
+            (prev?.token || '') === jupyterToken
+          ) {
+            return prev;
+          }
+          return {
+            baseUrl: jupyterUrl,
+            token: jupyterToken || undefined,
+            podName: 'agent-node-sandbox',
+          };
+        });
+        // Endpoint resolved — stop the fast poll.
+        stopPolling();
+      } catch {
+        // Sandbox not ready yet; keep polling.
+      }
+    };
+
+    void poll();
+    intervalId = window.setInterval(() => {
+      void poll();
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      stopPolling();
+    };
+  }, [step, hasActiveAgent]);
+
+  // ── Agent spec info for the chat header (title/description/suggestions) ──
+  // Mirrors the `ui` runtime chat view: the chat header shows the agent spec's
+  // display name and welcome message, and the empty state offers the spec's
+  // suggested prompts. The node-local agent is launched from a library spec
+  // whose id is used as the agent id (see AgentNodeGallery `launch`), so the
+  // spec is looked up by that same id via `GET /api/v1/agents/library/{id}`.
+  const [agentSpecInfo, setAgentSpecInfo] = useState<{
+    name?: string;
+    description?: string;
+    welcomeMessage?: string;
+    suggestions?: string[];
+  } | null>(null);
+  useEffect(() => {
+    const agentId = String(selectedAgentId || '').trim();
+    if (step !== 'chat' || !agentId || agentId === 'default') {
+      setAgentSpecInfo(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch(
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agents/library/${encodeURIComponent(agentId)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          },
+        );
+        if (!resp.ok) {
+          if (!cancelled) {
+            setAgentSpecInfo(null);
+          }
+          return;
+        }
+        const spec = await resp.json().catch(() => null);
+        if (cancelled || !spec) {
+          return;
+        }
+        setAgentSpecInfo({
+          name: typeof spec.name === 'string' ? spec.name : undefined,
+          description:
+            typeof spec.description === 'string' ? spec.description : undefined,
+          welcomeMessage:
+            typeof spec.welcomeMessage === 'string'
+              ? spec.welcomeMessage
+              : typeof spec.welcome_message === 'string'
+                ? spec.welcome_message
+                : undefined,
+          suggestions: Array.isArray(spec.suggestions)
+            ? spec.suggestions.filter((s: unknown) => typeof s === 'string')
+            : undefined,
+        });
+      } catch {
+        if (!cancelled) {
+          setAgentSpecInfo(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, selectedAgentId, token]);
+
+  const chatTitle = agentSpecInfo?.name || 'Agent Node Chat';
+  const chatDescription =
+    agentSpecInfo?.welcomeMessage || agentSpecInfo?.description || 'Node-local chat';
+  const chatSuggestions: Suggestion[] | undefined =
+    agentSpecInfo?.suggestions && agentSpecInfo.suggestions.length > 0
+      ? agentSpecInfo.suggestions.map(s => ({ title: s, message: s }))
+      : undefined;
+
   type BannerKind = 'success' | 'info' | 'warning' | 'error';
   type BannerState = { id: number; kind: BannerKind; message: string };
   const [banner, setBanner] = useState<BannerState | null>(null);
@@ -832,6 +991,12 @@ export function AgentNode() {
     }
   }, [step, configuration.mode]);
 
+  useEffect(() => {
+    if (step === 'chat' && !hasActiveAgent) {
+      setStep('gallery');
+    }
+  }, [step, hasActiveAgent]);
+
   const handleSignIn = (newToken: string, handle: string) => {
     setAutoBootstrapDisabled(false);
     setDisableAutoBootstrap(false);
@@ -935,7 +1100,9 @@ export function AgentNode() {
     if (nextStep === 'auth') return true;
     if (!token) return false;
     if (nextStep === 'gallery') return true;
-    if (nextStep === 'chat') return configuration.mode === 'private';
+    if (nextStep === 'chat') {
+      return configuration.mode === 'private' && hasActiveAgent;
+    }
     return true;
   };
 
@@ -1019,80 +1186,43 @@ export function AgentNode() {
                     />
                   </Box>
                 </PageHeader.Title>
-                {token && (
-                  <Text sx={{ color: 'fg.muted', fontSize: 1, mt: 1 }}>
-                    Configure Private/Shared/Sleep mode, then chat from this
-                    node.
-                  </Text>
-                )}
               </PageHeader.TitleArea>
               <PageHeader.Actions>
                 <Box
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 3,
+                    gap: 2,
                     fontSize: 2,
                     lineHeight: '22px',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    {token && (
-                      <>
-                        <StepEntry
-                          entryStep="chat"
-                          label="Chat"
-                          leadingVisual={CommentIcon}
-                        />
-                        <StepEntry
-                          entryStep="gallery"
-                          label="Agents"
-                          leadingVisual={RocketIcon}
-                        />
-                        <StepEntry
-                          entryStep="config"
-                          label="Configuration"
-                          leadingVisual={GearIcon}
-                        />
-                      </>
-                    )}
-                  </Box>
-                  {!token ? (
-                    <Button
-                      size="small"
-                      variant="invisible"
-                      onClick={() => setStep('auth')}
-                      leadingVisual={SignInIcon}
-                      sx={{ color: 'fg.muted' }}
-                    >
-                      Sign in
-                    </Button>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}
-                    >
+                  {token && (
+                    <>
+                      <StepEntry
+                        entryStep="chat"
+                        label="Chat"
+                        leadingVisual={CommentIcon}
+                      />
+                      <StepEntry
+                        entryStep="gallery"
+                        label="Agents"
+                        leadingVisual={RocketIcon}
+                      />
+                      <StepEntry
+                        entryStep="config"
+                        label="Configuration"
+                        leadingVisual={GearIcon}
+                      />
+                    </>
+                  )}
+                  {!token ? null : (
+                    <>
                       <StepEntry
                         entryStep="profile"
                         label="Profile"
                         leadingVisual={PersonIcon}
                       />
-                      <Box
-                        sx={{
-                          textAlign: 'left',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <UserBadge
-                          token={token}
-                          variant="small"
-                          onTokenExpired={handleSignOut}
-                        />
-                      </Box>
                       <Button
                         size="small"
                         variant="invisible"
@@ -1102,7 +1232,7 @@ export function AgentNode() {
                       >
                         Sign out
                       </Button>
-                    </Box>
+                    </>
                   )}
                   <AppearanceControlsWithStore
                     useStore={useAgentNodeThemeStore}
@@ -1472,7 +1602,12 @@ export function AgentNode() {
               </Box>
             )}
 
-            {step === 'profile' && <AgentNodeProfileView token={token} />}
+            {step === 'profile' && (
+              <AgentNodeProfileView
+                token={token}
+                onTokenExpired={handleSignOut}
+              />
+            )}
 
             {step === 'gallery' && (
               <AgentNodeGallery
@@ -1506,6 +1641,14 @@ export function AgentNode() {
                   });
                   setStep('chat');
                 }}
+                onTerminated={() => {
+                  setSelectedAgentId('default');
+                  setConfiguration(prev => ({
+                    ...prev,
+                    active_agent_id: undefined,
+                  }));
+                  setStep('gallery');
+                }}
               />
             )}
 
@@ -1522,9 +1665,11 @@ export function AgentNode() {
                   protocol="ag-ui"
                   baseUrl={AGENT_RUNTIMES_BASE_URL}
                   agentId={selectedAgentId}
-                  title="Agent Node Chat"
+                  title={chatTitle}
                   placeholder="Send a message..."
-                  description="Node-local chat"
+                  description={chatDescription}
+                  suggestions={chatSuggestions}
+                  submitOnSuggestionClick
                   showHeader={true}
                   height={'70vh'}
                   showModelSelector={true}
@@ -1536,7 +1681,9 @@ export function AgentNode() {
                   enableEphemeralNotebook
                   enableEphemeralDocument
                   initialEphemeralSurfaceMode="notebook"
-                  runtimeId={configuration.node_uid || selectedAgentId}
+                  runtimeId={selectedAgentId}
+                  ephemeralRuntimeOverride={sandboxRuntimeOverride}
+                  kernelEnvironmentName={sandboxEnvironmentName}
                   ephemeralNotebookCollaborationProvider={
                     ephemeralNotebookCollaborationProvider
                   }
@@ -1546,7 +1693,6 @@ export function AgentNode() {
                   ephemeralDocumentCollaboration={
                     ephemeralDocumentCollaboration
                   }
-                  ephemeralRuntimeOverride={ephemeralRuntimeOverride}
                   historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
                 />
               </Box>

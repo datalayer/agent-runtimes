@@ -319,6 +319,10 @@ export function Chat({
   codemodeStatusData,
   sandboxStatusData,
   kernel,
+  kernelEnvironmentName,
+  kernelCpu,
+  kernelMemory,
+  kernelGpu,
   showToolApprovalBanner,
   pendingApprovals,
   onApproveApproval,
@@ -741,6 +745,10 @@ export function Chat({
               mcpStatusData={mcpStatusData}
               sandboxStatusData={sandboxStatusData}
               kernel={kernel}
+              kernelEnvironmentName={kernelEnvironmentName}
+              kernelCpu={kernelCpu}
+              kernelMemory={kernelMemory}
+              kernelGpu={kernelGpu}
               showToolApprovalBanner={showToolApprovalBanner}
               pendingApprovals={pendingApprovals}
               onApproveApproval={onApproveApproval}

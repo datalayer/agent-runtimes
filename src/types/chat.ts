@@ -605,6 +605,22 @@ export interface ChatCommonProps {
     import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection | null;
 
   /**
+   * Optional environment name displayed in the chat header's kernel
+   * indicator details (e.g. the agent's local sandbox name). Defaults to
+   * the indicator's own "browser-runtime" placeholder when omitted.
+   */
+  kernelEnvironmentName?: string;
+
+  /** Optional CPU info displayed in the chat header's kernel indicator. */
+  kernelCpu?: string;
+
+  /** Optional memory info displayed in the chat header's kernel indicator. */
+  kernelMemory?: string;
+
+  /** Optional GPU info displayed in the chat header's kernel indicator. */
+  kernelGpu?: string;
+
+  /**
    * Disable ChatBase's internal JupyterReactTheme wrapper.
    * Use this when the host page already provides a JupyterReactTheme boundary.
    * @default false

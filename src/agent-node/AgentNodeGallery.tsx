@@ -4,7 +4,15 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Button, Heading, Label, Spinner, Text } from '@primer/react';
+import {
+  Box,
+  Button,
+  Heading,
+  Label,
+  Spinner,
+  Text,
+  TextInput,
+} from '@primer/react';
 import { CheckCircleFillIcon, RocketIcon } from '@primer/octicons-react';
 
 /**
@@ -42,6 +50,8 @@ export type AgentNodeGalleryProps = {
   activeAgentId?: string | null;
   /** Called with the launched agent id once it is running and set active. */
   onLaunched: (agentId: string) => void;
+  /** Called once the active agent is terminated and cleared on the node. */
+  onTerminated?: (agentId: string) => void;
   /** Optional callback used by parent to display launch errors (e.g. toast). */
   onLaunchError?: (message: string) => void;
 };
@@ -60,6 +70,7 @@ export function AgentNodeGallery({
   token,
   activeAgentId,
   onLaunched,
+  onTerminated,
   onLaunchError,
 }: AgentNodeGalleryProps): JSX.Element {
   const [specs, setSpecs] = useState<AgentspecSummary[]>([]);
@@ -67,6 +78,8 @@ export function AgentNodeGallery({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [launchingId, setLaunchingId] = useState<string | null>(null);
+  const [terminating, setTerminating] = useState(false);
+  const [search, setSearch] = useState('');
 
   const authHeaders = useMemo(() => {
     const headers: Record<string, string> = {
@@ -126,6 +139,42 @@ export function AgentNodeGallery({
     return map;
   }, [running]);
 
+  const normalizedActiveAgentId = String(activeAgentId || '').trim();
+  const hasActiveAgent = normalizedActiveAgentId.length > 0;
+
+  const activeAgent = useMemo(() => {
+    if (!normalizedActiveAgentId) {
+      return null;
+    }
+    return (
+      running.find(candidate => {
+        const candidateId = String(candidate.agent_id || candidate.id || '').trim();
+        return candidateId === normalizedActiveAgentId;
+      }) || null
+    );
+  }, [running, normalizedActiveAgentId]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredSpecs = useMemo(() => {
+    if (!normalizedSearch) {
+      return specs;
+    }
+    return specs.filter(spec => {
+      const haystack = [
+        spec.id,
+        spec.name,
+        spec.description,
+        spec.model,
+        spec.inference_provider,
+        ...(spec.tags || []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [specs, normalizedSearch]);
+
   const launch = useCallback(
     async (spec: AgentspecSummary) => {
       setLaunchingId(spec.id);
@@ -169,12 +218,33 @@ export function AgentNodeGallery({
                 );
               });
               agentId = existing?.agent_id || existing?.id || null;
+
+              // If a same-name agent exists but is not tied to this spec,
+              // recreate it so configure/spec lookups and sandbox settings
+              // match the selected gallery card.
+              if (existing && existing.agent_spec_id !== spec.id) {
+                const staleId = String(existing.agent_id || existing.id || '').trim();
+                if (staleId) {
+                  await fetch(
+                    `${baseUrl}/api/v1/agents/${encodeURIComponent(staleId)}`,
+                    {
+                      method: 'DELETE',
+                      headers: authHeaders,
+                    },
+                  );
+                }
+                agentId = null;
+              }
             }
           }
           if (!createResponse.ok && !agentId) {
-            throw new Error(
-              `Failed to launch agent (${createResponse.status})`,
-            );
+            // Conflict with stale same-name agent is handled above by deleting
+            // and recreating. Other failures remain hard errors.
+            if (createResponse.status !== 409) {
+              throw new Error(
+                `Failed to launch agent (${createResponse.status})`,
+              );
+            }
           }
           if (!agentId && createResponse.ok) {
             const createPayload = await createResponse.json().catch(() => null);
@@ -185,10 +255,71 @@ export function AgentNodeGallery({
               createPayload?.agent?.id ||
               null;
           }
+
+          if (!agentId) {
+            const recreateResponse = await fetch(`${baseUrl}/api/v1/agents`, {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify({
+                name: requestedName,
+                agent_spec_id: spec.id,
+              }),
+            });
+            if (!recreateResponse.ok) {
+              throw new Error(
+                `Failed to launch agent (${recreateResponse.status})`,
+              );
+            }
+            const recreatePayload = await recreateResponse.json().catch(() => null);
+            agentId =
+              recreatePayload?.agent_id ||
+              recreatePayload?.id ||
+              recreatePayload?.agent?.agent_id ||
+              recreatePayload?.agent?.id ||
+              null;
+          }
         }
         if (!agentId) {
           throw new Error('Launch did not return an agent id.');
         }
+
+        // Best-effort guard: if spec metadata is missing for this agent id,
+        // recreate once from the selected spec to avoid configure/spec 404s.
+        const specResponse = await fetch(
+          `${baseUrl}/api/v1/configure/agents/${encodeURIComponent(agentId)}/spec`,
+          { headers: authHeaders },
+        );
+        if (specResponse.status === 404) {
+          await fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
+            method: 'DELETE',
+            headers: authHeaders,
+          });
+          const recreateResponse = await fetch(`${baseUrl}/api/v1/agents`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({
+              name: spec.id,
+              agent_spec_id: spec.id,
+            }),
+          });
+          if (!recreateResponse.ok) {
+            throw new Error(
+              `Failed to recreate agent with spec (${recreateResponse.status})`,
+            );
+          }
+          const recreatePayload = await recreateResponse.json().catch(() => null);
+          agentId =
+            recreatePayload?.agent_id ||
+            recreatePayload?.id ||
+            recreatePayload?.agent?.agent_id ||
+            recreatePayload?.agent?.id ||
+            null;
+        }
+
+        if (!agentId) {
+          throw new Error('Launch did not return an agent id.');
+        }
+
         const activeResponse = await fetch(
           `${baseUrl}/api/v1/agent-node/active-agent`,
           {
@@ -213,6 +344,53 @@ export function AgentNodeGallery({
     },
     [authHeaders, baseUrl, onLaunched, onLaunchError, runningBySpec],
   );
+
+  const terminateActiveAgent = useCallback(async () => {
+    if (!normalizedActiveAgentId) {
+      return;
+    }
+    setTerminating(true);
+    setError(null);
+    try {
+      const deleteResponse = await fetch(
+        `${baseUrl}/api/v1/agents/${encodeURIComponent(normalizedActiveAgentId)}`,
+        {
+          method: 'DELETE',
+          headers: authHeaders,
+        },
+      );
+      if (!deleteResponse.ok && deleteResponse.status !== 404) {
+        throw new Error(
+          `Failed to terminate active agent (${deleteResponse.status})`,
+        );
+      }
+
+      const clearResponse = await fetch(`${baseUrl}/api/v1/agent-node/active-agent`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ agent_id: null }),
+      });
+      if (!clearResponse.ok) {
+        throw new Error(
+          `Failed to clear active agent (${clearResponse.status})`,
+        );
+      }
+
+      setRunning(prev =>
+        prev.filter(candidate => {
+          const candidateId = String(candidate.agent_id || candidate.id || '').trim();
+          return candidateId !== normalizedActiveAgentId;
+        }),
+      );
+      onTerminated?.(normalizedActiveAgentId);
+    } catch (reason: any) {
+      const message = reason?.message || 'Unable to terminate active agent.';
+      setError(message);
+      onLaunchError?.(message);
+    } finally {
+      setTerminating(false);
+    }
+  }, [authHeaders, baseUrl, normalizedActiveAgentId, onTerminated, onLaunchError]);
 
   if (loading) {
     return (
@@ -250,7 +428,46 @@ export function AgentNodeGallery({
         </Box>
       )}
 
-      {specs.length === 0 ? (
+      {hasActiveAgent ? (
+        <Box
+          sx={{
+            p: 4,
+            border: '1px solid',
+            borderColor: 'success.muted',
+            borderRadius: 2,
+            bg: 'success.subtle',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Label
+              variant="success"
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}
+            >
+              <CheckCircleFillIcon size={12} />
+              Active agent
+            </Label>
+            <Text sx={{ fontWeight: 600 }}>
+              {activeAgent?.name || activeAgent?.agent_spec_id || normalizedActiveAgentId}
+            </Text>
+          </Box>
+          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+            Chat is enabled while an active agent is running on this node. Terminate it to
+            return to the agent cards picker.
+          </Text>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <Button
+              variant="danger"
+              disabled={terminating}
+              onClick={() => void terminateActiveAgent()}
+            >
+              {terminating ? 'Terminating…' : 'Terminate'}
+            </Button>
+          </Box>
+        </Box>
+      ) : specs.length === 0 ? (
         <Box
           sx={{
             p: 4,
@@ -264,14 +481,23 @@ export function AgentNodeGallery({
           No agents are available in the library yet.
         </Box>
       ) : (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: GRID_TEMPLATE,
-            gap: 3,
-          }}
-        >
-          {specs.map(spec => {
+        <>
+          <Box sx={{ mb: 3, maxWidth: 420 }}>
+            <TextInput
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder="Filter agents by name, description, model, or tag..."
+              block
+            />
+          </Box>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: GRID_TEMPLATE,
+              gap: 3,
+            }}
+          >
+            {filteredSpecs.map(spec => {
             const isActive =
               !!activeAgentId &&
               runningBySpec.get(spec.id) === activeAgentId;
@@ -399,8 +625,24 @@ export function AgentNodeGallery({
                 </Box>
               </Box>
             );
-          })}
-        </Box>
+            })}
+          </Box>
+          {filteredSpecs.length === 0 && (
+            <Box
+              sx={{
+                mt: 3,
+                p: 3,
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+              }}
+            >
+              <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                No agents match this filter.
+              </Text>
+            </Box>
+          )}
+        </>
       )}
     </Box>
   );

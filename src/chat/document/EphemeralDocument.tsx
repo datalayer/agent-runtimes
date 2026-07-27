@@ -51,14 +51,14 @@ import { ListPlugin } from '@lexical/react/LexicalListPlugin';
 import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
+import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
-  Box,
   DatalayerThemeProvider,
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
 } from '@datalayer/primer-addons';
-import { Spinner, Text } from '@primer/react';
+import { Box, Spinner, Text } from '@primer/react';
 import {
   JupyterReactTheme,
   Kernel,
@@ -150,6 +150,12 @@ export interface EphemeralDocumentProps {
   onContentChange?: (content: string) => void;
   /** Reports the lexical frontend tools so the parent can pass them to the agent. */
   onToolsReady?: (tools: FrontendToolDefinition[]) => void;
+  /**
+   * Reports the document's live sandbox kernel connection upward so the chat
+   * header can render the same rich kernel indicator (kernel id, client id,
+   * status) as the notebook surface. Emits `null` while the kernel is absent.
+   */
+  onKernelChange?: (kernel: IKernelConnection | null) => void;
   /**
    * Optional real-time collaboration configuration. When supplied the document
    * joins a shared Loro room over WebSocket so its state transits over RTC
@@ -245,6 +251,7 @@ export function EphemeralDocument({
   content,
   onContentChange,
   onToolsReady,
+  onKernelChange,
   collaboration,
 }: EphemeralDocumentProps) {
   // Real-time collaboration is active only when both a WebSocket endpoint and a
@@ -413,6 +420,16 @@ export function EphemeralDocument({
       }
     };
   }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
+
+  // Surface the document's live kernel connection to the parent so the chat
+  // header's kernel indicator reflects the real connected kernel instead of
+  // the "disconnected"/"no-kernel" placeholder while the document is active.
+  useEffect(() => {
+    onKernelChange?.(documentKernel?.connection ?? null);
+    return () => {
+      onKernelChange?.(null);
+    };
+  }, [documentKernel, onKernelChange]);
 
   const activeServiceManager = runtimeServiceManager;
   const isRuntimeStarting = Boolean(
