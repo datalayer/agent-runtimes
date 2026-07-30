@@ -171,6 +171,13 @@ pip install -e ".[chat]"       # chat-related extras
 pip install -e ".[docs]"       # docs build dependencies
 ```
 
+For deterministic installs in CI (and to avoid resolver backtracking), use the
+version constraints file:
+
+```bash
+pip install -c constraints/py313.txt -e .
+```
+
 ### Run
 
 ```bash

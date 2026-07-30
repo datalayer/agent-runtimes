@@ -18,6 +18,7 @@ from ..routes.agent_node import (
     register_configuration_change_callback,
     register_credentials_change_callback,
     register_mode_change_callback,
+    set_agent_node_aws_identity,
     set_agent_node_uid,
 )
 from .agent_node_collaboration import ensure_collaboration_room
@@ -101,6 +102,32 @@ def _register_payload() -> dict:
     if node_id:
         payload["node_id"] = node_id
     return payload
+
+
+def _detect_aws_identity() -> tuple[str | None, str | None, str | None]:
+    """Return (account_id, region, arn) when running with AWS credentials."""
+    try:
+        import boto3
+    except Exception:
+        return None, None, None
+
+    try:
+        session = boto3.session.Session()
+        sts = session.client("sts")
+        identity = sts.get_caller_identity()
+        account_id = str(identity.get("Account") or "").strip() or None
+        arn = str(identity.get("Arn") or "").strip() or None
+        region = (
+            str(session.region_name or "").strip()
+            or str(os.environ.get("AWS_REGION") or "").strip()
+            or str(os.environ.get("AWS_DEFAULT_REGION") or "").strip()
+            or None
+        )
+        if account_id and (not account_id.isdigit() or len(account_id) != 12):
+            account_id = None
+        return account_id, region, arn
+    except Exception:
+        return None, None, None
 
 
 def _has_running_active_agent() -> bool:
@@ -247,6 +274,15 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
                     heartbeat_seconds,
                 )
                 continue
+
+            configuration = get_agent_node_configuration()
+            if configuration.deployment_target == "aws":
+                account_id, region, identity_arn = _detect_aws_identity()
+                set_agent_node_aws_identity(
+                    aws_account_id=account_id,
+                    aws_region=region,
+                    aws_identity_arn=identity_arn,
+                )
 
             if client is None or client_signature != signature:
                 if client is not None:

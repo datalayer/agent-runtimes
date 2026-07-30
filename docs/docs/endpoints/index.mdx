@@ -702,7 +702,7 @@ Get detailed information about running MCP toolsets.
 ```json
 [
   {
-    "type": "MCPServerStdio",
+    "type": "MCPToolset",
     "id": "tavily",
     "command": "npx",
     "args": ["-y", "tavily-mcp@0.1.3"]
@@ -1282,6 +1282,7 @@ Read or update local node configuration.
 POST /api/runtimes/v1/agent-nodes/register
 POST /api/runtimes/v1/agent-nodes/heartbeat
 POST /api/runtimes/v1/agent-nodes/configuration
+POST /api/runtimes/v1/agent-nodes/aws/discover
 GET  /api/runtimes/v1/agent-nodes
 GET  /api/runtimes/v1/agent-nodes/{node_id}
 ```
@@ -1290,6 +1291,10 @@ These endpoints maintain fleet state and enforce visibility:
 
 - own nodes are always visible,
 - other users' nodes are visible only when `mode=shared`.
+
+`POST /agent-nodes/aws/discover` accepts `{ "aws_account_id": "123456789012" }`,
+allowlists that account id for the caller in memory, and returns currently
+available nodes registered with the same AWS account id.
 
 ### Agent Node Tunnel (datalayer-runtimes)
 

@@ -345,7 +345,8 @@ class MCPLifecycleManager:
 
             # Import pydantic_ai MCP support
             try:
-                from pydantic_ai.mcp import MCPServerStdio
+                from fastmcp.client.transports import StdioTransport
+                from pydantic_ai.mcp import MCPToolset
             except ImportError as e:
                 error = f"pydantic_ai.mcp not available: {e}"
                 logger.error(error)
@@ -395,21 +396,19 @@ class MCPLifecycleManager:
                     for arg in (config.args or [])
                 ]
 
-                # Use tool_prefix to avoid name conflicts if the same server type
-                # is selected multiple times (e.g., from both config and catalog)
-                tool_prefix = f"{server_id}_"
-
-                pydantic_server = MCPServerStdio(
-                    config.command,
-                    args=expanded_args,
-                    env=env,
-                    tool_prefix=tool_prefix,
-                    id=server_id,  # Pass id in constructor
+                pydantic_server = MCPToolset(
+                    StdioTransport(
+                        command=config.command,
+                        args=expanded_args,
+                        env=env,
+                    ),
+                    id=server_id,
+                    init_timeout=MCP_SERVER_HANDSHAKE_TIMEOUT,
                 )
 
                 # Log the env vars that will be available in the subprocess.
                 # For npx-based servers (e.g., tavily, kaggle) this is the
-                # ONLY source of env vars — MCPServerStdio does not inherit
+                # ONLY source of env vars — the stdio transport subprocess does not inherit
                 # from the parent process.
                 if extra_env:
                     logger.info(
@@ -417,22 +416,6 @@ class MCPLifecycleManager:
                         f"includes {len(extra_env)} injected var(s): "
                         f"{sorted(extra_env.keys())}"
                     )
-
-                # Adjust timeout if supported
-                if hasattr(pydantic_server, "timeout"):
-                    try:
-                        current_timeout = getattr(pydantic_server, "timeout")
-                        if (
-                            current_timeout is None
-                            or current_timeout < MCP_SERVER_HANDSHAKE_TIMEOUT
-                        ):
-                            setattr(
-                                pydantic_server, "timeout", MCP_SERVER_HANDSHAKE_TIMEOUT
-                            )
-                    except Exception as timeout_error:
-                        logger.debug(
-                            f"Unable to adjust timeout for '{server_id}': {timeout_error}"
-                        )
 
             except Exception as e:
                 error = f"Failed to create MCP server: {e}"

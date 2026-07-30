@@ -14,7 +14,7 @@ the central UI under `Docs → Agent Nodes`.
 ## Documentation Map
 
 - End-user overview: [/docs/agent-nodes](https://datalayer.ai/docs/agent-nodes)
-- End-user laptop workflow: [/docs/agent-nodes-laptop](https://datalayer.ai/docs/agent-nodes-laptop)
+- End-user localhost workflow: [/docs/agent-nodes-localhost](https://datalayer.ai/docs/agent-nodes-localhost)
 - End-user AWS workflow: [/docs/agent-nodes-aws](https://datalayer.ai/docs/agent-nodes-aws)
 - CloudFormation definitions source:
    [github.com/datalayer/agent-runtimes/tree/main/aws](https://github.com/datalayer/agent-runtimes/tree/main/aws)
@@ -135,9 +135,25 @@ the tunnel required:
    `RUN_FINISHED`. On `chat.error` or a
    `DATALAYER_AGENT_NODE_AGUI_TIMEOUT_SECONDS` timeout, emit `RUN_ERROR`.
 
-The same node also serves **node-local** chat directly from its own UI; both
-paths target the node's active agent, so behaviour is identical whether the
-prompt arrives over the tunnel or locally.
+Localhost deployments can also serve **node-local** chat directly from the
+node UI. AWS deployments are commonly configured as **SaaS-only chat**:
+prompts enter through the central AG-UI proxy, while execution still happens on
+the node.
+
+### AWS account discovery allowlist
+
+For AWS nodes that do not use node-local interactive sign-in, the node sends
+AWS identity metadata (`aws_account_id`, `aws_region`, `aws_identity_arn`) in
+its registration payload (detected via `boto3` STS `GetCallerIdentity`).
+
+`datalayer-runtimes` keeps an in-memory allowlist per requester. Calling
+`POST /api/runtimes/v1/agent-nodes/aws/discover` with a 12-digit account id:
+
+1. allowlists that AWS account id for the caller, and
+2. returns currently available nodes registered with that account id.
+
+Those nodes then become visible to that caller in the Agent Nodes list/chat
+flows even when not shared.
 
 ## Modes
 

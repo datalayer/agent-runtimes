@@ -206,6 +206,11 @@ type AgentNodeConfiguration = {
   active_agent_id?: string;
   collaboration_notebook_uid?: string;
   collaboration_document_uid?: string;
+  deployment_target?: 'localhost' | 'aws' | 'other';
+  chat_access_mode?: 'local_and_saas' | 'saas_only';
+  aws_account_id?: string;
+  aws_region?: string;
+  aws_identity_arn?: string;
 };
 
 const DEFAULT_CONFIGURATION: AgentNodeConfiguration = {
@@ -496,6 +501,9 @@ export function AgentNode() {
   const hasActiveAgent = Boolean(
     String(configuration.active_agent_id || '').trim(),
   );
+  const isSaasOnlyChat =
+    configuration.chat_access_mode === 'saas_only' ||
+    configuration.deployment_target === 'aws';
 
   // ── Local sandbox runtime override for the ephemeral surfaces ─────────────
   // In the node-local webapp the agent's Jupyter sandbox is a LOCAL server, not
@@ -1044,6 +1052,12 @@ export function AgentNode() {
     }
   }, [step, hasActiveAgent]);
 
+  useEffect(() => {
+    if (step === 'chat' && isSaasOnlyChat) {
+      setStep('gallery');
+    }
+  }, [step, isSaasOnlyChat]);
+
   const handleSignIn = (newToken: string, handle: string) => {
     setAutoBootstrapDisabled(false);
     setDisableAutoBootstrap(false);
@@ -1148,7 +1162,7 @@ export function AgentNode() {
     if (!token) return false;
     if (nextStep === 'gallery') return true;
     if (nextStep === 'chat') {
-      return configuration.mode === 'private' && hasActiveAgent;
+      return configuration.mode === 'private' && hasActiveAgent && !isSaasOnlyChat;
     }
     return true;
   };
@@ -1686,7 +1700,15 @@ export function AgentNode() {
                   ).catch(() => {
                     // Best-effort persistence; local state already switched.
                   });
-                  setStep('chat');
+                  if (isSaasOnlyChat) {
+                    showBanner(
+                      'info',
+                      'This node is configured for SaaS chat. Open Agent Nodes in Datalayer to chat with it.',
+                    );
+                    setStep('gallery');
+                  } else {
+                    setStep('chat');
+                  }
                 }}
                 onTerminated={() => {
                   setSelectedAgentId('default');
@@ -1708,40 +1730,51 @@ export function AgentNode() {
                   overflow: 'hidden',
                 }}
               >
-                <Chat
-                  protocol="ag-ui"
-                  baseUrl={AGENT_RUNTIMES_BASE_URL}
-                  agentId={selectedAgentId}
-                  title={chatTitle}
-                  placeholder="Send a message..."
-                  description={chatDescription}
-                  suggestions={chatSuggestions}
-                  submitOnSuggestionClick
-                  showHeader={true}
-                  height={'70vh'}
-                  showModelSelector={true}
-                  showToolsMenu={true}
-                  showSkillsMenu={true}
-                  showTokenUsage={true}
-                  showInformation={true}
-                  autoFocus
-                  enableEphemeralNotebook
-                  enableEphemeralDocument
-                  initialEphemeralSurfaceMode="notebook"
-                  runtimeId={selectedAgentId}
-                  ephemeralRuntimeOverride={sandboxRuntimeOverride}
-                  kernelEnvironmentName={sandboxEnvironmentName}
-                  ephemeralNotebookCollaborationProvider={
-                    ephemeralNotebookCollaborationProvider
-                  }
-                  ephemeralNotebookCollaborationDocumentId={
-                    ephemeralCollaborationDocumentId
-                  }
-                  ephemeralDocumentCollaboration={
-                    ephemeralDocumentCollaboration
-                  }
-                  historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
-                />
+                {isSaasOnlyChat ? (
+                  <Box sx={{ p: 4 }}>
+                    <Heading sx={{ fontSize: 2, mb: 2 }}>Chat From SaaS</Heading>
+                    <Text sx={{ color: 'fg.muted' }}>
+                      This Agent Node deployment is configured for SaaS-only chat.
+                      Use the Datalayer Agent Nodes view to open chat sessions over
+                      the runtimes tunnel.
+                    </Text>
+                  </Box>
+                ) : (
+                  <Chat
+                    protocol="ag-ui"
+                    baseUrl={AGENT_RUNTIMES_BASE_URL}
+                    agentId={selectedAgentId}
+                    title={chatTitle}
+                    placeholder="Send a message..."
+                    description={chatDescription}
+                    suggestions={chatSuggestions}
+                    submitOnSuggestionClick
+                    showHeader={true}
+                    height={'70vh'}
+                    showModelSelector={true}
+                    showToolsMenu={true}
+                    showSkillsMenu={true}
+                    showTokenUsage={true}
+                    showInformation={true}
+                    autoFocus
+                    enableEphemeralNotebook
+                    enableEphemeralDocument
+                    initialEphemeralSurfaceMode="notebook"
+                    runtimeId={selectedAgentId}
+                    ephemeralRuntimeOverride={sandboxRuntimeOverride}
+                    kernelEnvironmentName={sandboxEnvironmentName}
+                    ephemeralNotebookCollaborationProvider={
+                      ephemeralNotebookCollaborationProvider
+                    }
+                    ephemeralNotebookCollaborationDocumentId={
+                      ephemeralCollaborationDocumentId
+                    }
+                    ephemeralDocumentCollaboration={
+                      ephemeralDocumentCollaboration
+                    }
+                    historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
+                  />
+                )}
               </Box>
             )}
           </PageLayout.Content>

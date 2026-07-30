@@ -41,6 +41,13 @@ Parameters:
       (Optional) Dedicated ai-inference base URL. When empty, the template
       falls back to DatalayerUrl.
 
+  DatalayerRuntimesUrl:
+    Type: String
+    Default: ''
+    Description: >
+      (Optional) Datalayer Runtimes base URL used for node registration and
+      tunnel traffic. When empty, the template falls back to DatalayerUrl.
+
   AgentNodeImage:
     Type: String
     Default: datalayer/agent-nodes:latest
@@ -198,12 +205,23 @@ Resources:
             AI_INFERENCE_URL='${DatalayerUrl}'
           fi
 
+          RUNTIMES_URL='${DatalayerRuntimesUrl}'
+          if [[ -z "$RUNTIMES_URL" ]]; then
+            RUNTIMES_URL='${DatalayerUrl}'
+          fi
+
           docker run -d \
             --name agent-node \
             --restart unless-stopped \
             -p ${AgentNodePort}:${AgentNodePort} \
+            -e AGENT_RUNTIMES_NODE=true \
+            -e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer \
+            -e AGENT_NODE_DEPLOYMENT_TARGET=aws \
+            -e AGENT_NODE_CHAT_ACCESS_MODE=saas_only \
             -e DATALAYER_API_KEY='${DatalayerApiKey}' \
             -e DATALAYER_URL='${DatalayerUrl}' \
+            -e DATALAYER_RUNTIMES_URL="$RUNTIMES_URL" \
+            -e DATALAYER_AGENT_RUNTIMES_URL="$RUNTIMES_URL" \
             -e VITE_DATALAYER_URL='${DatalayerUrl}' \
             -e DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \
             -e VITE_DATALAYER_AI_INFERENCE_URL="$AI_INFERENCE_URL" \

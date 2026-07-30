@@ -497,9 +497,7 @@ async def _create_and_register_cli_agent(
             )
         ]
     agent_kwargs: dict[str, Any] = {
-        "system_prompt": system_prompt,
-        # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
-        "builtin_tools": (),
+        "instructions": system_prompt,
     }
     if capabilities:
         agent_kwargs["capabilities"] = capabilities

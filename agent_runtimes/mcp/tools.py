@@ -12,7 +12,7 @@ import logging
 from typing import Any
 from urllib.parse import urljoin
 
-from pydantic_ai.mcp import MCPServerStreamableHTTP
+from pydantic_ai.mcp import MCPToolset
 
 from agent_runtimes.types import BuiltinTool
 
@@ -71,7 +71,7 @@ def tools_to_builtin_list(tools: list[dict[str, Any]]) -> list[BuiltinTool]:
 def create_mcp_server(
     base_url: str,
     token: str | None = None,
-) -> MCPServerStreamableHTTP:
+) -> MCPToolset:
     """
     Create an MCP server connection.
 
@@ -83,7 +83,7 @@ def create_mcp_server(
         token: Authentication token
 
     Returns:
-        MCPServerStreamableHTTP instance connected to the MCP server
+        MCPToolset instance connected to the MCP server
     """
     # Construct the MCP endpoint URL
     mcp_url = urljoin(base_url.rstrip("/") + "/", "mcp")
@@ -93,10 +93,10 @@ def create_mcp_server(
     # Create MCP server with authentication headers if token is provided
     if token:
         headers = {"Authorization": f"token {token}"}
-        server = MCPServerStreamableHTTP(mcp_url, headers=headers)
+        server = MCPToolset(mcp_url, headers=headers)
         logger.info("MCP server connection created successfully with authentication")
     else:
-        server = MCPServerStreamableHTTP(mcp_url)
+        server = MCPToolset(mcp_url)
         logger.info("MCP server connection created successfully without authentication")
 
     return server
@@ -141,6 +141,8 @@ async def get_tools_from_mcp(
                 # Include inputSchema if available
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
                     tool_dict["inputSchema"] = tool.inputSchema
+                elif hasattr(tool, "parameters_json_schema") and tool.parameters_json_schema:
+                    tool_dict["inputSchema"] = tool.parameters_json_schema
                 else:
                     tool_dict["inputSchema"] = {
                         "type": "object",

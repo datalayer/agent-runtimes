@@ -3295,7 +3295,11 @@ function ChatBaseInner({
       pendingPromptSentRef.current = pendingPromptKey;
       return;
     }
-    if (!historyLoaded) return;
+    // Do not block prompt replay forever when runtime history cannot be fetched
+    // (e.g. websocket not connected yet/anymore). In that case we fall back to
+    // submitting once the adapter is ready.
+    const canProceedWithoutHistory = !historyScopeId || wsState !== 'connected';
+    if (!historyLoaded && !canProceedWithoutHistory) return;
     if (!adapterReady && !onSendMessage) return;
     pendingPromptSentRef.current = pendingPromptKey ?? null;
     if (pendingPromptKey) {
@@ -3306,6 +3310,8 @@ function ChatBaseInner({
     pendingPrompt,
     pendingPromptKey,
     historyLoaded,
+    historyScopeId,
+    wsState,
     adapterReady,
     handleSend,
     onSendMessage,

@@ -704,12 +704,18 @@ class PydanticAIAdapter(BaseAgent):
             # Detailed tracking is handled by LLMContextUsageCapability.
             usage = {}
             if hasattr(result, "usage"):
-                run_usage = result.usage()
-                usage = {
-                    "prompt_tokens": getattr(run_usage, "input_tokens", 0),
-                    "completion_tokens": getattr(run_usage, "output_tokens", 0),
-                    "total_tokens": getattr(run_usage, "total_tokens", 0),
-                }
+                run_usage_candidate = getattr(result, "usage", None)
+                run_usage = (
+                    run_usage_candidate()
+                    if callable(run_usage_candidate)
+                    else run_usage_candidate
+                )
+                if run_usage is not None:
+                    usage = {
+                        "prompt_tokens": getattr(run_usage, "input_tokens", 0),
+                        "completion_tokens": getattr(run_usage, "output_tokens", 0),
+                        "total_tokens": getattr(run_usage, "total_tokens", 0),
+                    }
 
             return AgentResponse(
                 content=content,

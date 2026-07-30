@@ -50,6 +50,12 @@ class AgentNodeConfiguration(BaseModel):
     # above and provisioned alongside it, so the node-local UI and the SaaS
     # gallery view join the same Loro room for rich-text editing.
     collaboration_document_uid: str | None = None
+    # Deployment/runtime metadata propagated to the central runtimes registry.
+    deployment_target: Literal["localhost", "aws", "other"] | None = None
+    chat_access_mode: Literal["local_and_saas", "saas_only"] | None = None
+    aws_account_id: str | None = None
+    aws_region: str | None = None
+    aws_identity_arn: str | None = None
 
 
 def _state_path() -> Path:
@@ -174,8 +180,22 @@ def _initial_configuration() -> AgentNodeConfiguration:
     persisted = _read_from_disk()
     if persisted is not None:
         return persisted
+    deployment_target = (
+        (os.environ.get("AGENT_NODE_DEPLOYMENT_TARGET") or "localhost")
+        .strip()
+        .lower()
+    )
+    if deployment_target not in ("localhost", "aws", "other"):
+        deployment_target = "localhost"
+    chat_access_mode = (
+        (os.environ.get("AGENT_NODE_CHAT_ACCESS_MODE") or "").strip().lower()
+    )
+    if chat_access_mode not in ("local_and_saas", "saas_only"):
+        chat_access_mode = "saas_only" if deployment_target == "aws" else "local_and_saas"
     return AgentNodeConfiguration(
-        mode=(os.environ.get("AGENT_NODE_MODE") or "sleep").strip().lower() or "sleep"
+        mode=(os.environ.get("AGENT_NODE_MODE") or "sleep").strip().lower() or "sleep",
+        deployment_target=deployment_target,  # type: ignore[arg-type]
+        chat_access_mode=chat_access_mode,  # type: ignore[arg-type]
     )
 
 
@@ -206,6 +226,11 @@ def set_agent_node_configuration(
                 "collaboration_document_uid": (
                     _CURRENT_CONFIGURATION.collaboration_document_uid
                 ),
+                "deployment_target": _CURRENT_CONFIGURATION.deployment_target,
+                "chat_access_mode": _CURRENT_CONFIGURATION.chat_access_mode,
+                "aws_account_id": _CURRENT_CONFIGURATION.aws_account_id,
+                "aws_region": _CURRENT_CONFIGURATION.aws_region,
+                "aws_identity_arn": _CURRENT_CONFIGURATION.aws_identity_arn,
             }
         )
         previous_mode = _CURRENT_CONFIGURATION.mode
@@ -233,6 +258,38 @@ def set_agent_node_uid(node_uid: str) -> AgentNodeConfiguration:
             update={"node_uid": cleaned}
         )
         _write_to_disk(_CURRENT_CONFIGURATION)
+    return _CURRENT_CONFIGURATION
+
+
+def set_agent_node_aws_identity(
+    *,
+    aws_account_id: str | None,
+    aws_region: str | None,
+    aws_identity_arn: str | None,
+) -> AgentNodeConfiguration:
+    """Persist detected AWS identity metadata when it changes."""
+    global _CURRENT_CONFIGURATION
+    cleaned_account = (aws_account_id or "").strip() or None
+    if cleaned_account and (not cleaned_account.isdigit() or len(cleaned_account) != 12):
+        cleaned_account = None
+    cleaned_region = (aws_region or "").strip() or None
+    cleaned_arn = (aws_identity_arn or "").strip() or None
+    with _LOCK:
+        if (
+            _CURRENT_CONFIGURATION.aws_account_id == cleaned_account
+            and _CURRENT_CONFIGURATION.aws_region == cleaned_region
+            and _CURRENT_CONFIGURATION.aws_identity_arn == cleaned_arn
+        ):
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={
+                "aws_account_id": cleaned_account,
+                "aws_region": cleaned_region,
+                "aws_identity_arn": cleaned_arn,
+            }
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    _notify_configuration_change()
     return _CURRENT_CONFIGURATION
 
 

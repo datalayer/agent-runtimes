@@ -40,6 +40,13 @@ Parameters:
       (Optional) Dedicated ai-inference base URL. When empty, the template
       falls back to DatalayerUrl.
 
+  DatalayerRuntimesUrl:
+    Type: String
+    Default: ''
+    Description: >
+      (Optional) Datalayer Runtimes base URL used for node registration and
+      tunnel traffic. When empty, the template falls back to DatalayerUrl.
+
   AgentNodeImage:
     Type: String
     Default: datalayer/agent-nodes:latest
@@ -69,6 +76,8 @@ Parameters:
 Conditions:
   HasDatalayerAiInferenceUrl: !Not
     - !Equals [!Ref DatalayerAiInferenceUrl, '']
+  HasDatalayerRuntimesUrl: !Not
+    - !Equals [!Ref DatalayerRuntimesUrl, '']
 
 Resources:
 
@@ -278,10 +287,28 @@ Resources:
             - ContainerPort: !Ref AgentNodePort
               Protocol: tcp
           Environment:
+            - Name: AGENT_RUNTIMES_NODE
+              Value: 'true'
+            - Name: AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE
+              Value: datalayer
+            - Name: AGENT_NODE_DEPLOYMENT_TARGET
+              Value: aws
+            - Name: AGENT_NODE_CHAT_ACCESS_MODE
+              Value: saas_only
             - Name: DATALAYER_API_KEY
               Value: !Ref DatalayerApiKey
             - Name: DATALAYER_URL
               Value: !Ref DatalayerUrl
+            - Name: DATALAYER_RUNTIMES_URL
+              Value: !If
+                - HasDatalayerRuntimesUrl
+                - !Ref DatalayerRuntimesUrl
+                - !Ref DatalayerUrl
+            - Name: DATALAYER_AGENT_RUNTIMES_URL
+              Value: !If
+                - HasDatalayerRuntimesUrl
+                - !Ref DatalayerRuntimesUrl
+                - !Ref DatalayerUrl
             - Name: VITE_DATALAYER_URL
               Value: !Ref DatalayerUrl
             - Name: DATALAYER_AI_INFERENCE_URL

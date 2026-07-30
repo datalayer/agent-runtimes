@@ -388,7 +388,7 @@ mcp_toolsets = get_mcp_toolsets()
 # Create agent with MCP tools
 agent = Agent(
         "anthropic:claude-sonnet-4-20250514",
-        system_prompt="You are a helpful assistant.",
+    instructions="You are a helpful assistant.",
         toolsets=mcp_toolsets,
 )
 ```

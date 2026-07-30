@@ -1843,9 +1843,7 @@ async def create_agent(
             capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
 
             agent_kwargs: dict[str, Any] = {
-                "system_prompt": final_system_prompt,
-                # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
-                "builtin_tools": (),
+                "instructions": final_system_prompt,
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
             if capabilities:

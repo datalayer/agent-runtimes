@@ -1042,42 +1042,47 @@ class VercelAITransport(BaseTransport):
                 "Vercel AI: Could not apply per-turn tool/skill state: %s", exc
             )
 
-        # Convert string tool IDs to actual AbstractBuiltinTool instances
-        # pydantic-ai expects Sequence[AbstractBuiltinTool], not list[str]
-        effective_builtin_tools = None
+        # Convert string tool IDs to pydantic-ai v2 native tool capabilities.
+        # The frontend still uses `builtinTools` naming for compatibility.
+        request_native_capabilities = []
         if builtin_tools_input:
             try:
-                from pydantic_ai.builtin_tools import (
-                    BUILTIN_TOOL_TYPES,
-                    AbstractBuiltinTool,
+                from pydantic_ai.capabilities import NativeTool
+                from pydantic_ai.native_tools import (
+                    NATIVE_TOOL_TYPES,
+                    AbstractNativeTool,
                 )
 
-                tool_instances: list[AbstractBuiltinTool] = []
+                tool_instances: list[AbstractNativeTool] = []
                 for tool_id in builtin_tools_input:
                     if isinstance(tool_id, str):
-                        tool_cls = BUILTIN_TOOL_TYPES.get(tool_id)
+                        tool_cls = NATIVE_TOOL_TYPES.get(tool_id)
                         if tool_cls is not None:
                             tool_instances.append(tool_cls())
                             logger.debug(
-                                f"Vercel AI: Converted builtin tool '{tool_id}' to {tool_cls.__name__}"
+                                f"Vercel AI: Converted builtin tool '{tool_id}' to native {tool_cls.__name__}"
                             )
                         else:
                             logger.warning(
-                                f"Vercel AI: Unknown builtin tool '{tool_id}', skipping"
+                                f"Vercel AI: Unknown native tool '{tool_id}', skipping"
                             )
-                    elif isinstance(tool_id, AbstractBuiltinTool):
+                    elif isinstance(tool_id, AbstractNativeTool):
                         # Already an instance
                         tool_instances.append(tool_id)
                     else:
                         logger.warning(
-                            f"Vercel AI: Invalid builtin tool type: {type(tool_id)}, skipping"
+                            f"Vercel AI: Invalid native tool type: {type(tool_id)}, skipping"
                         )
-                effective_builtin_tools = tool_instances if tool_instances else None
+                request_native_capabilities = [
+                    NativeTool(tool_instance) for tool_instance in tool_instances
+                ]
                 logger.info(
-                    f"Vercel AI: Converted {len(builtin_tools_input)} builtin tool names to {len(tool_instances)} instances"
+                    "Vercel AI: Converted %d builtin tool names to %d native capabilities",
+                    len(builtin_tools_input),
+                    len(request_native_capabilities),
                 )
             except ImportError as e:
-                logger.error(f"Vercel AI: Could not import builtin_tools: {e}")
+                logger.error(f"Vercel AI: Could not import native_tools: {e}")
 
         # Extract identity/JWT hints for OTEL metric attribution
         metric_user_id: str | None = None
@@ -1134,7 +1139,14 @@ class VercelAITransport(BaseTransport):
             Callback invoked after agent run completes.
             Usage tracking is handled by LLMContextUsageCapability.
             """
-            usage = result.usage()
+            usage_candidate = getattr(result, "usage", None)
+            usage = (
+                usage_candidate()
+                if callable(usage_candidate)
+                else usage_candidate
+            )
+            if usage is None:
+                return
             input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
             output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
             tool_call_count = int(getattr(usage, "tool_calls", 0) or 0)
@@ -1397,8 +1409,8 @@ class VercelAITransport(BaseTransport):
                     "toolsets": runtime_toolsets,
                     "on_complete": on_complete,
                 }
-                if effective_builtin_tools is not None:
-                    dispatch_kwargs["builtin_tools"] = effective_builtin_tools
+                if request_native_capabilities:
+                    dispatch_kwargs["capabilities"] = request_native_capabilities
 
                 dispatch_params = inspect.signature(
                     VercelAIAdapter.dispatch_request

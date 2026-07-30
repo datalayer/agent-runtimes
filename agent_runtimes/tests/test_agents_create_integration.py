@@ -185,8 +185,8 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
 
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
-    assert "Spec system prompt" in str(pydantic_kwargs.get("system_prompt"))
-    assert "Use codemode tools." in str(pydantic_kwargs.get("system_prompt"))
+    assert "Spec system prompt" in str(pydantic_kwargs.get("instructions"))
+    assert "Use codemode tools." in str(pydantic_kwargs.get("instructions"))
 
     adapter_kwargs = creation_spy["adapter_kwargs"]
     assert isinstance(adapter_kwargs, dict)
@@ -222,7 +222,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
 
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
-    assert pydantic_kwargs.get("system_prompt") == "Forwarded prompt"
+    assert pydantic_kwargs.get("instructions") == "Forwarded prompt"
 
     # Ensure model actually changed from request default.
     assert creation_spy["pydantic_model"] != DEFAULT_MODEL.value
