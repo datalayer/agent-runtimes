@@ -3,23 +3,30 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { AiAgentIcon, AlienIcon } from '@datalayer/icons-react';
 import {
   DatalayerLogoText,
   DatalayerThemeProvider,
+  getColorPalette,
   getLogoColors,
   setupPrimerPortals,
   themeConfigs,
 } from '@datalayer/primer-addons';
-import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
+import { AppearanceMenu } from '@datalayer/primer-addons/lib/components/appearance';
 import {
   ActionList,
   ActionMenu,
-  Avatar,
   Box,
   Button,
-  FormControl,
   Heading,
   Label,
   PageHeader,
@@ -35,11 +42,11 @@ import {
   PeopleIcon,
   PersonIcon,
   GearIcon,
-  RocketIcon,
   SignOutIcon,
   type Icon as OcticonIcon,
 } from '@primer/octicons-react';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
+import { UserAvatar } from '@datalayer/core/lib/components/avatars';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useIAMStore } from '@datalayer/core/lib/state';
@@ -244,27 +251,44 @@ type InferenceModelResponse = {
 function AgentNodeProfileView({
   token,
   onTokenExpired,
+  avatarFallbackBackground,
+  avatarFallbackForeground,
 }: {
   token: string | null;
   onTokenExpired?: () => void;
+  avatarFallbackBackground?: string;
+  avatarFallbackForeground?: string;
 }) {
   const user = useIAMStore(state => state.user);
+  const hasRealAvatar = (url?: string): boolean => {
+    if (!url) {
+      return false;
+    }
+    if (url.startsWith('https://www.gravatar.com/avatar')) {
+      return false;
+    }
+    return true;
+  };
 
   const display = useMemo(() => {
     if (!user) return null;
     const u = user as any;
     const displayName =
-      [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
       u.display_name ||
-      u.name ||
-      u.handle ||
-      u.email ||
-      'Datalayer user';
+      u.displayName ||
+      u.profile?.display_name ||
+      u.profile?.displayName ||
+      u.full_name ||
+      u.fullName ||
+      [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
+      '';
     const username =
       u.username || u.handle || (u.email ? String(u.email).split('@')[0] : '');
+    const headingDisplayName =
+      displayName || username || u.email || 'Datalayer user';
     const initials =
       u.initials ||
-      String(displayName)
+      String(headingDisplayName)
         .split(/\s+/)
         .filter(Boolean)
         .slice(0, 2)
@@ -274,6 +298,7 @@ function AgentNodeProfileView({
       id: String(u.id || u.uid || ''),
       username,
       displayName,
+      headingDisplayName,
       initials,
       origin: String(u.origin || 'datalayer'),
       handle: u.handle ? `@${u.handle}` : '',
@@ -301,85 +326,106 @@ function AgentNodeProfileView({
         <Text sx={{ color: 'fg.muted' }}>Loading profile…</Text>
       ) : (
         <>
-          <Heading sx={{ fontSize: 2, mb: 2 }}>Identity</Heading>
-          <Box sx={{ textAlign: 'left' }}>
-            <UserBadge
-              token={token}
-              variant="small"
-              onTokenExpired={onTokenExpired}
-            />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {display.avatarUrl ? (
-              <Avatar
-                src={display.avatarUrl}
-                size={72}
-                alt={display.displayName}
-              />
-            ) : (
-              <Box
-                sx={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: '50%',
-                  bg: 'canvas.subtle',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'fg.muted',
-                }}
-              >
-                <PersonIcon size={30} />
-              </Box>
-            )}
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Heading sx={{ fontSize: 3, mb: 1 }}>
-                {display.displayName}
-              </Heading>
-              {display.handle && (
-                <Text sx={{ color: 'fg.muted' }}>{display.handle}</Text>
-              )}
-              {display.email && (
-                <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                  {display.email}
-                </Text>
-              )}
-            </Box>
-          </Box>
-          {display.id && (
-            <Box sx={{ mt: 2 }}>
-              <Label size="large" variant="secondary">
-                {display.id}
-              </Label>
-            </Box>
-          )}
+          <Heading sx={{ fontSize: 2, mb: 2 }}>Profile</Heading>
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: '1fr 2fr',
-              rowGap: 2,
-              columnGap: 3,
-              maxWidth: 560,
+              gridTemplateColumns: ['1fr', null, 'minmax(280px, 1fr) minmax(320px, 2fr)'],
+              gap: 4,
+              alignItems: 'start',
             }}
           >
-            <Text sx={{ fontWeight: 'bold' }}>Username</Text>
-            <Text>{display.username || '-'}</Text>
-            <Text sx={{ fontWeight: 'bold' }}>Display name</Text>
-            <Text>{display.displayName || '-'}</Text>
-            <Text sx={{ fontWeight: 'bold' }}>Initials</Text>
-            <Text>{display.initials || '-'}</Text>
-            <Text sx={{ fontWeight: 'bold' }}>Origin</Text>
-            <Text>{display.origin || '-'}</Text>
-          </Box>
-          {display.roles.length > 0 && (
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              {display.roles.map(role => (
-                <Label key={role} size="small" variant="secondary">
-                  {role}
-                </Label>
-              ))}
+            <Box
+              sx={{
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                p: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 3,
+              }}
+            >
+              <Box sx={{ textAlign: 'left' }}>
+                <UserBadge
+                  token={token}
+                  variant="small"
+                  onTokenExpired={onTokenExpired}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                {hasRealAvatar(display.avatarUrl) ? (
+                  <UserAvatar avatarUrl={display.avatarUrl} size={72} square={false} />
+                ) : (
+                  <Box
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: '50%',
+                      bg: avatarFallbackBackground || 'accent.subtle',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      '--datalayer-icon-fg': avatarFallbackForeground || 'accent.fg',
+                    }}
+                  >
+                    <AlienIcon size={34} themed colormoded />
+                  </Box>
+                )}
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Heading sx={{ fontSize: 3, mb: 1 }}>
+                    {display.headingDisplayName}
+                  </Heading>
+                  {display.handle && (
+                    <Text sx={{ color: 'fg.muted' }}>{display.handle}</Text>
+                  )}
+                </Box>
+              </Box>
+              {display.id && (
+                <Box>
+                  <Label size="large" variant="secondary">
+                    {display.id}
+                  </Label>
+                </Box>
+              )}
             </Box>
-          )}
+
+            <Box
+              sx={{
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                p: 3,
+                display: 'grid',
+                gridTemplateColumns: '1fr 2fr',
+                rowGap: 2,
+                columnGap: 3,
+              }}
+            >
+              <Text sx={{ fontWeight: 'bold' }}>Username</Text>
+              <Text>{display.username || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Display name</Text>
+              <Text>{display.displayName || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Email</Text>
+              <Text>{display.email || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Initials</Text>
+              <Text>{display.initials || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Origin</Text>
+              <Text>{display.origin || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Roles</Text>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {display.roles.length > 0 ? (
+                  display.roles.map(role => (
+                    <Label key={role} size="small" variant="secondary">
+                      {role}
+                    </Label>
+                  ))
+                ) : (
+                  <Text>-</Text>
+                )}
+              </Box>
+            </Box>
+          </Box>
         </>
       )}
     </Box>
@@ -393,6 +439,8 @@ export function AgentNode() {
   const queryClient = useQueryClient();
   const iamUser = useIAMStore(state => state.user);
   const { colorMode, theme: themeVariant } = useAgentNodeThemeStore();
+  const setColorMode = useAgentNodeThemeStore(state => state.setColorMode);
+  const setTheme = useAgentNodeThemeStore(state => state.setTheme);
 
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
@@ -405,6 +453,7 @@ export function AgentNode() {
       : colorMode === 'dark'
         ? 'dark'
         : 'light';
+        const avatarPalette = getColorPalette(themeVariant as any, resolvedMode);
   const authGradient = cfg.cardGradient[resolvedMode];
 
   const [step, setStep] = useState<Step>('auth');
@@ -497,10 +546,11 @@ export function AgentNode() {
     string | null
   >(null);
   const [configurationLoaded, setConfigurationLoaded] = useState(false);
+  const [isActiveAgentRunning, setIsActiveAgentRunning] = useState(false);
   const chatRestoreAttemptRef = useRef<string>('');
-  const hasActiveAgent = Boolean(
-    String(configuration.active_agent_id || '').trim(),
-  );
+  const hasActiveAgent =
+    Boolean(String(configuration.active_agent_id || '').trim()) &&
+    isActiveAgentRunning;
   const isSaasOnlyChat =
     configuration.chat_access_mode === 'saas_only' ||
     configuration.deployment_target === 'aws';
@@ -982,6 +1032,12 @@ export function AgentNode() {
   }, [token, step]);
 
   useEffect(() => {
+    if (!token || !String(configuration.active_agent_id || '').trim()) {
+      setIsActiveAgentRunning(false);
+    }
+  }, [token, configuration.active_agent_id]);
+
+  useEffect(() => {
     if (!token || !configurationLoaded) {
       return;
     }
@@ -1016,21 +1072,25 @@ export function AgentNode() {
           const id = String(agent?.agent_id || agent?.id || '').trim();
           return id === activeAgentId;
         });
+        setIsActiveAgentRunning(running);
         if (running) {
           setSelectedAgentId(activeAgentId);
           setConfiguration(prev =>
             prev.mode === 'private' ? prev : { ...prev, mode: 'private' }
           );
           setStep('chat');
+        } else if (selectedAgentId === activeAgentId) {
+          setSelectedAgentId('default');
         }
       } catch {
+        setIsActiveAgentRunning(false);
         // Best-effort restore only.
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [token, configurationLoaded, configuration.active_agent_id]);
+  }, [token, configurationLoaded, configuration.active_agent_id, selectedAgentId]);
 
   useEffect(() => {
     // If a persisted session is already authenticated on first load,
@@ -1174,7 +1234,7 @@ export function AgentNode() {
   }: {
     entryStep: Step;
     label: string;
-    leadingVisual?: OcticonIcon;
+    leadingVisual?: ComponentType<any>;
   }) => {
     const enabled = isStepEnabled(entryStep);
     const active = step === entryStep;
@@ -1268,7 +1328,7 @@ export function AgentNode() {
                       <StepEntry
                         entryStep="gallery"
                         label="Agents"
-                        leadingVisual={RocketIcon}
+                        leadingVisual={AiAgentIcon}
                       />
                       <StepEntry
                         entryStep="config"
@@ -1295,8 +1355,12 @@ export function AgentNode() {
                       </Button>
                     </>
                   )}
-                  <AppearanceControlsWithStore
-                    useStore={useAgentNodeThemeStore}
+                  <AppearanceMenu
+                    colorMode={colorMode}
+                    themeVariant={themeVariant}
+                    onColorModeChange={setColorMode}
+                    onThemeChange={nextTheme => setTheme(nextTheme, false)}
+                    shape="circle"
                   />
                 </Box>
               </PageHeader.Actions>
@@ -1458,8 +1522,15 @@ export function AgentNode() {
                       gap: 3,
                     }}
                   >
-                    <FormControl>
-                      <FormControl.Label>Mode</FormControl.Label>
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        borderRadius: 2,
+                        p: 3,
+                      }}
+                    >
+                      <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>Mode</Heading>
                       <Box
                         sx={{
                           display: 'grid',
@@ -1528,10 +1599,19 @@ export function AgentNode() {
                           );
                         })}
                       </Box>
-                    </FormControl>
+                    </Box>
 
-                    <FormControl>
-                      <FormControl.Label>Inference</FormControl.Label>
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        borderRadius: 2,
+                        p: 3,
+                      }}
+                    >
+                      <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
+                        Inference
+                      </Heading>
                       <Text sx={{ color: 'fg.muted', fontSize: 1, mb: 2 }}>
                         Used inference provider for newly launched agent
                         sessions.
@@ -1609,24 +1689,43 @@ export function AgentNode() {
                           )}
                         </Box>
                       )}
-                    </FormControl>
+                    </Box>
 
                     {iamUser ? (
-                      <BillingEntitySelect
-                        value={configuration.billing_entity_uid || ''}
-                        onChange={handleBillingEntityChange}
-                        onSelectedAccountChange={handleSelectedAccountChange}
-                        onAccountsResolved={handleAccountsResolved}
-                      />
+                      <Box
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'border.default',
+                          borderRadius: 2,
+                          p: 3,
+                        }}
+                      >
+                        <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
+                          Billing Entity
+                        </Heading>
+                        <BillingEntitySelect
+                          value={configuration.billing_entity_uid || ''}
+                          onChange={handleBillingEntityChange}
+                          onSelectedAccountChange={handleSelectedAccountChange}
+                          onAccountsResolved={handleAccountsResolved}
+                        />
+                      </Box>
                     ) : (
-                      <FormControl>
-                        <FormControl.Label>
-                          Run this agent under
-                        </FormControl.Label>
+                      <Box
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'border.default',
+                          borderRadius: 2,
+                          p: 3,
+                        }}
+                      >
+                        <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
+                          Billing Entity
+                        </Heading>
                         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                           Loading billing entitys...
                         </Text>
-                      </FormControl>
+                      </Box>
                     )}
                   </Box>
 
@@ -1637,15 +1736,24 @@ export function AgentNode() {
                       gap: 2,
                     }}
                   >
-                    <Heading sx={{ fontSize: 2, m: 0 }}>Share</Heading>
-                    <ShareAccessComponent
-                      isOpen
-                      displayMode="inline"
-                      requestUrl={`${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/sharing`}
-                      resourceLabel="Agent Node"
-                      resourceName="this Agent Node"
-                      onClose={handleSharingInlineClose}
-                    />
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        borderRadius: 2,
+                        p: 3,
+                      }}
+                    >
+                      <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>Share</Heading>
+                      <ShareAccessComponent
+                        isOpen
+                        displayMode="inline"
+                        requestUrl={`${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/sharing`}
+                        resourceLabel="Agent Node"
+                        resourceName="this Agent Node"
+                        onClose={handleSharingInlineClose}
+                      />
+                    </Box>
                   </Box>
                 </Box>
 
@@ -1667,6 +1775,8 @@ export function AgentNode() {
               <AgentNodeProfileView
                 token={token}
                 onTokenExpired={handleSignOut}
+                avatarFallbackBackground={avatarPalette.bgAlt}
+                avatarFallbackForeground={avatarPalette.primary}
               />
             )}
 
@@ -1680,6 +1790,7 @@ export function AgentNode() {
                 }}
                 onLaunched={agentId => {
                   setSelectedAgentId(agentId);
+                  setIsActiveAgentRunning(true);
                   const nextConfiguration = {
                     ...configuration,
                     active_agent_id: agentId,
@@ -1712,6 +1823,7 @@ export function AgentNode() {
                 }}
                 onTerminated={() => {
                   setSelectedAgentId('default');
+                  setIsActiveAgentRunning(false);
                   setConfiguration(prev => ({
                     ...prev,
                     active_agent_id: undefined,
@@ -1763,6 +1875,8 @@ export function AgentNode() {
                     runtimeId={selectedAgentId}
                     ephemeralRuntimeOverride={sandboxRuntimeOverride}
                     kernelEnvironmentName={sandboxEnvironmentName}
+                    themeVariant={themeVariant}
+                    colorMode={colorMode}
                     ephemeralNotebookCollaborationProvider={
                       ephemeralNotebookCollaborationProvider
                     }

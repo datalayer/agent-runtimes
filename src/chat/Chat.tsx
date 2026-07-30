@@ -323,6 +323,8 @@ export function Chat({
   kernelCpu,
   kernelMemory,
   kernelGpu,
+  themeVariant,
+  colorMode,
   showToolApprovalBanner,
   pendingApprovals,
   onApproveApproval,
@@ -749,6 +751,8 @@ export function Chat({
               kernelCpu={kernelCpu}
               kernelMemory={kernelMemory}
               kernelGpu={kernelGpu}
+              themeVariant={themeVariant}
+              colorMode={colorMode}
               showToolApprovalBanner={showToolApprovalBanner}
               pendingApprovals={pendingApprovals}
               onApproveApproval={onApproveApproval}

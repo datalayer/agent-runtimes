@@ -144,6 +144,10 @@ export interface EphemeralDocumentProps {
   runtimePodName?: string;
   /** Optional explicit runtime endpoint (agent-node tunnel proxy path). */
   runtimeOverride?: EphemeralRuntimeOverride;
+  /** Optional theme variant override from host chat context. */
+  themeVariant?: string;
+  /** Optional color mode override from host chat context. */
+  colorMode?: 'light' | 'dark' | 'auto';
   /** Optional persisted Lexical editor state (JSON string) to restore. */
   content?: string;
   /** Callback fired when the document's editor state changes. */
@@ -248,6 +252,8 @@ export function EphemeralDocument({
   documentId,
   runtimePodName,
   runtimeOverride,
+  themeVariant,
+  colorMode,
   content,
   onContentChange,
   onToolsReady,
@@ -480,10 +486,13 @@ export function EphemeralDocument({
   // Resolve the active theme/color-mode exactly like the notebook editor so
   // the document honours dark / branded themes instead of always rendering
   // light.
-  const { colorMode, theme: themeVariant } = useThemeStore();
+  const { colorMode: storeColorMode, theme: storeThemeVariant } = useThemeStore();
+  const effectiveColorMode = colorMode ?? storeColorMode;
+  const effectiveThemeVariant = themeVariant ?? storeThemeVariant;
   const systemMode = useSystemColorMode();
-  const themeConfig = getThemeConfig(themeVariant);
-  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const themeConfig = getThemeConfig(effectiveThemeVariant as any);
+  const resolvedMode =
+    effectiveColorMode === 'auto' ? systemMode : effectiveColorMode;
   const modeStyles =
     resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
@@ -504,7 +513,7 @@ export function EphemeralDocument({
     >
       {activeServiceManager ? (
         <DatalayerThemeProvider
-          colorMode={colorMode}
+          colorMode={effectiveColorMode}
           theme={themeConfig.primerTheme}
           themeStyles={themeConfig.themeStyles}
         >

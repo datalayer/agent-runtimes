@@ -114,6 +114,10 @@ export interface EphemeralNotebookProps {
   onNbformatChange?: (content: INotebookContent) => void;
   /** Optional toolbar component override. */
   toolbarComponent?: EphemeralNotebookToolbarComponent;
+  /** Optional theme variant override from host chat context. */
+  themeVariant?: string;
+  /** Optional color mode override from host chat context. */
+  colorMode?: 'light' | 'dark' | 'auto';
   /**
    * Optional real-time collaboration provider. When supplied, the notebook
    * joins a shared collaborative room (the ydoc becomes the source of truth)
@@ -135,6 +139,8 @@ export function EphemeralNotebook({
   nbformat,
   onNbformatChange,
   toolbarComponent,
+  themeVariant,
+  colorMode,
   collaborationProvider,
 }: EphemeralNotebookProps) {
   // The `nbformat` passed to the `Notebook` component MUST stay a stable
@@ -357,10 +363,13 @@ export function EphemeralNotebook({
   // Resolve the active theme/color-mode exactly like the notebook editor
   // (NotebookEditorPanel) so the notebook honours dark / branded themes
   // instead of always rendering light.
-  const { colorMode, theme: themeVariant } = useThemeStore();
+  const { colorMode: storeColorMode, theme: storeThemeVariant } = useThemeStore();
+  const effectiveColorMode = colorMode ?? storeColorMode;
+  const effectiveThemeVariant = themeVariant ?? storeThemeVariant;
   const systemMode = useSystemColorMode();
-  const themeConfig = getThemeConfig(themeVariant);
-  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const themeConfig = getThemeConfig(effectiveThemeVariant as any);
+  const resolvedMode =
+    effectiveColorMode === 'auto' ? systemMode : effectiveColorMode;
   const modeStyles =
     resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
@@ -386,7 +395,7 @@ export function EphemeralNotebook({
     >
       {activeServiceManager ? (
         <DatalayerThemeProvider
-          colorMode={colorMode}
+          colorMode={effectiveColorMode}
           theme={themeConfig.primerTheme}
           themeStyles={themeConfig.themeStyles}
         >

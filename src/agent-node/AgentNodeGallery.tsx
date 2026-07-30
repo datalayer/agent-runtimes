@@ -13,7 +13,55 @@ import {
   Text,
   TextInput,
 } from '@primer/react';
-import { CheckCircleFillIcon, RocketIcon } from '@primer/octicons-react';
+import {
+  AgentIcon,
+  BeakerIcon,
+  BookIcon,
+  BugIcon,
+  CheckCircleFillIcon,
+  CloudIcon,
+  CodeIcon,
+  CopilotIcon,
+  CpuIcon,
+  DatabaseIcon,
+  DependabotIcon,
+  EyeIcon,
+  FileIcon,
+  GearIcon,
+  GitBranchIcon,
+  GlobeIcon,
+  GraphIcon,
+  HeartIcon,
+  HomeIcon,
+  IssueOpenedIcon,
+  LightBulbIcon,
+  LinkIcon,
+  MailIcon,
+  MegaphoneIcon,
+  NoteIcon,
+  PackageIcon,
+  PencilIcon,
+  PeopleIcon,
+  PlayIcon,
+  PlugIcon,
+  PulseIcon,
+  RocketIcon,
+  SearchIcon,
+  ShareIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
+  SparklesFillIcon,
+  SquirrelIcon,
+  StarIcon,
+  SyncIcon,
+  TableIcon,
+  TagIcon,
+  TelescopeIcon,
+  TerminalIcon,
+  ToolsIcon,
+  ZapIcon,
+  type Icon,
+} from '@primer/octicons-react';
 
 /**
  * A single agent specification returned by ``GET /api/v1/agents/library``.
@@ -56,7 +104,80 @@ export type AgentNodeGalleryProps = {
   onLaunchError?: (message: string) => void;
 };
 
-const GRID_TEMPLATE = ['1fr', '1fr 1fr', '1fr 1fr 1fr'];
+const GRID_TEMPLATE = ['1fr', '1fr 1fr', 'repeat(5, minmax(0, 1fr))'];
+
+const ICON_REGISTRY: Record<string, Icon> = {
+  // Primary agentspec icon values.
+  agent: AgentIcon,
+  database: DatabaseIcon,
+  globe: GlobeIcon,
+  'git-branch': GitBranchIcon,
+  'trending-up': GraphIcon,
+  'share-2': ShareIcon,
+
+  // Additional mappings used across the agentspec catalog.
+  rocket: RocketIcon,
+  sparkles: SparklesFillIcon,
+  search: SearchIcon,
+  code: CodeIcon,
+  cpu: CpuIcon,
+  beaker: BeakerIcon,
+  book: BookIcon,
+  bug: BugIcon,
+  cloud: CloudIcon,
+  copilot: CopilotIcon,
+  dependabot: DependabotIcon,
+  eye: EyeIcon,
+  file: FileIcon,
+  gear: GearIcon,
+  graph: GraphIcon,
+  heart: HeartIcon,
+  home: HomeIcon,
+  lightbulb: LightBulbIcon,
+  link: LinkIcon,
+  mail: MailIcon,
+  megaphone: MegaphoneIcon,
+  note: NoteIcon,
+  package: PackageIcon,
+  pencil: PencilIcon,
+  people: PeopleIcon,
+  play: PlayIcon,
+  plug: PlugIcon,
+  pulse: PulseIcon,
+  'issue-opened': IssueOpenedIcon,
+  shield: ShieldIcon,
+  'shield-check': ShieldCheckIcon,
+  squirrel: SquirrelIcon,
+  star: StarIcon,
+  sync: SyncIcon,
+  table: TableIcon,
+  tag: TagIcon,
+  telescope: TelescopeIcon,
+  terminal: TerminalIcon,
+  tools: ToolsIcon,
+  zap: ZapIcon,
+};
+
+const DEFAULT_ICON = SparklesFillIcon;
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function resolveAgentspecIcon(iconId: string | undefined, seed: string): Icon {
+  if (iconId) {
+    return ICON_REGISTRY[iconId] || DEFAULT_ICON;
+  }
+  const iconValues = Object.values(ICON_REGISTRY);
+  if (iconValues.length === 0) {
+    return DEFAULT_ICON;
+  }
+  return iconValues[hashString(seed) % iconValues.length];
+}
 
 /**
  * URL (optionally with `?token=`) of the LOCAL Jupyter server that the node's
@@ -206,6 +327,24 @@ export function AgentNodeGallery({
 
   // An "active" agent must be both configured and currently running.
   const hasActiveAgent = Boolean(normalizedActiveAgentId && activeAgent);
+
+  const activeAgentSpec = useMemo(() => {
+    if (!activeAgent) {
+      return null;
+    }
+    const directSpecId = String(activeAgent.agent_spec_id || '').trim();
+    if (directSpecId) {
+      const directMatch = specs.find(spec => spec.id === directSpecId);
+      if (directMatch) {
+        return directMatch;
+      }
+    }
+    const nameCandidate = String(activeAgent.name || '').trim();
+    if (!nameCandidate) {
+      return null;
+    }
+    return specs.find(spec => spec.id === nameCandidate) || null;
+  }, [activeAgent, specs]);
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredSpecs = useMemo(() => {
@@ -487,12 +626,12 @@ export function AgentNodeGallery({
     <Box>
       <Box sx={{ mb: 3 }}>
         <Heading as="h2" sx={{ fontSize: 3, mb: 1 }}>
-          Choose an agent
+          {hasActiveAgent ? 'Running agent' : 'Choose an agent'}
         </Heading>
         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-          Pick an agent from the gallery to launch it on this node. The active
-          agent handles prompts sent directly to the node and through the
-          Datalayer platform.
+          {hasActiveAgent
+            ? 'Your node is currently running an active agent. You can terminate it to go back to the gallery.'
+            : 'Pick an agent from the gallery to launch it on this node. The active agent handles prompts sent directly to the node and through the Datalayer platform.'}
         </Text>
       </Box>
 
@@ -516,9 +655,9 @@ export function AgentNodeGallery({
           sx={{
             p: 4,
             border: '1px solid',
-            borderColor: 'success.muted',
+            borderColor: 'accent.muted',
             borderRadius: 2,
-            bg: 'success.subtle',
+            bg: 'accent.subtle',
             display: 'flex',
             flexDirection: 'column',
             gap: 3,
@@ -526,8 +665,13 @@ export function AgentNodeGallery({
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Label
-              variant="success"
-              sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}
+              variant="secondary"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                color: 'accent.fg',
+              }}
             >
               <CheckCircleFillIcon size={12} />
               Active agent
@@ -540,6 +684,61 @@ export function AgentNodeGallery({
             Chat is enabled while an active agent is running on this node. Terminate it to
             return to the agent cards picker.
           </Text>
+          {activeAgentSpec && (
+            <Box
+              sx={{
+                p: 3,
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                bg: 'canvas.default',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Label size="small" variant="accent">
+                  Spec
+                </Label>
+                <Text sx={{ fontWeight: 600 }}>
+                  {activeAgentSpec.name || activeAgentSpec.id}
+                </Text>
+                {activeAgentSpec.version && (
+                  <Label size="small" variant="secondary">
+                    v{activeAgentSpec.version}
+                  </Label>
+                )}
+              </Box>
+              {activeAgentSpec.description && (
+                <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
+                  {activeAgentSpec.description}
+                </Text>
+              )}
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Label size="small" variant="secondary">
+                  id: {activeAgentSpec.id}
+                </Label>
+                {activeAgentSpec.model && (
+                  <Label size="small" variant="secondary">
+                    model: {activeAgentSpec.model}
+                  </Label>
+                )}
+                {activeAgentSpec.inference_provider && (
+                  <Label size="small" variant="secondary">
+                    provider: {activeAgentSpec.inference_provider}
+                  </Label>
+                )}
+                {Array.isArray(activeAgentSpec.tags)
+                  ? activeAgentSpec.tags.map(tag => (
+                      <Label key={tag} size="small" variant="secondary">
+                        {tag}
+                      </Label>
+                    ))
+                  : null}
+              </Box>
+            </Box>
+          )}
           <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
             <Button
               variant="danger"
@@ -581,26 +780,67 @@ export function AgentNodeGallery({
             }}
           >
             {filteredSpecs.map(spec => {
+            const IconComponent = resolveAgentspecIcon(
+              spec.icon,
+              spec.name || spec.id,
+            );
             const isActive =
               !!activeAgentId &&
               runningBySpec.get(spec.id) === activeAgentId;
             const isLaunching = launchingId === spec.id;
             const isRunning = runningBySpec.has(spec.id);
+            const launchLabel = isActive
+              ? 'Open chat'
+              : isLaunching
+                ? 'Launching…'
+                : isRunning
+                  ? 'Set active'
+                  : 'Launch';
             return (
               <Box
                 key={spec.id}
+                role="button"
+                tabIndex={isLaunching ? -1 : 0}
+                onClick={() => {
+                  if (!isLaunching) {
+                    void launch(spec);
+                  }
+                }}
+                onKeyDown={event => {
+                  if ((event.key === 'Enter' || event.key === ' ') && !isLaunching) {
+                    event.preventDefault();
+                    void launch(spec);
+                  }
+                }}
+                aria-label={`${launchLabel} ${spec.name || spec.id}`}
+                aria-busy={isLaunching}
+                aria-disabled={isLaunching}
                 sx={{
                   display: 'flex',
                   flexDirection: 'column',
+                  textAlign: 'left',
+                  cursor: isLaunching ? 'progress' : 'pointer',
                   p: 3,
                   border: '1px solid',
                   borderColor: isActive ? 'success.emphasis' : 'border.default',
                   borderRadius: 2,
                   bg: 'canvas.default',
-                  transition: 'box-shadow 0.15s ease, transform 0.15s ease',
-                  ':hover': {
+                  // Hover feedback is border + shadow only. No transform: a
+                  // transform here promotes the card to its own layer and makes
+                  // the line-clamped description re-rasterize (per-paragraph
+                  // motion artifact).
+                  transition: 'box-shadow 180ms ease, border-color 180ms ease',
+                  '&:hover': {
                     boxShadow: 'shadow.medium',
-                    transform: 'translateY(-2px)',
+                    borderColor: isActive ? 'success.emphasis' : 'accent.emphasis',
+                  },
+                  '&:focus-visible': {
+                    outline: '2px solid',
+                    outlineColor: 'accent.fg',
+                    outlineOffset: '2px',
+                  },
+                  '&[aria-disabled="true"]': {
+                    opacity: 0.8,
                   },
                 }}
               >
@@ -624,7 +864,11 @@ export function AgentNodeGallery({
                       bg: 'canvas.subtle',
                     }}
                   >
-                    {spec.emoji || '🤖'}
+                    {spec.emoji ? (
+                      <Text sx={{ fontSize: 3, lineHeight: 1 }}>{spec.emoji}</Text>
+                    ) : (
+                      <IconComponent size={20} />
+                    )}
                   </Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Heading
@@ -690,21 +934,26 @@ export function AgentNodeGallery({
                 )}
 
                 <Box sx={{ mt: 'auto', pt: 1 }}>
-                  <Button
-                    variant={isActive ? 'default' : 'primary'}
-                    leadingVisual={RocketIcon}
-                    block
-                    disabled={isLaunching}
-                    onClick={() => void launch(spec)}
+                  <Box
+                    as="span"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      px: 2,
+                      py: 1,
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: isActive ? 'border.default' : 'accent.muted',
+                      bg: isActive ? 'canvas.subtle' : 'accent.subtle',
+                      color: isActive ? 'fg.default' : 'accent.fg',
+                      fontSize: 1,
+                      fontWeight: 600,
+                    }}
                   >
-                    {isActive
-                      ? 'Open chat'
-                      : isLaunching
-                        ? 'Launching…'
-                        : isRunning
-                          ? 'Set active'
-                          : 'Launch'}
-                  </Button>
+                    <IconComponent size={14} />
+                    {launchLabel}
+                  </Box>
                 </Box>
               </Box>
             );

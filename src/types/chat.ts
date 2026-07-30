@@ -620,6 +620,12 @@ export interface ChatCommonProps {
   /** Optional GPU info displayed in the chat header's kernel indicator. */
   kernelGpu?: string;
 
+  /** Optional theme variant override for companion notebook/document surfaces. */
+  themeVariant?: string;
+
+  /** Optional color mode override for companion notebook/document surfaces. */
+  colorMode?: 'light' | 'dark' | 'auto';
+
   /**
    * Disable ChatBase's internal JupyterReactTheme wrapper.
    * Use this when the host page already provides a JupyterReactTheme boundary.
@@ -835,6 +841,12 @@ export interface ChatBaseProps {
 
   /** Optional GPU info displayed in kernel indicator details. */
   kernelGpu?: string;
+
+  /** Optional theme variant override for companion notebook/document surfaces. */
+  themeVariant?: string;
+
+  /** Optional color mode override for companion notebook/document surfaces. */
+  colorMode?: 'light' | 'dark' | 'auto';
 
   /**
    * Current chat view mode.

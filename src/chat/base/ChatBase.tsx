@@ -214,12 +214,22 @@ const ThemedJupyterReactTheme = JupyterReactTheme as unknown as React.FC<
  *   chat height/flex chain is preserved); CSS custom properties and inherited
  *   properties (color, font) still cascade through it.
  */
-function ThemedChatBoundary({ children }: React.PropsWithChildren<unknown>) {
-  const colorMode = useThemeStore(s => s.colorMode);
-  const themeVariant = useThemeStore(s => s.theme);
+function ThemedChatBoundary({
+  children,
+  themeVariant,
+  colorMode,
+}: React.PropsWithChildren<{
+  themeVariant?: string;
+  colorMode?: 'light' | 'dark' | 'auto';
+}>) {
+  const storeColorMode = useThemeStore(s => s.colorMode);
+  const storeThemeVariant = useThemeStore(s => s.theme);
+  const resolvedColorMode = colorMode ?? storeColorMode;
+  const resolvedThemeVariant = themeVariant ?? storeThemeVariant;
   const systemMode = useSystemColorMode();
-  const themeConfig = getThemeConfig(themeVariant);
-  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const themeConfig = getThemeConfig(resolvedThemeVariant as any);
+  const resolvedMode =
+    resolvedColorMode === 'auto' ? systemMode : resolvedColorMode;
   const modeStyles =
     resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
@@ -647,6 +657,8 @@ export function ChatBase(props: ChatBaseProps) {
     protocol: protocolProp,
     useStore: useStoreMode = true,
     disableInternalJupyterTheme = false,
+    themeVariant,
+    colorMode,
   } = props;
 
   // Resolve protocol: string Protocol overrides type in agentRuntimeConfig or
@@ -685,7 +697,9 @@ export function ChatBase(props: ChatBaseProps) {
   const wrappedContent = disableInternalJupyterTheme ? (
     content
   ) : (
-    <ThemedChatBoundary>{content}</ThemedChatBoundary>
+    <ThemedChatBoundary themeVariant={themeVariant} colorMode={colorMode}>
+      {content}
+    </ThemedChatBoundary>
   );
 
   if (!existingQueryClient) {
@@ -734,6 +748,8 @@ function ChatBaseInner({
   kernelCpu,
   kernelMemory,
   kernelGpu,
+  themeVariant,
+  colorMode,
   chatViewMode,
   onChatViewModeChange,
   // Mode selection
@@ -1812,11 +1828,17 @@ function ChatBaseInner({
 
   // ---- Agent-runtime WebSocket (monitoring stream) ----
   // Derive the bare base URL from configEndpoint or protocol.endpoint.
+  const isAgentNodeTunnelAgUi = Boolean(
+    protocol?.endpoint &&
+      /\/api\/runtimes\/v1\/agent-nodes\/[^/]+\/ag-ui\/?$/.test(
+        protocol.endpoint,
+      ),
+  );
   const wsBaseUrl = protocol?.configEndpoint
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : (protocol?.endpoint?.replace(/\/api\/v1\/.*$/, '') ?? '');
   useAgentRuntimeWebSocket({
-    enabled: !!protocol && !!wsBaseUrl,
+    enabled: !!protocol && !!wsBaseUrl && !isAgentNodeTunnelAgUi,
     baseUrl: wsBaseUrl,
     authToken: protocol?.authToken,
     agentId: protocol?.agentId,
@@ -4009,6 +4031,8 @@ function ChatBaseInner({
                 notebookId={ephemeralNotebookId}
                 runtimePodName={runtimeId || activeAgentId}
                 runtimeOverride={ephemeralRuntimeOverride}
+                themeVariant={themeVariant}
+                colorMode={colorMode}
                 nbformat={persistedEphemeralNbformat ?? undefined}
                 onNbformatChange={handleEphemeralNotebookChange}
                 toolbarComponent={ephemeralNotebookToolbar}
@@ -4020,6 +4044,8 @@ function ChatBaseInner({
                   documentId={ephemeralDocumentId}
                   runtimePodName={runtimeId || activeAgentId}
                   runtimeOverride={ephemeralRuntimeOverride}
+                  themeVariant={themeVariant}
+                  colorMode={colorMode}
                   content={persistedEphemeralDocument ?? undefined}
                   onContentChange={handleEphemeralDocumentChange}
                   onToolsReady={handleDocumentToolsReady}
