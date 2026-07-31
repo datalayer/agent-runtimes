@@ -18,11 +18,12 @@
  * and swap `<DatalayerThemeProvider>` → `<ThemedProvider>`.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   DatalayerThemeProvider,
   type IDatalayerThemeProviderProps,
   themeConfigs,
+  useThemeStore as usePrimerThemeStore,
 } from '@datalayer/primer-addons';
 import { JupyterReactTheme } from '@datalayer/jupyter-react';
 import { useExampleThemeStore } from './themeStore';
@@ -38,6 +39,14 @@ export const ThemedProvider: React.FC<
 > = ({ children, ...rest }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const cfg = themeConfigs[themeVariant];
+
+  // <Chat> and other components read the shared primer-addons singleton
+  // `useThemeStore` (key 'datalayer-theme', which defaults to matrix/dark),
+  // not the examples' `useExampleThemeStore`. Mirror the selected theme into
+  // the singleton so the chat main view follows the picker.
+  useEffect(() => {
+    usePrimerThemeStore.setState({ theme: themeVariant, colorMode });
+  }, [themeVariant, colorMode]);
 
   return (
     <DatalayerThemeProvider

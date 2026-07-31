@@ -217,6 +217,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           justifyContent: 'center',
           height: '100%',
           gap: 3,
+          bg: 'canvas.default',
         }}
       >
         <Spinner size="large" />
@@ -239,6 +240,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        bg: 'canvas.default',
       }}
     >
       {/* Toolbar */}

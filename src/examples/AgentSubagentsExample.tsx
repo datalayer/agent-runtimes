@@ -179,6 +179,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
           justifyContent: 'center',
           height: '100%',
           gap: 3,
+          bg: 'canvas.default',
         }}
       >
         <Spinner size="large" />
@@ -199,6 +200,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        bg: 'canvas.default',
       }}
     >
       <Box
