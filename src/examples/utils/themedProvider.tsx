@@ -110,9 +110,13 @@ export const ThemedJupyterProvider: React.FC<
   return (
     <ThemedProvider>
       {useJupyterReactTheme ? (
+        // `ThemedProvider` (DatalayerThemeProvider) already applies Primer
+        // BaseStyles with the branded theme font. Disable the inner BaseStyles
+        // so Jupyter examples inherit that font instead of Primer's default.
         <JupyterReactTheme
           colormode={colorMode}
           backgroundColor={backgroundColor}
+          useBaseStyles={false}
         >
           {children}
         </JupyterReactTheme>

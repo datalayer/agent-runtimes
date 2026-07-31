@@ -64,8 +64,8 @@ interface TraceRun {
 //   - start/end  → graph entry / exit markers
 
 const NODE_COLORS: Record<string, string> = {
-  root: '#58a6ff',
-  start: '#58a6ff',
+  root: '#16A085',
+  start: '#16A085',
   step: '#3fb950',
   end: '#f85149',
   end_or_continue: '#d29922',

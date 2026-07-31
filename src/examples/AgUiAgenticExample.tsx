@@ -130,7 +130,7 @@ const AgUiAgenticExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -169,7 +169,7 @@ const AgUiAgenticExample: React.FC = () => {
             sx={{
               marginTop: 4,
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',

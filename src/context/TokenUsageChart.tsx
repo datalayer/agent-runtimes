@@ -733,7 +733,7 @@ export function TokenUsageChart({
               ]
             : [[initialTimestampMsRef.current, 0]],
       })),
-      color: ['#2da44e', '#0969da', '#8250df', '#bf8700', '#cf222e'],
+      color: ['#2da44e', '#16A085', '#0ea5a5', '#bf8700', '#cf222e'],
     };
   }, [turns]);
 

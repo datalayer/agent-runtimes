@@ -37,6 +37,12 @@ export const ExampleWrapper: React.FC<{ children: React.ReactNode }> = ({
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        fontFamily:
+          'var(--fontStack-sansSerif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif)',
+        lineHeight: 1.5,
+        '& h1, & h2, & h3, & h4, & h5, & h6, & p, & li, & span, & label, & button, & input, & textarea, & select': {
+          fontFamily: 'inherit',
+        },
         // Generic constraint: every example's root child fills the wrapper
         // exactly and cannot exceed it. This neutralises stray `100vh`/
         // `calc(100vh - Npx)` heights inside individual examples so the

@@ -74,7 +74,7 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
     const colorMap: Record<string, string> = {
       'System Prompts': '#8250df',
       'Tool Definitions': '#bf8700',
-      'User Messages': '#0969da',
+      'User Messages': '#16A085',
       'Assistant Messages': '#1a7f37',
       'Tool Usage': '#cf222e',
     };
@@ -107,7 +107,7 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
       categories.push({
         name: 'Messages',
         value: messageTokens,
-        color: '#0969da',
+        color: '#16A085',
       });
     }
     const toolResultTokens =
@@ -122,7 +122,7 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
   }
 
   // Tiny filled pie chart options
-  const pieColor = pct > 90 ? '#cf222e' : pct > 70 ? '#bf8700' : '#0969da';
+  const pieColor = pct > 90 ? '#cf222e' : pct > 70 ? '#bf8700' : '#16A085';
   const freeSliceColor = 'var(--bgColor-muted, #f6f8fa)';
   const freeSliceOverlayColor = 'var(--borderColor-default, #d1d9e0)';
   const miniPieOption = {

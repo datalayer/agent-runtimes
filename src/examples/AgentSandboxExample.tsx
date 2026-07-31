@@ -535,7 +535,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        bg: 'canvas.subtle',
+        bg: 'canvas.default',
       }}
     >
       {/* ── Header ── */}
@@ -722,7 +722,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
                     entry.direction === 'sent' ? 'accent.fg' : 'fg.default',
                   bg:
                     entry.direction === 'sent'
-                      ? 'accent.subtle'
+                      ? 'neutral.muted'
                       : 'transparent',
                   borderBottom: '1px solid',
                   borderColor: 'border.subtle',

@@ -52,7 +52,7 @@ export const MainContent: React.FC<MainContentProps> = ({
           sx={{
             mb: 4,
             p: 3,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
             borderRadius: 2,
             border: '1px solid',
             borderColor: 'border.default',

@@ -182,7 +182,7 @@ export function InputPrompt({
             '&:focus-within': {
               borderColor: 'accent.fg',
               boxShadow: (t: Record<string, unknown>) =>
-                `0 0 0 1px ${(t as any)?.colors?.accent?.fg ?? '#0969da'}`,
+                `0 0 0 1px ${(t as any)?.colors?.accent?.fg ?? '#16A085'}`,
             },
           }}
         >

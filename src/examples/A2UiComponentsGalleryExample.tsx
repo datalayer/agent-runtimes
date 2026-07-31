@@ -906,7 +906,7 @@ function GalleryContent({
           borderColor: 'border.default',
           borderRadius: 2,
           p: 3,
-          backgroundColor: 'canvas.subtle',
+          backgroundColor: 'canvas.default',
           display: 'flex',
           flexDirection: 'column',
           gap: 3,
@@ -1009,7 +1009,7 @@ const A2UiComponentsGalleryExample: React.FC = () => {
               py: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
             }}
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
@@ -1030,7 +1030,7 @@ const A2UiComponentsGalleryExample: React.FC = () => {
               p: 3,
               fontFamily: 'mono',
               fontSize: 0,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               whiteSpace: 'pre-wrap',
               maxHeight: 220,
               overflow: 'auto',

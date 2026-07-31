@@ -244,7 +244,7 @@ const AgentParametersExample: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: 2,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
@@ -313,7 +313,7 @@ const AgentParametersExample: React.FC = () => {
                 border: '1px solid',
                 borderColor: 'border.default',
                 borderRadius: 2,
-                bg: 'canvas.subtle',
+                bg: 'canvas.default',
               }}
             >
               <Text sx={{ color: 'fg.muted', fontSize: 1 }}>

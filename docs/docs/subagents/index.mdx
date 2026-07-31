@@ -5,14 +5,14 @@ title: Subagents
 
 # Subagents
 
-Agent Runtimes supports multi-agent delegation via the [subagents-pydantic-ai](https://github.com/datalayer/pydantic-ai-subagents) library. An orchestrator agent can delegate tasks to specialised subagents, each running independently with its own model, instructions, and context.
+Agent Runtimes supports multi-agent delegation via the in-repo subagents capability (`agent_runtimes/subagents/`). An orchestrator agent can delegate tasks to specialised subagents, each running independently with its own model and instructions.
 
 ## How It Works
 
 1. **Agent spec** declares a `subagents` block listing the available subagents
 2. **Code generation** (`make specs`) compiles the YAML into Python/TypeScript catalogs
-3. **Agent creation** reads the spec and builds a `SubAgentCapability` via `factory.py`
-4. **Runtime** — the orchestrator agent receives delegation tools and a dynamic system prompt
+3. **Agent creation** reads the spec and builds a `SubagentsCapability` via `factory.py`
+4. **Runtime** — the orchestrator agent receives a `delegate_task` tool and a dynamic system prompt listing the subagents
 
 ### Architecture
 
@@ -64,47 +64,42 @@ See the [agentspecs subagents documentation](https://agentspecs.datalayer.tech/s
 
 When an agent is created from a spec containing `subagents`, the capability factory in `agent_runtimes/capabilities/factory.py` automatically:
 
-1. Converts each `SubAgentspecConfig` into a `SubAgentConfig` TypedDict
-2. Creates a `SubAgentCapability` with the full configuration
+1. Converts each `SubAgentspecConfig` into a `SubagentDefinition`
+2. Creates a `SubagentsCapability` with the resolved default model
 3. Adds it to the agent's capability list
 
 ```python
-from subagents_pydantic_ai import SubAgentCapability, SubAgentConfig
+from agent_runtimes.subagents import SubagentDefinition, SubagentsCapability
 
-capability = SubAgentCapability(
+capability = SubagentsCapability(
     subagents=[
-        SubAgentConfig(
+        SubagentDefinition(
             name="researcher",
             description="Researches topics...",
             instructions="You are a thorough research assistant...",
-            preferred_mode="sync",
-            typical_complexity="moderate",
-            can_ask_questions=True,
-            max_questions=3,
         ),
     ],
     default_model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     include_general_purpose=True,
-    max_nesting_depth=0,
 )
 ```
 
-### Delegation Tools
+### Delegation Tool
 
-The orchestrator agent receives these tools at runtime:
+The orchestrator agent receives a single delegation tool at runtime:
 
 | Tool | Description |
 |------|-------------|
-| `task` | Assign a task to a named subagent (sync or async) |
-| `check_task` | Check the status/result of an async task |
-| `answer_subagent` | Answer a question from a subagent |
-| `list_active_tasks` | List all currently active delegated tasks |
-| `soft_cancel_task` | Gracefully cancel a running task |
-| `hard_cancel_task` | Immediately cancel a running task |
+| `delegate_task` | Run a named subagent on a self-contained task and return its final answer |
+
+Each delegation runs the subagent in an isolated child run. Token and request
+usage are forwarded to the parent run so budget limits stay accurate.
 
 ### Dynamic System Prompt
 
-The `SubAgentCapability` generates a system prompt section listing all available subagents with their names, descriptions, and capabilities. This is automatically appended to the orchestrator's system prompt.
+The `SubagentsCapability` contributes a system prompt section listing the
+available subagents with their names and descriptions, so the model knows what
+it can delegate to.
 
 ## TypeScript Types
 
@@ -139,7 +134,7 @@ The `AgentSubagentsExample` demonstrates the full workflow:
 EXAMPLE=AgentSubagentsExample npm run dev
 ```
 
-This creates an orchestrator agent from the `demo-subagents` spec with a researcher
+This creates an orchestrator agent from the `example-subagents` spec with a researcher
 and writer subagent. The sidebar shows available subagents and delegation tools.
 
 ### Suggestions to Try
@@ -150,9 +145,7 @@ and writer subagent. The sidebar shows available subagents and delegation tools.
 
 ## Demo Spec
 
-The built-in `demo-subagents` spec is available in `agentspecs/agentspecs/agents/demo-subagents.yaml` and demonstrates:
+The built-in `example-subagents` spec is available in `agentspecs/agentspecs/agents/example-subagents.yaml` and demonstrates:
 
 - Two subagents (researcher and writer) with distinct roles
-- Sync execution mode for both
-- Question-asking enabled for the researcher
-- General-purpose subagent included as fallback
+- A general-purpose subagent included as fallback

@@ -337,7 +337,7 @@ export function ChatLexicalExampleInner({
             p: 3,
             borderBottom: '1px solid',
             borderColor: 'border.default',
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',

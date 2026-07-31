@@ -201,7 +201,7 @@ const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 3,
-          bg: 'canvas.subtle',
+          bg: 'canvas.default',
         }}
       >
         <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>

@@ -1334,7 +1334,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
                 <Box
                   sx={{
-                    bg: 'canvas.subtle',
+                    bg: 'canvas.default',
                     border: '1px solid',
                     borderColor: 'border.default',
                     borderRadius: 2,
@@ -1645,7 +1645,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                 key={`once-msg-${msg.id}`}
                                 sx={{
                                   p: 2,
-                                  bg: 'canvas.subtle',
+                                  bg: 'canvas.default',
                                   borderRadius: 2,
                                   border: '1px solid',
                                   borderColor: 'border.default',
@@ -1989,7 +1989,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                 key={`approval-msg-${msg.id}`}
                                 sx={{
                                   p: 2,
-                                  bg: 'canvas.subtle',
+                                  bg: 'canvas.default',
                                   borderRadius: 2,
                                   border: '1px solid',
                                   borderColor: 'border.default',
@@ -2059,7 +2059,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                     <Box
                       sx={{
                         mt: 1,
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         borderRadius: 2,
                         p: 2,
                         fontFamily: 'mono',
@@ -2174,7 +2174,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
                     <Box
                       sx={{
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         p: 2,
                         borderRadius: 2,
                         mb: 2,
@@ -2193,7 +2193,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         </Text>
                         <Box
                           sx={{
-                            bg: 'canvas.subtle',
+                            bg: 'canvas.default',
                             p: 2,
                             borderRadius: 2,
                             mt: 1,
@@ -2438,12 +2438,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         key={evt.id}
                         sx={{
                           p: 2,
-                          bg: evt.read ? 'canvas.subtle' : 'accent.subtle',
+                          bg: evt.read ? 'canvas.default' : 'neutral.muted',
                           borderRadius: 2,
                           border: '1px solid',
-                          borderColor: evt.read
-                            ? 'border.default'
-                            : 'accent.muted',
+                          borderColor: 'border.default',
                         }}
                       >
                         <Box

@@ -202,7 +202,7 @@ export function AgentRuntimeNotebookExampleInner({
               p: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              bg: 'canvas.subtle',
+              bg: 'canvas.default',
             }}
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>

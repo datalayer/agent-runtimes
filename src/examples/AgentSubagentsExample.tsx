@@ -6,7 +6,7 @@
 /**
  * AgentSubagentsExample
  *
- * Demonstrates multi-agent delegation using subagents-pydantic-ai.
+ * Demonstrates multi-agent delegation using the in-repo subagents capability.
  * The parent agent orchestrates a researcher and a writer subagent,
  * delegating tasks and combining results for the user.
  *
@@ -19,13 +19,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Text, Spinner, Heading, Label, Timeline } from '@primer/react';
-import {
-  PeopleIcon,
-  PersonIcon,
-  CheckCircleFillIcon,
-  ClockIcon,
-  XCircleFillIcon,
-} from '@primer/octicons-react';
+import { PeopleIcon, PersonIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
@@ -40,9 +34,6 @@ const AGENTSPEC_ID = 'example-subagents';
 interface SubagentInfo {
   name: string;
   description: string;
-  preferredMode: string;
-  typicalComplexity: string;
-  canAskQuestions: boolean;
 }
 
 const SUBAGENTS: SubagentInfo[] = [
@@ -50,17 +41,11 @@ const SUBAGENTS: SubagentInfo[] = [
     name: 'researcher',
     description:
       'Researches topics, gathers facts, and provides detailed analysis',
-    preferredMode: 'sync',
-    typicalComplexity: 'moderate',
-    canAskQuestions: true,
   },
   {
     name: 'writer',
     description:
       'Writes clear, structured content based on research or instructions',
-    preferredMode: 'sync',
-    typicalComplexity: 'moderate',
-    canAskQuestions: false,
   },
 ];
 
@@ -302,19 +287,6 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
                     >
                       {sa.description}
                     </Text>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Label size="small" variant="secondary">
-                        {sa.preferredMode}
-                      </Label>
-                      <Label size="small" variant="secondary">
-                        {sa.typicalComplexity}
-                      </Label>
-                      {sa.canAskQuestions && (
-                        <Label size="small" variant="accent">
-                          can ask questions
-                        </Label>
-                      )}
-                    </Box>
                   </Timeline.Body>
                 </Timeline.Item>
               ))}
@@ -334,24 +306,9 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {[
                 {
-                  name: 'task',
-                  desc: 'Assign a task to a subagent',
-                  icon: ClockIcon,
-                },
-                {
-                  name: 'check_task',
-                  desc: 'Check status of a running task',
-                  icon: CheckCircleFillIcon,
-                },
-                {
-                  name: 'list_active_tasks',
-                  desc: 'View all active delegated tasks',
+                  name: 'delegate_task',
+                  desc: 'Run a named subagent on a task and return its answer',
                   icon: PeopleIcon,
-                },
-                {
-                  name: 'soft_cancel_task',
-                  desc: 'Gracefully cancel a task',
-                  icon: XCircleFillIcon,
                 },
               ].map(tool => (
                 <Box
@@ -395,13 +352,12 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             </Heading>
             <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
               The orchestrator agent delegates tasks to specialised subagents
-              using the <code>task</code> tool. Each subagent runs independently
-              with its own model, instructions, and context.
+              using the <code>delegate_task</code> tool. Each subagent runs in
+              an isolated child run with its own model and instructions.
             </Text>
             <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 0 }}>
-              Subagents can be configured with different execution modes (sync,
-              async, auto), complexity hints, and question-asking capabilities
-              for interactive workflows.
+              Token and request usage from each delegation is forwarded to the
+              parent run, so budget limits stay accurate across delegation.
             </Text>
           </Box>
         </Box>

@@ -15,6 +15,25 @@ from .ephemeral import EphemeralMemory
 
 logger = logging.getLogger(__name__)
 
+# Active memory backends keyed by agent id, so routes can inspect an agent's
+# memory without reaching into the running capability instance.
+_MEMORY_BACKENDS: dict[str, BaseMemoryBackend] = {}
+
+
+def register_memory_backend(agent_id: str, backend: BaseMemoryBackend) -> None:
+    """Register an agent's memory backend for later lookup."""
+    _MEMORY_BACKENDS[agent_id] = backend
+
+
+def get_memory_backend(agent_id: str) -> BaseMemoryBackend | None:
+    """Return the registered memory backend for an agent, if any."""
+    return _MEMORY_BACKENDS.get(agent_id)
+
+
+def unregister_memory_backend(agent_id: str) -> None:
+    """Remove an agent's memory backend from the registry."""
+    _MEMORY_BACKENDS.pop(agent_id, None)
+
 
 def create_memory_backend(
     memory_type: str | None,

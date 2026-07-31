@@ -58,6 +58,22 @@ class BaseMemoryBackend(ABC):
         """
         ...
 
+    async def list_all(self, limit: int = 50) -> list[dict[str, Any]]:
+        """List stored memory entries (most recent first).
+
+        Parameters
+        ----------
+        limit : int
+            Maximum number of entries to return.
+
+        Returns
+        -------
+        list[dict]
+            Stored entries with ``content`` keys. Backends that cannot
+            enumerate their contents return an empty list.
+        """
+        return []
+
     async def get_relevant_context(self, query: str, max_tokens: int = 2000) -> str:
         """Get relevant memory context for system prompt injection.
 

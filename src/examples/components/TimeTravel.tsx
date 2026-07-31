@@ -35,7 +35,7 @@ export const TimeTravel: React.FC<TimeTravelProps> = ({
         border: '1px solid',
         borderColor: 'border.default',
         borderRadius: 2,
-        backgroundColor: 'canvas.subtle',
+        backgroundColor: 'canvas.default',
       }}
     >
       <Box

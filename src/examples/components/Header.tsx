@@ -256,7 +256,7 @@ export const Header: React.FC<HeaderProps> = ({
             border: '1px solid',
             borderColor: 'border.default',
             borderRadius: 2,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           <Box
@@ -392,7 +392,7 @@ export const Header: React.FC<HeaderProps> = ({
             border: '1px solid',
             borderColor: 'border.default',
             borderRadius: 2,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           <Text

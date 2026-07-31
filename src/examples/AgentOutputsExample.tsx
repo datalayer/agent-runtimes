@@ -285,7 +285,7 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
             whiteSpace: 'normal',
             wordBreak: 'break-word',
           },
-          th: { bg: 'canvas.subtle', fontWeight: 'bold' },
+          th: { bg: 'canvas.default', fontWeight: 'bold' },
         }}
       >
         <thead>
@@ -363,7 +363,7 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
           fontFamily: 'mono',
           fontSize: 0,
           whiteSpace: 'pre-wrap',
-          bg: 'canvas.subtle',
+          bg: 'canvas.default',
           p: 2,
           borderRadius: 2,
           m: 0,
@@ -754,7 +754,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
                     <Box
                       as="pre"
                       sx={{
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         p: 2,
                         borderRadius: 2,
                         fontFamily: 'mono',
@@ -780,7 +780,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
                       <Box
                         as="pre"
                         sx={{
-                          bg: 'canvas.subtle',
+                          bg: 'canvas.default',
                           p: 2,
                           borderRadius: 2,
                           fontFamily: 'mono',

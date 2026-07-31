@@ -171,7 +171,7 @@ function ContactCardContent({
               borderColor: 'border.default',
               borderRadius: 2,
               p: 3,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
             }}
           >
             <A2uiSurfaceComposed surface={surface} />
@@ -209,7 +209,7 @@ const A2UiContactCardExample: React.FC = () => {
               py: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
             }}
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
@@ -237,7 +237,7 @@ const A2UiContactCardExample: React.FC = () => {
                 borderColor: 'border.default',
                 borderRadius: 2,
                 p: 3,
-                backgroundColor: 'canvas.subtle',
+                backgroundColor: 'canvas.default',
                 fontFamily: 'mono',
                 fontSize: 0,
                 whiteSpace: 'pre-wrap',

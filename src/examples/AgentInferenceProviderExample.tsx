@@ -70,7 +70,7 @@ const ProviderBadge: React.FC<{ provider: InferenceProviderKind }> = ({
       borderColor: 'border.default',
       fontSize: 0,
       color: 'fg.muted',
-      bg: 'canvas.inset',
+      bg: 'canvas.default',
       textTransform: 'uppercase',
       letterSpacing: '0.03em',
     }}
@@ -478,7 +478,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             gap: 2,
             minHeight: 0,
             overflow: 'hidden',
-            bg: 'canvas.inset',
+            bg: 'canvas.default',
           }}
         >
           <Heading as="h3" sx={{ fontSize: 2 }}>
@@ -574,7 +574,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
                         mb: 0,
                         p: 2,
                         borderRadius: 2,
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         fontSize: 0,
                         whiteSpace: 'pre-wrap',
                         fontFamily: 'mono',

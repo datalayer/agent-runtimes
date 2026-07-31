@@ -547,7 +547,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               borderRight: '1px solid',
               borderColor: 'border.default',
               overflowY: 'auto',
-              bg: 'canvas.subtle',
+              bg: 'canvas.default',
             }}
           >
             {/* Spec Attributes */}

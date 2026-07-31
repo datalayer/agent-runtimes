@@ -261,7 +261,7 @@ const A2UiRestaurantExample: React.FC = () => {
               p: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
             }}
           >
             <Text as="h1" sx={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
@@ -352,7 +352,7 @@ const A2UiRestaurantExample: React.FC = () => {
               p: 2,
               borderTop: '1px solid',
               borderColor: 'border.default',
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               textAlign: 'center',
             }}
           >

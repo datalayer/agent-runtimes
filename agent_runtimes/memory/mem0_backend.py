@@ -119,6 +119,32 @@ class Mem0Backend(BaseMemoryBackend):
             logger.error("Mem0 search failed: %s", exc)
             return []
 
+    async def list_all(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Return all stored memories for the user/agent."""
+        memory = self._ensure_initialized()
+        try:
+            kwargs: dict[str, Any] = {"user_id": self.user_id, "limit": limit}
+            if self.agent_id:
+                kwargs["agent_id"] = self.agent_id
+            results = memory.get_all(**kwargs)
+            if isinstance(results, dict) and "results" in results:
+                results = results["results"]
+            normalized: list[dict[str, Any]] = []
+            for item in results:
+                if isinstance(item, dict):
+                    normalized.append(
+                        {
+                            "content": item.get("memory", item.get("content", "")),
+                            "score": item.get("score", 0.0),
+                            "id": item.get("id", ""),
+                            "metadata": item.get("metadata", {}),
+                        }
+                    )
+            return normalized
+        except Exception as exc:
+            logger.error("Mem0 get_all failed: %s", exc)
+            return []
+
     async def close(self) -> None:
         """Release Mem0 resources."""
         self._memory = None

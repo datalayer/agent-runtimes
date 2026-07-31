@@ -251,7 +251,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'AgentSubagentsExample',
     () => import('./AgentSubagentsExample'),
-    'Multi-agent delegation with subagents-pydantic-ai.',
+    'Multi-agent delegation with the in-repo subagents capability.',
   ),
   makeEntry(
     'AgentNotificationsExample',

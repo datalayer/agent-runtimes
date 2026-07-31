@@ -198,8 +198,8 @@ function LoopSummary({ loop }: { loop: LoopSpec }) {
               px: 2,
               py: '2px',
               borderRadius: 6,
-              bg: 'accent.subtle',
-              color: 'accent.fg',
+              bg: 'neutral.muted',
+              color: 'fg.default',
               fontWeight: 'bold',
             }}
           >
@@ -366,7 +366,7 @@ export function AgentLoopExampleInner({
               p: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              bg: 'canvas.subtle',
+              bg: 'canvas.default',
             }}
           >
             <Box

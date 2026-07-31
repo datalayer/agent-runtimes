@@ -962,7 +962,7 @@ class FrontendConfig(BaseModel):
 class SubAgentspecConfig(BaseModel):
     """Configuration for a subagent within an agent specification.
 
-    Maps to ``subagents_pydantic_ai.SubAgentConfig`` at runtime.
+    Maps to ``agent_runtimes.subagents.SubagentDefinition`` at runtime.
     """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
@@ -1254,8 +1254,8 @@ class Agentspec(BaseModel):
         default=None,
         description=(
             "Subagent delegation configuration. When set, the agent can "
-            "delegate tasks to specialised child agents via the "
-            "subagents-pydantic-ai SubAgentCapability."
+            "delegate tasks to specialised child agents via the in-repo "
+            "SubagentsCapability."
         ),
     )
 

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { Heading, Text, TextInput } from '@primer/react';
+import { Heading, Text, TextInput, Label } from '@primer/react';
 import { SearchIcon } from '@primer/octicons-react';
 
 export interface HomeExampleCardEntry {
@@ -106,44 +106,49 @@ const HomeExample: React.FC<HomeExampleProps> = ({
             {sortedExamples.map(example => (
               <Box
                 key={example.id}
-                as="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectExample?.(example.id)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelectExample?.(example.id);
+                  }
+                }}
                 sx={{
-                  textAlign: 'left',
+                  bg: 'canvas.default',
+                  p: 4,
+                  borderRadius: '12px',
                   border: '1px solid',
                   borderColor: 'border.default',
-                  borderRadius: 2,
-                  p: 3,
-                  bg: 'canvas.subtle',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
                   cursor: 'pointer',
-                  transition: 'all 120ms ease-in-out',
-                  ':hover': {
+                  transition:
+                    'box-shadow 0.2s, transform 0.2s, border-color 0.2s',
+                  '&:hover': {
+                    boxShadow: 'shadow.large',
                     transform: 'translateY(-2px)',
                     borderColor: 'accent.emphasis',
-                    boxShadow: 'shadow.medium',
-                    bg: 'canvas.default',
+                  },
+                  '&:focus-visible': {
+                    outline: '2px solid',
+                    outlineColor: 'accent.emphasis',
+                    outlineOffset: '2px',
                   },
                 }}
               >
-                <Text sx={{ fontWeight: 600, fontSize: 2, display: 'block' }}>
+                <Heading as="h3" sx={{ fontSize: 2, fontWeight: 'bold' }}>
                   {example.title}
-                </Text>
-                <Text
-                  sx={{
-                    color: 'fg.muted',
-                    fontSize: 1,
-                    display: 'block',
-                    mt: 1,
-                  }}
-                >
+                </Heading>
+                <Text sx={{ color: 'fg.muted', fontSize: 1, lineHeight: 1.6 }}>
                   {example.description}
                 </Text>
                 <Text
                   sx={{
                     color: 'fg.muted',
                     fontSize: 0,
-                    display: 'block',
-                    mt: 2,
                     fontFamily: 'mono',
                   }}
                 >
@@ -151,24 +156,18 @@ const HomeExample: React.FC<HomeExampleProps> = ({
                 </Text>
                 {example.tags.length > 0 && (
                   <Box
-                    sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}
+                    sx={{
+                      display: 'flex',
+                      gap: 1,
+                      flexWrap: 'wrap',
+                      mt: 'auto',
+                      pt: 2,
+                    }}
                   >
                     {example.tags.map(tag => (
-                      <Box
-                        key={`${example.id}-${tag}`}
-                        sx={{
-                          fontSize: 0,
-                          px: 2,
-                          py: '2px',
-                          borderRadius: 999,
-                          bg: 'canvas.inset',
-                          color: 'fg.muted',
-                          border: '1px solid',
-                          borderColor: 'border.muted',
-                        }}
-                      >
+                      <Label key={`${example.id}-${tag}`} variant="secondary">
                         {tag}
-                      </Box>
+                      </Label>
                     ))}
                   </Box>
                 )}

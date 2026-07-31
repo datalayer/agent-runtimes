@@ -109,7 +109,7 @@ const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
     subtitle: 'Raw MCP tools without codemode conversion',
     suggestionMessage: NO_CODEMODE_SUGGESTION_MESSAGE,
     specId: 'example-no-codemode',
-    color: '#0969DA',
+    color: '#16A085',
     baseUrl: NO_CODEMODE_BASE_URL,
   },
   {
@@ -668,7 +668,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
           emoji: '🤝',
           title: 'Tie',
           message: 'Both agents are tied on token usage.',
-          bg: 'canvas.subtle',
+          bg: 'canvas.default',
           borderColor: 'border.default',
           color: 'fg.default',
         };

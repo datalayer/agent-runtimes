@@ -158,7 +158,7 @@ const NotebookCollaborationExample = (
               <Box
                 sx={{
                   p: 2,
-                  bg: 'canvas.subtle',
+                  bg: 'canvas.default',
                   borderBottom: '1px solid',
                   borderColor: 'border.default',
                   fontWeight: 'bold',
@@ -193,7 +193,7 @@ const NotebookCollaborationExample = (
               <Box
                 sx={{
                   p: 2,
-                  bg: 'canvas.subtle',
+                  bg: 'canvas.default',
                   borderBottom: '1px solid',
                   borderColor: 'border.default',
                   fontWeight: 'bold',
@@ -245,11 +245,11 @@ const NotebookCollaborationExample = (
         )}
 
         <Box sx={{ mt: 2, fontSize: 1, color: 'fg.subtle' }}>
-          <p>
+          <Box as="p" sx={{ m: 0, mb: 2 }}>
             This example demonstrates how to use Datalayer services with
             Notebook:
-          </p>
-          <ul>
+          </Box>
+          <Box as="ul" sx={{ m: 0, pl: 3, '& li': { mb: 1 } }}>
             <li>
               <strong>DatalayerServiceManager:</strong> Connects to Datalayer
               infrastructure for kernel management
@@ -268,7 +268,7 @@ const NotebookCollaborationExample = (
               This shows the explicit, composable pattern for Datalayer
               integration
             </li>
-          </ul>
+          </Box>
         </Box>
       </Box>
     </ThemedJupyterProvider>

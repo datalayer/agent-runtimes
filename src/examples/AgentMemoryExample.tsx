@@ -307,7 +307,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           <Box

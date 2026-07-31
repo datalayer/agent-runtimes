@@ -1968,7 +1968,21 @@ EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1 = Agentspec(
     post_hooks=None,
     tool_hooks=None,
     parameters=None,
-    subagents=None,
+    subagents=SubAgentsConfig(
+        include_general_purpose=True,
+        subagents=[
+            SubAgentspecConfig(
+                name="researcher",
+                description="Gathers facts and source-backed notes on a topic. Use for research, fact-finding, and background gathering.",
+                instructions="You are a meticulous research specialist. Given a topic, gather the key facts and return concise, source-aware notes. Prefer verifiable claims and flag anything uncertain.",
+            ),
+            SubAgentspecConfig(
+                name="writer",
+                description="Turns research notes into clear, well-structured prose. Use for summaries, drafts, and final write-ups.",
+                instructions="You are a concise writing specialist. Given notes or findings, produce clear, well-structured prose. Keep it focused and free of filler.",
+            ),
+        ],
+    ),
 )
 
 EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1 = Agentspec(

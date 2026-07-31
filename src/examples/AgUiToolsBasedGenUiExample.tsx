@@ -79,7 +79,7 @@ const PlanStepItem: React.FC<{
             : step.status === 'completed'
               ? 'success.subtle'
               : isEnabled
-                ? 'canvas.subtle'
+                ? 'canvas.default'
                 : 'canvas.default',
         border: '1px solid',
         borderColor:
@@ -98,7 +98,7 @@ const PlanStepItem: React.FC<{
         '&:hover': isInteractive
           ? {
               backgroundColor:
-                step.status === 'completed' ? 'success.subtle' : 'canvas.inset',
+                step.status === 'completed' ? 'success.subtle' : 'canvas.default',
               borderColor: 'accent.muted',
             }
           : {},
@@ -448,7 +448,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -476,7 +476,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',

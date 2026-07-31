@@ -1242,7 +1242,7 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
-  color: '#0969DA',
+  color: '#16A085',
   suggestions: [
     'Search for the latest updates about Datalayer',
     'Extract key points from the top result',
@@ -2323,7 +2323,25 @@ export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
   postHooks: undefined,
   toolHooks: undefined,
   parameters: undefined,
-  subagents: undefined,
+  subagents: {
+    includeGeneralPurpose: true,
+    subagents: [
+      {
+        name: 'researcher',
+        description:
+          'Gathers facts and source-backed notes on a topic. Use for research, fact-finding, and background gathering.',
+        instructions:
+          'You are a meticulous research specialist. Given a topic, gather the key facts and return concise, source-aware notes. Prefer verifiable claims and flag anything uncertain.',
+      },
+      {
+        name: 'writer',
+        description:
+          'Turns research notes into clear, well-structured prose. Use for summaries, drafts, and final write-ups.',
+        instructions:
+          'You are a concise writing specialist. Given notes or findings, produce clear, well-structured prose. Keep it focused and free of filler.',
+      },
+    ],
+  },
 };
 
 export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
@@ -3106,7 +3124,7 @@ export const GALLERY_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#0969da',
+  color: '#16A085',
   suggestions: [
     'Run a full inventory audit now',
     'Show current stock levels across all warehouses',
@@ -3204,7 +3222,7 @@ export const GALLERY_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'shield-check',
     emoji: '🏦',
-    color: '#0969da',
+    color: '#16A085',
     suggestions: [
       'Generate the monthly Basel III capital adequacy report',
       'Show current risk-weighted asset breakdown',
@@ -3377,7 +3395,7 @@ export const GALLERY_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'mail',
   emoji: '📬',
-  color: '#0969da',
+  color: '#16A085',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -6883,7 +6901,7 @@ export const GALLERY_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '🔄',
-  color: '#0969da',
+  color: '#16A085',
   suggestions: [
     'Run a full CRM contact sync now',
     'Show the latest sync report',

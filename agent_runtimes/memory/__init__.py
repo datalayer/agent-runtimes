@@ -12,13 +12,24 @@ Other backends (memU, SimpleMem) are planned for future iterations.
 """
 
 from .base import BaseMemoryBackend
+from .capability import MemoryCapability, build_memory_capability
 from .ephemeral import EphemeralMemory
 from .mem0_backend import Mem0Backend
-from .registry import create_memory_backend
+from .registry import (
+    create_memory_backend,
+    get_memory_backend,
+    register_memory_backend,
+    unregister_memory_backend,
+)
 
 __all__ = [
     "BaseMemoryBackend",
     "EphemeralMemory",
     "Mem0Backend",
+    "MemoryCapability",
+    "build_memory_capability",
     "create_memory_backend",
+    "get_memory_backend",
+    "register_memory_backend",
+    "unregister_memory_backend",
 ]

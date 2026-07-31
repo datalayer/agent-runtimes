@@ -55,6 +55,15 @@ class EphemeralMemory(BaseMemoryBackend):
         # Return most recent matches first, capped at limit
         return scored[-limit:]
 
+    async def list_all(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Return the most recent stored entries."""
+        entries = [
+            {"content": entry.get("content", ""), "score": 1.0, **entry}
+            for entry in self._entries
+            if entry.get("content")
+        ]
+        return entries[-limit:][::-1]
+
     async def close(self) -> None:
         """Clear memory."""
         self._entries.clear()

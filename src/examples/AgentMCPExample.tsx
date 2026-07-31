@@ -700,7 +700,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           {/* Header */}
@@ -786,7 +786,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     mt: 3,
                     p: 2,
                     borderRadius: 2,
-                    bg: 'canvas.inset',
+                    bg: 'canvas.default',
                     border: '1px solid',
                     borderColor: 'border.muted',
                   }}

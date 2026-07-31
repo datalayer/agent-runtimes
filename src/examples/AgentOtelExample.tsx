@@ -192,7 +192,7 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
         flexDirection: 'column',
         gap: 2,
         flexShrink: 0,
-        bg: 'canvas.subtle',
+        bg: 'canvas.default',
       }}
     >
       <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>

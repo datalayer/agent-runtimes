@@ -141,7 +141,7 @@ const StepsFeedback: React.FC<{
       sx={{
         width: '100%',
         padding: 3,
-        backgroundColor: 'canvas.subtle',
+        backgroundColor: 'canvas.default',
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'border.default',
@@ -405,7 +405,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -442,10 +442,10 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'accent.subtle',
+              backgroundColor: 'neutral.muted',
               borderRadius: 2,
               border: '1px solid',
-              borderColor: 'accent.muted',
+              borderColor: 'border.default',
             }}
           >
             <Text

@@ -165,7 +165,7 @@ const SkillCard: React.FC<{
                 wordBreak: 'break-word',
                 m: 0,
                 p: 3,
-                bg: 'canvas.inset',
+                bg: 'canvas.default',
                 borderRadius: 2,
                 border: '1px solid',
                 borderColor: 'border.muted',
@@ -450,7 +450,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           <Box
@@ -502,7 +502,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 mt: 3,
                 p: 2,
                 borderRadius: 2,
-                bg: 'canvas.inset',
+                bg: 'canvas.default',
                 border: '1px solid',
                 borderColor: 'border.muted',
               }}

@@ -974,7 +974,7 @@ const ExampleAppThemed: React.FC<{
             justifyContent: 'space-between',
             gap: 3,
             height: '60px',
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
             borderBottom: '1px solid',
             borderColor: 'border.default',
           }}
@@ -1014,7 +1014,7 @@ const ExampleAppThemed: React.FC<{
                 px: 2,
                 py: '6px',
                 fontSize: 1,
-                fontFamily: 'mono',
+                fontFamily: 'inherit',
                 border: '1px solid',
                 borderColor: 'border.default',
                 borderRadius: 2,
@@ -1025,7 +1025,7 @@ const ExampleAppThemed: React.FC<{
                 outline: 'none',
                 '&:focus-visible': {
                   boxShadow:
-                    '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
+                    '0 0 0 2px var(--bgColor-accent-muted, rgba(26,188,156,0.3))',
                 },
               }}
             >
@@ -1152,7 +1152,7 @@ const ExampleAppThemed: React.FC<{
                 px: 2,
                 py: '6px',
                 fontSize: 1,
-                fontFamily: 'mono',
+                fontFamily: 'inherit',
                 border: '1px solid',
                 borderColor: 'border.default',
                 borderRadius: 2,
@@ -1163,7 +1163,7 @@ const ExampleAppThemed: React.FC<{
                 outline: 'none',
                 '&:focus-visible': {
                   boxShadow:
-                    '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
+                    '0 0 0 2px var(--bgColor-accent-muted, rgba(26,188,156,0.3))',
                 },
               }}
             >

@@ -2478,6 +2478,49 @@ async def list_agents() -> AgentListResponse:
     return AgentListResponse(agents=agents)
 
 
+@router.get("/{agent_id}/memory")
+async def list_agent_memory(agent_id: str) -> dict[str, Any]:
+    """List durable memories stored for an agent.
+
+    Returns an empty list when the agent has no durable memory backend, so the
+    UI can degrade gracefully.
+    """
+    from ..memory import get_memory_backend
+
+    backend = get_memory_backend(agent_id)
+    if backend is None:
+        return {"memories": []}
+    try:
+        memories = await backend.list_all()
+    except Exception as exc:
+        logger.warning("Failed to list memory for %s: %s", agent_id, exc)
+        memories = []
+    return {"memories": memories}
+
+
+@router.post("/{agent_id}/memory/search")
+async def search_agent_memory(agent_id: str, request: Request) -> dict[str, Any]:
+    """Search an agent's durable memory for a query string."""
+    from ..memory import get_memory_backend
+
+    backend = get_memory_backend(agent_id)
+    if backend is None:
+        return {"results": []}
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    query = str(payload.get("query", "")).strip() if isinstance(payload, dict) else ""
+    if not query:
+        return {"results": []}
+    try:
+        memories = await backend.search(query)
+    except Exception as exc:
+        logger.warning("Failed to search memory for %s: %s", agent_id, exc)
+        memories = []
+    return {"results": memories}
+
+
 @router.get("/{agent_id:path}")
 async def get_agent(agent_id: str) -> dict[str, Any]:
     """
