@@ -281,6 +281,10 @@ type SandboxStatusResponse = {
   } | null;
 };
 
+type SandboxEnvironmentResources = NonNullable<
+  NonNullable<SandboxStatusResponse['environment']>['resources']
+>;
+
 function resolveSandboxIngress(payload: SandboxStatusResponse): string {
   const direct = String(payload.jupyter_url || '').trim();
   if (direct) {
@@ -306,7 +310,7 @@ function toOptionalString(value: unknown): string | undefined {
   return normalized || undefined;
 }
 
-function resolveGpuLabel(resources: SandboxStatusResponse['resources']): string | undefined {
+function resolveGpuLabel(resources: SandboxEnvironmentResources | null | undefined): string | undefined {
   if (!resources) {
     return undefined;
   }

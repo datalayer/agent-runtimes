@@ -1371,7 +1371,7 @@ const ExampleAppThemed: React.FC<{
       exampleId: selectedExample,
       agentName: selectedExample,
       location: runtimeTarget,
-      baseUrl: isSandboxOnlyExample ? undefined : agentApiBaseUrl,
+      baseUrl: isSandboxOnlyExample ? '' : agentApiBaseUrl,
       sandboxBaseUrl: isSandboxOnlyExample ? jupyterSandboxBaseUrl : undefined,
       status: isChangingExample ? 'switching' : 'selected',
     });

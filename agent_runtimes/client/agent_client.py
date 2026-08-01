@@ -37,6 +37,7 @@ from agent_runtimes.mixins.runtimes import RuntimesMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
 from agent_runtimes.models.environment import EnvironmentModel
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
+from agent_runtimes.runtimes import RuntimeService
 from agent_runtimes.sandboxes.code_sandbox_snapshots import (
     as_code_sandbox_snapshots,
     create_snapshot,
