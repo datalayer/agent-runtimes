@@ -193,7 +193,20 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
             Agent base URL: {summary.baseUrl || '—'}
           </Box>
           <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
-            Code sandbox base URL: {summary.sandboxBaseUrl || '—'}
+            Code sandbox base URL:{' '}
+            {summary.sandboxBaseUrl ? (
+              <Box
+                as="a"
+                href={summary.sandboxBaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+              >
+                {summary.sandboxBaseUrl}
+              </Box>
+            ) : (
+              '—'
+            )}
           </Box>
           <Box
             sx={{

@@ -597,7 +597,6 @@ export function useAgentRuntimes(
     if (runtimeCreationTarget === 'local-agent-runtimes') {
       return (
         import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
-        import.meta.env.VITE_BASE_URL ||
         'http://localhost:8765'
       );
     }

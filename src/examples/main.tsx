@@ -72,7 +72,7 @@ declare global {
 
 const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
 const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
-  'http://0.0.0.0:8888/api/jupyter-server';
+  'http://localhost:8888/api/jupyter-server';
 const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
   '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
@@ -217,18 +217,34 @@ const isProd1JupyterServerUrl = (value?: string | null): boolean => {
 };
 
 const resolveLocalJupyterServerUrl = (): string => {
+  const normalizeLoopbackHost = (raw: string): string => {
+    const trimmed = raw.trim().replace(/\/$/, '');
+    if (!trimmed) {
+      return DEFAULT_LOCAL_JUPYTER_SERVER_URL;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.hostname === '0.0.0.0') {
+        parsed.hostname = 'localhost';
+      }
+      return parsed.toString().replace(/\/$/, '');
+    } catch {
+      return trimmed.replace('://0.0.0.0', '://localhost');
+    }
+  };
+
   const envLocalUrl = (
     import.meta.env.VITE_JUPYTER_SERVER_URL as string | undefined
   )?.trim();
   if (envLocalUrl) {
-    return envLocalUrl.replace(/\/$/, '');
+    return normalizeLoopbackHost(envLocalUrl);
   }
 
   const configured = getJupyterServerUrl();
   if (configured && !isProd1JupyterServerUrl(configured)) {
-    return configured;
+    return normalizeLoopbackHost(configured);
   }
-  return DEFAULT_LOCAL_JUPYTER_SERVER_URL;
+  return normalizeLoopbackHost(DEFAULT_LOCAL_JUPYTER_SERVER_URL);
 };
 
 const ensureLocalJupyterToken = (): void => {

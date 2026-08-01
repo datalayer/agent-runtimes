@@ -32,7 +32,8 @@ export function resolveExampleAgentRuntimesUrl(
   }
 
   const localUrl =
-    normalizeBaseUrl(import.meta.env.VITE_BASE_URL) ?? LOCAL_DEFAULT;
+    normalizeBaseUrl(import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL) ??
+    LOCAL_DEFAULT;
   const cloudUrl =
     normalizeBaseUrl(import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL) ??
     normalizeBaseUrl(import.meta.env.VITE_DATALAYER_RUNTIMES_URL) ??

@@ -43,6 +43,19 @@ interface NotebookViewerProps {
   notebookContent?: any;
 }
 
+const DEFAULT_LOCAL_RUNTIMES_URL = 'http://localhost:8765';
+
+const resolveNextjsRuntimesUrl = (): string => {
+  const envRuntimeUrl = process.env.NEXT_PUBLIC_DATALAYER_RUNTIMES_URL;
+  const envAgentRuntimesUrl =
+    process.env.NEXT_PUBLIC_DATALAYER_AGENT_RUNTIMES_URL;
+  const configured =
+    envRuntimeUrl?.trim() ||
+    envAgentRuntimesUrl?.trim() ||
+    DEFAULT_LOCAL_RUNTIMES_URL;
+  return configured.replace(/\/$/, '');
+};
+
 export default function NotebookViewer({
   notebookPath,
   runtime,
@@ -89,12 +102,19 @@ export default function NotebookViewer({
           throw new Error('Please log in first');
         }
 
-        // Ensure token is in the configuration for createDatalayerServiceManager
+        // Ensure token and runtimes URL are configured for local runtime creation.
         const currentConfig = coreStore.configuration;
-        if (!currentConfig.token) {
+        const resolvedRuntimesUrl = resolveNextjsRuntimesUrl();
+        const currentRuntimesUrl = String(currentConfig.runtimesUrl || '').trim();
+        const shouldSetRuntimesUrl =
+          !currentRuntimesUrl ||
+          currentRuntimesUrl.includes('prod1.datalayer.run') ||
+          currentRuntimesUrl.includes('r1.datalayer.run');
+        if (!currentConfig.token || shouldSetRuntimesUrl) {
           coreStore.setConfiguration({
             ...currentConfig,
             token: token,
+            ...(shouldSetRuntimesUrl ? { runtimesUrl: resolvedRuntimesUrl } : {}),
           });
         }
 
@@ -130,7 +150,7 @@ export default function NotebookViewer({
           // Get runtime info from the store - find the runtime for our environment
           const currentPods = runtimesStore.runtimePods;
           const matchingRuntime = currentPods.find(
-            pod => pod.environment_name === (runtime || 'ai-agents-env'),
+            pod => pod.environment?.name === (runtime || 'ai-agents-env'),
           );
 
           if (matchingRuntime && matchingRuntime.reservation_id) {
@@ -162,7 +182,8 @@ export default function NotebookViewer({
           // Create collaboration provider
           const sdkConfig = coreStore.configuration;
           const datalayerUrl =
-            sdkConfig?.runtimesUrl || 'https://prod1.datalayer.run';
+            String(sdkConfig?.runtimesUrl || '').trim() ||
+            resolveNextjsRuntimesUrl();
           const isValidUID =
             notebookPath && /^[A-Z0-9]{26,}$/i.test(notebookPath);
 

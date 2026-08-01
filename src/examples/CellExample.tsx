@@ -29,30 +29,31 @@ for i in range(10):
     display('I am a long string which is repeatedly added to the dom in separated divs: %d' % i)`;
 
 const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
+  const isLocalSandbox = useMemo(() => {
+    const rawBaseUrl = String(serviceManager?.serverSettings.baseUrl || '').trim();
+    if (!rawBaseUrl) {
+      return true;
+    }
+    try {
+      const parsed = new URL(rawBaseUrl);
+      return (
+        parsed.hostname === 'localhost' ||
+        parsed.hostname === '127.0.0.1' ||
+        parsed.hostname === '0.0.0.0'
+      );
+    } catch {
+      return true;
+    }
+  }, [serviceManager?.serverSettings.baseUrl]);
+
   const { defaultKernel } = useJupyter({
     serviceManager,
-    // Reuse the first running kernel from the sandbox manager.
-    // Do not start a new kernel from the cell example.
-    useRunningKernelIndex: 0,
-    startDefaultKernel: false,
+    // Local mode: start a fresh kernel so the example always renders.
+    // Cloud mode: attach to the sandbox's already-running kernel.
+    startDefaultKernel: isLocalSandbox,
+    ...(isLocalSandbox ? {} : { useRunningKernelIndex: 0 }),
   });
-  const activeKernel = useMemo(() => {
-    if (!defaultKernel) {
-      return undefined;
-    }
-    const expectedBaseUrl = String(serviceManager?.serverSettings.baseUrl || '')
-      .trim()
-      .replace(/\/$/, '');
-    const kernelBaseUrl = String(
-      defaultKernel.connection?.serverSettings?.baseUrl || ''
-    )
-      .trim()
-      .replace(/\/$/, '');
-    if (expectedBaseUrl && kernelBaseUrl && expectedBaseUrl !== kernelBaseUrl) {
-      return undefined;
-    }
-    return defaultKernel;
-  }, [defaultKernel, serviceManager?.serverSettings.baseUrl]);
+  const activeKernel = defaultKernel;
   const fallbackKernelEnvironmentName = useMemo(() => {
     const rawBaseUrl = String(serviceManager?.serverSettings.baseUrl || '').trim();
     if (!rawBaseUrl) {
@@ -80,6 +81,20 @@ const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
     runtimeEnvironment?.environmentTitle ||
     runtimeEnvironment?.environmentName ||
     fallbackKernelEnvironmentName;
+  // `Cell` creates its adapter once and does not re-wire when the `kernel`
+  // prop changes. Key the cell by the kernel/server identity so switching
+  // runtimes (e.g. local -> cloud) remounts it against the new kernel.
+  const cellRemountKey = useMemo(() => {
+    if (!activeKernel) {
+      return 'no-kernel';
+    }
+    const base = String(
+      activeKernel.connection?.serverSettings?.baseUrl ||
+        serviceManager?.serverSettings.baseUrl ||
+        '',
+    );
+    return `${base}::${activeKernel.id}`;
+  }, [activeKernel, serviceManager?.serverSettings.baseUrl]);
   const cellsStore = useCellsStore();
   const kernelsStore = useKernelsStore();
 
@@ -148,7 +163,12 @@ const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
         </Box>
       </Box>
       {activeKernel ? (
-        <Cell source={DEFAULT_SOURCE} id={CELL_ID} kernel={activeKernel} />
+        <Cell
+          key={cellRemountKey}
+          source={DEFAULT_SOURCE}
+          id={CELL_ID}
+          kernel={activeKernel}
+        />
       ) : null}
     </Box>
   );
