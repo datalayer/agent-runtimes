@@ -26,9 +26,7 @@ const DEFAULT_SOURCE = `from IPython.display import display
 for i in range(10):
     display('I am a long string which is repeatedly added to the dom in separated divs: %d' % i)`;
 
-const JupyterCellExampleContent = ({
-  serviceManager,
-}: IJupyterCellExampleProps) => {
+const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
   const { defaultKernel } = useJupyter({
     serviceManager,
     startDefaultKernel: true,
@@ -77,14 +75,14 @@ const JupyterCellExampleContent = ({
   );
 };
 
-export const JupyterCellExample = (props: IJupyterCellExampleProps) => {
+export const CellExample = (props: IJupyterCellExampleProps) => {
   const { serviceManager } = props;
 
   return (
     <ThemedJupyterProvider>
-      <JupyterCellExampleContent serviceManager={serviceManager} />
+      <CellExampleContent serviceManager={serviceManager} />
     </ThemedJupyterProvider>
   );
 };
 
-export default JupyterCellExample;
+export default CellExample;

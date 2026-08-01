@@ -15,7 +15,7 @@ export { default as AgUiHaikuGenUiExample } from './AgUiHaikuGenUiExample';
 export { default as AgUiHumanInTheLoopExample } from './AgUiHumanInTheLoopExample';
 export { default as AgUiSharedStateExample } from './AgUiSharedStateExample';
 export { default as AgUiToolsBasedGenUiExample } from './AgUiToolsBasedGenUiExample';
-export { default as CellExample } from './CellSimpleExample';
+export { default as CellExample } from './CellExample';
 export { default as ChatStandaloneExample } from './ChatStandaloneExample';
 export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample';
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';

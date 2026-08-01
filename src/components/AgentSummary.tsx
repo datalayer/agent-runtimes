@@ -77,10 +77,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
     };
   }, []);
 
-  // Both the agent status and the code sandbox status are served by the
-  // agent-runtimes API server (summary.baseUrl). Derive each endpoint from that
-  // single base so local and cloud runs point at the right server rather than
-  // at the Jupyter sandbox URL.
+  // Agent status is served by the agent-runtimes API server.
   const apiBase = summary?.baseUrl
     ? (() => {
         const normalized = summary.baseUrl.replace(/\/$/, '');
@@ -88,7 +85,12 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
       })()
     : undefined;
   const agentStatusUrl = apiBase ? `${apiBase}/runtime/status` : undefined;
-  const sandboxStatusUrl = apiBase ? `${apiBase}/agents/sandbox/status` : undefined;
+  const sandboxStatusUrl = summary?.sandboxBaseUrl
+    ? (() => {
+        const normalized = summary.sandboxBaseUrl.replace(/\/$/, '');
+        return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
+      })()
+    : undefined;
 
   if (!summary) {
     return null;

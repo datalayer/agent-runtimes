@@ -141,9 +141,9 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Configure and run agents from specs and transports.',
   ),
   makeEntry(
-    'CellSimpleExample',
-    () => import('./CellSimpleExample'),
-    'Simple Jupyter cell integration example.',
+    'CellExample',
+    () => import('./CellExample'),
+    'Simple cell example.',
   ),
   makeEntry(
     'ChatCustomExample',

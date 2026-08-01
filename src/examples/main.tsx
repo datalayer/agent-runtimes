@@ -928,9 +928,13 @@ const ExampleAppThemed: React.FC<{
   }, []);
 
   useEffect(() => {
-    const baseUrl =
-      toAgentRuntimesBaseUrl(serviceManager?.serverSettings.baseUrl) ||
-      resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const jupyterSandboxBaseUrl = toAgentRuntimesBaseUrl(
+      serviceManager?.serverSettings.baseUrl,
+    );
+    const agentApiBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const isSandboxOnlyExample =
+      (selectedExample.includes('Notebook') || selectedExample.includes('Cell')) &&
+      !selectedExample.includes('Agent');
     // Seed a base summary for the selected example. Do NOT clobber a richer
     // summary that the mounted example already published (spec id, agent id,
     // readiness) for the same example + target — otherwise fast-settling local
@@ -950,7 +954,8 @@ const ExampleAppThemed: React.FC<{
       exampleId: selectedExample,
       agentName: selectedExample,
       location: runtimeTarget,
-      baseUrl,
+      baseUrl: isSandboxOnlyExample ? undefined : agentApiBaseUrl,
+      sandboxBaseUrl: isSandboxOnlyExample ? jupyterSandboxBaseUrl : undefined,
       status: isChangingExample ? 'switching' : 'selected',
     });
   }, [selectedExample, runtimeTarget, isChangingExample, serviceManager]);
