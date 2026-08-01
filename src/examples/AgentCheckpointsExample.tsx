@@ -66,10 +66,10 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import {
   useAgentsRuntimes,
-  useAgentRuntimes,
   useAgentRuntimesQuery,
   useRefreshAgentRuntimes,
 } from '../hooks/useAgentRuntimes';
+import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 import { useAgentLifecycle } from '../hooks/useCheckpoints';
 import { useDeletePausedAgentRuntime } from '../hooks/useCheckpoints';
 import { AGENT_STATUS_COLORS } from '../types/agents';

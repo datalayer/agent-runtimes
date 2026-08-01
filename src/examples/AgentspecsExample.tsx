@@ -41,7 +41,7 @@ import {
 } from '../config/AgentConfiguration';
 import { MockFileBrowser, MainContent, Header } from './components';
 import { useChatStore } from '../stores';
-import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
+import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 import type {
   AgentLibrary,
   McpServerSelection,
@@ -589,7 +589,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   // Can be configured via VITE_JUPYTER_SANDBOX_URL environment variable
   const jupyterSandboxUrl =
     import.meta.env.VITE_JUPYTER_SANDBOX_URL ||
-    'http://localhost:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
+    'http://0.0.0.0:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
   const handleSelectedServersChange = React.useCallback(
     (newServers: McpServerSelection[]) => {

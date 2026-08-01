@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Notebook Example - Next generation chat with Jupyter Notebook.
+ * Agent Runtime Notebook Example - Chat with Jupyter Notebook.
  *
  * This example demonstrates using the chat component with:
  * - Jupyter Notebook integration
@@ -106,7 +106,7 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
 }
 
 /**
- * Agent Runtime Notebook Sidebar Example with Simple integration
+ * Agent Runtime Notebook Chat  Sidebar Example with Simple integration
  */
 interface ChatJupyterNotebookExampleProps {
   serviceManager?: ServiceManager.IManager;
@@ -206,10 +206,10 @@ export function AgentRuntimeNotebookExampleInner({
             }}
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-              Agent Runtime Notebook Sidebar Example
+              Agent Runtime Notebook Chat Sidebar Example
             </h1>
             <p style={{ margin: '8px 0 0', color: 'var(--fgColor-muted)' }}>
-              Next generation chat with Jupyter Notebook integration
+              Chat with Jupyter Notebook integration
             </p>
           </Box>
 

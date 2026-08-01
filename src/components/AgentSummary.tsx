@@ -3,9 +3,10 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Spinner } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { strip } from '@datalayer/core/lib/utils';
 
 export interface AgentSummaryData {
   agentName: string;
@@ -13,6 +14,7 @@ export interface AgentSummaryData {
   specId?: string;
   status?: string;
   baseUrl?: string;
+  sandboxBaseUrl?: string;
   agentId?: string;
   isReady?: boolean;
   error?: string;
@@ -37,6 +39,8 @@ const CREATING_STATUSES = new Set([
   'resuming',
 ]);
 
+const MAX_AGENT_NAME_LENGTH = 32;
+
 /**
  * Compact agent summary badge with a hover overlay for details.
  */
@@ -45,16 +49,46 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
   title = 'Active Agent',
 }) => {
   const [isHovering, setIsHovering] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
 
-  const runtimeStatusUrl = summary?.baseUrl
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const handleMouseEnter = () => {
+    clearCloseTimer();
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    clearCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      setIsHovering(false);
+      closeTimerRef.current = null;
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearCloseTimer();
+    };
+  }, []);
+
+  // Both the agent status and the code sandbox status are served by the
+  // agent-runtimes API server (summary.baseUrl). Derive each endpoint from that
+  // single base so local and cloud runs point at the right server rather than
+  // at the Jupyter sandbox URL.
+  const apiBase = summary?.baseUrl
     ? (() => {
         const normalized = summary.baseUrl.replace(/\/$/, '');
-        if (normalized.endsWith('/api/v1')) {
-          return `${normalized}/runtime/status`;
-        }
-        return `${normalized}/api/v1/runtime/status`;
+        return normalized.endsWith('/api/v1') ? normalized : `${normalized}/api/v1`;
       })()
     : undefined;
+  const agentStatusUrl = apiBase ? `${apiBase}/runtime/status` : undefined;
+  const sandboxStatusUrl = apiBase ? `${apiBase}/agents/sandbox/status` : undefined;
 
   if (!summary) {
     return null;
@@ -68,19 +102,28 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
     !summary.agentId &&
     CREATING_STATUSES.has(normalizedStatus);
   const hasError = Boolean(summary.error);
+  // The agent is optional: some examples run only a code sandbox. Show the
+  // agent status when there is an agent (or one is being created).
+  const hasAgent = Boolean(summary.agentId) || isCreating;
+  const shortAgentName = strip(summary.agentName, MAX_AGENT_NAME_LENGTH);
+  const badgeLabel = `${summary.agentName} · ${summary.location}`;
+  const badgeLabelShort = `${shortAgentName} · ${summary.location}`;
 
   return (
     <Box
       sx={{ position: 'relative' }}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <Box
         as="button"
         type="button"
+        title={badgeLabel}
         sx={{
           px: 2,
           py: '6px',
+          maxWidth: 280,
+          minWidth: 0,
           border: '1px solid',
           borderColor: hasError ? 'danger.emphasis' : 'border.default',
           borderRadius: 2,
@@ -95,7 +138,18 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
       >
         {isCreating && <Spinner size="small" sx={{ width: 12, height: 12 }} />}
         {hasError && <span aria-hidden>⚠</span>}
-        {summary.agentName} · {summary.location}
+        <Box
+          as="span"
+          sx={{
+            display: 'block',
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {badgeLabelShort}
+        </Box>
       </Box>
 
       {isHovering && (
@@ -124,7 +178,10 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
             Status: {isCreating ? 'creating' : summary.status || '—'}
           </Box>
           <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
-            Base URL: {summary.baseUrl || '—'}
+            Agent base URL: {summary.baseUrl || '—'}
+          </Box>
+          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+            Code sandbox base URL: {summary.sandboxBaseUrl || '—'}
           </Box>
           <Box
             sx={{
@@ -148,16 +205,32 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
             )}
           </Box>
           <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
-            Runtime status:{' '}
-            {runtimeStatusUrl ? (
+            Agent status:{' '}
+            {hasAgent && agentStatusUrl ? (
               <Box
                 as="a"
-                href={runtimeStatusUrl}
+                href={agentStatusUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{ color: 'accent.fg', textDecoration: 'underline' }}
               >
-                {runtimeStatusUrl}
+                {agentStatusUrl}
+              </Box>
+            ) : (
+              'n/a'
+            )}
+          </Box>
+          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+            Code sandbox status:{' '}
+            {sandboxStatusUrl ? (
+              <Box
+                as="a"
+                href={sandboxStatusUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+              >
+                {sandboxStatusUrl}
               </Box>
             ) : (
               'n/a'

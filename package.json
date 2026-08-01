@@ -103,7 +103,7 @@
     "start:agent": "run-p server:start start:agent:vite",
     "start:agent:vite": "vite --open /html/agent.html",
     "start:agent-node": "run-p server:start:agent-node jupyter:start start:agent-node:vite",
-    "start:agent-node:vite": "VITE_JUPYTER_SANDBOX_URL=${VITE_JUPYTER_SANDBOX_URL:-http://localhost:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6} vite --open /html/agent-node.html",
+    "start:agent-node:vite": "VITE_JUPYTER_SANDBOX_URL=${VITE_JUPYTER_SANDBOX_URL:-http://0.0.0.0:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6} vite --open /html/agent-node.html",
     "start:agent-notebook": "run-p server:start jupyter:start start:agent-notebook:vite",
     "start:agent-notebook:vite": "vite --open /html/agent-notebook.html",
     "start:agent-document": "run-p server:start jupyter:start start:agent-document:vite",

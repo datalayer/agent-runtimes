@@ -101,13 +101,20 @@ export function useExampleAgentRuntime(
   }, [isCloud, connectToRuntime, agentName, environmentName, baseUrl]);
 
   useEffect(() => {
+    // Agent status and code sandbox status are both reported by the
+    // agent-runtimes API server. For local runs that server is `baseUrl`
+    // (e.g. http://localhost:8765); the Jupyter sandbox lives elsewhere
+    // (`runtime.agentBaseUrl`). For cloud runs the per-agent runtime URL
+    // (`runtime.agentBaseUrl`) hosts the API, so prefer it when present.
+    const agentApiBaseUrl = isCloud ? runtime?.agentBaseUrl || baseUrl : baseUrl;
     agentSummaryStore.getState().setActive({
       exampleId,
       agentName,
       agentId: runtime?.agentId,
       specId,
       location,
-      baseUrl: runtime?.agentBaseUrl || baseUrl,
+      baseUrl: agentApiBaseUrl,
+      sandboxBaseUrl: runtime?.agentBaseUrl,
       status,
       isReady,
       error: error || undefined,
@@ -124,6 +131,7 @@ export function useExampleAgentRuntime(
     specId,
     location,
     baseUrl,
+    isCloud,
     status,
     isReady,
     error,

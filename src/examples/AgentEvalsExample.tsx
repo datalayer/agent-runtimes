@@ -33,8 +33,6 @@ import {
   Label,
   Flash,
   ProgressBar,
-  Select,
-  FormControl,
 } from '@primer/react';
 import {
   BeakerIcon,
@@ -47,10 +45,11 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useRuntimeTargetStore, type ExampleRuntimeTarget } from './utils/runtimeTargetStore';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
 import { Chat } from '../chat';
-import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
+import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 
 const queryClient = new QueryClient();
 
@@ -58,14 +57,6 @@ const queryClient = new QueryClient();
 
 const AGENT_NAME = 'eval-example-agent';
 const AGENTSPEC_ID = 'example-evals';
-const DEFAULT_EXECUTION_TARGET: ExecutionTarget =
-  (
-    (import.meta.env.VITE_AGENT_EVALS_TARGET as string | undefined) || 'cloud'
-  ).toLowerCase() === 'local'
-    ? 'local'
-    : 'cloud';
-
-type ExecutionTarget = 'cloud' | 'local';
 
 const normalizeHttpUrl = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -120,9 +111,8 @@ interface EvalRun {
 
 const AgentEvalsInner: React.FC<{
   onLogout: () => void;
-  executionTarget: ExecutionTarget;
-  onExecutionTargetChange: (target: ExecutionTarget) => void;
-}> = ({ onLogout, executionTarget, onExecutionTargetChange }) => {
+  executionTarget: ExampleRuntimeTarget;
+}> = ({ onLogout, executionTarget }) => {
   const { token } = useSimpleAuthStore();
   const { configuration } = useCoreStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
@@ -591,22 +581,9 @@ const AgentEvalsInner: React.FC<{
             Runtime API: {runtimeCreationBaseUrl}/api/runtimes/v1/runtimes
           </Text>
         </Box>
-        <FormControl sx={{ minWidth: 160 }}>
-          <FormControl.Label sx={{ fontSize: 0, mb: 1 }}>
-            Target
-          </FormControl.Label>
-          <Select
-            size="small"
-            value={executionTarget}
-            onChange={e =>
-              onExecutionTargetChange(e.target.value as ExecutionTarget)
-            }
-            disabled={isRunning}
-          >
-            <Select.Option value="cloud">Cloud</Select.Option>
-            <Select.Option value="local">Local</Select.Option>
-          </Select>
-        </FormControl>
+        <Label size="small" variant="accent">
+          Target: {executionTarget === 'cloud' ? 'Cloud' : 'Local'}
+        </Label>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -783,9 +760,7 @@ const syncTokenToIamStore = (token: string) => {
 const AgentEvalsExample: React.FC = () => {
   const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
-  const [executionTarget, setExecutionTarget] = useState<ExecutionTarget>(
-    DEFAULT_EXECUTION_TARGET,
-  );
+  const executionTarget = useRuntimeTargetStore(state => state.target);
 
   useEffect(() => {
     if (token && !hasSynced.current) {
@@ -817,7 +792,6 @@ const AgentEvalsExample: React.FC = () => {
           key={executionTarget}
           onLogout={handleLogout}
           executionTarget={executionTarget}
-          onExecutionTargetChange={setExecutionTarget}
         />
       </ThemedProvider>
     </QueryClientProvider>

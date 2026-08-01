@@ -28,7 +28,7 @@ import {
 } from '@datalayer/primer-addons';
 import { AgentSummary } from '../components';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
-import { Button, Spinner, Text } from '@primer/react';
+import { Button, SegmentedControl, Spinner, Text } from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import { coreStore, iamStore } from '@datalayer/core';
 import {
@@ -68,6 +68,10 @@ declare global {
 }
 
 const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
+const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
+  'http://0.0.0.0:8888/api/jupyter-server';
+const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
+  '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
 const resolveRuntimesUrl = (configured?: string): string => {
   const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
@@ -91,6 +95,39 @@ const toAgentRuntimesBaseUrl = (value?: string | null): string | undefined => {
     return undefined;
   }
   return normalized;
+};
+
+const isProd1JupyterServerUrl = (value?: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+  try {
+    return new URL(value).hostname === 'prod1.datalayer.run';
+  } catch {
+    return value.includes('prod1.datalayer.run');
+  }
+};
+
+const resolveLocalJupyterServerUrl = (): string => {
+  const envLocalUrl = (
+    import.meta.env.VITE_JUPYTER_SERVER_URL as string | undefined
+  )?.trim();
+  if (envLocalUrl) {
+    return envLocalUrl.replace(/\/$/, '');
+  }
+
+  const configured = getJupyterServerUrl();
+  if (configured && !isProd1JupyterServerUrl(configured)) {
+    return configured;
+  }
+  return DEFAULT_LOCAL_JUPYTER_SERVER_URL;
+};
+
+const ensureLocalJupyterToken = (): void => {
+  const token = (getJupyterServerToken() || '').trim();
+  if (!token) {
+    setJupyterServerToken(DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN);
+  }
 };
 
 // Load configurations from DOM
@@ -497,6 +534,8 @@ const NotebookOnlyApp: React.FC = () => {
             setServiceManager(manager);
           }
         } else {
+          setJupyterServerUrl(resolveLocalJupyterServerUrl());
+          ensureLocalJupyterToken();
           const serverSettings = createServerSettings(
             getJupyterServerUrl(),
             getJupyterServerToken(),
@@ -626,6 +665,8 @@ export const ExampleApp: React.FC = () => {
 
   const createLocalServiceManager =
     async (): Promise<ServiceManager.IManager> => {
+      setJupyterServerUrl(resolveLocalJupyterServerUrl());
+      ensureLocalJupyterToken();
       const serverSettings = createServerSettings(
         getJupyterServerUrl(),
         getJupyterServerToken(),
@@ -873,6 +914,7 @@ const ExampleAppThemed: React.FC<{
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const agentSummary = useAgentSummaryStore(state => state.active);
+  const isHome = selectedExample === 'HomeExample';
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
@@ -1138,39 +1180,36 @@ const ExampleAppThemed: React.FC<{
               })()}
             </Box>
             <Box
-              as="select"
-              value={runtimeTarget}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                void onRuntimeTargetChange(
-                  e.target.value as ExampleRuntimeTarget,
-                )
-              }
-              disabled={isChangingExample}
               aria-label="Runtime target"
               title="Runtime target"
-              sx={{
-                px: 2,
-                py: '6px',
-                fontSize: 1,
-                fontFamily: 'inherit',
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                color: 'fg.default',
-                cursor: isChangingExample ? 'not-allowed' : 'pointer',
-                minWidth: '120px',
-                outline: 'none',
-                '&:focus-visible': {
-                  boxShadow:
-                    '0 0 0 2px var(--bgColor-accent-muted, rgba(26,188,156,0.3))',
-                },
-              }}
+              sx={{ minWidth: '160px', opacity: isHome || isChangingExample ? 0.6 : 1 }}
             >
-              <option value="local">Local</option>
-              <option value="cloud">Cloud</option>
+              <SegmentedControl aria-label="Runtime target" fullWidth>
+                <SegmentedControl.Button
+                  selected={runtimeTarget === 'local'}
+                  disabled={isHome}
+                  onClick={() => {
+                    if (!isHome && !isChangingExample) {
+                      void onRuntimeTargetChange('local');
+                    }
+                  }}
+                >
+                  Local
+                </SegmentedControl.Button>
+                <SegmentedControl.Button
+                  selected={runtimeTarget === 'cloud'}
+                  disabled={isHome}
+                  onClick={() => {
+                    if (!isHome && !isChangingExample) {
+                      void onRuntimeTargetChange('cloud');
+                    }
+                  }}
+                >
+                  Cloud
+                </SegmentedControl.Button>
+              </SegmentedControl>
             </Box>
-            <AgentSummary summary={agentSummary} />
+            {!isHome && <AgentSummary summary={agentSummary} />}
             {isChangingExample && (
               <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
                 Loading…

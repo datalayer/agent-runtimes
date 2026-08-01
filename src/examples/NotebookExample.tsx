@@ -37,7 +37,7 @@ export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
   if (!serviceManager) {
     return (
       <Box as="h1">
-        A Jupyter Notebook
+        Notebook Example
         <div>Loading...</div>
       </Box>
     );
@@ -45,7 +45,7 @@ export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
 
   return (
     <ThemedJupyterProvider>
-      <Box as="h1">A Jupyter Notebook</Box>
+      <Box as="h1">Notebook Example</Box>
       <Notebook
         id={NOTEBOOK_ID}
         nbformat={nbformatExample}

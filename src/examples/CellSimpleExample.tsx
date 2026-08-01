@@ -34,7 +34,7 @@ const JupyterCellExampleContent = () => {
   return (
     <Box p={4}>
       <Heading as="h1" sx={{ fontSize: 3, mb: 3 }}>
-        Jupyter Cell Example
+        Cell Example
       </Heading>
       <Text as="p" sx={{ mb: 2 }}>
         Source: {cellsStore.getSource(CELL_ID)}
@@ -57,7 +57,11 @@ const JupyterCellExampleContent = () => {
       <Box display="flex">
         <Box>Kernel Indicator:</Box>
         <Box ml={3}>
-          <KernelIndicator kernel={defaultKernel && defaultKernel.connection} />
+          <KernelIndicator
+            kernel={defaultKernel && defaultKernel.connection}
+            bordered={false}
+            position="bottom-right"
+          />
         </Box>
       </Box>
       <Box>

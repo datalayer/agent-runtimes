@@ -28,6 +28,10 @@ import { BOOTSTRAP_USER_ONBOARDING } from '@datalayer/core/lib/models/UserOnboar
 import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
 
 const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
+const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
+  'http://0.0.0.0:8888/api/jupyter-server';
+const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
+  '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
 const resolveRuntimesUrl = (configured?: string): string => {
   const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
@@ -40,6 +44,38 @@ const resolveRuntimesUrl = (configured?: string): string => {
     return DEFAULT_RUNTIMES_URL;
   }
   return candidate.replace(/\/$/, '');
+};
+
+const isProd1JupyterServerUrl = (value?: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+  try {
+    return new URL(value).hostname === 'prod1.datalayer.run';
+  } catch {
+    return value.includes('prod1.datalayer.run');
+  }
+};
+
+const resolveLocalJupyterServerUrl = (): string => {
+  const envLocalUrl = (
+    import.meta.env.VITE_JUPYTER_SERVER_URL as string | undefined
+  )?.trim();
+  if (envLocalUrl) {
+    return envLocalUrl.replace(/\/$/, '');
+  }
+  const configured = getJupyterServerUrl();
+  if (configured && !isProd1JupyterServerUrl(configured)) {
+    return configured;
+  }
+  return DEFAULT_LOCAL_JUPYTER_SERVER_URL;
+};
+
+const ensureLocalJupyterToken = (): void => {
+  const token = (getJupyterServerToken() || '').trim();
+  if (!token) {
+    setJupyterServerToken(DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN);
+  }
 };
 
 // Load configurations from DOM
@@ -193,6 +229,8 @@ const NotebookOnlyApp: React.FC = () => {
             setServiceManager(manager);
           } catch (error) {
             console.error('Failed to create DatalayerServiceManager:', error);
+            setJupyterServerUrl(resolveLocalJupyterServerUrl());
+            ensureLocalJupyterToken();
             const serverSettings = createServerSettings(
               getJupyterServerUrl(),
               getJupyterServerToken(),
@@ -202,6 +240,8 @@ const NotebookOnlyApp: React.FC = () => {
             setServiceManager(manager);
           }
         } else {
+          setJupyterServerUrl(resolveLocalJupyterServerUrl());
+          ensureLocalJupyterToken();
           const serverSettings = createServerSettings(
             getJupyterServerUrl(),
             getJupyterServerToken(),
@@ -337,6 +377,8 @@ export const ExampleApp: React.FC = () => {
           } catch (error) {
             console.error('Failed to create DatalayerServiceManager:', error);
             // Fall back to regular ServiceManager
+            setJupyterServerUrl(resolveLocalJupyterServerUrl());
+            ensureLocalJupyterToken();
             const serverSettings = createServerSettings(
               getJupyterServerUrl(),
               getJupyterServerToken(),
@@ -350,6 +392,8 @@ export const ExampleApp: React.FC = () => {
           }
         } else {
           // Use regular ServiceManager (no Datalayer token)
+          setJupyterServerUrl(resolveLocalJupyterServerUrl());
+          ensureLocalJupyterToken();
           const serverSettings = createServerSettings(
             getJupyterServerUrl(),
             getJupyterServerToken(),
