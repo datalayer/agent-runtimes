@@ -41,6 +41,21 @@ const CREATING_STATUSES = new Set([
 
 const MAX_AGENT_NAME_LENGTH = 32;
 
+const toSandboxStatusUrl = (value?: string): string | undefined => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(raw);
+    parsed.pathname = `${parsed.pathname.replace(/\/$/, '')}/api`;
+    return parsed.toString();
+  } catch {
+    const normalized = raw.replace(/\/$/, '');
+    return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
+  }
+};
+
 /**
  * Compact agent summary badge with a hover overlay for details.
  */
@@ -85,12 +100,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
       })()
     : undefined;
   const agentStatusUrl = apiBase ? `${apiBase}/runtime/status` : undefined;
-  const sandboxStatusUrl = summary?.sandboxBaseUrl
-    ? (() => {
-        const normalized = summary.sandboxBaseUrl.replace(/\/$/, '');
-        return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
-      })()
-    : undefined;
+  const sandboxStatusUrl = toSandboxStatusUrl(summary?.sandboxBaseUrl);
 
   if (!summary) {
     return null;

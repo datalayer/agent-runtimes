@@ -1220,6 +1220,11 @@ class Agentspec(BaseModel):
         default=None,
         description="Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem')",
     )
+    memory_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        alias="memoryConfig",
+        description="Optional backend-specific memory configuration (for example Mem0 sqlite/pgvector settings).",
+    )
     pre_hooks: Optional[Dict[str, Any]] = Field(
         default=None,
         description=(

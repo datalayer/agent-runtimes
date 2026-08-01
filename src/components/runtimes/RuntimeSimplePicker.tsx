@@ -255,7 +255,7 @@ export function RuntimeSimplePicker(
                         setRuntimeLocation('remote');
                         assignRuntime({
                           runtimeDesc: {
-                            name: kernelModel.environment_name,
+                            name: kernelModel.environment.name,
                             language: '',
                             location: 'remote',
                             displayName: kernelModel.given_name,
@@ -273,7 +273,7 @@ export function RuntimeSimplePicker(
                       </ActionList.LeadingVisual>
                       {kernelModel.given_name}
                       <ActionList.Description variant="block">
-                        {kernelModel.environment_name}
+                        {kernelModel.environment.title || kernelModel.environment.name}
                       </ActionList.Description>
                     </ActionList.Item>
                   );

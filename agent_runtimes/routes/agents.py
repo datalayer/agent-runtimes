@@ -918,6 +918,15 @@ class CreateAgentRequest(BaseModel):
         default=None,
         description="Optional complete agent spec payload forwarded by the UI. Used to prefill fields when creating from a library spec.",
     )
+    memory: str | None = Field(
+        default=None,
+        description="Optional memory backend override (for example: 'ephemeral' or 'mem0').",
+    )
+    memory_config: dict[str, Any] | None = Field(
+        default=None,
+        alias="memoryConfig",
+        description="Optional memory backend configuration override.",
+    )
     pre_hooks: dict[str, Any] | None = Field(
         default=None,
         alias="preHooks",
@@ -1082,6 +1091,12 @@ async def create_agent(
                 request.disable_tool_approvals = bool(
                     getattr(library_spec, "disable_tool_approvals", False)
                 )
+            if request.memory is None and getattr(library_spec, "memory", None):
+                request.memory = library_spec.memory
+            if request.memory_config is None and getattr(
+                library_spec, "memory_config", None
+            ):
+                request.memory_config = library_spec.memory_config
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and library_spec.sandbox_variant:
                 request.sandbox_variant = library_spec.sandbox_variant
@@ -1182,6 +1197,14 @@ async def create_agent(
                 request.sandbox_variant = _spec_value(
                     "sandboxVariant", "sandbox_variant"
                 )
+            if request.memory is None:
+                memory_from_spec = _spec_value("memory")
+                if isinstance(memory_from_spec, str):
+                    request.memory = memory_from_spec
+            if request.memory_config is None:
+                memory_cfg_from_spec = _spec_value("memoryConfig", "memory_config")
+                if isinstance(memory_cfg_from_spec, dict):
+                    request.memory_config = memory_cfg_from_spec
             if request.transport == "ag-ui":
                 protocol = _spec_value("protocol")
                 if protocol in {"ag-ui", "vercel-ai", "acp", "a2a"}:
@@ -1797,12 +1820,34 @@ async def create_agent(
                 spec_for_runtime_controls = get_library_agent_spec(
                     request.agent_spec_id
                 )
+                if spec_for_runtime_controls is not None:
+                    try:
+                        merged_payload = spec_for_runtime_controls.model_dump(
+                            by_alias=True
+                        )
+                        if request.memory is not None:
+                            merged_payload["memory"] = request.memory
+                        if request.memory_config is not None:
+                            merged_payload["memoryConfig"] = request.memory_config
+                        spec_for_runtime_controls = Agentspec.model_validate(
+                            merged_payload
+                        )
+                    except Exception as exc:
+                        logger.debug(
+                            "Failed to merge request memory overrides into runtime controls spec: %s",
+                            exc,
+                        )
 
             # Fallback: UI may send a full spec payload without a library ID.
             if spec_for_runtime_controls is None and request.agent_spec:
                 try:
+                    merged_payload = dict(request.agent_spec)
+                    if request.memory is not None:
+                        merged_payload["memory"] = request.memory
+                    if request.memory_config is not None:
+                        merged_payload["memoryConfig"] = request.memory_config
                     spec_for_runtime_controls = Agentspec.model_validate(
-                        request.agent_spec
+                        merged_payload
                     )
                 except Exception as exc:
                     logger.debug(

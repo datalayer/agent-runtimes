@@ -10,7 +10,7 @@
  * The parent agent orchestrates a researcher and a writer subagent,
  * delegating tasks and combining results for the user.
  *
- * - Creates a local agent from the 'example-subagents' spec
+ * - Creates an agent from the 'example-subagents' spec on the selected target
  * - Shows a Chat component for interacting with the orchestrator
  * - Sidebar displays subagent info and active task status
  */
@@ -27,6 +27,7 @@ import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
 const AGENT_NAME = 'subagents-example-agent';
 const AGENTSPEC_ID = 'example-subagents';
@@ -53,6 +54,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
@@ -81,7 +83,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
   useEffect(() => {
     let isCancelled = false;
 
-    const createLocalAgent = async () => {
+    const createAgentForTarget = async () => {
       setRuntimeStatus('launching');
       setIsReady(false);
       setHookError(null);
@@ -97,6 +99,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENTSPEC_ID,
+            memory: 'ephemeral',
             enable_skills: true,
             tools: [],
           }),
@@ -147,12 +150,12 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
       }
     };
 
-    void createLocalAgent();
+    void createAgentForTarget();
 
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, authFetch]);
+  }, [agentBaseUrl, authFetch, runtimeTarget]);
 
   if (!isReady && runtimeStatus !== 'error') {
     return (
@@ -169,7 +172,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
-          Launching subagents example agent...
+          Launching subagents example agent ({runtimeTarget})...
         </Text>
       </Box>
     );
@@ -209,6 +212,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             Reconnected
           </Label>
         )}
+        <Label variant="accent">{runtimeTarget}</Label>
         <Label variant="accent">{SUBAGENTS.length} subagents</Label>
       </Box>
 

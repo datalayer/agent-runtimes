@@ -25,6 +25,13 @@ export interface AgentSummary {
    * the sandbox status itself is reported by the agent-runtimes server.
    */
   sandboxBaseUrl?: string;
+  runtimeEnvironment?: {
+    environmentName?: string;
+    environmentTitle?: string;
+    cpu?: string;
+    memory?: string;
+    gpu?: string;
+  };
   status?: string;
   isReady?: boolean;
   error?: string;

@@ -2,7 +2,6 @@
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
-import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 /// <reference types="vite/client" />
 
@@ -25,6 +24,7 @@ import {
   getLogoColors,
   themeConfigs,
   Box,
+  SlidingPanel,
 } from '@datalayer/primer-addons';
 import { AgentSummary } from '../components';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
@@ -56,6 +56,9 @@ import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
+import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
+import type { RuntimeEnvironmentDetails } from '../hooks/useAgentRuntimes';
+import { DEFAULT_MODEL } from '../specs/models';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
@@ -72,6 +75,111 @@ const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
   'http://0.0.0.0:8888/api/jupyter-server';
 const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
   '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
+const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
+
+const isNotebookOrCellExample = (exampleId: string): boolean => {
+  return (
+    (exampleId.includes('Notebook') || exampleId.includes('Cell')) &&
+    !exampleId.includes('Agent')
+  );
+};
+
+const wait = (ms: number) =>
+  new Promise<void>(resolve => {
+    window.setTimeout(resolve, ms);
+  });
+
+const safeExampleId = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+};
+
+const toAgentApiBaseUrl = (ingress: string): string => {
+  const normalized = ingress.replace(/\/$/, '');
+  if (normalized.includes('/api/agent-runtimes')) {
+    return normalized;
+  }
+  if (normalized.includes('/api/jupyter-server')) {
+    return normalized.replace('/api/jupyter-server', '/api/agent-runtimes');
+  }
+  if (normalized.includes('/jupyter/server/')) {
+    return normalized.replace('/jupyter/server/', '/agent-runtimes/');
+  }
+  if (normalized.includes('/jupyter-server/')) {
+    return normalized.replace('/jupyter-server/', '/agent-runtimes/');
+  }
+  return normalized.replace('/jupyter/', '/agent-runtimes/');
+};
+
+const toSurfaceLabel = (exampleId: string): 'cell' | 'notebook' => {
+  if (exampleId.toLowerCase().includes('cell')) {
+    return 'cell';
+  }
+  return 'notebook';
+};
+
+const normalizeSandboxBaseUrl = (
+  sandboxBaseUrl: string | undefined,
+  agentBaseUrl: string,
+): string => {
+  const sandboxRaw = String(sandboxBaseUrl || '').trim();
+  const agentRaw = String(agentBaseUrl || '').trim();
+  if (!sandboxRaw) {
+    return agentRaw;
+  }
+  try {
+    const sandboxUrl = new URL(sandboxRaw);
+    const host = sandboxUrl.hostname;
+    const isInternalHost =
+      host === '0.0.0.0' || host === '127.0.0.1' || host === 'localhost';
+    if (!isInternalHost) {
+      return sandboxRaw;
+    }
+    const agentUrl = new URL(agentRaw);
+    sandboxUrl.protocol = agentUrl.protocol;
+    sandboxUrl.host = agentUrl.host;
+    return sandboxUrl.toString();
+  } catch {
+    return sandboxRaw;
+  }
+};
+
+const withTokenQueryParam = (rawUrl: string, token: string): string => {
+  const normalizedUrl = String(rawUrl || '').trim();
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedUrl || !normalizedToken) {
+    return normalizedUrl;
+  }
+  try {
+    const parsed = new URL(normalizedUrl);
+    if (!parsed.searchParams.get('token') && !parsed.searchParams.get('jupyter_token')) {
+      parsed.searchParams.set('token', normalizedToken);
+    }
+    return parsed.toString();
+  } catch {
+    return normalizedUrl;
+  }
+};
+
+type CloudSandboxBootstrap = {
+  agentBaseUrl: string;
+  agentId: string;
+  ingress: string;
+  runtimeEnvironment?: RuntimeEnvironmentDetails;
+};
+
+type TopNoticeTone = 'default' | 'info' | 'success' | 'warning' | 'error' | 'danger';
+
+interface TopNotice {
+  id: number;
+  message: string;
+  details?: string;
+  tone?: TopNoticeTone;
+  durationMs?: number;
+}
 
 const resolveRuntimesUrl = (configured?: string): string => {
   const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
@@ -517,14 +625,23 @@ const NotebookOnlyApp: React.FC = () => {
           configuration?.token
         ) {
           try {
-            const manager = await createDatalayerServiceManager(
-              configuration.cpuEnvironment || 'python-3.11',
-              configuration.credits || 100,
+            const activeSummary = agentSummaryStore.getState().active;
+            if (!activeSummary || activeSummary.location !== 'cloud') {
+              throw new Error(
+                'No active cloud agent sandbox found for notebook-only mode.',
+              );
+            }
+            const manager = await createServiceManagerFromAgentSandbox(
+              {
+                baseUrl: activeSummary.sandboxBaseUrl || activeSummary.baseUrl,
+                agentId: activeSummary.agentId,
+                agentBaseUrl: activeSummary.baseUrl,
+              },
+              configuration.token,
             );
-            await manager.ready;
             setServiceManager(manager);
           } catch (error) {
-            console.error('Failed to create DatalayerServiceManager:', error);
+            console.error('Failed to connect to cloud sandbox:', error);
             const serverSettings = createServerSettings(
               getJupyterServerUrl(),
               getJupyterServerToken(),
@@ -618,8 +735,27 @@ export const ExampleApp: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState(getInitialSearchQuery());
   const [isChangingExample, setIsChangingExample] = useState(false);
+  const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const setRuntimeTarget = useRuntimeTargetStore(state => state.setTarget);
+
+  const showTopNotice = useCallback(
+    (
+      message: string,
+      tone: TopNoticeTone = 'info',
+      durationMs = 4500,
+      details?: string,
+    ) => {
+      setTopNotice({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        message,
+        details,
+        tone,
+        durationMs,
+      });
+    },
+    [],
+  );
 
   const filteredExampleEntries = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -658,6 +794,7 @@ export const ExampleApp: React.FC = () => {
       setIsChangingExample(false);
     } catch (e) {
       console.error('Failed to load example:', e);
+      showTopNotice(`Failed to load example: ${e instanceof Error ? e.message : String(e)}`, 'error', 6000);
       setError(`Failed to load example: ${e}`);
       setIsChangingExample(false);
     }
@@ -684,24 +821,287 @@ export const ExampleApp: React.FC = () => {
           'Cloud runtime requires authentication. Please sign in.',
         );
       }
+
+      const connectFromSummary = async (
+        summary: {
+          baseUrl: string;
+          sandboxBaseUrl?: string;
+          agentId?: string;
+          runtimeEnvironment?: RuntimeEnvironmentDetails;
+        },
+      ): Promise<ServiceManager.IManager> => {
+        const connectOnce = async (
+          candidate: {
+            baseUrl: string;
+            sandboxBaseUrl?: string;
+            agentId?: string;
+            runtimeEnvironment?: RuntimeEnvironmentDetails;
+          },
+        ): Promise<ServiceManager.IManager> => {
+          const resolvedSandboxBaseUrl = normalizeSandboxBaseUrl(
+            candidate.sandboxBaseUrl,
+            candidate.baseUrl,
+          );
+          const manager = await createServiceManagerFromAgentSandbox(
+            {
+              baseUrl: resolvedSandboxBaseUrl,
+              agentId: candidate.agentId,
+              agentBaseUrl: candidate.baseUrl,
+              runtimeEnvironment: candidate.runtimeEnvironment,
+            },
+            configuration.token,
+          );
+          const cloudBaseUrl = String(manager.serverSettings.baseUrl || '').trim();
+          const cloudToken = String(manager.serverSettings.token || '').trim();
+          if (cloudBaseUrl) {
+            setJupyterServerUrl(cloudBaseUrl.replace(/\/$/, ''));
+          }
+          if (cloudToken) {
+            setJupyterServerToken(cloudToken);
+          }
+          return manager;
+        };
+
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= 8; attempt += 1) {
+          try {
+            return await connectOnce(summary);
+          } catch (error) {
+            lastError = error;
+            if (attempt === 8) {
+              break;
+            }
+            await wait(700 * attempt);
+          }
+        }
+        throw lastError;
+      };
+
+      const bootstrapCloudSandbox =
+        async (): Promise<CloudSandboxBootstrap> => {
+          const runtimesUrl = resolveRuntimesUrl(configuration.runtimesUrl);
+          const exampleSlug = safeExampleId(selectedExample || 'example');
+          const runtimeResp = await fetch(
+            `${runtimesUrl}/api/runtimes/v1/runtimes`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${configuration.token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                environment: {
+                  name: DEFAULT_CLOUD_RUNTIME_ENVIRONMENT,
+                },
+                given_name: `${exampleSlug}-sandbox`,
+                credits_limit: 5,
+                type: 'notebook',
+                editor_variant: 'none',
+              }),
+            },
+          );
+
+          if (!runtimeResp.ok) {
+            const failure = await runtimeResp.json().catch(() => ({}));
+            throw new Error(
+              String(
+                (failure as { detail?: string }).detail ||
+                  `Failed to launch cloud runtime (${runtimeResp.status}).`,
+              ),
+            );
+          }
+
+          const runtimePayload = (await runtimeResp.json()) as {
+            runtime?: {
+              ingress?: string;
+              pod_name?: string;
+              token?: string;
+              jupyter_token?: string;
+              environment?: {
+                name?: string;
+                title?: string;
+                cpu?: string | number;
+                memory?: string | number;
+                gpu?: string | number;
+                resources?: {
+                  cpu?: string | number;
+                  memory?: string | number;
+                  gpu?: string | number;
+                  gpu_count?: string | number;
+                  gpu_type?: string;
+                  gpu_memory?: string;
+                  'nvidia.com/gpu'?: string | number;
+                };
+              };
+            };
+            ingress?: string;
+            pod_name?: string;
+            token?: string;
+            jupyter_token?: string;
+          };
+          const ingress = String(
+            runtimePayload.runtime?.ingress || runtimePayload.ingress || '',
+          ).trim();
+          if (!ingress) {
+            throw new Error(
+              'Cloud runtime launched but did not expose a Jupyter ingress URL.',
+            );
+          }
+
+          const agentBaseUrl = toAgentApiBaseUrl(ingress);
+          const agentId = `${exampleSlug}-cloud-agent`;
+
+          const agentResp = await fetch(`${agentBaseUrl}/api/v1/agents`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${configuration.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: agentId,
+              description: `Cloud sandbox agent for ${selectedExample}`,
+              agent_library: 'pydantic-ai',
+              transport: 'ag-ui',
+              model: DEFAULT_MODEL,
+              system_prompt: 'You are a helpful AI assistant.',
+            }),
+          });
+
+          if (!agentResp.ok && agentResp.status !== 400 && agentResp.status !== 409) {
+            const failure = await agentResp.json().catch(() => ({}));
+            throw new Error(
+              String(
+                (failure as { detail?: string }).detail ||
+                  `Cloud runtime launched but agent creation failed (${agentResp.status}).`,
+              ),
+            );
+          }
+
+          const agentPayload = (await agentResp
+            .clone()
+            .json()
+            .catch(() => ({}))) as {
+            agent_id?: string;
+            id?: string;
+            token?: string;
+            jupyter_token?: string;
+            agent?: { id?: string; agent_id?: string };
+          };
+          const resolvedAgentId =
+            String(
+              agentPayload.agent_id ||
+                agentPayload.id ||
+                agentPayload.agent?.agent_id ||
+                agentPayload.agent?.id ||
+                '',
+            ).trim() || agentId;
+          const resolvedJupyterToken = String(
+            agentPayload.jupyter_token ||
+              agentPayload.token ||
+              runtimePayload.runtime?.jupyter_token ||
+              runtimePayload.runtime?.token ||
+              runtimePayload.jupyter_token ||
+              runtimePayload.token ||
+              '',
+          ).trim();
+          const runtimeEnvironment: RuntimeEnvironmentDetails = {
+            environmentName: String(
+              runtimePayload.runtime?.environment?.name || '',
+            ).trim() || undefined,
+            environmentTitle: String(
+              runtimePayload.runtime?.environment?.title || '',
+            ).trim() || undefined,
+            cpu:
+              String(
+                runtimePayload.runtime?.environment?.cpu ||
+                  runtimePayload.runtime?.environment?.resources?.cpu ||
+                  '',
+              ).trim() || undefined,
+            memory:
+              String(
+                runtimePayload.runtime?.environment?.memory ||
+                  runtimePayload.runtime?.environment?.resources?.memory ||
+                  '',
+              ).trim() ||
+              undefined,
+            gpu:
+              [
+                runtimePayload.runtime?.environment?.gpu ||
+                  runtimePayload.runtime?.environment?.resources?.gpu ||
+                  runtimePayload.runtime?.environment?.resources?.gpu_count ||
+                  runtimePayload.runtime?.environment?.resources?.['nvidia.com/gpu'] ||
+                  '',
+                runtimePayload.runtime?.environment?.resources?.gpu_type || '',
+                runtimePayload.runtime?.environment?.resources?.gpu_memory || '',
+              ]
+                .map(value => String(value || '').trim())
+                .filter(Boolean)
+                .join(' ') || undefined,
+          };
+
+          return {
+            agentBaseUrl,
+            agentId: resolvedAgentId,
+            ingress: withTokenQueryParam(ingress, resolvedJupyterToken),
+            runtimeEnvironment,
+          };
+        };
+
       const activeSummary = agentSummaryStore.getState().active;
-      const selectedEntry = getExampleEntriesList().find(
-        entry => entry.id === selectedExample,
+      if (
+        activeSummary?.location === 'cloud' &&
+        (activeSummary.sandboxBaseUrl || activeSummary.baseUrl)
+      ) {
+        try {
+          return await connectFromSummary({
+            baseUrl: activeSummary.baseUrl,
+            sandboxBaseUrl: activeSummary.sandboxBaseUrl,
+            agentId: activeSummary.agentId,
+            runtimeEnvironment: activeSummary.runtimeEnvironment,
+          });
+        } catch (error) {
+          if (!isNotebookOrCellExample(selectedExample)) {
+            throw error;
+          }
+          showTopNotice(
+            'Existing cloud sandbox is unavailable. Launching a fresh sandbox...',
+            'warning',
+            3500,
+          );
+        }
+      }
+
+      if (!isNotebookOrCellExample(selectedExample)) {
+        throw new Error(
+          'No active cloud agent sandbox found. Open an agent example and launch a cloud agent first.',
+        );
+      }
+
+      showTopNotice('Starting a cloud agent sandbox...', 'info', 2600);
+      const launched = await bootstrapCloudSandbox();
+      agentSummaryStore.getState().setActive({
+        exampleId: selectedExample,
+        agentName: launched.agentId,
+        agentId: launched.agentId,
+        location: 'cloud',
+        baseUrl: launched.agentBaseUrl,
+        sandboxBaseUrl: launched.ingress,
+        runtimeEnvironment: launched.runtimeEnvironment,
+        status: 'running',
+        isReady: true,
+      });
+      showTopNotice(
+        `Cloud sandbox ready. Connecting ${toSurfaceLabel(selectedExample)} to it...`,
+        'success',
+        2600,
       );
-      const resolvedSpecId =
-        activeSummary?.exampleId === selectedExample
-          ? activeSummary.specId
-          : undefined;
-      const runtimeDescriptor =
-        resolvedSpecId || selectedEntry?.title || selectedExample;
-      const contextualRuntimeName = `Agent Runtime - ${runtimeDescriptor}`;
-      const manager = await createDatalayerServiceManager(
-        configuration.cpuEnvironment || 'python-3.11',
-        configuration.credits || 100,
-        contextualRuntimeName,
-      );
-      await manager.ready;
-      return manager;
+
+      return connectFromSummary({
+        baseUrl: launched.agentBaseUrl,
+        sandboxBaseUrl: launched.ingress,
+        agentId: launched.agentId,
+        runtimeEnvironment: launched.runtimeEnvironment,
+      });
     };
 
   useEffect(() => {
@@ -719,17 +1119,22 @@ export const ExampleApp: React.FC = () => {
           try {
             const manager = await createCloudServiceManager();
             setServiceManager(manager);
+            showTopNotice(
+              'Code sandbox connected successfully (cloud).',
+              'success',
+              2600,
+            );
 
             // Load initial example
             await loadExample(selectedExample, manager);
           } catch (error) {
             console.error('Failed to create DatalayerServiceManager:', error);
-            // Surface the failure in the UI, then fall back to local so the
-            // app stays usable.
-            setError(
+            showTopNotice(
               `Cloud runtime unavailable, using local instead: ${
                 error instanceof Error ? error.message : String(error)
               }`,
+              'warning',
+              5500,
             );
             const manager = await createLocalServiceManager();
             setServiceManager(manager);
@@ -749,6 +1154,7 @@ export const ExampleApp: React.FC = () => {
         setLoading(false);
       } catch (e) {
         console.error('Failed to initialize app:', e);
+        showTopNotice(`Failed to initialize app: ${e instanceof Error ? e.message : String(e)}`, 'error', 6000);
         setError(`Failed to initialize app: ${e}`);
         setLoading(false);
       }
@@ -797,12 +1203,12 @@ export const ExampleApp: React.FC = () => {
           ? await createCloudServiceManager()
           : await createLocalServiceManager();
     } catch (switchError) {
-      setError(
+      showTopNotice(
         `Failed to switch to ${newTarget}: ${
-          switchError instanceof Error
-            ? switchError.message
-            : String(switchError)
+          switchError instanceof Error ? switchError.message : String(switchError)
         }`,
+        'error',
+        6000,
       );
       return;
     }
@@ -827,6 +1233,11 @@ export const ExampleApp: React.FC = () => {
     setServiceManager(nextManager);
     setError(null);
     await loadExample(selectedExample, nextManager);
+    showTopNotice(
+      `Code sandbox connected successfully (${newTarget}).`,
+      'success',
+      2600,
+    );
   };
 
   if (loading) {
@@ -882,6 +1293,8 @@ export const ExampleApp: React.FC = () => {
       onExampleChange={handleExampleChange}
       onRuntimeTargetChange={handleRuntimeTargetChange}
       availableExamples={getExampleEntriesList()}
+      topNotice={topNotice}
+      onDismissTopNotice={() => setTopNotice(null)}
     />
   );
 };
@@ -900,6 +1313,8 @@ const ExampleAppThemed: React.FC<{
   onExampleChange: (name: string) => Promise<void>;
   onRuntimeTargetChange: (target: ExampleRuntimeTarget) => Promise<void>;
   availableExamples: ExampleEntry[];
+  topNotice: TopNotice | null;
+  onDismissTopNotice: () => void;
 }> = ({
   selectedExample,
   isChangingExample,
@@ -910,6 +1325,8 @@ const ExampleAppThemed: React.FC<{
   onExampleChange,
   onRuntimeTargetChange,
   availableExamples,
+  topNotice,
+  onDismissTopNotice,
 }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
@@ -1220,11 +1637,6 @@ const ExampleAppThemed: React.FC<{
                 Loading…
               </Box>
             )}
-            {error && (
-              <Box as="span" sx={{ color: 'danger.fg', fontSize: 0 }}>
-                Error: {error}
-              </Box>
-            )}
           </Box>
 
           {/* Right: theme picker + color mode + logo */}
@@ -1332,6 +1744,18 @@ const ExampleAppThemed: React.FC<{
             </ExampleErrorBoundary>
           ) : null}
         </Box>
+        <SlidingPanel
+          isOpen={Boolean(topNotice)}
+          onDismiss={onDismissTopNotice}
+          position="north"
+          variant={topNotice?.tone ?? 'info'}
+          durationMs={topNotice?.durationMs ?? 0}
+          fullWidth={true}
+          offset={60}
+          zIndex={160}
+          message={topNotice?.message || ''}
+          details={topNotice?.details}
+        />
       </Box>
     </DatalayerThemeProvider>
   );

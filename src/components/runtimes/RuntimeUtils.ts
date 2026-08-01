@@ -92,7 +92,7 @@ export function getGroupedRuntimeDescs(
         .map(runtime => {
           const environment = multiServiceManager
             .remote!.environments.get()
-            .find(env => env.name === runtime.environment_name)!;
+            .find(env => env.name === runtime.environment.name)!;
           return {
             kernelId: runtime.id,
             name: environment!.name,

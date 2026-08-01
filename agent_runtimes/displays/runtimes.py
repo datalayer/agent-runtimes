@@ -46,10 +46,12 @@ def _add_runtime_to_table(table: Table, runtime: dict[str, Any]) -> None:
         Runtime/kernel data dictionary to add as a row.
     """
     expired_at = runtime.get("expired_at")
+    environment = runtime.get("environment") if isinstance(runtime.get("environment"), dict) else {}
+    environment_name = str(environment.get("name") or runtime.get("environment_name") or "")
     table.add_row(
         runtime["pod_name"],
         runtime["given_name"],
-        runtime["environment_name"],
+        environment_name,
         "Never" if expired_at is None else timestamp_to_local_date(expired_at),
     )
 

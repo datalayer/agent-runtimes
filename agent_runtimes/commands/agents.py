@@ -572,7 +572,9 @@ def create_agent_runtime(
                 "success": True,
                 "runtime": {
                     "given_name": runtime.name,
-                    "environment_name": runtime.environment,
+                    "environment": {
+                        "name": runtime.environment,
+                    },
                     "pod_name": runtime.pod_name,
                     "uid": runtime.uid,
                     "ingress": runtime.ingress,
@@ -689,7 +691,9 @@ def get_agent_runtime(
 
         runtime_dict = {
             "given_name": runtime.name,
-            "environment_name": runtime.environment,
+            "environment": {
+                "name": runtime.environment,
+            },
             "pod_name": runtime.pod_name,
             "ingress": runtime.ingress,
             "reservation_id": runtime.reservation_id,

@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 from .base import BaseMemoryBackend
+from .config import resolve_mem0_config
 from .ephemeral import EphemeralMemory
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,17 @@ def create_memory_backend(
         try:
             from .mem0_backend import Mem0Backend
 
+            resolved_config = resolve_mem0_config(
+                user_id=user_id,
+                agent_id=agent_id,
+                explicit_config=config,
+            )
             logger.info("Using Mem0 memory backend for user=%s", user_id)
-            return Mem0Backend(user_id=user_id, agent_id=agent_id, config=config)
+            return Mem0Backend(
+                user_id=user_id,
+                agent_id=agent_id,
+                config=resolved_config,
+            )
         except ImportError:
             logger.warning(
                 "Mem0 not available (pip install mem0ai) — falling back to ephemeral"

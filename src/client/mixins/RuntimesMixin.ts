@@ -116,7 +116,9 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
           );
 
           const data: CreateRuntimeRequest = {
-            environment_name: environmentName,
+            environment: {
+              name: environmentName,
+            },
             type,
             given_name: givenName,
             credits_limit: creditsLimit,

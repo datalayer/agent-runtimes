@@ -307,10 +307,10 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       id: rt.id,
       podName: rt.pod_name,
       name: rt.name,
-      description: rt.environment_title || rt.environment_name,
+      description: rt.environment.title || rt.environment.name,
       status: rt.status,
       protocol: 'vercel-ai',
-      environmentName: rt.environment_name,
+      environmentName: rt.environment.name,
       jupyterBaseUrl: rt.url,
     }));
   }, [agentRuntimes, runningAgentsOverride]);

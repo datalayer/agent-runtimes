@@ -66,7 +66,7 @@ class RuntimesCreateMixin:
         """
         body: dict[str, Any] = {
             "type": "notebook",
-            "environment_name": environment_name,
+            "environment": {"name": environment_name},
         }
 
         resolved_billing_entity_uid = (

@@ -41,6 +41,15 @@ export type IRuntimeLocation = 'browser' | 'local' | string;
  */
 export interface IRuntimeModel extends IRuntimePod, Kernel.IModel {}
 
+export interface IRuntimeEnvironment {
+  name: string;
+  title?: string;
+  cpu?: string;
+  memory?: string;
+  gpu?: string;
+  resources?: Record<string, string>;
+}
+
 /**
  * A runtime pod as returned by the Datalayer control-plane.
  *
@@ -61,14 +70,8 @@ export interface IRuntimePod {
    * exist before a kernel is attached, so prefer `uid` for pod identity.
    */
   uid: string;
-  /**
-   * Environment display name
-   */
-  environment_title: string;
-  /**
-   * Environment name
-   */
-  environment_name: string;
+  /** Runtime environment details. */
+  environment: IRuntimeEnvironment;
   /**
    * Runtime name
    */

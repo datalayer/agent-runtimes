@@ -37,13 +37,21 @@ from agent_runtimes.mixins.runtimes import RuntimesMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
 from agent_runtimes.models.environment import EnvironmentModel
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
-from agent_runtimes.runtimes.runtime_service import RuntimeService
 from agent_runtimes.sandboxes.code_sandbox_snapshots import (
     as_code_sandbox_snapshots,
     create_snapshot,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _runtime_environment_name(runtime_data: dict[str, Any]) -> str:
+    environment = runtime_data.get("environment")
+    if isinstance(environment, dict):
+        name = str(environment.get("name") or "").strip()
+        if name:
+            return name
+    return str(runtime_data.get("environment_name") or "").strip()
 
 DEFAULT_LOCAL_HOST = "127.0.0.1"
 DEFAULT_LOCAL_AGENT_NAME = "default"
@@ -877,13 +885,12 @@ class AgentClient(
         runtime_data = response["runtime"]
         runtime = RuntimeService(
             name=runtime_data["given_name"],
-            environment=runtime_data["environment_name"],
+            environment=_runtime_environment_name(runtime_data),
             datalayer_url=self._urls.datalayer_url,
             iam_url=self._urls.iam_url,
             token=api_key or self._get_api_key(),
             ingress=runtime_data["ingress"],
             jupyter_token=runtime_data["token"],
-            pod_name=runtime_data["pod_name"],
             uid=runtime_data.get("uid"),
             reservation_id=runtime_data.get("reservation_id"),
             burning_rate=runtime_data.get("burning_rate"),
@@ -924,7 +931,7 @@ class AgentClient(
             runtime_services.append(
                 RuntimeService(
                     name=runtime["given_name"],
-                    environment=runtime["environment_name"],
+                    environment=_runtime_environment_name(runtime),
                     pod_name=runtime["pod_name"],
                     token=self._get_api_key(),
                     ingress=runtime["ingress"],
@@ -1007,7 +1014,7 @@ class AgentClient(
 
         return RuntimeService(
             name=runtime_data.get("given_name", pod_name),
-            environment=runtime_data.get("environment_name", ""),
+            environment=_runtime_environment_name(runtime_data),
             pod_name=runtime_data.get("pod_name", pod_name),
             token=self._get_api_key(),
             ingress=runtime_data.get("ingress"),

@@ -102,3 +102,34 @@ def test_tools_present_when_enabled() -> None:
     assert toolset is not None
     tool_names = set(getattr(toolset, "tools", {}).keys())
     assert {"search_memory", "remember"} <= tool_names
+
+
+def test_build_forwards_memory_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, object] = {}
+
+    class FakeBackend(EphemeralMemory):
+        pass
+
+    def _fake_create(
+        memory_type: str | None,
+        user_id: str = "default",
+        agent_id: str | None = None,
+        config: dict[str, object] | None = None,
+    ) -> FakeBackend:
+        seen["memory_type"] = memory_type
+        seen["user_id"] = user_id
+        seen["agent_id"] = agent_id
+        seen["config"] = config
+        return FakeBackend()
+
+    monkeypatch.setattr(
+        "agent_runtimes.memory.capability.create_memory_backend", _fake_create
+    )
+
+    cfg = {"vector_store": {"provider": "sqlite", "config": {"path": "/tmp/mem.db"}}}
+    cap = build_memory_capability("mem0", user_id="u2", agent_id="a2", config=cfg)
+    assert isinstance(cap, MemoryCapability)
+    assert seen["memory_type"] == "mem0"
+    assert seen["user_id"] == "u2"
+    assert seen["agent_id"] == "a2"
+    assert seen["config"] == cfg

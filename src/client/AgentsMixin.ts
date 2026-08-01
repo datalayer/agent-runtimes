@@ -460,7 +460,9 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
         method: 'POST',
         token,
         body: {
-          environment_name: data.environmentName || 'ai-agents-env',
+          environment: {
+            name: data.environmentName || 'ai-agents-env',
+          },
           given_name: data.givenName || 'Agent',
           credits_limit: data.creditsLimit || 10,
           type: data.type || 'notebook',

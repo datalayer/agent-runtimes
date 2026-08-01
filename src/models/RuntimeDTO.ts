@@ -59,8 +59,10 @@ export interface RuntimeJSON {
  * @interface CreateRuntimeRequest
  */
 export interface CreateRuntimeRequest {
-  /** Name of the environment to use */
-  environment_name: string;
+  /** Runtime environment to use */
+  environment: {
+    name: string;
+  };
   /** Type of runtime (e.g., 'notebook', 'terminal', 'job') */
   type?: 'notebook' | 'terminal' | 'job';
   /** Optional given name for the runtime */
@@ -105,7 +107,7 @@ export interface ListRuntimesResponse {
  *
  * @example
  * ```typescript
- * const runtime = await client.createRuntime({ environment_name: 'python-cpu' });
+ * const runtime = await client.createRuntime({ environment: { name: 'python-cpu' } });
  * await runtime.waitUntilReady();
  * ```
  */
@@ -161,7 +163,7 @@ export class RuntimeDTO {
   /** Name of the environment this runtime is based on. */
   get environmentName(): string {
     this._checkDeleted();
-    return this._data.environment_name;
+    return this._data.environment.name;
   }
 
   /** Ingress URL for accessing the runtime. */
@@ -209,7 +211,7 @@ export class RuntimeDTO {
   /** Environment title for display. */
   get environmentTitle(): string {
     this._checkDeleted();
-    return this._data.environment_title || '';
+    return this._data.environment.title || '';
   }
 
   // ========================================================================

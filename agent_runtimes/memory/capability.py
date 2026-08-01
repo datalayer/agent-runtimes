@@ -174,6 +174,7 @@ def build_memory_capability(
     memory_type: str | None,
     user_id: str = "default",
     agent_id: str | None = None,
+    config: dict[str, Any] | None = None,
 ) -> MemoryCapability | None:
     """Build a ``MemoryCapability`` from an Agentspec ``memory`` field.
 
@@ -182,5 +183,10 @@ def build_memory_capability(
     """
     if not memory_type or memory_type == "ephemeral":
         return None
-    backend = create_memory_backend(memory_type, user_id=user_id, agent_id=agent_id)
+    backend = create_memory_backend(
+        memory_type,
+        user_id=user_id,
+        agent_id=agent_id,
+        config=config,
+    )
     return MemoryCapability(backend=backend, agent_id=agent_id)

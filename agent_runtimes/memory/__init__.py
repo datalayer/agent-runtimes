@@ -13,6 +13,7 @@ Other backends (memU, SimpleMem) are planned for future iterations.
 
 from .base import BaseMemoryBackend
 from .capability import MemoryCapability, build_memory_capability
+from .config import resolve_mem0_config
 from .ephemeral import EphemeralMemory
 from .mem0_backend import Mem0Backend
 from .registry import (
@@ -26,6 +27,7 @@ __all__ = [
     "BaseMemoryBackend",
     "EphemeralMemory",
     "Mem0Backend",
+    "resolve_mem0_config",
     "MemoryCapability",
     "build_memory_capability",
     "create_memory_backend",

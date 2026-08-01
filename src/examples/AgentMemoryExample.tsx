@@ -7,7 +7,8 @@
  * AgentMemoryExample
  *
  * Demonstrates the Mem0 memory backend for durable agents.
- * Creates a local agent-runtimes agent using the `example-memory` spec.
+ * Uses sqlite-backed Mem0 for local runs and pgvector-backed Mem0
+ * (PostgreSQL) for cloud runs when server-side postgres env is configured.
  *
  * The left panel shows a standard Chat. The right panel shows the
  * agent's memory contents (fetched from the runtime sidecar) and lets
@@ -37,6 +38,7 @@ const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -58,6 +60,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const agentBaseUrl = useExampleAgentRuntimesUrl();
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
@@ -103,6 +106,18 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENTSPEC_ID,
+            memory: 'mem0',
+            memoryConfig:
+              runtimeTarget === 'local'
+                ? {
+                    vector_store: {
+                      provider: 'sqlite',
+                      config: {
+                        path: `/tmp/mem0/${agentName}.db`,
+                      },
+                    },
+                  }
+                : undefined,
             enable_skills: true,
             tools: [],
           }),
@@ -154,7 +169,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, agentName, authFetch]);
+  }, [agentBaseUrl, agentName, authFetch, runtimeTarget]);
 
   // ── Fetch memory list ────────────────────────────────────────────────────
 
@@ -325,7 +340,9 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               </Heading>
             </Box>
             <Label variant="accent" sx={{ mb: 2 }}>
-              Mem0 backend
+              {runtimeTarget === 'local'
+                ? 'Mem0 sqlite backend (local)'
+                : 'Mem0 pgvector backend (cloud)'}
             </Label>
 
             <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>

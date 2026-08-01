@@ -14,6 +14,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { ServerConnection } from '@jupyterlab/services';
 import type { IRuntimeOptions } from '../runtimes/apis';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { create } from 'zustand';
@@ -229,6 +230,246 @@ const RUNTIME_STATUS_MAP: Record<string, AgentStatus> = {
   running: 'running',
 };
 
+export interface AgentSandboxConnectionInfo {
+  baseUrl: string;
+  agentId?: string;
+  agentBaseUrl?: string;
+  runtimeEnvironment?: RuntimeEnvironmentDetails;
+}
+
+export interface RuntimeEnvironmentDetails {
+  environmentName?: string;
+  environmentTitle?: string;
+  cpu?: string;
+  memory?: string;
+  gpu?: string;
+}
+
+const RUNTIME_ENVIRONMENT_META_KEY =
+  '__datalayerRuntimeEnvironmentDetails';
+
+type RuntimeEnvironmentCarrier = {
+  [RUNTIME_ENVIRONMENT_META_KEY]?: RuntimeEnvironmentDetails;
+};
+
+type SandboxStatusResponse = {
+  variant?: string;
+  sandbox_running?: boolean;
+  jupyter_url?: string | null;
+  jupyter_token?: string | null;
+  token?: string | null;
+  environment?: {
+    name?: string | null;
+    title?: string | null;
+    cpu?: string | number | null;
+    memory?: string | number | null;
+    gpu?: string | number | null;
+    resources?: {
+      cpu?: string | number | null;
+      memory?: string | number | null;
+      gpu?: string | number | null;
+      gpu_count?: string | number | null;
+      gpu_type?: string | null;
+      gpu_memory?: string | null;
+      'nvidia.com/gpu'?: string | number | null;
+    } | null;
+  } | null;
+  sandbox?: {
+    jupyter_url?: string | null;
+    jupyter_token?: string | null;
+    token?: string | null;
+  } | null;
+};
+
+function resolveSandboxIngress(payload: SandboxStatusResponse): string {
+  const direct = String(payload.jupyter_url || '').trim();
+  if (direct) {
+    return direct;
+  }
+  const nested = String(payload.sandbox?.jupyter_url || '').trim();
+  if (nested) {
+    return nested;
+  }
+  return '';
+}
+
+function resolveSandboxToken(payload: SandboxStatusResponse): string {
+  const direct = String(payload.jupyter_token || payload.token || '').trim();
+  if (direct) {
+    return direct;
+  }
+  return String(payload.sandbox?.jupyter_token || payload.sandbox?.token || '').trim();
+}
+
+function toOptionalString(value: unknown): string | undefined {
+  const normalized = String(value || '').trim();
+  return normalized || undefined;
+}
+
+function resolveGpuLabel(resources: SandboxStatusResponse['resources']): string | undefined {
+  if (!resources) {
+    return undefined;
+  }
+  const gpuCount =
+    toOptionalString(resources.gpu) ||
+    toOptionalString(resources.gpu_count) ||
+    toOptionalString(resources['nvidia.com/gpu']);
+  const gpuType = toOptionalString(resources.gpu_type);
+  const gpuMemory = toOptionalString(resources.gpu_memory);
+  const parts = [gpuCount, gpuType, gpuMemory].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : undefined;
+}
+
+function resolveRuntimeEnvironmentDetails(
+  payload: SandboxStatusResponse | null,
+  seed?: RuntimeEnvironmentDetails,
+): RuntimeEnvironmentDetails | undefined {
+  const environment = payload?.environment;
+  const resources = environment?.resources;
+  const environmentName =
+    toOptionalString(seed?.environmentName) ||
+    toOptionalString(environment?.name);
+  const environmentTitle =
+    toOptionalString(seed?.environmentTitle) ||
+    toOptionalString(environment?.title);
+  const cpu =
+    toOptionalString(seed?.cpu) ||
+    toOptionalString(environment?.cpu) ||
+    toOptionalString(resources?.cpu);
+  const memory =
+    toOptionalString(seed?.memory) ||
+    toOptionalString(environment?.memory) ||
+    toOptionalString(resources?.memory);
+  const gpu =
+    toOptionalString(seed?.gpu) ||
+    toOptionalString(environment?.gpu) ||
+    resolveGpuLabel(resources);
+
+  if (!environmentName && !environmentTitle && !cpu && !memory && !gpu) {
+    return undefined;
+  }
+
+  return {
+    environmentName,
+    environmentTitle,
+    cpu,
+    memory,
+    gpu,
+  };
+}
+
+export function getServiceManagerRuntimeEnvironmentDetails(
+  manager: ServiceManager.IManager | null | undefined,
+): RuntimeEnvironmentDetails | undefined {
+  if (!manager) {
+    return undefined;
+  }
+  const carrier = manager as ServiceManager.IManager & RuntimeEnvironmentCarrier;
+  return carrier[RUNTIME_ENVIRONMENT_META_KEY];
+}
+
+function isInternalHost(value: string): boolean {
+  const host = String(value || '').trim().toLowerCase();
+  return host === '127.0.0.1' || host === '0.0.0.0' || host === 'localhost';
+}
+
+/**
+ * Connect a Jupyter ServiceManager to an already-running agent sandbox.
+ *
+ * This is the preferred cloud path when an agent runtime already exists:
+ * resolve sandbox status from the agent API, then bind directly to the
+ * returned Jupyter ingress URL/token instead of creating a new runtime.
+ */
+export async function createServiceManagerFromAgentSandbox(
+  info: AgentSandboxConnectionInfo,
+  authToken?: string,
+): Promise<ServiceManager.IManager> {
+  const fallbackIngress = String(info.baseUrl || '').trim();
+  if (!fallbackIngress) {
+    throw new Error('Cloud agent sandbox base URL is missing.');
+  }
+
+  let resolvedIngress = fallbackIngress;
+  let tokenFromStatus = '';
+  let payloadFromStatus: SandboxStatusResponse | null = null;
+
+  const agentBaseUrl = String(info.agentBaseUrl || '').trim().replace(/\/$/, '');
+  const agentId = String(info.agentId || '').trim();
+  const bearer = String(authToken || '').trim();
+  if (agentBaseUrl && agentId && bearer) {
+    const statusCandidates = [
+      `${agentBaseUrl}/api/v1/runtime/status?agent_id=${encodeURIComponent(agentId)}`,
+    ];
+    for (const statusUrl of statusCandidates) {
+      try {
+        const response = await fetch(statusUrl, {
+          headers: {
+            Authorization: `Bearer ${bearer}`,
+          },
+        });
+        if (!response.ok) {
+          continue;
+        }
+        const payload = (await response.json().catch(() => null)) as
+          | SandboxStatusResponse
+          | null;
+        if (!payload) {
+          continue;
+        }
+        payloadFromStatus = payload;
+        const ingressFromStatus = resolveSandboxIngress(payload);
+        if (ingressFromStatus) {
+          try {
+            const parsed = new URL(ingressFromStatus);
+            // Cloud sandboxes can report an internal localhost URL in runtime
+            // status; do not override the known cloud ingress with that host.
+            if (!isInternalHost(parsed.hostname)) {
+              resolvedIngress = ingressFromStatus;
+            }
+          } catch {
+            resolvedIngress = ingressFromStatus;
+          }
+        }
+        tokenFromStatus = resolveSandboxToken(payload);
+        break;
+      } catch {
+        // Keep fallback ingress/token when status endpoint is unavailable.
+      }
+    }
+  }
+
+  let ingress = resolvedIngress.replace(/\/$/, '');
+  let tokenFromIngress = '';
+  try {
+    const parsed = new URL(resolvedIngress);
+    tokenFromIngress =
+      String(parsed.searchParams.get('token') || parsed.searchParams.get('jupyter_token') || '').trim();
+    parsed.searchParams.delete('token');
+    parsed.searchParams.delete('jupyter_token');
+    ingress = parsed.toString().replace(/\/$/, '');
+  } catch {
+    // Keep raw ingress when URL parsing fails.
+  }
+
+  const serverSettings = ServerConnection.makeSettings({
+    baseUrl: ingress,
+    wsUrl: ingress.replace(/^http/, 'ws'),
+    token: tokenFromIngress || tokenFromStatus || authToken || '',
+    appendToken: true,
+  });
+  const manager = new ServiceManager({ serverSettings });
+  await manager.ready;
+  const runtimeEnvironment = resolveRuntimeEnvironmentDetails(
+    payloadFromStatus,
+    info.runtimeEnvironment,
+  );
+  if (runtimeEnvironment) {
+    const carrier = manager as ServiceManager.IManager & RuntimeEnvironmentCarrier;
+    carrier[RUNTIME_ENVIRONMENT_META_KEY] = runtimeEnvironment;
+  }
+  return manager;
+}
+
 /**
  * Map a raw backend runtime record to AgentRuntimeData.
  */
@@ -243,8 +484,26 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
   const volume_uids = rawVolumeUids
     .map((uid: unknown) => String(uid || '').trim())
     .filter(Boolean);
+  const environment = raw.environment as
+    | {
+        name?: string;
+        title?: string;
+        cpu?: string;
+        memory?: string;
+        gpu?: string;
+        resources?: Record<string, string>;
+      }
+    | undefined;
   return {
     ...raw,
+    environment: {
+      name: String(environment?.name || '').trim(),
+      title: String(environment?.title || '').trim() || undefined,
+      cpu: String(environment?.cpu || '').trim() || undefined,
+      memory: String(environment?.memory || '').trim() || undefined,
+      gpu: String(environment?.gpu || '').trim() || undefined,
+      resources: environment?.resources,
+    },
     status: normalizedStatus,
     name: raw.given_name || raw.pod_name,
     id: raw.pod_name,
@@ -578,7 +837,7 @@ export function useAgentRuntimes(
         const runtimesResponse = await listRuntimes(token, runtimesUrl);
         const runtimes = runtimesResponse.runtimes || [];
         const aiAgentRuntimes = runtimes.filter(rt => {
-          if (rt.environment_name !== 'ai-agents-env') {
+          if (rt.environment?.name !== 'ai-agents-env') {
             return false;
           }
           if (!agentSpecId) {
@@ -601,7 +860,7 @@ export function useAgentRuntimes(
 
         storeConnectAgent({
           podName: latestRuntime.pod_name,
-          environmentName: latestRuntime.environment_name,
+          environmentName: latestRuntime.environment.name,
           jupyterBaseUrl: latestRuntime.ingress,
         });
 
@@ -771,7 +1030,7 @@ export function useAgentRuntimesQuery(
       });
       if (resp.success && resp.runtimes) {
         const agentRuntimes = (resp.runtimes as Record<string, any>[])
-          .filter(rt => rt.environment_name === 'ai-agents-env')
+          .filter(rt => rt.environment?.name === 'ai-agents-env')
           .map(toAgentRuntimeData)
           // Drop stale echoes of pods deleted from this client so consumers
           // never reconnect a ServiceManager to a dead ingress (CORS spam).
@@ -848,7 +1107,9 @@ export function useCreateAgentRuntime() {
         url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes`,
         method: 'POST',
         body: {
-          environment_name: data.environmentName || 'ai-agents-env',
+          environment: {
+            name: data.environmentName || 'ai-agents-env',
+          },
           given_name: data.givenName || 'Agent',
           credits_limit: data.creditsLimit || 10,
           type: data.type || 'notebook',

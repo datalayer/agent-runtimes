@@ -60,7 +60,7 @@ export const createRuntime = async (
       if (status === 404) {
         // Environment not found
         throw new Error(
-          `Environment '${data.environment_name}' not found. ${responseData.message || 'Please check the environment name and try again.'}`,
+          `Environment '${data.environment?.name || ''}' not found. ${responseData.message || 'Please check the environment name and try again.'}`,
         );
       } else if (status === 503) {
         // No runtime available

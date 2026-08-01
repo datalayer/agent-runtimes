@@ -330,10 +330,12 @@ def build_capabilities_from_agent_spec(
     if memory_type:
         from ..memory import build_memory_capability
 
+        memory_config = getattr(agent_spec, "memory_config", None)
         memory_capability = build_memory_capability(
             memory_type,
             user_id=agent_id or "default",
             agent_id=agent_id,
+            config=memory_config,
         )
         if memory_capability is not None:
             capabilities.append(memory_capability)

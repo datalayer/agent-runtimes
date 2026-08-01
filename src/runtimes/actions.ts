@@ -60,7 +60,9 @@ export async function createRuntime(
     );
   }
   const body: Record<string, unknown> = {
-    environment_name: options.environmentName,
+    environment: {
+      name: options.environmentName,
+    },
     type: options.type ?? 'notebook',
     given_name: options.givenName,
     credits_limit: options.creditsLimit,

@@ -671,7 +671,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             );
             const conn: AgentConnection = {
               podName: runtimePod.pod_name,
-              environmentName: runtimePod.environment_name,
+              environmentName: runtimePod.environment.name,
               jupyterBaseUrl,
               agentBaseUrl,
               status: 'ready',

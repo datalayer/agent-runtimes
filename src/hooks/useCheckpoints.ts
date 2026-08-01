@@ -549,7 +549,7 @@ export function useAgentLifecycle(
             const runtimesResponse = await listRuntimes(token, runtimesUrl);
             const runtimes = runtimesResponse.runtimes || [];
             const aiAgentRuntimes = runtimes.filter(rt => {
-              if (rt.environment_name !== 'ai-agents-env') {
+              if (rt.environment.name !== 'ai-agents-env') {
                 return false;
               }
               if (!agentSpecId) {
@@ -567,7 +567,7 @@ export function useAgentLifecycle(
             if (latestRuntime?.pod_name && latestRuntime?.ingress) {
               connectToRuntime({
                 podName: latestRuntime.pod_name,
-                environmentName: latestRuntime.environment_name,
+                environmentName: latestRuntime.environment.name,
                 jupyterBaseUrl: latestRuntime.ingress,
               });
             }
