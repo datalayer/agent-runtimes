@@ -155,7 +155,10 @@ const withTokenQueryParam = (rawUrl: string, token: string): string => {
   }
   try {
     const parsed = new URL(normalizedUrl);
-    if (!parsed.searchParams.get('token') && !parsed.searchParams.get('jupyter_token')) {
+    if (
+      !parsed.searchParams.get('token') &&
+      !parsed.searchParams.get('jupyter_token')
+    ) {
       parsed.searchParams.set('token', normalizedToken);
     }
     return parsed.toString();
@@ -171,7 +174,8 @@ type CloudSandboxBootstrap = {
   runtimeEnvironment?: RuntimeEnvironmentDetails;
 };
 
-type TopNoticeTone = 'default' | 'info' | 'success' | 'warning' | 'error' | 'danger';
+type TopNoticeTone =
+  'default' | 'info' | 'success' | 'warning' | 'error' | 'danger';
 
 interface TopNotice {
   id: number;
@@ -810,7 +814,11 @@ export const ExampleApp: React.FC = () => {
       setIsChangingExample(false);
     } catch (e) {
       console.error('Failed to load example:', e);
-      showTopNotice(`Failed to load example: ${e instanceof Error ? e.message : String(e)}`, 'error', 6000);
+      showTopNotice(
+        `Failed to load example: ${e instanceof Error ? e.message : String(e)}`,
+        'error',
+        6000,
+      );
       setError(`Failed to load example: ${e}`);
       setIsChangingExample(false);
     }
@@ -838,22 +846,18 @@ export const ExampleApp: React.FC = () => {
         );
       }
 
-      const connectFromSummary = async (
-        summary: {
+      const connectFromSummary = async (summary: {
+        baseUrl: string;
+        sandboxBaseUrl?: string;
+        agentId?: string;
+        runtimeEnvironment?: RuntimeEnvironmentDetails;
+      }): Promise<ServiceManager.IManager> => {
+        const connectOnce = async (candidate: {
           baseUrl: string;
           sandboxBaseUrl?: string;
           agentId?: string;
           runtimeEnvironment?: RuntimeEnvironmentDetails;
-        },
-      ): Promise<ServiceManager.IManager> => {
-        const connectOnce = async (
-          candidate: {
-            baseUrl: string;
-            sandboxBaseUrl?: string;
-            agentId?: string;
-            runtimeEnvironment?: RuntimeEnvironmentDetails;
-          },
-        ): Promise<ServiceManager.IManager> => {
+        }): Promise<ServiceManager.IManager> => {
           const resolvedSandboxBaseUrl = normalizeSandboxBaseUrl(
             candidate.sandboxBaseUrl,
             candidate.baseUrl,
@@ -867,7 +871,9 @@ export const ExampleApp: React.FC = () => {
             },
             configuration.token,
           );
-          const cloudBaseUrl = String(manager.serverSettings.baseUrl || '').trim();
+          const cloudBaseUrl = String(
+            manager.serverSettings.baseUrl || '',
+          ).trim();
           const cloudToken = String(manager.serverSettings.token || '').trim();
           if (cloudBaseUrl) {
             setJupyterServerUrl(cloudBaseUrl.replace(/\/$/, ''));
@@ -983,7 +989,11 @@ export const ExampleApp: React.FC = () => {
             }),
           });
 
-          if (!agentResp.ok && agentResp.status !== 400 && agentResp.status !== 409) {
+          if (
+            !agentResp.ok &&
+            agentResp.status !== 400 &&
+            agentResp.status !== 409
+          ) {
             const failure = await agentResp.json().catch(() => ({}));
             throw new Error(
               String(
@@ -1021,12 +1031,12 @@ export const ExampleApp: React.FC = () => {
               '',
           ).trim();
           const runtimeEnvironment: RuntimeEnvironmentDetails = {
-            environmentName: String(
-              runtimePayload.runtime?.environment?.name || '',
-            ).trim() || undefined,
-            environmentTitle: String(
-              runtimePayload.runtime?.environment?.title || '',
-            ).trim() || undefined,
+            environmentName:
+              String(runtimePayload.runtime?.environment?.name || '').trim() ||
+              undefined,
+            environmentTitle:
+              String(runtimePayload.runtime?.environment?.title || '').trim() ||
+              undefined,
             cpu:
               String(
                 runtimePayload.runtime?.environment?.cpu ||
@@ -1038,17 +1048,19 @@ export const ExampleApp: React.FC = () => {
                 runtimePayload.runtime?.environment?.memory ||
                   runtimePayload.runtime?.environment?.resources?.memory ||
                   '',
-              ).trim() ||
-              undefined,
+              ).trim() || undefined,
             gpu:
               [
                 runtimePayload.runtime?.environment?.gpu ||
                   runtimePayload.runtime?.environment?.resources?.gpu ||
                   runtimePayload.runtime?.environment?.resources?.gpu_count ||
-                  runtimePayload.runtime?.environment?.resources?.['nvidia.com/gpu'] ||
+                  runtimePayload.runtime?.environment?.resources?.[
+                    'nvidia.com/gpu'
+                  ] ||
                   '',
                 runtimePayload.runtime?.environment?.resources?.gpu_type || '',
-                runtimePayload.runtime?.environment?.resources?.gpu_memory || '',
+                runtimePayload.runtime?.environment?.resources?.gpu_memory ||
+                  '',
               ]
                 .map(value => String(value || '').trim())
                 .filter(Boolean)
@@ -1170,7 +1182,11 @@ export const ExampleApp: React.FC = () => {
         setLoading(false);
       } catch (e) {
         console.error('Failed to initialize app:', e);
-        showTopNotice(`Failed to initialize app: ${e instanceof Error ? e.message : String(e)}`, 'error', 6000);
+        showTopNotice(
+          `Failed to initialize app: ${e instanceof Error ? e.message : String(e)}`,
+          'error',
+          6000,
+        );
         setError(`Failed to initialize app: ${e}`);
         setLoading(false);
       }
@@ -1221,7 +1237,9 @@ export const ExampleApp: React.FC = () => {
     } catch (switchError) {
       showTopNotice(
         `Failed to switch to ${newTarget}: ${
-          switchError instanceof Error ? switchError.message : String(switchError)
+          switchError instanceof Error
+            ? switchError.message
+            : String(switchError)
         }`,
         'error',
         6000,
@@ -1366,7 +1384,8 @@ const ExampleAppThemed: React.FC<{
     );
     const agentApiBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
     const isSandboxOnlyExample =
-      (selectedExample.includes('Notebook') || selectedExample.includes('Cell')) &&
+      (selectedExample.includes('Notebook') ||
+        selectedExample.includes('Cell')) &&
       !selectedExample.includes('Agent');
     // Seed a base summary for the selected example. Do NOT clobber a richer
     // summary that the mounted example already published (spec id, agent id,
@@ -1620,7 +1639,10 @@ const ExampleAppThemed: React.FC<{
             <Box
               aria-label="Runtime target"
               title="Runtime target"
-              sx={{ minWidth: '160px', opacity: isHome || isChangingExample ? 0.6 : 1 }}
+              sx={{
+                minWidth: '160px',
+                opacity: isHome || isChangingExample ? 0.6 : 1,
+              }}
             >
               <SegmentedControl aria-label="Runtime target" fullWidth>
                 <SegmentedControl.Button

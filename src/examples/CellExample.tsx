@@ -30,7 +30,9 @@ for i in range(10):
 
 const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
   const isLocalSandbox = useMemo(() => {
-    const rawBaseUrl = String(serviceManager?.serverSettings.baseUrl || '').trim();
+    const rawBaseUrl = String(
+      serviceManager?.serverSettings.baseUrl || '',
+    ).trim();
     if (!rawBaseUrl) {
       return true;
     }
@@ -55,7 +57,9 @@ const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
   });
   const activeKernel = defaultKernel;
   const fallbackKernelEnvironmentName = useMemo(() => {
-    const rawBaseUrl = String(serviceManager?.serverSettings.baseUrl || '').trim();
+    const rawBaseUrl = String(
+      serviceManager?.serverSettings.baseUrl || '',
+    ).trim();
     if (!rawBaseUrl) {
       return 'local-jupyter-server';
     }

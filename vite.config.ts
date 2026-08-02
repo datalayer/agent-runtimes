@@ -498,8 +498,7 @@ export default defineConfig(({ mode, command }) => {
           test: {
             name: 'integration',
             include: ['src/**/*.integration.{test,spec}.{js,ts,tsx}'],
-            environment: 'jsdom',
-            setupFiles: ['src/test-setup.ts'],
+            environment: 'node',
             testTimeout: 30000,
             pool: 'threads',
             poolOptions: { threads: { singleThread: true } },

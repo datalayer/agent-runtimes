@@ -1969,7 +1969,6 @@ EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1 = Agentspec(
     tool_hooks=None,
     parameters=None,
     subagents=SubAgentsConfig(
-        include_general_purpose=True,
         subagents=[
             SubAgentspecConfig(
                 name="researcher",
@@ -1981,7 +1980,7 @@ EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1 = Agentspec(
                 description="Turns research notes into clear, well-structured prose. Use for summaries, drafts, and final write-ups.",
                 instructions="You are a concise writing specialist. Given notes or findings, produce clear, well-structured prose. Keep it focused and free of filler.",
             ),
-        ],
+        ]
     ),
 )
 

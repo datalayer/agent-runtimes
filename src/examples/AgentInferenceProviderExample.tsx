@@ -103,11 +103,9 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
     }
     const env = (import.meta as any).env ?? {};
     return (
-      env.VITE_DATALAYER_AI_INFERENCE_URL ||
-      env.VITE_DATALAYER_URL ||
-      'https://prod1.datalayer.run'
+      env.VITE_DATALAYER_AI_INFERENCE_URL || env.VITE_DATALAYER_URL || baseUrl
     );
-  }, [provider]);
+  }, [provider, baseUrl]);
 
   const authFetch = useCallback(
     (url: string, init: RequestInit = {}) => {

@@ -98,7 +98,9 @@ const PlanStepItem: React.FC<{
         '&:hover': isInteractive
           ? {
               backgroundColor:
-                step.status === 'completed' ? 'success.subtle' : 'canvas.default',
+                step.status === 'completed'
+                  ? 'success.subtle'
+                  : 'canvas.default',
               borderColor: 'accent.muted',
             }
           : {},

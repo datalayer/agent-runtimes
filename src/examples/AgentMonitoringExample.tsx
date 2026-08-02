@@ -104,7 +104,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
     DATALAYER_URL_ENV ||
-    'https://prod1.datalayer.run';
+    agentBaseUrl;
   const podName = agentId;
   // The OTEL service_name resource attribute is 'agent-runtimes' (the
   // application name), NOT the individual agent ID.  Use the correct value

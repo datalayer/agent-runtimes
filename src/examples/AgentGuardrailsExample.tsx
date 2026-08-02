@@ -318,7 +318,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
     DATALAYER_URL_ENV ||
-    'https://prod1.datalayer.run';
+    agentBaseUrl;
   const podName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 

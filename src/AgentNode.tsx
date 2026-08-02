@@ -126,9 +126,7 @@ function setAutoBootstrapDisabled(disabled: boolean): void {
  * `VITE_DATALAYER_URL`, which defaults to production because `make build` runs
  * without the local environment.
  */
-const getConfigUrlFromDocument = (
-  ...keys: string[]
-): string | undefined => {
+const getConfigUrlFromDocument = (...keys: string[]): string | undefined => {
   if (typeof document === 'undefined') {
     return undefined;
   }
@@ -167,7 +165,6 @@ const resolveSpacerUrl = (): string =>
   getConfigUrlFromDocument('spacerUrl') ||
   (import.meta as any).env?.VITE_DATALAYER_SPACER_URL ||
   resolveDatalayerUrl();
-
 
 type AgentNodeMode = 'private' | 'shared' | 'sleep';
 type Step = 'auth' | 'config' | 'gallery' | 'chat' | 'profile';
@@ -330,7 +327,11 @@ function AgentNodeProfileView({
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: ['1fr', null, 'minmax(280px, 1fr) minmax(320px, 2fr)'],
+              gridTemplateColumns: [
+                '1fr',
+                null,
+                'minmax(280px, 1fr) minmax(320px, 2fr)',
+              ],
               gap: 4,
               alignItems: 'start',
             }}
@@ -355,7 +356,11 @@ function AgentNodeProfileView({
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 {hasRealAvatar(display.avatarUrl) ? (
-                  <UserAvatar avatarUrl={display.avatarUrl} size={72} square={false} />
+                  <UserAvatar
+                    avatarUrl={display.avatarUrl}
+                    size={72}
+                    square={false}
+                  />
                 ) : (
                   <Box
                     sx={{
@@ -366,7 +371,8 @@ function AgentNodeProfileView({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      '--datalayer-icon-fg': avatarFallbackForeground || 'accent.fg',
+                      '--datalayer-icon-fg':
+                        avatarFallbackForeground || 'accent.fg',
                     }}
                   >
                     <AlienIcon size={34} themed colormoded />
@@ -453,7 +459,7 @@ export function AgentNode() {
       : colorMode === 'dark'
         ? 'dark'
         : 'light';
-        const avatarPalette = getColorPalette(themeVariant as any, resolvedMode);
+  const avatarPalette = getColorPalette(themeVariant as any, resolvedMode);
   const authGradient = cfg.cardGradient[resolvedMode];
 
   const [step, setStep] = useState<Step>('auth');
@@ -510,9 +516,7 @@ export function AgentNode() {
   // is embedded in the ws URL (createWebsocketProvider forwards it as a query
   // param) so the spacer authenticates the connection.
   const collaborationDocumentUser = useIAMStore(state => state.user) as
-    | Record<string, any>
-    | null
-    | undefined;
+    Record<string, any> | null | undefined;
   const ephemeralDocumentCollaboration = useMemo(() => {
     const documentRoomId = configuration.collaboration_document_uid;
     if (!token || !documentRoomId) {
@@ -537,7 +541,11 @@ export function AgentNode() {
           }
         : undefined,
     };
-  }, [configuration.collaboration_document_uid, token, collaborationDocumentUser]);
+  }, [
+    configuration.collaboration_document_uid,
+    token,
+    collaborationDocumentUser,
+  ]);
 
   const [inferenceProvider, setInferenceProvider] =
     useState<InferenceProvider>('datalayer');
@@ -730,7 +738,9 @@ export function AgentNode() {
 
   const chatTitle = agentSpecInfo?.name || 'Agent Node Chat';
   const chatDescription =
-    agentSpecInfo?.welcomeMessage || agentSpecInfo?.description || 'Node-local chat';
+    agentSpecInfo?.welcomeMessage ||
+    agentSpecInfo?.description ||
+    'Node-local chat';
   const chatSuggestions: Suggestion[] | undefined =
     agentSpecInfo?.suggestions && agentSpecInfo.suggestions.length > 0
       ? agentSpecInfo.suggestions.map(s => ({ title: s, message: s }))
@@ -1053,11 +1063,14 @@ export function AgentNode() {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`${AGENT_RUNTIMES_BASE_URL}/api/v1/agents`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const response = await fetch(
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agents`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
-        });
+        );
         if (!response.ok) {
           return;
         }
@@ -1076,7 +1089,7 @@ export function AgentNode() {
         if (running) {
           setSelectedAgentId(activeAgentId);
           setConfiguration(prev =>
-            prev.mode === 'private' ? prev : { ...prev, mode: 'private' }
+            prev.mode === 'private' ? prev : { ...prev, mode: 'private' },
           );
           setStep('chat');
         } else if (selectedAgentId === activeAgentId) {
@@ -1090,7 +1103,12 @@ export function AgentNode() {
     return () => {
       cancelled = true;
     };
-  }, [token, configurationLoaded, configuration.active_agent_id, selectedAgentId]);
+  }, [
+    token,
+    configurationLoaded,
+    configuration.active_agent_id,
+    selectedAgentId,
+  ]);
 
   useEffect(() => {
     // If a persisted session is already authenticated on first load,
@@ -1222,7 +1240,9 @@ export function AgentNode() {
     if (!token) return false;
     if (nextStep === 'gallery') return true;
     if (nextStep === 'chat') {
-      return configuration.mode === 'private' && hasActiveAgent && !isSaasOnlyChat;
+      return (
+        configuration.mode === 'private' && hasActiveAgent && !isSaasOnlyChat
+      );
     }
     return true;
   };
@@ -1844,11 +1864,13 @@ export function AgentNode() {
               >
                 {isSaasOnlyChat ? (
                   <Box sx={{ p: 4 }}>
-                    <Heading sx={{ fontSize: 2, mb: 2 }}>Chat From SaaS</Heading>
+                    <Heading sx={{ fontSize: 2, mb: 2 }}>
+                      Chat From SaaS
+                    </Heading>
                     <Text sx={{ color: 'fg.muted' }}>
-                      This Agent Node deployment is configured for SaaS-only chat.
-                      Use the Datalayer Agent Nodes view to open chat sessions over
-                      the runtimes tunnel.
+                      This Agent Node deployment is configured for SaaS-only
+                      chat. Use the Datalayer Agent Nodes view to open chat
+                      sessions over the runtimes tunnel.
                     </Text>
                   </Box>
                 ) : (

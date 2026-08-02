@@ -24,9 +24,7 @@ export function useExampleAgentRuntimes(
 
   const runtimeCreationTarget =
     options.runtimeCreationTarget ??
-    (runtimeTarget === 'cloud'
-      ? 'backend-services'
-      : 'local-agent-runtimes');
+    (runtimeTarget === 'cloud' ? 'backend-services' : 'local-agent-runtimes');
 
   const runtimeCreationBaseUrl =
     options.runtimeCreationBaseUrl ??

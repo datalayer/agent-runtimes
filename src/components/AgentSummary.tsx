@@ -96,7 +96,9 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
   const apiBase = summary?.baseUrl
     ? (() => {
         const normalized = summary.baseUrl.replace(/\/$/, '');
-        return normalized.endsWith('/api/v1') ? normalized : `${normalized}/api/v1`;
+        return normalized.endsWith('/api/v1')
+          ? normalized
+          : `${normalized}/api/v1`;
       })()
     : undefined;
   const agentStatusUrl = apiBase ? `${apiBase}/runtime/status` : undefined;

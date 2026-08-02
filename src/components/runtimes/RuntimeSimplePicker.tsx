@@ -273,7 +273,8 @@ export function RuntimeSimplePicker(
                       </ActionList.LeadingVisual>
                       {kernelModel.given_name}
                       <ActionList.Description variant="block">
-                        {kernelModel.environment.title || kernelModel.environment.name}
+                        {kernelModel.environment.title ||
+                          kernelModel.environment.name}
                       </ActionList.Description>
                     </ActionList.Item>
                   );

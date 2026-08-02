@@ -201,8 +201,8 @@ export function EphemeralNotebook({
   // override path binds immediately, so no polling is needed there.
   const needsRuntimeLookup = Boolean(
     !runtimeOverride?.baseUrl &&
-      String(runtimePodName || '').trim() &&
-      !selectedRuntime,
+    String(runtimePodName || '').trim() &&
+    !selectedRuntime,
   );
   useEffect(() => {
     if (!needsRuntimeLookup) {
@@ -244,9 +244,8 @@ export function EphemeralNotebook({
       try {
         const token = String(selectedRuntime?.token || '').trim();
         const wsUrl =
-          String(
-            (selectedRuntime as { wsUrl?: string })?.wsUrl || '',
-          ).trim() || baseUrl.replace(/^http/, 'ws');
+          String((selectedRuntime as { wsUrl?: string })?.wsUrl || '').trim() ||
+          baseUrl.replace(/^http/, 'ws');
         const serverSettings = ServerConnection.makeSettings({
           baseUrl,
           wsUrl,
@@ -305,7 +304,7 @@ export function EphemeralNotebook({
   const isRuntimeStarting = Boolean(
     (String(runtimePodName || '').trim() ||
       String(runtimeOverride?.baseUrl || '').trim()) &&
-      !activeServiceManager,
+    !activeServiceManager,
   );
   useProgressTask(`ephemeral-notebook-start-${notebookId}`, isRuntimeStarting);
 
@@ -363,7 +362,8 @@ export function EphemeralNotebook({
   // Resolve the active theme/color-mode exactly like the notebook editor
   // (NotebookEditorPanel) so the notebook honours dark / branded themes
   // instead of always rendering light.
-  const { colorMode: storeColorMode, theme: storeThemeVariant } = useThemeStore();
+  const { colorMode: storeColorMode, theme: storeThemeVariant } =
+    useThemeStore();
   const effectiveColorMode = colorMode ?? storeColorMode;
   const effectiveThemeVariant = themeVariant ?? storeThemeVariant;
   const systemMode = useSystemColorMode();

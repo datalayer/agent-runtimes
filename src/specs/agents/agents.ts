@@ -1242,7 +1242,7 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'globe',
   emoji: '🌐',
-  color: '#16A085',
+  color: '#0969DA',
   suggestions: [
     'Search for the latest updates about Datalayer',
     'Extract key points from the top result',
@@ -3124,7 +3124,7 @@ export const GALLERY_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'package',
   emoji: '📦',
-  color: '#16A085',
+  color: '#0969da',
   suggestions: [
     'Run a full inventory audit now',
     'Show current stock levels across all warehouses',
@@ -3222,7 +3222,7 @@ export const GALLERY_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec =
     environmentName: 'ai-agents-env',
     icon: 'shield-check',
     emoji: '🏦',
-    color: '#16A085',
+    color: '#0969da',
     suggestions: [
       'Generate the monthly Basel III capital adequacy report',
       'Show current risk-weighted asset breakdown',
@@ -3395,7 +3395,7 @@ export const GALLERY_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'mail',
   emoji: '📬',
-  color: '#16A085',
+  color: '#0969da',
   suggestions: [],
   welcomeMessage: undefined,
   welcomeNotebook: undefined,
@@ -6901,7 +6901,7 @@ export const GALLERY_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   environmentName: 'ai-agents-env',
   icon: 'people',
   emoji: '🔄',
-  color: '#16A085',
+  color: '#0969da',
   suggestions: [
     'Run a full CRM contact sync now',
     'Show the latest sync report',

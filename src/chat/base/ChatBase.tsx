@@ -1830,9 +1830,9 @@ function ChatBaseInner({
   // Derive the bare base URL from configEndpoint or protocol.endpoint.
   const isAgentNodeTunnelAgUi = Boolean(
     protocol?.endpoint &&
-      /\/api\/runtimes\/v1\/agent-nodes\/[^/]+\/ag-ui\/?$/.test(
-        protocol.endpoint,
-      ),
+    /\/api\/runtimes\/v1\/agent-nodes\/[^/]+\/ag-ui\/?$/.test(
+      protocol.endpoint,
+    ),
   );
   const wsBaseUrl = protocol?.configEndpoint
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')

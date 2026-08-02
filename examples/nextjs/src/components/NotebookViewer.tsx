@@ -105,7 +105,9 @@ export default function NotebookViewer({
         // Ensure token and runtimes URL are configured for local runtime creation.
         const currentConfig = coreStore.configuration;
         const resolvedRuntimesUrl = resolveNextjsRuntimesUrl();
-        const currentRuntimesUrl = String(currentConfig.runtimesUrl || '').trim();
+        const currentRuntimesUrl = String(
+          currentConfig.runtimesUrl || '',
+        ).trim();
         const shouldSetRuntimesUrl =
           !currentRuntimesUrl ||
           currentRuntimesUrl.includes('prod1.datalayer.run') ||
@@ -114,7 +116,9 @@ export default function NotebookViewer({
           coreStore.setConfiguration({
             ...currentConfig,
             token: token,
-            ...(shouldSetRuntimesUrl ? { runtimesUrl: resolvedRuntimesUrl } : {}),
+            ...(shouldSetRuntimesUrl
+              ? { runtimesUrl: resolvedRuntimesUrl }
+              : {}),
           });
         }
 

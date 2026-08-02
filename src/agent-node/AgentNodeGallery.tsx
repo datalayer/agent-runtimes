@@ -319,7 +319,9 @@ export function AgentNodeGallery({
     }
     return (
       running.find(candidate => {
-        const candidateId = String(candidate.agent_id || candidate.id || '').trim();
+        const candidateId = String(
+          candidate.agent_id || candidate.id || '',
+        ).trim();
         return candidateId === normalizedActiveAgentId;
       }) || null
     );
@@ -421,7 +423,9 @@ export function AgentNodeGallery({
               // recreate it so configure/spec lookups and sandbox settings
               // match the selected gallery card.
               if (existing && existing.agent_spec_id !== spec.id) {
-                const staleId = String(existing.agent_id || existing.id || '').trim();
+                const staleId = String(
+                  existing.agent_id || existing.id || '',
+                ).trim();
                 if (staleId) {
                   await fetch(
                     `${baseUrl}/api/v1/agents/${encodeURIComponent(staleId)}`,
@@ -474,7 +478,9 @@ export function AgentNodeGallery({
                 `Failed to launch agent (${recreateResponse.status})`,
               );
             }
-            const recreatePayload = await recreateResponse.json().catch(() => null);
+            const recreatePayload = await recreateResponse
+              .json()
+              .catch(() => null);
             agentId =
               recreatePayload?.agent_id ||
               recreatePayload?.id ||
@@ -506,10 +512,13 @@ export function AgentNodeGallery({
           mustRecreateForSandbox = variant !== 'jupyter';
         }
         if (specResponse.status === 404 || mustRecreateForSandbox) {
-          await fetch(`${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`, {
-            method: 'DELETE',
-            headers: authHeaders,
-          });
+          await fetch(
+            `${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
+            {
+              method: 'DELETE',
+              headers: authHeaders,
+            },
+          );
           const recreateResponse = await fetch(`${baseUrl}/api/v1/agents`, {
             method: 'POST',
             headers: authHeaders,
@@ -529,7 +538,9 @@ export function AgentNodeGallery({
               `Failed to recreate agent with spec (${recreateResponse.status})`,
             );
           }
-          const recreatePayload = await recreateResponse.json().catch(() => null);
+          const recreatePayload = await recreateResponse
+            .json()
+            .catch(() => null);
           agentId =
             recreatePayload?.agent_id ||
             recreatePayload?.id ||
@@ -587,11 +598,14 @@ export function AgentNodeGallery({
         );
       }
 
-      const clearResponse = await fetch(`${baseUrl}/api/v1/agent-node/active-agent`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ agent_id: null }),
-      });
+      const clearResponse = await fetch(
+        `${baseUrl}/api/v1/agent-node/active-agent`,
+        {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({ agent_id: null }),
+        },
+      );
       if (!clearResponse.ok) {
         throw new Error(
           `Failed to clear active agent (${clearResponse.status})`,
@@ -600,7 +614,9 @@ export function AgentNodeGallery({
 
       setRunning(prev =>
         prev.filter(candidate => {
-          const candidateId = String(candidate.agent_id || candidate.id || '').trim();
+          const candidateId = String(
+            candidate.agent_id || candidate.id || '',
+          ).trim();
           return candidateId !== normalizedActiveAgentId;
         }),
       );
@@ -612,7 +628,13 @@ export function AgentNodeGallery({
     } finally {
       setTerminating(false);
     }
-  }, [authHeaders, baseUrl, normalizedActiveAgentId, onTerminated, onLaunchError]);
+  }, [
+    authHeaders,
+    baseUrl,
+    normalizedActiveAgentId,
+    onTerminated,
+    onLaunchError,
+  ]);
 
   if (loading) {
     return (
@@ -677,12 +699,14 @@ export function AgentNodeGallery({
               Active agent
             </Label>
             <Text sx={{ fontWeight: 600 }}>
-              {activeAgent?.name || activeAgent?.agent_spec_id || normalizedActiveAgentId}
+              {activeAgent?.name ||
+                activeAgent?.agent_spec_id ||
+                normalizedActiveAgentId}
             </Text>
           </Box>
           <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-            Chat is enabled while an active agent is running on this node. Terminate it to
-            return to the agent cards picker.
+            Chat is enabled while an active agent is running on this node.
+            Terminate it to return to the agent cards picker.
           </Text>
           {activeAgentSpec && (
             <Box
@@ -780,183 +804,198 @@ export function AgentNodeGallery({
             }}
           >
             {filteredSpecs.map(spec => {
-            const IconComponent = resolveAgentspecIcon(
-              spec.icon,
-              spec.name || spec.id,
-            );
-            const isActive =
-              !!activeAgentId &&
-              runningBySpec.get(spec.id) === activeAgentId;
-            const isLaunching = launchingId === spec.id;
-            const isRunning = runningBySpec.has(spec.id);
-            const launchLabel = isActive
-              ? 'Open chat'
-              : isLaunching
-                ? 'Launching…'
-                : isRunning
-                  ? 'Set active'
-                  : 'Launch';
-            return (
-              <Box
-                key={spec.id}
-                role="button"
-                tabIndex={isLaunching ? -1 : 0}
-                onClick={() => {
-                  if (!isLaunching) {
-                    void launch(spec);
-                  }
-                }}
-                onKeyDown={event => {
-                  if ((event.key === 'Enter' || event.key === ' ') && !isLaunching) {
-                    event.preventDefault();
-                    void launch(spec);
-                  }
-                }}
-                aria-label={`${launchLabel} ${spec.name || spec.id}`}
-                aria-busy={isLaunching}
-                aria-disabled={isLaunching}
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  textAlign: 'left',
-                  cursor: isLaunching ? 'progress' : 'pointer',
-                  p: 3,
-                  border: '1px solid',
-                  borderColor: isActive ? 'success.emphasis' : 'border.default',
-                  borderRadius: 2,
-                  bg: 'canvas.default',
-                  // Hover feedback is border + shadow only. No transform: a
-                  // transform here promotes the card to its own layer and makes
-                  // the line-clamped description re-rasterize (per-paragraph
-                  // motion artifact).
-                  transition: 'box-shadow 180ms ease, border-color 180ms ease',
-                  '&:hover': {
-                    boxShadow: 'shadow.medium',
-                    borderColor: isActive ? 'success.emphasis' : 'accent.emphasis',
-                  },
-                  '&:focus-visible': {
-                    outline: '2px solid',
-                    outlineColor: 'accent.fg',
-                    outlineOffset: '2px',
-                  },
-                  '&[aria-disabled="true"]': {
-                    opacity: 0.8,
-                  },
-                }}
-              >
+              const IconComponent = resolveAgentspecIcon(
+                spec.icon,
+                spec.name || spec.id,
+              );
+              const isActive =
+                !!activeAgentId && runningBySpec.get(spec.id) === activeAgentId;
+              const isLaunching = launchingId === spec.id;
+              const isRunning = runningBySpec.has(spec.id);
+              const launchLabel = isActive
+                ? 'Open chat'
+                : isLaunching
+                  ? 'Launching…'
+                  : isRunning
+                    ? 'Set active'
+                    : 'Launch';
+              return (
                 <Box
+                  key={spec.id}
+                  role="button"
+                  tabIndex={isLaunching ? -1 : 0}
+                  onClick={() => {
+                    if (!isLaunching) {
+                      void launch(spec);
+                    }
+                  }}
+                  onKeyDown={event => {
+                    if (
+                      (event.key === 'Enter' || event.key === ' ') &&
+                      !isLaunching
+                    ) {
+                      event.preventDefault();
+                      void launch(spec);
+                    }
+                  }}
+                  aria-label={`${launchLabel} ${spec.name || spec.id}`}
+                  aria-busy={isLaunching}
+                  aria-disabled={isLaunching}
                   sx={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    mb: 2,
+                    flexDirection: 'column',
+                    textAlign: 'left',
+                    cursor: isLaunching ? 'progress' : 'pointer',
+                    p: 3,
+                    border: '1px solid',
+                    borderColor: isActive
+                      ? 'success.emphasis'
+                      : 'border.default',
+                    borderRadius: 2,
+                    bg: 'canvas.default',
+                    // Hover feedback is border + shadow only. No transform: a
+                    // transform here promotes the card to its own layer and makes
+                    // the line-clamped description re-rasterize (per-paragraph
+                    // motion artifact).
+                    transition:
+                      'box-shadow 180ms ease, border-color 180ms ease',
+                    '&:hover': {
+                      boxShadow: 'shadow.medium',
+                      borderColor: isActive
+                        ? 'success.emphasis'
+                        : 'accent.emphasis',
+                    },
+                    '&:focus-visible': {
+                      outline: '2px solid',
+                      outlineColor: 'accent.fg',
+                      outlineOffset: '2px',
+                    },
+                    '&[aria-disabled="true"]': {
+                      opacity: 0.8,
+                    },
                   }}
                 >
                   <Box
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      fontSize: 3,
-                      bg: 'canvas.subtle',
+                      gap: 2,
+                      mb: 2,
                     }}
                   >
-                    {spec.emoji ? (
-                      <Text sx={{ fontSize: 3, lineHeight: 1 }}>{spec.emoji}</Text>
-                    ) : (
-                      <IconComponent size={20} />
-                    )}
-                  </Box>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Heading
-                      as="h3"
+                    <Box
                       sx={{
-                        fontSize: 2,
-                        mb: 0,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 40,
+                        height: 40,
+                        borderRadius: 2,
+                        fontSize: 3,
+                        bg: 'canvas.subtle',
                       }}
                     >
-                      {spec.name || spec.id}
-                    </Heading>
-                    {spec.version && (
-                      <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                        v{spec.version}
-                      </Text>
+                      {spec.emoji ? (
+                        <Text sx={{ fontSize: 3, lineHeight: 1 }}>
+                          {spec.emoji}
+                        </Text>
+                      ) : (
+                        <IconComponent size={20} />
+                      )}
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Heading
+                        as="h3"
+                        sx={{
+                          fontSize: 2,
+                          mb: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {spec.name || spec.id}
+                      </Heading>
+                      {spec.version && (
+                        <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                          v{spec.version}
+                        </Text>
+                      )}
+                    </Box>
+                    {isActive && (
+                      <Label
+                        variant="success"
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <CheckCircleFillIcon size={12} />
+                        Active
+                      </Label>
                     )}
                   </Box>
-                  {isActive && (
-                    <Label
-                      variant="success"
-                      sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}
+
+                  {spec.description && (
+                    <Text
+                      sx={{
+                        color: 'fg.muted',
+                        fontSize: 1,
+                        mb: 2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
                     >
-                      <CheckCircleFillIcon size={12} />
-                      Active
-                    </Label>
+                      {spec.description}
+                    </Text>
                   )}
-                </Box>
 
-                {spec.description && (
-                  <Text
-                    sx={{
-                      color: 'fg.muted',
-                      fontSize: 1,
-                      mb: 2,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {spec.description}
-                  </Text>
-                )}
+                  {spec.tags && spec.tags.length > 0 && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        mb: 3,
+                      }}
+                    >
+                      {spec.tags.slice(0, 4).map(tag => (
+                        <Label key={tag} size="small" variant="secondary">
+                          {tag}
+                        </Label>
+                      ))}
+                    </Box>
+                  )}
 
-                {spec.tags && spec.tags.length > 0 && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 1,
-                      mb: 3,
-                    }}
-                  >
-                    {spec.tags.slice(0, 4).map(tag => (
-                      <Label key={tag} size="small" variant="secondary">
-                        {tag}
-                      </Label>
-                    ))}
-                  </Box>
-                )}
-
-                <Box sx={{ mt: 'auto', pt: 1 }}>
-                  <Box
-                    as="span"
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      px: 2,
-                      py: 1,
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: isActive ? 'border.default' : 'accent.muted',
-                      bg: isActive ? 'canvas.subtle' : 'accent.subtle',
-                      color: isActive ? 'fg.default' : 'accent.fg',
-                      fontSize: 1,
-                      fontWeight: 600,
-                    }}
-                  >
-                    <IconComponent size={14} />
-                    {launchLabel}
+                  <Box sx={{ mt: 'auto', pt: 1 }}>
+                    <Box
+                      as="span"
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        px: 2,
+                        py: 1,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: isActive
+                          ? 'border.default'
+                          : 'accent.muted',
+                        bg: isActive ? 'canvas.subtle' : 'accent.subtle',
+                        color: isActive ? 'fg.default' : 'accent.fg',
+                        fontSize: 1,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <IconComponent size={14} />
+                      {launchLabel}
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
-            );
+              );
             })}
           </Box>
           {filteredSpecs.length === 0 && (

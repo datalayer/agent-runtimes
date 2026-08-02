@@ -14,9 +14,8 @@
  *
  * The OTEL backend is configured via `configuration.otelUrl` when available
  * (falling back to `configuration.datalayerUrl`, then `VITE_OTEL_BASE_URL`, then
- * `VITE_DATALAYER_URL`, then https://prod1.datalayer.run).
- * Agent routes use `VITE_BASE_URL` when provided, otherwise the same resolved
- * direct run URL to avoid proxy-relative calls.
+ * `VITE_DATALAYER_URL`, then the resolved runtime base URL).
+ * Agent routes resolve from the shared local/cloud runtime target hook.
  *
  * For Python-side observability, wire in `agent_runtimes/otel.py`:
  *   from agent_runtimes.otel import setup_otel
@@ -48,6 +47,7 @@ import { AuthRequiredView } from './components';
 import { ChatSidebar } from '../chat';
 import type { AgentLibrary, ProtocolConfig } from '../types';
 import { Protocol } from '../types';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 // ─── Environment / defaults ────────────────────────────────────────────────
 
@@ -57,12 +57,6 @@ const OTEL_BASE_URL_ENV: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
 const OTEL_IN_BASE_URL_ENV: string =
   import.meta.env.VITE_OTEL_IN_BASE_URL ?? '';
 const DATALAYER_URL_ENV: string = import.meta.env.VITE_DATALAYER_URL ?? '';
-
-/**
- * Base URL of the agent-runtimes server.
- * Defaults to proxy-relative calls when VITE_BASE_URL is unset.
- */
-const AGENT_BASE_URL_ENV: string = import.meta.env.VITE_BASE_URL || '';
 
 const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
@@ -248,6 +242,7 @@ const AgentOtelExampleInner: React.FC<{
   token: string;
 }> = ({ token }) => {
   const { configuration } = useCoreStore();
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const resolvedUrl =
     configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
@@ -255,9 +250,8 @@ const AgentOtelExampleInner: React.FC<{
     configuration?.datalayerUrl ||
     OTEL_BASE_URL_ENV ||
     DATALAYER_URL_ENV ||
-    'https://prod1.datalayer.run';
+    agentBaseUrl;
   const otelBaseUrl = resolvedUrl;
-  const agentBaseUrl = AGENT_BASE_URL_ENV;
 
   // ── OTEL view state ─────────────────────────────────────────────
   const [view, setView] = useState<OtelView>('dashboard');

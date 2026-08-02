@@ -338,8 +338,8 @@ export function EphemeralDocument({
 
   const needsRuntimeLookup = Boolean(
     !runtimeOverride?.baseUrl &&
-      String(runtimePodName || '').trim() &&
-      !selectedRuntime,
+    String(runtimePodName || '').trim() &&
+    !selectedRuntime,
   );
   useEffect(() => {
     if (!needsRuntimeLookup) {
@@ -441,7 +441,7 @@ export function EphemeralDocument({
   const isRuntimeStarting = Boolean(
     (String(runtimePodName || '').trim() ||
       String(runtimeOverride?.baseUrl || '').trim()) &&
-      !activeServiceManager,
+    !activeServiceManager,
   );
   useProgressTask(`ephemeral-document-start-${documentId}`, isRuntimeStarting);
 
@@ -486,7 +486,8 @@ export function EphemeralDocument({
   // Resolve the active theme/color-mode exactly like the notebook editor so
   // the document honours dark / branded themes instead of always rendering
   // light.
-  const { colorMode: storeColorMode, theme: storeThemeVariant } = useThemeStore();
+  const { colorMode: storeColorMode, theme: storeThemeVariant } =
+    useThemeStore();
   const effectiveColorMode = colorMode ?? storeColorMode;
   const effectiveThemeVariant = themeVariant ?? storeThemeVariant;
   const systemMode = useSystemColorMode();

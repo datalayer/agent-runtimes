@@ -44,8 +44,14 @@ import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useRuntimeTargetStore, type ExampleRuntimeTarget } from './utils/runtimeTargetStore';
+import {
+  resolveExampleAgentRuntimesUrl,
+  useExampleAgentRuntimesUrl,
+} from './utils/useExampleAgentRuntimesUrl';
+import {
+  useRuntimeTargetStore,
+  type ExampleRuntimeTarget,
+} from './utils/runtimeTargetStore';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
 import { Chat } from '../chat';
@@ -118,24 +124,11 @@ const AgentEvalsInner: React.FC<{
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const localRuntimeBaseUrl = useExampleAgentRuntimesUrl();
   const cloudRuntimeBaseUrl = useMemo(() => {
-    const envRuntimesUrl = normalizeHttpUrl(
-      import.meta.env.VITE_DATALAYER_RUNTIMES_URL,
-    );
-    const envAgentRuntimesUrl = normalizeHttpUrl(
-      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL,
-    );
     const configuredRuntimesUrl = normalizeHttpUrl(configuration?.runtimesUrl);
-
-    if (envRuntimesUrl && !isLocalhostUrl(envRuntimesUrl)) {
-      return envRuntimesUrl;
-    }
     if (configuredRuntimesUrl && !isLocalhostUrl(configuredRuntimesUrl)) {
       return configuredRuntimesUrl;
     }
-    if (envAgentRuntimesUrl && !isLocalhostUrl(envAgentRuntimesUrl)) {
-      return envAgentRuntimesUrl;
-    }
-    return 'https://r1.datalayer.run';
+    return resolveExampleAgentRuntimesUrl('cloud');
   }, [configuration?.runtimesUrl]);
 
   const {

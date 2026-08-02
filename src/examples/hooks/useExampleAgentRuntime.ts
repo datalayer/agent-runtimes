@@ -106,7 +106,9 @@ export function useExampleAgentRuntime(
     // (e.g. http://localhost:8765); the Jupyter sandbox lives elsewhere
     // (`runtime.agentBaseUrl`). For cloud runs the per-agent runtime URL
     // (`runtime.agentBaseUrl`) hosts the API, so prefer it when present.
-    const agentApiBaseUrl = isCloud ? runtime?.agentBaseUrl || baseUrl : baseUrl;
+    const agentApiBaseUrl = isCloud
+      ? runtime?.agentBaseUrl || baseUrl
+      : baseUrl;
     agentSummaryStore.getState().setActive({
       exampleId,
       agentName,

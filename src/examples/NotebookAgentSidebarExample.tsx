@@ -14,7 +14,8 @@
  *
  * To run this example:
  * 1. Start the agent-runtimes server: `npm run start:ag-ui`
- * 2. Create a .env file with VITE_BASE_URL if not using defaults
+ * 2. Optionally set `VITE_DATALAYER_AGENT_RUNTIMES_URL` (and
+ *    `VITE_DATALAYER_RUNTIMES_URL` for cloud target) when overriding defaults.
  *
  * @module examples/NotebookAgentSidebarExample
  */

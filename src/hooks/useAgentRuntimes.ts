@@ -245,8 +245,7 @@ export interface RuntimeEnvironmentDetails {
   gpu?: string;
 }
 
-const RUNTIME_ENVIRONMENT_META_KEY =
-  '__datalayerRuntimeEnvironmentDetails';
+const RUNTIME_ENVIRONMENT_META_KEY = '__datalayerRuntimeEnvironmentDetails';
 
 type RuntimeEnvironmentCarrier = {
   [RUNTIME_ENVIRONMENT_META_KEY]?: RuntimeEnvironmentDetails;
@@ -302,7 +301,9 @@ function resolveSandboxToken(payload: SandboxStatusResponse): string {
   if (direct) {
     return direct;
   }
-  return String(payload.sandbox?.jupyter_token || payload.sandbox?.token || '').trim();
+  return String(
+    payload.sandbox?.jupyter_token || payload.sandbox?.token || '',
+  ).trim();
 }
 
 function toOptionalString(value: unknown): string | undefined {
@@ -310,7 +311,9 @@ function toOptionalString(value: unknown): string | undefined {
   return normalized || undefined;
 }
 
-function resolveGpuLabel(resources: SandboxEnvironmentResources | null | undefined): string | undefined {
+function resolveGpuLabel(
+  resources: SandboxEnvironmentResources | null | undefined,
+): string | undefined {
   if (!resources) {
     return undefined;
   }
@@ -368,12 +371,15 @@ export function getServiceManagerRuntimeEnvironmentDetails(
   if (!manager) {
     return undefined;
   }
-  const carrier = manager as ServiceManager.IManager & RuntimeEnvironmentCarrier;
+  const carrier = manager as ServiceManager.IManager &
+    RuntimeEnvironmentCarrier;
   return carrier[RUNTIME_ENVIRONMENT_META_KEY];
 }
 
 function isInternalHost(value: string): boolean {
-  const host = String(value || '').trim().toLowerCase();
+  const host = String(value || '')
+    .trim()
+    .toLowerCase();
   return host === '127.0.0.1' || host === '0.0.0.0' || host === 'localhost';
 }
 
@@ -397,7 +403,9 @@ export async function createServiceManagerFromAgentSandbox(
   let tokenFromStatus = '';
   let payloadFromStatus: SandboxStatusResponse | null = null;
 
-  const agentBaseUrl = String(info.agentBaseUrl || '').trim().replace(/\/$/, '');
+  const agentBaseUrl = String(info.agentBaseUrl || '')
+    .trim()
+    .replace(/\/$/, '');
   const agentId = String(info.agentId || '').trim();
   const bearer = String(authToken || '').trim();
   if (agentBaseUrl && agentId && bearer) {
@@ -414,9 +422,9 @@ export async function createServiceManagerFromAgentSandbox(
         if (!response.ok) {
           continue;
         }
-        const payload = (await response.json().catch(() => null)) as
-          | SandboxStatusResponse
-          | null;
+        const payload = (await response
+          .json()
+          .catch(() => null)) as SandboxStatusResponse | null;
         if (!payload) {
           continue;
         }
@@ -446,8 +454,11 @@ export async function createServiceManagerFromAgentSandbox(
   let tokenFromIngress = '';
   try {
     const parsed = new URL(resolvedIngress);
-    tokenFromIngress =
-      String(parsed.searchParams.get('token') || parsed.searchParams.get('jupyter_token') || '').trim();
+    tokenFromIngress = String(
+      parsed.searchParams.get('token') ||
+        parsed.searchParams.get('jupyter_token') ||
+        '',
+    ).trim();
     parsed.searchParams.delete('token');
     parsed.searchParams.delete('jupyter_token');
     ingress = parsed.toString().replace(/\/$/, '');
@@ -468,7 +479,8 @@ export async function createServiceManagerFromAgentSandbox(
     info.runtimeEnvironment,
   );
   if (runtimeEnvironment) {
-    const carrier = manager as ServiceManager.IManager & RuntimeEnvironmentCarrier;
+    const carrier = manager as ServiceManager.IManager &
+      RuntimeEnvironmentCarrier;
     carrier[RUNTIME_ENVIRONMENT_META_KEY] = runtimeEnvironment;
   }
   return manager;

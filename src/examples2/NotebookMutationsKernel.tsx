@@ -70,7 +70,9 @@ const NotebookMutationsKernel = () => {
   };
   const changeIndex = (index: number) => {
     setIndex(index);
-    setJupyterServerToken(getJupyterServerToken() || LOCAL_JUPYTER_SERVER_TOKEN);
+    setJupyterServerToken(
+      getJupyterServerToken() || LOCAL_JUPYTER_SERVER_TOKEN,
+    );
     switch (index) {
       case 0: {
         setNbformat(getCurrentNotebookContent());
