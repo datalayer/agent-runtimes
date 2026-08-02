@@ -326,6 +326,125 @@ export interface ResumeRuntimeBody {
 }
 
 /**
+ * Persisted memory record returned by ``/api/runtimes/v1/memories``.
+ */
+export interface RuntimeMemory {
+  id: string;
+  memory?: string | null;
+  hash?: string | null;
+  user_id?: string | null;
+  agent_id?: string | null;
+  run_id?: string | null;
+  actor_id?: string | null;
+  role?: string | null;
+  scope?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Response payload for listing persisted runtime memories.
+ */
+export interface ListRuntimeMemoriesResponse {
+  success: boolean;
+  message?: string;
+  count: number;
+  limit: number;
+  offset: number;
+  user_id?: string;
+  memories: RuntimeMemory[];
+}
+
+/**
+ * Response payload for fetching one persisted memory.
+ */
+export interface GetRuntimeMemoryResponse {
+  success: boolean;
+  message?: string;
+  memory: RuntimeMemory;
+}
+
+/**
+ * Query options for listing persisted runtime memories.
+ */
+export interface ListRuntimeMemoriesOptions {
+  userId?: string;
+  agentId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * List persisted memories from the runtimes API.
+ *
+ * Non-admin callers are automatically scoped to their own personal account by
+ * the backend, even when ``userId`` is omitted.
+ */
+export const listRuntimeMemories = async (
+  token: string,
+  options: ListRuntimeMemoriesOptions = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<ListRuntimeMemoriesResponse> => {
+  validateToken(token);
+
+  const query = new URLSearchParams();
+  if (options.userId?.trim()) {
+    query.set('user_id', options.userId.trim());
+  }
+  if (options.agentId?.trim()) {
+    query.set('agent_id', options.agentId.trim());
+  }
+  if (typeof options.limit === 'number' && Number.isFinite(options.limit)) {
+    query.set('limit', String(Math.max(1, Math.min(1000, Math.floor(options.limit)))));
+  }
+  if (typeof options.offset === 'number' && Number.isFinite(options.offset)) {
+    query.set('offset', String(Math.max(0, Math.floor(options.offset))));
+  }
+
+  const qs = query.toString();
+  const response = await requestDatalayerAPI<any>({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories${qs ? `?${qs}` : ''}`,
+    method: 'GET',
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    message: response?.message,
+    count: Number(response?.count ?? 0),
+    limit: Number(response?.limit ?? options.limit ?? 100),
+    offset: Number(response?.offset ?? options.offset ?? 0),
+    user_id: response?.user_id,
+    memories: Array.isArray(response?.memories) ? response.memories : [],
+  };
+};
+
+/**
+ * Fetch one persisted memory by id from the runtimes API.
+ */
+export const getRuntimeMemory = async (
+  token: string,
+  memoryId: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<GetRuntimeMemoryResponse> => {
+  validateToken(token);
+  validateRequiredString(memoryId, 'Memory id');
+
+  const response = await requestDatalayerAPI<any>({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories/${encodeURIComponent(memoryId)}`,
+    method: 'GET',
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    message: response?.message,
+    memory: response?.memory as RuntimeMemory,
+  };
+};
+
+/**
  * Resume a paused runtime by restoring from a checkpoint (async).
  *
  * Returns immediately with a 202 Accepted response.  The actual restore

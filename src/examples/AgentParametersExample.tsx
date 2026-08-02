@@ -396,6 +396,7 @@ const AgentParametersExample: React.FC = () => {
       placeholder="Ask something about your configured project..."
       description={`Role: ${String(formData.role ?? 'n/a')} · Tone: ${String(formData.tone ?? 'n/a')}`}
       showHeader={true}
+      kernelIndicatorPlacement="right"
       showModelSelector={true}
       showToolsMenu={true}
       showSkillsMenu={true}

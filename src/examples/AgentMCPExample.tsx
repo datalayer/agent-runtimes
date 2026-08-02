@@ -645,6 +645,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             brandIcon={<GlobeIcon size={16} />}
             placeholder="Ask the agent to search the web or explore GitHub..."
             showHeader={true}
+            kernelIndicatorPlacement="right"
             showNewChatButton={true}
             showClearButton={true}
             showToolsMenu={true}

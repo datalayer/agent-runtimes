@@ -551,6 +551,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
           placeholder="Ask both agents the same request to compare behavior..."
           description={config.subtitle}
           showHeader={true}
+          kernelIndicatorPlacement="right"
           headerActions={
             isReconnectedAgent ? (
               <Label size="small" variant="attention">

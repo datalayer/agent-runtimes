@@ -21,55 +21,55 @@ describe('Runtimes Healthz Integration Tests', () => {
   describe.skipIf(skipIfNoToken() || skipInCi || !runExternalIntegration)(
     'ping endpoint',
     () => {
-    it('should successfully ping the Runtimes service', async () => {
-      console.log('Testing health check ping endpoint for Runtimes...');
+      it('should successfully ping the Runtimes service', async () => {
+        console.log('Testing health check ping endpoint for Runtimes...');
 
-      const response = await healthz.ping(testConfig.getBaseUrl('RUNTIMES'));
+        const response = await healthz.ping(testConfig.getBaseUrl('RUNTIMES'));
 
-      // Log response for debugging
-      console.log('Ping response:', JSON.stringify(response, null, 2));
+        // Log response for debugging
+        console.log('Ping response:', JSON.stringify(response, null, 2));
 
-      // Verify response structure
-      expect(response).toBeDefined();
-      expect(response.success).toBe(true);
-      expect(response.message).toBeDefined();
+        // Verify response structure
+        expect(response).toBeDefined();
+        expect(response.success).toBe(true);
+        expect(response.message).toBeDefined();
 
-      // Log success
-      console.log('Runtimes health check successful');
-      console.log('Success:', response.success);
-      console.log('Message:', response.message);
-      if (response.status) {
-        console.log('Status:', response.status);
-      }
-      if (response.version) {
-        console.log('Version:', response.version);
-      }
-    });
+        // Log success
+        console.log('Runtimes health check successful');
+        console.log('Success:', response.success);
+        console.log('Message:', response.message);
+        if (response.status) {
+          console.log('Status:', response.status);
+        }
+        if (response.version) {
+          console.log('Version:', response.version);
+        }
+      });
 
-    it('should work with default URL if not specified', async () => {
-      console.log('Testing health check with default URL...');
+      it('should work with default URL if not specified', async () => {
+        console.log('Testing health check with default URL...');
 
-      // Use default URL (should use production)
-      const response = await healthz.ping();
+        // Use default URL (should use production)
+        const response = await healthz.ping();
 
-      expect(response).toBeDefined();
-      expect(response.success).toBe(true);
-      expect(response.message).toBeDefined();
+        expect(response).toBeDefined();
+        expect(response.success).toBe(true);
+        expect(response.message).toBeDefined();
 
-      console.log('Successfully pinged Runtimes service with default URL');
-    });
+        console.log('Successfully pinged Runtimes service with default URL');
+      });
 
-    it('should fail with invalid URL', async () => {
-      console.log('Testing health check with invalid URL...');
+      it('should fail with invalid URL', async () => {
+        console.log('Testing health check with invalid URL...');
 
-      const invalidUrl = 'https://invalid.datalayer.run';
+        const invalidUrl = 'https://invalid.datalayer.run';
 
-      await expect(healthz.ping(invalidUrl)).rejects.toThrow(
-        'Health check failed',
-      );
+        await expect(healthz.ping(invalidUrl)).rejects.toThrow(
+          'Health check failed',
+        );
 
-      console.log('Correctly failed with invalid URL');
-    });
+        console.log('Correctly failed with invalid URL');
+      });
     },
   );
 });

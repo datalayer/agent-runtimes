@@ -596,6 +596,9 @@ export interface ChatCommonProps {
   /** Optional sandbox status override for immediate UI updates. */
   sandboxStatusData?: SandboxWsStatus | null;
 
+  /** Horizontal placement for the header kernel indicator. @default 'left' */
+  kernelIndicatorPlacement?: 'left' | 'center' | 'right';
+
   /**
    * Live kernel connection of the companion notebook/document sandbox.
    * When provided, it is forwarded to the chat header's `<KernelIndicator>`
@@ -814,6 +817,9 @@ export interface ChatBaseProps {
 
   /** Notebook kernel indicator state override for the chat header. */
   kernelIndicatorState?: import('@datalayer/jupyter-react').ExecutionState;
+
+  /** Horizontal placement for the header kernel indicator. @default 'left' */
+  kernelIndicatorPlacement?: 'left' | 'center' | 'right';
 
   /**
    * Live notebook kernel connection. When provided, the chat header

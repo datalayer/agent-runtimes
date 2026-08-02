@@ -319,6 +319,7 @@ export function Chat({
   codemodeStatusData,
   sandboxStatusData,
   kernel,
+  kernelIndicatorPlacement,
   kernelEnvironmentName,
   kernelCpu,
   kernelMemory,
@@ -747,6 +748,7 @@ export function Chat({
               mcpStatusData={mcpStatusData}
               sandboxStatusData={sandboxStatusData}
               kernel={kernel}
+              kernelIndicatorPlacement={kernelIndicatorPlacement}
               kernelEnvironmentName={kernelEnvironmentName}
               kernelCpu={kernelCpu}
               kernelMemory={kernelMemory}

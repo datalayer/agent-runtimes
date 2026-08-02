@@ -795,6 +795,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
           placeholder="Ask something that triggers tools…"
           description="Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)"
           showHeader={true}
+          kernelIndicatorPlacement="right"
           showTokenUsage={true}
           errorBanner={overBudgetBanner}
           disableInputPrompt={isOverRunBudget}

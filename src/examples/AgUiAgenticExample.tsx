@@ -198,6 +198,7 @@ const AgUiAgenticExample: React.FC = () => {
         {/* Floating chat */}
         {agenticChatEndpoint && (
           <ChatFloating
+            kernelIndicatorPlacement="right"
             protocol="ag-ui"
             endpoint={agenticChatEndpoint}
             title="Agentic Chat"

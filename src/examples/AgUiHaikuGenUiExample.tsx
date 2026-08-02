@@ -306,6 +306,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
             launching state so the chat appears instantly while the managed
             agent runtime is still starting. */}
         <ChatFloating
+          kernelIndicatorPlacement="right"
           protocol="ag-ui"
           endpoint={haikuGenUiEndpoint}
           launching={!haikuGenUiEndpoint}

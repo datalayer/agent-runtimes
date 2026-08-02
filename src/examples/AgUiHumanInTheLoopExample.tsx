@@ -467,6 +467,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
         {/* Floating chat with tool rendering */}
         {humanInTheLoopEndpoint && (
           <ChatFloating
+            kernelIndicatorPlacement="right"
             protocol="ag-ui"
             endpoint={humanInTheLoopEndpoint}
             title="Task Planner"

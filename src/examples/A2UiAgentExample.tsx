@@ -750,6 +750,7 @@ const A2UiAgentExample: React.FC = () => {
                 description="Generate interactive A2UI surfaces"
                 placeholder="Describe the UI you want..."
                 showHeader={true}
+                kernelIndicatorPlacement="right"
                 showModelSelector={true}
                 showToolsMenu={true}
                 showSkillsMenu={true}

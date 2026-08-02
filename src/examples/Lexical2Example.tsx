@@ -392,6 +392,7 @@ export function ChatLexicalExampleInner({
 
       {/* Floating Chat */}
       <ChatFloating
+        kernelIndicatorPlacement="right"
         useStore={true}
         title="AI Assistant"
         position="bottom-right"

@@ -252,6 +252,11 @@ typedoc: # typedoc
 docs: pydoc typedoc ## build the api docs and serve the docs
 	cd docs && npm run start
 
+start: ## start – local-first (local agent-runtimes + local jupyter-server)
+	$(BEDROCK_ENV) \
+	$(EXAMPLES_LOCAL_ENV) \
+		npm run examples
+
 examples: ## examples – local-first (local agent-runtimes + local jupyter-server)
 	$(BEDROCK_ENV) \
 	$(EXAMPLES_LOCAL_ENV) \

@@ -180,6 +180,11 @@ def build_memory_capability(
 
     Returns ``None`` for ephemeral/unset memory so no capability is added when
     durable memory is not requested.
+
+    ``user_id`` must be the trusted personal-account identity of the runtime
+    owner (see ``memory.identity.resolve_memory_identity``). Memories are
+    persisted under the composite ``(user_id, agent_id)`` key: the user is
+    the ownership boundary and the agent uid namespaces memories per agent.
     """
     if not memory_type or memory_type == "ephemeral":
         return None

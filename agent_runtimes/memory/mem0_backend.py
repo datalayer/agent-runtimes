@@ -23,15 +23,23 @@ logger = logging.getLogger(__name__)
 class Mem0Backend(BaseMemoryBackend):
     """Memory backend powered by Mem0.
 
+    Stored memories are keyed by the composite ``(user_id, agent_id)``: the
+    user (personal account) is the ownership boundary that memories never
+    cross, and the agent uid namespaces memories per agent within that user.
+
     Parameters
     ----------
     user_id : str
-        User identifier for memory isolation.
+        Effective user identifier (personal account). It is the trusted
+        ownership boundary for stored memories (derived from the runtime
+        environment, never from the caller) and forms the persistence key
+        together with ``agent_id``.
     config : dict | None
         Mem0 configuration (vector store, embedding model, etc.).
         If None, uses Mem0 defaults.
     agent_id : str | None
-        Optional agent identifier for agent-specific memories.
+        Agent uid. Combined with ``user_id`` as the persistence key so each
+        agent has its own memory namespace within the user's account.
     """
 
     def __init__(
@@ -79,8 +87,9 @@ class Mem0Backend(BaseMemoryBackend):
             kwargs: dict[str, Any] = {"user_id": self.user_id}
             if self.agent_id:
                 kwargs["agent_id"] = self.agent_id
-            if metadata:
-                kwargs["metadata"] = metadata
+            scoped_metadata: dict[str, Any] = dict(metadata or {})
+            scoped_metadata.setdefault("scope", "agent" if self.agent_id else "user")
+            kwargs["metadata"] = scoped_metadata
             memory.add(messages, **kwargs)
             logger.debug(
                 "Added %d messages to Mem0 (user=%s)", len(messages), self.user_id

@@ -467,6 +467,7 @@ function LexicalWithChat({
 
       {effectiveReady && (
         <ChatFloating
+          kernelIndicatorPlacement="right"
           protocol="vercel-ai"
           endpoint={vercelAiEndpoint}
           title="Lexical AI Agent Runtime"

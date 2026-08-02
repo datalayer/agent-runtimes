@@ -204,6 +204,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
         {/* Floating chat with inline tool rendering */}
         {backendToolRenderingEndpoint && (
           <ChatFloating
+            kernelIndicatorPlacement="right"
             protocol="ag-ui"
             endpoint={backendToolRenderingEndpoint}
             title="Weather Assistant"

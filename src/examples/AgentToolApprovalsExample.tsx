@@ -280,6 +280,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             brandIcon={<CheckCircleIcon size={16} />}
             placeholder="Ask for actions that require approval..."
             showHeader={true}
+            kernelIndicatorPlacement="right"
             showNewChatButton={true}
             showClearButton={true}
             showTokenUsage={true}

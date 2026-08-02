@@ -1221,6 +1221,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 brandIcon={<ZapIcon size={16} />}
                 description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
                 showHeader={true}
+                kernelIndicatorPlacement="right"
                 autoFocus={false}
                 height="100%"
                 runtimeId={agentId}

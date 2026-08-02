@@ -28,4 +28,32 @@ describe('Runtimes API', () => {
     expect(requestDatalayerAPI).toHaveBeenCalled();
     expect(result).toEqual(mockResponse);
   });
+
+  it('should list runtime memories with query params', async () => {
+    const mockResponse = {
+      success: true,
+      count: 1,
+      limit: 10,
+      offset: 0,
+      memories: [{ id: 'm-1', memory: 'remember this' }],
+    };
+    vi.mocked(requestDatalayerAPI).mockResolvedValue(mockResponse);
+
+    const result = await runtimes.listRuntimeMemories(MOCK_JWT_TOKEN, {
+      agentId: 'agent-1',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(requestDatalayerAPI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'GET',
+        token: MOCK_JWT_TOKEN,
+      }),
+    );
+    const call = vi.mocked(requestDatalayerAPI).mock.calls.at(0)?.[0] as any;
+    expect(String(call?.url || '')).toContain('/api/runtimes/v1/memories');
+    expect(String(call?.url || '')).toContain('agent_id=agent-1');
+    expect(result.memories).toHaveLength(1);
+  });
 });

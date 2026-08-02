@@ -15,6 +15,7 @@ from .base import BaseMemoryBackend
 from .capability import MemoryCapability, build_memory_capability
 from .config import resolve_mem0_config
 from .ephemeral import EphemeralMemory
+from .identity import MemoryIdentity, resolve_memory_identity
 from .mem0_backend import Mem0Backend
 from .registry import (
     create_memory_backend,
@@ -27,6 +28,8 @@ __all__ = [
     "BaseMemoryBackend",
     "EphemeralMemory",
     "Mem0Backend",
+    "MemoryIdentity",
+    "resolve_memory_identity",
     "resolve_mem0_config",
     "MemoryCapability",
     "build_memory_capability",

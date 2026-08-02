@@ -90,6 +90,8 @@ export interface ChatBaseHeaderProps {
   padding: number;
   /** Optional kernel indicator state override from notebook runtime. */
   kernelIndicatorState?: ExecutionState;
+  /** Horizontal placement for the kernel indicator in the title row. */
+  kernelIndicatorPlacement?: 'left' | 'center' | 'right';
   /**
    * Runtime status from agent-runtimes sandbox status stream.
    * Uses the same execution-state model as KernelIndicator.
@@ -148,6 +150,7 @@ export function ChatBaseHeader({
   onInformationClick,
   padding,
   kernelIndicatorState,
+  kernelIndicatorPlacement = 'left',
   runtimeStatus,
   kernel,
   kernelEnvironmentName,
@@ -168,12 +171,34 @@ export function ChatBaseHeader({
 }: ChatBaseHeaderProps) {
   const effectiveIndicatorState =
     kernelIndicatorState ?? toRuntimeExecutionState(runtimeStatus);
+  const kernelIndicatorElement = kernel ? (
+    <KernelIndicator
+      kernel={kernel}
+      environmentName={kernelEnvironmentName}
+      cpu={kernelCpu}
+      memory={kernelMemory}
+      gpu={kernelGpu}
+      position="s"
+      bordered={false}
+    />
+  ) : (
+    <KernelIndicator
+      state={effectiveIndicatorState ?? 'undefined'}
+      environmentName={kernelEnvironmentName}
+      cpu={kernelCpu}
+      memory={kernelMemory}
+      gpu={kernelGpu}
+      position="s"
+      bordered={false}
+    />
+  );
 
   return (
     <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
+        bg: 'canvas.default',
         borderBottom: '1px solid',
         borderColor: 'border.default',
       }}
@@ -196,29 +221,8 @@ export function ChatBaseHeader({
             flex: '1 1 auto',
           }}
         >
+          {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
           {brandIcon || <AiAgentIcon colored size={20} />}
-          {/* Runtime status indicator: shown between leading icon and title. */}
-          {kernel ? (
-            <KernelIndicator
-              kernel={kernel}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-              position="s"
-              bordered={false}
-            />
-          ) : (
-            <KernelIndicator
-              state={effectiveIndicatorState ?? 'undefined'}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-              position="s"
-              bordered={false}
-            />
-          )}
           {(title || subtitle) && (
             <Box
               sx={{
@@ -270,11 +274,13 @@ export function ChatBaseHeader({
               onClick={onInformationClick}
             />
           )}
+          {kernelIndicatorPlacement === 'center' && kernelIndicatorElement}
         </Box>
 
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
+          {kernelIndicatorPlacement === 'right' && kernelIndicatorElement}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (
             <IconButton

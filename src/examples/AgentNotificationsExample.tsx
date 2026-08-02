@@ -380,6 +380,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
             placeholder="Ask the agent to send you notifications…"
             description={`${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`}
             showHeader={true}
+            kernelIndicatorPlacement="right"
             autoFocus
             height="100%"
             runtimeId={podName}

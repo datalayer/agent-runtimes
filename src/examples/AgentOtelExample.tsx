@@ -427,6 +427,7 @@ const AgentOtelExampleInner: React.FC<{
 
         {/* ── Agent sidebar ────────────────────────────────────────── */}
         <ChatSidebar
+          kernelIndicatorPlacement="right"
           title="AI Agent"
           protocol={protocolConfig}
           position="right"

@@ -281,6 +281,7 @@ const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
       description={`Spec ${activeOption.specId} (${activeOption.variant})`}
       brandIcon={<PackageIcon size={16} />}
       showHeader={true}
+      kernelIndicatorPlacement="right"
       showModelSelector={true}
       showToolsMenu={true}
       showSkillsMenu={true}

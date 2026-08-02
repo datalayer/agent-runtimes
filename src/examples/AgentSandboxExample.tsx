@@ -542,6 +542,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
       <Box
         sx={{
           p: 2,
+          bg: 'canvas.default',
           borderBottom: '1px solid',
           borderColor: 'border.default',
         }}
@@ -790,6 +791,7 @@ const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
               brandIcon={<TerminalIcon size={16} />}
               placeholder="Ask the agent to write and run code…"
               showHeader={true}
+              kernelIndicatorPlacement="right"
               showNewChatButton={true}
               showClearButton={true}
               showTokenUsage={true}

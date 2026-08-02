@@ -381,6 +381,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             brandIcon={<BriefcaseIcon size={16} />}
             placeholder="Ask the agent to use its skills..."
             showHeader={true}
+            kernelIndicatorPlacement="right"
             showNewChatButton={true}
             showClearButton={true}
             showTokenUsage={true}

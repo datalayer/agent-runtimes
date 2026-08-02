@@ -1617,6 +1617,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                           title:
                             currentAgent?.name || agentName || 'AI Assistant',
                           brandIcon: <AgentIcon size={16} />,
+                          kernelIndicatorPlacement: 'right',
                           autoConnect: true,
                           autoFocus: true,
                           placeholder: 'Type your message to the agent...',

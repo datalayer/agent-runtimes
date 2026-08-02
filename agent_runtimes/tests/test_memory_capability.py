@@ -127,7 +127,9 @@ def test_build_forwards_memory_config(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     cfg = {"vector_store": {"provider": "sqlite", "config": {"path": "/tmp/mem.db"}}}
-    cap = build_memory_capability("mem0", user_id="u2", agent_id="a2", config=cfg)
+    cap = build_memory_capability(
+        "mem0", user_id="u2", agent_id="a2", config=cfg
+    )
     assert isinstance(cap, MemoryCapability)
     assert seen["memory_type"] == "mem0"
     assert seen["user_id"] == "u2"

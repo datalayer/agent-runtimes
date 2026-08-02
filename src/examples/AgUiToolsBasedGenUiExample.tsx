@@ -523,6 +523,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
         {/* Floating chat */}
         {agenticGenerativeUiEndpoint && (
           <ChatFloating
+            kernelIndicatorPlacement="right"
             protocol="ag-ui"
             endpoint={agenticGenerativeUiEndpoint}
             title="Plan Generator"

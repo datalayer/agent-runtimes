@@ -161,6 +161,309 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 // Agent Specs
 // ============================================================================
 
+export const AGENTIFY_BUSINESS_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'agentify-business-marketer',
+  version: '0.0.1',
+  name: 'Business Marketer',
+  description: `Monitors trends and relevant conversations across LinkedIn, X, and Bluesky. Using connected MCP tools, it identifies engagement opportunities, recommends people to connect with, and drafts or publishes platform-specific content.`,
+  tags: ['marketing', 'social-media', 'monitoring'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1'], MCP_SERVER_MAP['slack:0.0.1']],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [
+    TOOL_MAP['runtime-echo:0.0.1'],
+    TOOL_MAP['runtime-sensitive-echo:0.0.1'],
+  ],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'megaphone',
+  emoji: '📣',
+  color: '#8B5CF6',
+  suggestions: [
+    'What conversations should I engage with today?',
+    'Recommend 5 people worth connecting with this week',
+    'Draft a LinkedIn post about our latest launch',
+    'Turn this announcement into an X thread and a Bluesky post',
+  ],
+  welcomeMessage:
+    "Hi! I'm your Business Marketer. I watch trends and conversations across LinkedIn, X, and Bluesky, flag the best engagement opportunities, suggest who to connect with, and draft platform-ready content. I'll always ask before publishing.",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a social media marketing agent for a business. Your responsibilities: - Monitor trends and relevant conversations across LinkedIn, X, and Bluesky
+  using the connected MCP tools.
+- Identify timely engagement opportunities and prioritize them by relevance
+  and potential reach.
+- Recommend specific people and accounts worth connecting with, and explain
+  why each is a good fit.
+- Draft platform-specific content that matches each channel's tone, format,
+  and length conventions.
+- Only publish content after receiving explicit human approval; never post
+  autonomously.
+- Maintain a consistent brand voice and remember prior campaigns and
+  engagements across sessions.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Monitor social conversations across LinkedIn, X, and Bluesky, identify timely engagement opportunities and people worth connecting with, and draft or publish platform-specific content that fits each channel's audience.`,
+  protocol: 'vercel-ai',
+  uiExtension: 'a2ui',
+  trigger: undefined,
+  modelConfig: { temperature: 0.6, max_tokens: 4096 },
+  mcpServerTools: [
+    {
+      server: 'LinkedIn',
+      tools: [
+        { name: 'search_conversations', approval: 'auto' },
+        { name: 'recommend_connections', approval: 'auto' },
+        { name: 'publish_post', approval: 'manual' },
+      ],
+    },
+    {
+      server: 'X',
+      tools: [
+        { name: 'search_conversations', approval: 'auto' },
+        { name: 'publish_post', approval: 'manual' },
+      ],
+    },
+    {
+      server: 'Bluesky',
+      tools: [
+        { name: 'search_conversations', approval: 'auto' },
+        { name: 'publish_post', approval: 'manual' },
+      ],
+    },
+  ],
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: true, token_reduction: '~90%', speedup: '~2× faster' },
+  output: { type: 'Markdown', template: 'engagement_plan_template.md' },
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'mem0',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const AGENTIFY_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'agentify-customer-interviewer',
+  version: '0.0.1',
+  name: 'Customer Interviewer',
+  description: `Conducts adaptive, AI-led interviews that respond intelligently to each answer. It asks relevant follow-up questions, uncovers motivations and decision-making patterns, and transforms conversations into structured, actionable insights.`,
+  tags: ['research', 'customer-support', 'analysis'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'comment-discussion',
+  emoji: '🎙️',
+  color: '#0EA5E9',
+  suggestions: [
+    'Start an interview about why I chose this product',
+    'Interview me about my onboarding experience',
+    'Ask follow-up questions to understand my decision process',
+    'Summarize this interview into structured insights',
+  ],
+  welcomeMessage:
+    "Hi! I'm your Customer Interviewer. I'll ask a few open questions and adapt as we go — following up on what you share to understand your motivations and decisions. At the end, I'll turn our conversation into structured, actionable insights.",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are an expert qualitative researcher conducting an adaptive customer interview. Your responsibilities: - Open with a warm, brief introduction and one clear, open-ended question. - Ask ONE question at a time and listen carefully to each answer. - Adapt dynamically: generate follow-up questions based on what the
+  interviewee just said, probing for the "why" behind their answers.
+- Uncover motivations, pain points, decision-making criteria, and trade-offs
+  rather than accepting surface-level responses.
+- Avoid leading questions and never put words in the interviewee's mouth. - Keep the interview to roughly {{max_questions}} questions, then close
+  gracefully.
+- After the interview, transform the conversation into structured, actionable
+  insights: key motivations, decision drivers, objections, notable quotes,
+  and recommended next steps.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Conduct an adaptive, AI-led customer interview that reacts to each answer, asks relevant follow-up questions to uncover motivations and decision-making patterns, and produces a structured set of actionable insights.`,
+  protocol: 'vercel-ai',
+  uiExtension: 'a2ui',
+  trigger: undefined,
+  modelConfig: { temperature: 0.7, max_tokens: 4096 },
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: { type: 'JSON', template: 'interview_insights_schema.json' },
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'mem0',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: {
+    type: 'object',
+    properties: {
+      research_goal: {
+        type: 'string',
+        title: 'Research Goal',
+        description: 'What you want to learn from this interview.',
+        default:
+          'Understand why customers choose our product over alternatives.',
+      },
+      persona: {
+        type: 'string',
+        title: 'Interviewee Persona',
+        description: 'Who is being interviewed.',
+        default: 'Recently onboarded customer',
+      },
+      max_questions: {
+        type: 'integer',
+        title: 'Max Questions',
+        description: 'Approximate number of questions to ask.',
+        default: 12,
+      },
+    },
+    required: ['research_goal'],
+  },
+  subagents: undefined,
+};
+
+export const AGENTIFY_NEWS_AGGREGATOR_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'agentify-news-aggregator',
+  version: '0.0.1',
+  name: 'News Aggregator',
+  description: `Creates a personalized daily news briefing based on each user's preferred topics, sources, companies, and industries. It filters out noise, identifies important developments, and delivers a concise summary of what matters most.`,
+  tags: ['research', 'summarization', 'monitoring'],
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
+  skills: [
+    SKILL_MAP['text-summarizer:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['text-summarizer:0.0.1'])
+      : undefined,
+    SKILL_MAP['crawl:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
+      : undefined,
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1'], TOOL_MAP['runtime-send-mail:0.0.1']],
+  frontendTools: [
+    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
+    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
+  ],
+  environmentName: 'ai-agents-env',
+  icon: 'rss',
+  emoji: '📰',
+  color: '#EF4444',
+  suggestions: [
+    'Build my daily briefing for AI and cloud computing',
+    'Summarize the most important developments about my tracked companies',
+    'What changed in my industries since yesterday?',
+    'Give me a concise briefing and cite the sources',
+  ],
+  welcomeMessage:
+    "Hi! I'm your News Aggregator. Tell me the topics, sources, companies, and industries you care about, and I'll deliver a concise daily briefing of what matters most — with the noise filtered out.",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter',
+  systemPrompt: `You are a personalized news briefing agent. Your responsibilities: - Use Tavily web search to gather recent, credible news on the user's topics,
+  preferred sources, tracked companies, and industries.
+- Filter out low-signal, duplicate, and off-topic items. - Rank the remaining developments by importance and relevance to the user. - Produce a concise briefing: a short "what matters most" summary followed by
+  grouped highlights (by topic/company/industry), each with a one-line
+  takeaway and a cited source link.
+- Remember the user's stated preferences across sessions and refine the
+  briefing over time.
+- Never fabricate headlines or sources; only report items you actually found.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: `Produce a personalized daily news briefing covering the user's preferred topics, sources, companies, and industries, filtering out noise and surfacing the most important developments in a concise summary.`,
+  protocol: 'vercel-ai',
+  uiExtension: 'a2ui',
+  trigger: {
+    type: 'schedule',
+    cron: '0 7 * * *',
+    description: 'Every day at 7:00 AM UTC',
+    prompt:
+      'Search for the latest news on {{topics}} from {{sources}}, tracking {{companies}} across {{industries}}. Filter out noise, rank developments by importance, and produce a {{tone}} daily briefing with sources cited.',
+  },
+  modelConfig: { temperature: 0.3, max_tokens: 4096 },
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: { type: 'Markdown', template: 'daily_briefing_template.md' },
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'mem0',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: {
+    type: 'object',
+    properties: {
+      topics: {
+        type: 'string',
+        title: 'Topics',
+        description: 'Comma-separated topics of interest.',
+        default: 'artificial intelligence, cloud computing',
+      },
+      sources: {
+        type: 'string',
+        title: 'Preferred Sources',
+        description: 'Comma-separated preferred news sources or domains.',
+        default: 'reuters.com, techcrunch.com',
+      },
+      companies: {
+        type: 'string',
+        title: 'Companies to Track',
+        description: 'Comma-separated companies to follow.',
+        default: 'Datalayer, Anthropic',
+      },
+      industries: {
+        type: 'string',
+        title: 'Industries',
+        description: 'Comma-separated industries to monitor.',
+        default: 'developer tools, machine learning',
+      },
+      tone: {
+        type: 'string',
+        title: 'Briefing Tone',
+        enum: ['concise', 'detailed'],
+        default: 'concise',
+      },
+    },
+    required: ['topics'],
+  },
+  subagents: undefined,
+};
+
 export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
   id: 'example-a2ui-agent',
   version: '0.0.1',
@@ -168,7 +471,7 @@ export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
   description: `An AG-UI agent that generates interactive A2UI surfaces on demand. Describe a form, intake, configurator, survey or booking flow and the agent renders a validated, themeable A2UI surface you can fill in.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-render-a2ui-surface:0.0.1']],
@@ -239,7 +542,7 @@ export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
   description: `A basic conversational AG-UI agent that can chat and use a tool to get the current time in any timezone.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-current-time:0.0.1']],
@@ -284,7 +587,7 @@ export const EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   description: `An AG-UI agent that creates plans with steps and updates individual steps as progress is made using JSON Patch (RFC 6902) state deltas.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
@@ -347,7 +650,7 @@ export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
   description: `An AG-UI weather assistant that fetches real weather data with a backend tool for the frontend to render as a weather card.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-get-weather:0.0.1']],
@@ -407,7 +710,7 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Tavily MCP demo agent with codemode enabled. MCP tools can be composed through codemode execution flows.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -463,7 +766,7 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Evals runner variant with codemode disabled for A/B comparisons against example-evals in SDK eval examples.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -520,7 +823,7 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Default eval runner for local and cloud execution in SDK eval examples. Includes baseline tooling for reproducible eval runs.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -577,7 +880,7 @@ export const EXAMPLE_FULL_AGENTSPEC_0_0_1: Agentspec = {
   description: `A full-featured demonstration agent showcasing MCP servers (Tavily web search), skills (GitHub, PDF, crawl, events, text summarizer, jokes), human-in-the-loop tool approval, and frontend tools (Jupyter notebooks, Lexical documents).`,
   tags: ['document-processing', 'human-approval', 'notebook'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -660,7 +963,7 @@ export const EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Guardrails-focused example agent for AgentGuardrailsExample. Includes budget limits and a sensitive tool requiring manual approval.`,
   tags: ['workflow', 'human-approval', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -757,7 +1060,7 @@ export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   description: `An AG-UI agent that generates Japanese haiku with English translations and a gradient, rendered as cards by the frontend.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-generate-haiku:0.0.1']],
@@ -825,7 +1128,7 @@ export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates pre-hooks and post-hooks executed in the sandbox lifecycle.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
@@ -934,7 +1237,7 @@ export const EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1: Agentspec = {
   description: `An AG-UI agent that generates task plans requiring human review and approval before execution.`,
   tags: ['workflow', 'human-approval', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-generate-task-steps:0.0.1']],
@@ -998,7 +1301,7 @@ export const EXAMPLE_INFERENCE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates inference-provider switching (local vs datalayer) for a local agent runtime session.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   inferenceProvider: 'local',
   mcpServers: [],
   skills: [
@@ -1055,7 +1358,7 @@ export const EXAMPLE_MCP_AGENTSPEC_0_0_1: Agentspec = {
   description: `MCP-focused example agent for AgentMCPExample. It connects to the Tavily MCP server and demonstrates search/research style tool usage from the chat panel.`,
   tags: ['research', 'analysis', 'summarization'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1115,7 +1418,7 @@ export const EXAMPLE_MEMORY_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates durable conversational memory with the Mem0 backend. Persists user preferences and supports memory inspection/search.`,
   tags: ['customer-support', 'workflow', 'routing'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1171,7 +1474,7 @@ export const EXAMPLE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Monitoring-focused example agent for AgentMonitoringExample. It is intentionally lightweight so it starts reliably in local example runs.`,
   tags: ['monitoring', 'operations', 'performance'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1227,7 +1530,7 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Tavily MCP demo agent without codemode conversion. MCP tools are used directly without codemode orchestration.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1283,7 +1586,7 @@ export const EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates multi-channel notifications including in-app, email, and Slack style destinations with preference management.`,
   tags: ['monitoring', 'email', 'operations'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1339,7 +1642,7 @@ export const EXAMPLE_ONE_TRIGGER_APPROVAL_AGENTSPEC_0_0_1: Agentspec = {
   description: `A demonstration agent for the "once" trigger type with manual tool approval. When launched, the agent executes its trigger prompt once and invokes the runtime-sensitive-echo tool, which requires manual approval before execution. After completion, the runtime is terminated automatically.`,
   tags: ['workflow', 'human-approval', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-sensitive-echo:0.0.1']],
@@ -1388,7 +1691,7 @@ export const EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1: Agentspec = {
   description: `A demonstration agent for the "once" trigger type. When launched, the agent executes its trigger prompt exactly once, emits AGENT_STARTED and AGENT_ENDED lifecycle events, and then terminates the runtime automatically.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -1444,7 +1747,7 @@ export const EXAMPLE_OTEL_AGENTSPEC_0_0_1: Agentspec = {
   description: `OTEL observability example agent for AgentOtelExample. It assists the user in exploring traces, logs and metrics surfaced by the OTEL dashboard.`,
   tags: ['monitoring', 'visualization', 'operations'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1501,7 +1804,7 @@ export const EXAMPLE_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates structured response rendering (table, json, chart, and file) for the AgentOutputsExample sidebar output parser.`,
   tags: ['workflow', 'visualization', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -1565,7 +1868,7 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates launch-time parameterization with JSON schema validation.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -2085,7 +2388,7 @@ export const EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1: Agentspec = {
   description: `An AG-UI recipe-builder agent demonstrating bidirectional state synchronization between the agent and the UI.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['example-display-recipe:0.0.1']],
@@ -2144,7 +2447,7 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2202,7 +2505,7 @@ export const EXAMPLE_SKILLS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demo agent for skills usage with mixed discovery sources, including built-in file skills and package-registered skills like datalayer-whoami.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['crawl:0.0.1']
@@ -2277,7 +2580,7 @@ export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates multi-agent delegation with a parent orchestrator that can split work between a researcher and a writer subagent.`,
   tags: ['research', 'workflow', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2351,7 +2654,7 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Demonstrates per-tool approval hooks with policy requests and decision/audit logging.`,
   tags: ['compliance', 'human-approval', 'audit'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [
@@ -2442,7 +2745,7 @@ export const EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   description: `An AG-UI agent that renders rich content by calling frontend-defined render tools. The generative UI is produced by the frontend.`,
   tags: ['workflow', 'automation', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [],
@@ -2491,7 +2794,7 @@ export const GALLERY_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Work with Odoo accounting data to reconcile invoices and payments, analyze journal balances, and prepare close-ready summaries.`,
   tags: ['finance', 'accounting', 'reconciliation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['odoo:0.0.1']],
   skills: [
     SKILL_MAP['accounting:0.0.1']
@@ -2548,7 +2851,7 @@ export const GALLERY_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec =
     description: `Use a planner, executor, and critic agent loop to iteratively improve analysis quality and reduce logical errors in outputs.`,
     tags: ['analysis', 'data-quality', 'analytics'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -2602,7 +2905,7 @@ export const GALLERY_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1: Agentspec = {
   description: `Review SQL queries for correctness, performance, missing filters, risky joins, and opportunities to simplify the analysis.`,
   tags: ['analysis', 'sql', 'risk'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2656,7 +2959,7 @@ export const GALLERY_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Generate charts and dashboard-ready views from your data, then iterate by asking follow-up questions in natural language.`,
   tags: ['workflow', 'visualization', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2710,7 +3013,7 @@ export const GALLERY_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Turn raw cells, charts, and model outputs into an executive explanation that non-technical stakeholders can understand.`,
   tags: ['workflow', 'notebook', 'visualization'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2764,7 +3067,7 @@ export const GALLERY_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Describe the transformation you need and let AI generate, run, debug, and explain the Pandas code behind the result.`,
   tags: ['workflow', 'notebook', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -2818,7 +3121,7 @@ export const GALLERY_ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that unifies marketing data from Google Ads, Meta, TikTok, LinkedIn, GA4, CRM, and email platforms. Normalises metrics into a unified view, detects performance anomalies in real time, and generates budget reallocation recommendations to maximise ROAS.`,
   tags: ['marketing', 'analytics', 'email'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -2946,7 +3249,7 @@ export const GALLERY_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1: Agentspec = {
   description: `Upload a spreadsheet and get data cleaning, summary statistics, charts, anomalies, and a plain-English explanation of what matters.`,
   tags: ['analysis', 'excel', 'summarization'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -3000,7 +3303,7 @@ export const GALLERY_ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that triages incoming support tickets, categorizes by urgency and topic, identifies recurring patterns, and generates resolution recommendations with escalation paths.`,
   tags: ['customer-support', 'analytics', 'data-acquisition'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -3103,7 +3406,7 @@ export const GALLERY_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that monitors inventory levels across warehouses, detects discrepancies between physical and system counts, forecasts demand by SKU, and generates automated reorder recommendations.`,
   tags: ['finance', 'automation', 'inventory'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -3201,7 +3504,7 @@ export const GALLERY_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec =
     description: `A multi-agent team that automates end-to-end regulatory reporting for financial institutions. Ingests data from trading systems, risk engines, and accounting platforms, reconciles positions, computes risk metrics, validates against regulatory rules (Basel III/IV, MiFID II, SOX), and generates submission-ready compliance reports with full audit trails.`,
     tags: ['finance', 'compliance', 'regulatory'],
     enabled: false,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [
       MCP_SERVER_MAP['filesystem:0.0.1'],
       MCP_SERVER_MAP['slack:0.0.1'],
@@ -3323,7 +3626,7 @@ export const GALLERY_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1: Agentspec =
     description: `Turn a question into a complete Jupyter notebook with data loading, analysis, charts, explanations, and next steps.`,
     tags: ['analysis', 'notebook', 'visualization'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -3377,7 +3680,7 @@ export const GALLERY_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A generic email classification and routing agent. Analyzes incoming emails to determine intent (inquiry, complaint, order, support request), assigns priority (critical, high, medium, low), and routes to the appropriate department queue. Works across any industry with email-based workflows.`,
   tags: ['customer-support', 'email', 'routing'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['slack:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -3478,7 +3781,7 @@ export const GALLERY_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Compare two versions of a workbook, detect row-level and formula differences, and summarize what changed and why it matters.`,
   tags: ['analysis', 'excel', 'summarization'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -3532,7 +3835,7 @@ export const GALLERY_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Collect evidence from documents and data, flag missing information, and draft a structured compliance report for review.`,
   tags: ['compliance', 'reporting', 'document-processing'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -3587,7 +3890,7 @@ export const GALLERY_COMPREHENSIVE_SALES_ANALYTICS_AGENTSPEC_0_0_1: Agentspec =
     description: `A multi-agent team that replaces a single KPI monitor with four specialized agents: a Data Collector that pulls real-time CRM metrics, an Anomaly Detector that flags statistical outliers, a Trend Analyzer that identifies patterns and forecasts, and a Report Generator that compiles executive dashboards and sends alerts. Together they deliver deeper insights, faster detection, and richer reporting than any single agent could.`,
     tags: ['sales', 'analytics', 'kpi'],
     enabled: false,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [
       MCP_SERVER_MAP['filesystem:0.0.1'],
       MCP_SERVER_MAP['slack:0.0.1'],
@@ -3680,7 +3983,7 @@ export const GALLERY_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Compare a chat-heavy workflow with a code-first workflow and show where tokens, latency, and cost are reduced.`,
   tags: ['analysis', 'cost', 'reporting'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -3734,7 +4037,7 @@ export const GALLERY_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   description: `Web crawling and research agent that searches the web and GitHub repositories for information.`,
   tags: ['research', 'github', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -3813,7 +4116,7 @@ export const GALLERY_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Detect churn signals, rank at-risk customers, and generate a retention report with suggested next actions.`,
   tags: ['customer-support', 'analysis', 'risk'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -3867,7 +4170,7 @@ export const GALLERY_DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   description: `Acquires and manages data from various sources including Kaggle datasets and local filesystem operations.`,
   tags: ['data-acquisition', 'etl', 'pipeline'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['kaggle:0.0.1'],
     MCP_SERVER_MAP['filesystem:0.0.1'],
@@ -3950,7 +4253,7 @@ export const GALLERY_DOCUMENT_QA_AGENTSPEC_0_0_1: Agentspec = {
   description: `Ask questions across contracts, reports, policies, or research notes and receive cited answers with supporting context.`,
   tags: ['research', 'document-processing', 'qa'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4004,7 +4307,7 @@ export const GALLERY_END_OF_MONTH_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Consolidates and analyzes end-of-month retail sales data directly from Salesforce. Computes revenue performance vs targets by SKU, detects anomalies in bookings and discounting, explains variances by region/segment/product/SKU, and generates executive-ready sales performance reports with full data lineage.`,
   tags: ['finance', 'analytics', 'sales'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['salesforce:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -4204,7 +4507,7 @@ export const GALLERY_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Connect to a database, ask business questions, generate SQL, inspect results, and turn findings into charts or reports.`,
   tags: ['analysis', 'sql', 'database'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4258,7 +4561,7 @@ export const GALLERY_EXTRACT_DATA_FROM_FILES_AGENTSPEC_0_0_1: Agentspec = {
   description: `A generic data extraction agent that processes unstructured files (PDFs, scanned documents, spreadsheets, images with text) and extracts structured data — tables, key-value pairs, line items, totals. Outputs clean JSON or CSV ready for downstream systems. Applicable to invoices, receipts, forms, medical records, legal documents, and more.`,
   tags: ['data-acquisition', 'automation', 'document-processing'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -4364,7 +4667,7 @@ export const GALLERY_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1: Agentspec 
     description: `Pull revenue, margin, growth, and guidance metrics from quarterly reports and output a clean KPI table with source citations.`,
     tags: ['data-acquisition', 'kpi', 'reporting'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -4418,7 +4721,7 @@ export const GALLERY_FINANCIAL_RECONCILIATION_AGENTSPEC_0_0_1: Agentspec = {
   description: `Compare invoices, payments, accounting exports, and bank transactions to identify mismatches and explain exceptions.`,
   tags: ['finance', 'reconciliation', 'banking'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4472,7 +4775,7 @@ export const GALLERY_FINANCIAL_VIZ_AGENTSPEC_0_0_1: Agentspec = {
   description: `Analyzes financial market data and creates visualizations and charts.`,
   tags: ['finance', 'visualization', 'reporting'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['alphavantage:0.0.1'],
     MCP_SERVER_MAP['chart:0.0.1'],
@@ -4551,7 +4854,7 @@ export const GALLERY_FINANCIAL_AGENTSPEC_0_0_1: Agentspec = {
   description: `Analyzes financial market data and provides chart-ready insights.`,
   tags: ['finance', 'visualization', 'analysis'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['alphavantage:0.0.1']],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4627,7 +4930,7 @@ export const GALLERY_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1: Agentspec = {
   description: `One agent profiles the data, another cleans it, another charts it, another checks quality, and another writes the final summary.`,
   tags: ['analysis', 'summarization', 'data-quality'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4681,7 +4984,7 @@ export const GALLERY_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1: Agentspec = {
   description: `Run several analyses at the same time, compare their outputs, and merge the best findings into one final report.`,
   tags: ['workflow', 'notebook', 'reporting'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4735,7 +5038,7 @@ export const GALLERY_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Aggregates data across marketing, sales, and operations departments. Generates structured weekly reports with charts, KPI summaries, trend analysis, and executive-level takeaways.`,
   tags: ['sales', 'marketing', 'reporting'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -4851,7 +5154,7 @@ export const GALLERY_GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   description: `Manages GitHub repositories, issues, and pull requests with email notification capabilities.`,
   tags: ['workflow', 'github', 'email'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['google-workspace:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -4930,7 +5233,7 @@ export const GALLERY_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1: Agentspec = {
   description: `Use different models for different roles: one creates the plan, one writes code, one critiques the output, and one summarizes results.`,
   tags: ['workflow', 'summarization', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -4984,7 +5287,7 @@ export const GALLERY_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
   description: `Let AI prepare the work while humans approve sensitive actions, final reports, or external notifications before they happen.`,
   tags: ['workflow', 'human-approval', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5038,7 +5341,7 @@ export const GALLERY_INFORMATION_ROUTING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Routes information between Google Drive and other services, managing document workflows and information sharing.`,
   tags: ['data-acquisition', 'workflow', 'routing'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['google-workspace:0.0.1'],
     MCP_SERVER_MAP['github:0.0.1'],
@@ -5117,7 +5420,7 @@ export const GALLERY_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   description: `Group claims, detect unusual patterns, compare supporting documents, and prepare a review summary for human approval.`,
   tags: ['insurance', 'analysis', 'document-processing'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5171,7 +5474,7 @@ export const GALLERY_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Forecast product demand, identify stockout risk, and propose reorder quantities across SKUs, regions, and seasonal trends.`,
   tags: ['inventory', 'forecasting', 'planning'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5225,7 +5528,7 @@ export const GALLERY_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Launch a data workflow that can continue running, recover from interruptions, and return results when the job is complete.`,
   tags: ['operations', 'workflow', 'automation'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5279,7 +5582,7 @@ export const GALLERY_MARKETING_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Analyze campaign exports, traffic data, conversion funnels, and customer segments to find what is working and what is wasting spend.`,
   tags: ['marketing', 'analytics', 'performance'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5333,7 +5636,7 @@ export const GALLERY_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   description: `Compare studies, extract measurements, summarize findings, and prepare a research note for domain experts to validate.`,
   tags: ['healthcare', 'research', 'analysis'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5387,7 +5690,7 @@ export const GALLERY_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Monitor and analyze sales KPIs from the CRM system. Generate daily reports summarizing key performance metrics, identify trends, and flag anomalies. Send notifications when KPIs deviate more than 10% from targets.`,
   tags: ['sales', 'customer-support', 'kpi'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -5510,7 +5813,7 @@ export const GALLERY_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Split cleaning, validation, deduplication, normalization, and explanation into separate agents with a shared context.`,
   tags: ['data-acquisition', 'data-quality', 'etl'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5565,7 +5868,7 @@ export const GALLERY_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1: Agentspec 
     description: `Assign agents to anomaly detection, hypothesis generation, evidence review, and synthesis to produce root-cause findings.`,
     tags: ['analysis', 'analytics', 'reporting'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -5619,7 +5922,7 @@ export const GALLERY_OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Monitors competitor pricing across marketplaces, forecasts demand per SKU, and generates margin-optimised pricing recommendations in real time. Tracks 50K+ SKUs hourly across Amazon, Walmart, and niche channels, combining competitive intelligence with demand signals to maximise margins.`,
   tags: ['analytics', 'pricing', 'forecasting'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -5748,7 +6051,7 @@ export const GALLERY_OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that processes millions of IoT sensor data points from smart meters, substations, and renewable generation assets. Predicts equipment failures 2–4 weeks in advance, optimises load balancing across the grid, and reduces unplanned downtime by 50%.`,
   tags: ['operations', 'sustainability', 'automation'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -5864,7 +6167,7 @@ export const GALLERY_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec =
     description: `Profile slow SQL queries, identify bottlenecks, and suggest rewrites and index strategies with before/after performance notes.`,
     tags: ['workflow', 'sql', 'performance'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -5918,7 +6221,7 @@ export const GALLERY_PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that automates citizen request processing for government agencies. Classifies and triages permits, FOIA requests, and benefit claims from multiple channels. Models policy impacts across population datasets and ensures every automated decision is explainable, auditable, and compliant with transparency mandates.`,
   tags: ['compliance', 'government', 'audit'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -6042,7 +6345,7 @@ export const GALLERY_PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that automates clinical trial data processing across dozens of trial sites. Harmonises patient records and lab results to CDISC SDTM format, detects safety signals and adverse events in real time, and prepares submission-ready datasets — all with strict HIPAA and GxP compliance guardrails.`,
   tags: ['compliance', 'healthcare', 'regulatory'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -6169,7 +6472,7 @@ export const GALLERY_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1: Agentspec =
     description: `Processes and validates financial transactions across accounts. Reconciles balances, detects anomalies, enforces compliance rules, and generates audit-ready transaction reports.`,
     tags: ['finance', 'human-approval', 'transactions'],
     enabled: false,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
     skills: [
       SKILL_MAP['pdf:0.0.1']
@@ -6279,7 +6582,7 @@ export const GALLERY_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1: Agentspec = {
   description: `Ask for the tables, groupings, filters, and charts you would usually build by hand in Excel, then export the result.`,
   tags: ['workflow', 'excel', 'visualization'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -6334,7 +6637,7 @@ export const GALLERY_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1: Agentspec =
     description: `Execute long ETL pipelines with checkpointing and automatic resume so failures do not require restarting from scratch.`,
     tags: ['workflow', 'etl', 'data-quality'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -6389,7 +6692,7 @@ export const GALLERY_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1: Agentspec =
     description: `Let AI execute Python in a controlled runtime instead of only suggesting code you still need to copy and run manually.`,
     tags: ['operations', 'notebook', 'automation'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -6443,7 +6746,7 @@ export const GALLERY_SALES_FORECASTING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Use historical sales data to project future revenue, identify seasonality, and explain the assumptions behind the forecast.`,
   tags: ['sales', 'forecasting', 'analytics'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -6497,7 +6800,7 @@ export const GALLERY_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   description: `Build a board-ready sales pipeline report with stage conversion, weighted forecast, and regional performance insights.`,
   tags: ['sales', 'pipeline', 'reporting'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -6552,7 +6855,7 @@ export const GALLERY_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1: Agen
     description: `Run nightly validation jobs, detect schema and freshness drift, and send a morning report with prioritized issues.`,
     tags: ['operations', 'data-acquisition', 'data-quality'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -6607,7 +6910,7 @@ export const GALLERY_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1: Agentspec =
     description: `Analyze experimental data, generate plots, explain results, and preserve the full workflow in an executable notebook.`,
     tags: ['research', 'notebook', 'workflow'],
     enabled: true,
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     mcpServers: [],
     skills: [
       SKILL_MAP['events:0.0.1']
@@ -6661,7 +6964,7 @@ export const GALLERY_SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Discovers, acquires, and analyzes geospatial datasets using Earthdata and Eurus tools. Produces map-ready summaries, anomaly diagnostics, and reproducible analysis artifacts for environmental and climate use cases.`,
   tags: ['analytics', 'sustainability', 'summarization'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['earthdata:0.0.1'],
     MCP_SERVER_MAP['eurus:0.0.1'],
@@ -6726,7 +7029,7 @@ export const GALLERY_SUMMARIZE_10_PDFS_AGENTSPEC_0_0_1: Agentspec = {
   description: `Extract the key points, compare documents, find repeated themes, and generate a structured report from many PDF files.`,
   tags: ['data-acquisition', 'summarization', 'pdf'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -6780,7 +7083,7 @@ export const GALLERY_SUMMARIZE_DOCUMENTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A generic document summarization agent that processes PDFs, Word files, Markdown, and plain text. Produces structured executive summaries with key findings, action items, and metadata extraction. Useful across every industry vertical — from legal contracts to research papers.`,
   tags: ['research', 'document-processing', 'summarization'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [MCP_SERVER_MAP['filesystem:0.0.1']],
   skills: [
     SKILL_MAP['pdf:0.0.1']
@@ -6880,7 +7183,7 @@ export const GALLERY_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   description: `A multi-agent team that collects and aggregates contact data from multiple CRM sources, analyzes and deduplicates records, writes cleaned data back, and generates sync summary reports.`,
   tags: ['sales', 'crm', 'data-acquisition'],
   enabled: false,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [
     MCP_SERVER_MAP['filesystem:0.0.1'],
     MCP_SERVER_MAP['slack:0.0.1'],
@@ -6978,7 +7281,7 @@ export const GALLERY_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
   description: `Generate a weekly executive summary with KPI deltas, top risks, and recommended actions from operational and analytics data.`,
   tags: ['analytics', 'reporting', 'risk'],
   enabled: true,
-  model: 'bedrock:us.anthropic.claude-opus-4-8',
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -7030,6 +7333,10 @@ export const GALLERY_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
 // ============================================================================
 
 export const AGENTSPECS: Record<string, Agentspec> = {
+  'agentify-business-marketer': AGENTIFY_BUSINESS_MARKETER_AGENTSPEC_0_0_1,
+  'agentify-customer-interviewer':
+    AGENTIFY_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1,
+  'agentify-news-aggregator': AGENTIFY_NEWS_AGGREGATOR_AGENTSPEC_0_0_1,
   'example-a2ui-agent': EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
   'example-agentic-chat': EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
   'example-agentic-generative-ui':

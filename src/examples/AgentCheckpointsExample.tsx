@@ -1028,6 +1028,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               placeholder="Ask about sales KPIs…"
               description="Monitor Sales KPI agent with pause/resume checkpointing"
               showHeader={true}
+              kernelIndicatorPlacement="right"
               showTokenUsage={true}
               autoFocus
               height="100%"

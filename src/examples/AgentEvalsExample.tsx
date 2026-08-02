@@ -595,6 +595,7 @@ const AgentEvalsInner: React.FC<{
                 : 'No evaluations run yet'
             }
             showHeader={true}
+            kernelIndicatorPlacement="right"
             autoFocus
             height="100%"
             runtimeId={podName}

@@ -413,6 +413,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
                 subtitle={`Spec: ${AGENTSPEC_ID}`}
                 placeholder="Ask the inference provider something..."
                 showHeader={true}
+                kernelIndicatorPlacement="right"
                 showNewChatButton={true}
                 showClearButton={true}
                 showModelSelector={true}

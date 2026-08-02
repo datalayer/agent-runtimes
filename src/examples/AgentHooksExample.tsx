@@ -77,6 +77,7 @@ const AgentHooksExample: React.FC = () => {
       placeholder="Ask about lifecycle hooks..."
       description="Demonstrates lifecycle hooks and pydantic-style tool hooks: before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls"
       showHeader={true}
+      kernelIndicatorPlacement="right"
       showModelSelector={true}
       showToolsMenu={true}
       showSkillsMenu={true}

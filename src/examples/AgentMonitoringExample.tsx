@@ -542,6 +542,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
             description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
             showHeader={true}
+            kernelIndicatorPlacement="right"
             showTokenUsage={true}
             showToolsMenu={true}
             showSkillsMenu={true}

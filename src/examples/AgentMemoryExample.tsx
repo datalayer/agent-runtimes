@@ -37,6 +37,7 @@ import { uniqueAgentId } from './utils/agentId';
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
+import { listRuntimeMemories } from '../api/runtimes/runtimes';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
@@ -69,6 +70,8 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [agentId, setAgentId] = useState<string>(agentName);
 
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
+  const [accountMemories, setAccountMemories] = useState<MemoryEntry[]>([]);
+  const [accountMemoriesError, setAccountMemoriesError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MemoryEntry[]>([]);
   const [searching, setSearching] = useState(false);
@@ -196,6 +199,47 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     }
   }, [isReady, fetchMemories]);
 
+  const fetchAccountMemories = useCallback(async () => {
+    if (!isReady || !agentBaseUrl || !token) {
+      return;
+    }
+    try {
+      const response = await listRuntimeMemories(
+        token,
+        { agentId: agentId, limit: 10 },
+        agentBaseUrl,
+      );
+      const normalized = (response.memories || []).map((item: any) => ({
+        id: String(item?.id || ''),
+        content: String(item?.memory || ''),
+        score: typeof item?.score === 'number' ? item.score : undefined,
+        metadata:
+          item?.metadata && typeof item.metadata === 'object'
+            ? item.metadata
+            : undefined,
+      }));
+      setAccountMemories(normalized);
+      setAccountMemoriesError(null);
+    } catch (error: any) {
+      setAccountMemories([]);
+      setAccountMemoriesError(
+        error?.message ||
+          'Runtimes memory API is not available in this environment.',
+      );
+    }
+  }, [agentBaseUrl, agentId, isReady, token]);
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+    void fetchAccountMemories();
+    const interval = setInterval(() => {
+      void fetchAccountMemories();
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [fetchAccountMemories, isReady]);
+
   // ── Search memory ────────────────────────────────────────────────────────
 
   const handleSearch = useCallback(async () => {
@@ -295,6 +339,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             placeholder="Chat — the agent remembers you across sessions…"
             description="Agent with Mem0 persistent memory"
             showHeader={true}
+            kernelIndicatorPlacement="right"
             showTokenUsage={true}
             autoFocus
             height="100%"
@@ -449,6 +494,42 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 </Box>
               ))
             )}
+
+            <Box sx={{ mt: 3 }}>
+              <Text sx={{ fontWeight: 'semibold', fontSize: 0, display: 'block', mb: 2 }}>
+                Runtimes API (account scoped)
+              </Text>
+              <Text sx={{ color: 'fg.muted', fontSize: 0, display: 'block', mb: 2 }}>
+                Uses listRuntimeMemories against /api/runtimes/v1/memories.
+              </Text>
+              {accountMemoriesError ? (
+                <Flash variant="warning" sx={{ fontSize: 0, mb: 2 }}>
+                  {accountMemoriesError}
+                </Flash>
+              ) : null}
+              {accountMemories.length === 0 ? (
+                <Flash variant="default" sx={{ fontSize: 0 }}>
+                  No runtime memories returned.
+                </Flash>
+              ) : (
+                accountMemories.map((entry, i) => (
+                  <Box
+                    key={`runtime-${entry.id || i}`}
+                    sx={{
+                      p: 2,
+                      mb: 1,
+                      bg: 'canvas.default',
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: 'border.muted',
+                      fontSize: 0,
+                    }}
+                  >
+                    <Text sx={{ display: 'block' }}>{entry.content}</Text>
+                  </Box>
+                ))
+              )}
+            </Box>
           </Box>
         </Box>
       </Box>

@@ -621,6 +621,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
             placeholder="Ask for a Table, JSON, Chart, or File…"
             description={`${detected.length} detected output${detected.length !== 1 ? 's' : ''}`}
             showHeader={true}
+            kernelIndicatorPlacement="right"
             showToolsMenu={true}
             showSkillsMenu={true}
             autoFocus

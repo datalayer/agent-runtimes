@@ -24,6 +24,10 @@ import type { SpaceDTO, UpdateSpaceRequest } from '../models/SpaceDTO';
 import type { NotebookDTO } from '../models/NotebookDTO';
 import type { LexicalDTO } from '../models/LexicalDTO';
 import type { ProjectDTO, ProjectDefaultItems } from '../models/ProjectDTO';
+import type {
+  RuntimeMemory,
+  ListRuntimeMemoriesOptions,
+} from '../api/runtimes/runtimes';
 
 // Apply the runtime + content mixins on top of the core client.
 const AgentRuntimesClientWithMixins = SpacerMixin(
@@ -73,6 +77,8 @@ export interface AgentRuntimesClient extends DatalayerCoreClient {
     fromSnapshotId?: string,
   ): Promise<RuntimeDTO>;
   listRuntimes(): Promise<RuntimeDTO[]>;
+  listRuntimeMemories(options?: ListRuntimeMemoriesOptions): Promise<RuntimeMemory[]>;
+  getRuntimeMemory(memoryId: string): Promise<RuntimeMemory>;
   getRuntime(podName: string): Promise<RuntimeDTO>;
   deleteRuntime(podName: string): Promise<void>;
   terminateAllRuntimes(): Promise<PromiseSettledResult<void>[]>;

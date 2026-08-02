@@ -329,12 +329,36 @@ def build_capabilities_from_agent_spec(
     memory_type = getattr(agent_spec, "memory", None)
     if memory_type:
         from ..memory import build_memory_capability
+        from ..memory.identity import resolve_memory_identity
 
+        # Memories are persisted under the composite (user_uid, agent_uid)
+        # key. The user is the trusted ownership boundary (never the agent id
+        # or any caller-provided value); the agent uid namespaces memories
+        # per agent within that user's personal account.
+        identity = resolve_memory_identity()
         memory_config = getattr(agent_spec, "memory_config", None)
+        effective_memory_agent_id = agent_id
+        if isinstance(memory_config, dict):
+            override: Any = None
+            datalayer_overrides = memory_config.get("datalayer")
+            if isinstance(datalayer_overrides, dict):
+                override = datalayer_overrides.get("memory_agent_id")
+            if override is None:
+                override = memory_config.get("memory_agent_id")
+            if isinstance(override, str) and override.strip():
+                effective_memory_agent_id = override.strip()
+
+            # Remove Datalayer-only controls before forwarding provider config.
+            if "datalayer" in memory_config or "memory_agent_id" in memory_config:
+                filtered_config = dict(memory_config)
+                filtered_config.pop("datalayer", None)
+                filtered_config.pop("memory_agent_id", None)
+                memory_config = filtered_config
+
         memory_capability = build_memory_capability(
             memory_type,
-            user_id=agent_id or "default",
-            agent_id=agent_id,
+            user_id=identity.user_id,
+            agent_id=effective_memory_agent_id,
             config=memory_config,
         )
         if memory_capability is not None:

@@ -382,6 +382,7 @@ export function ChatLexicalAgentExampleInner({
         {/* Chat sidebar */}
         {effectiveReady && (
           <ChatSidebar
+            kernelIndicatorPlacement="right"
             title="AI Assistant"
             protocol={protocolConfig}
             position="right"

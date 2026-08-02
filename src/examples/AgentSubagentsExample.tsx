@@ -228,6 +228,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             placeholder="Ask me to research a topic, write content, or both..."
             description="Multi-agent delegation with researcher & writer"
             showHeader={true}
+            kernelIndicatorPlacement="right"
             autoFocus
             height="100%"
             runtimeId={agentId}

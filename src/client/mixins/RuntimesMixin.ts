@@ -13,6 +13,10 @@ import * as runtimes from '../../api/runtimes/runtimes';
 import * as snapshots from '../../api/runtimes/snapshots';
 import type { CreateRuntimeRequest } from '../../models/RuntimeDTO';
 import type { CreateCodeSandboxSnapshotRequest } from '../../models/CodeSandboxSnapshotDTO';
+import type {
+  RuntimeMemory,
+  ListRuntimeMemoriesOptions,
+} from '../../api/runtimes/runtimes';
 import type { Constructor } from '@datalayer/core/lib/client/utils/mixins';
 import { EnvironmentDTO } from '../../models/EnvironmentDTO';
 import { RuntimeDTO } from '../../models/RuntimeDTO';
@@ -172,6 +176,39 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
       const token = (this as any).getToken();
       const runtimesUrl = (this as any).getRuntimesUrl();
       await runtimes.deleteRuntime(token, podName, runtimesUrl);
+    }
+
+    /**
+     * List persisted memories for the authenticated caller.
+     *
+     * Backend scoping rules apply: non-admin callers are limited to their own
+     * personal account.
+     */
+    async listRuntimeMemories(
+      options: ListRuntimeMemoriesOptions = {},
+    ): Promise<RuntimeMemory[]> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.listRuntimeMemories(
+        token,
+        options,
+        runtimesUrl,
+      );
+      return response.memories;
+    }
+
+    /**
+     * Fetch one persisted memory by id.
+     */
+    async getRuntimeMemory(memoryId: string): Promise<RuntimeMemory> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.getRuntimeMemory(
+        token,
+        memoryId,
+        runtimesUrl,
+      );
+      return response.memory;
     }
 
     /**

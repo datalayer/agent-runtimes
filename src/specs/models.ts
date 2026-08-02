@@ -36,6 +36,8 @@ export const AIModels = {
     'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6:
+    'bedrock:us.anthropic.claude-sonnet-4-6',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
   OPENAI_GPT_4_1_MINI: 'openai:gpt-4.1-mini',
@@ -214,6 +216,20 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel
     ],
   };
 
+export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
+  id: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  version: '0.0.1',
+  name: 'Bedrock Claude Sonnet 4.6',
+  description: 'Claude Sonnet 4.6 via AWS Bedrock - balanced performance',
+  provider: 'bedrock',
+  default: true,
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
+};
+
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
   {
     id: 'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
@@ -316,6 +332,8 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-sonnet-4-6':
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
   'openai:gpt-4.1-mini': OPENAI_GPT_4_1_MINI_0_0_1,

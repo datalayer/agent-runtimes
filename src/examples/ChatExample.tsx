@@ -91,6 +91,7 @@ const AgentRuntimeChatExample: React.FC = () => {
       placeholder="Send a message..."
       description="Chat with a simple AI assistant"
       showHeader={true}
+      kernelIndicatorPlacement="right"
       showModelSelector={true}
       showToolsMenu={true}
       showSkillsMenu={true}
