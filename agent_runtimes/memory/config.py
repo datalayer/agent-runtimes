@@ -16,7 +16,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,12 @@ def _postgres_config() -> dict[str, object] | None:
         )
         dbname = dbname or _DEFAULT_PGVECTOR_DB
         user = user or _DEFAULT_PGVECTOR_USER
+
+    if not uri and user and password:
+        uri = (
+            f"postgres://{quote(user, safe='')}:{quote(password, safe='')}"
+            f"@{host}:{port}/{dbname}"
+        )
 
     if not password and not uri:
         return None
