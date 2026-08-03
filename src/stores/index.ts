@@ -27,6 +27,7 @@ export {
   useAgentRuntimeLoadedSkills,
   useAgentRuntimeActiveSubagentToolCallId,
   useAgentRuntimeSubagentActivity,
+  useAgentRuntimeSubagentActivityByToolCall,
   useAgentRuntimeCompaction,
   getAgentRuntimeState,
   subscribeToAgentRuntime,

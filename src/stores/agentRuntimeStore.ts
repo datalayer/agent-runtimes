@@ -1251,6 +1251,35 @@ export const useAgentRuntimeSubagentActivity = (toolCallId?: string) =>
   );
 
 /**
+ * Live subagent activity resolved by tool-call id with a subagent-name
+ * fallback. The backend keys events by the parent run's `tool_call_id`, which
+ * can differ from the id surfaced in the chat transport stream; when the id
+ * misses we fall back to the most recent run for the named subagent.
+ */
+export const useAgentRuntimeSubagentActivityByToolCall = (
+  toolCallId?: string,
+  subagentName?: string,
+) =>
+  useAgentRuntimeStore(s => {
+    if (toolCallId) {
+      const byId = s.subagentActivity[toolCallId];
+      if (byId && byId.length > 0) return byId;
+    }
+    if (subagentName) {
+      const byNameKey = s.subagentActivity[subagentName];
+      if (byNameKey && byNameKey.length > 0) return byNameKey;
+      let match: AgentStreamSubagentPayload[] | undefined;
+      for (const events of Object.values(s.subagentActivity)) {
+        if (events.length > 0 && events[0]?.subagentName === subagentName) {
+          match = events;
+        }
+      }
+      if (match) return match;
+    }
+    return EMPTY_SUBAGENT_EVENTS;
+  });
+
+/**
  * Key of the currently active (running) subagent run, or `null` when none is
  * active. A run is active while its event list has no `end`/`error` phase; when
  * several are active the most recently started one wins.
