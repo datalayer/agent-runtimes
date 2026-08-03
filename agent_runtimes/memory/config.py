@@ -21,7 +21,7 @@ from urllib.parse import quote, urlparse
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PGVECTOR_HOST = (
-    'datalayer-postgresql-memory-rw.datalayer-postgresql.svc.cluster.local'
+    'datalayer-postgresql-agent-memories-rw.datalayer-postgresql.svc.cluster.local'
 )
 _DEFAULT_PGVECTOR_PORT = 5432
 _DEFAULT_PGVECTOR_DB = 'mem0'
@@ -51,13 +51,13 @@ def _sqlite_config(user_id: str, agent_id: str | None) -> dict[str, object]:
 
 
 def _postgres_config() -> dict[str, object] | None:
-    uri = os.environ.get('DATALAYER_POSTGRESQL_MEMORY_URI', '').strip()
-    password = os.environ.get('DATALAYER_POSTGRESQL_MEMORY_PASSWORD', '').strip()
-    user = os.environ.get('DATALAYER_POSTGRESQL_MEMORY_USER', '').strip()
-    host = os.environ.get('DATALAYER_POSTGRESQL_MEMORY_HOST', '').strip()
-    dbname = os.environ.get('DATALAYER_POSTGRESQL_MEMORY_DATABASE', '').strip()
+    uri = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_URI', '').strip()
+    password = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD', '').strip()
+    user = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_USER', '').strip()
+    host = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_HOST', '').strip()
+    dbname = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_DATABASE', '').strip()
     collection = os.environ.get(
-        'DATALAYER_POSTGRESQL_MEMORY_COLLECTION', _DEFAULT_PGVECTOR_COLLECTION
+        'DATALAYER_POSTGRESQL_AGENT_MEMORIES_COLLECTION', _DEFAULT_PGVECTOR_COLLECTION
     ).strip()
 
     if uri:
@@ -70,7 +70,7 @@ def _postgres_config() -> dict[str, object] | None:
     else:
         host = host or _DEFAULT_PGVECTOR_HOST
         port = int(
-            os.environ.get('DATALAYER_POSTGRESQL_MEMORY_PORT', _DEFAULT_PGVECTOR_PORT)
+            os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_PORT', _DEFAULT_PGVECTOR_PORT)
         )
         dbname = dbname or _DEFAULT_PGVECTOR_DB
         user = user or _DEFAULT_PGVECTOR_USER

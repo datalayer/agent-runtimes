@@ -396,7 +396,10 @@ export const listRuntimeMemories = async (
     query.set('agent_id', options.agentId.trim());
   }
   if (typeof options.limit === 'number' && Number.isFinite(options.limit)) {
-    query.set('limit', String(Math.max(1, Math.min(1000, Math.floor(options.limit)))));
+    query.set(
+      'limit',
+      String(Math.max(1, Math.min(1000, Math.floor(options.limit)))),
+    );
   }
   if (typeof options.offset === 'number' && Number.isFinite(options.offset)) {
     query.set('offset', String(Math.max(0, Math.floor(options.offset))));

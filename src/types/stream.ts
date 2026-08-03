@@ -9,9 +9,79 @@ import type { SkillStatus } from './skills';
 
 export type AgentStreamEventType =
   | 'agent.snapshot'
+  | 'agent.subagent'
+  | 'agent.compaction'
   | 'tool_approval_created'
   | 'tool_approval_approved'
   | 'tool_approval_rejected';
+
+/** Phase of a streamed history-compaction interaction. */
+export type AgentCompactionPhase = 'start' | 'end';
+
+/**
+ * History-compaction activity pushed on the agent's monitoring stream when the
+ * conversation is summarized to stay under the configured token budget. A
+ * `start` event precedes summarization; the matching `end` event reports the
+ * before/after token and message counts plus the elapsed time.
+ */
+export interface AgentStreamCompactionPayload {
+  /** Interaction phase. */
+  phase: AgentCompactionPhase;
+  /** Token ceiling driving compaction. */
+  budget: number;
+  /** Estimated history tokens before compaction. */
+  beforeTokens: number;
+  /** Estimated history tokens after compaction (`end`). */
+  afterTokens?: number;
+  /** Message count before compaction. */
+  beforeMessages: number;
+  /** Message count after compaction (`end`). */
+  afterMessages?: number;
+  /** Elapsed summarization time in milliseconds (`end`). */
+  durationMs?: number;
+  /** Cumulative number of compactions performed (`end`). */
+  compactionCount?: number;
+  /** Whether history was actually reduced (`end`). */
+  reduced?: boolean;
+}
+
+/** Phase of a streamed subagent interaction. */
+export type AgentSubagentPhase =
+  | 'start'
+  | 'text'
+  | 'thinking'
+  | 'tool_call'
+  | 'tool_result'
+  | 'end'
+  | 'error';
+
+/**
+ * Incremental subagent activity pushed on the parent agent's monitoring
+ * stream while a `delegate_task` call runs. Consumers key events by
+ * `toolCallId` (the parent delegation tool call) to render a live timeline.
+ */
+export interface AgentStreamSubagentPayload {
+  /** Name of the subagent producing the activity. */
+  subagentName: string;
+  /** Parent `delegate_task` tool call id, when resolvable. */
+  toolCallId?: string | null;
+  /** Interaction phase. */
+  phase: AgentSubagentPhase;
+  /** Delegated task description (`start`). */
+  task?: string;
+  /** Text or thinking delta (`text` / `thinking`). */
+  text?: string;
+  /** Tool name (`tool_call` / `tool_result`). */
+  toolName?: string;
+  /** Tool call arguments (`tool_call`). */
+  toolArgs?: Record<string, unknown>;
+  /** Tool result preview (`tool_result`). */
+  result?: string;
+  /** Final subagent output (`end`). */
+  output?: string;
+  /** Failure message (`error`). */
+  error?: string;
+}
 
 export interface AgentStreamMessage<TPayload = Record<string, unknown>> {
   version: string;

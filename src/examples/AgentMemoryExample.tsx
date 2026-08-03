@@ -71,7 +71,9 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [accountMemories, setAccountMemories] = useState<MemoryEntry[]>([]);
-  const [accountMemoriesError, setAccountMemoriesError] = useState<string | null>(null);
+  const [accountMemoriesError, setAccountMemoriesError] = useState<
+    string | null
+  >(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MemoryEntry[]>([]);
   const [searching, setSearching] = useState(false);
@@ -496,10 +498,19 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             )}
 
             <Box sx={{ mt: 3 }}>
-              <Text sx={{ fontWeight: 'semibold', fontSize: 0, display: 'block', mb: 2 }}>
+              <Text
+                sx={{
+                  fontWeight: 'semibold',
+                  fontSize: 0,
+                  display: 'block',
+                  mb: 2,
+                }}
+              >
                 Runtimes API (account scoped)
               </Text>
-              <Text sx={{ color: 'fg.muted', fontSize: 0, display: 'block', mb: 2 }}>
+              <Text
+                sx={{ color: 'fg.muted', fontSize: 0, display: 'block', mb: 2 }}
+              >
                 Uses listRuntimeMemories against /api/runtimes/v1/memories.
               </Text>
               {accountMemoriesError ? (

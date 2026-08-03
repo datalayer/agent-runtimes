@@ -110,10 +110,62 @@ def build_usage_limits_from_agent_spec(agent_spec: Any) -> UsageLimits | None:
     )
 
 
+def apply_model_output_tokens_limit(
+    usage_limits: UsageLimits | None, model_id: str | None
+) -> UsageLimits | None:
+    """Set ``output_tokens_limit`` from the model spec's ``tokens_limit``.
+
+    Each model spec declares the maximum output tokens the model can emit in a
+    single run. Wiring it into ``UsageLimits.output_tokens_limit`` ensures the
+    generated output is not capped below the model's capability, and — because
+    the parent run's limits are enforced across delegated subagent runs — that
+    subagents inherit a sensible per-model budget instead of a hardcoded cap.
+
+    An explicit ``output_tokens_limit`` already present on ``usage_limits`` is
+    preserved.
+    """
+    if not model_id:
+        return usage_limits
+
+    from ..specs.models import get_model
+
+    spec = get_model(model_id)
+    tokens_limit = getattr(spec, "tokens_limit", None) if spec is not None else None
+    if not tokens_limit:
+        return usage_limits
+
+    if usage_limits is None:
+        return UsageLimits(output_tokens_limit=tokens_limit)
+
+    if getattr(usage_limits, "output_tokens_limit", None) is not None:
+        return usage_limits
+
+    import dataclasses
+
+    if dataclasses.is_dataclass(usage_limits) and not isinstance(usage_limits, type):
+        return dataclasses.replace(usage_limits, output_tokens_limit=tokens_limit)
+
+    model_copy = getattr(usage_limits, "model_copy", None)
+    if callable(model_copy):
+        return model_copy(update={"output_tokens_limit": tokens_limit})
+
+    return usage_limits
+
+
 def build_capabilities_from_agent_spec(
-    agent_spec: Any, agent_id: str | None = None
+    agent_spec: Any,
+    agent_id: str | None = None,
+    model: str | None = None,
+    compaction_max_tokens: int | None = None,
 ) -> list[Any]:
-    """Convert agent-runtimes Agentspec guardrails into pydantic-ai capabilities."""
+    """Convert agent-runtimes Agentspec guardrails into pydantic-ai capabilities.
+
+    ``model`` is the resolved model id the agent will run (env override, spec
+    model, or default). It budgets the compaction capability from the model
+    spec's ``tokens_limit``; when omitted the spec model is used.
+    ``compaction_max_tokens`` optionally caps the compaction history budget
+    below that model limit so a smaller ceiling can be exercised on demand.
+    """
     capabilities: list[Any] = []
     guardrails = list(getattr(agent_spec, "guardrails", None) or [])
     explicit_capabilities = list(getattr(agent_spec, "capabilities", None) or [])
@@ -321,6 +373,7 @@ def build_capabilities_from_agent_spec(
         subagents_capability = build_subagents_capability(
             subagents_config,
             default_model=getattr(agent_spec, "model", None),
+            agent_id=agent_id,
         )
         if subagents_capability is not None:
             capabilities.append(subagents_capability)
@@ -417,6 +470,20 @@ def build_capabilities_from_agent_spec(
 
     # Always enforce user-selected skills and MCP tool toggles.
     capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+
+    # History compaction keeps the input under the model's declared
+    # ``tokens_limit`` by summarizing older messages before each request.
+    if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_COMPACTION", True):
+        from ..compaction import build_compaction_capability
+
+        compaction_model = model or getattr(agent_spec, "model", None)
+        compaction_capability = build_compaction_capability(
+            compaction_model,
+            max_tokens_override=compaction_max_tokens,
+            agent_id=agent_id,
+        )
+        if compaction_capability is not None:
+            capabilities.append(compaction_capability)
 
     return capabilities
 

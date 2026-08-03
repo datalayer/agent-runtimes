@@ -146,12 +146,16 @@ class VercelAIChatHandler(APIHandler):
                 except Exception:
                     pass
 
-                # Create usage limits for the agent
+                # Create usage limits for the agent. The output-token ceiling
+                # is derived from the selected model spec's ``tokens_limit`` so
+                # it matches the model's real capability instead of a fixed cap.
+                from ...capabilities import apply_model_output_tokens_limit
+
                 usage_limits = UsageLimits(
                     tool_calls_limit=5,
-                    output_tokens_limit=5000,
                     total_tokens_limit=100000,
                 )
+                usage_limits = apply_model_output_tokens_limit(usage_limits, model)
 
                 # Convert frontend builtinTools ids to native tool capabilities.
                 native_capabilities = []

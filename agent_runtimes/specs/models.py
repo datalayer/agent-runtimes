@@ -65,6 +65,7 @@ ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1 = AIModel(
     provider="anthropic",
     default=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=8192,
 )
 
 ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1 = AIModel(
@@ -75,6 +76,7 @@ ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1 = AIModel(
     provider="anthropic",
     default=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=32000,
 )
 
 ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1 = AIModel(
@@ -85,6 +87,7 @@ ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1 = AIModel(
     provider="anthropic",
     default=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=64000,
 )
 
 ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1 = AIModel(
@@ -95,6 +98,7 @@ ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1 = AIModel(
     provider="anthropic",
     default=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=64000,
 )
 
 AZURE_OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
@@ -105,6 +109,7 @@ AZURE_OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
     provider="azure-openai",
     default=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=32768,
 )
 
 AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
@@ -115,6 +120,7 @@ AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
     provider="azure-openai",
     default=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=32768,
 )
 
 AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
@@ -125,6 +131,7 @@ AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
     provider="azure-openai",
     default=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=32768,
 )
 
 AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
@@ -135,6 +142,7 @@ AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
     provider="azure-openai",
     default=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=16384,
 )
 
 AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
@@ -145,6 +153,7 @@ AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
     provider="azure-openai",
     default=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=16384,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
@@ -159,6 +168,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=64000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
@@ -173,6 +183,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=32000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
@@ -187,6 +198,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=32000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
@@ -201,6 +213,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=32000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
@@ -215,6 +228,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=64000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
@@ -229,6 +243,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=64000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
@@ -243,6 +258,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=64000,
 )
 
 OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
@@ -253,6 +269,7 @@ OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
     provider="openai",
     default=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=32768,
 )
 
 OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
@@ -263,6 +280,7 @@ OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
     provider="openai",
     default=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=32768,
 )
 
 OPENAI_GPT_4_1_0_0_1 = AIModel(
@@ -273,6 +291,7 @@ OPENAI_GPT_4_1_0_0_1 = AIModel(
     provider="openai",
     default=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=32768,
 )
 
 OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
@@ -283,6 +302,7 @@ OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
     provider="openai",
     default=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=16384,
 )
 
 OPENAI_GPT_4O_0_0_1 = AIModel(
@@ -293,6 +313,7 @@ OPENAI_GPT_4O_0_0_1 = AIModel(
     provider="openai",
     default=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=16384,
 )
 
 OPENAI_O3_MINI_0_0_1 = AIModel(
@@ -303,6 +324,7 @@ OPENAI_O3_MINI_0_0_1 = AIModel(
     provider="openai",
     default=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=100000,
 )
 
 # ============================================================================

@@ -2600,6 +2600,7 @@ export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
     'Research a topic and provide source-backed notes',
     'Write a concise summary from the research findings',
     'Split work between researcher and writer, then merge output',
+    'Delegate to the researcher and stream its work live: research the pros and cons of Python async patterns, then have the writer summarize',
   ],
   welcomeMessage:
     'Subagents example agent ready. Ask me to delegate research and writing tasks across specialist subagents.',

@@ -30,6 +30,7 @@ from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..capabilities import (
     ToolApprovalConfig,
     ToolsGuardrailCapability,
+    apply_model_output_tokens_limit,
     build_capabilities_from_agent_spec,
     build_default_choice_guardrails,
     build_usage_limits_from_agent_spec,
@@ -951,6 +952,15 @@ class CreateAgentRequest(BaseModel):
         alias="agentParameters",
         description="Launch-time parameter values validated against parameters JSON schema.",
     )
+    compaction_max_tokens: int | None = Field(
+        default=None,
+        alias="compactionMaxTokens",
+        description=(
+            "Optional history-compaction token ceiling. Caps the compaction "
+            "budget below the model's tokens_limit so a smaller context window "
+            "can be exercised on demand (never raised above the model limit)."
+        ),
+    )
 
 
 class CreateAgentResponse(BaseModel):
@@ -1859,6 +1869,8 @@ async def create_agent(
                 capabilities = build_capabilities_from_agent_spec(
                     spec_for_runtime_controls,
                     agent_id=agent_id,
+                    model=request.model,
+                    compaction_max_tokens=request.compaction_max_tokens,
                 )
                 usage_limits = build_usage_limits_from_agent_spec(
                     spec_for_runtime_controls
@@ -1886,6 +1898,12 @@ async def create_agent(
             if capabilities is None:
                 capabilities = []
             capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+
+            # Raise the output-token ceiling to the selected model's capability
+            # (also enforced across delegated subagent runs).
+            usage_limits = apply_model_output_tokens_limit(
+                usage_limits, request.model
+            )
 
             agent_kwargs: dict[str, Any] = {
                 "instructions": final_system_prompt,
@@ -2196,6 +2214,7 @@ async def create_agent(
             try:
                 vercel_adapter = VercelAITransport(
                     agent,
+                    usage_limits=usage_limits,
                     agent_id=agent_id,
                     has_spec_frontend_tools=has_spec_frontend_tools,
                     approval_tool_ids=approval_tool_ids or [],
@@ -2809,8 +2828,14 @@ async def update_agent_transport(
             _has_approval = bool(tools_requiring_approval_ids(_stored_tools)) and (
                 not _is_tool_approvals_disabled(_stored_disable_approvals)
             )
+            # Raise the output-token ceiling to the stored model's capability so
+            # the transport does not fall back to its low default cap.
+            _switch_usage_limits = apply_model_output_tokens_limit(
+                None, stored_spec.get("model")
+            )
             vercel_adapter = VercelAITransport(
                 agent,
+                usage_limits=_switch_usage_limits,
                 agent_id=agent_id,
                 has_spec_frontend_tools=_has_ft,
                 has_approval_tools=_has_approval,

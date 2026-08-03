@@ -17,15 +17,30 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { Text, Spinner, Heading, Label, Timeline } from '@primer/react';
-import { PeopleIcon, PersonIcon } from '@primer/octicons-react';
+import { PeopleIcon, PersonIcon, DependabotIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { Chat } from '../chat';
+import { ChatMessageList } from '../chat/messages/ChatMessageList';
+import {
+  useAgentRuntimeActiveSubagentToolCallId,
+  useAgentRuntimeSubagentActivity,
+  agentRuntimeStore,
+} from '../stores';
+import type { AgentStreamSubagentPayload } from '../types/stream';
+import type { DisplayItem, ToolCallMessage, AvatarConfig } from '../types/chat';
+import type { ChatMessage } from '../types/messages';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
@@ -49,6 +64,291 @@ const SUBAGENTS: SubagentInfo[] = [
       'Writes clear, structured content based on research or instructions',
   },
 ];
+
+/** Fixed height (px) for the active-subagent chat viewport. */
+const ACTIVE_PANEL_HEIGHT = 280;
+
+type SubagentAvatarConfig = Required<
+  Pick<
+    AvatarConfig,
+    | 'userAvatar'
+    | 'assistantAvatar'
+    | 'showAvatars'
+    | 'avatarSize'
+    | 'userAvatarBg'
+    | 'assistantAvatarBg'
+  >
+>;
+
+const SUBAGENT_AVATAR: SubagentAvatarConfig = {
+  userAvatar: <PersonIcon size={14} />,
+  assistantAvatar: <DependabotIcon size={14} />,
+  showAvatars: true,
+  avatarSize: 24,
+  userAvatarBg: 'neutral.muted',
+  assistantAvatarBg: 'accent.emphasis',
+};
+
+/**
+ * Convert the streamed subagent activity into the same `DisplayItem[]` shape
+ * the main chat renders, so text becomes markdown messages and tool events
+ * become tool-call cards (with approval controls when the runtime requests
+ * one). Consecutive text deltas are merged; tool calls are paired with their
+ * results by tool name. Reasoning (`thinking`) is omitted to mirror the
+ * primary agent view.
+ */
+function buildSubagentDisplayItems(
+  events: readonly AgentStreamSubagentPayload[],
+  keyPrefix: string,
+): DisplayItem[] {
+  const items: DisplayItem[] = [];
+  const openByName = new Map<string, ToolCallMessage>();
+  let textBuffer = '';
+  let seq = 0;
+
+  const flushText = () => {
+    if (textBuffer.trim()) {
+      items.push({
+        id: `${keyPrefix}:msg:${seq++}`,
+        role: 'assistant',
+        content: textBuffer,
+        createdAt: new Date(0),
+      } as ChatMessage);
+    }
+    textBuffer = '';
+  };
+
+  for (const event of events) {
+    switch (event.phase) {
+      case 'text':
+        textBuffer += event.text ?? '';
+        break;
+      case 'tool_call': {
+        flushText();
+        const id = `${keyPrefix}:tool:${seq++}`;
+        const toolCall: ToolCallMessage = {
+          id,
+          type: 'tool-call',
+          toolCallId: id,
+          toolName: event.toolName ?? 'tool',
+          args: event.toolArgs ?? {},
+          status: 'inProgress',
+        };
+        items.push(toolCall);
+        if (event.toolName) {
+          openByName.set(event.toolName, toolCall);
+        }
+        break;
+      }
+      case 'tool_result': {
+        flushText();
+        const open = event.toolName
+          ? openByName.get(event.toolName)
+          : undefined;
+        if (open) {
+          open.result = event.result;
+          open.status = 'complete';
+          if (event.toolName) {
+            openByName.delete(event.toolName);
+          }
+        } else {
+          const id = `${keyPrefix}:tool:${seq++}`;
+          items.push({
+            id,
+            type: 'tool-call',
+            toolCallId: id,
+            toolName: event.toolName ?? 'tool',
+            args: {},
+            result: event.result,
+            status: 'complete',
+          } as ToolCallMessage);
+        }
+        break;
+      }
+      case 'error':
+        flushText();
+        items.push({
+          id: `${keyPrefix}:msg:${seq++}`,
+          role: 'assistant',
+          content: `**\u26a0\ufe0f ${event.error ?? 'Subagent failed'}**`,
+          createdAt: new Date(0),
+        } as ChatMessage);
+        break;
+      // `start`, `thinking`, and `end` do not produce display items.
+      default:
+        break;
+    }
+  }
+  flushText();
+  return items;
+}
+
+/**
+ * Chat-style, fixed-height viewport for a single active subagent run.
+ * Reuses the primary chat message renderer so subagent output is formatted
+ * exactly like the main agent, including tool-call cards and approvals.
+ * Auto-scrolls to the latest streamed message.
+ */
+const SubagentChat: React.FC<{ toolCallId: string }> = ({ toolCallId }) => {
+  const events = useAgentRuntimeSubagentActivity(toolCallId);
+  const displayItems = useMemo(
+    () => buildSubagentDisplayItems(events, toolCallId),
+    [events, toolCallId],
+  );
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const subagentName = useMemo(() => {
+    for (const event of events) {
+      if (event.subagentName) return event.subagentName;
+    }
+    return 'subagent';
+  }, [events]);
+  const isDone = useMemo(
+    () => events.some(e => e.phase === 'end' || e.phase === 'error'),
+    [events],
+  );
+  const hasError = useMemo(
+    () => events.some(e => e.phase === 'error'),
+    [events],
+  );
+
+  // Forward inline tool-approval decisions to the shared monitoring socket,
+  // matching the primary chat's approval flow.
+  const handleRespond = useCallback(
+    async (_toolCallId: string, result: unknown) => {
+      if (result && typeof result === 'object') {
+        const record = result as Record<string, unknown>;
+        if (
+          record.type === 'tool-approval-decision' &&
+          typeof record.approved === 'boolean' &&
+          typeof record.approvalId === 'string'
+        ) {
+          agentRuntimeStore
+            .getState()
+            .sendDecision(record.approvalId, record.approved);
+        }
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: 'end' });
+  }, [displayItems]);
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: ACTIVE_PANEL_HEIGHT,
+        border: '1px solid',
+        borderColor: 'border.default',
+        borderRadius: 2,
+        overflow: 'hidden',
+        bg: 'canvas.default',
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 2,
+          py: 1,
+          borderBottom: '1px solid',
+          borderColor: 'border.muted',
+          bg: 'canvas.subtle',
+          flexShrink: 0,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            color: hasError ? 'danger.fg' : isDone ? 'success.fg' : 'accent.fg',
+          }}
+        >
+          <DependabotIcon size={14} />
+        </Box>
+        <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.default' }}>
+          {subagentName}
+        </Text>
+        <Text sx={{ fontSize: 0, color: 'fg.muted', ml: 'auto' }}>
+          {hasError ? 'failed' : isDone ? 'done' : 'working…'}
+        </Text>
+      </Box>
+
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <ChatMessageList
+          displayItems={displayItems}
+          isLoading={!isDone}
+          isStreaming={!isDone}
+          showLoadingIndicator={!isDone}
+          hideMessagesAfterToolUI={false}
+          avatarConfig={SUBAGENT_AVATAR}
+          padding={2}
+          onRespond={handleRespond}
+          messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
+          emptyContent={
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                color: 'fg.muted',
+                p: 2,
+              }}
+            >
+              <Spinner size="small" />
+              <Text sx={{ fontSize: 0 }}>Starting…</Text>
+            </Box>
+          }
+        />
+      </Box>
+    </Box>
+  );
+};
+
+/**
+ * Shows the currently active (running) subagent and its streamed messages.
+ * Falls back to a placeholder when no subagent is active.
+ */
+const ActiveSubagentPanel: React.FC = () => {
+  const activeToolCallId = useAgentRuntimeActiveSubagentToolCallId();
+  return (
+    <Box
+      sx={{
+        p: 3,
+        borderBottom: '1px solid',
+        borderColor: 'border.default',
+      }}
+    >
+      <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+        Active Subagent
+      </Heading>
+      {activeToolCallId ? (
+        <SubagentChat toolCallId={activeToolCallId} />
+      ) : (
+        <Box
+          sx={{
+            height: ACTIVE_PANEL_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid',
+            borderColor: 'border.muted',
+            borderRadius: 2,
+            bg: 'canvas.subtle',
+          }}
+        >
+          <Text sx={{ fontSize: 0, color: 'fg.muted', m: 0 }}>
+            No active Subagent
+          </Text>
+        </Box>
+      )}
+    </Box>
+  );
+};
 
 const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
@@ -264,6 +564,8 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             overflow: 'auto',
           }}
         >
+          <ActiveSubagentPanel />
+
           <Box
             sx={{
               p: 3,

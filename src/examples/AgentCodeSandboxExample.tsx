@@ -4,7 +4,7 @@
  */
 
 /**
- * AgentSandboxExample
+ * AgentCodeSandboxExample
  *
  * Demonstrates sandbox variant switching (eval / jupyter) with a live
  * sidebar that streams WebSocket messages to and from the
@@ -15,7 +15,7 @@
  * - Sidebar shows live sandbox status, WebSocket event log, and an
  *   interrupt button
  *
- * @module examples/AgentSandboxExample
+ * @module examples/AgentCodeSandboxExample
  */
 
 /// <reference types="vite/client" />
@@ -105,7 +105,7 @@ function apiVariantFromUi(variant: SandboxVariant): 'eval' | 'jupyter' {
 
 // ─── Inner component (after auth) ──────────────────────────────────────────
 
-const AgentSandboxInner: React.FC<{ onLogout: () => void }> = ({
+const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
   onLogout,
 }) => {
   const { token } = useSimpleAuthStore();
@@ -877,7 +877,7 @@ const syncTokenToIamStore = (newToken: string) => {
   });
 };
 
-const AgentSandboxExample: React.FC = () => {
+const AgentCodeSandboxExample: React.FC = () => {
   const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -907,10 +907,10 @@ const AgentSandboxExample: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemedProvider>
-        <AgentSandboxInner onLogout={handleLogout} />
+        <AgentCodeSandboxInner onLogout={handleLogout} />
       </ThemedProvider>
     </QueryClientProvider>
   );
 };
 
-export default AgentSandboxExample;
+export default AgentCodeSandboxExample;

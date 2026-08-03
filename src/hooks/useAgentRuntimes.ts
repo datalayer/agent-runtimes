@@ -33,6 +33,8 @@ import {
 import {
   parseAgentStreamMessage,
   type AgentStreamSnapshotPayload,
+  type AgentStreamSubagentPayload,
+  type AgentStreamCompactionPayload,
 } from '../types/stream';
 import { DEFAULT_AGENT_CONFIG } from '../types/config';
 import type { AgentConfig } from '../types/config';
@@ -1560,6 +1562,20 @@ export function useAgentRuntimeWebSocket(
         if (parsed.type === 'agent.snapshot') {
           state.applySnapshot(
             parsed.payload as unknown as AgentStreamSnapshotPayload,
+          );
+          return;
+        }
+
+        if (parsed.type === 'agent.subagent') {
+          state.appendSubagentEvent(
+            parsed.payload as unknown as AgentStreamSubagentPayload,
+          );
+          return;
+        }
+
+        if (parsed.type === 'agent.compaction') {
+          state.setCompaction(
+            parsed.payload as unknown as AgentStreamCompactionPayload,
           );
           return;
         }

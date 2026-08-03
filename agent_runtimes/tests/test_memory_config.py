@@ -15,8 +15,8 @@ def test_resolve_mem0_config_uses_explicit_config() -> None:
 
 
 def test_resolve_mem0_config_auto_sqlite_without_postgres_env(monkeypatch) -> None:
-    monkeypatch.delenv('DATALAYER_POSTGRESQL_MEMORY_URI', raising=False)
-    monkeypatch.delenv('DATALAYER_POSTGRESQL_MEMORY_PASSWORD', raising=False)
+    monkeypatch.delenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_URI', raising=False)
+    monkeypatch.delenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD', raising=False)
     monkeypatch.setenv('AGENT_RUNTIMES_MEM0_BACKEND', 'auto')
 
     resolved = resolve_mem0_config('u1', 'a1')
@@ -28,7 +28,7 @@ def test_resolve_mem0_config_auto_sqlite_without_postgres_env(monkeypatch) -> No
 
 def test_resolve_mem0_config_auto_prefers_postgres_when_available(monkeypatch) -> None:
     monkeypatch.setenv(
-        'DATALAYER_POSTGRESQL_MEMORY_URI',
+        'DATALAYER_POSTGRESQL_AGENT_MEMORIES_URI',
         'postgres://mem0:secret@pg.example:5432/mem0',
     )
     monkeypatch.setenv('AGENT_RUNTIMES_MEM0_BACKEND', 'auto')
@@ -41,12 +41,12 @@ def test_resolve_mem0_config_auto_prefers_postgres_when_available(monkeypatch) -
 
 
 def test_resolve_mem0_config_builds_uri_when_missing(monkeypatch) -> None:
-    monkeypatch.delenv('DATALAYER_POSTGRESQL_MEMORY_URI', raising=False)
-    monkeypatch.setenv('DATALAYER_POSTGRESQL_MEMORY_USER', 'mem0')
-    monkeypatch.setenv('DATALAYER_POSTGRESQL_MEMORY_PASSWORD', 'secret')
-    monkeypatch.setenv('DATALAYER_POSTGRESQL_MEMORY_HOST', 'pg.internal')
-    monkeypatch.setenv('DATALAYER_POSTGRESQL_MEMORY_PORT', '5432')
-    monkeypatch.setenv('DATALAYER_POSTGRESQL_MEMORY_DATABASE', 'mem0')
+    monkeypatch.delenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_URI', raising=False)
+    monkeypatch.setenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_USER', 'mem0')
+    monkeypatch.setenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD', 'secret')
+    monkeypatch.setenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_HOST', 'pg.internal')
+    monkeypatch.setenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_PORT', '5432')
+    monkeypatch.setenv('DATALAYER_POSTGRESQL_AGENT_MEMORIES_DATABASE', 'mem0')
     monkeypatch.setenv('AGENT_RUNTIMES_MEM0_BACKEND', 'postgres')
 
     resolved = resolve_mem0_config('u1', 'a1')

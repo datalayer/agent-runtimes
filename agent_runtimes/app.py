@@ -443,6 +443,7 @@ async def _create_and_register_cli_agent(
     from .capabilities import (
         ToolApprovalConfig,
         ToolsGuardrailCapability,
+        apply_model_output_tokens_limit,
         build_capabilities_from_agent_spec,
         build_usage_limits_from_agent_spec,
     )
@@ -477,8 +478,11 @@ async def _create_and_register_cli_agent(
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
     tool_ids = list(agent_spec.tools or [])
-    capabilities = build_capabilities_from_agent_spec(agent_spec, agent_id=agent_id)
+    capabilities = build_capabilities_from_agent_spec(
+        agent_spec, agent_id=agent_id, model=model
+    )
     usage_limits = build_usage_limits_from_agent_spec(agent_spec)
+    usage_limits = apply_model_output_tokens_limit(usage_limits, model)
     tool_approvals_disabled = (
         os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower() == "true"
     )
@@ -883,6 +887,7 @@ async def _create_and_register_cli_agent(
 
             vercel_adapter = VercelAITransport(
                 agent,
+                usage_limits=usage_limits,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
                 approval_tool_ids=approval_tool_ids or [],
@@ -900,6 +905,7 @@ async def _create_and_register_cli_agent(
 
             vercel_adapter = VercelAITransport(
                 agent,
+                usage_limits=usage_limits,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
                 approval_tool_ids=approval_tool_ids or [],

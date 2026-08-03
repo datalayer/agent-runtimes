@@ -236,6 +236,13 @@ class AIModel(BaseModel):
         default_factory=list,
         description="Required environment variable names",
     )
+    tokens_limit: Optional[int] = Field(
+        default=None,
+        description=(
+            "Maximum output tokens the model can generate in a single run "
+            "(maps to pydantic-ai output_tokens_limit)."
+        ),
+    )
 
 
 class AIModels(str, Enum):

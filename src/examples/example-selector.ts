@@ -176,6 +176,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Checkpoint and resume lifecycle for agents.',
   ),
   makeEntry(
+    'AgentCompactionExample',
+    () => import('./AgentCompactionExample'),
+    'Set a context token budget and watch history compaction summarize older messages, with live from/to token and timing details.',
+    ['example', 'agent', 'compaction', 'context', 'tokens'],
+  ),
+  makeEntry(
     'AgentCodemodeExample',
     () => import('./AgentCodemodeExample'),
     'Code mode execution and tool orchestration example.',
@@ -239,8 +245,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'OpenTelemetry instrumentation and traces example.',
   ),
   makeEntry(
-    'AgentSandboxExample',
-    () => import('./AgentSandboxExample'),
+    'AgentCodeSandboxExample',
+    () => import('./AgentCodeSandboxExample'),
     'Sandbox execution variants and context controls.',
   ),
   makeEntry(

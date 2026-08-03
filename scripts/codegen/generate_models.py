@@ -104,6 +104,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         else:
             env_vars_formatted = "[]"
 
+        tokens_limit = spec.get("tokens_limit")
+        tokens_limit_formatted = (
+            str(tokens_limit) if tokens_limit is not None else "None"
+        )
+
         lines.extend(
             [
                 f"{const_name} = AIModel(",
@@ -114,6 +119,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    provider="{spec["provider"]}",',
                 f"    default={spec.get('default', False)},",
                 f"    required_env_vars={env_vars_formatted},",
+                f"    tokens_limit={tokens_limit_formatted},",
                 ")",
                 "",
             ]
@@ -288,20 +294,27 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         # Escape description for TypeScript
         description = spec.get("description", "").replace("'", "\\'")
 
-        lines.extend(
+        tokens_limit = spec.get("tokens_limit")
+
+        model_lines = [
+            f"export const {const_name}: AIModel = {{",
+            f"  id: '{spec['id']}',",
+            f"  version: '{spec['version']}',",
+            f"  name: '{spec['name']}',",
+            f"  description: '{description}',",
+            f"  provider: '{spec['provider']}',",
+            f"  default: {str(spec.get('default', False)).lower()},",
+            f"  requiredEnvVars: {env_vars_formatted},",
+        ]
+        if tokens_limit is not None:
+            model_lines.append(f"  tokensLimit: {tokens_limit},")
+        model_lines.extend(
             [
-                f"export const {const_name}: AIModel = {{",
-                f"  id: '{spec['id']}',",
-                f"  version: '{spec['version']}',",
-                f"  name: '{spec['name']}',",
-                f"  description: '{description}',",
-                f"  provider: '{spec['provider']}',",
-                f"  default: {str(spec.get('default', False)).lower()},",
-                f"  requiredEnvVars: {env_vars_formatted},",
                 "};",
                 "",
             ]
         )
+        lines.extend(model_lines)
 
     # Generate catalog object
     lines.extend(

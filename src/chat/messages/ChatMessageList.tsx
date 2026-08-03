@@ -25,6 +25,7 @@ import {
   streamdownCodeBlockStyles,
 } from '../styles/streamdownStyles';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
+import { SubagentActivity } from '../tools/SubagentActivity';
 
 import { isToolCallMessage, getMessageText } from '../../utils';
 import { useAgentRuntimeStore } from '../../stores/agentRuntimeStore';
@@ -299,32 +300,39 @@ function DefaultToolCallRenderer({
       ? 'external'
       : undefined;
 
+  const isSubagentDelegation = normalizedToolName === 'delegate_task';
+
   return (
-    <ToolCallDisplay
-      toolCallId={item.toolCallId}
-      toolName={item.toolName}
-      args={item.args}
-      result={item.result}
-      status={item.status}
-      error={item.error}
-      executionError={item.executionError}
-      codeError={item.codeError}
-      exitCode={item.exitCode}
-      approvalRequired={hasApproval}
-      approvalState={approvalState}
-      approvalDecisionSource={approvalDecisionSource}
-      onApprove={
-        effectiveApprovalId && !decision && !externalDecision
-          ? () => makeDecision('approve')
-          : undefined
-      }
-      onDeny={
-        effectiveApprovalId && !decision && !externalDecision
-          ? () => makeDecision('reject')
-          : undefined
-      }
-      approvalLoading={false}
-    />
+    <>
+      <ToolCallDisplay
+        toolCallId={item.toolCallId}
+        toolName={item.toolName}
+        args={item.args}
+        result={item.result}
+        status={item.status}
+        error={item.error}
+        executionError={item.executionError}
+        codeError={item.codeError}
+        exitCode={item.exitCode}
+        approvalRequired={hasApproval}
+        approvalState={approvalState}
+        approvalDecisionSource={approvalDecisionSource}
+        onApprove={
+          effectiveApprovalId && !decision && !externalDecision
+            ? () => makeDecision('approve')
+            : undefined
+        }
+        onDeny={
+          effectiveApprovalId && !decision && !externalDecision
+            ? () => makeDecision('reject')
+            : undefined
+        }
+        approvalLoading={false}
+      />
+      {isSubagentDelegation && (
+        <SubagentActivity toolCallId={item.toolCallId} />
+      )}
+    </>
   );
 }
 

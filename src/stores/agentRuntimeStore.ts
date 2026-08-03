@@ -39,6 +39,8 @@ import type {
 } from '../types';
 import type {
   AgentStreamSnapshotPayload,
+  AgentStreamSubagentPayload,
+  AgentStreamCompactionPayload,
   AgentStreamToolApprovalPayload,
   CodemodeStatusData,
 } from '../types/stream';
@@ -122,6 +124,17 @@ export interface AgentRuntimeStoreState {
   wsState: AgentRuntimeWsState;
   approvals: AgentStreamToolApprovalPayload[];
   pendingApprovalCount: number;
+  /**
+   * Live subagent (`delegate_task`) activity keyed by the parent delegation
+   * tool call id. Each entry is the ordered stream of interaction events for
+   * that subagent run.
+   */
+  subagentActivity: Record<string, AgentStreamSubagentPayload[]>;
+  /**
+   * Latest history-compaction activity for the connected agent, or `null` when
+   * no compaction has occurred on the current stream.
+   */
+  compaction: AgentStreamCompactionPayload | null;
   contextSnapshot: ContextSnapshotData | null;
   costUsage: ContextSnapshotData['costUsage'] | null;
   mcpStatus: McpToolsetsStatusResponse | null;
@@ -201,6 +214,9 @@ export interface AgentRuntimeStoreActions {
   setWsState: (state: AgentRuntimeWsState) => void;
   setWs: (ws: WebSocket | null, agentId?: string) => void;
   applySnapshot: (payload: AgentStreamSnapshotPayload) => void;
+  appendSubagentEvent: (event: AgentStreamSubagentPayload) => void;
+  clearSubagentActivity: () => void;
+  setCompaction: (payload: AgentStreamCompactionPayload | null) => void;
   upsertApproval: (approval: AgentStreamToolApprovalPayload) => void;
   removeApproval: (approvalId: string) => void;
   sendDecision: (
@@ -373,6 +389,8 @@ const initialWsState: Pick<
   | 'wsState'
   | 'approvals'
   | 'pendingApprovalCount'
+  | 'subagentActivity'
+  | 'compaction'
   | 'contextSnapshot'
   | 'costUsage'
   | 'mcpStatus'
@@ -384,6 +402,8 @@ const initialWsState: Pick<
   wsState: 'closed',
   approvals: [],
   pendingApprovalCount: 0,
+  subagentActivity: {},
+  compaction: null,
   contextSnapshot: null,
   costUsage: null,
   mcpStatus: null,
@@ -753,6 +773,22 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             codemodeStatus: payload.codemodeStatus ?? null,
             fullContext: payload.fullContext ?? null,
           })),
+
+        appendSubagentEvent: event =>
+          set(state => {
+            const key = event.toolCallId ?? event.subagentName;
+            const existing = state.subagentActivity[key] ?? [];
+            return {
+              subagentActivity: {
+                ...state.subagentActivity,
+                [key]: [...existing, event],
+              },
+            };
+          }),
+
+        clearSubagentActivity: () => set({ subagentActivity: {} }),
+
+        setCompaction: payload => set({ compaction: payload }),
 
         upsertApproval: approval =>
           set(state => {
@@ -1203,6 +1239,36 @@ export const useAgentRuntimeLoadedSkills = (agentId?: string) =>
   useAgentRuntimeStore(s =>
     agentId ? (s.loadedSkillsByAgentId[agentId] ?? []) : [],
   );
+
+const EMPTY_SUBAGENT_EVENTS: readonly AgentStreamSubagentPayload[] = [];
+
+/** Live subagent activity for a given parent `delegate_task` tool call id. */
+export const useAgentRuntimeSubagentActivity = (toolCallId?: string) =>
+  useAgentRuntimeStore(s =>
+    toolCallId
+      ? (s.subagentActivity[toolCallId] ?? EMPTY_SUBAGENT_EVENTS)
+      : EMPTY_SUBAGENT_EVENTS,
+  );
+
+/**
+ * Key of the currently active (running) subagent run, or `null` when none is
+ * active. A run is active while its event list has no `end`/`error` phase; when
+ * several are active the most recently started one wins.
+ */
+export const useAgentRuntimeActiveSubagentToolCallId = (): string | null =>
+  useAgentRuntimeStore(s => {
+    let activeKey: string | null = null;
+    for (const [key, events] of Object.entries(s.subagentActivity)) {
+      if (events.length === 0) continue;
+      const done = events.some(e => e.phase === 'end' || e.phase === 'error');
+      if (!done) activeKey = key;
+    }
+    return activeKey;
+  });
+
+/** Latest history-compaction activity for the connected agent. */
+export const useAgentRuntimeCompaction = () =>
+  useAgentRuntimeStore(s => s.compaction);
 
 // ---------------------------------------------------------------------------
 // Non-React access

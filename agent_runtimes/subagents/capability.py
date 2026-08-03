@@ -34,6 +34,21 @@ _GENERAL_PURPOSE_INSTRUCTIONS = (
 )
 
 
+def _build_subagent_capabilities(model: str | Model) -> list[Any]:
+    """Capabilities attached to a subagent's inner Agent.
+
+    Adds history compaction budgeted from the subagent model's ``tokens_limit``
+    so a delegated run's history stays under the model's limit independently of
+    the parent. Skips it when the model is an instance (no spec id to resolve).
+    """
+    if not isinstance(model, str):
+        return []
+    from ..compaction import build_compaction_capability
+
+    capability = build_compaction_capability(model)
+    return [capability] if capability is not None else []
+
+
 @dataclass(frozen=True)
 class SubagentDefinition:
     """A single delegatable subagent.
@@ -80,6 +95,7 @@ class SubagentsCapability(AbstractCapability[Any]):
     include_general_purpose: bool = True
     tool_name: str = "delegate_task"
     tool_retries: int = 1
+    agent_id: str | None = None
     _agents: dict[str, Agent[Any, str]] = field(
         default_factory=dict, init=False, repr=False
     )
@@ -114,6 +130,7 @@ class SubagentsCapability(AbstractCapability[Any]):
                 model,
                 name=definition.name,
                 instructions=definition.instructions,
+                capabilities=_build_subagent_capabilities(model),
             )
             self._descriptions[definition.name] = definition.description
 
@@ -157,12 +174,20 @@ class SubagentsCapability(AbstractCapability[Any]):
                     f"Unknown subagent '{subagent_name}'. "
                     f"Available subagents: {available}."
                 )
+            tool_call_id = getattr(ctx, "tool_call_id", None)
+            self._emit_subagent_event(subagent_name, tool_call_id, "start", task=task)
             try:
-                result = await agent.run(task, usage=ctx.usage)
+                output = await self._run_subagent_streaming(
+                    agent, subagent_name, tool_call_id, task, ctx.usage
+                )
             except Exception as exc:  # noqa: BLE001 - surface to the model
                 logger.exception("Subagent %r failed", subagent_name)
+                self._emit_subagent_event(
+                    subagent_name, tool_call_id, "error", error=str(exc)
+                )
                 return f"Subagent '{subagent_name}' failed: {exc}"
-            return str(result.output)
+            self._emit_subagent_event(subagent_name, tool_call_id, "end", output=output)
+            return output
 
         toolset.add_function(
             delegate_task,
@@ -171,14 +196,169 @@ class SubagentsCapability(AbstractCapability[Any]):
         )
         return toolset
 
+    async def _run_subagent_streaming(
+        self,
+        agent: Agent[Any, str],
+        subagent_name: str,
+        tool_call_id: str | None,
+        task: str,
+        usage: Any,
+    ) -> str:
+        """Run a subagent while streaming its inner interactions as events.
+
+        Iterates the subagent run node-by-node and republishes text, thinking,
+        tool-call and tool-result activity on the parent agent's monitoring
+        stream so the UI can display the subagent working in real time. Usage is
+        forwarded to the parent run so budget limits stay accurate.
+        """
+        from pydantic_ai import Agent as _Agent
+        from pydantic_ai.messages import (
+            FunctionToolCallEvent,
+            FunctionToolResultEvent,
+            PartDeltaEvent,
+            PartStartEvent,
+            TextPart,
+            TextPartDelta,
+            ThinkingPart,
+            ThinkingPartDelta,
+        )
+
+        async with agent.iter(task, usage=usage) as run:
+            async for node in run:
+                if _Agent.is_model_request_node(node):
+                    async with node.stream(run.ctx) as request_stream:
+                        async for event in request_stream:
+                            if isinstance(event, PartStartEvent):
+                                part = event.part
+                                if isinstance(part, TextPart) and part.content:
+                                    self._emit_subagent_event(
+                                        subagent_name,
+                                        tool_call_id,
+                                        "text",
+                                        text=part.content,
+                                    )
+                                elif isinstance(part, ThinkingPart) and part.content:
+                                    self._emit_subagent_event(
+                                        subagent_name,
+                                        tool_call_id,
+                                        "thinking",
+                                        text=part.content,
+                                    )
+                            elif isinstance(event, PartDeltaEvent):
+                                delta = event.delta
+                                if (
+                                    isinstance(delta, TextPartDelta)
+                                    and delta.content_delta
+                                ):
+                                    self._emit_subagent_event(
+                                        subagent_name,
+                                        tool_call_id,
+                                        "text",
+                                        text=delta.content_delta,
+                                    )
+                                elif isinstance(delta, ThinkingPartDelta) and getattr(
+                                    delta, "content_delta", None
+                                ):
+                                    self._emit_subagent_event(
+                                        subagent_name,
+                                        tool_call_id,
+                                        "thinking",
+                                        text=delta.content_delta,
+                                    )
+                elif _Agent.is_call_tools_node(node):
+                    async with node.stream(run.ctx) as handle_stream:
+                        async for event in handle_stream:
+                            if isinstance(event, FunctionToolCallEvent):
+                                part = event.part
+                                self._emit_subagent_event(
+                                    subagent_name,
+                                    tool_call_id,
+                                    "tool_call",
+                                    toolName=getattr(part, "tool_name", ""),
+                                    toolArgs=_stringify_tool_args(
+                                        getattr(part, "args", None)
+                                    ),
+                                )
+                            elif isinstance(event, FunctionToolResultEvent):
+                                result = event.result
+                                self._emit_subagent_event(
+                                    subagent_name,
+                                    tool_call_id,
+                                    "tool_result",
+                                    toolName=getattr(result, "tool_name", ""),
+                                    result=_stringify_tool_result(
+                                        getattr(result, "content", None)
+                                    ),
+                                )
+        result = run.result
+        return str(result.output) if result is not None else ""
+
+    def _emit_subagent_event(
+        self,
+        subagent_name: str,
+        tool_call_id: str | None,
+        phase: str,
+        **payload: Any,
+    ) -> None:
+        """Publish a subagent activity event on the parent monitoring stream.
+
+        Failures are swallowed: streaming telemetry must never break the
+        delegated run.
+        """
+        parent_agent_id = self.agent_id
+        if not parent_agent_id:
+            return
+        try:
+            from ..streams import AgentStreamMessage, enqueue_stream_message
+
+            message = AgentStreamMessage.create(
+                type="agent.subagent",
+                payload={
+                    "subagentName": subagent_name,
+                    "toolCallId": tool_call_id,
+                    "phase": phase,
+                    **payload,
+                },
+                agent_id=parent_agent_id,
+            )
+            enqueue_stream_message(parent_agent_id, message)
+        except Exception:  # noqa: BLE001 - telemetry must not break delegation
+            logger.debug("Failed to emit subagent event", exc_info=True)
+
+
+def _stringify_tool_args(args: Any) -> dict[str, Any]:
+    """Coerce a tool-call arguments payload into a JSON-friendly dict."""
+    if args is None:
+        return {}
+    if isinstance(args, dict):
+        return args
+    if isinstance(args, str):
+        import json
+
+        try:
+            parsed = json.loads(args)
+        except (ValueError, TypeError):
+            return {"value": args}
+        return parsed if isinstance(parsed, dict) else {"value": parsed}
+    return {"value": str(args)}
+
+
+def _stringify_tool_result(content: Any) -> str:
+    """Coerce a tool result payload into a short display string."""
+    if content is None:
+        return ""
+    text = content if isinstance(content, str) else str(content)
+    return text if len(text) <= 2000 else text[:2000] + "…"
+
 
 def build_subagents_capability(
-    subagents_config: Any, default_model: str | None
+    subagents_config: Any, default_model: str | None, agent_id: str | None = None
 ) -> SubagentsCapability | None:
     """Build a ``SubagentsCapability`` from an Agentspec ``subagents`` config.
 
     Returns ``None`` when no subagents are defined so the caller can skip adding
-    an empty capability.
+    an empty capability. ``agent_id`` links streamed subagent activity to the
+    parent agent's monitoring stream.
     """
     raw_subagents = list(getattr(subagents_config, "subagents", None) or [])
     definitions: list[SubagentDefinition] = []
@@ -203,4 +383,5 @@ def build_subagents_capability(
         subagents=definitions,
         default_model=resolved_default,
         include_general_purpose=include_general_purpose,
+        agent_id=agent_id,
     )

@@ -23,6 +23,11 @@ export interface AIModel {
   default: boolean;
   /** Required environment variable names */
   requiredEnvVars: string[];
+  /**
+   * Maximum output tokens the model can generate in a single run
+   * (maps to pydantic-ai output_tokens_limit).
+   */
+  tokensLimit?: number;
 }
 
 /**

@@ -22,6 +22,7 @@ export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExampl
 export { default as CustomExample } from './ChatCustomExample';
 export { default as NotebookCollaborationExample } from './NotebookCollaborationExample';
 export { default as AgentCheckpointsExample } from './AgentCheckpointsExample';
+export { default as AgentCompactionExample } from './AgentCompactionExample';
 export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentCodeSandboxesExample } from './AgentCodeSandboxesExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';

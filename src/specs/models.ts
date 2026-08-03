@@ -62,6 +62,7 @@ export const ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1: AIModel = {
   provider: 'anthropic',
   default: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 8192,
 };
 
 export const ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1: AIModel = {
@@ -72,6 +73,7 @@ export const ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1: AIModel = {
   provider: 'anthropic',
   default: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 32000,
 };
 
 export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
@@ -83,6 +85,7 @@ export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
   provider: 'anthropic',
   default: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 64000,
 };
 
 export const ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1: AIModel = {
@@ -93,6 +96,7 @@ export const ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1: AIModel = {
   provider: 'anthropic',
   default: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 64000,
 };
 
 export const AZURE_OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
@@ -103,6 +107,7 @@ export const AZURE_OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   provider: 'azure-openai',
   default: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 32768,
 };
 
 export const AZURE_OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
@@ -113,6 +118,7 @@ export const AZURE_OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   provider: 'azure-openai',
   default: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 32768,
 };
 
 export const AZURE_OPENAI_GPT_4_1_0_0_1: AIModel = {
@@ -123,6 +129,7 @@ export const AZURE_OPENAI_GPT_4_1_0_0_1: AIModel = {
   provider: 'azure-openai',
   default: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 32768,
 };
 
 export const AZURE_OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
@@ -133,6 +140,7 @@ export const AZURE_OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   provider: 'azure-openai',
   default: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 16384,
 };
 
 export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
@@ -143,6 +151,7 @@ export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
   provider: 'azure-openai',
   default: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 16384,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {
@@ -157,6 +166,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 64000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
@@ -171,6 +181,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 32000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
@@ -185,6 +196,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 32000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
@@ -199,6 +211,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 32000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel =
@@ -214,6 +227,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel
       'AWS_SECRET_ACCESS_KEY',
       'AWS_DEFAULT_REGION',
     ],
+    tokensLimit: 64000,
   };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
@@ -228,6 +242,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 64000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
@@ -243,6 +258,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
       'AWS_SECRET_ACCESS_KEY',
       'AWS_DEFAULT_REGION',
     ],
+    tokensLimit: 64000,
   };
 
 export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
@@ -253,6 +269,7 @@ export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   provider: 'openai',
   default: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 32768,
 };
 
 export const OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
@@ -263,6 +280,7 @@ export const OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   provider: 'openai',
   default: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 32768,
 };
 
 export const OPENAI_GPT_4_1_0_0_1: AIModel = {
@@ -273,6 +291,7 @@ export const OPENAI_GPT_4_1_0_0_1: AIModel = {
   provider: 'openai',
   default: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 32768,
 };
 
 export const OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
@@ -283,6 +302,7 @@ export const OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   provider: 'openai',
   default: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 16384,
 };
 
 export const OPENAI_GPT_4O_0_0_1: AIModel = {
@@ -293,6 +313,7 @@ export const OPENAI_GPT_4O_0_0_1: AIModel = {
   provider: 'openai',
   default: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 16384,
 };
 
 export const OPENAI_O3_MINI_0_0_1: AIModel = {
@@ -303,6 +324,7 @@ export const OPENAI_O3_MINI_0_0_1: AIModel = {
   provider: 'openai',
   default: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 100000,
 };
 
 // ============================================================================
