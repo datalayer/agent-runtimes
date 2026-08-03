@@ -44,9 +44,8 @@ const NotebookMutationsServiceManager = () => {
   const [readonly, setReadonly] = useState(true);
   const [waiting, setWaiting] = useState(false);
   const [lite, setLite] = useState<Lite>(false);
-  const [serviceManager, setServiceManager] = useState<
-    ServiceManager.IManager | ServiceManagerLess
-  >(SERVICE_MANAGER_LESS);
+  const [serviceManager, setServiceManager] =
+    useState<ServiceManager.IManager>(SERVICE_MANAGER_LESS);
   const [sessions, setSessions] = useState<Array<Session.ISessionConnection>>(
     [],
   );
@@ -203,7 +202,7 @@ const NotebookMutationsServiceManager = () => {
             nbformat={nbformat as INotebookContent}
             onSessionConnection={onSessionConnection}
             readonly={readonly}
-            serviceManager={serviceManager as ServiceManager.IManager}
+            serviceManager={serviceManager}
           />
         )}
       </>
