@@ -459,6 +459,10 @@ async def _wrap_streaming_body_with_approvals(
     """
     import json as json_mod
 
+    from ..guardrails.tool_approvals import (
+        _agent_scope_key,
+        has_tool_grant_for_scope,
+    )
     from ..routes.tool_approvals import (
         _APPROVALS,
         _APPROVALS_LOCK,
@@ -552,6 +556,11 @@ async def _wrap_streaming_body_with_approvals(
         from datetime import datetime, timezone
 
         async for chunk in body_iterator:
+            # Approval-request SSE lines to strip from this chunk when the tool
+            # was already approved earlier in the chat (prevents a phantom
+            # approval banner + SaaS request on repeat asks; the tool still
+            # auto-executes via handle_deferred_tool_calls).
+            suppressed_lines: set[str] = set()
             # Fast path: skip parsing when not relevant
             if "tool-input-available" in chunk or "tool-approval-request" in chunk:
                 try:
@@ -597,6 +606,54 @@ async def _wrap_streaming_body_with_approvals(
                         normalized_tool_args = (
                             tool_args if isinstance(tool_args, dict) else {}
                         )
+
+                        # Chat-scoped reuse: once this exact tool+args was
+                        # approved earlier in the chat, later identical calls
+                        # auto-execute via handle_deferred_tool_calls. Do NOT
+                        # create a new local record, forward a remote (ai-agents)
+                        # approval, or leak the approval-request event — else the
+                        # SaaS Tool Approvals view and the local banner show a
+                        # phantom request. The in-memory grant map can be missed
+                        # when the prior record is already "consumed", so also
+                        # honour a matching resolved record in _APPROVALS.
+                        already_approved_in_chat = has_tool_grant_for_scope(
+                            _agent_scope_key(agent_id),
+                            tool_name,
+                            normalized_tool_args,
+                        )
+                        if not already_approved_in_chat:
+                            async with _APPROVALS_LOCK:
+                                for candidate in _APPROVALS.values():
+                                    if candidate.status not in (
+                                        "approved",
+                                        "executing",
+                                        "consumed",
+                                    ):
+                                        continue
+                                    if _approval_envelope_matches(
+                                        candidate,
+                                        agent_id=agent_id,
+                                        tool_name=tool_name,
+                                        tool_args=normalized_tool_args,
+                                    ):
+                                        already_approved_in_chat = True
+                                        break
+                        if already_approved_in_chat:
+                            if tool_call_id:
+                                created_tool_call_ids.add(tool_call_id)
+                            # Drop the approval-request event so the client
+                            # renders no banner; keep tool-input-available so the
+                            # tool card still shows.
+                            if event_type == "tool-approval-request":
+                                suppressed_lines.add(line.strip())
+                            logger.info(
+                                "[Vercel AI] Suppressing approval banner/record "
+                                "for '%s' (tool_call_id=%s): already approved in "
+                                "this chat",
+                                tool_name,
+                                tool_call_id,
+                            )
+                            continue
 
                         # Root-cause guard: when a tool has already been
                         # approved recently for the same agent/tool/args
@@ -750,7 +807,17 @@ async def _wrap_streaming_body_with_approvals(
                         "[Vercel AI] Error parsing SSE for approval: %s",
                         parse_err,
                     )
-            yield chunk
+            if suppressed_lines:
+                kept = [
+                    ln
+                    for ln in chunk.split("\n")
+                    if ln.strip() not in suppressed_lines
+                ]
+                rebuilt = "\n".join(kept)
+                if rebuilt.strip():
+                    yield rebuilt
+            else:
+                yield chunk
     except Exception as e:
         logger.error(f"[Vercel AI] STREAMING ERROR: {e}")
         logger.error(

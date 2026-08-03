@@ -13,6 +13,7 @@ from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import ToolDenied
 
 from agent_runtimes.guardrails.tool_approvals import (
+    _APPROVED_TOOL_GRANTS_BY_SCOPE,
     ToolApprovalConfig,
     ToolsGuardrailCapability,
 )
@@ -32,6 +33,8 @@ def _now_iso() -> str:
 async def _reset_approvals() -> None:
     async with _APPROVALS_LOCK:
         _APPROVALS.clear()
+    # Cross-turn grants are process-global; clear them so tests stay isolated.
+    _APPROVED_TOOL_GRANTS_BY_SCOPE.clear()
 
 
 async def _put_record(record: ToolApprovalRecord) -> None:

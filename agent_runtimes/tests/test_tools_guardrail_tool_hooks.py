@@ -15,6 +15,7 @@ import pytest
 from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.guardrails.tool_approvals import (
+    _APPROVED_TOOL_GRANTS_BY_SCOPE,
     ToolApprovalConfig,
     ToolApprovalExecutionReservationError,
     ToolApprovalManager,
@@ -104,6 +105,8 @@ async def _put_record(record: ToolApprovalRecord) -> None:
 @pytest.fixture(autouse=True)
 def _reset_post_hook_payloads() -> None:
     _POST_HOOK_PAYLOADS.clear()
+    # Cross-turn grants are process-global; clear them so tests stay isolated.
+    _APPROVED_TOOL_GRANTS_BY_SCOPE.clear()
 
 
 @pytest.mark.asyncio

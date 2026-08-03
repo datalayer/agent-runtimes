@@ -42,6 +42,37 @@ logger = logging.getLogger(__name__)
 # the same chat scope even if capability instances are recreated per request.
 _APPROVED_TOOL_GRANTS_BY_SCOPE: dict[str, set[str]] = {}
 
+
+def _agent_scope_key(agent_id: str | None) -> str:
+    """Scope key used when no chat/conversation id is available (see
+    ``ToolsGuardrailCapability._approval_scope_key``)."""
+    return f"agent:{agent_id or 'default-agent'}"
+
+
+def _grant_envelope_key(tool_name: str, tool_args: Any) -> str:
+    """Canonical grant key for a tool call: normalized name + normalized args.
+
+    Args-sensitive on purpose: approving ``echo(text=hello)`` must NOT grant
+    ``echo(text=danger)`` — different arguments are a different action and must
+    be re-approved.
+    """
+    norm_name = tool_name.strip().lower().replace("-", "_")
+    norm_args = _normalize_tool_args_for_match(tool_args or {})
+    args_repr = json_mod.dumps(norm_args, sort_keys=True, separators=(",", ":"))
+    return f"{norm_name}|{args_repr}"
+
+
+def has_tool_grant_for_scope(scope_key: str, tool_name: str, tool_args: Any) -> bool:
+    """Return True if this exact tool+args was already approved in ``scope_key``.
+
+    Shared with the streaming approval wrapper so it can suppress duplicate
+    approval banners / remote (ai-agents) records for already-granted calls.
+    """
+    granted = _APPROVED_TOOL_GRANTS_BY_SCOPE.get(scope_key)
+    if not granted:
+        return False
+    return _grant_envelope_key(tool_name, tool_args) in granted
+
 _HOOK_DECISION_ALIASES = {
     "allow": "allow",
     "allowed": "allow",
@@ -667,33 +698,17 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         agent_id = self.config.agent_id or "default-agent"
         return f"agent:{agent_id}"
 
-    @staticmethod
-    def _tool_grant_keys(tool_name: str) -> set[str]:
-        normalized = tool_name.strip().lower()
-        return {
-            normalized,
-            normalized.replace("-", "_"),
-            normalized.replace("_", "-"),
-        }
+    def _has_tool_grant(
+        self, *, scope_key: str, tool_name: str, tool_args: Any
+    ) -> bool:
+        return has_tool_grant_for_scope(scope_key, tool_name, tool_args)
 
-    def _has_tool_grant(self, *, scope_key: str, tool_name: str) -> bool:
-        granted_local = self._approved_tools_by_scope.get(scope_key)
-        granted_global = _APPROVED_TOOL_GRANTS_BY_SCOPE.get(scope_key)
-        if not granted_local and not granted_global:
-            return False
-        for key in self._tool_grant_keys(tool_name):
-            if (granted_local and key in granted_local) or (
-                granted_global and key in granted_global
-            ):
-                return True
-        return False
-
-    def _remember_tool_grant(self, *, scope_key: str, tool_name: str) -> None:
-        keys = self._tool_grant_keys(tool_name)
-        local_granted = self._approved_tools_by_scope.setdefault(scope_key, set())
-        local_granted.update(keys)
-        global_granted = _APPROVED_TOOL_GRANTS_BY_SCOPE.setdefault(scope_key, set())
-        global_granted.update(keys)
+    def _remember_tool_grant(
+        self, *, scope_key: str, tool_name: str, tool_args: Any
+    ) -> None:
+        key = _grant_envelope_key(tool_name, tool_args)
+        self._approved_tools_by_scope.setdefault(scope_key, set()).add(key)
+        _APPROVED_TOOL_GRANTS_BY_SCOPE.setdefault(scope_key, set()).add(key)
 
     def __post_init__(self) -> None:
         has_agent_sudo_local = False
@@ -1087,11 +1102,12 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             call_tool_id = getattr(call, "tool_call_id", None)
             call_safe_args = _normalize_tool_args_for_match(getattr(call, "args", {}))
 
-            # Chat-scoped reuse: once a tool was approved by a human in this chat,
-            # auto-approve later calls of the same tool without re-prompting.
+            # Chat-scoped reuse: once this exact tool+args was approved by a
+            # human in this chat, auto-approve later identical calls.
             if call_tool_id and self._has_tool_grant(
                 scope_key=approval_scope_key,
                 tool_name=call.tool_name,
+                tool_args=call_safe_args,
             ):
                 logger.info(
                     "[tool-approval] Reusing chat grant for deferred tool='%s' "
@@ -1161,6 +1177,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 self._remember_tool_grant(
                     scope_key=approval_scope_key,
                     tool_name=call.tool_name,
+                    tool_args=call_safe_args,
                 )
             elif matched.status == "rejected":
                 approvals[call_tool_id] = ToolDenied(
@@ -1230,11 +1247,12 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         )
 
         if hook_decision in {"allow", "delegated-allow"}:
-            # Persist grant for this chat scope so subsequent calls of the same
-            # tool in the same chat do not require another prompt.
+            # Persist grant for this chat scope so subsequent identical calls in
+            # the same chat do not require another prompt.
             self._remember_tool_grant(
                 scope_key=approval_scope_key,
                 tool_name=call.tool_name,
+                tool_args=safe_args,
             )
             self._remember_decision(
                 tool_call_id=getattr(call, "tool_call_id", None),
@@ -1259,6 +1277,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         if self._has_tool_grant(
             scope_key=approval_scope_key,
             tool_name=call.tool_name,
+            tool_args=safe_args,
         ):
             logger.info(
                 "[tool-approval] Reusing chat grant for tool='%s' scope=%s "
@@ -1404,6 +1423,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             self._remember_tool_grant(
                 scope_key=approval_scope_key,
                 tool_name=call.tool_name,
+                tool_args=safe_args,
             )
             return args
 
@@ -1434,6 +1454,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         self._remember_tool_grant(
             scope_key=approval_scope_key,
             tool_name=call.tool_name,
+            tool_args=safe_args,
         )
 
         self._log_decision(
