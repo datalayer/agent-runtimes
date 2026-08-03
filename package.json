@@ -69,7 +69,7 @@
     "create:patches": "bash scripts/create-patches.sh",
     "examples": "run-p server:start server:start:codemode jupyter:start examples:vite",
     "examples2": "run-p server:start server:start:codemode jupyter:start examples2:vite",
-    "examples:proxy": "make examples:proxy",
+    "example-local": "make example-local",
     "examples:fresh": "npm run clean:cache && npm run examples",
     "examples:jupyter": "run-p jupyter:start server:start server:start:codemode examples:vite",
     "examples:nextjs": "npm run dev --workspace=nextjs-notebook-example",

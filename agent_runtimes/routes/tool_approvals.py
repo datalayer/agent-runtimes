@@ -802,7 +802,7 @@ async def _mark_approval_executing(
     now = _now_iso()
     async with _APPROVALS_LOCK:
         record = _APPROVALS.get(approval_id)
-        if record is None or record.status != "approved":
+        if record is None:
             return None
         if not _approval_envelope_matches(
             record,
@@ -810,6 +810,18 @@ async def _mark_approval_executing(
             tool_name=tool_name,
             tool_args=tool_args,
         ):
+            return None
+        if record.status == "executing":
+            # Idempotent reservation: the same in-flight call (e.g. a second
+            # guardrail capability or a re-entrant continuation pass) already
+            # reserved this envelope — do not fail or double-reserve.
+            if (
+                execution_tool_call_id is not None
+                and record.execution_tool_call_id == execution_tool_call_id
+            ):
+                return record
+            return None
+        if record.status != "approved":
             return None
 
         updated = record.model_copy(

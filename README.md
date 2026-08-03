@@ -269,10 +269,11 @@ make examples:prod DATALAYER_URL=https://prod2.datalayer.run
 If you are developing against a local Plane (`plane local`), use:
 
 ```bash
-make examples:proxy
+make example-local
 ```
 
-This points each `DATALAYER_*_URL` at the matching localhost port exposed by
+This points each `DATALAYER_*_URL` (and its `VITE_*` frontend counterpart, so
+both http and ws traffic stay local) at the matching localhost port exposed by
 `plane local` (see `services/plane/datalayer_plane/sbin/local.sh`):
 
 | Variable                       | Default port                  |
@@ -293,7 +294,7 @@ This points each `DATALAYER_*_URL` at the matching localhost port exposed by
 Override any port on the command line, e.g.:
 
 ```bash
-PLANE_LOCAL_IAM_URL=http://localhost:9701 make examples:proxy
+PLANE_LOCAL_IAM_URL=http://localhost:9701 make example-local
 ```
 
 On the main page, you’ll find an example gallery (cards) that break things down into practical building blocks:

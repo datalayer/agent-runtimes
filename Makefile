@@ -8,7 +8,7 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod examples\:proxy examples-proxy agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
+	examples examples\:prod example-local agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	specs-sandbox-variants \
@@ -36,7 +36,8 @@ DOCKER_PLATFORM ?=
 # `make examples`        → local-first dev mode (local agent-runtimes + local
 #                          jupyter-server). No remote URLs are injected.
 # `make examples:prod`   → explicit remote mode using DATALAYER_* defaults.
-# `make examples:proxy`  → local Plane stack started via `plane local`. Ports
+# `make example-local`   → local Plane stack started via `plane local`. All
+#                          requests (http + ws) target local servers. Ports
 #                          match `services/plane/datalayer_plane/sbin/local.sh`.
 #                          Override any individual URL on the command line.
 
@@ -114,7 +115,7 @@ EXAMPLES_PROD_ENV = \
 	VITE_OTEL_BASE_URL=$(DATALAYER_OTEL_URL) \
 	VITE_OTEL_IN_BASE_URL=$(DATALAYER_OTEL_IN_URL)
 
-EXAMPLES_PROXY_ENV = \
+EXAMPLE_LOCAL_ENV = \
 	DATALAYER_URL=$(PLANE_LOCAL_RUN_URL) \
 	DATALAYER_IAM_URL=$(PLANE_LOCAL_IAM_URL) \
 	DATALAYER_RUNTIMES_URL=$(PLANE_LOCAL_RUNTIMES_URL) \
@@ -132,9 +133,16 @@ EXAMPLES_PROXY_ENV = \
 	DATALAYER_STATUS_URL=$(PLANE_LOCAL_STATUS_URL) \
 	DATALAYER_SUPPORT_URL=$(PLANE_LOCAL_SUPPORT_URL) \
 	VITE_DATALAYER_URL=$(PLANE_LOCAL_IAM_URL) \
+	VITE_DATALAYER_IAM_URL=$(PLANE_LOCAL_IAM_URL) \
 	VITE_DATALAYER_RUNTIMES_URL=$(PLANE_LOCAL_RUNTIMES_URL) \
 	VITE_DATALAYER_SPACER_URL=$(PLANE_LOCAL_SPACER_URL) \
+	VITE_DATALAYER_LIBRARY_URL=$(PLANE_LOCAL_LIBRARY_URL) \
+	VITE_DATALAYER_AI_AGENTS_URL=$(PLANE_LOCAL_AI_AGENTS_URL) \
 	VITE_DATALAYER_AI_INFERENCE_URL=$(PLANE_LOCAL_AI_INFERENCE_URL) \
+	VITE_DATALAYER_MCP_SERVERS_URL=$(PLANE_LOCAL_MCP_SERVERS_URL) \
+	VITE_DATALAYER_GROWTH_URL=$(PLANE_LOCAL_GROWTH_URL) \
+	VITE_DATALAYER_SUCCESS_URL=$(PLANE_LOCAL_SUCCESS_URL) \
+	VITE_DATALAYER_SUPPORT_URL=$(PLANE_LOCAL_SUPPORT_URL) \
 	VITE_DATALAYER_AGENT_RUNTIMES_URL=$(PLANE_LOCAL_AGENT_RUNTIMES_URL) \
 	VITE_JUPYTER_SERVER_URL=$(PLANE_LOCAL_JUPYTER_SERVER_URL) \
 	VITE_BASE_URL=$(PLANE_LOCAL_AGENT_RUNTIMES_URL) \
@@ -272,12 +280,10 @@ examples\:prod: ## examples – dev server pointed at prod1.datalayer.run (and r
 	$(EXAMPLES_PROD_ENV) \
 		npm run examples
 
-examples\:proxy: ## examples – dev server pointed at a local `plane local` stack (override per-service URLs via PLANE_LOCAL_*_URL)
+example-local: ## examples – dev server with all requests (http + ws) pointed at local `plane local` servers (override per-service URLs via PLANE_LOCAL_*_URL)
 	$(BEDROCK_ENV) \
-	$(EXAMPLES_PROXY_ENV) \
+	$(EXAMPLE_LOCAL_ENV) \
 		npm run examples:codemode
-
-examples-proxy: examples\:proxy ## alias for examples:proxy
 
 agent: # agent - open agent.html with vite dev server
 	$(BEDROCK_ENV) npm run start:agent
@@ -292,7 +298,7 @@ agent-node: ## agent-node – develop Agent Node UI + local server (Vite HMR + P
 
 agent-node-local: ## agent-node-local – Agent Node dev (Vite HMR + Python) against local `plane local` services (PLANE_LOCAL_*_URL defaults)
 	$(BEDROCK_ENV) \
-	$(EXAMPLES_PROXY_ENV) \
+	$(EXAMPLE_LOCAL_ENV) \
 	AGENT_RUNTIMES_NODE=true \
 	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
 		npm run start:agent-node
@@ -309,7 +315,7 @@ agent-node-dist: ## agent-node-dist – run a real Agent Node (Python server + b
 	@echo "Stop with Ctrl-C — the node stops sending health and is evicted from the runtimes registry."
 	@echo ""
 	$(BEDROCK_ENV) \
-	$(EXAMPLES_PROXY_ENV) \
+	$(EXAMPLE_LOCAL_ENV) \
 	AGENT_RUNTIMES_NODE=true \
 	AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=$${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} \
 		python -m agent_runtimes serve --node --host 0.0.0.0 --port 8765 --log-level info

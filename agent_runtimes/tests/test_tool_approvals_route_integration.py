@@ -184,3 +184,56 @@ async def test_route_level_approve_execute_consume_persists_receipt(
             assert final.execution_ref == consumed_ref
     finally:
         await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_reserve_execution_is_idempotent_for_same_in_flight_call() -> None:
+    """A second reservation pass for the same in-flight call (e.g. a second
+    guardrail capability or the deferred/SaaS continuation re-running the hook)
+    must resume idempotently instead of failing once the record is
+    ``executing``. A different call cannot hijack the reserved envelope."""
+    await _reset_approvals()
+    try:
+        created = await _create_approval(
+            ToolApprovalCreateRequest(
+                agent_id=_AGENT_ID,
+                tool_name=_TOOL,
+                tool_args=_ARGS,
+                tool_call_id=_TOOL_CALL_ID,
+            )
+        )
+        await _decide_approval_via_ws(created.id, approved=True, note="approved")
+
+        first = await _mark_approval_executing(
+            created.id,
+            agent_id=_AGENT_ID,
+            tool_name=_TOOL,
+            tool_args=_ARGS,
+            execution_tool_call_id=_TOOL_CALL_ID,
+        )
+        assert first is not None and first.status == "executing"
+
+        # Second pass for the SAME call — must succeed idempotently.
+        second = await _mark_approval_executing(
+            created.id,
+            agent_id=_AGENT_ID,
+            tool_name=_TOOL,
+            tool_args=_ARGS,
+            execution_tool_call_id=_TOOL_CALL_ID,
+        )
+        assert second is not None
+        assert second.status == "executing"
+        assert second.id == created.id
+
+        # A different in-flight call must NOT reuse the reserved envelope.
+        hijack = await _mark_approval_executing(
+            created.id,
+            agent_id=_AGENT_ID,
+            tool_name=_TOOL,
+            tool_args=_ARGS,
+            execution_tool_call_id="tool-route-other",
+        )
+        assert hijack is None
+    finally:
+        await _reset_approvals()
+

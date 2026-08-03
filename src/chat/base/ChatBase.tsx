@@ -1342,6 +1342,18 @@ function ChatBaseInner({
     ],
   );
 
+  // Assigned once `applyServerApprovalDecision` is defined below. A ref lets the
+  // ai-agents approval WS effect (declared earlier) drive the deferred-run
+  // continuation without re-subscribing when the callback identity changes.
+  const applyServerApprovalDecisionRef = useRef<
+    | ((
+        approval: AgentStreamToolApprovalPayload,
+        approved: boolean,
+        note?: string,
+      ) => boolean)
+    | null
+  >(null);
+
   const reconcileResolvedApprovalInStore = useCallback(
     (approval: AgentStreamToolApprovalPayload): void => {
       const state = agentRuntimeStore.getState();
@@ -1474,7 +1486,26 @@ function ChatBaseInner({
 
         const state = agentRuntimeStore.getState();
         for (const record of records) {
-          const approval = normalizeApprovalPayload(record);
+          let approval = normalizeApprovalPayload(record);
+          // SaaS-resolved events (tool_approval_approved/rejected) can arrive
+          // with only {approvalId, status} and no tool_name/tool_args. Recover
+          // the full envelope from the store (populated by the earlier pending
+          // event) so the card clears AND the deferred run can resume.
+          if (!approval) {
+            const rawId =
+              (typeof record.id === 'string' && record.id) ||
+              (typeof record.approval_id === 'string' && record.approval_id) ||
+              (typeof record.approvalId === 'string' && record.approvalId) ||
+              '';
+            const rawStatus =
+              (typeof record.status === 'string' && record.status) || '';
+            if (rawId && rawStatus && rawStatus !== 'pending') {
+              const stored = state.approvals.find(a => a.id === rawId);
+              if (stored) {
+                approval = { ...stored, status: rawStatus };
+              }
+            }
+          }
           if (!approval) {
             continue;
           }
@@ -1506,6 +1537,15 @@ function ChatBaseInner({
             state.upsertApproval(scopedApproval);
           } else {
             reconcileResolvedApprovalInStore(scopedApproval);
+            // Resume the deferred tool call when the decision was made on
+            // another surface (e.g. the SaaS Tool Approvals UI). Without this
+            // the pending card clears but pydantic-ai never receives the
+            // client continuation and the run stays parked.
+            applyServerApprovalDecisionRef.current?.(
+              scopedApproval,
+              scopedApproval.status === 'approved',
+              scopedApproval.note ?? undefined,
+            );
           }
         }
       } catch {
@@ -1826,6 +1866,7 @@ function ChatBaseInner({
     },
     [activeAgentId],
   );
+  applyServerApprovalDecisionRef.current = applyServerApprovalDecision;
 
   // ---- Agent-runtime WebSocket (monitoring stream) ----
   // Derive the bare base URL from configEndpoint or protocol.endpoint.
