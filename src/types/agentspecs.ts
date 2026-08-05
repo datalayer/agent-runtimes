@@ -39,8 +39,8 @@ export interface Agentspec {
   systemPromptCodemodeAddons?: string;
   /** Tags for categorization */
   tags: string[];
-  /** Industry vertical used to group agents in the gallery */
-  vertical?: string;
+  /** Domain used to group agents in the gallery */
+  domain?: string;
   /** Whether the agent is enabled */
   enabled: boolean;
   /** AI model identifier to use for this agent */

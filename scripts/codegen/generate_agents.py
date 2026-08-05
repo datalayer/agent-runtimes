@@ -367,13 +367,15 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                     )
                 subagents_str = "SubAgentsConfig(" + ", ".join(cfg_parts) + ")"
 
+            domain_value = spec.get("domain") or spec.get("vertical")
+
             code += f'''{const_name} = Agentspec(
     id="{full_agent_id}",
     version="{version}",
                 name="{display_name}",
     description="{description}",
     tags={_fmt_list(spec.get("tags", []))},
-    vertical={f'"{spec.get("vertical")}"' if spec.get("vertical") else "None"},
+    domain={f'"{domain_value}"' if domain_value else "None"},
     enabled={spec.get("enabled", True)},
     model={model_str},
     inference_provider={inference_provider_str},
@@ -837,8 +839,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             tags = spec.get("tags", [])
             tags_str = "[" + ", ".join(f"'{t}'" for t in tags) + "]"
 
-            vertical_val = spec.get("vertical")
-            vertical_ts = f"'{vertical_val}'" if vertical_val else "undefined"
+            domain_val = spec.get("domain") or spec.get("vertical")
+            domain_ts = f"'{domain_val}'" if domain_val else "undefined"
 
             suggestions = spec.get("suggestions", [])
             # Escape single quotes in suggestions for TypeScript
@@ -944,7 +946,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 name: '{display_name}',
     description: `{description}`,
     tags: {tags_str},
-    vertical: {vertical_ts},
+    domain: {domain_ts},
     enabled: {str(spec.get("enabled", True)).lower()},
     model: {model_ts},
 {inference_provider_line}    mcpServers: [{mcp_servers_str}],

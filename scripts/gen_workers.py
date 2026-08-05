@@ -234,7 +234,7 @@ TEMPLATE = """# Copyright (c) 2025-2026 Datalayer, Inc.
 id: workers-{slug}
 version: 0.0.1
 name: {name}
-vertical: {vertical}
+domain: {vertical}
 description: >-
   {description}
 

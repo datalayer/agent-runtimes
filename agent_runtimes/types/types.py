@@ -6,7 +6,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class EnvvarSpec(BaseModel):
@@ -1051,9 +1051,10 @@ class Agentspec(BaseModel):
     name: str = Field(..., description="Display name for the agent")
     description: str = Field(default="", description="Agent description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
-    vertical: Optional[str] = Field(
+    domain: Optional[str] = Field(
         default=None,
-        description="Industry vertical used to group agents in the gallery (e.g. 'earth-observation')",
+        description="Domain used to group agents in the gallery (e.g. 'earth-observation')",
+        validation_alias=AliasChoices("domain", "vertical"),
     )
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
     model: Optional[str] = Field(
