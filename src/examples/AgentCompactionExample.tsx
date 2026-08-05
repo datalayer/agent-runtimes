@@ -16,7 +16,14 @@
 /// <reference types="vite/client" />
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Text, Spinner, Heading, Label, Button, FormControl } from '@primer/react';
+import {
+  Text,
+  Spinner,
+  Heading,
+  Label,
+  Button,
+  FormControl,
+} from '@primer/react';
 import {
   HistoryIcon,
   ClockIcon,
@@ -125,7 +132,12 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
           </Box>
 
           <Box
-            sx={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 0 }}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              fontSize: 0,
+            }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Text sx={{ color: 'fg.muted', minWidth: 64 }}>Tokens</Text>
@@ -134,7 +146,9 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
               </Text>
               <ArrowRightIcon size={12} />
               <Text sx={{ fontFamily: 'mono' }}>
-                {numberFmt.format(compaction.afterTokens ?? compaction.beforeTokens)}
+                {numberFmt.format(
+                  compaction.afterTokens ?? compaction.beforeTokens,
+                )}
               </Text>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

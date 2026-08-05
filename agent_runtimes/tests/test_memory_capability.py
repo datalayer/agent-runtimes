@@ -60,7 +60,7 @@ async def test_retrieval_injects_stored_memory() -> None:
 @pytest.mark.asyncio
 async def test_after_run_persists_turn_and_clears_cache() -> None:
     backend = EphemeralMemory()
-    cap = MemoryCapability(backend=backend)
+    cap = MemoryCapability(backend=backend, auto_store=True)
     ctx = SimpleNamespace(prompt="remember blue", run_id="run-2")
 
     await cap.before_run(ctx)
@@ -89,6 +89,19 @@ async def test_no_persistence_when_auto_store_disabled() -> None:
     await cap.after_run(ctx, result=result)
 
     assert await backend.search("store") == []
+
+
+@pytest.mark.asyncio
+async def test_no_auto_store_by_default() -> None:
+    backend = EphemeralMemory()
+    cap = MemoryCapability(backend=backend)
+    ctx = SimpleNamespace(prompt="my colour is blue", run_id="run-4")
+
+    result = SimpleNamespace(output="Nice, I've remembered that!")
+    await cap.after_run(ctx, result=result)
+
+    # Verbatim turns are not stored; only the remember tool persists facts.
+    assert await backend.list_all() == []
 
 
 def test_tools_absent_when_disabled() -> None:
@@ -126,7 +139,12 @@ def test_build_forwards_memory_config(monkeypatch: pytest.MonkeyPatch) -> None:
         "agent_runtimes.memory.capability.create_memory_backend", _fake_create
     )
 
-    cfg = {"vector_store": {"provider": "sqlite", "config": {"path": "/tmp/mem.db"}}}
+    cfg = {
+        "vector_store": {
+            "provider": "faiss",
+            "config": {"path": "/tmp/mem0/faiss", "collection_name": "u2_a2"},
+        }
+    }
     cap = build_memory_capability(
         "mem0", user_id="u2", agent_id="a2", config=cfg
     )

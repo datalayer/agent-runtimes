@@ -1051,6 +1051,10 @@ class Agentspec(BaseModel):
     name: str = Field(..., description="Display name for the agent")
     description: str = Field(default="", description="Agent description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    vertical: Optional[str] = Field(
+        default=None,
+        description="Industry vertical used to group agents in the gallery (e.g. 'earth-observation')",
+    )
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
     model: Optional[str] = Field(
         default=None,
@@ -1230,7 +1234,7 @@ class Agentspec(BaseModel):
     memory_config: Optional[Dict[str, Any]] = Field(
         default=None,
         alias="memoryConfig",
-        description="Optional backend-specific memory configuration (for example Mem0 sqlite/pgvector settings).",
+        description="Optional backend-specific memory configuration (for example Mem0 faiss/pgvector settings).",
     )
     pre_hooks: Optional[Dict[str, Any]] = Field(
         default=None,

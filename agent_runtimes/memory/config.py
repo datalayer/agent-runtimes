@@ -4,7 +4,7 @@
 """Mem0 backend configuration helpers.
 
 Provides environment-driven defaults for local and cloud memory storage:
-- local: sqlite-backed Mem0 store
+- local: faiss-backed Mem0 store on local disk
 - cloud: pgvector-backed Mem0 store (PostgreSQL)
 
 Explicit config passed by the caller always wins.
@@ -29,7 +29,12 @@ _DEFAULT_PGVECTOR_USER = 'mem0'
 _DEFAULT_PGVECTOR_COLLECTION = 'agent_memories'
 
 
-def _sqlite_path(user_id: str, agent_id: str | None) -> str:
+def _local_path(user_id: str, agent_id: str | None) -> str:
+    configured = os.environ.get('AGENT_RUNTIMES_MEM0_LOCAL_PATH', '').strip()
+    if configured:
+        return configured
+
+    # Backward-compatible fallback for older env var naming.
     configured = os.environ.get('AGENT_RUNTIMES_MEM0_SQLITE_PATH', '').strip()
     if configured:
         return configured
@@ -38,14 +43,19 @@ def _sqlite_path(user_id: str, agent_id: str | None) -> str:
     safe_agent = (agent_id or 'shared').replace('/', '_')
     base_dir = Path(os.environ.get('AGENT_RUNTIMES_MEM0_DIR', '/tmp/mem0'))
     base_dir.mkdir(parents=True, exist_ok=True)
-    return str(base_dir / f'{safe_user}_{safe_agent}.db')
+    return str(base_dir / 'faiss')
 
 
-def _sqlite_config(user_id: str, agent_id: str | None) -> dict[str, object]:
+def _faiss_config(user_id: str, agent_id: str | None) -> dict[str, object]:
+    safe_user = user_id.replace('/', '_') or 'default'
+    safe_agent = (agent_id or 'shared').replace('/', '_')
     return {
         'vector_store': {
-            'provider': 'sqlite',
-            'config': {'path': _sqlite_path(user_id=user_id, agent_id=agent_id)},
+            'provider': 'faiss',
+            'config': {
+                'path': _local_path(user_id=user_id, agent_id=agent_id),
+                'collection_name': f'{safe_user}_{safe_agent}',
+            },
         }
     }
 
@@ -109,7 +119,7 @@ def resolve_mem0_config(
     Priority:
     1) explicit config argument
     2) AGENT_RUNTIMES_MEM0_CONFIG_JSON
-    3) mode-driven defaults (auto/sqlite/postgres)
+    3) mode-driven defaults (auto/faiss/postgres)
     """
     if explicit_config:
         return explicit_config
@@ -127,12 +137,12 @@ def resolve_mem0_config(
             logger.warning('Invalid AGENT_RUNTIMES_MEM0_CONFIG_JSON: %s', exc)
 
     mode = os.environ.get('AGENT_RUNTIMES_MEM0_BACKEND', 'auto').strip().lower()
-    if mode == 'sqlite':
-        return _sqlite_config(user_id=user_id, agent_id=agent_id)
+    if mode in {'sqlite', 'faiss'}:
+        return _faiss_config(user_id=user_id, agent_id=agent_id)
     if mode == 'postgres':
         return _postgres_config()
 
     postgres = _postgres_config()
     if postgres is not None:
         return postgres
-    return _sqlite_config(user_id=user_id, agent_id=agent_id)
+    return _faiss_config(user_id=user_id, agent_id=agent_id)

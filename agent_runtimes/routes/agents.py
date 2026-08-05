@@ -921,7 +921,7 @@ class CreateAgentRequest(BaseModel):
     )
     memory: str | None = Field(
         default=None,
-        description="Optional memory backend override (for example: 'ephemeral' or 'mem0').",
+        description="Optional memory backend override (for example: 'ephemeral', 'sqlite', or 'mem0').",
     )
     memory_config: dict[str, Any] | None = Field(
         default=None,

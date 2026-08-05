@@ -47,13 +47,7 @@ export interface AgentStreamCompactionPayload {
 
 /** Phase of a streamed subagent interaction. */
 export type AgentSubagentPhase =
-  | 'start'
-  | 'text'
-  | 'thinking'
-  | 'tool_call'
-  | 'tool_result'
-  | 'end'
-  | 'error';
+  'start' | 'text' | 'thinking' | 'tool_call' | 'tool_result' | 'end' | 'error';
 
 /**
  * Incremental subagent activity pushed on the parent agent's monitoring

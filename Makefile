@@ -8,7 +8,7 @@ SHELL=/bin/bash
 .PHONY: \
 	help default clean build test test-js test-py kill warning \
 	publish-npm publish-pypi publish-conda pydoc typedoc docs \
-	examples examples\:prod example-local agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
+	examples examples\:prod examples-local agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
 	specs-sandbox-variants \
@@ -280,7 +280,7 @@ examples\:prod: ## examples – dev server pointed at prod1.datalayer.run (and r
 	$(EXAMPLES_PROD_ENV) \
 		npm run examples
 
-example-local: ## examples – dev server with all requests (http + ws) pointed at local `plane local` servers (override per-service URLs via PLANE_LOCAL_*_URL)
+examples-local: ## examples-local – dev server with all requests (http + ws) pointed at local `plane local` servers (override per-service URLs via PLANE_LOCAL_*_URL)
 	$(BEDROCK_ENV) \
 	$(EXAMPLE_LOCAL_ENV) \
 		npm run examples:codemode

@@ -373,6 +373,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                 name="{display_name}",
     description="{description}",
     tags={_fmt_list(spec.get("tags", []))},
+    vertical={f'"{spec.get("vertical")}"' if spec.get("vertical") else "None"},
     enabled={spec.get("enabled", True)},
     model={model_str},
     inference_provider={inference_provider_str},
@@ -836,6 +837,9 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             tags = spec.get("tags", [])
             tags_str = "[" + ", ".join(f"'{t}'" for t in tags) + "]"
 
+            vertical_val = spec.get("vertical")
+            vertical_ts = f"'{vertical_val}'" if vertical_val else "undefined"
+
             suggestions = spec.get("suggestions", [])
             # Escape single quotes in suggestions for TypeScript
             escaped_suggestions = [s.replace("'", "\\'") for s in suggestions]
@@ -940,6 +944,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 name: '{display_name}',
     description: `{description}`,
     tags: {tags_str},
+    vertical: {vertical_ts},
     enabled: {str(spec.get("enabled", True)).lower()},
     model: {model_ts},
 {inference_provider_line}    mcpServers: [{mcp_servers_str}],

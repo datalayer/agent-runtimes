@@ -6,9 +6,10 @@
 /**
  * AgentMemoryExample
  *
- * Demonstrates the Mem0 memory backend for durable agents.
- * Uses sqlite-backed Mem0 for local runs and pgvector-backed Mem0
- * (PostgreSQL) for cloud runs when server-side postgres env is configured.
+ * Demonstrates durable agent memory.
+ * Uses a local SQLite store for local runs (offline, no API key) and
+ * pgvector-backed Mem0 (PostgreSQL) for cloud runs when server-side
+ * postgres env is configured.
  *
  * The left panel shows a standard Chat. The right panel shows the
  * agent's memory contents (fetched from the runtime sidecar) and lets
@@ -28,7 +29,11 @@ import {
   Label,
   Flash,
 } from '@primer/react';
-import { SearchIcon, DatabaseIcon } from '@primer/octicons-react';
+import {
+  SearchIcon,
+  DatabaseIcon,
+  ListUnorderedIcon,
+} from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
@@ -76,6 +81,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   >(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MemoryEntry[]>([]);
+  const [searchAttempted, setSearchAttempted] = useState(false);
   const [searching, setSearching] = useState(false);
 
   const podName = isReady ? `local:${agentId}` : '(launching…)';
@@ -107,22 +113,11 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           method: 'POST',
           body: JSON.stringify({
             name: agentName,
-            description: 'Agent with Mem0 persistent memory',
+            description: 'Agent with persistent memory',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENTSPEC_ID,
-            memory: 'mem0',
-            memoryConfig:
-              runtimeTarget === 'local'
-                ? {
-                    vector_store: {
-                      provider: 'sqlite',
-                      config: {
-                        path: `/tmp/mem0/${agentName}.db`,
-                      },
-                    },
-                  }
-                : undefined,
+            memory: runtimeTarget === 'local' ? 'sqlite' : 'mem0',
             enable_skills: true,
             tools: [],
           }),
@@ -224,9 +219,13 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setAccountMemoriesError(null);
     } catch (error: any) {
       setAccountMemories([]);
+      const rawMessage = String(error?.message || '');
+      const isMissingEndpoint = /404|not\s*found/i.test(rawMessage);
       setAccountMemoriesError(
-        error?.message ||
-          'Runtimes memory API is not available in this environment.',
+        isMissingEndpoint
+          ? 'Runtimes memory API endpoint is not available in this environment (expected in local example-only mode).'
+          : rawMessage ||
+              'Runtimes memory API is not available in this environment.',
       );
     }
   }, [agentBaseUrl, agentId, isReady, token]);
@@ -246,6 +245,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const handleSearch = useCallback(async () => {
     if (!isReady || !agentBaseUrl || !searchQuery.trim()) return;
+    setSearchAttempted(true);
     setSearching(true);
     try {
       const res = await authFetch(
@@ -258,13 +258,25 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       if (res.ok) {
         const data = await res.json();
         setSearchResults(Array.isArray(data) ? data : (data.results ?? []));
+      } else {
+        setSearchResults([]);
       }
     } catch {
       // Endpoint may not exist yet
+      setSearchResults([]);
     } finally {
       setSearching(false);
     }
   }, [isReady, agentBaseUrl, agentId, searchQuery, authFetch]);
+
+  // ── List all memories (clears any active search) ──────────────────────────
+
+  const handleListAll = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchAttempted(false);
+    void fetchMemories();
+  }, [fetchMemories]);
 
   // ── Loading state ────────────────────────────────────────────────────────
 
@@ -339,7 +351,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             title="Memory Agent"
             brandIcon={<DatabaseIcon size={16} />}
             placeholder="Chat — the agent remembers you across sessions…"
-            description="Agent with Mem0 persistent memory"
+            description="Agent with persistent memory"
             showHeader={true}
             kernelIndicatorPlacement="right"
             showTokenUsage={true}
@@ -388,9 +400,15 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             </Box>
             <Label variant="accent" sx={{ mb: 2 }}>
               {runtimeTarget === 'local'
-                ? 'Mem0 sqlite backend (local)'
+                ? 'SQLite backend (local, persistent)'
                 : 'Mem0 pgvector backend (cloud)'}
             </Label>
+
+            <Flash variant="default" sx={{ fontSize: 0, mt: 2 }}>
+              Memory persistence conditions: for local runs the agent uses a
+              durable SQLite store; for cloud runs it uses Mem0. Durable facts
+              are saved when the model emits a remember action (not every turn).
+            </Flash>
 
             <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
               <TextInput
@@ -408,6 +426,13 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 disabled={searching}
               >
                 {searching ? <Spinner size="small" /> : 'Search'}
+              </Button>
+              <Button
+                size="small"
+                leadingVisual={ListUnorderedIcon}
+                onClick={handleListAll}
+              >
+                List all
               </Button>
             </Box>
           </Box>
@@ -455,6 +480,24 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               ))}
             </Box>
           )}
+
+          {searchAttempted &&
+            !searching &&
+            searchQuery.trim() &&
+            searchResults.length === 0 && (
+              <Box
+                sx={{
+                  px: 3,
+                  py: 2,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.default',
+                }}
+              >
+                <Flash variant="default" sx={{ fontSize: 0 }}>
+                  No matching memories found for this query yet.
+                </Flash>
+              </Box>
+            )}
 
           {/* All memories */}
           <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 2 }}>
@@ -511,7 +554,9 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               <Text
                 sx={{ color: 'fg.muted', fontSize: 0, display: 'block', mb: 2 }}
               >
-                Uses listRuntimeMemories against /api/runtimes/v1/memories.
+                Uses listRuntimeMemories against /api/runtimes/v1/memories. This
+                endpoint is only available when the runtimes service is
+                configured; local example-only runs may return Not Found.
               </Text>
               {accountMemoriesError ? (
                 <Flash variant="warning" sx={{ fontSize: 0, mb: 2 }}>

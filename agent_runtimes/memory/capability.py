@@ -60,7 +60,9 @@ class MemoryCapability(AbstractCapability[Any]):
     max_memories:
         Maximum number of memories injected into the system prompt per run.
     auto_store:
-        When True, persist the user prompt and final answer after each run.
+        When True, persist the raw user prompt and final answer after each run.
+        Off by default so memory holds only durable facts the model chooses to
+        save via the ``remember`` tool, instead of verbatim conversation turns.
     expose_tools:
         When True, expose ``search_memory`` and ``remember`` tools to the model.
     """
@@ -68,7 +70,7 @@ class MemoryCapability(AbstractCapability[Any]):
     backend: BaseMemoryBackend = field(default_factory=EphemeralMemory)
     agent_id: str | None = None
     max_memories: int = 5
-    auto_store: bool = True
+    auto_store: bool = False
     expose_tools: bool = True
     _context_by_run: dict[str, str] = field(
         default_factory=dict, init=False, repr=False
