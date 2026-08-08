@@ -25,36 +25,24 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "a2a-sdk[all]>=0.3.0,<0.4.0",
-    "a2ui-agent-sdk>=0.4.0",
-    "ag-ui-protocol>=0.1.19",
-    "agent-client-protocol>=0.7.1",
     "agent-codemode",
     "agent-skills",
-    "boto3>=1.42.96,<1.43.0",
     "code-sandboxes",
     "croniter>=6.0.0",
     "datalayer-core",
-    "dbos",
-    "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
     "fastapi>=0.116.1,<0.142.0",
     "filelock>=3.20.3",
     "httpx>=0.28.0,<1.0.0",
-    "jupyter-kernel-client>=1.0.0",
     "nbformat>=5.10.0,<6.0.0",
     "jupyter-server>=2.10,<3",
-    "logfire>=4.32.1",
-    "logfire-api>=4.33.0",
-    "mcp-ui-server>=1.0.0,<1.1.0",
     "mcp>=1.10.1,<2",
-    "mem0ai>=2.0.1",
     "opentelemetry-api>=1.40.0,<2.0.0",
     "opentelemetry-sdk>=1.40.0,<2.0.0",
     "opentelemetry-semantic-conventions>=0.61b0,<0.62",
     "opentelemetry-exporter-otlp-proto-http>=1.40.0,<2.0.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.40.0,<2.0.0",
     "opentelemetry-instrumentation>=0.61b0,<0.62",
-    "pydantic-ai-slim[dbos,bedrock]>=2.21.0,<3",
+    "pydantic-ai-slim>=2.21.0,<3",
     "pydantic-graph>=2.21.0,<3",
     "pydantic-settings>=2.14.2",
     "pydantic[email]>=2.13.3",
@@ -85,24 +73,30 @@ google = [
     "google-api-core>=2.30.3",
     "pydantic-ai-slim[google]>=2.21.0,<3",
 ]
-all = [
-    "anthropic>=0.105.0,<1.0.0",
-    "openai>=2.29.0,<3.0.0",
-    "google-auth>=2.52.0",
-    "google-api-core>=2.30.3",
-    "pydantic-ai-slim[anthropic,openai,google]>=2.21.0,<3",
+aws = [
+    "boto3>=1.42.96,<1.43.0",
+    "pydantic-ai-slim[bedrock]>=2.21.0,<3",
 ]
-test = [
-    "coverage>=7.9.2",
-    "mypy>=1.16.1",
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1.0",
-    "pytest-cov>=6.2.1",
-    "pytest_jupyter>=0.10.1",
-    "pytest-tornasync",
-    "python-dotenv>=1.1.1",
-    "types-requests>=2.32.4",
-    "typing-extensions>=4.15.0",
+a2a = [
+    "a2a-sdk[all]>=0.3.0,<0.4.0",
+    "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
+]
+ui = [
+    "a2ui-agent-sdk>=0.4.0",
+    "ag-ui-protocol>=0.1.19",
+    "agent-client-protocol>=0.7.1",
+    "mcp-ui-server>=1.0.0,<1.1.0",
+]
+memory = [
+    "mem0ai>=2.0.1",
+]
+durable = [
+    "dbos",
+    "pydantic-ai-slim[dbos]>=2.21.0,<3",
+]
+logfire = [
+    "logfire>=4.32.1",
+    "logfire-api>=4.33.0",
 ]
 docs = [
     "npdoc_to_md>=2.0.1",
@@ -134,6 +128,21 @@ chat = [
 ]
 agent-sudo = [
     "agent-sudo>=0.4.0rc14",
+]
+all = [
+    "agent_runtimes[a2a,anthropic,aws,durable,google,logfire,memory,openai,ui]",
+]
+test = [
+    "coverage>=7.9.2",
+    "mypy>=1.16.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+    "pytest_jupyter>=0.10.1",
+    "pytest-tornasync",
+    "python-dotenv>=1.1.1",
+    "types-requests>=2.32.4",
+    "typing-extensions>=4.15.0",
 ]
 
 [project.scripts]

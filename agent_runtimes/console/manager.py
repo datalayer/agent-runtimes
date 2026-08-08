@@ -5,23 +5,25 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from typing import Any, Optional
 
 import requests
+from code_sandboxes import CodeSandboxClient
 from datalayer_core.utils.date import timestamp_to_local_date
 from datalayer_core.utils.urls import DatalayerURLs
-from jupyter_kernel_client.manager import REQUEST_TIMEOUT, KernelHttpManager
 from jupyter_server.utils import url_path_join
 
 from agent_runtimes.client import AgentClient
 from agent_runtimes.displays.runtimes import display_runtimes
 
 HTTP_PROTOCOL_REGEXP = re.compile(r"^http")
+REQUEST_TIMEOUT = 10.0
 
 
-class RuntimeManager(KernelHttpManager):
+class RuntimeManager:
     """
     Manages a single Runtime.
 
@@ -54,9 +56,12 @@ class RuntimeManager(KernelHttpManager):
         **kwargs : dict[str, Any]
             Additional keyword arguments.
         """
-        _ = kwargs.pop("kernel_id", None)  # kernel_id not supported
-        super().__init__(server_url="", token="", username=username, **kwargs)
+        _ = kwargs.pop("kernel_id", None)
         self._kernel_id = ""
+        self._sandbox_client: CodeSandboxClient | None = None
+        self.server_url = ""
+        self.token = ""
+        self.log = kwargs.pop("log", None) or logging.getLogger(__name__)
         self.runtime_uid = ""
         self.runtime_name = ""
         self.runtime_pod_name = ""
@@ -68,6 +73,25 @@ class RuntimeManager(KernelHttpManager):
         # Initialize AgentClient for modern API access
         urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
         self._client = AgentClient(urls=urls, api_key=token)
+
+    @property
+    def client(self) -> CodeSandboxClient | None:
+        """The active variant-neutral sandbox client."""
+        return self._sandbox_client
+
+    @property
+    def kernel(self) -> dict[str, Any] | None:
+        """Minimal execution backend metadata used by the console UI."""
+        if not self._sandbox_client or not self._kernel_id:
+            return None
+        return {"id": self._kernel_id, "execution_state": "idle"}
+
+    @property
+    def has_kernel(self) -> bool:
+        return self._sandbox_client is not None and self._sandbox_client.is_alive()
+
+    def refresh_model(self) -> dict[str, Any] | None:
+        return self.kernel
 
     @property
     def kernel_url(self) -> Optional[str]:
@@ -187,6 +211,15 @@ class RuntimeManager(KernelHttpManager):
         # Ensure runtime endpoint is ready and a usable kernel exists.
         self._kernel_id = self._ensure_kernel_id()
 
+        self._sandbox_client = CodeSandboxClient.create(
+            variant="jupyter",
+            server_url=self.server_url,
+            token=self.token,
+            kernel_id=self._kernel_id,
+            reuse_kernel=True,
+        )
+        self._sandbox_client.start()
+
         kernel_model = self.refresh_model()
         msg = f"RuntimeManager using existing Agent {runtime_name}"
         expired_at = runtime.get("expired_at")
@@ -195,6 +228,31 @@ class RuntimeManager(KernelHttpManager):
         self.log.info(msg)
 
         return kernel_model
+
+    def interrupt_kernel(self, timeout: float = REQUEST_TIMEOUT) -> bool:
+        del timeout
+        return bool(self._sandbox_client and self._sandbox_client.interrupt())
+
+    def shutdown_kernel(self, now: bool = False, restart: bool = False) -> None:
+        del now
+        if self._sandbox_client is None:
+            return
+        if restart:
+            self._sandbox_client.restart()
+        else:
+            self._sandbox_client.stop()
+            self._sandbox_client = None
+            self._kernel_id = ""
+
+    def restart_kernel(self, timeout: float = REQUEST_TIMEOUT, **kwargs: Any) -> None:
+        del timeout, kwargs
+        if self._sandbox_client is None:
+            raise RuntimeError("No code sandbox is active.")
+        self._sandbox_client.restart()
+
+    def is_alive(self, timeout: float = REQUEST_TIMEOUT) -> bool:
+        del timeout
+        return bool(self._sandbox_client and self._sandbox_client.is_alive())
 
     def _pick_accessible_runtime(self, runtimes: list[Any]) -> Optional[Any]:
         """Return first runtime that responds on /api/kernels with its runtime token."""

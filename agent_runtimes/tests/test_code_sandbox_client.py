@@ -4,7 +4,7 @@
 
 
 """
-Test script to debug kernel client variable operations.
+Test script for code sandbox client variable operations.
 """
 
 import os
@@ -17,9 +17,9 @@ from agent_runtimes.client import AgentClient
 load_dotenv()
 
 
-def test_kernel_client() -> None:
-    """Test kernel client variable operations"""
-    print("Testing kernel client variable operations...")
+def test_code_sandbox_client() -> None:
+    """Test code sandbox client variable operations."""
+    print("Testing code sandbox client variable operations...")
 
     # Explicitly get token from env vars (CI sets TEST_DATALAYER_API_KEY or DATALAYER_API_KEY)
     token = os.getenv("DATALAYER_API_KEY") or os.getenv("TEST_DATALAYER_API_KEY")
@@ -34,10 +34,10 @@ def test_kernel_client() -> None:
     ) as runtime:
         print(f"Runtime created: {runtime.uid}")
 
-        # Test kernel info
-        if runtime._kernel_client:
+        # Test sandbox execution metadata
+        if runtime.sandbox_client:
             try:
-                kernel_info = runtime._kernel_client.kernel_info
+                kernel_info = runtime.sandbox_client.kernel_info
                 print(f"Kernel info: {kernel_info}")
 
                 if kernel_info:
@@ -134,32 +134,14 @@ else:
                 debug=True,
             )
 
-            # Test the actual get_variable method and inspect results
+            # Test the public sandbox client before reading the variable.
             print("\n--- Testing get_variable execution details ---")
-            if runtime._kernel_client is None:
-                raise RuntimeError("Kernel client is None")
-            kernel_language = runtime._kernel_client.kernel_info.get(
+            if runtime.sandbox_client is None:
+                raise RuntimeError("Code sandbox client is None")
+            sandbox_language = runtime.sandbox_client.kernel_info.get(
                 "language_info", {}
             ).get("name")
-            print(f"Kernel language: {kernel_language}")
-
-            from jupyter_kernel_client.snippets import SNIPPETS_REGISTRY
-
-            snippet = SNIPPETS_REGISTRY.get_get_variable(kernel_language)
-            formatted_snippet = snippet.format(name="debug_var")
-            print(f"Get variable snippet:\n{formatted_snippet}")
-
-            # Execute the snippet and inspect the full results
-            if runtime._kernel_client is None:
-                raise RuntimeError("Kernel client is None")
-            results = runtime._kernel_client.execute(formatted_snippet, silent=True)
-            print(f"Get variable results: {results}")
-            print(f"Results status: {results['status']}")
-            print(f"Results outputs: {results['outputs']}")
-            for i, output in enumerate(results["outputs"]):
-                print(f"Output {i}: {output}")
-                if "data" in output:
-                    print(f"  Data keys: {output['data'].keys()}")
+            print(f"Sandbox language: {sandbox_language}")
 
             value = runtime.get_variable("debug_var")
             print(f"Retrieved debug_var using get_variable: {value}")
@@ -182,4 +164,4 @@ else:
 
 
 if __name__ == "__main__":
-    test_kernel_client()
+    test_code_sandbox_client()

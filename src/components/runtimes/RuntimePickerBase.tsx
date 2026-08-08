@@ -134,22 +134,20 @@ export function RuntimePickerBase(
     [translator],
   );
   const [defaultSet, setDefaultSet] = useState(false);
+  const [remoteModelsReady, setRemoteModelsReady] = useState(
+    !multiServiceManager.remote,
+  );
   // Trick because overflow is an unknown prop of ActionMenu.Overlay.
   const overlayProps = {
     maxHeight: 'large' as Height,
     width: (variant === 'cell' ? 'small' : 'auto') as Width,
   };
   useEffect(() => {
-    multiServiceManager.remote?.runtimesManager
-      .refreshRuntimeModels?.()
-      .catch(reason => {
-        console.error(
-          'Failed to resolve remote runtimes for the runtime picker.',
-          reason,
-        );
-      });
-
+    let disposed = false;
     const updateGroupedRuntimeDescs = () => {
+      if (disposed) {
+        return;
+      }
       setGroupedRuntimeDescs(
         getGroupedRuntimeDescs(
           multiServiceManager,
@@ -160,6 +158,27 @@ export function RuntimePickerBase(
         ),
       );
     };
+
+    const refreshRuntimeModels =
+      multiServiceManager.remote?.runtimesManager.refreshRuntimeModels?.();
+    if (refreshRuntimeModels) {
+      refreshRuntimeModels
+        .catch(reason => {
+          console.error(
+            'Failed to resolve remote runtimes for the runtime picker.',
+            reason,
+          );
+        })
+        .finally(() => {
+          if (disposed) {
+            return;
+          }
+          updateGroupedRuntimeDescs();
+          setRemoteModelsReady(true);
+        });
+    } else {
+      setRemoteModelsReady(true);
+    }
 
     // Recompute immediately in case a runtime changed between the initial
     // render and connecting the manager signals.
@@ -191,6 +210,7 @@ export function RuntimePickerBase(
     );
 
     return () => {
+      disposed = true;
       multiServiceManager.browser?.kernels.runningChanged.disconnect(
         updateGroupedRuntimeDescs,
       );
@@ -224,17 +244,28 @@ export function RuntimePickerBase(
     if (sessionContext && groupedRuntimeDescs) {
       const kernelId = sessionContext.session?.kernel?.id;
       if (kernelId) {
+        let matched = false;
         Object.entries(groupedRuntimeDescs).forEach(([group, runtimeDescs]) => {
           runtimeDescs.forEach(runtimeDesc => {
             if (runtimeDesc.kernelId === kernelId) {
+              matched = true;
               setRuntimeDesc(runtimeDesc);
             }
           });
         });
+        if (!matched && !remoteModelsReady) {
+          return;
+        }
       }
     }
     setDefaultSet(true);
-  }, [defaultSet, groupedRuntimeDescs, sessionContext, setRuntimeDesc]);
+  }, [
+    defaultSet,
+    groupedRuntimeDescs,
+    remoteModelsReady,
+    sessionContext,
+    setRuntimeDesc,
+  ]);
   // For cell using submenu instead of group would be nice unfortunately the feature
   // is not yet implemented in the component there has been a not-great demo story.
   // https://github.com/primer/react/pull/3585

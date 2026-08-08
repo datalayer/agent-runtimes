@@ -21,13 +21,13 @@ from typing import Any, Optional, Union
 from urllib.parse import urlparse
 
 import requests
+from code_sandboxes import CodeSandboxClient
 from datalayer_core.client.client import DatalayerClient as _BaseDatalayerClient
 from datalayer_core.utils.defaults import (
     DEFAULT_ENVIRONMENT,
     DEFAULT_TIME_RESERVATION,
 )
 from datalayer_core.utils.types import Minutes
-from jupyter_kernel_client import JupyterKernelClient
 
 from agent_runtimes.mixins.environments import EnvironmentsMixin
 from agent_runtimes.mixins.evals import EvalsMixin
@@ -1120,11 +1120,15 @@ class AgentClient(
             result["message"] = "runtime token is missing"
             return result
 
-        kernel_client: Optional[JupyterKernelClient] = None
+        sandbox_client: Optional[CodeSandboxClient] = None
         try:
-            kernel_client = JupyterKernelClient(server_url=endpoint, token=runtime_token)
-            kernel_client.start()
-            reply = kernel_client.execute(probe_code, timeout=timeout)
+            sandbox_client = CodeSandboxClient.create(
+                variant="jupyter",
+                server_url=endpoint,
+                token=runtime_token,
+            )
+            sandbox_client.start()
+            reply = sandbox_client.execute(probe_code, timeout=timeout)
             outputs = reply.get("outputs", [])
             if not isinstance(outputs, list):
                 outputs = []
@@ -1163,9 +1167,9 @@ class AgentClient(
             result["message"] = f"runtime health probe exception: {exc}"
             return result
         finally:
-            if kernel_client is not None:
+            if sandbox_client is not None:
                 try:
-                    kernel_client.stop()
+                    sandbox_client.stop()
                 except Exception:
                     pass
 

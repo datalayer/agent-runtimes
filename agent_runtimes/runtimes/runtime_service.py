@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 import requests
+from code_sandboxes import CodeSandboxClient
 from datalayer_core.mixins.authn import AuthnMixin
 from datalayer_core.models import ExecutionResponse
 from datalayer_core.utils.defaults import (
@@ -25,7 +26,6 @@ from datalayer_core.utils.types import (
     Seconds,
 )
 from datalayer_core.utils.urls import DEFAULT_DATALAYER_URL, DatalayerURLs
-from jupyter_kernel_client import JupyterKernelClient
 
 from agent_runtimes.mixins.runtimes import RuntimesMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
@@ -100,7 +100,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         burning_rate : Optional[float]
             Burning rate for the runtime.
         jupyter_token : Optional[str]
-            Token for the kernel client.
+            Token used by the code sandbox client.
         started_at : Optional[str]
             Start time for the runtime.
         expired_at : Optional[str]
@@ -124,7 +124,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             started_at=started_at,
             expired_at=expired_at,
             runtime={},
-            kernel_client=None,
+            sandbox_client=None,
             kernel_id=None,
             executing=False,
         )
@@ -137,7 +137,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         Provides access to all runtime properties including:
         - Configuration: name, environment, datalayer_url, iam_url
         - Authentication: token, external_token
-        - Runtime state: kernel_client, kernel_id, executing
+        - Runtime state: sandbox_client, kernel_id, executing
         - Infrastructure: pod_name, ingress, uid, reservation_id
 
         Returns
@@ -159,9 +159,9 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         self._model.token = value
 
     @property
-    def _kernel_client(self) -> Optional[Any]:
-        """Get the kernel client for backward compatibility."""
-        return self._model.kernel_client
+    def sandbox_client(self) -> Optional[CodeSandboxClient]:
+        """Get the variant-neutral code sandbox client."""
+        return self._model.sandbox_client
 
     @property
     def _external_token(self) -> Optional[str]:
@@ -286,7 +286,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
 
     def start(self) -> None:
         """
-        Start the runtime and kernel client.
+        Start the runtime and code sandbox client.
 
         This is a public wrapper for `_start()` to support non-context usage.
         """
@@ -294,7 +294,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
 
     def stop(self) -> bool:
         """
-        Stop the runtime and terminate the kernel client.
+        Stop the runtime and terminate the code sandbox client.
 
         This is a public wrapper for `_stop()` to support non-context usage.
         """
@@ -303,12 +303,14 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
     def _start(self) -> None:
         """Start the runtime."""
         if self.model.ingress is not None and self.model.jupyter_token is not None:
-            self.model.kernel_client = JupyterKernelClient(
-                server_url=self.model.ingress, token=self.model.jupyter_token
+            self.model.sandbox_client = CodeSandboxClient.create(
+                variant="jupyter",
+                server_url=self.model.ingress,
+                token=self.model.jupyter_token,
             )
-            self.model.kernel_client.start()
+            self.model.sandbox_client.start()
 
-        if self.model.kernel_client is None:
+        if self.model.sandbox_client is None:
             self.model.runtime = self._create_runtime(self.model.environment)
 
             # Check if runtime creation was successful
@@ -363,14 +365,16 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             self.model.started_at = runtime["started_at"]
             self.model.expired_at = runtime["expired_at"]
 
-            # Create and start kernel client
+            # Create and start the code sandbox client.
             last_error: Optional[Exception] = None
             for attempt in range(1, 4):
                 try:
-                    self.model.kernel_client = JupyterKernelClient(
-                        server_url=self.model.ingress, token=self.model.jupyter_token
+                    self.model.sandbox_client = CodeSandboxClient.create(
+                        variant="jupyter",
+                        server_url=self.model.ingress,
+                        token=self.model.jupyter_token,
                     )
-                    self.model.kernel_client.start()
+                    self.model.sandbox_client.start()
                     print(f"Runtime started successfully: {self.model.uid}")
                     break
                 except requests.exceptions.HTTPError as e:
@@ -385,14 +389,19 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
                     if status in (502, 503, 504) and attempt < 3:
                         time.sleep(2)
                         continue
-                    raise RuntimeError(f"Failed to start kernel client: {str(e)}")
+                    raise RuntimeError(
+                        f"Failed to start code sandbox client: {str(e)}"
+                    )
                 except Exception as e:
                     last_error = e
-                    raise RuntimeError(f"Failed to start kernel client: {str(e)}")
+                    raise RuntimeError(
+                        f"Failed to start code sandbox client: {str(e)}"
+                    )
 
-            if self.model.kernel_client is None:
+            if self.model.sandbox_client is None:
                 raise RuntimeError(
-                    f"Failed to start kernel client: {str(last_error) if last_error else 'unknown error'}"
+                    "Failed to start code sandbox client: "
+                    f"{str(last_error) if last_error else 'unknown error'}"
                 )
 
     def _stop(self) -> bool:
@@ -404,9 +413,9 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         bool
             True if runtime was successfully stopped, False otherwise.
         """
-        if self.model.kernel_client:
-            self.model.kernel_client.stop()
-            self.model.kernel_client = None
+        if self.model.sandbox_client:
+            self.model.sandbox_client.stop()
+            self.model.sandbox_client = None
             self.model.kernel_id = None
             if self.model.pod_name:
                 return self._terminate_runtime(self.model.pod_name)["success"]
@@ -448,10 +457,10 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         Any
             Value of the variable, or None if not found or runtime not started.
         """
-        if self.model.kernel_client:
+        if self.model.sandbox_client:
             try:
-                # The kernel client get_variable method should return the deserialized value
-                return self.model.kernel_client.get_variable(name)
+                # The sandbox client returns the deserialized value.
+                return self.model.sandbox_client.get_variable(name)
             except Exception as e:
                 print(f"Warning: Failed to get variable '{name}': {e}")
                 return None
@@ -489,10 +498,10 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         Response
             Response object containing execution results.
         """
-        if self.model.kernel_client and variables is not None:
+        if self.model.sandbox_client and variables is not None:
             for name, value in variables.items():
                 try:
-                    self.model.kernel_client.set_variable(name, value)
+                    self.model.sandbox_client.set_variable(name, value)
                 except Exception as e:
                     print(f"Warning: Failed to set variable '{name}': {e}")
                     # Continue with other variables instead of failing completely
@@ -531,10 +540,10 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             if variables:
                 self.set_variables(variables)
 
-            if self.model.kernel_client:
+            if self.model.sandbox_client:
                 outputs = []
                 for _id, cell in get_cells(fname):
-                    reply = self.model.kernel_client.execute_interactive(
+                    reply = self.model.sandbox_client.execute_interactive(
                         cell,
                         silent=False,
                         timeout=timeout,
@@ -590,10 +599,10 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             The result of the code execution.
         """
         if not self._check_file(code):
-            if self.model.kernel_client is not None:
+            if self.model.sandbox_client is not None:
                 if variables:
                     self.set_variables(variables)
-                reply = self.model.kernel_client.execute(code, timeout=timeout)
+                reply = self.model.sandbox_client.execute(code, timeout=timeout)
 
                 response = ExecutionResponse(
                     success=True,
@@ -714,7 +723,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
                 f"Failed to create snapshot '{name}': {response.get('message', 'unknown error')}"
             )
         if stop:
-            self.model.kernel_client = None
+            self.model.sandbox_client = None
             self.model.kernel_id = None
             try:
                 if self.model.pod_name:

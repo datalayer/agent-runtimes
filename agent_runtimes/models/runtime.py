@@ -68,7 +68,7 @@ class RuntimeModel(BaseModel):
         default=None, description="Burning rate for the runtime"
     )
     jupyter_token: Optional[str] = Field(
-        default=None, description="Token for the kernel client"
+        default=None, description="Token for the code sandbox client"
     )
     started_at: Optional[str] = Field(
         default=None, description="Start time for the runtime"
@@ -81,8 +81,8 @@ class RuntimeModel(BaseModel):
     runtime: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Runtime configuration object"
     )
-    kernel_client: Optional[Any] = Field(
-        default=None, description="Kernel client instance"
+    sandbox_client: Optional[Any] = Field(
+        default=None, description="Variant-neutral code sandbox client instance"
     )
     kernel_id: Optional[str] = Field(default=None, description="Active kernel ID")
     executing: bool = Field(

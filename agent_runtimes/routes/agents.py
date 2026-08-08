@@ -3470,18 +3470,8 @@ async def _start_mcp_servers_for_agent(
             new_codemode = adapter._codemode_builder(selected_servers)
             if new_codemode is not None:
                 # Log which sandbox the new toolset is using
-                if (
-                    hasattr(new_codemode, "_sandbox")
-                    and new_codemode._sandbox is not None
-                ):
-                    sandbox_type = type(new_codemode._sandbox).__name__
-                    logger.info(f"New codemode toolset has sandbox: {sandbox_type}")
-                elif (
-                    hasattr(new_codemode, "sandbox")
-                    and new_codemode.sandbox is not None
-                ):
-                    sandbox_type = type(new_codemode.sandbox).__name__
-                    logger.info(f"New codemode toolset has sandbox: {sandbox_type}")
+                if getattr(new_codemode, "sandbox_client", None) is not None:
+                    logger.info("New codemode toolset has a code sandbox client")
                 else:
                     logger.info("New codemode toolset has no sandbox attached")
 

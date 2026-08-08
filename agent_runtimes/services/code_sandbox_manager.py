@@ -431,8 +431,8 @@ class CodeSandboxManager:
         """Best-effort extraction of a sandbox's live Jupyter/kernel details.
 
         Different sandbox implementations expose their kernel id in different
-        ways.  ``JupyterSandbox`` keeps a ``jupyter_kernel_client.JupyterKernelClient``
-        in ``_client`` whose ``id`` is the live kernel id, so we probe several
+        ways. ``JupyterSandbox`` keeps its execution backend in ``_client``;
+        its ``id`` is the live kernel id, so we probe several
         well-known attributes to remain robust across variants.
         """
         details: dict[str, Any] = {

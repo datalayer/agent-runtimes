@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
+from code_sandboxes import CodeSandboxClient
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -749,7 +750,11 @@ async def _create_and_register_cli_agent(
                 new_codemode = CodemodeToolset(
                     registry=new_registry,
                     config=new_config,
-                    sandbox=fresh_sandbox,
+                    sandbox_client=(
+                        CodeSandboxClient(fresh_sandbox)
+                        if fresh_sandbox is not None
+                        else None
+                    ),
                     allow_discovery_tools=True,
                 )
 
