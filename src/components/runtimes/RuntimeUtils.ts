@@ -97,7 +97,8 @@ export function getGroupedRuntimeDescs(
             kernelId: runtime.id,
             name: environment!.name,
             language: environment!.language,
-            displayName: runtime.given_name ?? environment!.title,
+            displayName:
+              environment!.title || runtime.given_name || environment!.name,
             location: 'remote' as IRuntimeLocation,
             podName: runtime.pod_name,
             gpu: environment.resources?.['nvidia.com/gpu'],

@@ -149,6 +149,14 @@ export interface IRemoteRuntimesManager extends IDisposable {
   refresh(): Promise<void>;
 
   /**
+   * Resolve full kernel models for discovered runtime pods on demand.
+   *
+   * Implementations may omit this when {@link refresh} already returns full
+   * kernel models.
+   */
+  refreshRuntimeModels?(): Promise<void>;
+
+  /**
    * Launch a Kernel.
    *
    * @param createOptions - The kernel creation options

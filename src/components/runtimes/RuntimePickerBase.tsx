@@ -118,7 +118,7 @@ export function RuntimePickerBase(
     translator,
     variant,
   } = props;
-  const [groupedRuntimeDescs, _] = useState<
+  const [groupedRuntimeDescs, setGroupedRuntimeDescs] = useState<
     { [k: string]: IDatalayerRuntimeDesc[] } | undefined
   >(
     getGroupedRuntimeDescs(
@@ -139,35 +139,88 @@ export function RuntimePickerBase(
     maxHeight: 'large' as Height,
     width: (variant === 'cell' ? 'small' : 'auto') as Width,
   };
-  /*
-  // TODO this effect generates refresh of the react components which discards any change in the selection.
   useEffect(() => {
+    multiServiceManager.remote?.runtimesManager
+      .refreshRuntimeModels?.()
+      .catch(reason => {
+        console.error(
+          'Failed to resolve remote runtimes for the runtime picker.',
+          reason,
+        );
+      });
+
     const updateGroupedRuntimeDescs = () => {
-      setGroupedKernelDescs(getGroupedRuntimeDescs(multiServiceManager, preference?.id, translator, filterKernel, variant));
+      setGroupedRuntimeDescs(
+        getGroupedRuntimeDescs(
+          multiServiceManager,
+          preference?.id,
+          translator,
+          filterRuntime,
+          variant,
+        ),
+      );
     };
-    multiServiceManager.browser?.kernels.runningChanged.connect(updateGroupedRuntimeDescs);
-    multiServiceManager.browser?.kernelspecs.specsChanged.connect(updateGroupedRuntimeDescs);
-    multiServiceManager.browser?.sessions.runningChanged.connect(updateGroupedRuntimeDescs);
-    multiServiceManager.local.kernels.runningChanged.connect(updateGroupedRuntimeDescs);
-    multiServiceManager.local.kernelspecs.specsChanged.connect(updateGroupedRuntimeDescs);
-    multiServiceManager.local.sessions.runningChanged.connect(updateGroupedRuntimeDescs);
-    multiServiceManager.remote?.kernels.changed.connect(updateGroupedRuntimeDescs);
-    multiServiceManager.remote?.environments.changed.connect(updateGroupedRuntimeDescs);
-    // multiServiceManager.remote?.sessions.runningChanged.connect(updateOptions);
+
+    // Recompute immediately in case a runtime changed between the initial
+    // render and connecting the manager signals.
+    updateGroupedRuntimeDescs();
+
+    multiServiceManager.browser?.kernels.runningChanged.connect(
+      updateGroupedRuntimeDescs,
+    );
+    multiServiceManager.browser?.kernelspecs.specsChanged.connect(
+      updateGroupedRuntimeDescs,
+    );
+    multiServiceManager.browser?.sessions.runningChanged.connect(
+      updateGroupedRuntimeDescs,
+    );
+    multiServiceManager.local.kernels.runningChanged.connect(
+      updateGroupedRuntimeDescs,
+    );
+    multiServiceManager.local.kernelspecs.specsChanged.connect(
+      updateGroupedRuntimeDescs,
+    );
+    multiServiceManager.local.sessions.runningChanged.connect(
+      updateGroupedRuntimeDescs,
+    );
+    multiServiceManager.remote?.runtimesManager.changed.connect(
+      updateGroupedRuntimeDescs,
+    );
+    multiServiceManager.remote?.environments.changed.connect(
+      updateGroupedRuntimeDescs,
+    );
+
     return () => {
-      multiServiceManager.browser?.kernels.runningChanged.disconnect(updateGroupedRuntimeDescs);
-      multiServiceManager.browser?.kernelspecs.specsChanged.disconnect(updateGroupedRuntimeDescs);
-      multiServiceManager.browser?.sessions.runningChanged.disconnect(updateGroupedRuntimeDescs);
-      multiServiceManager.local.kernels.runningChanged.disconnect(updateGroupedRuntimeDescs);
-      multiServiceManager.local.kernelspecs.specsChanged.disconnect(updateGroupedRuntimeDescs);
-      multiServiceManager.local.sessions.runningChanged.disconnect(updateGroupedRuntimeDescs);
-      multiServiceManager.remote?.kernels.changed.disconnect(updateGroupedRuntimeDescs);
-      multiServiceManager.remote?.environments.changed.disconnect(updateGroupedRuntimeDescs);
-      // multiServiceManager.remote?.sessions.runningChanged.disconnect(updateOptions);
+      multiServiceManager.browser?.kernels.runningChanged.disconnect(
+        updateGroupedRuntimeDescs,
+      );
+      multiServiceManager.browser?.kernelspecs.specsChanged.disconnect(
+        updateGroupedRuntimeDescs,
+      );
+      multiServiceManager.browser?.sessions.runningChanged.disconnect(
+        updateGroupedRuntimeDescs,
+      );
+      multiServiceManager.local.kernels.runningChanged.disconnect(
+        updateGroupedRuntimeDescs,
+      );
+      multiServiceManager.local.kernelspecs.specsChanged.disconnect(
+        updateGroupedRuntimeDescs,
+      );
+      multiServiceManager.local.sessions.runningChanged.disconnect(
+        updateGroupedRuntimeDescs,
+      );
+      multiServiceManager.remote?.runtimesManager.changed.disconnect(
+        updateGroupedRuntimeDescs,
+      );
+      multiServiceManager.remote?.environments.changed.disconnect(
+        updateGroupedRuntimeDescs,
+      );
     };
-  }, [multiServiceManager, preference, translator, filterKernel, variant]);
-  */
+  }, [multiServiceManager, preference?.id, translator, filterRuntime, variant]);
   useEffect(() => {
+    if (defaultSet) {
+      return;
+    }
     if (sessionContext && groupedRuntimeDescs) {
       const kernelId = sessionContext.session?.kernel?.id;
       if (kernelId) {
@@ -181,7 +234,7 @@ export function RuntimePickerBase(
       }
     }
     setDefaultSet(true);
-  }, [groupedRuntimeDescs]);
+  }, [defaultSet, groupedRuntimeDescs, sessionContext, setRuntimeDesc]);
   // For cell using submenu instead of group would be nice unfortunately the feature
   // is not yet implemented in the component there has been a not-great demo story.
   // https://github.com/primer/react/pull/3585
