@@ -214,9 +214,9 @@ export function RuntimePickerCell(props: IRuntimePickerCellProps): JSX.Element {
           ) : (
             <ActionList.Item
               onSelect={props.logIn}
-              title={'Connect to the Runtime provider.'}
+              title={'Runtime Provider.'}
             >
-              <ExternalTokenSilentLogin message="Connect to the Runtime provider" />
+              <ExternalTokenSilentLogin message="Click to sign in" />
             </ActionList.Item>
           )
         }
