@@ -375,7 +375,7 @@ function AgentNodeProfileView({
                         avatarFallbackForeground || 'accent.fg',
                     }}
                   >
-                    <AlienIcon size={34} themed colormoded />
+                    <AlienIcon size={34} themed colormode />
                   </Box>
                 )}
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>
