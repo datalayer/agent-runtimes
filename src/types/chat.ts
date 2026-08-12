@@ -9,6 +9,7 @@
  * @module types/chat
  */
 
+import type { ToolbarItem } from '@datalayer/primer-addons';
 import type { ComponentType, ReactNode } from 'react';
 import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import type { ChatMessage, MessageHandler } from './messages';
@@ -488,6 +489,19 @@ export interface ChatCommonProps {
    * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
    */
   ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
+
+  /**
+   * Items added to the toolbar of the ephemeral notebook, e.g. the status of
+   * the sandbox it runs on. Merged with the items of the toolbar and ordered
+   * by the `order` of each item.
+   */
+  ephemeralNotebookToolbarExtraItems?: ToolbarItem[];
+
+  /**
+   * Items added to the toolbar of the ephemeral document, the same way as
+   * {@link ChatProps.ephemeralNotebookToolbarExtraItems} for the notebook.
+   */
+  ephemeralDocumentToolbarExtraItems?: ToolbarItem[];
 
   /**
    * Optional real-time collaboration provider for the ephemeral notebook.
@@ -1077,6 +1091,19 @@ export interface ChatBaseProps {
    * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
    */
   ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
+
+  /**
+   * Items added to the toolbar of the ephemeral notebook, e.g. the status of
+   * the sandbox it runs on. Merged with the items of the toolbar and ordered
+   * by the `order` of each item.
+   */
+  ephemeralNotebookToolbarExtraItems?: ToolbarItem[];
+
+  /**
+   * Items added to the toolbar of the ephemeral document, the same way as
+   * {@link ChatProps.ephemeralNotebookToolbarExtraItems} for the notebook.
+   */
+  ephemeralDocumentToolbarExtraItems?: ToolbarItem[];
 
   /**
    * Optional real-time collaboration provider for the ephemeral notebook.

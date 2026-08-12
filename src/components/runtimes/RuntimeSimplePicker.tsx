@@ -290,7 +290,7 @@ export function RuntimeSimplePicker(
                 <ActionList.LeadingVisual>
                   <PlusIcon />
                 </ActionList.LeadingVisual>
-                Launch a new Runtime…
+                Launch a new Code Sandbox…
               </ActionList.Item>
               <ActionList.Item
                 disabled={runtimeLocation !== 'browser'}

@@ -69,9 +69,16 @@ export function RuntimeReservationControl(
     onTimeChange,
     time,
   } = props;
+  // The caller computes its maximum from the credits and the burning rate of
+  // an environment, either of which may not be known yet — and a slider given
+  // `NaN` renders nothing but warnings. Fall back to what a reservation may
+  // hold in any case.
+  const requestedMax = Number.isFinite(maxProps)
+    ? maxProps
+    : MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES;
   const max = Math.max(
     1,
-    Math.min(maxProps, MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES),
+    Math.min(requestedMax, MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES),
   );
   const displayedTime = Number.isFinite(time)
     ? Math.min(max, Math.max(1, time))

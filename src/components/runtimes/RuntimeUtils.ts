@@ -32,23 +32,22 @@ export function getGroupedRuntimeDescs(
 ): { [g: string]: IDatalayerRuntimeDesc[] } | undefined {
   translator = translator ?? nullTranslator;
   const trans = translator.load('jupyterlab');
-  const specs = multiServiceManager.local.kernelspecs.specs!;
+  // The specifications land asynchronously, and a runtime that already runs
+  // is listed with or without them: what a kernel needs to be picked is its
+  // identifier, the specification only names it. Only the environments to
+  // start a new runtime in come from the specifications, and they wait.
+  const specs = multiServiceManager.local.kernelspecs.specs;
   const sessions = multiServiceManager.local.sessions.running();
   const kernels: { [g: string]: IDatalayerRuntimeDesc[] } = {};
   // Add the sessions.
   const runningSessions = Array.from(sessions)
-    .filter(
-      session =>
-        session.kernel &&
-        session.kernel.id !== kernelId &&
-        specs.kernelspecs[session.kernel!.name],
-    )
+    .filter(session => session.kernel && session.kernel.id !== kernelId)
     .map(session => {
-      const spec = specs.kernelspecs[session.kernel!.name];
+      const spec = specs?.kernelspecs[session.kernel!.name];
       return {
         kernelId: session.kernel!.id,
-        name: spec!.name,
-        language: spec!.language,
+        name: spec?.name ?? session.kernel!.name,
+        language: spec?.language ?? '',
         displayName: session.name || PathExt.basename(session.path),
         location: 'local' as IRuntimeLocation,
       };
@@ -57,15 +56,16 @@ export function getGroupedRuntimeDescs(
       Array.from(multiServiceManager.browser?.sessions.running() ?? [])
         .filter(session => session.kernel && session.kernel.id !== kernelId)
         .map(session => {
+          // The browser specifications load on their own schedule.
           const spec =
-            multiServiceManager.browser!.kernelspecs.specs!.kernelspecs[
+            multiServiceManager.browser?.kernelspecs.specs?.kernelspecs[
               session.kernel!.name
             ];
           return {
             id: '', // TODO Assign a proper ID.
             kernelId: session.kernel!.id,
-            name: spec!.name,
-            language: spec!.language,
+            name: spec?.name ?? session.kernel!.name,
+            language: spec?.language ?? '',
             displayName: session.name || PathExt.basename(session.path),
             location: 'browser' as IRuntimeLocation,
           } satisfies IDatalayerRuntimeDesc;
@@ -77,12 +77,12 @@ export function getGroupedRuntimeDescs(
   const runningKernels = Array.from(multiServiceManager.local.kernels.running())
     .filter(k => !listedAsSession.includes(k.id))
     .map(k => {
-      const spec = specs.kernelspecs[k.name];
+      const spec = specs?.kernelspecs[k.name];
       return {
         kernelId: k.id,
-        name: spec!.name,
-        language: spec!.language,
-        displayName: spec!.display_name,
+        name: spec?.name ?? k.name,
+        language: spec?.language ?? '',
+        displayName: spec?.display_name ?? k.name,
         location: 'local' as IRuntimeLocation,
       };
     })
@@ -110,20 +110,31 @@ export function getGroupedRuntimeDescs(
         .filter(k => !listedAsSession.includes(k.id))
         .map(k => {
           const spec =
-            multiServiceManager.browser!.kernelspecs.specs!.kernelspecs[
-              k.name
-            ]!;
+            multiServiceManager.browser?.kernelspecs.specs?.kernelspecs[k.name];
           return {
             kernelId: k.id,
-            name: spec!.name,
-            language: spec!.language,
-            displayName: spec!.display_name,
+            name: spec?.name ?? k.name,
+            language: spec?.language ?? '',
+            displayName: spec?.display_name ?? k.name,
             location: 'browser' as IRuntimeLocation,
           } satisfies IDatalayerRuntimeDesc;
         }),
     )
     .filter(filterKernels);
   runningSessions.push(...runningKernels);
+  // The sources overlap — a kernel of a session, a manager standing in for
+  // another — and a runtime listed twice would be picked twice.
+  const seen = new Set<string>();
+  const distinctRunning = runningSessions.filter(desc => {
+    const key = `${desc.location}:${desc.kernelId ?? desc.name}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+  runningSessions.length = 0;
+  runningSessions.push(...distinctRunning);
   if (runningSessions.length) {
     const key =
       variant === 'cell'
@@ -132,7 +143,7 @@ export function getGroupedRuntimeDescs(
     kernels[key] = runningSessions;
   }
   // Environments.
-  const environments = Object.values(specs.kernelspecs)
+  const environments = Object.values(specs?.kernelspecs ?? {})
     .filter(spec => !!spec)
     .map(
       spec =>

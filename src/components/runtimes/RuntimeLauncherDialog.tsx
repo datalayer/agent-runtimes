@@ -38,6 +38,20 @@ import {
 } from './RuntimeReservationControl';
 
 /**
+ * The text a fragment of markup reads as.
+ *
+ * @param html Markup to read
+ */
+function asPlainText(html: string): string {
+  if (!html || typeof DOMParser === 'undefined') {
+    return html;
+  }
+  return (
+    new DOMParser().parseFromString(html, 'text/html').body.textContent ?? ''
+  );
+}
+
+/**
  * Initial time in milliseconds before retrying in case no kernels are available
  */
 const NOT_AVAILABLE_INIT_RETRY = 10_000;
@@ -377,7 +391,7 @@ export function RuntimeLauncherDialog(
     <Dialog
       title={
         <span style={{ color: 'var(--fgColor-default)' }}>
-          {dialogTitle || 'Launch a new Runtime'}
+          {dialogTitle || 'Launch a new Code Sandbox'}
         </span>
       }
       onClose={() => {
@@ -452,8 +466,20 @@ export function RuntimeLauncherDialog(
                     sanitizer={sanitizer}
                   />
                 </Box>
+              ) : sanitizer ? (
+                // The description of an environment carries markup. With no
+                // parser to render it, the sanitizer of the application is
+                // enough to show it as what it is rather than as its tags.
+                <Box
+                  sx={{ img: { maxWidth: '100%' } }}
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizer.sanitize(description),
+                  }}
+                />
               ) : (
-                description
+                // Neither a parser nor a sanitizer: the text of the markup,
+                // which is still better than the markup itself.
+                asPlainText(description)
               )}
               {/*
               {spec?.contents?.length && (

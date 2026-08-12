@@ -415,7 +415,13 @@ export function RuntimePickerBase(
                     </Box>
                     {runtimeDescs.map(k => {
                       return (
-                        <Box key={k.kernelId} title={k.name}>
+                        // A kernel identifies a runtime that already runs; an
+                        // environment to start one in has none, and is named
+                        // by where it runs and what it runs.
+                        <Box
+                          key={`${k.location}:${k.kernelId ?? k.name}`}
+                          title={k.name}
+                        >
                           <FormControl>
                             <Radio
                               value={k.kernelId!}

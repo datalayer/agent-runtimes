@@ -146,6 +146,7 @@ test = [
 ]
 
 [project.scripts]
+datalayer-agents = "agent_runtimes.main:main"
 agent-runtimes = "agent_runtimes.main:main"
 loop = "agent_runtimes.main:main"
 l = "agent_runtimes.main:main"

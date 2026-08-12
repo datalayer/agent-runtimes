@@ -57,6 +57,7 @@ import {
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
+  type ToolbarItem,
 } from '@datalayer/primer-addons';
 import { Box, Spinner, Text } from '@primer/react';
 import {
@@ -167,6 +168,16 @@ export interface EphemeralDocumentProps {
    * local memory.
    */
   collaboration?: EphemeralDocumentCollaboration;
+  /**
+   * Items added to the toolbar of the document.
+   *
+   * The Lexical toolbar merges them with its own and orders the whole by the
+   * `order` of each item, so a host adds what the document itself knows
+   * nothing about — the status of the sandbox it runs on, a selector to
+   * change it — the same way the notebook surface does through the
+   * `extraItems` of its toolbar.
+   */
+  toolbarExtraItems?: ToolbarItem[];
 }
 
 /**
@@ -230,8 +241,10 @@ function CodeHighlightPlugin() {
  */
 function DocumentToolbar({
   setIsLinkEditMode,
+  extraItems,
 }: {
   setIsLinkEditMode: Dispatch<SetStateAction<boolean>>;
+  extraItems?: ToolbarItem[];
 }) {
   const [editor] = useLexicalComposerContext();
   const [activeEditor, setActiveEditor] = useState<LexicalEditor>(editor);
@@ -241,6 +254,7 @@ function DocumentToolbar({
       activeEditor={activeEditor}
       setActiveEditor={setActiveEditor}
       setIsLinkEditMode={setIsLinkEditMode}
+      extraItems={extraItems}
     />
   );
 }
@@ -259,6 +273,7 @@ export function EphemeralDocument({
   onToolsReady,
   onKernelChange,
   collaboration,
+  toolbarExtraItems,
 }: EphemeralDocumentProps) {
   // Real-time collaboration is active only when both a WebSocket endpoint and a
   // room id are supplied. In that mode the shared Loro CRDT is the single source
@@ -606,6 +621,7 @@ export function EphemeralDocument({
                       <div className="editor-shell">
                         <DocumentToolbar
                           setIsLinkEditMode={setIsLinkEditMode}
+                          extraItems={toolbarExtraItems}
                         />
                         <div className="editor-container">
                           <div className="editor-inner">

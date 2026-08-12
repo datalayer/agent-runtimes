@@ -28,6 +28,7 @@ import {
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
+  type ToolbarItem,
 } from '@datalayer/primer-addons';
 import { Box } from '@primer/react';
 import {
@@ -114,6 +115,15 @@ export interface EphemeralNotebookProps {
   onNbformatChange?: (content: INotebookContent) => void;
   /** Optional toolbar component override. */
   toolbarComponent?: EphemeralNotebookToolbarComponent;
+  /**
+   * Items added to the toolbar of the notebook.
+   *
+   * The notebook toolbar merges them with its own and orders the whole by the
+   * `order` of each item, so a host adds what the notebook itself knows
+   * nothing about — the status of the sandbox it runs on, a selector to
+   * change it — without replacing the toolbar through `toolbarComponent`.
+   */
+  toolbarExtraItems?: ToolbarItem[];
   /** Optional theme variant override from host chat context. */
   themeVariant?: string;
   /** Optional color mode override from host chat context. */
@@ -139,6 +149,7 @@ export function EphemeralNotebook({
   nbformat,
   onNbformatChange,
   toolbarComponent,
+  toolbarExtraItems,
   themeVariant,
   colorMode,
   collaborationProvider,
@@ -299,7 +310,18 @@ export function EphemeralNotebook({
   const activeServiceManager = runtimeServiceManager;
   const activeKernelId = runtimeKernelId;
   const activeStartDefaultKernel = runtimeStartDefaultKernel;
-  const ToolbarComponent = toolbarComponent || NotebookToolbar;
+  // The toolbar of the notebook, with the items of the host merged in. A host
+  // replacing the toolbar altogether receives them as well, as every toolbar
+  // built on the notebook one takes `extraItems`.
+  const ToolbarComponent = useMemo(() => {
+    const Base = toolbarComponent || NotebookToolbar;
+    if (!toolbarExtraItems?.length) {
+      return Base;
+    }
+    return function EphemeralNotebookToolbar(props: any) {
+      return <Base {...props} extraItems={toolbarExtraItems} />;
+    };
+  }, [toolbarComponent, toolbarExtraItems]);
 
   const isRuntimeStarting = Boolean(
     (String(runtimePodName || '').trim() ||

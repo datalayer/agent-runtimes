@@ -797,6 +797,8 @@ function ChatBaseInner({
   collapsed = false,
   onExpandFromCollapsed,
   ephemeralNotebookToolbar,
+  ephemeralNotebookToolbarExtraItems,
+  ephemeralDocumentToolbarExtraItems,
   ephemeralNotebookCollaborationProvider,
   ephemeralNotebookCollaborationDocumentId,
   ephemeralDocumentCollaboration,
@@ -4079,6 +4081,7 @@ function ChatBaseInner({
                 nbformat={persistedEphemeralNbformat ?? undefined}
                 onNbformatChange={handleEphemeralNotebookChange}
                 toolbarComponent={ephemeralNotebookToolbar}
+                toolbarExtraItems={ephemeralNotebookToolbarExtraItems}
                 collaborationProvider={ephemeralNotebookCollaborationProvider}
               />
             ) : (
@@ -4094,6 +4097,7 @@ function ChatBaseInner({
                   onToolsReady={handleDocumentToolsReady}
                   onKernelChange={handleDocumentKernelChange}
                   collaboration={ephemeralDocumentCollaboration}
+                  toolbarExtraItems={ephemeralDocumentToolbarExtraItems}
                 />
               </React.Suspense>
             )}
