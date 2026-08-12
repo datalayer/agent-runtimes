@@ -79,7 +79,7 @@ aws = [
 ]
 a2a = [
     "a2a-sdk[all]>=0.3.0,<0.4.0",
-    "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
+    "fasta2a",
 ]
 ui = [
     "a2ui-agent-sdk>=0.4.0",
