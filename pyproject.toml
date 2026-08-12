@@ -29,7 +29,7 @@ dependencies = [
     "agent-skills",
     "code-sandboxes",
     "croniter>=6.0.0",
-    "datalayer-core",
+    "datalayer-core>=1.1.52",
     "fastapi>=0.116.1,<0.142.0",
     "filelock>=3.20.3",
     "httpx>=0.28.0,<1.0.0",
