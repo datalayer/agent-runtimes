@@ -230,7 +230,7 @@ export interface TokenUsageChartProps {
   agentId?: string;
   runtimeId?: string;
   apiKey?: string;
-  datalayerUrl?: string;
+  otelUrl?: string;
   wsUrl?: string;
   liveSystemPromptTokens?: number;
   liveToolsDescriptionTokens?: number;
@@ -367,7 +367,7 @@ export function TokenUsageChart({
   agentId,
   runtimeId,
   apiKey,
-  datalayerUrl,
+  otelUrl,
   wsUrl,
   liveSystemPromptTokens,
   liveToolsDescriptionTokens,
@@ -420,7 +420,7 @@ export function TokenUsageChart({
   // Bootstrap chart with historical OTEL metrics so charts are populated even
   // before the first websocket update arrives.
   useEffect(() => {
-    if (!cacheServiceKey || !apiKey || !datalayerUrl) {
+    if (!cacheServiceKey || !apiKey || !otelUrl) {
       return;
     }
 
@@ -434,7 +434,7 @@ export function TokenUsageChart({
             fetchOtelMetricRows({
               metric,
               serviceName,
-              datalayerUrl,
+              otelUrl,
               apiKey,
               limit: 1000,
             }),
@@ -503,7 +503,7 @@ export function TokenUsageChart({
     agentId,
     apiKey,
     cacheServiceKey,
-    datalayerUrl,
+    otelUrl,
     mergeTokenTurns,
     runtimeId,
     serviceName,
@@ -581,7 +581,7 @@ export function TokenUsageChart({
 
     const rawBaseUrl =
       wsUrl ||
-      datalayerUrl ||
+      otelUrl ||
       (typeof window !== 'undefined' ? window.location.origin : '');
     if (!rawBaseUrl) return;
 
@@ -655,7 +655,7 @@ export function TokenUsageChart({
     apiKey,
     cacheServiceKey,
     mergeTokenTurns,
-    datalayerUrl,
+    otelUrl,
     runtimeId,
     serviceName,
     wsUrl,

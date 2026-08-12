@@ -29,7 +29,7 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
       DatalayerApiKey=$DATALAYER_API_KEY \
-      DatalayerUrl=https://prod1.datalayer.run \
+      DatalayerIamUrl=https://prod1.datalayer.run \
       DatalayerRuntimesUrl=https://r1.datalayer.run \
       KeyName=$EC2_KEY_PAIR
 ```
@@ -59,7 +59,7 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
       DatalayerApiKey=$DATALAYER_API_KEY \
-      DatalayerUrl=https://prod1.datalayer.run \
+      DatalayerIamUrl=https://prod1.datalayer.run \
       DatalayerRuntimesUrl=https://r1.datalayer.run
 ```
 
@@ -72,7 +72,7 @@ aws cloudformation describe-stacks --stack-name agent-node-fargate \
 
 If you need a dedicated ai-inference endpoint, add
 `DatalayerAiInferenceUrl=<url>` to either template's `--parameter-overrides`.
-When omitted, both templates default ai-inference routing to `DatalayerUrl`.
+When omitted, both templates default ai-inference routing to `DatalayerIamUrl`.
 
 ## Cleanup
 

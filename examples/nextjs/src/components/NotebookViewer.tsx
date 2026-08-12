@@ -185,8 +185,8 @@ export default function NotebookViewer({
 
           // Create collaboration provider
           const sdkConfig = coreStore.configuration;
-          const datalayerUrl =
-            String(sdkConfig?.runtimesUrl || '').trim() ||
+          const spacerUrl =
+            String(sdkConfig?.spacerUrl || '').trim() ||
             resolveNextjsRuntimesUrl();
           const isValidUID =
             notebookPath && /^[A-Z0-9]{26,}$/i.test(notebookPath);
@@ -194,7 +194,7 @@ export default function NotebookViewer({
           if (token && isValidUID) {
             try {
               const collabProvider = new DatalayerCollaborationProvider({
-                datalayerUrl,
+                spacerUrl,
                 token,
               });
               setCollaborationProvider(collabProvider);

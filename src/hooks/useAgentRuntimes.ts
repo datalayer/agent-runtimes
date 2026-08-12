@@ -632,11 +632,11 @@ export function useAgentRuntimes(
       const { iamStore, coreStore } = await import('@datalayer/core/lib/state');
       const token = iamStore.getState().token || '';
       const config = coreStore.getState().configuration;
-      const datalayerUrl = config?.aiAgentsUrl || '';
+      const aiAgentsUrl = config?.aiAgentsUrl || '';
       const runtimesUrl = resolvedRuntimeCreationBaseUrl;
-      return { token, datalayerUrl, runtimesUrl };
+      return { token, aiAgentsUrl, runtimesUrl };
     } catch {
-      return { token: '', datalayerUrl: '', runtimesUrl: '' };
+      return { token: '', aiAgentsUrl: '', runtimesUrl: '' };
     }
   }, [resolvedRuntimeCreationBaseUrl]);
 

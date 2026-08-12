@@ -29,8 +29,8 @@ class RuntimeManager:
 
     Parameters
     ----------
-    datalayer_url : str
-        The runtime URL.
+    runtimes_url : str
+        The URL of the Runtimes service.
     token : str
         Authentication token.
     username : str
@@ -40,15 +40,15 @@ class RuntimeManager:
     """
 
     def __init__(
-        self, datalayer_url: str, token: str, username: str, **kwargs: dict[str, Any]
+        self, runtimes_url: str, token: str, username: str, **kwargs: dict[str, Any]
     ):
         """
         Initialize the gateway Runtime manager.
 
         Parameters
         ----------
-        datalayer_url : str
-            The runtime URL.
+        runtimes_url : str
+            The URL of the Runtimes service.
         token : str
             Authentication token.
         username : str
@@ -66,12 +66,12 @@ class RuntimeManager:
         self.runtime_name = ""
         self.runtime_pod_name = ""
         self.runtime_created_in_start = False
-        self.datalayer_url = datalayer_url
+        self.runtimes_url = runtimes_url
         self.run_token = token
         self.username = username
 
         # Initialize AgentClient for modern API access
-        urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
+        urls = DatalayerURLs.from_environment(runtimes_url=runtimes_url)
         self._client = AgentClient(urls=urls, api_key=token)
 
     @property

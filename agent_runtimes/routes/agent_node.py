@@ -480,20 +480,20 @@ def set_sharing_endpoint(body: dict[str, Any]) -> dict[str, Any]:
 _BOOTSTRAP_CACHE: dict[str, Any] = {"key": None, "result": None}
 
 
-def _bootstrap_datalayer_url() -> str:
-    return (os.environ.get("DATALAYER_URL") or "https://prod1.datalayer.run").rstrip(
+def _bootstrap_iam_url() -> str:
+    return (os.environ.get("DATALAYER_IAM_URL") or "https://prod1.datalayer.run").rstrip(
         "/"
     )
 
 
-async def _exchange_api_key(api_key: str, datalayer_url: str) -> dict[str, Any] | None:
+async def _exchange_api_key(api_key: str, iam_url: str) -> dict[str, Any] | None:
     """Exchange a personal API key for a session token via central IAM."""
     import httpx  # local import to keep module import cheap
 
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(
-                f"{datalayer_url}/api/iam/v1/login",
+                f"{iam_url}/api/iam/v1/login",
                 json={"token": api_key},
                 headers={"Content-Type": "application/json"},
             )
@@ -510,7 +510,7 @@ async def _exchange_api_key(api_key: str, datalayer_url: str) -> dict[str, Any] 
     return {
         "token": str(data["token"]),
         "handle": str(handle),
-        "datalayer_url": datalayer_url,
+        "iam_url": iam_url,
     }
 
 
@@ -526,12 +526,12 @@ async def auth_bootstrap_endpoint() -> dict[str, Any]:
     api_key = (os.environ.get("DATALAYER_API_KEY") or "").strip()
     if not api_key:
         return {"success": True, "has_key": False}
-    datalayer_url = _bootstrap_datalayer_url()
-    cache_key = f"{api_key}@{datalayer_url}"
+    iam_url = _bootstrap_iam_url()
+    cache_key = f"{api_key}@{iam_url}"
     cached = _BOOTSTRAP_CACHE.get("result")
     if cached and _BOOTSTRAP_CACHE.get("key") == cache_key:
         return {"success": True, "has_key": True, **cached}
-    result = await _exchange_api_key(api_key, datalayer_url)
+    result = await _exchange_api_key(api_key, iam_url)
     if not result:
         return {"success": True, "has_key": False}
     _BOOTSTRAP_CACHE["key"] = cache_key

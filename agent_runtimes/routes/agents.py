@@ -2695,7 +2695,7 @@ async def delete_agent(
     if terminate_runtime:
         token = (os.environ.get("DATALAYER_API_KEY") or "").strip() or None
         runtimes_base_url = (
-            os.environ.get("DATALAYER_URL")
+            os.environ.get("DATALAYER_RUNTIMES_URL")
             or os.environ.get("RUNTIMES_URL")
             or "https://r1.datalayer.run"
         )
@@ -3649,7 +3649,6 @@ def _emit_agent_assigned_event(
     base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or os.environ.get("DATALAYER_URL")
         or "https://prod1.datalayer.run"
     )
     assigned_at = datetime.now(timezone.utc).isoformat()
@@ -4479,11 +4478,10 @@ async def trigger_run(
     events_base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or os.environ.get("DATALAYER_URL")
         or "https://prod1.datalayer.run"
     )
     runtimes_base_url = (
-        os.environ.get("DATALAYER_URL")
+        os.environ.get("DATALAYER_RUNTIMES_URL")
         or os.environ.get("RUNTIMES_URL")
         or "https://r1.datalayer.run"
     )

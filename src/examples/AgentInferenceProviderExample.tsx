@@ -103,7 +103,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
     }
     const env = (import.meta as any).env ?? {};
     return (
-      env.VITE_DATALAYER_AI_INFERENCE_URL || env.VITE_DATALAYER_URL || baseUrl
+      env.VITE_DATALAYER_AI_INFERENCE_URL || baseUrl
     );
   }, [provider, baseUrl]);
 

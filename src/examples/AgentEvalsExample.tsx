@@ -179,7 +179,7 @@ const AgentEvalsInner: React.FC<{
       : runtime?.podName || '(launching…)';
   const controlPlaneBaseUrl =
     (import.meta.env.VITE_RUN_URL as string | undefined) ||
-    configuration?.datalayerUrl ||
+    configuration?.aiAgentsUrl ||
     (cloudAgentBaseUrl ? new URL(cloudAgentBaseUrl).origin : '');
   const isAgentReady =
     executionTarget === 'local' ? localStatus === 'ready' : isReady;

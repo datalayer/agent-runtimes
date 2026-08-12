@@ -13,8 +13,8 @@
  * list and launched on demand.
  *
  * The OTEL backend is configured via `configuration.otelUrl` when available
- * (falling back to `configuration.datalayerUrl`, then `VITE_OTEL_BASE_URL`, then
- * `VITE_DATALAYER_URL`, then the resolved runtime base URL).
+ * (falling back to `configuration.otelUrl`, then `VITE_OTEL_BASE_URL`, then
+ * `VITE_DATALAYER_OTEL_URL`, then the resolved runtime base URL).
  * Agent routes resolve from the shared local/cloud runtime target hook.
  *
  * For Python-side observability, wire in `agent_runtimes/otel.py`:
@@ -56,7 +56,7 @@ const OTEL_BASE_URL_ENV: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
 // read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
 const OTEL_IN_BASE_URL_ENV: string =
   import.meta.env.VITE_OTEL_IN_BASE_URL ?? '';
-const DATALAYER_URL_ENV: string = import.meta.env.VITE_DATALAYER_URL ?? '';
+const OTEL_URL_ENV: string = import.meta.env.VITE_DATALAYER_OTEL_URL ?? '';
 
 const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
@@ -247,9 +247,9 @@ const AgentOtelExampleInner: React.FC<{
     configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
-    configuration?.datalayerUrl ||
+    configuration?.otelUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_URL_ENV ||
+    OTEL_URL_ENV ||
     agentBaseUrl;
   const otelBaseUrl = resolvedUrl;
 

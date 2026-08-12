@@ -906,22 +906,22 @@ async def _flush_otel_service(auth_token: str | None = None) -> None:
     The OTEL service contract for live delivery is websocket-based
     (``/api/otel/v1/ws``).  We intentionally avoid a REST flush call here.
     """
-    datalayer_url = (
-        os.environ.get("DATALAYER_URL")
+    otel_url = (
+        os.environ.get("DATALAYER_OTEL_URL")
         or os.environ.get("DATALAYER_OTEL_RUN_URL")
         or "https://prod1.datalayer.run"
     )
     token = auth_token or os.environ.get("DATALAYER_API_KEY")
 
-    datalayer_url = datalayer_url.strip().rstrip("/")
-    if datalayer_url.startswith("https://"):
-        ws_base = "wss://" + datalayer_url[len("https://") :]
-    elif datalayer_url.startswith("http://"):
-        ws_base = "ws://" + datalayer_url[len("http://") :]
-    elif datalayer_url.startswith("ws://") or datalayer_url.startswith("wss://"):
-        ws_base = datalayer_url
+    otel_url = otel_url.strip().rstrip("/")
+    if otel_url.startswith("https://"):
+        ws_base = "wss://" + otel_url[len("https://") :]
+    elif otel_url.startswith("http://"):
+        ws_base = "ws://" + otel_url[len("http://") :]
+    elif otel_url.startswith("ws://") or otel_url.startswith("wss://"):
+        ws_base = otel_url
     else:
-        ws_base = "wss://" + datalayer_url
+        ws_base = "wss://" + otel_url
 
     params: dict[str, str] = {}
     if token:

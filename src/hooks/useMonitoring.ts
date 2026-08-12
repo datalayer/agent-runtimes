@@ -15,7 +15,7 @@ import { createOtelClient } from '@datalayer/core/lib/otel';
 export interface OtelQueryOptions {
   metric: string;
   serviceName?: string;
-  datalayerUrl?: string;
+  otelUrl?: string;
   apiKey?: string;
   limit?: number;
   accountUid?: string;
@@ -46,17 +46,17 @@ export function toMetricValue(row: MetricValueRow): number {
 export async function fetchOtelMetricRows({
   metric,
   serviceName,
-  datalayerUrl,
+  otelUrl,
   apiKey,
   limit = 500,
   accountUid,
 }: OtelQueryOptions): Promise<MetricValueRow[]> {
-  if (!datalayerUrl || !apiKey) {
+  if (!otelUrl || !apiKey) {
     return [];
   }
 
   const client = createOtelClient({
-    baseUrl: datalayerUrl,
+    baseUrl: otelUrl,
     token: apiKey,
   });
   const filtered = await client.fetchMetrics({
@@ -86,7 +86,7 @@ export async function fetchOtelMetricTotal(
 
 export interface OtelTotalTokensOptions {
   serviceName?: string;
-  datalayerUrl?: string;
+  otelUrl?: string;
   apiKey?: string;
   limit?: number;
   accountUid?: string;
@@ -94,7 +94,7 @@ export interface OtelTotalTokensOptions {
 
 export async function fetchOtelTotalTokens({
   serviceName,
-  datalayerUrl,
+  otelUrl,
   apiKey,
   limit = 500,
   accountUid,
@@ -102,7 +102,7 @@ export async function fetchOtelTotalTokens({
   const total = await fetchOtelMetricTotal({
     metric: 'agent_runtimes.prompt.turn.total_tokens',
     serviceName,
-    datalayerUrl,
+    otelUrl,
     apiKey,
     limit,
     accountUid,
@@ -114,7 +114,7 @@ export async function fetchOtelTotalTokens({
   const prompt = await fetchOtelMetricTotal({
     metric: 'agent_runtimes.prompt.turn.prompt_tokens',
     serviceName,
-    datalayerUrl,
+    otelUrl,
     apiKey,
     limit,
     accountUid,
@@ -122,7 +122,7 @@ export async function fetchOtelTotalTokens({
   const completion = await fetchOtelMetricTotal({
     metric: 'agent_runtimes.prompt.turn.completion_tokens',
     serviceName,
-    datalayerUrl,
+    otelUrl,
     apiKey,
     limit,
     accountUid,
@@ -132,7 +132,7 @@ export async function fetchOtelTotalTokens({
 
 export function useOtelTotalTokens({
   serviceName,
-  datalayerUrl,
+  otelUrl,
   apiKey,
   limit = 500,
   accountUid,
@@ -146,7 +146,7 @@ export function useOtelTotalTokens({
       try {
         const total = await fetchOtelTotalTokens({
           serviceName,
-          datalayerUrl,
+          otelUrl,
           apiKey,
           limit,
           accountUid,
@@ -171,7 +171,7 @@ export function useOtelTotalTokens({
     return () => {
       cancelled = true;
     };
-  }, [apiKey, limit, datalayerUrl, serviceName, accountUid]);
+  }, [apiKey, limit, otelUrl, serviceName, accountUid]);
 
   return tokensLabel;
 }

@@ -33,7 +33,7 @@ _LIBRARY_SPACE_HANDLE = "library"
 
 def _spacer_base_url() -> str:
     """Resolve the spacer base URL from env, falling back to the Datalayer URL."""
-    for name in ("DATALAYER_SPACER_URL", "DATALAYER_URL"):
+    for name in ("DATALAYER_SPACER_URL",):
         value = (os.environ.get(name) or "").strip().rstrip("/")
         if value:
             return value

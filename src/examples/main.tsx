@@ -187,7 +187,7 @@ interface TopNotice {
 
 const resolveRuntimesUrl = (configured?: string): string => {
   const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
-  const envBaseUrl = import.meta.env.VITE_DATALAYER_URL;
+  const envBaseUrl = import.meta.env.VITE_DATALAYER_IAM_URL;
   const candidate = configured || envRuntimeUrl || envBaseUrl;
   if (!candidate) {
     return DEFAULT_RUNTIMES_URL;
@@ -279,7 +279,7 @@ const loadConfigurations = () => {
         }
       }
 
-      if (datalayerConfig.datalayerUrl) {
+      if (datalayerConfig.iamUrl) {
         datalayerConfig.runtimesUrl = resolveRuntimesUrl(
           datalayerConfig.runtimesUrl,
         );
@@ -621,13 +621,13 @@ const NotebookOnlyApp: React.FC = () => {
       try {
         const { configuration } = coreStore.getState();
 
-        // Always try to create collaboration provider if we have token and datalayerUrl
-        if (configuration?.token && configuration?.datalayerUrl) {
+        // Always try to create collaboration provider if we have token and spacerUrl
+        if (configuration?.token && configuration?.spacerUrl) {
           try {
             const { DatalayerCollaborationProvider } =
               await import('../collaboration/DatalayerCollaborationProvider');
             const provider = new DatalayerCollaborationProvider({
-              datalayerUrl: configuration.datalayerUrl,
+              spacerUrl: configuration.spacerUrl,
               token: configuration.token,
             });
             setCollaborationProvider(provider);

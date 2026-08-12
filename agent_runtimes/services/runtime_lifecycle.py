@@ -30,9 +30,8 @@ def _terminate_runtime_with_core(
     from agent_runtimes.utils.agent_utils import terminate_cloud_agent_runtime
 
     urls = DatalayerURLs.from_environment(
-        datalayer_url=runtime_base_url,
-        iam_url=runtime_base_url,
         runtimes_url=runtime_base_url,
+        iam_url=runtime_base_url,
     )
     client = AgentClient(urls=urls, api_key=token)
     return terminate_cloud_agent_runtime(client, runtime_id)

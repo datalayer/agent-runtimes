@@ -158,10 +158,6 @@ export default defineConfig(({ mode, command }) => {
         return html
           .replaceAll('%VITE_DATALAYER_API_KEY%', env.VITE_DATALAYER_API_KEY || '')
           .replaceAll(
-            '%VITE_DATALAYER_URL%',
-            env.VITE_DATALAYER_URL || 'https://r1.datalayer.run',
-          )
-          .replaceAll(
             '%VITE_DATALAYER_RUNTIMES_URL%',
             env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run',
           )
@@ -170,43 +166,37 @@ export default defineConfig(({ mode, command }) => {
             env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
               'https://r1.datalayer.run',
           )
-          // Per-service URLs. In prod every service is behind one gateway, so
-          // these fall back to VITE_DATALAYER_URL; local dev overrides each to
-          // its own port so http + ws both target local servers.
+          // One URL per service. In production they sit behind one gateway, so
+          // they share a default; local dev overrides each to its own port so
+          // http + ws both target local servers.
           .replaceAll(
             '%VITE_DATALAYER_AI_AGENTS_URL%',
             env.VITE_DATALAYER_AI_AGENTS_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_AI_INFERENCE_URL%',
             env.VITE_DATALAYER_AI_INFERENCE_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_MCP_SERVERS_URL%',
             env.VITE_DATALAYER_MCP_SERVERS_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_IAM_URL%',
             env.VITE_DATALAYER_IAM_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_LIBRARY_URL%',
             env.VITE_DATALAYER_LIBRARY_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_SPACER_URL%',
             env.VITE_DATALAYER_SPACER_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
@@ -214,41 +204,44 @@ export default defineConfig(({ mode, command }) => {
             env.VITE_DATALAYER_OTEL_URL ||
               env.VITE_OTEL_IN_BASE_URL ||
               env.VITE_OTEL_BASE_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_GROWTH_URL%',
             env.VITE_DATALAYER_GROWTH_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_SUCCESS_URL%',
             env.VITE_DATALAYER_SUCCESS_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
+          )
+          .replaceAll(
+            '%VITE_DATALAYER_INBOUNDS_URL%',
+            env.VITE_DATALAYER_INBOUNDS_URL || 'https://r1.datalayer.run',
           )
           .replaceAll(
             '%VITE_DATALAYER_SUPPORT_URL%',
             env.VITE_DATALAYER_SUPPORT_URL ||
-              env.VITE_DATALAYER_URL ||
               'https://r1.datalayer.run',
           )
           .replaceAll(
-            '%VITE_DATALAYER_URL_WS%',
-            (env.VITE_DATALAYER_URL || 'https://r1.datalayer.run').replace('http', 'ws'),
+            '%VITE_DATALAYER_RUNTIMES_URL_WS%',
+            (env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run').replace(
+              'http',
+              'ws',
+            ),
           )
           .replaceAll(
             '%VITE_JUPYTER_SERVER_URL%',
             env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_URL || 'https://r1.datalayer.run'}/api/jupyter-server`,
+              `${env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run'}/api/jupyter-server`,
           )
           .replaceAll(
             '%VITE_JUPYTER_SERVER_URL_WS%',
             (
               env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_URL || 'https://r1.datalayer.run'}/api/jupyter-server`
+              `${env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run'}/api/jupyter-server`
             ).replace('http', 'ws'),
           );
         },

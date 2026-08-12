@@ -338,7 +338,7 @@ export interface CostUsageChartProps {
   agentId?: string;
   runtimeId?: string;
   apiKey?: string;
-  datalayerUrl?: string;
+  otelUrl?: string;
   wsUrl?: string;
   liveCumulativeUsd?: number;
   liveTimestampMs?: number | null;
@@ -350,7 +350,7 @@ export function CostUsageChart({
   agentId,
   runtimeId,
   apiKey,
-  datalayerUrl,
+  otelUrl,
   wsUrl,
   liveCumulativeUsd,
   liveTimestampMs,
@@ -423,7 +423,7 @@ export function CostUsageChart({
 
   // Bootstrap chart with existing OTEL cost metrics before websocket updates.
   useEffect(() => {
-    if (!cacheServiceKey || !apiKey || !datalayerUrl) {
+    if (!cacheServiceKey || !apiKey || !otelUrl) {
       return;
     }
 
@@ -435,14 +435,14 @@ export function CostUsageChart({
           fetchOtelMetricRows({
             metric: COST_RUN_METRIC,
             serviceName,
-            datalayerUrl,
+            otelUrl,
             apiKey,
             limit: 1000,
           }),
           fetchOtelMetricRows({
             metric: COST_CUMULATIVE_METRIC,
             serviceName,
-            datalayerUrl,
+            otelUrl,
             apiKey,
             limit: 1000,
           }),
@@ -498,7 +498,7 @@ export function CostUsageChart({
     agentId,
     apiKey,
     cacheServiceKey,
-    datalayerUrl,
+    otelUrl,
     mergeCostPoints,
     runtimeId,
     serviceName,
@@ -558,7 +558,7 @@ export function CostUsageChart({
 
     const rawBaseUrl =
       wsUrl ||
-      datalayerUrl ||
+      otelUrl ||
       (typeof window !== 'undefined' ? window.location.origin : '');
     if (!rawBaseUrl) return;
 
@@ -626,7 +626,7 @@ export function CostUsageChart({
     apiKey,
     cacheServiceKey,
     mergeCostPoints,
-    datalayerUrl,
+    otelUrl,
     runtimeId,
     serviceName,
     wsUrl,

@@ -439,7 +439,7 @@ def _failure_cause_detail_lines(cause: dict[str, Any]) -> list[str]:
     if isinstance(diagnostics, dict) and diagnostics:
         for key, label in (
             ("agent_runtimes_url", "Agent runtimes URL"),
-            ("datalayer_url", "Datalayer URL"),
+            ("iam_url", "Datalayer IAM URL"),
         ):
             diag_value = diagnostics.get(key)
             if diag_value:
@@ -3602,7 +3602,7 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
             if isinstance(diagnostics, dict):
                 for key, label in (
                     ("agent_runtimes_url", "agent runtimes url"),
-                    ("datalayer_url", "run url"),
+                    ("iam_url", "iam url"),
                 ):
                     diag_value = diagnostics.get(key)
                     if diag_value:

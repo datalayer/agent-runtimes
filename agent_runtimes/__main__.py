@@ -170,11 +170,6 @@ def main_callback(
         is_eager=True,
         help="Show version and exit",
     ),
-    datalayer_url: str | None = typer.Option(
-        None,
-        "--datalayer-url",
-        help="Override DATALAYER_URL for this CLI invocation.",
-    ),
     iam_url: str | None = typer.Option(
         None,
         "--iam-url",
@@ -320,7 +315,6 @@ def main_callback(
 ) -> None:
     """Main callback to handle global options."""
     overrides = {
-        "DATALAYER_URL": datalayer_url,
         "DATALAYER_IAM_URL": iam_url,
         "DATALAYER_RUNTIMES_URL": runtimes_url,
         "DATALAYER_SPACER_URL": spacer_url,

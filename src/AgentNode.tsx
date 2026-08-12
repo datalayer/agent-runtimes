@@ -95,7 +95,7 @@ const LOCAL_JUPYTER_SANDBOX = (() => {
   }
 })();
 
-const DEFAULT_DATALAYER_URL = 'https://prod1.datalayer.run';
+const DEFAULT_DATALAYER_SERVICE_URL = 'https://prod1.datalayer.run';
 
 /**
  * localStorage key recording that the user explicitly signed out. When set, the
@@ -123,7 +123,7 @@ function setAutoBootstrapDisabled(disabled: boolean): void {
  * `DATALAYER_*_URL` environment variables, e.g. from `plane local`) when it
  * serves the built agent pages. Reading it at runtime lets the node target the
  * configured services (IAM, runtimes, ...) instead of the build-time-baked
- * `VITE_DATALAYER_URL`, which defaults to production because `make build` runs
+ * `VITE_DATALAYER_*_URL`, which default to production because `make build` runs
  * without the local environment.
  */
 const getConfigUrlFromDocument = (...keys: string[]): string | undefined => {
@@ -148,23 +148,23 @@ const getConfigUrlFromDocument = (...keys: string[]): string | undefined => {
   return undefined;
 };
 
-/** Resolve the base Datalayer URL: injected config → VITE env → production. */
-const resolveDatalayerUrl = (): string =>
-  getConfigUrlFromDocument('datalayerUrl', 'iamUrl') ||
-  (import.meta as any).env?.VITE_DATALAYER_URL ||
-  DEFAULT_DATALAYER_URL;
+/** Resolve the IAM URL: injected config → VITE env → production. */
+const resolveIamUrl = (): string =>
+  getConfigUrlFromDocument('iamUrl') ||
+  (import.meta as any).env?.VITE_DATALAYER_IAM_URL ||
+  DEFAULT_DATALAYER_SERVICE_URL;
 
-/** Resolve the runtimes URL: injected config → VITE env → base Datalayer URL. */
+/** Resolve the runtimes URL: injected config → VITE env → production. */
 const resolveRuntimesUrl = (): string =>
   getConfigUrlFromDocument('runtimesUrl') ||
   (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL ||
-  resolveDatalayerUrl();
+  DEFAULT_DATALAYER_SERVICE_URL;
 
-/** Resolve the spacer URL: injected config → VITE env → base Datalayer URL. */
+/** Resolve the spacer URL: injected config → VITE env → production. */
 const resolveSpacerUrl = (): string =>
   getConfigUrlFromDocument('spacerUrl') ||
   (import.meta as any).env?.VITE_DATALAYER_SPACER_URL ||
-  resolveDatalayerUrl();
+  DEFAULT_DATALAYER_SERVICE_URL;
 
 type AgentNodeMode = 'private' | 'shared' | 'sleep';
 type Step = 'auth' | 'config' | 'gallery' | 'chat' | 'profile';
@@ -441,7 +441,7 @@ function AgentNodeProfileView({
 export function AgentNode() {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const tokenForCore = token ?? undefined;
-  const signInLoginUrl = `${resolveDatalayerUrl()}/api/iam/v1/login`;
+  const signInLoginUrl = `${resolveIamUrl()}/api/iam/v1/login`;
   const queryClient = useQueryClient();
   const iamUser = useIAMStore(state => state.user);
   const { colorMode, theme: themeVariant } = useAgentNodeThemeStore();
@@ -504,7 +504,7 @@ export function AgentNode() {
     }
     const spacerUrl = resolveSpacerUrl();
     return new DatalayerCollaborationProvider({
-      datalayerUrl: spacerUrl,
+      spacerUrl,
       token,
     });
   }, [ephemeralCollaborationDocumentId, token]);
@@ -994,27 +994,27 @@ export function AgentNode() {
 
   useEffect(() => {
     import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
-      const datalayerUrl = resolveDatalayerUrl();
+      const iamUrl = resolveIamUrl();
       const runtimesUrl = resolveRuntimesUrl();
       const aiInferenceUrl =
         getConfigUrlFromDocument('aiInferenceUrl') ||
         (import.meta as any).env?.VITE_DATALAYER_AI_INFERENCE_URL ||
-        datalayerUrl;
+        DEFAULT_DATALAYER_SERVICE_URL;
       // Seed all per-service URLs to match the main UI login behavior.
       const coreApi = coreStore.getState() as any;
       const prevCfg = coreApi.configuration ?? {};
       const urls = {
-        iamUrl: datalayerUrl,
+        iamUrl: iamUrl,
         runtimesUrl,
-        spacerUrl: datalayerUrl,
-        libraryUrl: datalayerUrl,
-        aiAgentsUrl: datalayerUrl,
+        spacerUrl: iamUrl,
+        libraryUrl: iamUrl,
+        aiAgentsUrl: iamUrl,
         aiInferenceUrl: aiInferenceUrl,
-        mcpServersUrl: datalayerUrl,
-        otelUrl: datalayerUrl,
-        growthUrl: datalayerUrl,
-        successUrl: datalayerUrl,
-        supportUrl: datalayerUrl,
+        mcpServersUrl: iamUrl,
+        otelUrl: iamUrl,
+        growthUrl: iamUrl,
+        successUrl: iamUrl,
+        supportUrl: iamUrl,
       };
       if (typeof coreApi.setConfiguration === 'function') {
         coreApi.setConfiguration({ ...prevCfg, ...urls });
@@ -1025,7 +1025,7 @@ export function AgentNode() {
       }
 
       const api = iamStore.getState() as any;
-      iamStore.setState({ token: tokenForCore, iamUrl: datalayerUrl } as any);
+      iamStore.setState({ token: tokenForCore, iamUrl } as any);
       if (tokenForCore && typeof api.refreshUserByToken === 'function') {
         void Promise.resolve(api.refreshUserByToken(tokenForCore)).then(() => {
           queryClient.invalidateQueries({ queryKey: ['organizations'] });
@@ -1146,9 +1146,9 @@ export function AgentNode() {
   // API keys are exchanged for a session token before login so billing and
   // plans endpoints (/api/iam/v1/plans/*) resolve the correct paid plan.
   const handleApiKeySignIn = async (apiKey: string) => {
-    const datalayerUrl = resolveDatalayerUrl();
+    const iamUrl = resolveIamUrl();
     try {
-      const resp = await fetch(`${datalayerUrl}/api/iam/v1/login`, {
+      const resp = await fetch(`${iamUrl}/api/iam/v1/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: apiKey }),

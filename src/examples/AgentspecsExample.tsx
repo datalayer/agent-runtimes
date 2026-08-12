@@ -331,7 +331,7 @@ const resolveCloudRuntimeBaseUrlFromSpec = (
     'runtimeUrl',
     'runtimes_url',
     'runtime_url',
-    'datalayerUrl',
+    'aiAgentsUrl',
     'baseUrl',
     'endpoint',
   ];

@@ -28,24 +28,24 @@ Parameters:
       CIDR allowed to reach the public ALB listener on port 80. For production,
       set to your corporate egress IP(s) or front this stack with HTTPS + WAF.
 
-  DatalayerUrl:
+  DatalayerIamUrl:
     Type: String
     Default: https://prod1.datalayer.run
-    Description: Datalayer platform base URL.
+    Description: Datalayer IAM base URL.
 
   DatalayerAiInferenceUrl:
     Type: String
     Default: ''
     Description: >
       (Optional) Dedicated ai-inference base URL. When empty, the template
-      falls back to DatalayerUrl.
+      falls back to DatalayerIamUrl.
 
   DatalayerRuntimesUrl:
     Type: String
     Default: ''
     Description: >
       (Optional) Datalayer Runtimes base URL used for node registration and
-      tunnel traffic. When empty, the template falls back to DatalayerUrl.
+      tunnel traffic. When empty, the template falls back to DatalayerIamUrl.
 
   AgentNodeImage:
     Type: String
@@ -297,30 +297,30 @@ Resources:
               Value: saas_only
             - Name: DATALAYER_API_KEY
               Value: !Ref DatalayerApiKey
-            - Name: DATALAYER_URL
-              Value: !Ref DatalayerUrl
+            - Name: DATALAYER_IAM_URL
+              Value: !Ref DatalayerIamUrl
             - Name: DATALAYER_RUNTIMES_URL
               Value: !If
                 - HasDatalayerRuntimesUrl
                 - !Ref DatalayerRuntimesUrl
-                - !Ref DatalayerUrl
+                - !Ref DatalayerIamUrl
             - Name: DATALAYER_AGENT_RUNTIMES_URL
               Value: !If
                 - HasDatalayerRuntimesUrl
                 - !Ref DatalayerRuntimesUrl
-                - !Ref DatalayerUrl
-            - Name: VITE_DATALAYER_URL
-              Value: !Ref DatalayerUrl
+                - !Ref DatalayerIamUrl
+            - Name: VITE_DATALAYER_IAM_URL
+              Value: !Ref DatalayerIamUrl
             - Name: DATALAYER_AI_INFERENCE_URL
               Value: !If
                 - HasDatalayerAiInferenceUrl
                 - !Ref DatalayerAiInferenceUrl
-                - !Ref DatalayerUrl
+                - !Ref DatalayerIamUrl
             - Name: VITE_DATALAYER_AI_INFERENCE_URL
               Value: !If
                 - HasDatalayerAiInferenceUrl
                 - !Ref DatalayerAiInferenceUrl
-                - !Ref DatalayerUrl
+                - !Ref DatalayerIamUrl
             - Name: AGENT_RUNTIMES_PORT
               Value: !Ref AgentNodePort
           LogConfiguration:

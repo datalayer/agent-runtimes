@@ -52,7 +52,7 @@ const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
 // Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
 // read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
 const OTEL_IN_BASE_URL_ENV = import.meta.env.VITE_OTEL_IN_BASE_URL;
-const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
+const OTEL_URL_ENV = import.meta.env.VITE_DATALAYER_OTEL_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -101,9 +101,9 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
-    configuration?.datalayerUrl ||
+    configuration?.otelUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_URL_ENV ||
+    OTEL_URL_ENV ||
     agentBaseUrl;
   const podName = agentId;
   // The OTEL service_name resource attribute is 'agent-runtimes' (the
@@ -460,7 +460,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               serviceName={otelServiceName}
               agentId={agentId}
               apiKey={token ?? undefined}
-              datalayerUrl={otelBaseUrl}
+              otelUrl={otelBaseUrl}
               liveSystemPromptTokens={liveContextSnapshot?.systemPromptTokens}
               liveUserMessageTokens={liveContextSnapshot?.userMessageTokens}
               liveAgentMessageTokens={
@@ -486,7 +486,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               serviceName={otelServiceName}
               agentId={agentId}
               apiKey={token ?? undefined}
-              datalayerUrl={otelBaseUrl}
+              otelUrl={otelBaseUrl}
               liveCumulativeUsd={liveCost?.cumulativeCostUsd}
               liveTimestampMs={monitorLastSnapshotAt}
               height={180}
@@ -687,7 +687,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             <TurnGraphChart
               serviceName={otelServiceName}
               agentId={agentId}
-              datalayerUrl={otelBaseUrl}
+              otelUrl={otelBaseUrl}
               apiKey={token ?? undefined}
               autoRefreshMs={10_000}
               height={280}

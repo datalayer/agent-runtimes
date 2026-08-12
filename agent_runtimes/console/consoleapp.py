@@ -18,7 +18,7 @@ from agent_runtimes.console.manager import RuntimeManager
 
 aliases = {
     "agent": "RuntimesConsoleApp.runtime_name",
-    "datalayer-url": "RuntimesConsoleApp.datalayer_url",
+    "runtimes-url": "RuntimesConsoleApp.runtimes_url",
     "api-key": "RuntimesConsoleApp.token",
     "external-token": "RuntimesConsoleApp.external_token",
     "kernel-name": "RuntimesConsoleApp.kernel_name",
@@ -44,7 +44,7 @@ class RuntimesConsoleApp(AuthnMixin, JupyterApp):
 
     runtime_name = Unicode("", config=True, help="Runtime name to connect to.")
     user_handle = Unicode("", config=True, help="Username for authentication.")
-    datalayer_url = Unicode("", config=True, help="Datalayer server URL.")
+    runtimes_url = Unicode("", config=True, help="Datalayer Runtimes server URL.")
     iam_url = Unicode("", config=True, help="Datalayer IAM server URL.")
     token = Unicode("", config=True, help="Authentication token.")
     external_token = Unicode("", config=True, help="External authentication token.")
@@ -57,9 +57,9 @@ class RuntimesConsoleApp(AuthnMixin, JupyterApp):
         super().__init__(**kwargs)
         self.runtime_manager: RuntimeManager | None = None
 
-    @default("datalayer_url")
-    def _datalayer_url_default(self) -> str:
-        return DatalayerURLs.from_environment().datalayer_url
+    @default("runtimes_url")
+    def _runtimes_url_default(self) -> str:
+        return DatalayerURLs.from_environment().runtimes_url
 
     @default("iam_url")
     def _iam_url_default(self) -> str:
@@ -68,7 +68,7 @@ class RuntimesConsoleApp(AuthnMixin, JupyterApp):
     @property
     def urls(self) -> DatalayerURLs:
         return DatalayerURLs.from_environment(
-            datalayer_url=self.datalayer_url,
+            runtimes_url=self.runtimes_url,
             iam_url=self.iam_url,
         )
 
@@ -79,7 +79,7 @@ class RuntimesConsoleApp(AuthnMixin, JupyterApp):
             return
         self._log_in()
         self.runtime_manager = RuntimeManager(
-            datalayer_url=self.datalayer_url,
+            runtimes_url=self.runtimes_url,
             token=self.token or "",
             username=self.user_handle or "",
             log=self.log,

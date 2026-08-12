@@ -17,7 +17,7 @@ from datalayer_core.utils.types import (
     CreditsPerSecond,
     Minutes,
 )
-from datalayer_core.utils.urls import DEFAULT_DATALAYER_URL
+from datalayer_core.utils.urls import DEFAULT_DATALAYER_RUNTIMES_URL
 from pydantic import BaseModel, Field
 
 
@@ -41,9 +41,9 @@ class RuntimeModel(BaseModel):
     )
 
     # Service URLs
-    datalayer_url: str = Field(
-        default=DEFAULT_DATALAYER_URL,
-        description="Runtime service URL (default: 'https://api.datalayer.run')",
+    runtimes_url: str = Field(
+        default=DEFAULT_DATALAYER_RUNTIMES_URL,
+        description="Runtimes service URL",
     )
     iam_url: Optional[str] = Field(default=None, description="IAM service URL")
 
@@ -91,8 +91,8 @@ class RuntimeModel(BaseModel):
 
     # Legacy compatibility (keeping for backward compatibility)
     url: str = Field(
-        default=DEFAULT_DATALAYER_URL,
-        description="Runtime service URL (alias for datalayer_url)",
+        default=DEFAULT_DATALAYER_RUNTIMES_URL,
+        description="Runtime service URL (alias for runtimes_url)",
     )
     credits_per_second: CreditsPerSecond = Field(
         default=1, description="Credits consumed per second of runtime (default: 1)"

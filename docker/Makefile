@@ -86,7 +86,7 @@ start-local: ## start Agent Node wired to services running on local host
 	docker run -d --name $(CONTAINER_NAME) -p 8765:8765 $(HOST_GATEWAY_FLAG) \
 		-e AGENT_RUNTIMES_NODE=true \
 		-e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer \
-		-e DATALAYER_URL=$(LOCAL_IAM_URL) \
+		-e DATALAYER_IAM_URL=$(LOCAL_IAM_URL) \
 		-e DATALAYER_IAM_URL=$(LOCAL_IAM_URL) \
 		-e DATALAYER_RUNTIMES_URL=$(LOCAL_RUNTIMES_URL) \
 		-e DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \

@@ -98,7 +98,7 @@ class CodeSandboxExecService:
 
                 # Create a RuntimeManager with proper credentials
                 self.kernel_manager = RuntimeManager(
-                    datalayer_url=self._client.urls.datalayer_url,
+                    runtimes_url=self._client.urls.runtimes_url,
                     token=token or "",
                     username="",  # Username is not required for token-based auth
                 )

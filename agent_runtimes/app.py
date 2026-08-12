@@ -1519,7 +1519,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
             urls = DatalayerURLs.from_environment()
             return {
-                "datalayerUrl": urls.datalayer_url,
                 "iamUrl": urls.iam_url,
                 "runtimesUrl": urls.runtimes_url,
                 "spacerUrl": urls.spacer_url,

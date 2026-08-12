@@ -130,7 +130,7 @@ async def test_ensure_collaboration_room_skips_without_credentials(
     """Return ``None`` (skip) when neither spacer URL nor token is available."""
     _reset_config(tmp_path, monkeypatch)
     monkeypatch.delenv("DATALAYER_SPACER_URL", raising=False)
-    monkeypatch.delenv("DATALAYER_URL", raising=False)
+    monkeypatch.delenv("DATALAYER_SPACER_URL", raising=False)
     monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
 
     def handler(request: httpx.Request) -> httpx.Response:  # pragma: no cover
