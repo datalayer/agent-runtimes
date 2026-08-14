@@ -25,6 +25,11 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
+    # Provides the `acp` module, imported by the ACP routes, transports and
+    # clients. It was never declared, so `import agent_runtimes` failed
+    # wherever it was absent — reported by consumers as the package
+    # being missing when it was installed and merely unimportable.
+    "agent-client-protocol>=0.7.1",
     "agent-codemode",
     "agent-skills",
     "code-sandboxes",

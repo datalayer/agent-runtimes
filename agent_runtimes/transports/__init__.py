@@ -4,7 +4,12 @@
 """Protocol adapters and clients for agent-runtimes."""
 
 from .a2a import A2ATransport
-from .acp import ACPTransport
+# Optional, like the ACP route: absent `acp` must not make the whole
+# package unimportable for consumers that never speak that protocol.
+try:
+    from .acp import ACPTransport
+except ImportError:  # pragma: no cover - depends on what is installed
+    ACPTransport = None
 from .agui import AGUITransport
 from .base import BaseTransport
 

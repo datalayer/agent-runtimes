@@ -22,11 +22,17 @@ Example:
             print(event.delta, end="")
 """
 
-from .acp_client import (
-    ACPClient,
-    ACPClientError,
-    connect_acp,
-)
+# Optional: `acp` is not a declared dependency, so this import must not be
+# allowed to make the whole package unimportable. See the note in
+# `agent_runtimes/routes/__init__.py`.
+try:
+    from .acp_client import (
+        ACPClient,
+        ACPClientError,
+        connect_acp,
+    )
+except ImportError:  # pragma: no cover - depends on what is installed
+    ACPClient = ACPClientError = connect_acp = None
 from .ag_ui_client import (
     AGUIClient,
     AGUIClientError,

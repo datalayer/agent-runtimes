@@ -18,7 +18,15 @@ from .a2a import (
     router as a2a_protocol_router,
 )
 from .a2ui import router as a2ui_router
-from .acp import router as acp_router
+# ACP support is optional: `acp` is not a declared dependency, and importing
+# it unconditionally makes `import agent_runtimes` fail outright wherever it is
+# absent. That took down every consumer that only wants the client — the
+# Datalayer sandbox reported it as "agent-runtimes package is required" while
+# the package was installed and merely unimportable.
+try:
+    from .acp import router as acp_router
+except ImportError:  # pragma: no cover - depends on what is installed
+    acp_router = None
 from .agent_node import router as agent_node_router
 from .agents import router as agents_router
 from .agui import (
