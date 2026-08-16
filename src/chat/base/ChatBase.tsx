@@ -127,7 +127,9 @@ const sentPendingPromptKeys = new Set<string>();
  * tool that declares no parameters never gets that update — `{}` IS its
  * full argument set — so waiting on it left the call executing forever.
  */
-function frontendToolExpectsArgs(tool: FrontendToolDefinition | undefined): boolean {
+function frontendToolExpectsArgs(
+  tool: FrontendToolDefinition | undefined,
+): boolean {
   const parameters = tool?.parameters;
   if (!parameters) {
     return false;

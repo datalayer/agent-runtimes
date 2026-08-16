@@ -128,8 +128,8 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
         {(!configuration?.spacerUrl || !configuration?.token) && (
           <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
             Warning: Datalayer configuration is missing. Please configure
-            spacerUrl and token to use DatalayerServiceManager and
-            collaboration features.
+            spacerUrl and token to use DatalayerServiceManager and collaboration
+            features.
           </Box>
         )}
 

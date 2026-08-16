@@ -734,8 +734,12 @@ export function Chat({
               collapsed={collapsed}
               onExpandFromCollapsed={onExpandFromCollapsed}
               ephemeralNotebookToolbar={ephemeralNotebookToolbar}
-              ephemeralNotebookToolbarExtraItems={ephemeralNotebookToolbarExtraItems}
-              ephemeralDocumentToolbarExtraItems={ephemeralDocumentToolbarExtraItems}
+              ephemeralNotebookToolbarExtraItems={
+                ephemeralNotebookToolbarExtraItems
+              }
+              ephemeralDocumentToolbarExtraItems={
+                ephemeralDocumentToolbarExtraItems
+              }
               ephemeralNotebookCollaborationProvider={
                 ephemeralNotebookCollaborationProvider
               }

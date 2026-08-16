@@ -102,9 +102,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
       return 'local inference';
     }
     const env = (import.meta as any).env ?? {};
-    return (
-      env.VITE_DATALAYER_AI_INFERENCE_URL || baseUrl
-    );
+    return env.VITE_DATALAYER_AI_INFERENCE_URL || baseUrl;
   }, [provider, baseUrl]);
 
   const authFetch = useCallback(

@@ -71,8 +71,7 @@ export function useNewCodeSandboxAllowance(
     hasKnownCredits &&
     hasKnownRunAllowance &&
     !hasRemainingRuns &&
-    ((credits?.available ?? 0) <= 0 ||
-      (maxFromCredits ?? 0) < Number.EPSILON);
+    ((credits?.available ?? 0) <= 0 || (maxFromCredits ?? 0) < Number.EPSILON);
   return {
     maxFromCredits,
     effectiveMaxMinutes,
@@ -137,16 +136,16 @@ export function NewCodeSandboxControls(
   return (
     <>
       {withReservation && (
-      <RuntimeReservationControl
-        addCredits={addCredits}
-        disabled={disabled}
-        label={'Time reservation'}
-        max={max}
-        time={timeLimit}
-        burningRate={burningRate}
-        onTimeChange={onTimeChange}
-        error={error}
-      />
+        <RuntimeReservationControl
+          addCredits={addCredits}
+          disabled={disabled}
+          label={'Time reservation'}
+          max={max}
+          time={timeLimit}
+          burningRate={burningRate}
+          onTimeChange={onTimeChange}
+          error={error}
+        />
       )}
       {!configuration.whiteLabel && (
         <FormControl disabled={storageDisabled} layout="horizontal">

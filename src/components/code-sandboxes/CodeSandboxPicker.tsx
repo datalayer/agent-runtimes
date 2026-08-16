@@ -26,7 +26,10 @@ import { BrowserIcon, LaptopSimpleIcon } from '@datalayer/icons-react';
 import { CreditsIndicator } from '../progress';
 import { IRuntimeDesc } from '../../models';
 import { isRuntimeRemote, IMultiServiceManager } from '../../runtimes';
-import { getGroupedRuntimeDescs, IDatalayerRuntimeDesc } from '../runtimes/RuntimeUtils';
+import {
+  getGroupedRuntimeDescs,
+  IDatalayerRuntimeDesc,
+} from '../runtimes/RuntimeUtils';
 
 /**
  * Maximal runtime display name length after which it is trimmed.
