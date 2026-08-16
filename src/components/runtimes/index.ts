@@ -14,3 +14,5 @@ export * from './RuntimeSimplePicker';
 export * from './RuntimeTransfer';
 export * from './RuntimeUtils';
 export * from './RuntimeVariables';
+// The picker and the launcher moved in with the code sandboxes.
+export * from '../code-sandboxes';

@@ -4,15 +4,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActionList,
-  FormControl,
-  ToggleSwitch,
-  Tooltip,
-  IconButton,
-} from '@primer/react';
+import { ActionList } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { AlertIcon } from '@primer/octicons-react';
 import { ITranslator } from '@jupyterlab/translation';
 import { JSONExt } from '@lumino/coreutils';
 import { CommandRegistry } from '@lumino/commands';
@@ -25,13 +18,14 @@ import type {
 import { RuntimeSnippetsFacade } from '../../jupyter';
 import { IRuntimeDesc } from '../../models';
 import { ExternalTokenSilentLogin } from '@datalayer/core/lib/components/iam';
-import { useCoreStore, useIAMStore } from '../../state/substates';
-import {
-  RuntimeReservationControl,
-  MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES,
-} from './RuntimeReservationControl';
+import { useIAMStore } from '../../state/substates';
 import { RuntimeVariables } from './RuntimeVariables';
-import { RuntimePickerBase } from './RuntimePickerBase';
+import { CodeSandboxPicker } from '../code-sandboxes/CodeSandboxPicker';
+import {
+  creditsLimitFor,
+  NewCodeSandboxControls,
+  useNewCodeSandboxAllowance,
+} from '../code-sandboxes/NewCodeSandboxControls';
 import { RuntimeTransfer } from './RuntimeTransfer';
 
 /**
@@ -75,8 +69,7 @@ export function RuntimePickerNotebook(
   props: IRuntimePickerNotebookProps,
 ): JSX.Element {
   const { multiServiceManager, sessionContext, setValue, translator } = props;
-  const { configuration } = useCoreStore();
-  const { credits, refreshCredits, token, user } = useIAMStore();
+  const { refreshCredits, token } = useIAMStore();
   const [selectedRuntimeDesc, setSelectedRuntimeDesc] =
     useState<IRuntimeDesc>();
   const [timeLimit, setTimeLimit] = useState<number>(10);
@@ -182,36 +175,18 @@ export function RuntimePickerNotebook(
     },
     [selectedRuntimeDesc],
   );
-  const handleUserStorageChange = useCallback(
-    (e: any) => {
-      (e as MouseEvent).preventDefault();
-      setUserStorage(!userStorage);
-    },
-    [userStorage],
-  );
+  // The burning rate of the choice, and what the account allows for it —
+  // the same one copy of the arithmetic the launcher uses.
+  const resolvedBurningRate =
+    selectedRuntimeDesc?.burningRate ??
+    multiServiceManager.remote?.environments
+      .get()
+      .find(env => env.name === selectedRuntimeDesc?.name)?.burning_rate;
+  const allowance = useNewCodeSandboxAllowance(resolvedBurningRate);
   useEffect((): void => {
-    const resolvedBurningRate =
-      selectedRuntimeDesc?.burningRate ??
-      multiServiceManager.remote?.environments
-        .get()
-        .find(env => env.name === selectedRuntimeDesc?.name)?.burning_rate;
-    const includedRuns =
-      user?.subscription?.usage?.included_runs ??
-      user?.subscription?.included_runs;
-    const currentRuns =
-      user?.subscription?.usage?.current_runs ??
-      user?.subscription?.current_runs ??
-      user?.subscription?.used_runs;
-    const hasKnownRunAllowance = typeof includedRuns === 'number';
-    const hasRemainingRuns =
-      hasKnownRunAllowance &&
-      typeof currentRuns === 'number' &&
-      includedRuns > 0 &&
-      currentRuns < includedRuns;
-    const hasKnownCredits = typeof credits?.available === 'number';
     const maxMinutes =
-      selectedRuntimeDesc?.location === 'remote' && resolvedBurningRate
-        ? Math.floor((credits?.available ?? 0) / resolvedBurningRate / 60.0)
+      selectedRuntimeDesc?.location === 'remote'
+        ? allowance.maxFromCredits
         : undefined;
     const effectiveTimeLimit =
       selectedRuntimeDesc?.location === 'remote'
@@ -222,12 +197,7 @@ export function RuntimePickerNotebook(
         : timeLimit;
     const creditsLimit =
       selectedRuntimeDesc?.location === 'remote' && resolvedBurningRate
-        ? Math.min(
-            effectiveTimeLimit,
-            MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES,
-          ) *
-          resolvedBurningRate *
-          60
+        ? creditsLimitFor(effectiveTimeLimit, resolvedBurningRate)
         : undefined;
     const requiresRuntimeStart =
       !!selectedRuntimeDesc && !selectedRuntimeDesc.kernelId;
@@ -237,9 +207,9 @@ export function RuntimePickerNotebook(
         return;
       }
       if (
-        hasKnownCredits &&
-        hasKnownRunAllowance &&
-        !hasRemainingRuns &&
+        allowance.hasKnownCredits &&
+        allowance.hasKnownRunAllowance &&
+        !allowance.hasRemainingRuns &&
         (!creditsLimit || creditsLimit <= 0)
       ) {
         setValue({ runtime: null, selectedVariables: toTransfer });
@@ -269,49 +239,25 @@ export function RuntimePickerNotebook(
     toTransfer,
     timeLimit,
     multiServiceManager.remote,
-    credits?.available,
-    user,
+    resolvedBurningRate,
+    allowance,
   ]);
   const {
     kernelPreference: { canStart },
   } = sessionContext;
-  const resolvedBurningRate =
-    selectedRuntimeDesc?.burningRate ??
-    multiServiceManager.remote?.environments
-      .get()
-      .find(env => env.name === selectedRuntimeDesc?.name)?.burning_rate;
-  const maxFromCredits = resolvedBurningRate
-    ? Math.floor((credits?.available ?? 0) / resolvedBurningRate / 60.0)
-    : -1;
-  const includedRuns =
-    user?.subscription?.usage?.included_runs ??
-    user?.subscription?.included_runs;
-  const currentRuns =
-    user?.subscription?.usage?.current_runs ??
-    user?.subscription?.current_runs ??
-    user?.subscription?.used_runs;
-  const hasKnownRunAllowance = typeof includedRuns === 'number';
-  const hasRemainingRuns =
-    hasKnownRunAllowance &&
-    typeof currentRuns === 'number' &&
-    includedRuns > 0 &&
-    currentRuns < includedRuns;
-  const hasKnownCredits = typeof credits?.available === 'number';
   const effectiveMaxMinutes =
     selectedRuntimeDesc?.location === 'remote'
-      ? hasKnownCredits && hasKnownRunAllowance && !hasRemainingRuns
-        ? Math.max(1, maxFromCredits)
-        : Math.max(10, maxFromCredits > 0 ? maxFromCredits : 0)
-      : Math.max(1, maxFromCredits);
+      ? allowance.effectiveMaxMinutes
+      : Math.max(1, allowance.maxFromCredits ?? -1);
   const outOfCredits =
-    hasKnownCredits &&
-    hasKnownRunAllowance &&
-    !hasRemainingRuns &&
-    maxFromCredits < Number.EPSILON;
+    allowance.hasKnownCredits &&
+    allowance.hasKnownRunAllowance &&
+    !allowance.hasRemainingRuns &&
+    (allowance.maxFromCredits ?? -1) < Number.EPSILON;
   return (
     <Box as="form" className="dla-Runtimes-picker">
       <Box sx={{ padding: 'var(--stack-padding-condensed) 0' }}>
-        <RuntimePickerBase
+        <CodeSandboxPicker
           display="radio"
           disabled={canStart === false}
           preference={{
@@ -353,59 +299,24 @@ export function RuntimePickerNotebook(
       </Box>
       {!selectedRuntimeDesc?.kernelId &&
         selectedRuntimeDesc?.location === 'remote' && (
-          <>
-            <RuntimeReservationControl
-              disabled={
-                outOfCredits || selectedRuntimeDesc?.location !== 'remote'
-              }
-              label={'Time reservation'}
-              max={effectiveMaxMinutes}
-              time={timeLimit}
-              onTimeChange={setTimeLimit}
-              error={
-                outOfCredits && maxFromCredits >= 0
-                  ? 'You must add credits to your account.'
-                  : timeLimit === 0
-                    ? 'You must set a time limit.'
-                    : undefined
-              }
-              burningRate={selectedRuntimeDesc.burningRate}
-            />
-            {!configuration.whiteLabel && (
-              <FormControl
-                disabled={
-                  !!selectedRuntimeDesc?.kernelId ||
-                  selectedRuntimeDesc?.location !== 'remote'
-                }
-                layout="horizontal"
-              >
-                <FormControl.Label id="user-storage-picker-label">
-                  User storage
-                  <Tooltip
-                    text="The runtime will be slower to start."
-                    direction="e"
-                    style={{ marginLeft: 3 }}
-                  >
-                    <IconButton
-                      icon={AlertIcon}
-                      aria-label=""
-                      variant="invisible"
-                    />
-                  </Tooltip>
-                </FormControl.Label>
-                <ToggleSwitch
-                  disabled={
-                    !!selectedRuntimeDesc?.kernelId ||
-                    selectedRuntimeDesc?.location !== 'remote'
-                  }
-                  checked={userStorage}
-                  size="small"
-                  onClick={handleUserStorageChange}
-                  aria-labelledby="user-storage-picker-label"
-                />
-              </FormControl>
-            )}
-          </>
+          // The user asked for a NEW sandbox: the questions are the
+          // launcher's, asked through the launcher's own controls.
+          <NewCodeSandboxControls
+            burningRate={selectedRuntimeDesc.burningRate}
+            timeLimit={timeLimit}
+            onTimeChange={setTimeLimit}
+            max={effectiveMaxMinutes}
+            disabled={outOfCredits}
+            error={
+              outOfCredits && (allowance.maxFromCredits ?? -1) >= 0
+                ? 'You must add credits to your account.'
+                : timeLimit === 0
+                  ? 'You must set a time limit.'
+                  : undefined
+            }
+            userStorage={userStorage}
+            onUserStorageToggle={() => setUserStorage(current => !current)}
+          />
         )}
       {canTransferFrom && canTransferTo && (
         <RuntimeVariables

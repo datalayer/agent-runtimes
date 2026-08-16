@@ -17,16 +17,18 @@ import { isRuntimeRemote } from '../../runtimes';
 import { RuntimeSnippetsFacade } from '../../jupyter';
 import { ExternalTokenSilentLogin } from '@datalayer/core/lib/components/iam';
 import { SnippetDialog } from '../../components/snippets/SnippetDialog';
-import { IRuntimePickerBaseProps } from './RuntimePickerBase';
-import { RuntimeLauncherDialog } from './RuntimeLauncherDialog';
-import { RuntimePickerBase } from './RuntimePickerBase';
+import {
+  CodeSandboxPicker,
+  type ICodeSandboxPickerProps,
+} from '../code-sandboxes/CodeSandboxPicker';
+import { CodeSandboxLauncher } from '../code-sandboxes/CodeSandboxLauncher';
 import { RuntimeCellVariablesDialog } from './RuntimeCellVariablesDialog';
 
 /**
  * {@link RuntimePickerCell} properties
  */
 export type IRuntimePickerCellProps = Pick<
-  IRuntimePickerBaseProps,
+  ICodeSandboxPickerProps,
   'multiServiceManager' | 'preference' | 'translator'
 > & {
   /**
@@ -160,7 +162,7 @@ export function RuntimePickerCell(props: IRuntimePickerCellProps): JSX.Element {
   const datalayerMeta = model.getMetadata('datalayer') ?? {};
   return (
     <>
-      <RuntimePickerBase
+      <CodeSandboxPicker
         display="menu"
         filterRuntime={filterKernel}
         preference={preference}
@@ -242,7 +244,7 @@ export function RuntimePickerCell(props: IRuntimePickerCellProps): JSX.Element {
         />
       )}
       {isKernelDialogOpen && (
-        <RuntimeLauncherDialog
+        <CodeSandboxLauncher
           manager={multiServiceManager.remote!}
           onSubmit={onStartRemote}
           startRuntime={'defer'}
