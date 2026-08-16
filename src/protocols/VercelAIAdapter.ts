@@ -659,6 +659,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                       toolCallId,
                       toolName,
                       args,
+                      // `tool-input-available` carries the final input:
+                      // empty args are an answer, not a promise of more.
+                      argsComplete: true,
                     },
                     timestamp: new Date(),
                   });

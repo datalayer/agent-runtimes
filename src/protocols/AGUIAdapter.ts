@@ -709,6 +709,8 @@ export class AGUIAdapter extends BaseProtocolAdapter {
             toolCallId,
             toolName,
             args: {},
+            // TOOL_CALL_START: the args stream in afterwards.
+            argsComplete: false,
           },
           timestamp: new Date(),
         });
@@ -757,6 +759,8 @@ export class AGUIAdapter extends BaseProtocolAdapter {
                 toolCallId: pending.toolCallId,
                 toolName: pending.toolName,
                 args: parsedArgs,
+                // TOOL_CALL_END: this is the full argument set.
+                argsComplete: true,
               },
               timestamp: new Date(),
             });

@@ -1010,7 +1010,7 @@ export function AgentNode() {
         libraryUrl: iamUrl,
         aiAgentsUrl: iamUrl,
         aiInferenceUrl: aiInferenceUrl,
-        mcpServersUrl: iamUrl,
+        jupyterMcpServerUrl: 'https://mcp.datalayer.run/mcp',
         otelUrl: iamUrl,
         growthUrl: iamUrl,
         successUrl: iamUrl,

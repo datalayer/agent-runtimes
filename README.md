@@ -285,7 +285,7 @@ both http and ws traffic stay local) at the matching localhost port exposed by
 | `PLANE_LOCAL_MANAGER_URL`      | `http://localhost:2100`       |
 | `PLANE_LOCAL_AI_AGENTS_URL`    | `http://localhost:4400`       |
 | `PLANE_LOCAL_AI_INFERENCE_URL` | `http://localhost:4450`       |
-| `PLANE_LOCAL_MCP_SERVERS_URL`  | `http://localhost:4111`       |
+| `PLANE_LOCAL_JUPYTER_MCP_SERVER_URL` | `http://localhost:4404/mcp`   |
 | `PLANE_LOCAL_GROWTH_URL`       | `http://localhost:6660`       |
 | `PLANE_LOCAL_SUCCESS_URL`      | `http://localhost:3300`       |
 | `PLANE_LOCAL_STATUS_URL`       | `http://localhost:4785`       |

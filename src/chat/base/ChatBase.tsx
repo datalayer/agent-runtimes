@@ -119,6 +119,29 @@ const sentPendingPromptKeys = new Set<string>();
  * ephemeral notebook/document is not yet ready. Shown in place of the surface
  * content (never as an overlay) so structure appears as early as possible.
  */
+/**
+ * Whether a frontend tool declares any parameter.
+ *
+ * The empty-args guard around execution exists for AG-UI, which emits a
+ * first tool-call with `{}` and the real arguments in a later update. A
+ * tool that declares no parameters never gets that update — `{}` IS its
+ * full argument set — so waiting on it left the call executing forever.
+ */
+function frontendToolExpectsArgs(tool: FrontendToolDefinition | undefined): boolean {
+  const parameters = tool?.parameters;
+  if (!parameters) {
+    return false;
+  }
+  if (Array.isArray(parameters)) {
+    return parameters.length > 0;
+  }
+  const properties = (parameters as Record<string, unknown>).properties;
+  if (properties && typeof properties === 'object') {
+    return Object.keys(properties).length > 0;
+  }
+  return Object.keys(parameters).length > 0;
+}
+
 function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
   return (
     <Box
@@ -2776,6 +2799,14 @@ function ChatBaseInner({
             const toolCallId = event.toolCall.toolCallId || generateMessageId();
             const toolName = event.toolCall.toolName;
             const args = event.toolCall.args || {};
+            /*
+             * Whether these args are the full set, as the protocol tells it.
+             * Vercel's tool event is terminal — `{}` is an answer there,
+             * legal for a tool whose parameters are all optional. AG-UI
+             * streams the args after a first empty event and says so with
+             * `false`. Without the flag, the old heuristics decide.
+             */
+            const argsComplete = event.toolCall.argsComplete;
 
             if (toolCallsRef.current.has(toolCallId)) {
               const existingToolCall = toolCallsRef.current.get(toolCallId);
@@ -2800,7 +2831,7 @@ function ChatBaseInner({
                 if (
                   toolHandler &&
                   existingToolCall.status === 'executing' &&
-                  Object.keys(args).length > 0
+                  (argsComplete ?? Object.keys(args).length > 0)
                 ) {
                   pendingToolExecutionsRef.current++;
                   executeFrontendTool(toolHandler, updatedToolCall, toolCallId);
@@ -2829,12 +2860,19 @@ function ChatBaseInner({
                 t => t.name === toolName,
               );
               const toolHandler = frontendTool?.handler;
-              // Only execute when we have actual args. AG-UI emits an
-              // initial tool-call with empty args on TOOL_CALL_START;
-              // the real args arrive on TOOL_CALL_END. Skip execution
-              // here and let the update branch (above) handle it once
-              // the full args are available.
-              if (toolHandler && Object.keys(args).length > 0) {
+              // Execute when the args are complete. The protocol says so
+              // when it can (`argsComplete`); without the flag, fall back
+              // to the old heuristics — actual args present, or a tool
+              // that declares no parameters, for which `{}` is the full
+              // set and no update is ever coming. A protocol that streams
+              // its args (AG-UI start) says `false` and the update branch
+              // above executes once the full set has arrived.
+              if (
+                toolHandler &&
+                (argsComplete ??
+                  (Object.keys(args).length > 0 ||
+                    !frontendToolExpectsArgs(frontendTool)))
+              ) {
                 pendingToolExecutionsRef.current++;
                 executeFrontendTool(toolHandler, toolCallMsg, toolCallId);
               }

@@ -243,6 +243,17 @@ export interface ToolCallRequest {
   toolCallId: string;
   toolName: string;
   args: Record<string, unknown>;
+  /**
+   * Whether `args` is the complete argument set.
+   *
+   * Protocols that stream arguments (AG-UI) emit a first tool-call with
+   * `{}` and the real args later — those mark `false`, and execution waits.
+   * Protocols whose tool-call event is terminal (Vercel) mark `true`: an
+   * empty `args` there means the model chose to pass nothing, which is
+   * legal for a tool whose parameters are all optional — waiting on more
+   * would wait forever. Absent, the executor falls back to heuristics.
+   */
+  argsComplete?: boolean;
 }
 
 /**
