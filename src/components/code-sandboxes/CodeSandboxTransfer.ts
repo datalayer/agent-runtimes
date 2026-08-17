@@ -5,7 +5,7 @@
 
 import { type IRuntimeOptions } from '../../runtimes';
 
-export interface RuntimeTransfer {
+export interface CodeSandboxTransfer {
   /**
    * Selected Kernel.
    */

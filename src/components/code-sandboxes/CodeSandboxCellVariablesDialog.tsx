@@ -11,12 +11,12 @@ import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { JSONExt } from '@lumino/coreutils';
 import { KernelExecutor } from '@datalayer/jupyter-react';
 import { RuntimeSnippetsFacade } from '../../jupyter';
-import { RuntimeCellVariables } from './RuntimeCellVariables';
+import { CodeSandboxCellVariables } from './CodeSandboxCellVariables';
 
 /**
- * {@link RuntimeCellVariablesDialog} properties
+ * {@link CodeSandboxCellVariablesDialog} properties
  */
-export interface IRuntimeCellVariablesDialogProps {
+export interface ICodeSandboxCellVariablesDialogProps {
   /**
    * Code cell model
    */
@@ -46,8 +46,8 @@ export interface IRuntimeCellVariablesDialogProps {
 /**
  * Dialog to define the runtime cell variables to transfer
  */
-export function RuntimeCellVariablesDialog(
-  props: IRuntimeCellVariablesDialogProps,
+export function CodeSandboxCellVariablesDialog(
+  props: ICodeSandboxCellVariablesDialogProps,
 ): JSX.Element {
   const { onClose, model, preference, sessionContext, translator } = props;
   const [inputs, setInputs] = useState<string[]>([]);
@@ -143,7 +143,7 @@ export function RuntimeCellVariablesDialog(
         },
       ]}
     >
-      <RuntimeCellVariables
+      <CodeSandboxCellVariables
         inputs={inputs}
         getInputOptions={sessionContext ? getInputCandidates : undefined}
         setInputs={setInputs}
@@ -156,4 +156,4 @@ export function RuntimeCellVariablesDialog(
   );
 }
 
-export default RuntimeCellVariablesDialog;
+export default CodeSandboxCellVariablesDialog;

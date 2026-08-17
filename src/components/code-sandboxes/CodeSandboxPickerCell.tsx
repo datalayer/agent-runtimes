@@ -20,14 +20,14 @@ import { SnippetDialog } from '../../components/snippets/SnippetDialog';
 import {
   CodeSandboxPicker,
   type ICodeSandboxPickerProps,
-} from '../code-sandboxes/CodeSandboxPicker';
-import { CodeSandboxLauncher } from '../code-sandboxes/CodeSandboxLauncher';
-import { RuntimeCellVariablesDialog } from './RuntimeCellVariablesDialog';
+} from './CodeSandboxPicker';
+import { CodeSandboxLauncher } from './CodeSandboxLauncher';
+import { CodeSandboxCellVariablesDialog } from './CodeSandboxCellVariablesDialog';
 
 /**
- * {@link RuntimePickerCell} properties
+ * {@link CodeSandboxPickerCell} properties
  */
-export type IRuntimePickerCellProps = Pick<
+export type ICodeSandboxPickerCellProps = Pick<
   ICodeSandboxPickerProps,
   'multiServiceManager' | 'preference' | 'translator'
 > & {
@@ -56,7 +56,7 @@ export type IRuntimePickerCellProps = Pick<
 /**
  * Runtime picker component for a cell.
  */
-export function RuntimePickerCell(props: IRuntimePickerCellProps): JSX.Element {
+export function CodeSandboxPickerCell(props: ICodeSandboxPickerCellProps): JSX.Element {
   const {
     logIn,
     markdownParser,
@@ -222,7 +222,7 @@ export function RuntimePickerCell(props: IRuntimePickerCellProps): JSX.Element {
         translator={translator}
       />
       {isVariableDialogOpen && (
-        <RuntimeCellVariablesDialog
+        <CodeSandboxCellVariablesDialog
           model={model}
           onClose={closeVariableDialog}
           preference={preference}
@@ -254,4 +254,4 @@ export function RuntimePickerCell(props: IRuntimePickerCellProps): JSX.Element {
   );
 }
 
-export default RuntimePickerCell;
+export default CodeSandboxPickerCell;

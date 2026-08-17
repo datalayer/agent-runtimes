@@ -3,4 +3,10 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-export * from './StudentItemStatus';
+/**
+ * What an agent shows of itself.
+ *
+ * @module components/agents
+ */
+
+export * from './AgentSummary';

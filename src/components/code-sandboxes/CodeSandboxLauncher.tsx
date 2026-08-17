@@ -534,7 +534,3 @@ export function CodeSandboxLauncher(
     </Dialog>
   );
 }
-
-// Backward-compatible aliases (deprecated: use CodeSandboxLauncher).
-export const RuntimeLauncherDialog = CodeSandboxLauncher;
-export type IRuntimeLauncherDialogProps = ICodeSandboxLauncherProps;

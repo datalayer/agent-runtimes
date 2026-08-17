@@ -20,9 +20,9 @@ import { FormControl, ToggleSwitch, Tooltip, IconButton } from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import { useCoreStore, useIAMStore } from '../../state/substates';
 import {
-  RuntimeReservationControl,
-  MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES,
-} from '../runtimes/RuntimeReservationControl';
+  CodeSandboxReservationControl,
+  MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES,
+} from './CodeSandboxReservationControl';
 
 /** What the account allows for a new sandbox of a given burning rate. */
 export interface INewCodeSandboxAllowance {
@@ -88,7 +88,7 @@ export function creditsLimitFor(
   burningRate: number,
 ): number {
   return (
-    Math.min(timeLimitMinutes, MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES) *
+    Math.min(timeLimitMinutes, MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES) *
     burningRate *
     60
   );
@@ -136,7 +136,7 @@ export function NewCodeSandboxControls(
   return (
     <>
       {withReservation && (
-        <RuntimeReservationControl
+        <CodeSandboxReservationControl
           addCredits={addCredits}
           disabled={disabled}
           label={'Time reservation'}

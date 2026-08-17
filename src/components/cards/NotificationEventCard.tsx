@@ -21,7 +21,7 @@ import {
 } from '@datalayer/core/lib/utils';
 import { Streamdown } from 'streamdown';
 
-import { streamdownMarkdownStyles } from '../chat/styles/streamdownStyles';
+import { streamdownMarkdownStyles } from '../../chat/styles/streamdownStyles';
 
 export interface NotificationEventCardProps {
   event: any;

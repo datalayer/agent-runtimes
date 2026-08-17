@@ -13,12 +13,12 @@ import { Slider } from '@datalayer/primer-addons';
  *
  * TODO this should be configurable
  */
-export const MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES = 24 * 60;
+export const MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES = 24 * 60;
 
 /**
  * Time control properties
  */
-export interface IKernelReservationControlProps {
+export interface ICodeSandboxReservationControlProps {
   /**
    * Callback on add credits button
    */
@@ -56,8 +56,8 @@ export interface IKernelReservationControlProps {
 /**
  * Runtime reservation control
  */
-export function RuntimeReservationControl(
-  props: IKernelReservationControlProps,
+export function CodeSandboxReservationControl(
+  props: ICodeSandboxReservationControlProps,
 ): JSX.Element {
   const {
     addCredits,
@@ -75,10 +75,10 @@ export function RuntimeReservationControl(
   // hold in any case.
   const requestedMax = Number.isFinite(maxProps)
     ? maxProps
-    : MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES;
+    : MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES;
   const max = Math.max(
     1,
-    Math.min(requestedMax, MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES),
+    Math.min(requestedMax, MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES),
   );
   const displayedTime = Number.isFinite(time)
     ? Math.min(max, Math.max(1, time))
@@ -143,7 +143,7 @@ export function RuntimeReservationControl(
       </Box>
       <FormControl.Caption>
         Maximum execution time that can be consumed by the runtime. It must be
-        less than {(MAXIMAL_RUNTIME_TIME_RESERVATION_MINUTES / 60).toFixed(0)}{' '}
+        less than {(MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES / 60).toFixed(0)}{' '}
         hours.
         {burningRate && (
           <>

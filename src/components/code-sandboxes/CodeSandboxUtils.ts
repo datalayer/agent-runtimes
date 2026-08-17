@@ -16,20 +16,20 @@ const ASSIGN_EXISTING_REMOTE_RUNTIME_LABEL =
 
 const ASSIGN_EXISTING_RUNTIME_LABEL = 'Assign an existing Runtime';
 
-export type IDatalayerRuntimeDesc = IRuntimeDesc & {
+export type IDatalayerCodeSandboxDesc = IRuntimeDesc & {
   gpu?: string;
 };
 
 /**
  * Create the grouped runtime descriptions.
  */
-export function getGroupedRuntimeDescs(
+export function getGroupedCodeSandboxDescs(
   multiServiceManager: IMultiServiceManager,
   kernelId?: string,
   translator?: ITranslator,
-  filterKernels: (desc: IDatalayerRuntimeDesc) => boolean = () => true,
+  filterKernels: (desc: IDatalayerCodeSandboxDesc) => boolean = () => true,
   variant?: 'document' | 'cell',
-): { [g: string]: IDatalayerRuntimeDesc[] } | undefined {
+): { [g: string]: IDatalayerCodeSandboxDesc[] } | undefined {
   translator = translator ?? nullTranslator;
   const trans = translator.load('jupyterlab');
   // The specifications land asynchronously, and a runtime that already runs
@@ -38,7 +38,7 @@ export function getGroupedRuntimeDescs(
   // start a new runtime in come from the specifications, and they wait.
   const specs = multiServiceManager.local.kernelspecs.specs;
   const sessions = multiServiceManager.local.sessions.running();
-  const kernels: { [g: string]: IDatalayerRuntimeDesc[] } = {};
+  const kernels: { [g: string]: IDatalayerCodeSandboxDesc[] } = {};
   // Add the sessions.
   const runningSessions = Array.from(sessions)
     .filter(session => session.kernel && session.kernel.id !== kernelId)
@@ -68,7 +68,7 @@ export function getGroupedRuntimeDescs(
             language: spec?.language ?? '',
             displayName: session.name || PathExt.basename(session.path),
             location: 'browser' as IRuntimeLocation,
-          } satisfies IDatalayerRuntimeDesc;
+          } satisfies IDatalayerCodeSandboxDesc;
         }),
     )
     .filter(filterKernels);
@@ -102,7 +102,7 @@ export function getGroupedRuntimeDescs(
             location: 'remote' as IRuntimeLocation,
             podName: runtime.pod_name,
             gpu: environment.resources?.['nvidia.com/gpu'],
-          } satisfies IDatalayerRuntimeDesc;
+          } satisfies IDatalayerCodeSandboxDesc;
         }),
     )
     .concat(
@@ -117,7 +117,7 @@ export function getGroupedRuntimeDescs(
             language: spec?.language ?? '',
             displayName: spec?.display_name ?? k.name,
             location: 'browser' as IRuntimeLocation,
-          } satisfies IDatalayerRuntimeDesc;
+          } satisfies IDatalayerCodeSandboxDesc;
         }),
     )
     .filter(filterKernels);
@@ -153,7 +153,7 @@ export function getGroupedRuntimeDescs(
           displayName: spec!.display_name,
           gpu: spec!.resources?.['nvidia.com/gpu'],
           location: 'local' as IRuntimeLocation,
-        }) as IDatalayerRuntimeDesc,
+        }) as IDatalayerCodeSandboxDesc,
     )
     .filter(filterKernels);
   environments.push(
@@ -168,7 +168,7 @@ export function getGroupedRuntimeDescs(
             location: 'remote' as IRuntimeLocation,
             gpu: spec!.resources?.['nvidia.com/gpu'],
             burningRate: spec!.burning_rate,
-          }) satisfies IDatalayerRuntimeDesc,
+          }) satisfies IDatalayerCodeSandboxDesc,
       )
       .filter(filterKernels) ?? []),
   );
@@ -184,7 +184,7 @@ export function getGroupedRuntimeDescs(
             language: spec!.language,
             displayName: spec!.display_name,
             location: 'browser' as IRuntimeLocation,
-          }) satisfies IDatalayerRuntimeDesc,
+          }) satisfies IDatalayerCodeSandboxDesc,
       )
       .filter(filterKernels),
   );

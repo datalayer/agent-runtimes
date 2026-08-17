@@ -3,7 +3,14 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useEffect, useMemo, useState, ReactElement, ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  ReactElement,
+  ReactNode,
+} from 'react';
 import { ISessionContext } from '@jupyterlab/apputils';
 import { ITranslator } from '@jupyterlab/translation';
 import { nullTranslator } from '@jupyterlab/translation';
@@ -25,11 +32,27 @@ import { CpuIcon } from '@primer/octicons-react';
 import { BrowserIcon, LaptopSimpleIcon } from '@datalayer/icons-react';
 import { CreditsIndicator } from '../progress';
 import { IRuntimeDesc } from '../../models';
-import { isRuntimeRemote, IMultiServiceManager } from '../../runtimes';
 import {
-  getGroupedRuntimeDescs,
-  IDatalayerRuntimeDesc,
-} from '../runtimes/RuntimeUtils';
+  isRuntimeRemote,
+  type IDatalayerSessionContext,
+  type IMultiServiceManager,
+  type IRuntimeOptions,
+} from '../../runtimes';
+import { useIAMStore } from '../../state/substates';
+import {
+  getGroupedCodeSandboxDescs,
+  IDatalayerCodeSandboxDesc,
+} from './CodeSandboxUtils';
+import type { CodeSandboxTransfer } from './CodeSandboxTransfer';
+import {
+  creditsLimitFor,
+  NewCodeSandboxControls,
+  useNewCodeSandboxAllowance,
+} from './NewCodeSandboxControls';
+import {
+  CodeSandboxVariables,
+  useCodeSandboxVariablesTransfer,
+} from './CodeSandboxVariables';
 
 /**
  * Maximal runtime display name length after which it is trimmed.
@@ -76,13 +99,18 @@ export interface ICodeSandboxPickerProps {
     location?: string;
   };
   /**
-   * Runtime description.
+   * The sandbox shown as chosen.
+   *
+   * Given with {@link setRuntimeDesc}, the choice belongs to the host — a
+   * cell keeps it in its metadata. Omitted, the picker holds it itself and
+   * reports it through {@link onTransferChange}, which is what a dialog with
+   * no state of its own needs.
    */
   runtimeDesc?: IRuntimeDesc;
   /**
    * Set runtime description.
    */
-  setRuntimeDesc: (desc?: IRuntimeDesc) => void;
+  setRuntimeDesc?: (desc?: IRuntimeDesc) => void;
   /**
    * Document session context.
    */
@@ -99,6 +127,27 @@ export interface ICodeSandboxPickerProps {
    * Change the look depending on the menu integration.
    */
   variant?: 'document' | 'cell';
+  /**
+   * Whether the questions of a NEW sandbox are asked below the list.
+   *
+   * They are the launcher's own — see `NewCodeSandboxControls` — and only
+   * concern a sandbox that does not run yet.
+   */
+  withNewSandboxControls?: boolean;
+  /**
+   * Whether the variables of the current sandbox may be carried to the
+   * chosen one, when both speak a language the snippets can serialize.
+   */
+  withVariablesTransfer?: boolean;
+  /**
+   * Called with the answer a dialog would return: the sandbox to assign and
+   * the variables to carry over.
+   *
+   * The sandbox is named the way the callers start it: `remote-` and
+   * `browser-` prefix an environment to start one in, a local environment is
+   * named by its specification alone, and `id` names one that already runs.
+   */
+  onTransferChange?: (transfer: CodeSandboxTransfer) => void;
 }
 
 /**
@@ -112,19 +161,38 @@ export function CodeSandboxPicker(
     display,
     filterRuntime,
     multiServiceManager,
+    onTransferChange,
     postActions,
     preActions,
     preference,
-    runtimeDesc,
     sessionContext,
-    setRuntimeDesc,
     translator,
     variant,
+    withNewSandboxControls,
+    withVariablesTransfer,
   } = props;
+  /*
+   * The choice, held here when the host does not hold it.
+   *
+   * A cell keeps its sandbox in its metadata and passes both the value and
+   * the setter; a dialog has nowhere to keep it, so the picker does.
+   */
+  const isControlled = props.setRuntimeDesc !== undefined;
+  const [ownRuntimeDesc, setOwnRuntimeDesc] = useState<IRuntimeDesc>();
+  const runtimeDesc = isControlled ? props.runtimeDesc : ownRuntimeDesc;
+  const setRuntimeDesc = useCallback(
+    (desc?: IRuntimeDesc): void => {
+      if (!isControlled) {
+        setOwnRuntimeDesc(desc ? { ...desc } : undefined);
+      }
+      props.setRuntimeDesc?.(desc);
+    },
+    [isControlled, props.setRuntimeDesc],
+  );
   const [groupedRuntimeDescs, setGroupedRuntimeDescs] = useState<
-    { [k: string]: IDatalayerRuntimeDesc[] } | undefined
+    { [k: string]: IDatalayerCodeSandboxDesc[] } | undefined
   >(
-    getGroupedRuntimeDescs(
+    getGroupedCodeSandboxDescs(
       multiServiceManager,
       preference?.id,
       translator,
@@ -152,7 +220,7 @@ export function CodeSandboxPicker(
         return;
       }
       setGroupedRuntimeDescs(
-        getGroupedRuntimeDescs(
+        getGroupedCodeSandboxDescs(
           multiServiceManager,
           preference?.id,
           translator,
@@ -240,6 +308,15 @@ export function CodeSandboxPicker(
       );
     };
   }, [multiServiceManager, preference?.id, translator, filterRuntime, variant]);
+  /*
+   * The sandbox the session already runs on, shown as chosen.
+   *
+   * Preferably the very row of the list, so the choice is visibly one of
+   * them. A session whose sandbox is not listed — the list may leave the
+   * current one out, and the remote ones land late — is named from the
+   * specifications instead, so the picker still opens on what is running
+   * rather than on nothing.
+   */
   useEffect(() => {
     if (defaultSet) {
       return;
@@ -256,8 +333,25 @@ export function CodeSandboxPicker(
             }
           });
         });
-        if (!matched && !remoteModelsReady) {
-          return;
+        if (!matched) {
+          if (!remoteModelsReady) {
+            return;
+          }
+          const kernelName = sessionContext.session?.kernel?.name;
+          const spec = kernelName
+            ? sessionContext.specsManager.specs?.kernelspecs[kernelName]
+            : undefined;
+          if (spec) {
+            setRuntimeDesc({
+              name: spec.name,
+              kernelId,
+              language: spec.language,
+              displayName: sessionContext.kernelDisplayName,
+              location:
+                (sessionContext as IDatalayerSessionContext).location ??
+                'local',
+            });
+          }
         }
       }
     }
@@ -268,6 +362,107 @@ export function CodeSandboxPicker(
     remoteModelsReady,
     sessionContext,
     setRuntimeDesc,
+  ]);
+
+  /*
+   * What a NEW sandbox costs, and the answer the host is given.
+   *
+   * Only asked when the host wants them: a cell picking among the sandboxes
+   * that already run has neither a reservation to make nor an answer to
+   * shape. The arithmetic is the launcher's, from its own module.
+   */
+  const { refreshCredits } = useIAMStore();
+  const [timeLimit, setTimeLimit] = useState<number>(10);
+  const [userStorage, setUserStorage] = useState(false);
+  const asksForNewSandbox = withNewSandboxControls || !!onTransferChange;
+  useEffect(() => {
+    if (asksForNewSandbox) {
+      refreshCredits();
+    }
+  }, [asksForNewSandbox]);
+  const resolvedBurningRate =
+    runtimeDesc?.burningRate ??
+    multiServiceManager.remote?.environments
+      .get()
+      .find(env => env.name === runtimeDesc?.name)?.burning_rate;
+  const allowance = useNewCodeSandboxAllowance(resolvedBurningRate);
+  const isNewSandbox = !!runtimeDesc && !runtimeDesc.kernelId;
+  const effectiveMaxMinutes =
+    runtimeDesc?.location === 'remote'
+      ? allowance.effectiveMaxMinutes
+      : Math.max(1, allowance.maxFromCredits ?? -1);
+  const outOfCredits =
+    allowance.hasKnownCredits &&
+    allowance.hasKnownRunAllowance &&
+    !allowance.hasRemainingRuns &&
+    (allowance.maxFromCredits ?? -1) < Number.EPSILON;
+  const variables = useCodeSandboxVariablesTransfer(
+    sessionContext,
+    runtimeDesc,
+    withVariablesTransfer,
+  );
+  const selectedVariables = variables.selected;
+  useEffect((): void => {
+    if (!onTransferChange) {
+      return;
+    }
+    const maxMinutes =
+      runtimeDesc?.location === 'remote' ? allowance.maxFromCredits : undefined;
+    const effectiveTimeLimit =
+      runtimeDesc?.location === 'remote'
+        ? Math.max(
+            1,
+            Math.min(timeLimit, maxMinutes && maxMinutes > 0 ? maxMinutes : 10),
+          )
+        : timeLimit;
+    const creditsLimit =
+      runtimeDesc?.location === 'remote' && resolvedBurningRate
+        ? creditsLimitFor(effectiveTimeLimit, resolvedBurningRate)
+        : undefined;
+    // A new remote sandbox that the account cannot pay for is no answer at
+    // all: the dialog is left with nothing to assign rather than with a
+    // start that would be refused.
+    if (isNewSandbox && runtimeDesc?.location === 'remote') {
+      if (!resolvedBurningRate || !Number.isFinite(resolvedBurningRate)) {
+        onTransferChange({ runtime: null, selectedVariables });
+        return;
+      }
+      if (
+        allowance.hasKnownCredits &&
+        allowance.hasKnownRunAllowance &&
+        !allowance.hasRemainingRuns &&
+        (!creditsLimit || creditsLimit <= 0)
+      ) {
+        onTransferChange({ runtime: null, selectedVariables });
+        return;
+      }
+    }
+    onTransferChange({
+      runtime: runtimeDesc
+        ? ({
+            environmentName: ['browser', 'remote'].includes(
+              runtimeDesc.location,
+            )
+              ? `${runtimeDesc.location}-${runtimeDesc.name}`
+              : runtimeDesc.name,
+            id: runtimeDesc.kernelId,
+            creditsLimit,
+            capabilities: userStorage ? ['user_storage'] : undefined,
+          } satisfies Partial<
+            Omit<IRuntimeOptions, 'kernelType'> & { id: string }
+          > | null)
+        : null,
+      selectedVariables,
+    });
+  }, [
+    allowance,
+    isNewSandbox,
+    onTransferChange,
+    resolvedBurningRate,
+    runtimeDesc,
+    selectedVariables,
+    timeLimit,
+    userStorage,
   ]);
   // For cell using submenu instead of group would be nice unfortunately the feature
   // is not yet implemented in the component there has been a not-great demo story.
@@ -497,12 +692,43 @@ export function CodeSandboxPicker(
           {!!postActions && <>{postActions}</>}
         </>
       )}
+      {withNewSandboxControls && isNewSandbox && (
+        // The user asked for a NEW sandbox: the questions are the launcher's,
+        // asked through the launcher's own controls. A sandbox of this page
+        // or of this server reserves nothing, so only the time of a remote
+        // one is asked for.
+        <NewCodeSandboxControls
+          withReservation={runtimeDesc?.location === 'remote'}
+          burningRate={resolvedBurningRate}
+          timeLimit={timeLimit}
+          onTimeChange={setTimeLimit}
+          max={effectiveMaxMinutes}
+          disabled={outOfCredits}
+          error={
+            runtimeDesc?.location !== 'remote'
+              ? undefined
+              : outOfCredits && (allowance.maxFromCredits ?? -1) >= 0
+                ? 'You must add credits to your account.'
+                : timeLimit === 0
+                  ? 'You must set a time limit.'
+                  : undefined
+          }
+          userStorage={userStorage}
+          onUserStorageToggle={() => setUserStorage(current => !current)}
+        />
+      )}
+      {variables.available && (
+        <CodeSandboxVariables
+          selectedVariables={variables.selected}
+          setSelectVariable={variables.setSelected}
+          transferVariables={variables.transfer}
+          setTransferVariable={variables.setTransfer}
+          kernelVariables={variables.variables}
+          translator={translator}
+        />
+      )}
     </>
   );
 }
-
-// Backward-compatible aliases (deprecated: use CodeSandboxPicker).
-export const RuntimePickerBase = CodeSandboxPicker;
-export type IRuntimePickerBaseProps = ICodeSandboxPickerProps;
 
 export default CodeSandboxPicker;

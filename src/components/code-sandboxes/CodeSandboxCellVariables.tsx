@@ -10,7 +10,7 @@ import { Autocomplete, FormControl, TextInputWithTokens } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 
 /**
- * {@link RuntimeCellVariables} properties
+ * {@link CodeSandboxCellVariables} properties
  */
 interface IRuntimeCellVariablesProps {
   /**
@@ -64,7 +64,7 @@ type Datum = {
 /**
  * Runtime Cell Variables Picker.
  */
-export function RuntimeCellVariables(
+export function CodeSandboxCellVariables(
   props: IRuntimeCellVariablesProps,
 ): JSX.Element {
   const {
@@ -304,4 +304,4 @@ export function RuntimeCellVariables(
   );
 }
 
-export default RuntimeCellVariables;
+export default CodeSandboxCellVariables;

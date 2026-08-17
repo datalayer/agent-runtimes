@@ -5,10 +5,10 @@
 
 import { useState, useEffect } from 'react';
 import { Box } from '@datalayer/primer-addons';
+import { ConsumptionBar } from '@datalayer/core/lib/components/progress/ConsumptionBar';
 import { useNavigate } from '@datalayer/core/lib/hooks/useNavigate';
 import type { IRemoteServicesManager } from '../../runtimes';
 import type { IRuntimeModel } from '../../models';
-import { ConsumptionBar } from '@datalayer/core/lib/components/progress/ConsumptionBar';
 
 type ICreditsIndicatorProps = {
   /**
