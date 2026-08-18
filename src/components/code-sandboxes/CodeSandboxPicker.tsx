@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   ReactElement,
   ReactNode,
@@ -44,6 +45,10 @@ import {
   IDatalayerCodeSandboxDesc,
 } from './CodeSandboxUtils';
 import type { CodeSandboxTransfer } from './CodeSandboxTransfer';
+import {
+  listCodeSandboxGivenNames,
+  nextCodeSandboxGivenName,
+} from './CodeSandboxNames';
 import {
   creditsLimitFor,
   NewCodeSandboxControls,
@@ -373,6 +378,18 @@ export function CodeSandboxPicker(
    */
   const { refreshCredits } = useIAMStore();
   const [timeLimit, setTimeLimit] = useState<number>(10);
+  /*
+   * The name a new sandbox is given.
+   *
+   * Offered from what was picked — the environment or the specification —
+   * numbered against the sandboxes that already carry that name, and written
+   * into the description so whoever creates the sandbox creates it named:
+   * `given_name` for a runtime of the platform, the name held beside a kernel
+   * of a server. Re-offered whenever another thing is picked, and left alone
+   * while the user edits it.
+   */
+  const [givenName, setGivenName] = useState('');
+  const givenNameFor = useRef<string | undefined>(undefined);
   const [userStorage, setUserStorage] = useState(false);
   const asksForNewSandbox = withNewSandboxControls || !!onTransferChange;
   useEffect(() => {
@@ -387,6 +404,27 @@ export function CodeSandboxPicker(
       .find(env => env.name === runtimeDesc?.name)?.burning_rate;
   const allowance = useNewCodeSandboxAllowance(resolvedBurningRate);
   const isNewSandbox = !!runtimeDesc && !runtimeDesc.kernelId;
+  // Offer a name for what was just picked, and leave it alone afterwards: the
+  // key is the thing picked, so re-picking the same one keeps what was typed.
+  const pickedKey = isNewSandbox
+    ? `${runtimeDesc?.location}:${runtimeDesc?.name}`
+    : undefined;
+  useEffect(() => {
+    if (!pickedKey || givenNameFor.current === pickedKey) {
+      return;
+    }
+    givenNameFor.current = pickedKey;
+    const taken = [
+      ...(multiServiceManager.remote?.runtimesManager
+        .get()
+        .map(runtime => runtime.given_name)
+        .filter(Boolean) ?? []),
+      ...listCodeSandboxGivenNames(),
+    ];
+    setGivenName(
+      nextCodeSandboxGivenName(runtimeDesc?.displayName ?? '', taken),
+    );
+  }, [multiServiceManager, pickedKey, runtimeDesc?.displayName]);
   const effectiveMaxMinutes =
     runtimeDesc?.location === 'remote'
       ? allowance.effectiveMaxMinutes
@@ -637,8 +675,28 @@ export function CodeSandboxPicker(
                               }
                             />
                             <FormControl.Label>
-                              <Box display="flex">
+                              <Box display="flex" sx={{ alignItems: 'baseline' }}>
                                 <Box>{k.displayName}</Box>
+                                {/*
+                                  The identifier of the kernel beside the name:
+                                  two sandboxes of the same environment read
+                                  alike, and this is what tells them apart.
+                                  Quieter than the name, which is what is being
+                                  chosen.
+                                */}
+                                {k.kernelId && (
+                                  <Text
+                                    sx={{
+                                      ml: 2,
+                                      fontSize: 0,
+                                      color: 'fg.muted',
+                                      fontFamily: 'mono'
+                                    }}
+                                    title={k.kernelId}
+                                  >
+                                    {k.kernelId.slice(0, 8)}
+                                  </Text>
+                                )}
                                 {k.kernelId && k.location === 'remote' && (
                                   <Box ml={3} mt={1}>
                                     <CreditsIndicator
@@ -713,6 +771,15 @@ export function CodeSandboxPicker(
                   ? 'You must set a time limit.'
                   : undefined
           }
+          givenName={givenName}
+          onGivenNameChange={value => {
+            setGivenName(value);
+            if (runtimeDesc) {
+              // The description is what the caller creates the sandbox from:
+              // the name travels with it, rather than beside it.
+              setRuntimeDesc({ ...runtimeDesc, displayName: value });
+            }
+          }}
           userStorage={userStorage}
           onUserStorageToggle={() => setUserStorage(current => !current)}
         />

@@ -16,7 +16,13 @@
  * @module components/code-sandboxes/NewCodeSandboxControls
  */
 
-import { FormControl, ToggleSwitch, Tooltip, IconButton } from '@primer/react';
+import {
+  FormControl,
+  IconButton,
+  TextInput,
+  ToggleSwitch,
+  Tooltip,
+} from '@primer/react';
 import { AlertIcon } from '@primer/octicons-react';
 import { useCoreStore, useIAMStore } from '../../state/substates';
 import {
@@ -110,6 +116,23 @@ export interface INewCodeSandboxControlsProps {
   userStorage: boolean;
   onUserStorageToggle: () => void;
   storageDisabled?: boolean;
+  /**
+   * The name the sandbox is given, when the caller asks for that question.
+   *
+   * A sandbox of the platform is named through `given_name`; one of a server
+   * or of the browser has the name held for it by `CodeSandboxNames`. The
+   * question is the same either way, so it is asked in one place.
+   */
+  givenName?: string;
+  onGivenNameChange?: (givenName: string) => void;
+  /**
+   * Whether the storage of the user is offered.
+   *
+   * A sandbox of this Jupyter Server runs on this machine, with the files of
+   * this machine: it reserves no time and mounts no storage of the platform,
+   * so neither question applies to it.
+   */
+  withUserStorage?: boolean;
 }
 
 /**
@@ -125,16 +148,33 @@ export function NewCodeSandboxControls(
     withReservation = true,
     disabled,
     error,
+    givenName,
     max,
+    onGivenNameChange,
     onTimeChange,
     onUserStorageToggle,
     storageDisabled,
     timeLimit,
     userStorage,
+    withUserStorage = true,
   } = props;
   const { configuration } = useCoreStore();
   return (
     <>
+      {onGivenNameChange && (
+        <FormControl disabled={disabled}>
+          <FormControl.Label>Given Name</FormControl.Label>
+          <TextInput
+            block
+            name="given-name"
+            value={givenName ?? ''}
+            onChange={event => onGivenNameChange(event.target.value)}
+          />
+          <FormControl.Caption>
+            What this sandbox is called, wherever it is listed.
+          </FormControl.Caption>
+        </FormControl>
+      )}
       {withReservation && (
         <CodeSandboxReservationControl
           addCredits={addCredits}
@@ -147,7 +187,7 @@ export function NewCodeSandboxControls(
           error={error}
         />
       )}
-      {!configuration.whiteLabel && (
+      {withUserStorage && !configuration.whiteLabel && (
         <FormControl disabled={storageDisabled} layout="horizontal">
           <FormControl.Label id="new-sandbox-user-storage-label">
             User storage

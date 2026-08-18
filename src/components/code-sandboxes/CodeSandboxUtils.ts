@@ -3,18 +3,19 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { PathExt } from '@jupyterlab/coreutils';
 import { SessionContext } from '@jupyterlab/apputils';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { IMultiServiceManager } from '../../runtimes';
 import { IRuntimeLocation, IRuntimeDesc } from '../../models';
 
-const ASSIGN_NEW_RUNTIME_LABEL = 'Assign a new Runtime';
+const ASSIGN_NEW_RUNTIME_LABEL = 'Assign a new Code Sandbox';
+
+import { ensureCodeSandboxGivenName } from './CodeSandboxNames';
 
 const ASSIGN_EXISTING_REMOTE_RUNTIME_LABEL =
-  'Assign an existing Remote Runtime';
+  'Assign an existing Remote Code Sandbox';
 
-const ASSIGN_EXISTING_RUNTIME_LABEL = 'Assign an existing Runtime';
+const ASSIGN_EXISTING_RUNTIME_LABEL = 'Assign an existing Code Sandbox';
 
 export type IDatalayerCodeSandboxDesc = IRuntimeDesc & {
   gpu?: string;
@@ -48,7 +49,10 @@ export function getGroupedCodeSandboxDescs(
         kernelId: session.kernel!.id,
         name: spec?.name ?? session.kernel!.name,
         language: spec?.language ?? '',
-        displayName: session.name || PathExt.basename(session.path),
+        displayName: ensureCodeSandboxGivenName(
+          session.kernel!.id,
+          spec?.display_name ?? session.kernel!.name
+        ),
         location: 'local' as IRuntimeLocation,
       };
     })
@@ -66,7 +70,10 @@ export function getGroupedCodeSandboxDescs(
             kernelId: session.kernel!.id,
             name: spec?.name ?? session.kernel!.name,
             language: spec?.language ?? '',
-            displayName: session.name || PathExt.basename(session.path),
+            displayName: ensureCodeSandboxGivenName(
+              session.kernel!.id,
+              spec?.display_name ?? session.kernel!.name
+            ),
             location: 'browser' as IRuntimeLocation,
           } satisfies IDatalayerCodeSandboxDesc;
         }),
@@ -82,7 +89,10 @@ export function getGroupedCodeSandboxDescs(
         kernelId: k.id,
         name: spec?.name ?? k.name,
         language: spec?.language ?? '',
-        displayName: spec?.display_name ?? k.name,
+        displayName: ensureCodeSandboxGivenName(
+          k.id,
+          spec?.display_name ?? k.name
+        ),
         location: 'local' as IRuntimeLocation,
       };
     })
@@ -115,7 +125,10 @@ export function getGroupedCodeSandboxDescs(
             kernelId: k.id,
             name: spec?.name ?? k.name,
             language: spec?.language ?? '',
-            displayName: spec?.display_name ?? k.name,
+            displayName: ensureCodeSandboxGivenName(
+              k.id,
+              spec?.display_name ?? k.name
+            ),
             location: 'browser' as IRuntimeLocation,
           } satisfies IDatalayerCodeSandboxDesc;
         }),

@@ -24,7 +24,18 @@ import { NO_RUNTIME_AVAILABLE_LABEL } from '@datalayer/core/lib/i18n';
 import type { IRemoteServicesManager } from '../../runtimes';
 import type { RunResponseError } from '@datalayer/core/lib/api/DatalayerApi';
 import type { ICodeSandboxSnapshot, IRuntimeDesc } from '../../models';
-import { iamStore, useCoreStore, useIAMStore } from '../../state/substates';
+import {
+  getCodeSandboxGivenName,
+  listCodeSandboxGivenNames,
+  nextCodeSandboxGivenName,
+  setCodeSandboxGivenName,
+} from './CodeSandboxNames';
+import {
+  iamStore,
+  runtimesStore,
+  useCoreStore,
+  useIAMStore,
+} from '../../state/substates';
 import { createNotebook, sleep } from '@datalayer/core/lib/utils';
 import { Markdown } from '@datalayer/core/lib/components/display';
 import { Timer } from '@datalayer/core/lib/components/progress';
@@ -141,6 +152,32 @@ export function CodeSandboxLauncher(
 
   const user = iamStore.getState().user;
   const environments = manager.environments.get();
+  /*
+   * The sandboxes of this Jupyter Server, offered beside those of the platform.
+   *
+   * Inside JupyterLab a sandbox can be a kernel of the server, and the picker
+   * has always offered both — the launcher offered only the environments of
+   * the platform, so "Launch a Code Sandbox" could not launch the very kind
+   * that costs nothing and starts at once. The value of a local choice is
+   * prefixed, since a kernelspec and an environment are free to share a name.
+   */
+  const localSpecs = useMemo(() => {
+    const specs =
+      runtimesStore.getState().multiServiceManager?.local?.kernelspecs.specs
+        ?.kernelspecs ?? {};
+    return Object.values(specs)
+      .filter(Boolean)
+      .map(spec => ({
+        name: spec!.name,
+        title: spec!.display_name,
+        language: spec!.language,
+      }));
+  }, []);
+  const LOCAL_PREFIX = 'local:';
+  const localSpecOf = (value: string) =>
+    value.startsWith(LOCAL_PREFIX)
+      ? localSpecs.find(spec => spec.name === value.slice(LOCAL_PREFIX.length))
+      : undefined;
 
   const { configuration } = useCoreStore();
   const { refreshCredits } = useIAMStore();
@@ -160,8 +197,35 @@ export function CodeSandboxLauncher(
     (kernelSnapshot?.environment || environments[0]?.name) ?? '',
   );
   const [timeLimit, setTimeLimit] = useState<number>(10);
-  const [runtimeName, setRuntimeName] = useState(
-    environments[0]?.runtime?.givenNameTemplate || environments[0]?.title || '',
+  /*
+   * The name the sandbox is given, and what is offered for it.
+   *
+   * The environment says what to call one of its sandboxes; the sandboxes that
+   * already run say which of those names are taken — a second sandbox of an
+   * environment is offered that name numbered, exactly as an unnamed one is
+   * given one. Both go through `nextCodeSandboxGivenName`, so what is proposed
+   * here and what is assigned elsewhere never drift apart.
+   */
+  const takenGivenNames = useCallback(
+    (): string[] => [
+      ...manager.runtimesManager
+        .get()
+        .map(runtime => runtime.given_name)
+        .filter(Boolean),
+      ...listCodeSandboxGivenNames(),
+    ],
+    [manager],
+  );
+  const givenNameFor = useCallback(
+    (spec?: { title?: string; runtime?: { givenNameTemplate?: string } }) =>
+      nextCodeSandboxGivenName(
+        spec?.runtime?.givenNameTemplate || spec?.title || '',
+        takenGivenNames(),
+      ),
+    [takenGivenNames],
+  );
+  const [runtimeName, setRuntimeName] = useState(() =>
+    givenNameFor(environments[0]),
   );
   // Whether the runtim name has been changed by the user or not
   const [hasCustomRuntimeName, setHasCustomRuntimeName] = useState(false);
@@ -176,6 +240,7 @@ export function CodeSandboxLauncher(
       refreshCredits();
     }
   }, [shouldStartRuntime]);
+  const isLocalSelection = selection.startsWith(LOCAL_PREFIX);
   const spec = useMemo(
     () => environments.find(spec => spec.name === selection),
     [environments, selection],
@@ -191,13 +256,55 @@ export function CodeSandboxLauncher(
       const selection = (e.target as HTMLSelectElement).value;
       setSelection(selection);
       if (!hasCustomRuntimeName) {
-        const spec = environments.find(env => env.name === selection);
-        setRuntimeName(spec?.runtime?.givenNameTemplate || spec?.title || '');
+        const local = localSpecOf(selection);
+        setRuntimeName(
+          givenNameFor(
+            local ?? environments.find(env => env.name === selection),
+          ),
+        );
       }
     },
-    [setSelection, hasCustomRuntimeName],
+    [environments, givenNameFor, setSelection, hasCustomRuntimeName],
   );
   const handleSubmitRuntime = useCallback(async () => {
+    const localSpec = localSpecOf(selection);
+    if (localSpec) {
+      /*
+       * A sandbox of this Jupyter Server: started here, named here.
+       *
+       * Nothing to reserve, no credits to weigh, no pod to wait for — the
+       * kernel is started and the choice is handed back as any other, with
+       * the name the user gave it, which is the local answer to `given_name`.
+       */
+      setError(undefined);
+      const kernels =
+        runtimesStore.getState().multiServiceManager?.local?.kernels;
+      if (!kernels) {
+        setError(<>The Jupyter Server of this page is not reachable.</>);
+        return;
+      }
+      setWaitingForRuntime(true);
+      try {
+        const connection = await kernels.startNew({ name: localSpec.name });
+        setCodeSandboxGivenName(connection.id, runtimeName);
+        onSubmit({
+          kernelId: connection.id,
+          name: localSpec.name,
+          language: localSpec.language ?? '',
+          location: 'local',
+          displayName:
+            getCodeSandboxGivenName(connection.id) ?? localSpec.title,
+        } as IRuntimeDesc);
+      } catch (reason) {
+        console.warn('Failed to start a code sandbox of this server.', reason);
+        setError(<>The code sandbox could not be started.</>);
+      } finally {
+        if (isMounted()) {
+          setWaitingForRuntime(false);
+        }
+      }
+      return;
+    }
     if (selection) {
       setError(undefined);
       setWaitingForRuntime(shouldStartRuntime);
@@ -319,6 +426,8 @@ export function CodeSandboxLauncher(
         onSubmit(desc);
       }
     }
+    // `localSpecOf` closes over `localSpecs`, which is built once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     manager,
     selection,
@@ -420,6 +529,16 @@ export function CodeSandboxLauncher(
                 )}
               </Select.Option>
             ))}
+            {localSpecs.map(spec => (
+              <Select.Option
+                key={`${LOCAL_PREFIX}${spec.name}`}
+                value={`${LOCAL_PREFIX}${spec.name}`}
+              >
+                {spec.name}
+                {spec.title && <>{` - ${spec.title}`}</>}
+                {' (this Jupyter Server)'}
+              </Select.Option>
+            ))}
           </Select>
           <FormControl.Caption>
             <>
@@ -467,7 +586,10 @@ export function CodeSandboxLauncher(
           </FormControl.Caption>
         </FormControl>
         <NewCodeSandboxControls
-          withReservation={!!startRuntime}
+          // A sandbox of this server costs nothing and starts at once: it has
+          // no time to reserve and no storage of the platform to mount.
+          withReservation={!!startRuntime && !isLocalSelection}
+          withUserStorage={!isLocalSelection}
           burningRate={burningRate}
           timeLimit={timeLimit}
           onTimeChange={setTimeLimit}
@@ -487,7 +609,7 @@ export function CodeSandboxLauncher(
           onUserStorageToggle={() => setUserStorage(current => !current)}
         />
         <FormControl sx={{ paddingTop: '10px' }}>
-          <FormControl.Label>Runtime name</FormControl.Label>
+          <FormControl.Label>Given Name</FormControl.Label>
           <TextInput
             name="name"
             value={runtimeName}

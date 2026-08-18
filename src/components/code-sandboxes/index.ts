@@ -22,6 +22,7 @@ export * from './CodeSandboxPicker';
 export * from './CodeSandboxPickerCell';
 export * from './CodeSandboxReservationControl';
 export * from './CodeSandboxTransfer';
+export * from './CodeSandboxNames';
 export * from './CodeSandboxUtils';
 export * from './CodeSandboxVariables';
 export * from './NewCodeSandboxControls';
