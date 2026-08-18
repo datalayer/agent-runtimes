@@ -484,10 +484,20 @@ export function CodeSandboxPicker(
               ? `${runtimeDesc.location}-${runtimeDesc.name}`
               : runtimeDesc.name,
             id: runtimeDesc.kernelId,
+            // The name the sandbox is given, carried with the choice.
+            //
+            // Everything else about the pick travelled in this object and the
+            // name did not, so whoever created the sandbox had nothing to name
+            // it with and fell back to the kernelspec: the launcher honoured
+            // what was typed, the picker silently dropped it.
+            displayName: runtimeDesc.displayName,
             creditsLimit,
             capabilities: userStorage ? ['user_storage'] : undefined,
           } satisfies Partial<
-            Omit<IRuntimeOptions, 'kernelType'> & { id: string }
+            Omit<IRuntimeOptions, 'kernelType'> & {
+              id: string;
+              displayName: string;
+            }
           > | null)
         : null,
       selectedVariables,

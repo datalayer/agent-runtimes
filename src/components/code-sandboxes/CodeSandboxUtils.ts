@@ -108,7 +108,11 @@ export function getGroupedCodeSandboxDescs(
             name: environment!.name,
             language: environment!.language,
             displayName:
-              environment!.title || runtime.given_name || environment!.name,
+              // The name it was GIVEN first: the title of the environment is
+              // what it runs, and every sandbox of that environment answers
+              // it — the launcher asks for a name precisely so two of them
+              // can be told apart here.
+              runtime.given_name || environment!.title || environment!.name,
             location: 'remote' as IRuntimeLocation,
             podName: runtime.pod_name,
             gpu: environment.resources?.['nvidia.com/gpu'],

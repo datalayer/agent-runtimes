@@ -536,7 +536,7 @@ export function CodeSandboxLauncher(
               >
                 {spec.name}
                 {spec.title && <>{` - ${spec.title}`}</>}
-                {' (this Jupyter Server)'}
+                {' - Jupyter Server'}
               </Select.Option>
             ))}
           </Select>
