@@ -10,6 +10,7 @@ import { IRuntimeLocation, IRuntimeDesc } from '../../models';
 
 const ASSIGN_NEW_RUNTIME_LABEL = 'Assign a new Code Sandbox';
 
+import { loadJupyterConfig } from '@datalayer/jupyter-react';
 import { ensureCodeSandboxGivenName } from './CodeSandboxNames';
 
 const ASSIGN_EXISTING_REMOTE_RUNTIME_LABEL =
@@ -173,9 +174,20 @@ export function getGroupedCodeSandboxDescs(
         }) as IDatalayerCodeSandboxDesc,
     )
     .filter(filterKernels);
+  /*
+   * Inside JupyterLab, only the sandboxes of this Jupyter Server are offered.
+   *
+   * The application is running against a server of its own; a sandbox of the
+   * platform is started elsewhere, costs credits and belongs to the flows of
+   * the web application. Offering both here made "new sandbox" mean two very
+   * different things a click apart.
+   */
+  const insideJupyterLab = loadJupyterConfig().insideJupyterLab;
+  const remoteEnvironments = insideJupyterLab
+    ? []
+    : (multiServiceManager.remote?.environments.get() ?? []);
   environments.push(
-    ...(multiServiceManager.remote?.environments
-      .get()
+    ...remoteEnvironments
       .map(
         spec =>
           ({
@@ -187,7 +199,7 @@ export function getGroupedCodeSandboxDescs(
             burningRate: spec!.burning_rate,
           }) satisfies IDatalayerCodeSandboxDesc,
       )
-      .filter(filterKernels) ?? []),
+      .filter(filterKernels),
   );
   environments.push(
     ...Object.values(

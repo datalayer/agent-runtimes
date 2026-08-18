@@ -17,7 +17,10 @@ import {
 } from '@primer/react';
 import { Dialog } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
-import { useJupyterReactStore } from '@datalayer/jupyter-react';
+import {
+  loadJupyterConfig,
+  useJupyterReactStore,
+} from '@datalayer/jupyter-react';
 import { USAGE_ROUTE } from '@datalayer/core/lib/routes';
 import { useNavigate } from '@datalayer/core/lib/hooks';
 import { NO_RUNTIME_AVAILABLE_LABEL } from '@datalayer/core/lib/i18n';
@@ -151,7 +154,15 @@ export function CodeSandboxLauncher(
   const shouldStartRuntime = startRuntime !== 'defer';
 
   const user = iamStore.getState().user;
-  const environments = manager.environments.get();
+  /*
+   * Inside JupyterLab, only the sandboxes of this Jupyter Server are offered.
+   *
+   * Same rule as the picker: the environments of the platform belong to the
+   * flows of the web application, and mixing them into a launcher opened from
+   * JupyterLab made one button start two different kinds of thing.
+   */
+  const insideJupyterLab = loadJupyterConfig().insideJupyterLab;
+  const environments = insideJupyterLab ? [] : manager.environments.get();
   /*
    * The sandboxes of this Jupyter Server, offered beside those of the platform.
    *
@@ -162,6 +173,16 @@ export function CodeSandboxLauncher(
    * prefixed, since a kernelspec and an environment are free to share a name.
    */
   const localSpecs = useMemo(() => {
+    /*
+     * ...and only inside JupyterLab.
+     *
+     * The rule cuts both ways: the web application talks to no Jupyter Server
+     * of its own, so a kernelspec of one is not something it can start — the
+     * entries read as choices that lead nowhere.
+     */
+    if (!insideJupyterLab) {
+      return [];
+    }
     const specs =
       runtimesStore.getState().multiServiceManager?.local?.kernelspecs.specs
         ?.kernelspecs ?? {};
@@ -172,7 +193,7 @@ export function CodeSandboxLauncher(
         title: spec!.display_name,
         language: spec!.language,
       }));
-  }, []);
+  }, [insideJupyterLab]);
   const LOCAL_PREFIX = 'local:';
   const localSpecOf = (value: string) =>
     value.startsWith(LOCAL_PREFIX)
@@ -196,6 +217,18 @@ export function CodeSandboxLauncher(
   const [selection, setSelection] = useState(
     (kernelSnapshot?.environment || environments[0]?.name) ?? '',
   );
+  /*
+   * Something is always selected.
+   *
+   * With the environments of the platform withheld, the first choice of the
+   * list is a sandbox of this server — and nothing was selected at all, so the
+   * launcher opened on an empty dropdown that could not be submitted.
+   */
+  useEffect(() => {
+    if (!selection && localSpecs.length) {
+      setSelection(`${LOCAL_PREFIX}${localSpecs[0].name}`);
+    }
+  }, [localSpecs, selection]);
   const [timeLimit, setTimeLimit] = useState<number>(10);
   /*
    * The name the sandbox is given, and what is offered for it.
