@@ -1123,7 +1123,7 @@ class AgentClient(
         sandbox_client: Optional[CodeSandboxClient] = None
         try:
             sandbox_client = CodeSandboxClient.create(
-                variant="jupyter",
+                variant="jupyter-server",
                 server_url=endpoint,
                 token=runtime_token,
             )

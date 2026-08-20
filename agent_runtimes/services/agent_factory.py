@@ -523,7 +523,7 @@ def create_shared_sandbox(
                 os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
             )
             if jupyter_sidecar:
-                sandbox_manager.configure(variant="jupyter")
+                sandbox_manager.configure(variant="jupyter-server")
                 logger.info(
                     "Sidecar mode: configured sandbox as jupyter "
                     "(waiting for companion to provide jupyter URL)"

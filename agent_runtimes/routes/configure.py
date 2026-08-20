@@ -49,7 +49,7 @@ class SandboxStatus(BaseModel):
     the Jupyter kernel to call MCP tools via HTTP to the agent-runtimes container.
     """
 
-    variant: str  # "eval" or "jupyter"
+    variant: str  # "eval" or "jupyter-server"
     jupyter_url: str | None = None
     jupyter_connected: bool = False
     jupyter_error: str | None = None
@@ -887,7 +887,7 @@ def _get_sandbox_status() -> SandboxStatus | None:
             pass
 
         # If Jupyter variant, test the connection
-        if status["variant"] == "jupyter" and status.get("jupyter_url"):
+        if status["variant"] == "jupyter-server" and status.get("jupyter_url"):
             jupyter_connected, jupyter_error = _test_jupyter_connection(
                 status["jupyter_url"], status.get("jupyter_token")
             )
@@ -1080,7 +1080,7 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
                         )
                 sandbox_cls = type(agent_sandbox).__name__.lower()
                 if "jupyter" in sandbox_cls:
-                    variant = "jupyter"
+                    variant = "jupyter-server"
                 agent_url = getattr(agent_sandbox, "_server_url", None)
                 if agent_url:
                     jupyter_url = str(agent_url)
@@ -1125,7 +1125,7 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
     Message format (server → client)::
 
         {
-            "variant": "eval" | "jupyter" | "unavailable",
+            "variant": "eval" | "jupyter-server" | "unavailable",
             "sandbox_running": true/false,
             "is_executing": true/false,
             "jupyter_url": "..." | null

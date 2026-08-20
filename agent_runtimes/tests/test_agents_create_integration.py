@@ -133,7 +133,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         tools=["fetch_webpage", "run_in_terminal"],
         description="Spec description",
         model="openai:gpt-4.1",
-        sandbox_variant="jupyter",
+        sandbox_variant="jupyter-server",
         protocol="a2a",
         codemode={
             "enabled": True,
@@ -151,7 +151,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         pass
 
     class _DummySandboxManager:
-        variant = "jupyter"
+        variant = "jupyter-server"
 
         def configure_from_url(self, _url: str) -> None:
             pass

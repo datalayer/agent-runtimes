@@ -59,7 +59,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     state = "[green]running[/green]" if running else "[yellow]stopped[/yellow]"
     tux.console.print(f"  Variant: {variant} ({state})", style=STYLE_MUTED)
 
-    if variant == "jupyter":
+    if variant == "jupyter-server":
         jupyter_url = sandbox.get("jupyter_url")
         kernel_name = sandbox.get("kernel_name") or "python3"
         kernel_id = sandbox.get("kernel_id")

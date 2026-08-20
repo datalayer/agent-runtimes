@@ -30,7 +30,7 @@ Usage:
 
     # Configure for Jupyter sandbox
     manager.configure(
-        variant="jupyter",
+        variant="jupyter-server",
         jupyter_url="http://localhost:8888",
         jupyter_token="my-token",
     )
@@ -407,7 +407,7 @@ class CodeSandboxManager:
     @property
     def is_jupyter(self) -> bool:
         """Check if the current variant is Jupyter-based."""
-        return self._config.variant == "jupyter"
+        return self._config.variant == "jupyter-server"
 
     def _active_sandbox(self) -> "Sandbox | None":
         """Return the sandbox that reflects the live execution context.
@@ -534,7 +534,7 @@ class CodeSandboxManager:
             # If variant changed or we're reconfiguring jupyter, stop existing sandbox
             if self._sandbox is not None:
                 config_changed = old_variant != self._config.variant or (
-                    self._config.variant == "jupyter" and jupyter_url
+                    self._config.variant == "jupyter-server" and jupyter_url
                 )
                 if config_changed:
                     logger.info(
@@ -585,7 +585,7 @@ class CodeSandboxManager:
             )
 
         self.configure(
-            variant="jupyter",
+            variant="jupyter-server",
             jupyter_url=jupyter_sandbox_url,
             mcp_proxy_url=mcp_proxy_url,
             env_vars=env_vars,
@@ -693,12 +693,12 @@ class CodeSandboxManager:
 
         # Always inject sandbox metadata env vars
         env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = self._config.variant
-        if self._config.variant == "jupyter" and self._config.jupyter_url:
+        if self._config.variant == "jupyter-server" and self._config.jupyter_url:
             # Strip query string (token) from the URL
             clean_url = self._config.jupyter_url.split("?")[0]
             env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
 
-        if self._config.variant == "jupyter":
+        if self._config.variant == "jupyter-server":
             # Build a Python snippet that sets every env var in the kernel.
             lines = ["import os"]
             for name, value in env_vars.items():
@@ -757,7 +757,7 @@ class CodeSandboxManager:
                 return EvalSandbox()
             return CodeSandbox.create(variant="eval")
 
-        elif effective_variant == "jupyter":
+        elif effective_variant == "jupyter-server":
             # In sidecar mode, companion must provide a concrete Jupyter URL.
             # Never start a local fallback server in this mode.
             if (
@@ -777,7 +777,7 @@ class CodeSandboxManager:
                         token=self._config.jupyter_token,
                     )
                 return CodeSandbox.create(
-                    variant="jupyter",
+                    variant="jupyter-server",
                     server_url=self._config.jupyter_url,
                     token=self._config.jupyter_token,
                 )
@@ -788,7 +788,7 @@ class CodeSandboxManager:
                 from code_sandboxes.jupyter_server_sandbox import JupyterServerSandbox
 
                 return JupyterServerSandbox()
-            return CodeSandbox.create(variant="jupyter")
+            return CodeSandbox.create(variant="jupyter-server")
 
         else:
             if CodeSandbox is None:
@@ -821,7 +821,7 @@ class CodeSandboxManager:
         Create a dedicated sandbox for a specific agent.
 
         Each agent gets its own isolated sandbox instance.  For the
-        ``"jupyter"`` variant, ``code_sandboxes.JupyterSandbox``
+        ``"jupyter-server"`` variant, ``code_sandboxes.JupyterSandbox``
         starts its own Jupyter server on a random free port.
 
         Args:
@@ -872,7 +872,7 @@ class CodeSandboxManager:
         """
         Stop and remove the sandbox for a specific agent.
 
-        For the ``"jupyter"`` variant this stops the Jupyter server that
+        For the ``"jupyter-server"`` variant this stops the Jupyter server that
         ``code_sandboxes`` started.
 
         Args:
@@ -924,11 +924,11 @@ class CodeSandboxManager:
         # Add sandbox metadata env vars
         env_vars = dict(env_vars)
         env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = variant
-        if variant == "jupyter" and self._config.jupyter_url:
+        if variant == "jupyter-server" and self._config.jupyter_url:
             clean_url = self._config.jupyter_url.split("?")[0]
             env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
 
-        if variant == "jupyter":
+        if variant == "jupyter-server":
             lines = ["import os"]
             for name, value in env_vars.items():
                 lines.append(f"os.environ[{name!r}] = {value!r}")
@@ -990,7 +990,7 @@ class CodeSandboxManager:
         # Compute python_path (what gets added to sys.path)
         # For Jupyter/remote sandboxes, it's /tmp
         # For eval, it's the parent of generated_path
-        if self._config.variant in ("jupyter", "datalayer-runtime"):
+        if self._config.variant in ("jupyter-server", "datalayer-runtime"):
             python_path = "/tmp"  # nosec B108
         else:
             python_path = str(Path(generated_path).resolve().parent)

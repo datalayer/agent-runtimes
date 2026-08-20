@@ -212,7 +212,7 @@ class RuntimeManager:
         self._kernel_id = self._ensure_kernel_id()
 
         self._sandbox_client = CodeSandboxClient.create(
-            variant="jupyter",
+            variant="jupyter-server",
             server_url=self.server_url,
             token=self.token,
             kernel_id=self._kernel_id,

@@ -304,7 +304,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         """Start the runtime."""
         if self.model.ingress is not None and self.model.jupyter_token is not None:
             self.model.sandbox_client = CodeSandboxClient.create(
-                variant="jupyter",
+                variant="jupyter-server",
                 server_url=self.model.ingress,
                 token=self.model.jupyter_token,
             )
@@ -370,7 +370,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             for attempt in range(1, 4):
                 try:
                     self.model.sandbox_client = CodeSandboxClient.create(
-                        variant="jupyter",
+                        variant="jupyter-server",
                         server_url=self.model.ingress,
                         token=self.model.jupyter_token,
                     )

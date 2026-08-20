@@ -130,7 +130,7 @@ class TestCodeSandboxManagerSidecarGuard:
 
     def test_jupyter_without_url_raises_in_sidecar(self, monkeypatch: Any) -> None:
         manager = CodeSandboxManager()
-        manager.configure(variant="jupyter", jupyter_url=None)
+        manager.configure(variant="jupyter-server", jupyter_url=None)
         monkeypatch.setenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "true")
 
         with pytest.raises(
@@ -143,7 +143,7 @@ class TestCodeSandboxManagerSidecarGuard:
         self, monkeypatch: Any
     ) -> None:
         manager = CodeSandboxManager()
-        manager.configure(variant="jupyter", jupyter_url=None)
+        manager.configure(variant="jupyter-server", jupyter_url=None)
         monkeypatch.delenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", raising=False)
 
         fake_package = types.ModuleType("code_sandboxes")
@@ -167,7 +167,7 @@ class TestCodeSandboxManagerSidecarGuard:
     def test_jupyter_with_url_uses_high_level_factory(self, monkeypatch: Any) -> None:
         manager = CodeSandboxManager()
         manager.configure(
-            variant="jupyter",
+            variant="jupyter-server",
             jupyter_url="http://localhost:8888",
             jupyter_token="MY_TOKEN",
         )
@@ -191,7 +191,7 @@ class TestCodeSandboxManagerSidecarGuard:
         sandbox = manager._create_sandbox()
 
         assert sandbox == {
-            "variant": "jupyter",
+            "variant": "jupyter-server",
             "server_url": "http://localhost:8888",
             "token": "MY_TOKEN",
         }
@@ -201,7 +201,7 @@ class TestCodeSandboxManagerSidecarGuard:
     ) -> None:
         manager = CodeSandboxManager()
         manager.configure(
-            variant="jupyter",
+            variant="jupyter-server",
             jupyter_url="http://localhost:8888",
             jupyter_token="MY_TOKEN",
         )

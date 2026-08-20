@@ -214,23 +214,23 @@ async def _create_and_register_cli_agent(
     effective_variant = (
         sandbox_variant
         or agent_spec.sandbox_variant
-        or ("jupyter" if jupyter_sandbox_url else "eval")
+        or ("jupyter-server" if jupyter_sandbox_url else "eval")
     )
 
     # In K8s sidecar mode (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), a Jupyter
     # container already runs in the same pod. Keep the effective variant as
-    # "jupyter" and defer sandbox creation until companion provides URL.
+    # "jupyter-server" and defer sandbox creation until companion provides URL.
     jupyter_sidecar = (
         os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
     )
     if jupyter_sidecar:
-        if effective_variant == "jupyter":
+        if effective_variant == "jupyter-server":
             logger.info(
                 "Jupyter sidecar detected (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), "
                 "using jupyter variant with deferred URL configuration"
             )
         elif effective_variant == "eval":
-            effective_variant = "jupyter"
+            effective_variant = "jupyter-server"
             logger.info(
                 "Jupyter sidecar detected, overriding eval → jupyter "
                 "(companion will provide jupyter URL)"
@@ -243,11 +243,11 @@ async def _create_and_register_cli_agent(
     need_shared_sandbox = (
         (enable_codemode and skills_enabled)
         or (enable_codemode and jupyter_sandbox_url)
-        or (enable_codemode and effective_variant == "jupyter")
+        or (enable_codemode and effective_variant == "jupyter-server")
     )
     if need_shared_sandbox:
         if (
-            effective_variant == "jupyter"
+            effective_variant == "jupyter-server"
             and jupyter_sidecar
             and not jupyter_sandbox_url
         ):
@@ -255,13 +255,13 @@ async def _create_and_register_cli_agent(
             from .services.code_sandbox_manager import get_code_sandbox_manager
 
             sandbox_manager = get_code_sandbox_manager()
-            sandbox_manager.configure(variant="jupyter")
+            sandbox_manager.configure(variant="jupyter-server")
             shared_sandbox = sandbox_manager.get_managed_sandbox()
             logger.info(
-                f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
+                f"Deferred sandbox for agent '{agent_id}': variant=jupyter-server, "
                 f"waiting for companion to provide jupyter URL"
             )
-        elif effective_variant == "jupyter":
+        elif effective_variant == "jupyter-server":
             # Delegate to code_sandboxes: create a per-agent sandbox.
             # When jupyter_sandbox_url is set (e.g. sidecar with env var),
             # pass it to configure() so _create_sandbox() can connect to the
@@ -271,12 +271,12 @@ async def _create_and_register_cli_agent(
 
                 sandbox_manager = get_code_sandbox_manager()
                 sandbox_manager.configure(
-                    variant="jupyter",
+                    variant="jupyter-server",
                     jupyter_url=jupyter_sandbox_url,
                 )
                 shared_sandbox = sandbox_manager.create_agent_sandbox(
                     agent_id=agent_id,
-                    variant="jupyter",
+                    variant="jupyter-server",
                 )
                 logger.info(
                     f"Created per-agent Jupyter sandbox for CLI agent '{agent_id}'"
@@ -394,7 +394,7 @@ async def _create_and_register_cli_agent(
             # rebuild_codemode is called by configure-from-spec.
             sidecar_deferred = (
                 jupyter_sidecar
-                and effective_variant == "jupyter"
+                and effective_variant == "jupyter-server"
                 and not jupyter_sandbox_url
             )
             if sidecar_deferred:
@@ -974,7 +974,7 @@ async def _create_and_register_cli_agent(
     }
 
     # Add Jupyter sandbox details when using the jupyter variant
-    if effective_variant == "jupyter" and shared_sandbox is not None:
+    if effective_variant == "jupyter-server" and shared_sandbox is not None:
         jupyter_host = getattr(shared_sandbox, "_host", None)
         jupyter_port = getattr(shared_sandbox, "_port", None)
         jupyter_server_url = getattr(shared_sandbox, "_server_url", None)
@@ -991,7 +991,7 @@ async def _create_and_register_cli_agent(
         startup_info["sandbox"]["jupyter_url"] = jupyter_server_url
         startup_info["sandbox"]["jupyter_token"] = jupyter_token
         startup_info["sandbox"]["kernel_id"] = kernel_id
-    elif effective_variant == "jupyter" and jupyter_sandbox_url:
+    elif effective_variant == "jupyter-server" and jupyter_sandbox_url:
         startup_info["sandbox"]["jupyter_url"] = jupyter_sandbox_url
 
     return startup_info

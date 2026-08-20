@@ -393,9 +393,9 @@ async def _run_agent_hooks(
             if hasattr(sandbox_manager, "get_agent_sandbox"):
                 sandbox = sandbox_manager.get_agent_sandbox(agent_id)
             if sandbox is None:
-                if effective_variant in {"eval", "jupyter"}:
+                if effective_variant in {"eval", "jupyter-server"}:
                     sandbox_variant = cast(
-                        Literal["eval", "jupyter"], effective_variant
+                        Literal["eval", "jupyter-server"], effective_variant
                     )
                     sandbox_manager.configure(variant=sandbox_variant)
                 sandbox = sandbox_manager.get_sandbox()
@@ -632,7 +632,7 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
     variant_note = (
         "The sandbox is a full Jupyter kernel — variables, imports, and installed "
         "packages persist across calls."
-        if variant == "jupyter"
+        if variant == "jupyter-server"
         else "The sandbox executes Python in-process — state persists within the "
         "same session."
     )
@@ -667,7 +667,7 @@ def _build_codemode_system_prompt(variant: str) -> str:
     variant_note = (
         "The sandbox is a full Jupyter kernel — variables, imports, and installed "
         "packages persist across calls."
-        if variant == "jupyter"
+        if variant == "jupyter-server"
         else "The sandbox executes Python in-process — state persists within the "
         "same session."
     )
@@ -1458,25 +1458,25 @@ async def create_agent(
 
         # Determine the effective sandbox variant
         effective_variant = request.sandbox_variant or (
-            "jupyter" if request.jupyter_sandbox else "eval"
+            "jupyter-server" if request.jupyter_sandbox else "eval"
         )
 
         # In K8s sidecar mode, a Jupyter container already runs in the pod.
-        # "jupyter" variant means "start your own" — remap to "jupyter"
+        # "jupyter-server" variant means "start your own" — remap to "jupyter-server"
         # (connect to existing sidecar).  Never fallback to eval.
         jupyter_sidecar = (
             os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
         )
         if jupyter_sidecar:
-            if effective_variant == "jupyter":
-                effective_variant = "jupyter"
+            if effective_variant == "jupyter-server":
+                effective_variant = "jupyter-server"
                 logger.info(
                     "Jupyter sidecar detected, remapped sandbox variant "
                     "jupyter → jupyter for agent '%s'",
                     agent_id,
                 )
             elif effective_variant == "eval":
-                effective_variant = "jupyter"
+                effective_variant = "jupyter-server"
                 logger.info(
                     "Jupyter sidecar detected, overriding eval → jupyter "
                     "for agent '%s' (companion will provide jupyter URL)",
@@ -1506,23 +1506,23 @@ async def create_agent(
                 sandbox_manager = get_code_sandbox_manager()
 
                 if (
-                    effective_variant == "jupyter"
+                    effective_variant == "jupyter-server"
                     and not request.jupyter_sandbox
                     and jupyter_sidecar
                 ):
                     # Sidecar mode, Phase 1: companion will configure URL later.
-                    sandbox_manager.configure(variant="jupyter")
+                    sandbox_manager.configure(variant="jupyter-server")
                     logger.info(
                         "Deferred jupyter sandbox for '%s': "
                         "waiting for companion to provide jupyter URL",
                         agent_id,
                     )
-                elif effective_variant == "jupyter":
+                elif effective_variant == "jupyter-server":
                     # Prefer per-agent sandbox creation when available.
                     if hasattr(sandbox_manager, "create_agent_sandbox"):
                         sandbox_manager.create_agent_sandbox(
                             agent_id=agent_id,
-                            variant="jupyter",
+                            variant="jupyter-server",
                         )
                         logger.info(
                             "Eager-started per-agent jupyter sandbox for '%s'",
@@ -1584,7 +1584,7 @@ async def create_agent(
         )
         if need_shared_sandbox:
             if (
-                effective_variant == "jupyter"
+                effective_variant == "jupyter-server"
                 and not request.jupyter_sandbox
                 and jupyter_sidecar
             ):
@@ -1593,13 +1593,13 @@ async def create_agent(
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure(variant="jupyter")
+                sandbox_manager.configure(variant="jupyter-server")
                 shared_sandbox = sandbox_manager.get_managed_sandbox()
                 logger.info(
-                    f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
+                    f"Deferred sandbox for agent '{agent_id}': variant=jupyter-server, "
                     f"waiting for companion to provide jupyter URL"
                 )
-            elif effective_variant == "jupyter":
+            elif effective_variant == "jupyter-server":
                 # Use the per-agent Jupyter sandbox for codemode/skills execution.
                 # The eager-start block above may have already created it (when
                 # sandbox_variant is explicitly set), so always check before creating
@@ -1617,7 +1617,7 @@ async def create_agent(
                         if hasattr(sandbox_manager, "create_agent_sandbox"):
                             shared_sandbox = sandbox_manager.create_agent_sandbox(
                                 agent_id=agent_id,
-                                variant="jupyter",
+                                variant="jupyter-server",
                             )
                             logger.info(
                                 f"Created per-agent Jupyter sandbox for '{agent_id}'"
@@ -2992,7 +2992,7 @@ async def update_agent_mcp_servers(
 class ConfigureSandboxRequest(BaseModel):
     """Request to configure the code sandbox manager."""
 
-    variant: Literal["eval", "jupyter"] = Field(
+    variant: Literal["eval", "jupyter-server"] = Field(
         default="eval",
         description=(
             "Sandbox variant to use: 'eval' (Python exec), "
@@ -4370,7 +4370,7 @@ async def configure_from_spec_endpoint(
                 if agent_sandbox is not None:
                     sandbox_manager._inject_env_vars_into(
                         agent_sandbox,
-                        "jupyter",
+                        "jupyter-server",
                         sandbox_env_vars,
                     )
                 else:

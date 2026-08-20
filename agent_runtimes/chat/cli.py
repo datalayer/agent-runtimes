@@ -332,7 +332,7 @@ def _run_agent_runtime_server(
     # Load agent spec to get MCP servers and sandbox variant
     # Keep empty by default so specs with no MCP servers do not start any.
     mcp_servers_str = ""
-    sandbox_variant = "jupyter"  # Default interactive CLI sandbox variant
+    sandbox_variant = "jupyter-server"  # Default interactive CLI sandbox variant
     agent_spec = get_agent_spec(agent_id)
     if agent_spec:
         if agent_spec.mcp_servers:
@@ -507,7 +507,7 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
             add_row("Code Sandbox", sandbox_line)
 
             kernel_id = sandbox_info.get("kernel_id")
-            if str(variant).lower() == "jupyter" and kernel_id:
+            if str(variant).lower() == "jupyter-server" and kernel_id:
                 add_row("Kernel ID", str(kernel_id))
 
         skills = agent_info.get("skills", [])
@@ -1081,7 +1081,7 @@ def main_callback(
                     _summary_parts.append(
                         f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
                     )
-                if str(_sandbox_variant or "").lower() == "jupyter":
+                if str(_sandbox_variant or "").lower() == "jupyter-server":
                     _summary_parts.append("Jupyter sandbox")
                 if _codemode_on and not codemode_disabled:
                     _summary_parts.append("Code Mode")
