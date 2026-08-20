@@ -183,7 +183,7 @@ export function CodeSandboxLauncher(
    */
   const jupyterAvailable = isCodeSandboxProviderAvailable(
     'local',
-    runtimesStore.getState().multiServiceManager
+    runtimesStore.getState().multiServiceManager,
   );
   const environments = manager.environments.get();
   /*
@@ -637,7 +637,9 @@ export function CodeSandboxLauncher(
             right, and neither place can drift from the other.
           */}
           <CodeSandboxEnvironmentSelect
-            disabled={!!kernelSnapshot?.environment || environments.length === 0}
+            disabled={
+              !!kernelSnapshot?.environment || environments.length === 0
+            }
             options={environmentOptions}
             selectedKey={selection}
             onSelect={handleSelectionChange}

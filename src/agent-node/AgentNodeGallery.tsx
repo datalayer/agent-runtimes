@@ -388,8 +388,8 @@ export function AgentNodeGallery({
               name: requestedName,
               agent_spec_id: spec.id,
               transport: 'ag-ui',
-              sandbox_variant: 'jupyter',
-              sandboxVariant: 'jupyter',
+              sandbox_variant: 'jupyter-server',
+              sandboxVariant: 'jupyter-server',
               ...(LOCAL_JUPYTER_SANDBOX_URL
                 ? { jupyter_sandbox: LOCAL_JUPYTER_SANDBOX_URL }
                 : {}),
@@ -466,8 +466,8 @@ export function AgentNodeGallery({
                 name: requestedName,
                 agent_spec_id: spec.id,
                 transport: 'ag-ui',
-                sandbox_variant: 'jupyter',
-                sandboxVariant: 'jupyter',
+                sandbox_variant: 'jupyter-server',
+                sandboxVariant: 'jupyter-server',
                 ...(LOCAL_JUPYTER_SANDBOX_URL
                   ? { jupyter_sandbox: LOCAL_JUPYTER_SANDBOX_URL }
                   : {}),
@@ -509,7 +509,7 @@ export function AgentNodeGallery({
           )
             .trim()
             .toLowerCase();
-          mustRecreateForSandbox = variant !== 'jupyter';
+          mustRecreateForSandbox = variant !== 'jupyter-server';
         }
         if (specResponse.status === 404 || mustRecreateForSandbox) {
           await fetch(
@@ -526,8 +526,8 @@ export function AgentNodeGallery({
               name: spec.id,
               agent_spec_id: spec.id,
               transport: 'ag-ui',
-              sandbox_variant: 'jupyter',
-              sandboxVariant: 'jupyter',
+              sandbox_variant: 'jupyter-server',
+              sandboxVariant: 'jupyter-server',
               ...(LOCAL_JUPYTER_SANDBOX_URL
                 ? { jupyter_sandbox: LOCAL_JUPYTER_SANDBOX_URL }
                 : {}),

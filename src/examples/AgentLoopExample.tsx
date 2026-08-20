@@ -263,7 +263,7 @@ export function AgentLoopExampleInner({
         model: DEFAULT_MODEL,
         systemPrompt,
         enableCodemode: false,
-        sandboxVariant: 'jupyter',
+        sandboxVariant: 'jupyter-server',
         jupyterSandbox: jupyterSandboxUrl,
       },
     });
@@ -282,7 +282,7 @@ export function AgentLoopExampleInner({
       model: DEFAULT_MODEL,
       systemPrompt,
       enableCodemode: false,
-      sandboxVariant: 'jupyter',
+      sandboxVariant: 'jupyter-server',
       jupyterSandbox: jupyterSandboxUrl,
     }).catch(() => {
       setCreateRequested(false);

@@ -23,7 +23,7 @@ export const JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   version: '0.0.1',
   name: 'Jupyter Notebook',
   description: 'Frontend tools for interacting with Jupyter notebooks.',
-  tags: ['frontend', 'notebook', 'jupyter'],
+  tags: ['frontend', 'notebook', 'jupyter-server'],
   enabled: true,
   toolset: 'all',
   icon: 'notebook',

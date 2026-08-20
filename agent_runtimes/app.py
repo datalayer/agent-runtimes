@@ -165,8 +165,8 @@ async def _create_and_register_cli_agent(
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
         api_prefix: API prefix for routes
         protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
-        sandbox_variant: Code sandbox variant ('eval', 'jupyter', or
-            'jupyter'). When 'jupyter', a per-agent Jupyter server is
+        sandbox_variant: Code sandbox variant ('eval', 'jupyter-server', or
+            'jupyter-server'). When 'jupyter-server', a per-agent Jupyter server is
             started via code_sandboxes.
 
     Returns:

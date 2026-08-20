@@ -630,7 +630,7 @@ export function AgentNode() {
         const payload = await resp.json();
         const sandbox = payload?.sandbox;
         const jupyterUrl = String(sandbox?.jupyter_url || '').trim();
-        if (sandbox?.variant !== 'jupyter' || !jupyterUrl) {
+        if (sandbox?.variant !== 'jupyter-server' || !jupyterUrl) {
           return;
         }
         const jupyterToken = String(sandbox?.jupyter_token || '').trim();

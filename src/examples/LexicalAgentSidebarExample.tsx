@@ -285,7 +285,7 @@ export function ChatLexicalAgentExampleInner({
         systemPrompt:
           'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
         enableCodemode: false,
-        sandboxVariant: 'jupyter',
+        sandboxVariant: 'jupyter-server',
         jupyterSandbox: jupyterSandboxUrl,
       },
     });
@@ -303,7 +303,7 @@ export function ChatLexicalAgentExampleInner({
       systemPrompt:
         'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
       enableCodemode: false,
-      sandboxVariant: 'jupyter',
+      sandboxVariant: 'jupyter-server',
       jupyterSandbox: jupyterSandboxUrl,
     }).catch(() => {
       setCreateRequested(false);

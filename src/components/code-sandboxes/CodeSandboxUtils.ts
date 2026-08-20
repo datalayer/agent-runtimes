@@ -55,7 +55,7 @@ export function getGroupedCodeSandboxDescs(
    */
   const jupyterProviderAvailable = isCodeSandboxProviderAvailable(
     'local',
-    multiServiceManager
+    multiServiceManager,
   );
   const sessions = jupyterProviderAvailable
     ? multiServiceManager.local.sessions.running()
@@ -74,7 +74,7 @@ export function getGroupedCodeSandboxDescs(
         language: spec?.language ?? '',
         displayName: ensureCodeSandboxGivenName(
           session.kernel!.id,
-          spec?.display_name ?? session.kernel!.name
+          spec?.display_name ?? session.kernel!.name,
         ),
         location: 'local' as IRuntimeLocation,
       };
@@ -95,7 +95,7 @@ export function getGroupedCodeSandboxDescs(
             language: spec?.language ?? '',
             displayName: ensureCodeSandboxGivenName(
               session.kernel!.id,
-              spec?.display_name ?? session.kernel!.name
+              spec?.display_name ?? session.kernel!.name,
             ),
             location: 'browser' as IRuntimeLocation,
           } satisfies IDatalayerCodeSandboxDesc;
@@ -105,7 +105,7 @@ export function getGroupedCodeSandboxDescs(
   // Add the running runtimes.
   const listedAsSession = runningSessions.map(s => s.kernelId);
   const runningKernels = Array.from(
-    jupyterProviderAvailable ? multiServiceManager.local.kernels.running() : []
+    jupyterProviderAvailable ? multiServiceManager.local.kernels.running() : [],
   )
     .filter(k => !listedAsSession.includes(k.id))
     // Annotated, because the element type of the chain below is taken from
@@ -118,7 +118,7 @@ export function getGroupedCodeSandboxDescs(
         language: spec?.language ?? '',
         displayName: ensureCodeSandboxGivenName(
           k.id,
-          spec?.display_name ?? k.name
+          spec?.display_name ?? k.name,
         ),
         location: 'local' as IRuntimeLocation,
       };
@@ -147,7 +147,8 @@ export function getGroupedCodeSandboxDescs(
             name: environment!.name,
             language: environment!.language,
             provider: codeSandboxVariantOf(
-              (environment as any)?.owner ?? (runtime.environment as any)?.owner,
+              (environment as any)?.owner ??
+                (runtime.environment as any)?.owner,
             ),
             displayName:
               // The name it was GIVEN first: the title of the environment is
@@ -173,7 +174,7 @@ export function getGroupedCodeSandboxDescs(
             language: spec?.language ?? '',
             displayName: ensureCodeSandboxGivenName(
               k.id,
-              spec?.display_name ?? k.name
+              spec?.display_name ?? k.name,
             ),
             location: 'browser' as IRuntimeLocation,
           } satisfies IDatalayerCodeSandboxDesc;
@@ -212,7 +213,7 @@ export function getGroupedCodeSandboxDescs(
    * and offering them promises what cannot be reached.
    */
   const environments = Object.values(
-    jupyterProviderAvailable ? (specs?.kernelspecs ?? {}) : {}
+    jupyterProviderAvailable ? (specs?.kernelspecs ?? {}) : {},
   )
     .filter(spec => !!spec)
     .map(
@@ -237,7 +238,8 @@ export function getGroupedCodeSandboxDescs(
    * sandbox from there at all; the rule that was wanted is the other one, and
    * it is stated where the Jupyter Server is read below.
    */
-  const remoteEnvironments = multiServiceManager.remote?.environments.get() ?? [];
+  const remoteEnvironments =
+    multiServiceManager.remote?.environments.get() ?? [];
   environments.push(
     ...remoteEnvironments
       .map(

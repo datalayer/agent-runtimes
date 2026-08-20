@@ -51,7 +51,7 @@ export type ICodeSandboxProvider = {
  *   the page is one, the browser when kernels run in it
  */
 export function codeSandboxProviders(
-  multiServiceManager: IMultiServiceManager | undefined
+  multiServiceManager: IMultiServiceManager | undefined,
 ): ICodeSandboxProvider[] {
   /*
    * The Jupyter Server is the provider bound to WHERE the page runs.
@@ -68,7 +68,7 @@ export function codeSandboxProviders(
       available: Boolean(multiServiceManager?.remote),
       unavailableReason: multiServiceManager?.remote
         ? undefined
-        : 'Sign in to Datalayer to launch a sandbox on the platform.'
+        : 'Sign in to Datalayer to launch a sandbox on the platform.',
     },
     {
       name: 'local',
@@ -76,7 +76,7 @@ export function codeSandboxProviders(
       available: insideJupyterLab && Boolean(multiServiceManager?.local),
       unavailableReason: insideJupyterLab
         ? undefined
-        : 'The kernels of a Jupyter Server are offered inside JupyterLab.'
+        : 'The kernels of a Jupyter Server are offered inside JupyterLab.',
     },
     {
       name: 'browser',
@@ -84,8 +84,8 @@ export function codeSandboxProviders(
       available: Boolean(multiServiceManager?.browser),
       unavailableReason: multiServiceManager?.browser
         ? undefined
-        : 'No kernel runs in this browser.'
-    }
+        : 'No kernel runs in this browser.',
+    },
   ];
 }
 
@@ -97,12 +97,12 @@ export function codeSandboxProviders(
  */
 export function isCodeSandboxProviderAvailable(
   location: IRuntimeLocation,
-  multiServiceManager: IMultiServiceManager | undefined
+  multiServiceManager: IMultiServiceManager | undefined,
 ): boolean {
   return Boolean(
     codeSandboxProviders(multiServiceManager).find(
-      provider => provider.name === location
-    )?.available
+      provider => provider.name === location,
+    )?.available,
   );
 }
 

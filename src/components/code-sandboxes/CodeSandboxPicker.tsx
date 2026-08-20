@@ -294,12 +294,10 @@ export function CodeSandboxPicker(
   const runningEntries = useMemo(
     (): [string, IDatalayerCodeSandboxDesc[]][] =>
       Object.entries(groupedRuntimeDescs ?? {})
-        .map(
-          ([group, descs]): [string, IDatalayerCodeSandboxDesc[]] => [
-            group,
-            descs.filter(isRunningSandbox),
-          ],
-        )
+        .map(([group, descs]): [string, IDatalayerCodeSandboxDesc[]] => [
+          group,
+          descs.filter(isRunningSandbox),
+        ])
         .filter(([, descs]) => descs.length > 0),
     [groupedRuntimeDescs],
   );
@@ -315,139 +313,121 @@ export function CodeSandboxPicker(
   const radioSections = (
     entries: [string, IDatalayerCodeSandboxDesc[]][],
   ): JSX.Element => (
-            <RadioGroup name="kernel-options" aria-labelledby="kernel-options">
-              {entries.map(
-                ([group, runtimeDescs]) => (
-                  <Box key={group}>
-                    <Box
-                      as="h4"
-                      sx={{
-                        /*
-                         * The type of a form label, not of a heading.
-                         *
-                         * "Assign an existing Code Sandbox" and "Assign a
-                         * new Code Sandbox" name the two ways of answering
-                         * one question, and the second is the label of the
-                         * dropdown; set in the larger, heavier type of an
-                         * `h4`, the first read as a section above it rather
-                         * than as its pair. The values are the ones Primer
-                         * gives `FormControl.Label` — taken as the variables
-                         * it resolves rather than through the Primer scale,
-                         * whose `semibold` the JupyterLab theme redefines.
-                         */
-                        margin: 0,
-                        marginBottom: 2,
-                        color: 'fg.default',
-                        fontSize: 'var(--text-body-size-medium, 0.875rem)',
-                        fontWeight: 'var(--base-text-weight-semibold, 600)',
-                      }}
-                    >
-                      {group}
-                    </Box>
-                    {runtimeDescs.map(k => {
-                      return (
-                        // A kernel identifies a runtime that already runs; an
-                        // environment to start one in has none, and is named
-                        // by where it runs and what it runs.
-                        <Box
-                          key={`${k.location}:${k.kernelId ?? k.name}`}
-                          title={k.name}
-                        >
-                          <FormControl>
-                            <Radio
-                              value={k.kernelId!}
-                              onChange={() => {
-                                setRuntimeDesc(k);
-                              }}
-                              checked={
-                                (k.location === runtimeDesc?.location ||
-                                  (isRuntimeRemote(k.location) &&
-                                    isRuntimeRemote(
-                                      runtimeDesc?.location ?? 'local',
-                                    ))) &&
-                                (k.kernelId ?? k.name) ===
-                                  (runtimeDesc?.kernelId ?? runtimeDesc?.name)
-                              }
-                            />
-                            <FormControl.Label>
-                              <Box display="flex" sx={{ alignItems: 'baseline' }}>
-                                <Box>{k.displayName}</Box>
-                                {/*
+    <RadioGroup name="kernel-options" aria-labelledby="kernel-options">
+      {entries.map(([group, runtimeDescs]) => (
+        <Box key={group}>
+          <Box
+            as="h4"
+            sx={{
+              /*
+               * The type of a form label, not of a heading.
+               *
+               * "Assign an existing Code Sandbox" and "Assign a
+               * new Code Sandbox" name the two ways of answering
+               * one question, and the second is the label of the
+               * dropdown; set in the larger, heavier type of an
+               * `h4`, the first read as a section above it rather
+               * than as its pair. The values are the ones Primer
+               * gives `FormControl.Label` — taken as the variables
+               * it resolves rather than through the Primer scale,
+               * whose `semibold` the JupyterLab theme redefines.
+               */
+              margin: 0,
+              marginBottom: 2,
+              color: 'fg.default',
+              fontSize: 'var(--text-body-size-medium, 0.875rem)',
+              fontWeight: 'var(--base-text-weight-semibold, 600)',
+            }}
+          >
+            {group}
+          </Box>
+          {runtimeDescs.map(k => {
+            return (
+              // A kernel identifies a runtime that already runs; an
+              // environment to start one in has none, and is named
+              // by where it runs and what it runs.
+              <Box key={`${k.location}:${k.kernelId ?? k.name}`} title={k.name}>
+                <FormControl>
+                  <Radio
+                    value={k.kernelId!}
+                    onChange={() => {
+                      setRuntimeDesc(k);
+                    }}
+                    checked={
+                      (k.location === runtimeDesc?.location ||
+                        (isRuntimeRemote(k.location) &&
+                          isRuntimeRemote(runtimeDesc?.location ?? 'local'))) &&
+                      (k.kernelId ?? k.name) ===
+                        (runtimeDesc?.kernelId ?? runtimeDesc?.name)
+                    }
+                  />
+                  <FormControl.Label>
+                    <Box display="flex" sx={{ alignItems: 'baseline' }}>
+                      <Box>{k.displayName}</Box>
+                      {/*
                                   The identifier of the kernel beside the name:
                                   two sandboxes of the same environment read
                                   alike, and this is what tells them apart.
                                   Quieter than the name, which is what is being
                                   chosen.
                                 */}
-                                {k.kernelId && (
-                                  <Text
-                                    sx={{
-                                      ml: 2,
-                                      fontSize: 0,
-                                      color: 'fg.muted',
-                                      fontFamily: 'mono'
-                                    }}
-                                    title={k.kernelId}
-                                  >
-                                    {k.kernelId.slice(0, 8)}
-                                  </Text>
-                                )}
-                                {k.kernelId && k.location === 'remote' && (
-                                  <Box ml={3} mt={1}>
-                                    <CreditsIndicator
-                                      key="credits-indicator"
-                                      kernelId={k.kernelId}
-                                      serviceManager={
-                                        multiServiceManager.remote!
-                                      }
-                                    />
-                                  </Box>
-                                )}
-                              </Box>
-                            </FormControl.Label>
-                            <FormControl.Caption>
-                              <LabelGroup sx={{ marginTop: 1 }}>
-                                <Label variant="secondary">{k.name}</Label>
-                                {(k as IDatalayerCodeSandboxDesc).provider && (
-                                  <Label variant="accent" sx={{ marginLeft: 1 }}>
-                                    {codeSandboxVariantTitle(
-                                      (k as IDatalayerCodeSandboxDesc).provider!,
-                                    )}
-                                  </Label>
-                                )}
-                                <Label
-                                  variant="secondary"
-                                  sx={{ marginLeft: 1 }}
-                                >
-                                  {k.location}
-                                </Label>
-                                {k.burningRate && (
-                                  <Label
-                                    variant="sponsors"
-                                    sx={{ marginLeft: 1 }}
-                                  >
-                                    {k.burningRate} credits/second
-                                  </Label>
-                                )}
-                                {k.gpu && (
-                                  <Label
-                                    variant="success"
-                                    sx={{ marginLeft: 1 }}
-                                  >
-                                    GPU
-                                  </Label>
-                                )}
-                              </LabelGroup>
-                            </FormControl.Caption>
-                          </FormControl>
-                          <ActionList.Divider />
+                      {k.kernelId && (
+                        <Text
+                          sx={{
+                            ml: 2,
+                            fontSize: 0,
+                            color: 'fg.muted',
+                            fontFamily: 'mono',
+                          }}
+                          title={k.kernelId}
+                        >
+                          {k.kernelId.slice(0, 8)}
+                        </Text>
+                      )}
+                      {k.kernelId && k.location === 'remote' && (
+                        <Box ml={3} mt={1}>
+                          <CreditsIndicator
+                            key="credits-indicator"
+                            kernelId={k.kernelId}
+                            serviceManager={multiServiceManager.remote!}
+                          />
                         </Box>
-                      );
-                    })}
-                  </Box>
-                ),
-              )}
-            </RadioGroup>
+                      )}
+                    </Box>
+                  </FormControl.Label>
+                  <FormControl.Caption>
+                    <LabelGroup sx={{ marginTop: 1 }}>
+                      <Label variant="secondary">{k.name}</Label>
+                      {(k as IDatalayerCodeSandboxDesc).provider && (
+                        <Label variant="accent" sx={{ marginLeft: 1 }}>
+                          {codeSandboxVariantTitle(
+                            (k as IDatalayerCodeSandboxDesc).provider!,
+                          )}
+                        </Label>
+                      )}
+                      <Label variant="secondary" sx={{ marginLeft: 1 }}>
+                        {k.location}
+                      </Label>
+                      {k.burningRate && (
+                        <Label variant="sponsors" sx={{ marginLeft: 1 }}>
+                          {k.burningRate} credits/second
+                        </Label>
+                      )}
+                      {k.gpu && (
+                        <Label variant="success" sx={{ marginLeft: 1 }}>
+                          GPU
+                        </Label>
+                      )}
+                    </LabelGroup>
+                  </FormControl.Caption>
+                </FormControl>
+                <ActionList.Divider />
+              </Box>
+            );
+          })}
+        </Box>
+      ))}
+    </RadioGroup>
   );
 
   const trans = useMemo(
@@ -942,7 +922,8 @@ export function CodeSandboxPicker(
          * be read; closed, it is one line.
          */
         <>
-          {defaultSet && sandboxLayout === 'separated' &&
+          {defaultSet &&
+            sandboxLayout === 'separated' &&
             runningEntries.length > 0 &&
             radioSections(runningEntries)}
           {defaultSet && (

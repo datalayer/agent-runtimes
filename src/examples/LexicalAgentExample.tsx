@@ -390,7 +390,7 @@ function LexicalWithChat({
         systemPrompt:
           'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
         enableCodemode: false,
-        sandboxVariant: 'jupyter',
+        sandboxVariant: 'jupyter-server',
         jupyterSandbox: jupyterSandboxUrl,
       },
     });
@@ -408,7 +408,7 @@ function LexicalWithChat({
       systemPrompt:
         'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
       enableCodemode: false,
-      sandboxVariant: 'jupyter',
+      sandboxVariant: 'jupyter-server',
       jupyterSandbox: jupyterSandboxUrl,
     }).catch(() => {
       setCreateRequested(false);

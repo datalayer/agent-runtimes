@@ -18,10 +18,10 @@ import { Chat } from '../chat';
 
 type SandboxVariant =
   | 'eval'
-  | 'jupyter'
+  | 'jupyter-server'
   | 'docker'
   | 'datalayer'
-  | 'colab'
+  | 'google-colab'
   | 'kaggle'
   | 'monty'
   | 'modal';
@@ -41,7 +41,7 @@ const SANDBOX_SPEC_OPTIONS: SandboxSpecOption[] = [
     description: 'In-process Python execution for quick local iteration.',
   },
   {
-    variant: 'jupyter',
+    variant: 'jupyter-server',
     specId: 'example-sandbox-jupyter',
     title: 'Jupyter Sandbox',
     description: 'Kernel-backed execution with notebook-compatible behavior.',
@@ -59,7 +59,7 @@ const SANDBOX_SPEC_OPTIONS: SandboxSpecOption[] = [
     description: 'Cloud sandbox runtime powered by Datalayer environments.',
   },
   {
-    variant: 'colab',
+    variant: 'google-colab',
     specId: 'example-sandbox-colab',
     title: 'Colab Sandbox',
     description:

@@ -56,7 +56,9 @@ export type ICodeSandboxPickerCellProps = Pick<
 /**
  * Runtime picker component for a cell.
  */
-export function CodeSandboxPickerCell(props: ICodeSandboxPickerCellProps): JSX.Element {
+export function CodeSandboxPickerCell(
+  props: ICodeSandboxPickerCellProps,
+): JSX.Element {
   const {
     logIn,
     markdownParser,

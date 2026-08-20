@@ -55,7 +55,7 @@ const queryClient = new QueryClient();
 const AGENT_NAME = 'sandbox-example-agent';
 const AGENTSPEC_ID = 'example-full';
 
-type SandboxVariant = 'eval' | 'jupyter';
+type SandboxVariant = 'eval' | 'jupyter-server';
 
 // ─── WebSocket log entry ───────────────────────────────────────────────────
 
@@ -99,7 +99,7 @@ function deriveAggregate(
   return 'idle';
 }
 
-function apiVariantFromUi(variant: SandboxVariant): 'eval' | 'jupyter' {
+function apiVariantFromUi(variant: SandboxVariant): 'eval' | 'jupyter-server' {
   return variant;
 }
 
@@ -806,7 +806,9 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
                     size="small"
                     onChange={index => {
                       if (isTransitionLocked) return;
-                      void switchVariant(index === 0 ? 'eval' : 'jupyter');
+                      void switchVariant(
+                        index === 0 ? 'eval' : 'jupyter-server',
+                      );
                     }}
                   >
                     <SegmentedControl.Button
@@ -817,7 +819,7 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
                       eval
                     </SegmentedControl.Button>
                     <SegmentedControl.Button
-                      selected={displayedVariant === 'jupyter'}
+                      selected={displayedVariant === 'jupyter-server'}
                       leadingIcon={CodeIcon}
                       disabled={isTransitionLocked}
                     >

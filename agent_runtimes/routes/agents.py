@@ -624,7 +624,7 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
     tools are disabled.
 
     Args:
-        variant: The effective sandbox variant ('eval' or 'jupyter').
+        variant: The effective sandbox variant ('eval' or 'jupyter-server').
 
     Returns:
         A Markdown string suitable for appending to the system prompt.
@@ -659,7 +659,7 @@ def _build_codemode_system_prompt(variant: str) -> str:
     ``system_prompt_codemode_addons`` was provided in the spec.
 
     Args:
-        variant: The effective sandbox variant ('eval' or 'jupyter').
+        variant: The effective sandbox variant ('eval' or 'jupyter-server').
 
     Returns:
         A Markdown string suitable for appending to the system prompt.
@@ -907,8 +907,8 @@ class CreateAgentRequest(BaseModel):
         description=(
             "Sandbox variant to use for this agent.  "
             "Accepted values: 'eval' (in-process Python exec, default), "
-            "'jupyter' (starts a Jupyter server per agent via code_sandboxes), "
-            "'jupyter' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
+            "'jupyter-server' (starts a Jupyter server per agent via code_sandboxes), "
+            "'jupyter-server' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
         ),
     )
     agent_spec_id: str | None = Field(
@@ -2996,14 +2996,14 @@ class ConfigureSandboxRequest(BaseModel):
         default="eval",
         description=(
             "Sandbox variant to use: 'eval' (Python exec), "
-            "or 'jupyter' (Jupyter sandbox: managed local or existing URL)"
+            "or 'jupyter-server' (Jupyter sandbox: managed local or existing URL)"
         ),
     )
     jupyter_url: str | None = Field(
         default=None,
         description=(
             "Optional Jupyter server URL for existing server mode. "
-            "If omitted with variant='jupyter', a managed local Jupyter sandbox is used. "
+            "If omitted with variant='jupyter-server', a managed local Jupyter sandbox is used. "
             "Can include token as query param: http://localhost:8888?token=xxx"
         ),
     )
@@ -3056,8 +3056,8 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
 
     This endpoint allows runtime configuration of the sandbox variant.
     Use 'eval' for simple Python exec-based execution,
-    'jupyter' for a managed Jupyter sandbox, or
-    'jupyter' to connect to an existing Jupyter server.
+    'jupyter-server' for a managed Jupyter sandbox, or
+    'jupyter-server' to connect to an existing Jupyter server.
 
     Note: If a sandbox is currently running with a different configuration,
     it will be stopped and recreated on next use.

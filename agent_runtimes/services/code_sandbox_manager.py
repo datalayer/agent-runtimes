@@ -57,10 +57,10 @@ logger = logging.getLogger(__name__)
 
 SandboxVariant = Literal[
     "eval",
-    "jupyter",
+    "jupyter-server",
     "docker",
     "datalayer",
-    "colab",
+    "google-colab",
     "monty",
     "modal",
 ]
@@ -351,7 +351,7 @@ class CodeSandboxManager:
     - jupyter: Connects to an *existing* Jupyter server (URL required)
     - jupyter: Delegates to code_sandboxes to start its own Jupyter server
       on a random free port (no external URL needed)
-        - docker, datalayer, colab, monty, modal: Delegated to the
+        - docker, datalayer, google-colab, monty, modal: Delegated to the
             code_sandboxes variant factory.
     """
 

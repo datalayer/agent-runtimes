@@ -15,10 +15,10 @@ from pathlib import Path
 
 VARIANTS: tuple[str, ...] = (
     "eval",
-    "jupyter",
+    "jupyter-server",
     "docker",
     "datalayer",
-    "colab",
+    "google-colab",
     "kaggle",
     "monty",
     "modal",

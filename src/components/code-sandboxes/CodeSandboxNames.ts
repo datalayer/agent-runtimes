@@ -87,7 +87,7 @@ function loadStamps(): Record<string, number> {
 
 function save(
   names: Record<string, string>,
-  stamps: Record<string, number>
+  stamps: Record<string, number>,
 ): void {
   memory = names;
   memoryStamps = stamps;
@@ -116,7 +116,7 @@ export function getCodeSandboxGivenName(kernelId?: string): string | undefined {
  */
 export function setCodeSandboxGivenName(
   kernelId: string,
-  givenName: string
+  givenName: string,
 ): void {
   const names = load();
   const stamps = loadStamps();
@@ -136,7 +136,7 @@ export function setCodeSandboxGivenName(
  * @param runningKernelIds The kernels that are still there
  */
 export function pruneCodeSandboxGivenNames(
-  runningKernelIds: Iterable<string>
+  runningKernelIds: Iterable<string>,
 ): void {
   const alive = new Set(runningKernelIds);
   const names = load();
@@ -177,7 +177,7 @@ function asGivenName(base: string): string {
     // Pictographs, their skin tones, their joiners and their selectors.
     .replace(
       /[\u{1F000}-\u{1FAFF}\u{2190}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}]/gu,
-      ' '
+      ' ',
     )
     .replace(/\s+/g, ' ')
     .trim();
@@ -203,7 +203,7 @@ export function listCodeSandboxGivenNames(): string[] {
  */
 export function nextCodeSandboxGivenName(
   base: string,
-  taken: Iterable<string>
+  taken: Iterable<string>,
 ): string {
   const used = new Set(taken);
   const stem = asGivenName(base);
@@ -229,7 +229,7 @@ export function nextCodeSandboxGivenName(
  */
 export function ensureCodeSandboxGivenName(
   kernelId: string,
-  specDisplayName: string
+  specDisplayName: string,
 ): string {
   const existing = getCodeSandboxGivenName(kernelId);
   if (existing) {
@@ -237,7 +237,7 @@ export function ensureCodeSandboxGivenName(
   }
   const candidate = nextCodeSandboxGivenName(
     specDisplayName,
-    listCodeSandboxGivenNames()
+    listCodeSandboxGivenNames(),
   );
   setCodeSandboxGivenName(kernelId, candidate);
   return candidate;

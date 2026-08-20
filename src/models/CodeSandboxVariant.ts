@@ -27,13 +27,13 @@ export enum CodeSandboxVariant {
   /** A runtime of the Datalayer platform. */
   Datalayer = 'datalayer',
   /** A Google Colab runtime. */
-  GoogleColab = 'google_colab',
+  GoogleColab = 'google-colab',
   /** A Kaggle notebook session. */
   Kaggle = 'kaggle',
   /** The Monty in-browser interpreter. */
   Monty = 'monty',
   /** A container on Modal. */
-  Modal = 'modal'
+  Modal = 'modal',
 }
 
 /** What each variant is called where a person reads it. */
@@ -45,7 +45,7 @@ export const CODE_SANDBOX_VARIANT_TITLES: Record<CodeSandboxVariant, string> = {
   [CodeSandboxVariant.GoogleColab]: 'Google Colab',
   [CodeSandboxVariant.Kaggle]: 'Kaggle',
   [CodeSandboxVariant.Monty]: 'Monty',
-  [CodeSandboxVariant.Modal]: 'Modal'
+  [CodeSandboxVariant.Modal]: 'Modal',
 };
 
 /**
@@ -57,11 +57,11 @@ export const CODE_SANDBOX_VARIANT_TITLES: Record<CodeSandboxVariant, string> = {
  * what every environment was before providers existed.
  */
 export function codeSandboxVariantOf(
-  owner?: string | null
+  owner?: string | null,
 ): CodeSandboxVariant {
   const normalized = (owner ?? '').replace('_', '-').toLowerCase();
   const match = (Object.values(CodeSandboxVariant) as string[]).find(
-    value => value.replace('_', '-') === normalized
+    value => value.replace('_', '-') === normalized,
   );
   return (match as CodeSandboxVariant) ?? CodeSandboxVariant.Datalayer;
 }

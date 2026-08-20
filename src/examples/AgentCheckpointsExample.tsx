@@ -114,7 +114,7 @@ const AGENTSPEC = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   protocol: 'vercel-ai',
   memory: 'mem0',
-  sandbox_variant: 'jupyter',
+  sandbox_variant: 'jupyter-server',
   environment_name: 'ai-agents-env',
   tags: ['support', 'chatbot', 'sales', 'kpi', 'monitoring'],
   trigger: {

@@ -75,7 +75,7 @@ export interface Agentspec {
   welcomeNotebook?: string;
   /** Path to Lexical document to show on agent creation */
   welcomeDocument?: string;
-  /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter', 'kaggle'). */
+  /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter-server', 'kaggle'). */
   sandboxVariant?: string;
   /** User-facing objective for the agent */
   goal?: string;

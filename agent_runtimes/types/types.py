@@ -1154,7 +1154,7 @@ class Agentspec(BaseModel):
         default=None,
         description=(
             "Sandbox variant to use for this agent. "
-            "Accepted values: 'eval' (default), 'jupyter' (Jupyter server)"
+            "Accepted values: 'eval' (default), 'jupyter-server' (Jupyter server)"
         ),
         alias="sandboxVariant",
     )

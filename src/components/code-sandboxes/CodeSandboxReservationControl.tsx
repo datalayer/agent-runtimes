@@ -143,8 +143,8 @@ export function CodeSandboxReservationControl(
       </Box>
       <FormControl.Caption>
         Maximum execution time that can be consumed by the runtime. It must be
-        less than {(MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES / 60).toFixed(0)}{' '}
-        hours.
+        less than{' '}
+        {(MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES / 60).toFixed(0)} hours.
         {burningRate && (
           <>
             <br />

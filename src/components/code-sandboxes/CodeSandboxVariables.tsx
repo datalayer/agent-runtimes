@@ -107,7 +107,10 @@ export function useCodeSandboxVariablesTransfer(
         }
         if (value) {
           list().catch(reason => {
-            console.error('Failed to list the variables of the sandbox', reason);
+            console.error(
+              'Failed to list the variables of the sandbox',
+              reason,
+            );
             setListed(false);
           });
         }
@@ -160,7 +163,9 @@ export interface ICodeSandboxVariablesProps {
 /**
  * Runtime variables selector component.
  */
-export function CodeSandboxVariables(props: ICodeSandboxVariablesProps): ReactElement {
+export function CodeSandboxVariables(
+  props: ICodeSandboxVariablesProps,
+): ReactElement {
   const {
     className,
     translator,

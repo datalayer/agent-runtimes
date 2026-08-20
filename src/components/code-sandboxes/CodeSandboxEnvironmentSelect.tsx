@@ -110,7 +110,7 @@ function OptionLabels(props: {
 }
 
 export function CodeSandboxEnvironmentSelect(
-  props: ICodeSandboxEnvironmentSelectProps
+  props: ICodeSandboxEnvironmentSelectProps,
 ): JSX.Element {
   const {
     disabled,
@@ -199,7 +199,7 @@ export function CodeSandboxEnvironmentSelect(
                     <ActionList.GroupHeading>{group}</ActionList.GroupHeading>
                   ) : null}
                   {rows(
-                    ordered.filter(option => (option.group ?? '') === group)
+                    ordered.filter(option => (option.group ?? '') === group),
                   )}
                 </ActionList.Group>
               ))
