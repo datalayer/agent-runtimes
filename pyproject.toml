@@ -70,7 +70,14 @@ anthropic = [
     "pydantic-ai-slim[anthropic]>=2.21.0,<3",
 ]
 openai = [
-    "openai>=2.29.0,<3.0.0",
+    # The ceiling is the next MAJOR of the SDK, not the current one.
+    #
+    # pydantic-ai-slim moved its `openai` extra to `openai>=3.0.0` in 2.32.0,
+    # which our own `<3.0.0` then contradicted: pip could satisfy neither and
+    # the image stopped building. The only thing taken from the SDK directly
+    # is `AsyncAzureOpenAI`, whose arguments are unchanged in 3.x, so the
+    # ceiling was holding back the ecosystem rather than protecting anything.
+    "openai>=2.29.0,<4.0.0",
     "pydantic-ai-slim[openai]>=2.21.0,<3",
 ]
 google = [
