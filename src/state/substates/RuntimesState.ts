@@ -169,7 +169,13 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
      */
     removeRuntimeModel: (id: string) => {
       const kernels = [...get().runtimeModels];
-      const index = kernels?.findIndex(model => id === model.id) ?? -1;
+      // By the kernel it runs, or by the pod it is: a sandbox of an external
+      // provider has no kernel, so its pod name is the only name it answers
+      // to — matched on the kernel alone it was never removed from the list.
+      const index =
+        kernels?.findIndex(
+          model => (!!model.id && id === model.id) || id === model.pod_name,
+        ) ?? -1;
       if (index >= 0) {
         kernels.splice(index, 1);
         set({ runtimeModels: kernels });

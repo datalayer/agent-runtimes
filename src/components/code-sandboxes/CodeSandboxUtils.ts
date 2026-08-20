@@ -64,7 +64,9 @@ export function getGroupedCodeSandboxDescs(
   // Add the sessions.
   const runningSessions = Array.from(sessions)
     .filter(session => session.kernel && session.kernel.id !== kernelId)
-    .map(session => {
+    // Annotated for the same reason as the chain below: what is pushed into
+    // this list includes sandboxes that carry a pod rather than a kernel.
+    .map((session): IDatalayerCodeSandboxDesc => {
       const spec = specs?.kernelspecs[session.kernel!.name];
       return {
         kernelId: session.kernel!.id,
@@ -106,7 +108,9 @@ export function getGroupedCodeSandboxDescs(
     jupyterProviderAvailable ? multiServiceManager.local.kernels.running() : []
   )
     .filter(k => !listedAsSession.includes(k.id))
-    .map(k => {
+    // Annotated, because the element type of the chain below is taken from
+    // this first link: a sandbox with no kernel joins it further down.
+    .map((k): IDatalayerCodeSandboxDesc => {
       const spec = specs?.kernelspecs[k.name];
       return {
         kernelId: k.id,
@@ -121,15 +125,30 @@ export function getGroupedCodeSandboxDescs(
     })
     .concat(
       (multiServiceManager.remote?.runtimesManager.get() ?? [])
-        .filter(k => k.id && !listedAsSession.includes(k.id))
+        /*
+         * A sandbox with no KERNEL is still a sandbox that runs.
+         *
+         * The ones of an external provider — Kaggle, Modal — run at their
+         * provider and carry no kernel of this platform, so their `id` is
+         * empty. Asking for a truthy one dropped every one of them: they
+         * appeared in the table of the Code Sandboxes and nowhere in the
+         * picker, which is the one place a notebook can be pointed at them.
+         * What they always have is the pod that stands for them.
+         */
+        .filter(k => (k.id || k.pod_name) && !listedAsSession.includes(k.id))
         .map(runtime => {
           const environment = multiServiceManager
             .remote!.environments.get()
             .find(env => env.name === runtime.environment.name)!;
           return {
-            kernelId: runtime.id,
+            // Empty for an external sandbox: it has none, and saying so is
+            // what keeps the picker from trying to connect to one.
+            kernelId: runtime.id || undefined,
             name: environment!.name,
             language: environment!.language,
+            provider: codeSandboxVariantOf(
+              (environment as any)?.owner ?? (runtime.environment as any)?.owner,
+            ),
             displayName:
               // The name it was GIVEN first: the title of the environment is
               // what it runs, and every sandbox of that environment answers
@@ -166,7 +185,9 @@ export function getGroupedCodeSandboxDescs(
   // another — and a runtime listed twice would be picked twice.
   const seen = new Set<string>();
   const distinctRunning = runningSessions.filter(desc => {
-    const key = `${desc.location}:${desc.kernelId ?? desc.name}`;
+    // A kernel-less sandbox is named by its pod; without it every external
+    // sandbox of one environment collapsed into a single entry.
+    const key = `${desc.location}:${desc.kernelId ?? desc.podName ?? desc.name}`;
     if (seen.has(key)) {
       return false;
     }

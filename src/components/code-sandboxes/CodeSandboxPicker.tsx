@@ -59,6 +59,10 @@ import {
   CodeSandboxVariables,
   useCodeSandboxVariablesTransfer,
 } from './CodeSandboxVariables';
+import {
+  CodeSandboxEnvironmentSelect,
+  type ICodeSandboxEnvironmentOption,
+} from './CodeSandboxEnvironmentSelect';
 
 /**
  * Maximal runtime display name length after which it is trimmed.
@@ -69,7 +73,28 @@ type Height = 'large';
 
 type Width = 'auto' | 'small';
 
-type IDisplayMode = 'menu' | 'radio';
+type IDisplayMode = 'menu' | 'radio' | 'dropdown';
+
+/**
+ * Whether the choice is a sandbox that ALREADY RUNS.
+ *
+ * A running one is named by its kernel, or — where it runs at an external
+ * provider and has no kernel of this platform — by its pod. An environment
+ * to start a new one in has neither. Told apart by the kernel alone, every
+ * Kaggle and Modal sandbox read as an environment: they were offered under
+ * "Assign a new Code Sandbox" and never among the ones already running.
+ */
+function isRunningSandbox(desc: IRuntimeDesc): boolean {
+  return !!desc.kernelId || !!desc.podName;
+}
+
+/** How a sandbox is identified among the choices; see `dropdownDescs`. */
+function codeSandboxDescKey(desc: IRuntimeDesc): string {
+  // The pod stands in for the kernel of a sandbox that has none — the ones
+  // of an external provider. Without it two Modal sandboxes of the same
+  // environment answer to one key and the list shows a single row.
+  return `${desc.location}:${desc.kernelId ?? desc.podName ?? desc.name}`;
+}
 
 /**
  * {@link CodeSandboxPicker} properties
@@ -79,6 +104,19 @@ export interface ICodeSandboxPickerProps {
    * The display mode.
    */
   display: IDisplayMode;
+  /**
+   * Where the sandboxes that ALREADY RUN are offered, in the `dropdown`
+   * display.
+   *
+   * `separated`, the default: as radio buttons of their own, above a
+   * dropdown that then offers only the environments — so the dropdown reads
+   * as "start a new one" and the running sandboxes are all in sight, which
+   * is what picking one of them is usually about.
+   *
+   * `combined`: everything in the one dropdown, running sandboxes and
+   * environments alike, under their headings.
+   */
+  sandboxLayout?: 'separated' | 'combined';
   /**
    * Additional actions items to be placed at the top of the picker
    */
@@ -169,6 +207,7 @@ export function CodeSandboxPicker(
     multiServiceManager,
     onTransferChange,
     postActions,
+    sandboxLayout = 'separated',
     preActions,
     preference,
     sessionContext,
@@ -206,6 +245,211 @@ export function CodeSandboxPicker(
       variant,
     ),
   );
+  /*
+   * The same choices the radio column lists, as options of the dropdown.
+   *
+   * Keyed the way the radio column keys its rows — where the sandbox runs
+   * and which one it is — because a kernel already running and an
+   * environment to start one in are told apart by nothing else: two
+   * sandboxes of one environment share a name.
+   */
+  const dropdownDescs = useMemo(() => {
+    const byKey = new Map<string, IDatalayerCodeSandboxDesc>();
+    Object.values(groupedRuntimeDescs ?? {}).forEach(descs =>
+      descs.forEach(desc => byKey.set(codeSandboxDescKey(desc), desc)),
+    );
+    return byKey;
+  }, [groupedRuntimeDescs]);
+  const dropdownOptions = useMemo(
+    (): ICodeSandboxEnvironmentOption[] =>
+      Object.entries(groupedRuntimeDescs ?? {}).flatMap(([group, descs]) =>
+        descs.map(desc => ({
+          key: codeSandboxDescKey(desc),
+          title: desc.displayName ?? desc.name,
+          name: desc.name,
+          providerTitle: desc.provider
+            ? codeSandboxVariantTitle(desc.provider)
+            : undefined,
+          location: desc.location,
+          burningRate: desc.burningRate,
+          gpu: desc.gpu,
+          group,
+        })),
+      ),
+    [groupedRuntimeDescs],
+  );
+  /**
+   * The sandboxes as a column of radio buttons, group by group.
+   *
+   * Shared by the two layouts that show one: the whole list in the `radio`
+   * display, and the sandboxes that ALREADY RUN in the separated dropdown
+   * display, where the dropdown is left to the environments a new one is
+   * started in.
+   */
+  /*
+   * A sandbox that already runs is told from an environment by its KERNEL:
+   * a running one has one, an environment to start one in has none. Read
+   * from the data rather than from the heading, which is translated.
+   */
+  const runningEntries = useMemo(
+    (): [string, IDatalayerCodeSandboxDesc[]][] =>
+      Object.entries(groupedRuntimeDescs ?? {})
+        .map(
+          ([group, descs]): [string, IDatalayerCodeSandboxDesc[]] => [
+            group,
+            descs.filter(isRunningSandbox),
+          ],
+        )
+        .filter(([, descs]) => descs.length > 0),
+    [groupedRuntimeDescs],
+  );
+  const environmentOnlyOptions = useMemo(
+    () =>
+      dropdownOptions.filter(option => {
+        const desc = dropdownDescs.get(option.key);
+        return !desc || !isRunningSandbox(desc);
+      }),
+    [dropdownDescs, dropdownOptions],
+  );
+
+  const radioSections = (
+    entries: [string, IDatalayerCodeSandboxDesc[]][],
+  ): JSX.Element => (
+            <RadioGroup name="kernel-options" aria-labelledby="kernel-options">
+              {entries.map(
+                ([group, runtimeDescs]) => (
+                  <Box key={group}>
+                    <Box
+                      as="h4"
+                      sx={{
+                        /*
+                         * The type of a form label, not of a heading.
+                         *
+                         * "Assign an existing Code Sandbox" and "Assign a
+                         * new Code Sandbox" name the two ways of answering
+                         * one question, and the second is the label of the
+                         * dropdown; set in the larger, heavier type of an
+                         * `h4`, the first read as a section above it rather
+                         * than as its pair. The values are the ones Primer
+                         * gives `FormControl.Label` — taken as the variables
+                         * it resolves rather than through the Primer scale,
+                         * whose `semibold` the JupyterLab theme redefines.
+                         */
+                        margin: 0,
+                        marginBottom: 2,
+                        color: 'fg.default',
+                        fontSize: 'var(--text-body-size-medium, 0.875rem)',
+                        fontWeight: 'var(--base-text-weight-semibold, 600)',
+                      }}
+                    >
+                      {group}
+                    </Box>
+                    {runtimeDescs.map(k => {
+                      return (
+                        // A kernel identifies a runtime that already runs; an
+                        // environment to start one in has none, and is named
+                        // by where it runs and what it runs.
+                        <Box
+                          key={`${k.location}:${k.kernelId ?? k.name}`}
+                          title={k.name}
+                        >
+                          <FormControl>
+                            <Radio
+                              value={k.kernelId!}
+                              onChange={() => {
+                                setRuntimeDesc(k);
+                              }}
+                              checked={
+                                (k.location === runtimeDesc?.location ||
+                                  (isRuntimeRemote(k.location) &&
+                                    isRuntimeRemote(
+                                      runtimeDesc?.location ?? 'local',
+                                    ))) &&
+                                (k.kernelId ?? k.name) ===
+                                  (runtimeDesc?.kernelId ?? runtimeDesc?.name)
+                              }
+                            />
+                            <FormControl.Label>
+                              <Box display="flex" sx={{ alignItems: 'baseline' }}>
+                                <Box>{k.displayName}</Box>
+                                {/*
+                                  The identifier of the kernel beside the name:
+                                  two sandboxes of the same environment read
+                                  alike, and this is what tells them apart.
+                                  Quieter than the name, which is what is being
+                                  chosen.
+                                */}
+                                {k.kernelId && (
+                                  <Text
+                                    sx={{
+                                      ml: 2,
+                                      fontSize: 0,
+                                      color: 'fg.muted',
+                                      fontFamily: 'mono'
+                                    }}
+                                    title={k.kernelId}
+                                  >
+                                    {k.kernelId.slice(0, 8)}
+                                  </Text>
+                                )}
+                                {k.kernelId && k.location === 'remote' && (
+                                  <Box ml={3} mt={1}>
+                                    <CreditsIndicator
+                                      key="credits-indicator"
+                                      kernelId={k.kernelId}
+                                      serviceManager={
+                                        multiServiceManager.remote!
+                                      }
+                                    />
+                                  </Box>
+                                )}
+                              </Box>
+                            </FormControl.Label>
+                            <FormControl.Caption>
+                              <LabelGroup sx={{ marginTop: 1 }}>
+                                <Label variant="secondary">{k.name}</Label>
+                                {(k as IDatalayerCodeSandboxDesc).provider && (
+                                  <Label variant="accent" sx={{ marginLeft: 1 }}>
+                                    {codeSandboxVariantTitle(
+                                      (k as IDatalayerCodeSandboxDesc).provider!,
+                                    )}
+                                  </Label>
+                                )}
+                                <Label
+                                  variant="secondary"
+                                  sx={{ marginLeft: 1 }}
+                                >
+                                  {k.location}
+                                </Label>
+                                {k.burningRate && (
+                                  <Label
+                                    variant="sponsors"
+                                    sx={{ marginLeft: 1 }}
+                                  >
+                                    {k.burningRate} credits/second
+                                  </Label>
+                                )}
+                                {k.gpu && (
+                                  <Label
+                                    variant="success"
+                                    sx={{ marginLeft: 1 }}
+                                  >
+                                    GPU
+                                  </Label>
+                                )}
+                              </LabelGroup>
+                            </FormControl.Caption>
+                          </FormControl>
+                          <ActionList.Divider />
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                ),
+              )}
+            </RadioGroup>
+  );
+
   const trans = useMemo(
     () => (translator ?? nullTranslator).load('jupyterlab'),
     [translator],
@@ -359,11 +603,30 @@ export function CodeSandboxPicker(
             });
           }
         }
+      } else if (display === 'dropdown') {
+        /*
+         * Nothing assigned: the FIRST environment stands as the choice.
+         *
+         * A dropdown that opens on "Select an environment" reads as a
+         * question already answered — the control looks filled — and the
+         * dialog assigns nothing when it is accepted. A column of radio
+         * buttons shows its emptiness plainly and is left alone. The list
+         * must be settled first, or the choice would land on a local
+         * kernelspec and move when the remote environments arrive.
+         */
+        if (!remoteModelsReady) {
+          return;
+        }
+        const first = Object.values(groupedRuntimeDescs).flat()[0];
+        if (first) {
+          setRuntimeDesc(first);
+        }
       }
     }
     setDefaultSet(true);
   }, [
     defaultSet,
+    display,
     groupedRuntimeDescs,
     remoteModelsReady,
     sessionContext,
@@ -669,124 +932,56 @@ export function CodeSandboxPicker(
             </ActionList>
           </ActionMenu.Overlay>
         </ActionMenu>
+      ) : display === 'dropdown' ? (
+        /*
+         * Section for the dropdown display.
+         *
+         * The same choices as the radio column, in the control the launcher
+         * uses — one question asked one way. A list of nine environments is
+         * nine rows of radio buttons before anything else on the dialog can
+         * be read; closed, it is one line.
+         */
+        <>
+          {defaultSet && sandboxLayout === 'separated' &&
+            runningEntries.length > 0 &&
+            radioSections(runningEntries)}
+          {defaultSet && (
+            // Room below: the controls of a new sandbox follow, and the
+            // toggle of the user storage sat against the dropdown.
+            <FormControl sx={{ marginBottom: 4 }}>
+              <FormControl.Label>
+                {sandboxLayout === 'separated'
+                  ? 'Assign a new Code Sandbox'
+                  : 'Environment'}
+              </FormControl.Label>
+              <CodeSandboxEnvironmentSelect
+                disabled={disabled}
+                options={
+                  sandboxLayout === 'separated'
+                    ? environmentOnlyOptions
+                    : dropdownOptions
+                }
+                selectedKey={
+                  runtimeDesc ? codeSandboxDescKey(runtimeDesc) : undefined
+                }
+                onSelect={key => {
+                  const chosen = dropdownDescs.get(key);
+                  if (chosen) {
+                    setRuntimeDesc(chosen);
+                  }
+                }}
+              />
+            </FormControl>
+          )}
+          {!!postActions && <>{postActions}</>}
+        </>
       ) : (
         /*
          * Section for Radio display.
          */
         <>
-          {defaultSet && (
-            <RadioGroup name="kernel-options" aria-labelledby="kernel-options">
-              {Object.entries(groupedRuntimeDescs ?? {}).map(
-                ([group, runtimeDescs]) => (
-                  <Box key={group}>
-                    <Box as="h4" style={{ marginTop: 0 }}>
-                      {group}
-                    </Box>
-                    {runtimeDescs.map(k => {
-                      return (
-                        // A kernel identifies a runtime that already runs; an
-                        // environment to start one in has none, and is named
-                        // by where it runs and what it runs.
-                        <Box
-                          key={`${k.location}:${k.kernelId ?? k.name}`}
-                          title={k.name}
-                        >
-                          <FormControl>
-                            <Radio
-                              value={k.kernelId!}
-                              onChange={() => {
-                                setRuntimeDesc(k);
-                              }}
-                              checked={
-                                (k.location === runtimeDesc?.location ||
-                                  (isRuntimeRemote(k.location) &&
-                                    isRuntimeRemote(
-                                      runtimeDesc?.location ?? 'local',
-                                    ))) &&
-                                (k.kernelId ?? k.name) ===
-                                  (runtimeDesc?.kernelId ?? runtimeDesc?.name)
-                              }
-                            />
-                            <FormControl.Label>
-                              <Box display="flex" sx={{ alignItems: 'baseline' }}>
-                                <Box>{k.displayName}</Box>
-                                {/*
-                                  The identifier of the kernel beside the name:
-                                  two sandboxes of the same environment read
-                                  alike, and this is what tells them apart.
-                                  Quieter than the name, which is what is being
-                                  chosen.
-                                */}
-                                {k.kernelId && (
-                                  <Text
-                                    sx={{
-                                      ml: 2,
-                                      fontSize: 0,
-                                      color: 'fg.muted',
-                                      fontFamily: 'mono'
-                                    }}
-                                    title={k.kernelId}
-                                  >
-                                    {k.kernelId.slice(0, 8)}
-                                  </Text>
-                                )}
-                                {k.kernelId && k.location === 'remote' && (
-                                  <Box ml={3} mt={1}>
-                                    <CreditsIndicator
-                                      key="credits-indicator"
-                                      kernelId={k.kernelId}
-                                      serviceManager={
-                                        multiServiceManager.remote!
-                                      }
-                                    />
-                                  </Box>
-                                )}
-                              </Box>
-                            </FormControl.Label>
-                            <FormControl.Caption>
-                              <LabelGroup sx={{ marginTop: 1 }}>
-                                <Label variant="secondary">{k.name}</Label>
-                                {(k as IDatalayerCodeSandboxDesc).provider && (
-                                  <Label variant="accent" sx={{ marginLeft: 1 }}>
-                                    {codeSandboxVariantTitle(
-                                      (k as IDatalayerCodeSandboxDesc).provider!,
-                                    )}
-                                  </Label>
-                                )}
-                                <Label
-                                  variant="secondary"
-                                  sx={{ marginLeft: 1 }}
-                                >
-                                  {k.location}
-                                </Label>
-                                {k.burningRate && (
-                                  <Label
-                                    variant="sponsors"
-                                    sx={{ marginLeft: 1 }}
-                                  >
-                                    {k.burningRate} credits/second
-                                  </Label>
-                                )}
-                                {k.gpu && (
-                                  <Label
-                                    variant="success"
-                                    sx={{ marginLeft: 1 }}
-                                  >
-                                    GPU
-                                  </Label>
-                                )}
-                              </LabelGroup>
-                            </FormControl.Caption>
-                          </FormControl>
-                          <ActionList.Divider />
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                ),
-              )}
-            </RadioGroup>
-          )}
+          {defaultSet &&
+            radioSections(Object.entries(groupedRuntimeDescs ?? {}))}
           {!!postActions && <>{postActions}</>}
         </>
       )}

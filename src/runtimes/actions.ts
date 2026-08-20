@@ -49,14 +49,26 @@ export async function createRuntime(
   options: IRuntimeOptions,
 ): Promise<IRuntimePod> {
   const { externalToken, token } = iamStore.getState();
+  /*
+   * A limit is required; ZERO is one of the answers.
+   *
+   * The environments of an external provider — Kaggle, Modal — burn no
+   * credits of the platform: their sandbox runs on the account of the user,
+   * at their provider, and the platform only records it. Their burning rate
+   * is `0`, so the limit computed for them is `0` too, and refusing that
+   * threw here — before any request was made, which is why the failure
+   * showed as a sandbox that could not be created with nothing in the
+   * network log to explain it. What is still refused is a limit that is not
+   * a number at all, or one below zero.
+   */
   if (
     typeof options.creditsLimit !== 'number' ||
     !Number.isFinite(options.creditsLimit) ||
-    options.creditsLimit <= 0
+    options.creditsLimit < 0
   ) {
     throw new Error(
       `Invalid runtime creditsLimit for environment ${options.environmentName}. ` +
-        'A positive number is required.',
+        'A number of zero or more is required.',
     );
   }
   const body: Record<string, unknown> = {

@@ -7,11 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useIsMounted } from 'usehooks-ts';
 import type { IMarkdownParser, IRenderMime } from '@jupyterlab/rendermime';
 import {
-  ActionList,
-  ActionMenu,
   Button,
   FormControl,
-  Label,
   Spinner,
   Text,
   TextInput,
@@ -20,7 +17,6 @@ import {
 import { Dialog } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
 import { useJupyterReactStore } from '@datalayer/jupyter-react';
-import { USAGE_ROUTE } from '@datalayer/core/lib/routes';
 import { useNavigate } from '@datalayer/core/lib/hooks';
 import { NO_RUNTIME_AVAILABLE_LABEL } from '@datalayer/core/lib/i18n';
 import type { IRemoteServicesManager } from '../../runtimes';
@@ -32,6 +28,10 @@ import {
   codeSandboxVariantOf,
   codeSandboxVariantTitle,
 } from '../../models/CodeSandboxVariant';
+import {
+  CodeSandboxEnvironmentSelect,
+  type ICodeSandboxEnvironmentOption,
+} from './CodeSandboxEnvironmentSelect';
 import {
   getCodeSandboxGivenName,
   listCodeSandboxGivenNames,
@@ -131,6 +131,17 @@ export interface ICodeSandboxLauncherProps {
    * Upgrade subscription URL
    */
   upgradeSubscription?: string;
+  /**
+   * Where "Add credits" navigates.
+   *
+   * ABSOLUTE, always: a relative route resolves against the CURRENT
+   * location — opened from `/…/code-sandboxes`, `usage` landed on
+   * `code-sandboxes/usage` and a `:sandboxId` route swallowed it as a
+   * sandbox called "usage". The default is the web application's `/plans`
+   * (which redirects to the plan overview); a nested surface passes its
+   * own (e.g. `/datalayer/jupyter-kernels/usage/plans`).
+   */
+  usageRoute?: string;
 
   /**
    * Optional submit button label override.
@@ -152,6 +163,7 @@ export function CodeSandboxLauncher(
     markdownParser,
     sanitizer,
     upgradeSubscription,
+    usageRoute = '/plans',
     submitLabel,
     startRuntime = true,
   } = props;
@@ -206,6 +218,35 @@ export function CodeSandboxLauncher(
       }));
   }, [jupyterAvailable]);
   const LOCAL_PREFIX = 'local:';
+  /*
+   * The choices of the dropdown: what the platform and the external
+   * providers offer, then the kernelspecs of this Jupyter Server. Each says
+   * whose machine it is — two entries called "GPU" are told apart by nothing
+   * else.
+   */
+  const environmentOptions = useMemo(
+    (): ICodeSandboxEnvironmentOption[] => [
+      ...environments.map(spec => ({
+        key: spec.name,
+        title: spec.title || spec.name,
+        name: spec.name,
+        providerTitle: codeSandboxVariantTitle(
+          codeSandboxVariantOf((spec as any)?.owner),
+        ),
+        burningRate: (spec as any).burning_rate,
+      })),
+      ...localSpecs.map(spec => ({
+        key: `${LOCAL_PREFIX}${spec.name}`,
+        title: spec.title || spec.name,
+        name: spec.name,
+        providerTitle: codeSandboxVariantTitle(
+          CodeSandboxVariant.JupyterServer,
+        ),
+      })),
+    ],
+    [environments, localSpecs],
+  );
+
   const localSpecOf = (value: string) =>
     value.startsWith(LOCAL_PREFIX)
       ? localSpecs.find(spec => spec.name === value.slice(LOCAL_PREFIX.length))
@@ -590,76 +631,17 @@ export function CodeSandboxLauncher(
             environment and its provider read as LABELS, which no <option>
             can carry.
           */}
-          <ActionMenu>
-            <ActionMenu.Button
-              block
-              disabled={
-                !!kernelSnapshot?.environment || environments.length === 0
-              }
-              sx={{ '& > span': { justifyContent: 'space-between' } }}
-            >
-              {(() => {
-                const local = localSpecOf(selection);
-                const selected =
-                  local ?? environments.find(env => env.name === selection);
-                const provider = local
-                  ? CodeSandboxVariant.JupyterServer
-                  : codeSandboxVariantOf((selected as any)?.owner);
-                return selected ? (
-                  <Box
-                    as="span"
-                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
-                  >
-                    <Text>{selected.title || selected.name}</Text>
-                    <Label size="small">{selected.name}</Label>
-                    <Label size="small" variant="accent">
-                      {codeSandboxVariantTitle(provider)}
-                    </Label>
-                  </Box>
-                ) : (
-                  'Select an environment'
-                );
-              })()}
-            </ActionMenu.Button>
-            <ActionMenu.Overlay width="large">
-              <ActionList selectionVariant="single">
-                {environments.map(spec => (
-                  <ActionList.Item
-                    key={spec.name}
-                    selected={selection === spec.name}
-                    onSelect={() => handleSelectionChange(spec.name)}
-                  >
-                    {spec.title || spec.name}
-                    <ActionList.TrailingVisual>
-                      <Label size="small">{spec.name}</Label>{' '}
-                      <Label size="small" variant="accent">
-                        {codeSandboxVariantTitle(
-                          codeSandboxVariantOf((spec as any)?.owner),
-                        )}
-                      </Label>
-                    </ActionList.TrailingVisual>
-                  </ActionList.Item>
-                ))}
-                {localSpecs.map(spec => (
-                  <ActionList.Item
-                    key={`${LOCAL_PREFIX}${spec.name}`}
-                    selected={selection === `${LOCAL_PREFIX}${spec.name}`}
-                    onSelect={() =>
-                      handleSelectionChange(`${LOCAL_PREFIX}${spec.name}`)
-                    }
-                  >
-                    {spec.title || spec.name}
-                    <ActionList.TrailingVisual>
-                      <Label size="small">{spec.name}</Label>{' '}
-                      <Label size="small" variant="accent">
-                        {codeSandboxVariantTitle(CodeSandboxVariant.JupyterServer)}
-                      </Label>
-                    </ActionList.TrailingVisual>
-                  </ActionList.Item>
-                ))}
-              </ActionList>
-            </ActionMenu.Overlay>
-          </ActionMenu>
+          {/*
+            The one environment control of the application, shared with the
+            picker: the trigger reads like the rows, name left and labels
+            right, and neither place can drift from the other.
+          */}
+          <CodeSandboxEnvironmentSelect
+            disabled={!!kernelSnapshot?.environment || environments.length === 0}
+            options={environmentOptions}
+            selectedKey={selection}
+            onSelect={handleSelectionChange}
+          />
           <FormControl.Caption>
             <>
               {markdownParser ? (
@@ -721,7 +703,7 @@ export function CodeSandboxLauncher(
           addCredits={
             navigate
               ? () => {
-                  navigate!(USAGE_ROUTE);
+                  navigate!(usageRoute);
                 }
               : undefined
           }

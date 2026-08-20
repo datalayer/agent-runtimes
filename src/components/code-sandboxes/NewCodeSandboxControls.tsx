@@ -161,20 +161,6 @@ export function NewCodeSandboxControls(
   const { configuration } = useCoreStore();
   return (
     <>
-      {onGivenNameChange && (
-        <FormControl disabled={disabled}>
-          <FormControl.Label>Given Name</FormControl.Label>
-          <TextInput
-            block
-            name="given-name"
-            value={givenName ?? ''}
-            onChange={event => onGivenNameChange(event.target.value)}
-          />
-          <FormControl.Caption>
-            What this sandbox is called, wherever it is listed.
-          </FormControl.Caption>
-        </FormControl>
-      )}
       {withReservation && (
         <CodeSandboxReservationControl
           addCredits={addCredits}
@@ -209,6 +195,26 @@ export function NewCodeSandboxControls(
             }}
             aria-labelledby="new-sandbox-user-storage-label"
           />
+        </FormControl>
+      )}
+      {/*
+        Last of the controls, as in the launcher, which renders its own name
+        field after this block. What the sandbox will be CALLED is the least
+        of the choices — the environment and the time reserved decide what it
+        costs — and asking it first pushed them below the fold of the dialog.
+      */}
+      {onGivenNameChange && (
+        <FormControl disabled={disabled}>
+          <FormControl.Label>Given Name</FormControl.Label>
+          <TextInput
+            block
+            name="given-name"
+            value={givenName ?? ''}
+            onChange={event => onGivenNameChange(event.target.value)}
+          />
+          <FormControl.Caption>
+            What this sandbox is called, wherever it is listed.
+          </FormControl.Caption>
         </FormControl>
       )}
     </>
