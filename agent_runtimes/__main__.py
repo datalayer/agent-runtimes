@@ -81,6 +81,7 @@ from agent_runtimes.commands.pools import app as pools_app
 from agent_runtimes.commands.ray import app as ray_app
 from agent_runtimes.commands.memory import app as memory_app
 from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
+from agent_runtimes.commands.sandboxes import app as sandboxes_app
 from agent_runtimes.commands.schedules import app as schedules_app
 from agent_runtimes.commands.serve import (
     LogLevel,
@@ -429,6 +430,7 @@ app.add_typer(agents_app)
 app.add_typer(agent_nodes_app)
 app.add_typer(benchmarks_app)
 app.add_typer(checkpoints_app)
+app.add_typer(sandboxes_app)
 app.add_typer(console_app)
 app.add_typer(memory_app)
 app.add_typer(envs_app)

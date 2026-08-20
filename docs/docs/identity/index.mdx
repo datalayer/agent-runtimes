@@ -183,7 +183,7 @@ For the Agent Runtimes UI identity features, use the **API Token** method descri
    ```json
    {"username":"your-username","key":"your-api-key"}
    ```
-5. The `key` value is your `KAGGLE_TOKEN`
+5. The `key` value is your `KAGGLE_API_TOKEN`
 
 :::warning Token Security
 - Never commit your token to version control
@@ -235,12 +235,12 @@ When you send a message to the agent:
 2. **Tokens sent in request body** — Included as `identities` array in the AG-UI/Vercel AI request
 3. **Backend extracts identities** — The transport layer reads `body.identities`
 4. **Context variable set** — `set_request_identities()` stores tokens in a `contextvars.ContextVar`
-5. **Tools access tokens** — `get_identity_env()` returns `{"KAGGLE_TOKEN": "your-key"}`
+5. **Tools access tokens** — `get_identity_env()` returns `{"KAGGLE_API_TOKEN": "your-key"}`
 
 ```python
 # Inside your skill or codemode execution:
 import os
-kaggle_token = os.environ.get("KAGGLE_TOKEN")  # Available during execution
+kaggle_token = os.environ.get("KAGGLE_API_TOKEN")  # Available during execution
 ```
 
 #### Step 4: Programmatic Configuration (Optional)
@@ -249,7 +249,7 @@ For build-time configuration, set the token as an environment variable:
 
 ```bash
 # Frontend .env
-VITE_KAGGLE_TOKEN=your-api-key-from-kaggle-json
+VITE_KAGGLE_API_TOKEN=your-api-key-from-kaggle-json
 ```
 
 ```tsx
@@ -260,7 +260,7 @@ import { AgentRuntimeFormExample } from '@datalayer/agent-runtimes';
   identityProviders={{
     kaggle: {
       type: 'token',
-      token: import.meta.env.VITE_KAGGLE_TOKEN,
+      token: import.meta.env.VITE_KAGGLE_API_TOKEN,
       displayName: 'Kaggle',
     },
   }}
@@ -271,7 +271,7 @@ For the backend (Python):
 
 ```bash
 # Backend .env
-KAGGLE_TOKEN=your-api-key-from-kaggle-json
+KAGGLE_API_TOKEN=your-api-key-from-kaggle-json
 ```
 
 #### Kaggle MCP Server Configuration
@@ -288,7 +288,7 @@ For MCP tools, configure with token authentication:
         "mcp-remote",
         "https://www.kaggle.com/mcp",
         "--header",
-        "Authorization: Bearer ${KAGGLE_TOKEN}"
+        "Authorization: Bearer ${KAGGLE_API_TOKEN}"
       ]
     }
   }

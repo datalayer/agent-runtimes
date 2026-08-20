@@ -7,9 +7,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useIsMounted } from 'usehooks-ts';
 import type { IMarkdownParser, IRenderMime } from '@jupyterlab/rendermime';
 import {
+  ActionList,
+  ActionMenu,
   Button,
   FormControl,
-  Select,
+  Label,
   Spinner,
   Text,
   TextInput,
@@ -17,16 +19,19 @@ import {
 } from '@primer/react';
 import { Dialog } from '@primer/react/experimental';
 import { Box } from '@datalayer/primer-addons';
-import {
-  loadJupyterConfig,
-  useJupyterReactStore,
-} from '@datalayer/jupyter-react';
+import { useJupyterReactStore } from '@datalayer/jupyter-react';
 import { USAGE_ROUTE } from '@datalayer/core/lib/routes';
 import { useNavigate } from '@datalayer/core/lib/hooks';
 import { NO_RUNTIME_AVAILABLE_LABEL } from '@datalayer/core/lib/i18n';
 import type { IRemoteServicesManager } from '../../runtimes';
 import type { RunResponseError } from '@datalayer/core/lib/api/DatalayerApi';
 import type { ICodeSandboxSnapshot, IRuntimeDesc } from '../../models';
+import { isCodeSandboxProviderAvailable } from './codeSandboxProviders';
+import {
+  CodeSandboxVariant,
+  codeSandboxVariantOf,
+  codeSandboxVariantTitle,
+} from '../../models/CodeSandboxVariant';
 import {
   getCodeSandboxGivenName,
   listCodeSandboxGivenNames,
@@ -39,6 +44,7 @@ import {
   useCoreStore,
   useIAMStore,
 } from '../../state/substates';
+import { createRuntime as createRuntimeRecord } from '../../runtimes/actions';
 import { createNotebook, sleep } from '@datalayer/core/lib/utils';
 import { Markdown } from '@datalayer/core/lib/components/display';
 import { Timer } from '@datalayer/core/lib/components/progress';
@@ -155,14 +161,19 @@ export function CodeSandboxLauncher(
 
   const user = iamStore.getState().user;
   /*
-   * Inside JupyterLab, only the sandboxes of this Jupyter Server are offered.
+   * Where a sandbox may be launched: every provider that can be reached.
    *
-   * Same rule as the picker: the environments of the platform belong to the
-   * flows of the web application, and mixing them into a launcher opened from
-   * JupyterLab made one button start two different kinds of thing.
+   * The environments of the platform are offered wherever the account can
+   * reach it — withholding them inside JupyterLab left `ai-agents-env` off
+   * the list and no way to launch a remote sandbox from there. The Jupyter
+   * Server is the provider that depends on where this runs, and it is gated
+   * below.
    */
-  const insideJupyterLab = loadJupyterConfig().insideJupyterLab;
-  const environments = insideJupyterLab ? [] : manager.environments.get();
+  const jupyterAvailable = isCodeSandboxProviderAvailable(
+    'local',
+    runtimesStore.getState().multiServiceManager
+  );
+  const environments = manager.environments.get();
   /*
    * The sandboxes of this Jupyter Server, offered beside those of the platform.
    *
@@ -180,7 +191,7 @@ export function CodeSandboxLauncher(
      * of its own, so a kernelspec of one is not something it can start — the
      * entries read as choices that lead nowhere.
      */
-    if (!insideJupyterLab) {
+    if (!jupyterAvailable) {
       return [];
     }
     const specs =
@@ -193,7 +204,7 @@ export function CodeSandboxLauncher(
         title: spec!.display_name,
         language: spec!.language,
       }));
-  }, [insideJupyterLab]);
+  }, [jupyterAvailable]);
   const LOCAL_PREFIX = 'local:';
   const localSpecOf = (value: string) =>
     value.startsWith(LOCAL_PREFIX)
@@ -285,15 +296,12 @@ export function CodeSandboxLauncher(
   const effectiveMaxMinutes = allowance.effectiveMaxMinutes;
   const outOfCredits = shouldStartRuntime && allowance.outOfCredits;
   const handleSelectionChange = useCallback(
-    (e: any) => {
-      const selection = (e.target as HTMLSelectElement).value;
-      setSelection(selection);
+    (value: string) => {
+      setSelection(value);
       if (!hasCustomRuntimeName) {
-        const local = localSpecOf(selection);
+        const local = localSpecOf(value);
         setRuntimeName(
-          givenNameFor(
-            local ?? environments.find(env => env.name === selection),
-          ),
+          givenNameFor(local ?? environments.find(env => env.name === value)),
         );
       }
     },
@@ -357,7 +365,38 @@ export function CodeSandboxLauncher(
         desc.params['capabilities'] = ['user_storage'];
       }
       let success = true;
-      if (shouldStartRuntime) {
+      const provider = codeSandboxVariantOf((spec as any)?.owner);
+      if (shouldStartRuntime && provider !== CodeSandboxVariant.Datalayer) {
+        /*
+         * An EXTERNAL environment — Kaggle, Modal. The platform RECORDS such
+         * a sandbox rather than running it: the provider runs it under the
+         * user's own credentials, and what comes back is a record with no
+         * pod, no ingress and no kernel. Waiting for one, as the branch
+         * below does, would time out and then delete the record as broken.
+         */
+        success = false;
+        try {
+          await createRuntimeRecord({
+            environmentName: selection,
+            type: 'notebook',
+            givenName: runtimeName,
+            creditsLimit,
+          });
+          await manager.runtimesManager.refresh();
+          success = true;
+        } catch (error) {
+          console.error('Failed to record the external sandbox.', error);
+          setFlashLevel('danger');
+          setError(
+            <Text>
+              The {codeSandboxVariantTitle(provider)} sandbox could not be
+              created.
+            </Text>,
+          );
+        } finally {
+          setWaitingForRuntime(false);
+        }
+      } else if (shouldStartRuntime) {
         success = false;
         let availableTrial = 1;
         let retryDelay = NOT_AVAILABLE_INIT_RETRY;
@@ -542,37 +581,85 @@ export function CodeSandboxLauncher(
           disabled={!!kernelSnapshot?.environment || environments.length === 0}
         >
           <FormControl.Label>Environment</FormControl.Label>
-          <Select
-            name="environment"
-            disabled={
-              !!kernelSnapshot?.environment || environments.length === 0
-            }
-            value={selection}
-            onChange={handleSelectionChange}
-            block
-          >
-            {environments.map(spec => (
-              <Select.Option key={spec.name} value={spec.name}>
-                {spec.name}
-                {spec.title && (
-                  <>
-                    {' - '}
-                    {spec.title as string}
-                  </>
-                )}
-              </Select.Option>
-            ))}
-            {localSpecs.map(spec => (
-              <Select.Option
-                key={`${LOCAL_PREFIX}${spec.name}`}
-                value={`${LOCAL_PREFIX}${spec.name}`}
-              >
-                {spec.name}
-                {spec.title && <>{` - ${spec.title}`}</>}
-                {' - Jupyter Server'}
-              </Select.Option>
-            ))}
-          </Select>
+          {/*
+            Every entry says whose machine it is: the environments of the
+            platform and of the external providers by their owner tag, the
+            kernelspecs of this server as the jupyter-server provider — one
+            rule, since two entries called "GPU" are told apart by nothing
+            else. An ActionMenu rather than a native select: the name of the
+            environment and its provider read as LABELS, which no <option>
+            can carry.
+          */}
+          <ActionMenu>
+            <ActionMenu.Button
+              block
+              disabled={
+                !!kernelSnapshot?.environment || environments.length === 0
+              }
+              sx={{ '& > span': { justifyContent: 'space-between' } }}
+            >
+              {(() => {
+                const local = localSpecOf(selection);
+                const selected =
+                  local ?? environments.find(env => env.name === selection);
+                const provider = local
+                  ? CodeSandboxVariant.JupyterServer
+                  : codeSandboxVariantOf((selected as any)?.owner);
+                return selected ? (
+                  <Box
+                    as="span"
+                    sx={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
+                  >
+                    <Text>{selected.title || selected.name}</Text>
+                    <Label size="small">{selected.name}</Label>
+                    <Label size="small" variant="accent">
+                      {codeSandboxVariantTitle(provider)}
+                    </Label>
+                  </Box>
+                ) : (
+                  'Select an environment'
+                );
+              })()}
+            </ActionMenu.Button>
+            <ActionMenu.Overlay width="large">
+              <ActionList selectionVariant="single">
+                {environments.map(spec => (
+                  <ActionList.Item
+                    key={spec.name}
+                    selected={selection === spec.name}
+                    onSelect={() => handleSelectionChange(spec.name)}
+                  >
+                    {spec.title || spec.name}
+                    <ActionList.TrailingVisual>
+                      <Label size="small">{spec.name}</Label>{' '}
+                      <Label size="small" variant="accent">
+                        {codeSandboxVariantTitle(
+                          codeSandboxVariantOf((spec as any)?.owner),
+                        )}
+                      </Label>
+                    </ActionList.TrailingVisual>
+                  </ActionList.Item>
+                ))}
+                {localSpecs.map(spec => (
+                  <ActionList.Item
+                    key={`${LOCAL_PREFIX}${spec.name}`}
+                    selected={selection === `${LOCAL_PREFIX}${spec.name}`}
+                    onSelect={() =>
+                      handleSelectionChange(`${LOCAL_PREFIX}${spec.name}`)
+                    }
+                  >
+                    {spec.title || spec.name}
+                    <ActionList.TrailingVisual>
+                      <Label size="small">{spec.name}</Label>{' '}
+                      <Label size="small" variant="accent">
+                        {codeSandboxVariantTitle(CodeSandboxVariant.JupyterServer)}
+                      </Label>
+                    </ActionList.TrailingVisual>
+                  </ActionList.Item>
+                ))}
+              </ActionList>
+            </ActionMenu.Overlay>
+          </ActionMenu>
           <FormControl.Caption>
             <>
               {markdownParser ? (

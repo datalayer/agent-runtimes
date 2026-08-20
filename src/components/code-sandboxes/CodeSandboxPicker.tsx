@@ -49,6 +49,7 @@ import {
   listCodeSandboxGivenNames,
   nextCodeSandboxGivenName,
 } from './CodeSandboxNames';
+import { codeSandboxVariantTitle } from '../../models/CodeSandboxVariant';
 import {
   creditsLimitFor,
   NewCodeSandboxControls,
@@ -631,6 +632,28 @@ export function CodeSandboxPicker(
                             )}
                           </ActionList.LeadingVisual>
                           {displayName + annotation.slice(0, 10)}
+                          {/*
+                            The provider, stated beside the environment: two
+                            entries called "GPU" are told apart by whose GPU
+                            it is — Datalayer's, Kaggle's, this server's.
+                          */}
+                          <ActionList.TrailingVisual>
+                            {candidateRuntimeDesc.name && (
+                              <Label size="small" variant="secondary">
+                                {candidateRuntimeDesc.name}
+                              </Label>
+                            )}{' '}
+                            {(candidateRuntimeDesc as IDatalayerCodeSandboxDesc)
+                              .provider && (
+                              <Label size="small" variant="accent">
+                                {codeSandboxVariantTitle(
+                                  (
+                                    candidateRuntimeDesc as IDatalayerCodeSandboxDesc
+                                  ).provider!,
+                                )}
+                              </Label>
+                            )}
+                          </ActionList.TrailingVisual>
                         </ActionList.Item>
                       );
                     })}
@@ -723,6 +746,13 @@ export function CodeSandboxPicker(
                             <FormControl.Caption>
                               <LabelGroup sx={{ marginTop: 1 }}>
                                 <Label variant="secondary">{k.name}</Label>
+                                {(k as IDatalayerCodeSandboxDesc).provider && (
+                                  <Label variant="accent" sx={{ marginLeft: 1 }}>
+                                    {codeSandboxVariantTitle(
+                                      (k as IDatalayerCodeSandboxDesc).provider!,
+                                    )}
+                                  </Label>
+                                )}
                                 <Label
                                   variant="secondary"
                                   sx={{ marginLeft: 1 }}

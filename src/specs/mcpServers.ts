@@ -184,13 +184,13 @@ export const KAGGLE_MCP_SERVER_0_0_1: MCPServer = {
     'mcp-remote',
     'https://www.kaggle.com/mcp',
     '--header',
-    'Authorization: Bearer ${KAGGLE_TOKEN}',
+    'Authorization: Bearer ${KAGGLE_API_TOKEN}',
   ],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
   tools: [],
-  requiredEnvVars: ['KAGGLE_TOKEN:0.0.1'],
+  requiredEnvVars: ['KAGGLE_API_TOKEN:0.0.1'],
 };
 
 export const ODOO_MCP_SERVER_0_0_1: MCPServer = {

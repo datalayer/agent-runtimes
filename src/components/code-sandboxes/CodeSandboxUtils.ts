@@ -10,8 +10,12 @@ import { IRuntimeLocation, IRuntimeDesc } from '../../models';
 
 const ASSIGN_NEW_RUNTIME_LABEL = 'Assign a new Code Sandbox';
 
-import { loadJupyterConfig } from '@datalayer/jupyter-react';
 import { ensureCodeSandboxGivenName } from './CodeSandboxNames';
+import { isCodeSandboxProviderAvailable } from './codeSandboxProviders';
+import {
+  CodeSandboxVariant,
+  codeSandboxVariantOf,
+} from '../../models/CodeSandboxVariant';
 
 const ASSIGN_EXISTING_REMOTE_RUNTIME_LABEL =
   'Assign an existing Remote Code Sandbox';
@@ -20,6 +24,8 @@ const ASSIGN_EXISTING_RUNTIME_LABEL = 'Assign an existing Code Sandbox';
 
 export type IDatalayerCodeSandboxDesc = IRuntimeDesc & {
   gpu?: string;
+  /** The provider the environment belongs to — see `CodeSandboxVariant`. */
+  provider?: CodeSandboxVariant;
 };
 
 /**
@@ -39,7 +45,21 @@ export function getGroupedCodeSandboxDescs(
   // identifier, the specification only names it. Only the environments to
   // start a new runtime in come from the specifications, and they wait.
   const specs = multiServiceManager.local.kernelspecs.specs;
-  const sessions = multiServiceManager.local.sessions.running();
+  /*
+   * The kernels of a Jupyter Server belong to the page that talks to one —
+   * inside JupyterLab. The web application's "local" manager points at
+   * whatever server its configuration names, and offering those kernels
+   * there lists sandboxes the user never started and cannot reason about.
+   * One rule for the whole file: the provider registry answers it, for the
+   * existing sandboxes here exactly as for the new-sandbox group below.
+   */
+  const jupyterProviderAvailable = isCodeSandboxProviderAvailable(
+    'local',
+    multiServiceManager
+  );
+  const sessions = jupyterProviderAvailable
+    ? multiServiceManager.local.sessions.running()
+    : [];
   const kernels: { [g: string]: IDatalayerCodeSandboxDesc[] } = {};
   // Add the sessions.
   const runningSessions = Array.from(sessions)
@@ -82,7 +102,9 @@ export function getGroupedCodeSandboxDescs(
     .filter(filterKernels);
   // Add the running runtimes.
   const listedAsSession = runningSessions.map(s => s.kernelId);
-  const runningKernels = Array.from(multiServiceManager.local.kernels.running())
+  const runningKernels = Array.from(
+    jupyterProviderAvailable ? multiServiceManager.local.kernels.running() : []
+  )
     .filter(k => !listedAsSession.includes(k.id))
     .map(k => {
       const spec = specs?.kernelspecs[k.name];
@@ -161,7 +183,16 @@ export function getGroupedCodeSandboxDescs(
     kernels[key] = runningSessions;
   }
   // Environments.
-  const environments = Object.values(specs?.kernelspecs ?? {})
+  /*
+   * The sandboxes of a Jupyter Server, which is a provider like the others.
+   *
+   * It is the one provider that only exists where the page is talking to such
+   * a server: inside JupyterLab. Elsewhere its kernels are somebody else's,
+   * and offering them promises what cannot be reached.
+   */
+  const environments = Object.values(
+    jupyterProviderAvailable ? (specs?.kernelspecs ?? {}) : {}
+  )
     .filter(spec => !!spec)
     .map(
       spec =>
@@ -171,21 +202,21 @@ export function getGroupedCodeSandboxDescs(
           displayName: spec!.display_name,
           gpu: spec!.resources?.['nvidia.com/gpu'],
           location: 'local' as IRuntimeLocation,
+          provider: CodeSandboxVariant.JupyterServer,
         }) as IDatalayerCodeSandboxDesc,
     )
     .filter(filterKernels);
   /*
-   * Inside JupyterLab, only the sandboxes of this Jupyter Server are offered.
+   * Every provider that can be used from here, and only those.
    *
-   * The application is running against a server of its own; a sandbox of the
-   * platform is started elsewhere, costs credits and belongs to the flows of
-   * the web application. Offering both here made "new sandbox" mean two very
-   * different things a click apart.
+   * A provider is a place a sandbox runs — the platform, this Jupyter Server,
+   * the browser — and each is offered when it is REACHABLE, not according to
+   * which application is asking. Withholding the platform inside JupyterLab
+   * took `ai-agents-env` off the list and left no way to launch a remote
+   * sandbox from there at all; the rule that was wanted is the other one, and
+   * it is stated where the Jupyter Server is read below.
    */
-  const insideJupyterLab = loadJupyterConfig().insideJupyterLab;
-  const remoteEnvironments = insideJupyterLab
-    ? []
-    : (multiServiceManager.remote?.environments.get() ?? []);
+  const remoteEnvironments = multiServiceManager.remote?.environments.get() ?? [];
   environments.push(
     ...remoteEnvironments
       .map(
@@ -197,6 +228,7 @@ export function getGroupedCodeSandboxDescs(
             location: 'remote' as IRuntimeLocation,
             gpu: spec!.resources?.['nvidia.com/gpu'],
             burningRate: spec!.burning_rate,
+            provider: codeSandboxVariantOf((spec as any)?.owner),
           }) satisfies IDatalayerCodeSandboxDesc,
       )
       .filter(filterKernels),

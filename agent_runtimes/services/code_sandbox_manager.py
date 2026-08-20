@@ -770,9 +770,9 @@ class CodeSandboxManager:
 
             if self._config.jupyter_url:
                 if CodeSandbox is None:
-                    from code_sandboxes.jupyter_sandbox import JupyterSandbox
+                    from code_sandboxes.jupyter_server_sandbox import JupyterServerSandbox
 
-                    return JupyterSandbox(
+                    return JupyterServerSandbox(
                         server_url=self._config.jupyter_url,
                         token=self._config.jupyter_token,
                     )
@@ -785,9 +785,9 @@ class CodeSandboxManager:
             # No external URL configured: let code_sandboxes start its own
             # local Jupyter server on a free port.
             if CodeSandbox is None:
-                from code_sandboxes.jupyter_sandbox import JupyterSandbox
+                from code_sandboxes.jupyter_server_sandbox import JupyterServerSandbox
 
-                return JupyterSandbox()
+                return JupyterServerSandbox()
             return CodeSandbox.create(variant="jupyter")
 
         else:

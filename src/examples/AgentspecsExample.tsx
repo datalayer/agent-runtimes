@@ -180,7 +180,7 @@ const GITHUB_CLIENT_ID =
 // Kaggle API token - set via environment variable
 // Get your token at: https://www.kaggle.com/settings/account (API section)
 // Download kaggle.json and use the "key" value
-const KAGGLE_TOKEN = import.meta.env.VITE_KAGGLE_TOKEN || '';
+const KAGGLE_API_TOKEN = import.meta.env.VITE_KAGGLE_API_TOKEN || '';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -462,11 +462,11 @@ const DEFAULT_IDENTITY_PROVIDERS: IdentityProvidersInput = {
         },
       }
     : {}),
-  ...(KAGGLE_TOKEN
+  ...(KAGGLE_API_TOKEN
     ? {
         kaggle: {
           type: 'token' as const,
-          token: KAGGLE_TOKEN,
+          token: KAGGLE_API_TOKEN,
           displayName: 'Kaggle',
           iconUrl: 'https://www.kaggle.com/static/images/favicon.ico',
         },

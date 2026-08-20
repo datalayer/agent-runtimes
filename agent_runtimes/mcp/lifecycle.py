@@ -387,7 +387,7 @@ class MCPLifecycleManager:
                     logger.debug(f"  Expanded config.env: {list(expanded_env.keys())}")
                     env.update(expanded_env)
 
-                # Expand environment variables in args (e.g., ${KAGGLE_TOKEN}).
+                # Expand environment variables in args (e.g., ${KAGGLE_API_TOKEN}).
                 # Use the combined env so args can reference extra_env values.
                 expanded_args = [
                     self._expand_env_vars(arg, lookup_env=env)

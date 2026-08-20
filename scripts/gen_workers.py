@@ -40,7 +40,7 @@ VERTICALS = {
         "emoji": "🧬", "icon": "beaker", "color": "#06B6D4",
         "mcp": ["huggingface:0.0.1", "kaggle:0.0.1"],
         "skills": ["text-summarizer:0.0.1", "pdf:0.0.1"],
-        "envvars": ["HF_TOKEN:0.0.1", "KAGGLE_TOKEN:0.0.1"],
+        "envvars": ["HF_TOKEN:0.0.1", "KAGGLE_API_TOKEN:0.0.1"],
     },
     "capital-markets": {
         "emoji": "📈", "icon": "graph", "color": "#3B82F6",

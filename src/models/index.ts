@@ -28,6 +28,7 @@ export * from './NotebookDTO';
 export * from './Page';
 export * from './PageTag';
 export * from './ProjectDTO';
+export * from './CodeSandboxVariant';
 export * from './Runtime';
 export * from './RuntimeDTO';
 export * from './Space';

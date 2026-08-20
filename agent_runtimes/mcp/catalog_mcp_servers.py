@@ -199,12 +199,12 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
         "mcp-remote",
         "https://www.kaggle.com/mcp",
         "--header",
-        "Authorization: Bearer ${KAGGLE_TOKEN}",
+        "Authorization: Bearer ${KAGGLE_API_TOKEN}",
     ],
     transport="stdio",
     enabled=True,
     tools=[],
-    required_env_vars=["KAGGLE_TOKEN:0.0.1"],
+    required_env_vars=["KAGGLE_API_TOKEN:0.0.1"],
 )
 
 ODOO_MCP_SERVER_0_0_1 = MCPServer(

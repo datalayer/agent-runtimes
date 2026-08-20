@@ -148,6 +148,7 @@ test = [
     "python-dotenv>=1.1.1",
     "types-requests>=2.32.4",
     "typing-extensions>=4.15.0",
+    "datalayer_reactor",
 ]
 
 [project.scripts]
@@ -155,6 +156,12 @@ datalayer-agents = "agent_runtimes.main:main"
 agent-runtimes = "agent_runtimes.main:main"
 loop = "agent_runtimes.main:main"
 l = "agent_runtimes.main:main"
+
+# The Datalayer CLI discovers its extensions through this group: installing
+# agent-runtimes is what makes `datalayer sandboxes` (and the other command
+# groups of this package) exist over there.
+[project.entry-points."datalayer.cli"]
+agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 
 [tool.hatch.metadata]
 allow-direct-references = true

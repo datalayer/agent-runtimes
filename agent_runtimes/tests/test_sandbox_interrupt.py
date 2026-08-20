@@ -148,16 +148,16 @@ class TestCodeSandboxManagerSidecarGuard:
 
         fake_package = types.ModuleType("code_sandboxes")
         fake_package.__path__ = []
-        fake_module = types.ModuleType("code_sandboxes.jupyter_sandbox")
+        fake_module = types.ModuleType("code_sandboxes.jupyter_server_sandbox")
 
         class DummyJupyterSandbox:
             pass
 
-        fake_module.JupyterSandbox = DummyJupyterSandbox
+        fake_module.JupyterServerSandbox = DummyJupyterSandbox
         monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
         monkeypatch.setitem(
             sys.modules,
-            "code_sandboxes.jupyter_sandbox",
+            "code_sandboxes.jupyter_server_sandbox",
             fake_module,
         )
 
@@ -208,7 +208,7 @@ class TestCodeSandboxManagerSidecarGuard:
 
         fake_package = types.ModuleType("code_sandboxes")
         fake_package.__path__ = []
-        fake_module = types.ModuleType("code_sandboxes.jupyter_sandbox")
+        fake_module = types.ModuleType("code_sandboxes.jupyter_server_sandbox")
 
         class DummyJupyterSandbox:
             def __init__(
@@ -217,9 +217,9 @@ class TestCodeSandboxManagerSidecarGuard:
                 self.server_url = server_url
                 self.token = token
 
-        fake_module.JupyterSandbox = DummyJupyterSandbox
+        fake_module.JupyterServerSandbox = DummyJupyterSandbox
         monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
-        monkeypatch.setitem(sys.modules, "code_sandboxes.jupyter_sandbox", fake_module)
+        monkeypatch.setitem(sys.modules, "code_sandboxes.jupyter_server_sandbox", fake_module)
 
         sandbox = manager._create_sandbox()
 

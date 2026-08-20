@@ -36,26 +36,64 @@
 /** Where the names are kept, and under which key. */
 const STORAGE_KEY = 'datalayer:code-sandbox-names';
 
-/** The names, by kernel identifier, as they were last written. */
-let names: Record<string, string> | undefined;
+/** When each name was written, so pruning can spare what is brand new. */
+const STAMP_KEY = 'datalayer:code-sandbox-names:at';
 
-function load(): Record<string, string> {
-  if (names) {
-    return names;
-  }
+/**
+ * How long a fresh name is safe from pruning.
+ *
+ * Pruning compares the names against a list of running kernels, and that list
+ * is a POLL: a sweep that was in flight while a sandbox was created and named
+ * finishes with a list from before it existed, and deleted the name the user
+ * had just typed — every surface then agreed on the renumbered default. A
+ * kernel identifier is never reused, so sparing a young name costs nothing:
+ * a truly dead one is collected on the sweeps after the grace.
+ */
+const PRUNE_GRACE_MS = 10 * 60 * 1000;
+
+/** The fallback for a browser that refuses its storage: this page only. */
+let memory: Record<string, string> = {};
+let memoryStamps: Record<string, number> = {};
+
+function read(key: string): Record<string, any> | undefined {
   try {
-    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
-    names = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    const raw = globalThis.localStorage?.getItem(key);
+    return raw ? (JSON.parse(raw) as Record<string, any>) : {};
   } catch {
-    // A browser that refuses its storage keeps the names for this page only.
-    names = {};
+    return undefined;
   }
-  return names;
 }
 
-function save(): void {
+/*
+ * Read on every call, never cached in the module.
+ *
+ * A cached copy is a second truth: another instance of this module — another
+ * tab, another bundle holding its own copy — writes the storage, the cache
+ * here goes stale, and the next save writes the stale cache back over what
+ * the other instance stored. The maps are a handful of entries; reading them
+ * each time is nothing.
+ */
+function load(): Record<string, string> {
+  const stored = read(STORAGE_KEY);
+  return stored === undefined ? memory : (stored as Record<string, string>);
+}
+
+function loadStamps(): Record<string, number> {
+  const stored = read(STAMP_KEY);
+  return stored === undefined
+    ? memoryStamps
+    : (stored as Record<string, number>);
+}
+
+function save(
+  names: Record<string, string>,
+  stamps: Record<string, number>
+): void {
+  memory = names;
+  memoryStamps = stamps;
   try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(load()));
+    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(names));
+    globalThis.localStorage?.setItem(STAMP_KEY, JSON.stringify(stamps));
   } catch {
     /* the names stay in memory */
   }
@@ -80,13 +118,16 @@ export function setCodeSandboxGivenName(
   kernelId: string,
   givenName: string
 ): void {
-  const stored = load();
+  const names = load();
+  const stamps = loadStamps();
   if (givenName) {
-    stored[kernelId] = asGivenName(givenName);
+    names[kernelId] = asGivenName(givenName);
+    stamps[kernelId] = Date.now();
   } else {
-    delete stored[kernelId];
+    delete names[kernelId];
+    delete stamps[kernelId];
   }
-  save();
+  save(names, stamps);
 }
 
 /**
@@ -98,16 +139,27 @@ export function pruneCodeSandboxGivenNames(
   runningKernelIds: Iterable<string>
 ): void {
   const alive = new Set(runningKernelIds);
-  const stored = load();
+  const names = load();
+  const stamps = loadStamps();
+  const now = Date.now();
   let dropped = false;
-  Object.keys(stored).forEach(kernelId => {
-    if (!alive.has(kernelId)) {
-      delete stored[kernelId];
-      dropped = true;
+  Object.keys(names).forEach(kernelId => {
+    if (alive.has(kernelId)) {
+      return;
     }
+    // Not in the list is not proof of death: the list is a poll, and a
+    // sandbox named a moment ago may not be in it yet. The young are spared;
+    // see PRUNE_GRACE_MS.
+    const namedAt = stamps[kernelId];
+    if (typeof namedAt === 'number' && now - namedAt < PRUNE_GRACE_MS) {
+      return;
+    }
+    delete names[kernelId];
+    delete stamps[kernelId];
+    dropped = true;
   });
   if (dropped) {
-    save();
+    save(names, stamps);
   }
 }
 

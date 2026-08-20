@@ -14,7 +14,7 @@ interface ImportMetaEnv {
   readonly VITE_COPILOT_KIT_API_KEY?: string;
   readonly VITE_BASE_URL?: string;
   readonly VITE_GITHUB_CLIENT_ID?: string;
-  readonly VITE_KAGGLE_TOKEN?: string;
+  readonly VITE_KAGGLE_API_TOKEN?: string;
   /** Jupyter sandbox URL for two-container Codemode architecture */
   readonly VITE_JUPYTER_SANDBOX_URL?: string;
 }
