@@ -8,7 +8,8 @@
  *
  * A sandbox is not one kind of thing: it is a runtime of the platform, a
  * kernel of a Jupyter Server, a kernel of the browser — and, on the Python
- * side, a Kaggle session or a Modal container as well. Each of those is a
+ * side, a Kaggle session, a Modal or CoreWeave container, an E2B microVM, a
+ * Daytona sandbox or a Cloudflare edge container as well. Each of those is a
  * PROVIDER, each ships the environments it offers (the platform ships
  * `ai-agents-env`, Kaggle a CPU and a GPU session), and each is usable only
  * where what it needs is at hand.
@@ -23,6 +24,14 @@
  * where availability is decided by secrets rather than by services. Both
  * answer the same question — which providers can be used from here — so the
  * CLI, the web application and JupyterLab offer the same thing.
+ *
+ * The clouds of that registry — Kaggle, Modal, Cloudflare, CoreWeave,
+ * Daytona, E2B — are deliberately absent from the list below. Nothing on this
+ * page holds their credentials, and nothing here should: the operator holds
+ * them, decides which of them an account may use, and serves what they offer
+ * as environments of the platform, each tagged with its provider through
+ * `owner`. So they reach this page under `remote`, one provider as far as the
+ * services are concerned, and `CodeSandboxVariant` is what tells them apart.
  *
  * @module components/code-sandboxes/codeSandboxProviders
  */

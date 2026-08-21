@@ -41,6 +41,7 @@ from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
 from ..models.models import resolve_model_for_inference_provider
 from ..services import (
+    SandboxVariant,
     create_codemode_toolset,
     create_shared_sandbox,
     create_skills_toolset,
@@ -393,11 +394,16 @@ async def _run_agent_hooks(
             if hasattr(sandbox_manager, "get_agent_sandbox"):
                 sandbox = sandbox_manager.get_agent_sandbox(agent_id)
             if sandbox is None:
-                if effective_variant in {"eval", "jupyter-server"}:
-                    sandbox_variant = cast(
-                        Literal["eval", "jupyter-server"], effective_variant
+                if effective_variant:
+                    # Whatever the agent asked for, not only the two variants
+                    # this branch used to admit. A hook installs packages and
+                    # sets variables the agent's code then reads, so it has to
+                    # run where that code runs; for a Kaggle, Modal, Daytona,
+                    # E2B, CoreWeave or Cloudflare agent it ran in whatever
+                    # sandbox the manager happened to be holding instead.
+                    sandbox_manager.configure(
+                        variant=cast(SandboxVariant, effective_variant)
                     )
-                    sandbox_manager.configure(variant=sandbox_variant)
                 sandbox = sandbox_manager.get_sandbox()
 
         loop = asyncio.get_running_loop()
@@ -613,6 +619,67 @@ def _test_jupyter_sandbox(jupyter_sandbox_url: str) -> tuple[bool, str | None]:
         return False, f"Connection error: {str(e)}"
 
 
+#: What the sandbox of each variant actually is, told to the model that will
+#: use it.
+#:
+#: This was a coin toss — a Jupyter kernel, or Python in this very process —
+#: and every variant that is neither came out as the second. An agent on
+#: Cloudflare was told its variables would still be there on the next call,
+#: when a Cloudflare snippet gets a process of its own and nothing survives
+#: it at all; a model that believes that writes code that cannot work. Where
+#: the provider is not known well enough to promise anything, the note
+#: promises nothing.
+_SANDBOX_VARIANT_NOTES: dict[str, str] = {
+    "jupyter-server": (
+        "The sandbox is a full Jupyter kernel — variables, imports, and "
+        "installed packages persist across calls."
+    ),
+    "eval": (
+        "The sandbox executes Python in-process — state persists within the "
+        "same session."
+    ),
+    "monty": (
+        "The sandbox executes Python in-process — state persists within the "
+        "same session."
+    ),
+    "e2b": (
+        "The sandbox is a Firecracker microVM on E2B running a Python "
+        "kernel — variables, imports, and installed packages persist across "
+        "calls, and results come back with their rich outputs."
+    ),
+    "coreweave": (
+        "The sandbox is a container on CoreWeave running a Python session — "
+        "variables, imports, and installed packages persist across calls."
+    ),
+    "daytona": (
+        "The sandbox is a Daytona sandbox running a Python interpreter — "
+        "variables, imports, and installed packages persist across calls."
+    ),
+    "cloudflare": (
+        "The sandbox is a container on Cloudflare's edge and it is "
+        "STATELESS: every snippet runs in a process of its own, so nothing "
+        "carries over between calls. Send each snippet whole, imports "
+        "included, and pass anything it needs through files or its own text."
+    ),
+}
+
+#: For a provider whose sandbox is not described above: say where it runs and
+#: claim nothing else.
+_DEFAULT_SANDBOX_VARIANT_NOTE = (
+    "The sandbox runs Python at its provider. Do not assume that state "
+    "carries over between calls unless a call proves that it does."
+)
+
+
+def _sandbox_variant_note(variant: str) -> str:
+    """What to tell the model about the sandbox it has been given.
+
+    Args:
+        variant: The effective sandbox variant.
+    """
+    return _SANDBOX_VARIANT_NOTES.get(variant, _DEFAULT_SANDBOX_VARIANT_NOTE)
+
+
 def _build_sandbox_only_system_prompt(variant: str) -> str:
     """
     Build a system-prompt section that tells the LLM it has a sandbox available
@@ -624,18 +691,12 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
     tools are disabled.
 
     Args:
-        variant: The effective sandbox variant ('eval' or 'jupyter-server').
+        variant: The effective sandbox variant.
 
     Returns:
         A Markdown string suitable for appending to the system prompt.
     """
-    variant_note = (
-        "The sandbox is a full Jupyter kernel — variables, imports, and installed "
-        "packages persist across calls."
-        if variant == "jupyter-server"
-        else "The sandbox executes Python in-process — state persists within the "
-        "same session."
-    )
+    variant_note = _sandbox_variant_note(variant)
     return (
         "## Sandbox\n"
         "\n"
@@ -659,18 +720,12 @@ def _build_codemode_system_prompt(variant: str) -> str:
     ``system_prompt_codemode_addons`` was provided in the spec.
 
     Args:
-        variant: The effective sandbox variant ('eval' or 'jupyter-server').
+        variant: The effective sandbox variant.
 
     Returns:
         A Markdown string suitable for appending to the system prompt.
     """
-    variant_note = (
-        "The sandbox is a full Jupyter kernel — variables, imports, and installed "
-        "packages persist across calls."
-        if variant == "jupyter-server"
-        else "The sandbox executes Python in-process — state persists within the "
-        "same session."
-    )
+    variant_note = _sandbox_variant_note(variant)
     return (
         "## Sandbox Access (Codemode)\n"
         "\n"
@@ -907,8 +962,11 @@ class CreateAgentRequest(BaseModel):
         description=(
             "Sandbox variant to use for this agent.  "
             "Accepted values: 'eval' (in-process Python exec, default), "
-            "'jupyter-server' (starts a Jupyter server per agent via code_sandboxes), "
-            "'jupyter-server' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
+            "'jupyter-server' (starts a Jupyter server per agent via "
+            "code_sandboxes, or connects to an existing one when "
+            "jupyter_sandbox names it), or a provider reached with its own "
+            "credentials — 'docker', 'datalayer', 'google-colab', 'kaggle', "
+            "'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'."
         ),
     )
     agent_spec_id: str | None = Field(
@@ -1536,10 +1594,17 @@ async def create_agent(
                         sandbox_manager.get_sandbox()
                         logger.info("Eager-started jupyter sandbox")
                 else:
-                    # eval
-                    sandbox_manager.configure(variant="eval")
+                    # Every other variant, eval included, is one the
+                    # code_sandboxes factory knows how to reach. Hard-coding
+                    # `eval` here gave an agent that asked for Kaggle, Modal,
+                    # Daytona, E2B, CoreWeave or Cloudflare a sandbox in this
+                    # very process — no isolation, none of the machine it
+                    # asked for, and no error to say that it had not got it.
+                    sandbox_manager.configure(
+                        variant=cast(SandboxVariant, effective_variant)
+                    )
                     sandbox_manager.get_sandbox()
-                    logger.info("Eager-started eval sandbox")
+                    logger.info("Eager-started %s sandbox", effective_variant)
             except HTTPException:
                 raise
             except ImportError as e:
@@ -1649,7 +1714,9 @@ async def create_agent(
                         detail=f"Failed to create Jupyter sandbox: {str(e)}",
                     )
             else:
-                shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
+                shared_sandbox = create_shared_sandbox(
+                    request.jupyter_sandbox, effective_variant
+                )
 
         await _run_agent_hooks(
             agent_id=agent_id,
@@ -2992,11 +3059,18 @@ async def update_agent_mcp_servers(
 class ConfigureSandboxRequest(BaseModel):
     """Request to configure the code sandbox manager."""
 
-    variant: Literal["eval", "jupyter-server"] = Field(
+    # Every variant the manager can create, not the two this literal used to
+    # spell: the endpoint exists to switch the sandbox at runtime, and a
+    # request for a provider it can perfectly well reach — Kaggle, Modal,
+    # Daytona, E2B, CoreWeave, Cloudflare — was rejected before it arrived.
+    variant: SandboxVariant = Field(
         default="eval",
         description=(
-            "Sandbox variant to use: 'eval' (Python exec), "
-            "or 'jupyter-server' (Jupyter sandbox: managed local or existing URL)"
+            "Sandbox variant to use: 'eval' (Python exec), 'jupyter-server' "
+            "(Jupyter sandbox: managed local or existing URL), or a provider "
+            "code_sandboxes reaches with its own credentials — 'docker', "
+            "'datalayer', 'google-colab', 'kaggle', 'monty', 'modal', "
+            "'daytona', 'cloudflare', 'coreweave', 'e2b'."
         ),
     )
     jupyter_url: str | None = Field(
@@ -3055,9 +3129,11 @@ async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusRe
     Configure the code sandbox manager.
 
     This endpoint allows runtime configuration of the sandbox variant.
-    Use 'eval' for simple Python exec-based execution,
-    'jupyter-server' for a managed Jupyter sandbox, or
-    'jupyter-server' to connect to an existing Jupyter server.
+    Use 'eval' for simple Python exec-based execution, 'jupyter-server' for a
+    managed Jupyter sandbox or an existing server named by ``jupyter_url``,
+    and the name of a provider — 'kaggle', 'modal', 'daytona', 'e2b',
+    'coreweave', 'cloudflare', … — for a sandbox that provider runs under the
+    credentials this process holds for it.
 
     Note: If a sandbox is currently running with a different configuration,
     it will be stopped and recreated on next use.

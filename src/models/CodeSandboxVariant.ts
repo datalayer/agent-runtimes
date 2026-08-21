@@ -34,6 +34,14 @@ export enum CodeSandboxVariant {
   Monty = 'monty',
   /** A container on Modal. */
   Modal = 'modal',
+  /** A sandbox on Daytona, with an optional GPU. */
+  Daytona = 'daytona',
+  /** A container on Cloudflare's edge, behind a bridge Worker. */
+  Cloudflare = 'cloudflare',
+  /** A container on CoreWeave, with an optional GPU. */
+  CoreWeave = 'coreweave',
+  /** A Firecracker microVM on E2B. */
+  E2B = 'e2b',
 }
 
 /** What each variant is called where a person reads it. */
@@ -46,15 +54,19 @@ export const CODE_SANDBOX_VARIANT_TITLES: Record<CodeSandboxVariant, string> = {
   [CodeSandboxVariant.Kaggle]: 'Kaggle',
   [CodeSandboxVariant.Monty]: 'Monty',
   [CodeSandboxVariant.Modal]: 'Modal',
+  [CodeSandboxVariant.Daytona]: 'Daytona',
+  [CodeSandboxVariant.Cloudflare]: 'Cloudflare',
+  [CodeSandboxVariant.CoreWeave]: 'CoreWeave',
+  [CodeSandboxVariant.E2B]: 'E2B',
 };
 
 /**
  * The variant an environment belongs to, read off its `owner` tag.
  *
  * The operator tags an external environment with its provider through the
- * environment's `owner` — `kaggle`, `modal` — while the platform's own carry
- * `datalayer`. An owner nothing here recognises reads as Datalayer, which is
- * what every environment was before providers existed.
+ * environment's `owner` — `kaggle`, `modal`, `e2b` — while the platform's own
+ * carry `datalayer`. An owner nothing here recognises reads as Datalayer,
+ * which is what every environment was before providers existed.
  */
 export function codeSandboxVariantOf(
   owner?: string | null,

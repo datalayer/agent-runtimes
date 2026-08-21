@@ -55,14 +55,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# The full set of ``code_sandboxes.models.SandboxVariant``: what the factory
+# can create is what an agent may ask for, and a variant left out of this
+# alias is one the type checker rejects while ``code_sandboxes`` runs it
+# happily — which is how kaggle, daytona, e2b, coreweave and cloudflare came
+# to be unspellable here long after they worked.
 SandboxVariant = Literal[
     "eval",
     "jupyter-server",
     "docker",
     "datalayer",
     "google-colab",
+    "kaggle",
     "monty",
     "modal",
+    "daytona",
+    "cloudflare",
+    "coreweave",
+    "e2b",
 ]
 
 
@@ -351,8 +361,10 @@ class CodeSandboxManager:
     - jupyter: Connects to an *existing* Jupyter server (URL required)
     - jupyter: Delegates to code_sandboxes to start its own Jupyter server
       on a random free port (no external URL needed)
-        - docker, datalayer, google-colab, monty, modal: Delegated to the
-            code_sandboxes variant factory.
+        - docker, datalayer, google-colab, kaggle, monty, modal, daytona,
+            cloudflare, coreweave, e2b: Delegated to the code_sandboxes
+            variant factory, which reaches each provider with the credentials
+            that provider needs.
     """
 
     _instance: CodeSandboxManager | None = None

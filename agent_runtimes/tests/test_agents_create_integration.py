@@ -167,7 +167,9 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         lambda: _DummySandboxManager(),
     )
     monkeypatch.setattr(
-        agents_route, "create_shared_sandbox", lambda _url: _DummySandbox()
+        agents_route,
+        "create_shared_sandbox",
+        lambda _url, _variant=None: _DummySandbox(),
     )
 
     request = CreateAgentRequest(

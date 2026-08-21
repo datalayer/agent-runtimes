@@ -165,9 +165,12 @@ async def _create_and_register_cli_agent(
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
         api_prefix: API prefix for routes
         protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
-        sandbox_variant: Code sandbox variant ('eval', 'jupyter-server', or
-            'jupyter-server'). When 'jupyter-server', a per-agent Jupyter server is
-            started via code_sandboxes.
+        sandbox_variant: Code sandbox variant. 'eval' runs the code in this
+            process, 'jupyter-server' starts a per-agent Jupyter server via
+            code_sandboxes, and the name of a provider — 'docker',
+            'datalayer', 'google-colab', 'kaggle', 'monty', 'modal',
+            'daytona', 'cloudflare', 'coreweave', 'e2b' — runs it at that
+            provider, under the credentials this process holds for it.
 
     Returns:
         A dictionary with startup information about the registered agent and
@@ -291,7 +294,9 @@ async def _create_and_register_cli_agent(
                     f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
                 ) from e
         else:
-            shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
+            shared_sandbox = create_shared_sandbox(
+                jupyter_sandbox_url, effective_variant
+            )
 
     # Add skills toolset if enabled
     if skills_enabled:

@@ -606,7 +606,11 @@ def serve(
             "--sandbox-variant",
             envvar="AGENT_RUNTIMES_SANDBOX_VARIANT",
             help="Sandbox variant: 'eval' (default in-process exec), "
-            "or 'jupyter-server' (connects to existing Jupyter server, requires --jupyter-sandbox).",
+            "'jupyter-server' (connects to existing Jupyter server, "
+            "requires --jupyter-sandbox), or a provider reached with the "
+            "credentials this machine holds for it — 'docker', 'datalayer', "
+            "'google-colab', 'kaggle', 'monty', 'modal', 'daytona', "
+            "'cloudflare', 'coreweave', 'e2b'.",
         ),
     ] = None,
     protocol: Annotated[

@@ -11,7 +11,7 @@ Used by both app.py (CLI agents) and routes/agents.py (API agents).
 import logging
 import os
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +315,9 @@ def create_codemode_toolset(
         shared_sandbox: Optional shared sandbox for state persistence
         mcp_proxy_url: Optional MCP proxy URL for Jupyter/remote execution
         enable_discovery_tools: Whether to enable discovery tools (default: True)
-        sandbox_variant: Sandbox variant ('eval', 'jupyter-server').
+        sandbox_variant: Sandbox variant — 'eval', 'jupyter-server', or a
+            provider: 'docker', 'datalayer', 'google-colab', 'kaggle',
+            'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'.
             If None, reads from the CodeSandboxManager's current config.
 
     Returns:
@@ -490,6 +492,7 @@ async def initialize_codemode_toolset(codemode_toolset: Any) -> None:
 
 def create_shared_sandbox(
     jupyter_sandbox_url: str | None = None,
+    variant: str | None = None,
 ) -> Any | None:
     """
     Create a shared managed sandbox proxy.
@@ -500,12 +503,16 @@ def create_shared_sandbox(
 
     Args:
         jupyter_sandbox_url: Optional Jupyter server URL (with token)
+        variant: The variant the caller settled on. Without it this function
+            configured ``eval`` and nothing else, so an agent that asked for
+            Kaggle, Modal, Daytona, E2B, CoreWeave or Cloudflare had its
+            manager reset to a sandbox in this very process on the way past.
 
     Returns:
         ManagedSandbox proxy or None if code_sandboxes not available
     """
     try:
-        from .code_sandbox_manager import get_code_sandbox_manager
+        from .code_sandbox_manager import SandboxVariant, get_code_sandbox_manager
 
         sandbox_manager = get_code_sandbox_manager()
 
@@ -529,7 +536,10 @@ def create_shared_sandbox(
                     "(waiting for companion to provide jupyter URL)"
                 )
             else:
-                sandbox_manager.configure(variant="eval")
+                # What the caller settled on; `eval` only when nobody said.
+                sandbox_manager.configure(
+                    variant=cast(SandboxVariant, variant or "eval")
+                )
 
         shared_sandbox = sandbox_manager.get_managed_sandbox()
         logger.info(
