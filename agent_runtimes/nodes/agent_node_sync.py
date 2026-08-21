@@ -14,13 +14,13 @@ import httpx
 
 from ..routes.agent_node import (
     get_agent_node_configuration,
-    get_runtime_credentials,
     register_configuration_change_callback,
     register_credentials_change_callback,
     register_mode_change_callback,
     set_agent_node_aws_identity,
     set_agent_node_uid,
 )
+from .agent_node_auth import resolve_auth_token, resolve_runtimes_url
 from .agent_node_collaboration import ensure_collaboration_room
 from .agent_node_health import collect_health
 
@@ -45,27 +45,12 @@ def _node_name() -> str:
 
 def _runtimes_url() -> str:
     """Resolve runtimes API base URL from env first, then UI credentials."""
-    env_url = (
-        (
-            os.environ.get("DATALAYER_RUNTIMES_URL")
-            or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
-            or ""
-        )
-        .strip()
-        .rstrip("/")
-    )
-    if env_url:
-        return env_url
-    ui_url = (get_runtime_credentials().get("runtimes_url") or "").strip().rstrip("/")
-    return ui_url
+    return resolve_runtimes_url()
 
 
 def _auth_token() -> str:
     """Resolve runtime API token from env first, then UI credentials."""
-    env_token = (os.environ.get("DATALAYER_API_KEY") or "").strip()
-    if env_token:
-        return env_token
-    return (get_runtime_credentials().get("token") or "").strip()
+    return resolve_auth_token()
 
 
 def _auth_headers() -> dict[str, str]:

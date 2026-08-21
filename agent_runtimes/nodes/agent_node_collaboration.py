@@ -14,16 +14,15 @@ central runtimes service via the heartbeat so the SaaS UI can discover it.
 from __future__ import annotations
 
 import logging
-import os
 
 import httpx
 
 from ..routes.agent_node import (
     get_agent_node_configuration,
-    get_runtime_credentials,
     set_collaboration_document_uid,
     set_collaboration_notebook_uid,
 )
+from .agent_node_auth import resolve_auth_token, resolve_spacer_url
 
 logger = logging.getLogger(__name__)
 
@@ -33,20 +32,12 @@ _LIBRARY_SPACE_HANDLE = "library"
 
 def _spacer_base_url() -> str:
     """Resolve the spacer base URL from env, falling back to the Datalayer URL."""
-    for name in ("DATALAYER_SPACER_URL",):
-        value = (os.environ.get(name) or "").strip().rstrip("/")
-        if value:
-            return value
-    # Last resort: the UI-supplied runtimes URL shares the same ingress host.
-    return (get_runtime_credentials().get("runtimes_url") or "").strip().rstrip("/")
+    return resolve_spacer_url()
 
 
 def _auth_token() -> str:
     """Resolve the auth token (env first, then UI-supplied credentials)."""
-    env_token = (os.environ.get("DATALAYER_API_KEY") or "").strip()
-    if env_token:
-        return env_token
-    return (get_runtime_credentials().get("token") or "").strip()
+    return resolve_auth_token()
 
 
 async def _resolve_library_space_uid(
@@ -146,8 +137,7 @@ async def ensure_collaboration_room(node_id: str | None = None) -> str | None:
     token = _auth_token()
     if not base_url or not token:
         logger.debug(
-            "Skipping collaboration room provisioning "
-            "(spacer_url=%s, has_token=%s)",
+            "Skipping collaboration room provisioning (spacer_url=%s, has_token=%s)",
             bool(base_url),
             bool(token),
         )

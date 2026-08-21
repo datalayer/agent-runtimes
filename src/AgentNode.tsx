@@ -6,6 +6,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -31,6 +32,7 @@ import {
   Label,
   PageHeader,
   PageLayout,
+  Spinner,
   Text,
 } from '@primer/react';
 import {
@@ -49,6 +51,7 @@ import { SignInSimple } from '@datalayer/core/lib/views/iam';
 import { UserAvatar } from '@datalayer/core/lib/components/avatars';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import * as coreState from '@datalayer/core/lib/state';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import {
   BillingEntitySelect,
@@ -102,6 +105,30 @@ const DEFAULT_DATALAYER_SERVICE_URL = 'https://prod1.datalayer.run';
  * UI must not silently re-authenticate from the env-supplied DATALAYER_API_KEY
  * via /auth/bootstrap, so the sign-out survives a page refresh.
  */
+/** The chat protocols a node-hosted agent may speak. */
+type ChatProtocol = 'ag-ui' | 'vercel-ai';
+
+/** The protocol a node reports for an agent, as the chat understands it. */
+const normalizeChatProtocol = (value: unknown): ChatProtocol =>
+  value === 'vercel-ai' || value === 'vercel-ai-jupyter'
+    ? 'vercel-ai'
+    : 'ag-ui';
+
+/**
+ * Whether a JWT's `exp` is in the past. A token that does not parse is not
+ * called expired — that is IAM's verdict to give, and it gives it as a 401.
+ */
+const isJwtExpired = (token: string): boolean => {
+  try {
+    const payload = token.split('.')[1];
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp = Number(JSON.parse(json)?.exp);
+    return Number.isFinite(exp) && exp * 1000 < Date.now();
+  } catch {
+    return false;
+  }
+};
+
 const AUTO_BOOTSTRAP_DISABLED_KEY = 'agent-node-auto-bootstrap-disabled';
 
 /** Persist (or clear) the signed-out intent in localStorage. */
@@ -512,9 +539,12 @@ export function AgentNode() {
   // ── Ephemeral document RTC (shared Lexical/Loro room with the SaaS UI) ────
   // The node provisions a spacer *lexical* room (distinct from the notebook
   // room) on registration and stores its uid as `collaboration_document_uid`.
-  // Both peers join that Loro room over the spacer lexical WebSocket. The token
-  // is embedded in the ws URL (createWebsocketProvider forwards it as a query
-  // param) so the spacer authenticates the connection.
+  // Both peers join that Loro room over the spacer lexical WebSocket.
+  //
+  // The URL is the bare endpoint: the Loro provider composes
+  // `${websocketUrl}/${roomId}` itself, so a query string here would land
+  // *between* the path and the room (`…/ws?token=…/ROOM`) and match no route —
+  // which is what this used to do. The spacer reads no token on this socket.
   const collaborationDocumentUser = useIAMStore(state => state.user) as
     Record<string, any> | null | undefined;
   const ephemeralDocumentCollaboration = useMemo(() => {
@@ -524,9 +554,7 @@ export function AgentNode() {
     }
     const spacerUrl = resolveSpacerUrl();
     const wsSpacer = String(spacerUrl).replace(/^http/, 'ws');
-    const websocketUrl = `${wsSpacer}/api/spacer/v1/lexical/ws?token=${encodeURIComponent(
-      token,
-    )}`;
+    const websocketUrl = `${wsSpacer}/api/spacer/v1/lexical/ws`;
     const u = collaborationDocumentUser;
     return {
       websocketUrl,
@@ -555,10 +583,16 @@ export function AgentNode() {
   >(null);
   const [configurationLoaded, setConfigurationLoaded] = useState(false);
   const [isActiveAgentRunning, setIsActiveAgentRunning] = useState(false);
+  // The protocol the active agent actually speaks, as reported by the node.
+  // The chat must speak the same one; a node hosts AG-UI and Vercel AI
+  // agents alike.
+  const [activeAgentProtocol, setActiveAgentProtocol] =
+    useState<ChatProtocol>('ag-ui');
   const chatRestoreAttemptRef = useRef<string>('');
   const hasActiveAgent =
     Boolean(String(configuration.active_agent_id || '').trim()) &&
     isActiveAgentRunning;
+
   const isSaasOnlyChat =
     configuration.chat_access_mode === 'saas_only' ||
     configuration.deployment_target === 'aws';
@@ -794,6 +828,66 @@ export function AgentNode() {
     [],
   );
 
+  // A token that IAM no longer accepts ends the session, here and now.
+  //
+  // The billing entity selector reads the signed-in user from the core IAM
+  // store, which this page fills by asking IAM `whoami` with the node's token.
+  // When that call fails the core store logs its user out while the node's own
+  // token stays — and the page used to sit there "loading" a user that was
+  // never coming. A token past its `exp` is signed out at once; one that IAM
+  // rejects is retried briefly (a plane still starting), then signed out too.
+  const [identityAttempt, setIdentityAttempt] = useState(0);
+  const expireSession = useCallback(
+    (why: string) => {
+      showBanner('info', `${why} Please sign in again.`);
+      setAutoBootstrapDisabled(true);
+      setDisableAutoBootstrap(true);
+      void pushCredentials(token, null).catch(() => {
+        // Best-effort; local state is signed out regardless.
+      });
+      clearAuth();
+      setStep('auth');
+    },
+    [token, showBanner, pushCredentials, clearAuth],
+  );
+  useEffect(() => {
+    if (!token || iamUser) {
+      return;
+    }
+    if (isJwtExpired(token)) {
+      expireSession('Your session has expired.');
+      return;
+    }
+    let cancelled = false;
+    const attempt = identityAttempt;
+    const timer = window.setTimeout(
+      async () => {
+        try {
+          const api = coreState.iamStore.getState() as any;
+          await api.refreshUserByToken(token);
+        } catch {
+          // Decided below, on whether a user arrived.
+        }
+        if (cancelled) {
+          return;
+        }
+        if (coreState.iamStore.getState().user) {
+          return;
+        }
+        if (attempt >= 2) {
+          expireSession(`${resolveIamUrl()} did not recognise your session.`);
+        } else {
+          setIdentityAttempt(n => n + 1);
+        }
+      },
+      attempt === 0 ? 1500 : 4000,
+    );
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [token, iamUser, identityAttempt, expireSession]);
+
   // Refs kept in sync with state so the BillingEntitySelect callbacks
   // (passed via stable identities) can read the latest values without
   // being re-created on every render — re-created callbacks made
@@ -992,8 +1086,14 @@ export function AgentNode() {
     });
   }, [token, pushCredentials]);
 
-  useEffect(() => {
-    import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
+  // Before paint, and before any child effect: children fetch runtimes and
+  // the like in their own effects, and a parent's layout effect runs first.
+  // Seeded in a plain effect behind a dynamic import, as this used to be,
+  // the first round of requests went to the core store's *default* URLs —
+  // production — and came back 401 against a local token before the local
+  // plane was even named.
+  useLayoutEffect(() => {
+    Promise.resolve(coreState).then(({ iamStore, coreStore }) => {
       const iamUrl = resolveIamUrl();
       const runtimesUrl = resolveRuntimesUrl();
       const aiInferenceUrl =
@@ -1109,6 +1209,65 @@ export function AgentNode() {
     configuration.active_agent_id,
     selectedAgentId,
   ]);
+
+  // Keep "is the active agent running" true to life.
+  //
+  // The restore effect above decides that once, when the page loads, so that
+  // it can send the reader to the chat once and not on every tick. But the
+  // answer changes: an agent launched later from the gallery, by another tab,
+  // or through the API (the SaaS, say) used to leave the header's Chat
+  // disabled for as long as the page stayed open, while the gallery — which
+  // refetches — plainly showed the agent as active.
+  useEffect(() => {
+    if (!token || !configurationLoaded) {
+      return;
+    }
+    const activeAgentId = (configuration.active_agent_id || '').trim();
+    if (!activeAgentId) {
+      setIsActiveAgentRunning(false);
+      return;
+    }
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const response = await fetch(
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agents`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const payload = await response.json().catch(() => null);
+        if (cancelled) {
+          return;
+        }
+        const agents: Array<Record<string, any>> = Array.isArray(payload)
+          ? payload
+          : payload?.agents || payload?.items || [];
+        const active = agents.find(agent => {
+          const id = String(agent?.agent_id || agent?.id || '').trim();
+          return id === activeAgentId;
+        });
+        setIsActiveAgentRunning(Boolean(active));
+        if (active) {
+          setActiveAgentProtocol(
+            normalizeChatProtocol(active.protocol ?? active.transport),
+          );
+        }
+      } catch {
+        // Leave the last known answer; the next tick asks again.
+      }
+    };
+    void check();
+    const timer = window.setInterval(() => void check(), 10_000);
+    const onFocus = () => void check();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [token, configurationLoaded, configuration.active_agent_id]);
 
   useEffect(() => {
     // If a persisted session is already authenticated on first load,
@@ -1742,9 +1901,14 @@ export function AgentNode() {
                         <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
                           Billing Entity
                         </Heading>
-                        <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                          Loading billing entitys...
-                        </Text>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        >
+                          <Spinner size="small" />
+                          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                            Loading billing entities...
+                          </Text>
+                        </Box>
                       </Box>
                     )}
                   </Box>
@@ -1808,9 +1972,10 @@ export function AgentNode() {
                 onLaunchError={message => {
                   showBanner('error', message);
                 }}
-                onLaunched={agentId => {
+                onLaunched={(agentId, protocol) => {
                   setSelectedAgentId(agentId);
                   setIsActiveAgentRunning(true);
+                  setActiveAgentProtocol(normalizeChatProtocol(protocol));
                   const nextConfiguration = {
                     ...configuration,
                     active_agent_id: agentId,
@@ -1875,7 +2040,7 @@ export function AgentNode() {
                   </Box>
                 ) : (
                   <Chat
-                    protocol="ag-ui"
+                    protocol={activeAgentProtocol}
                     baseUrl={AGENT_RUNTIMES_BASE_URL}
                     agentId={selectedAgentId}
                     title={chatTitle}

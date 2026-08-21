@@ -221,31 +221,70 @@ def start_node_jupyter_server(host: str = "127.0.0.1") -> Optional["object"]:
             f"Agent Node: Jupyter port {desired_port} in use, using {jupyter_port}"
         )
 
-    command = [
-        sys.executable,
-        "-m",
-        "jupyter",
-        "server",
-        f"--ServerApp.ip={jupyter_host}",
-        f"--ServerApp.port={jupyter_port}",
-        f"--ServerApp.base_url={base_url}",
-        f"--IdentityProvider.token={token}",
-        "--ServerApp.disable_check_xsrf=True",
-        "--ServerApp.allow_origin=*",
-        "--ServerApp.open_browser=False",
-        f"--ServerApp.root_dir={root_dir}",
-    ]
+    def _command(port: int) -> list[str]:
+        return [
+            sys.executable,
+            "-m",
+            "jupyter",
+            "server",
+            f"--ServerApp.ip={jupyter_host}",
+            f"--ServerApp.port={port}",
+            # Bind this port or exit. Jupyter otherwise walks forward on its own
+            # when the port is taken — and it was taken, in dev, by a second
+            # server that started between our probe above and its bind — which
+            # left the URL recorded below pointing at a server that was not
+            # ours, holding a token it did not know. Every kernel call the
+            # tunnel relayed came back 403 and the notebook stayed blank.
+            "--ServerApp.port_retries=0",
+            f"--ServerApp.base_url={base_url}",
+            f"--IdentityProvider.token={token}",
+            "--ServerApp.disable_check_xsrf=True",
+            "--ServerApp.allow_origin=*",
+            "--ServerApp.open_browser=False",
+            f"--ServerApp.root_dir={root_dir}",
+        ]
 
-    try:
-        proc = subprocess.Popen(command)  # noqa: S603
-    except FileNotFoundError:
-        logger.warning(
-            "Agent Node: Jupyter is not installed; ephemeral notebook/document "
-            "editors will not have a kernel backend"
+    def _listening(port: int, proc: "subprocess.Popen[bytes]") -> bool:
+        """Wait for *our* process to own the port, or for it to give up."""
+        import time
+
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline:
+            if proc.poll() is not None:
+                return False
+            if not is_port_free(jupyter_host, port):
+                return True
+            time.sleep(0.2)
+        return proc.poll() is None
+
+    proc = None
+    for attempt in range(5):
+        try:
+            proc = subprocess.Popen(_command(jupyter_port))  # noqa: S603
+        except FileNotFoundError:
+            logger.warning(
+                "Agent Node: Jupyter is not installed; ephemeral notebook/document "
+                "editors will not have a kernel backend"
+            )
+            return None
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Agent Node: failed to start Jupyter server: {exc}")
+            return None
+        if _listening(jupyter_port, proc):
+            break
+        # Lost the port to someone else between the probe and the bind: the
+        # process has exited. Take the next free one and try again, so the URL
+        # we record is the one the server we started actually answers on.
+        logger.info(
+            f"Agent Node: Jupyter could not bind port {jupyter_port}; trying the next"
         )
-        return None
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(f"Agent Node: failed to start Jupyter server: {exc}")
+        jupyter_port = find_free_port(jupyter_host, jupyter_port + 1)
+        proc = None
+    if proc is None:
+        logger.warning(
+            "Agent Node: could not start a local Jupyter server on any port; "
+            "ephemeral notebook/document editors will not have a kernel backend"
+        )
         return None
 
     local_url = f"http://{jupyter_host}:{jupyter_port}{base_url.rstrip('/')}"
@@ -467,6 +506,12 @@ def serve_server(
         raise ServeError(
             "uvicorn is not installed. Install it with: pip install uvicorn"
         )
+
+    if node:
+        # Where the node reaches its own HTTP API — the AG-UI mount the tunnel
+        # relays runs to. Loopback whatever the bind address, which may be
+        # ``0.0.0.0``.
+        os.environ["AGENT_NODE_LOCAL_URL"] = f"http://127.0.0.1:{actual_port}"
 
     logger.info(f"Starting agent-runtimes server on {host}:{actual_port}")
     logger.info(f"API docs available at http://{host}:{actual_port}/docs")

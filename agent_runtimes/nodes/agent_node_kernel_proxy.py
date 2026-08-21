@@ -77,6 +77,20 @@ class NodeKernelProxy:
         self._send = send
         self._ws_clients: Dict[str, Any] = {}
         self._ws_tasks: Dict[str, asyncio.Task[None]] = {}
+        # Browser frames for a channel, in order, from the moment the channel
+        # is asked for. ``ws.open`` and the ``ws.send`` frames that follow it
+        # arrive as separate tasks, and opening the local socket takes a
+        # round trip; a send that ran before the open finished used to find
+        # no client and drop the frame — and a kernel session begins with a
+        # burst of exactly such frames, so every session lost its opening
+        # messages. Queued here, they wait for the socket and go out in order.
+        self._ws_outbox: Dict[str, asyncio.Queue[Optional[Dict[str, Any]]]] = {}
+        self._ws_writers: Dict[str, asyncio.Task[None]] = {}
+
+    @property
+    def send(self) -> SendFrame:
+        """The tunnel writer, for relays that live outside this class."""
+        return self._send
 
     async def handle_http_request(self, request_id: str, data: Dict[str, Any]) -> None:
         """Forward one REST call to the local Jupyter server."""
@@ -88,7 +102,9 @@ class NodeKernelProxy:
 
         target = _local_jupyter_target()
         if target is None:
-            await self._http_error(request_id, 503, "No local Jupyter server configured")
+            await self._http_error(
+                request_id, 503, "No local Jupyter server configured"
+            )
             return
         base_url, token = target
 
@@ -98,7 +114,8 @@ class NodeKernelProxy:
         headers = {
             key: value
             for key, value in (data.get("headers") or {}).items()
-            if key.lower() not in ("host", "authorization", "connection", "content-length")
+            if key.lower()
+            not in ("host", "authorization", "connection", "content-length")
         }
         if token:
             headers["Authorization"] = f"token {token}"
@@ -125,7 +142,9 @@ class NodeKernelProxy:
                 }
             )
         except Exception as exc:  # noqa: BLE001
-            await self._http_error(request_id, 502, f"Local Jupyter request failed: {exc}")
+            await self._http_error(
+                request_id, 502, f"Local Jupyter request failed: {exc}"
+            )
 
     async def _http_error(self, request_id: str, status: int, message: str) -> None:
         await self._send(
@@ -135,7 +154,9 @@ class NodeKernelProxy:
                 "payload": {
                     "status": status,
                     "headers": {"content-type": "text/plain"},
-                    "body_b64": base64.b64encode(message.encode("utf-8")).decode("ascii"),
+                    "body_b64": base64.b64encode(message.encode("utf-8")).decode(
+                        "ascii"
+                    ),
                 },
             }
         )
@@ -144,14 +165,19 @@ class NodeKernelProxy:
         """Open a WebSocket to the local Jupyter server for a channel."""
         if not channel_id:
             return
+        # Before the first await: anything the browser sends from now on has
+        # somewhere to wait.
+        outbox = self._ws_outbox.setdefault(channel_id, asyncio.Queue())
         try:
             from websockets.asyncio.client import connect as ws_connect
         except Exception as exc:  # noqa: BLE001
+            self._ws_outbox.pop(channel_id, None)
             await self._ws_close(channel_id, 1011, f"websockets unavailable: {exc}")
             return
 
         target = _local_jupyter_target()
         if target is None:
+            self._ws_outbox.pop(channel_id, None)
             await self._ws_close(channel_id, 1011, "No local Jupyter server configured")
             return
         base_url, token = target
@@ -179,11 +205,38 @@ class NodeKernelProxy:
                 max_size=None,
             )
         except Exception as exc:  # noqa: BLE001
-            await self._ws_close(channel_id, 1011, f"Local Jupyter WebSocket failed: {exc}")
+            self._ws_outbox.pop(channel_id, None)
+            await self._ws_close(
+                channel_id, 1011, f"Local Jupyter WebSocket failed: {exc}"
+            )
             return
 
         self._ws_clients[channel_id] = client
         self._ws_tasks[channel_id] = asyncio.create_task(self._pump(channel_id, client))
+        self._ws_writers[channel_id] = asyncio.create_task(
+            self._drain(channel_id, client, outbox)
+        )
+
+    async def _drain(
+        self,
+        channel_id: str,
+        client: Any,
+        outbox: "asyncio.Queue[Optional[Dict[str, Any]]]",
+    ) -> None:
+        """Send the browser's frames to the local socket, in the order they came."""
+        try:
+            while True:
+                data = await outbox.get()
+                if data is None:
+                    return
+                if data.get("binary"):
+                    await client.send(base64.b64decode(data.get("data") or ""))
+                else:
+                    await client.send(data.get("data") or "")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("ws.send failed on channel %s: %s", channel_id, exc)
 
     async def _pump(self, channel_id: str, client: Any) -> None:
         """Relay messages from the local Jupyter socket back over the tunnel."""
@@ -207,20 +260,19 @@ class NodeKernelProxy:
         finally:
             self._ws_clients.pop(channel_id, None)
             self._ws_tasks.pop(channel_id, None)
+            writer = self._ws_writers.pop(channel_id, None)
+            self._ws_outbox.pop(channel_id, None)
+            if writer is not None:
+                writer.cancel()
             await self._ws_close(channel_id, code, reason)
 
     async def handle_ws_send(self, channel_id: str, data: Dict[str, Any]) -> None:
-        """Forward one browser frame to the local Jupyter socket."""
-        client = self._ws_clients.get(channel_id)
-        if client is None:
+        """Forward one browser frame to the local Jupyter socket, in order."""
+        outbox = self._ws_outbox.get(channel_id)
+        if outbox is None:
+            # No open was ever asked for on this channel (or it has closed).
             return
-        try:
-            if data.get("binary"):
-                await client.send(base64.b64decode(data.get("data") or ""))
-            else:
-                await client.send(data.get("data") or "")
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("ws.send failed on channel %s: %s", channel_id, exc)
+        outbox.put_nowait(data)
 
     async def handle_ws_close(self, channel_id: str) -> None:
         """Tear down a channel at the browser's request."""
@@ -229,8 +281,12 @@ class NodeKernelProxy:
     async def _close_channel(self, channel_id: str) -> None:
         task = self._ws_tasks.pop(channel_id, None)
         client = self._ws_clients.pop(channel_id, None)
+        writer = self._ws_writers.pop(channel_id, None)
+        self._ws_outbox.pop(channel_id, None)
         if task is not None:
             task.cancel()
+        if writer is not None:
+            writer.cancel()
         if client is not None:
             try:
                 await client.close()

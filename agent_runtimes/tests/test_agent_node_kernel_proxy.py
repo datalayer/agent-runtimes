@@ -43,7 +43,9 @@ async def test_handle_http_request_forwards_and_injects_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        proxy_mod, "_local_jupyter_target", lambda: ("http://127.0.0.1:2300", "secret-token")
+        proxy_mod,
+        "_local_jupyter_target",
+        lambda: ("http://127.0.0.1:2300", "secret-token"),
     )
 
     seen: Dict[str, Any] = {}
@@ -97,10 +99,17 @@ async def test_handle_http_request_without_target_returns_503(
 
 
 class _FakeWSClient:
-    """Minimal async-iterable stand-in for a websockets client connection."""
+    """Minimal async-iterable stand-in for a websockets client connection.
 
-    def __init__(self, incoming: List[Any]) -> None:
+    With ``stay_open`` the iteration blocks after the scripted messages until
+    ``close()`` — as a live kernel socket does — instead of ending at once,
+    which reads to the proxy as the server hanging up.
+    """
+
+    def __init__(self, incoming: List[Any], stay_open: bool = False) -> None:
         self._incoming = incoming
+        self._stay_open = stay_open
+        self._closed = asyncio.Event()
         self.sent: List[Any] = []
         self.closed = False
 
@@ -112,6 +121,8 @@ class _FakeWSClient:
         try:
             return next(self._iter)
         except StopIteration:  # noqa: PERF203
+            if self._stay_open:
+                await self._closed.wait()
             raise StopAsyncIteration
 
     async def send(self, data: Any) -> None:
@@ -119,6 +130,7 @@ class _FakeWSClient:
 
     async def close(self) -> None:
         self.closed = True
+        self._closed.set()
 
 
 @pytest.mark.asyncio
@@ -179,7 +191,7 @@ async def test_ws_send_forwards_text_and_binary(
     monkeypatch.setattr(
         proxy_mod, "_local_jupyter_target", lambda: ("http://127.0.0.1:2300", "")
     )
-    fake_client = _FakeWSClient([])
+    fake_client = _FakeWSClient([], stay_open=True)
 
     async def fake_connect(url: str, **kwargs: Any) -> _FakeWSClient:
         return fake_client
@@ -197,9 +209,60 @@ async def test_ws_send_forwards_text_and_binary(
         "chan-2",
         {"data": base64.b64encode(b"\xff\x00").decode("ascii"), "binary": True},
     )
+    # Sends are queued and written by the channel's own task.
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
 
     assert fake_client.sent[0] == "ping"
     assert fake_client.sent[1] == b"\xff\x00"
 
     await proxy.handle_ws_close("chan-2")
     assert fake_client.closed is True
+
+
+@pytest.mark.asyncio
+async def test_ws_send_before_open_completes_is_not_lost(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Frames sent while the local socket is still opening wait for it, in order.
+
+    ``ws.open`` and the ``ws.send`` frames behind it are dispatched as separate
+    tasks, and a kernel session opens with a burst of sends. They used to be
+    dropped when they beat the handshake — which every session's first
+    messages did.
+    """
+    monkeypatch.setattr(
+        proxy_mod, "_local_jupyter_target", lambda: ("http://127.0.0.1:2300", "")
+    )
+    fake_client = _FakeWSClient([], stay_open=True)
+    handshake = asyncio.Event()
+
+    async def slow_connect(url: str, **kwargs: Any) -> _FakeWSClient:
+        await handshake.wait()  # the round trip to Jupyter
+        return fake_client
+
+    import websockets.asyncio.client as wsclient
+
+    monkeypatch.setattr(wsclient, "connect", slow_connect)
+
+    _, send = _collector()
+    proxy = NodeKernelProxy(send)
+    opening = asyncio.create_task(
+        proxy.handle_ws_open("chan-3", {"path": "api/kernels/x/channels"})
+    )
+    await asyncio.sleep(0)  # the open task has started and is waiting
+
+    # The browser's opening burst, before the socket exists.
+    await proxy.handle_ws_send(
+        "chan-3", {"data": "kernel_info_request", "binary": False}
+    )
+    await proxy.handle_ws_send("chan-3", {"data": "execute_request", "binary": False})
+    assert fake_client.sent == []
+
+    handshake.set()
+    await opening
+    for _ in range(4):
+        await asyncio.sleep(0)
+
+    assert fake_client.sent == ["kernel_info_request", "execute_request"]
+    await proxy.handle_ws_close("chan-3")

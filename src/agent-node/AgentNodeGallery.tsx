@@ -79,6 +79,8 @@ export type AgentspecSummary = {
   icon?: string;
   emoji?: string;
   color?: string;
+  /** The chat protocol the spec is written for: ``ag-ui`` or ``vercel-ai``. */
+  protocol?: string;
 };
 
 /** A currently-registered/running agent from ``GET /api/v1/agents``. */
@@ -87,7 +89,23 @@ type RunningAgent = {
   id?: string;
   agent_spec_id?: string;
   name?: string;
+  protocol?: string;
 };
+
+/** The transports a node launches agents with, and the chat can speak. */
+export type AgentTransport = 'ag-ui' | 'vercel-ai';
+
+/**
+ * The transport to launch a spec with: its own when it names one the node
+ * can serve, AG-UI otherwise. A spec written for Vercel AI launched as AG-UI
+ * answered on an endpoint its chat never called.
+ */
+export const transportForSpec = (spec: {
+  protocol?: string;
+}): AgentTransport =>
+  spec.protocol === 'vercel-ai' || spec.protocol === 'vercel-ai-jupyter'
+    ? 'vercel-ai'
+    : 'ag-ui';
 
 export type AgentNodeGalleryProps = {
   /** Base URL of the local Agent Runtimes server. */
@@ -97,7 +115,7 @@ export type AgentNodeGalleryProps = {
   /** Id of the agent currently marked active on the node, if any. */
   activeAgentId?: string | null;
   /** Called with the launched agent id once it is running and set active. */
-  onLaunched: (agentId: string) => void;
+  onLaunched: (agentId: string, protocol: AgentTransport) => void;
   /** Called once the active agent is terminated and cleared on the node. */
   onTerminated?: (agentId: string) => void;
   /** Optional callback used by parent to display launch errors (e.g. toast). */
@@ -387,7 +405,7 @@ export function AgentNodeGallery({
             body: JSON.stringify({
               name: requestedName,
               agent_spec_id: spec.id,
-              transport: 'ag-ui',
+              transport: transportForSpec(spec),
               sandbox_variant: 'jupyter-server',
               sandboxVariant: 'jupyter-server',
               ...(LOCAL_JUPYTER_SANDBOX_URL
@@ -465,7 +483,7 @@ export function AgentNodeGallery({
               body: JSON.stringify({
                 name: requestedName,
                 agent_spec_id: spec.id,
-                transport: 'ag-ui',
+                transport: transportForSpec(spec),
                 sandbox_variant: 'jupyter-server',
                 sandboxVariant: 'jupyter-server',
                 ...(LOCAL_JUPYTER_SANDBOX_URL
@@ -525,7 +543,7 @@ export function AgentNodeGallery({
             body: JSON.stringify({
               name: spec.id,
               agent_spec_id: spec.id,
-              transport: 'ag-ui',
+              transport: transportForSpec(spec),
               sandbox_variant: 'jupyter-server',
               sandboxVariant: 'jupyter-server',
               ...(LOCAL_JUPYTER_SANDBOX_URL
@@ -566,7 +584,7 @@ export function AgentNodeGallery({
             `Failed to set active agent (${activeResponse.status})`,
           );
         }
-        onLaunched(agentId);
+        onLaunched(agentId, transportForSpec(spec));
       } catch (reason: any) {
         const message = reason?.message || 'Unable to launch agent.';
         setError(message);

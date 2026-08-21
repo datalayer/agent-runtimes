@@ -93,7 +93,7 @@
     "rebuild:fresh": "npm run create:patches && npm install && npm run build && npm run clean:cache",
     "server": "python -m agent_runtimes serve",
     "server:start": "PYTHONIOENCODING=utf-8 AGENT_RUNTIMES_DEBUG=false AGENT_RUNTIMES_LOG_LEVEL=info DATALAYER_EVALS_MODE=interactive DATALAYER_EVALS_EMIT_LIVE_EVENTS=true python -m agent_runtimes serve --port 8765 --log-level info",
-    "server:start:agent-node": "PYTHONIOENCODING=utf-8 AGENT_RUNTIMES_DEBUG=false AGENT_RUNTIMES_LOG_LEVEL=info DATALAYER_EVALS_MODE=interactive DATALAYER_EVALS_EMIT_LIVE_EVENTS=true AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} python -m agent_runtimes serve --node --port 8765 --log-level info",
+    "server:start:agent-node": "AGENT_NODE_JUPYTER_URL=${AGENT_NODE_JUPYTER_URL:-http://127.0.0.1:8888/api/jupyter-server} AGENT_NODE_JUPYTER_TOKEN=${AGENT_NODE_JUPYTER_TOKEN:-60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6} PYTHONIOENCODING=utf-8 AGENT_RUNTIMES_DEBUG=false AGENT_RUNTIMES_LOG_LEVEL=info DATALAYER_EVALS_MODE=interactive DATALAYER_EVALS_EMIT_LIVE_EVENTS=true AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=${AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE:-datalayer} python -m agent_runtimes serve --node --port 8765 --log-level info",
     "server:start:codemode": "PYTHONIOENCODING=utf-8 AGENT_RUNTIMES_DEBUG=false AGENT_RUNTIMES_LOG_LEVEL=info DATALAYER_EVALS_MODE=interactive DATALAYER_EVALS_EMIT_LIVE_EVENTS=true python -m agent_runtimes serve --port 8766 --log-level info",
     "examples:codemode": "run-p server:start server:start:codemode examples:vite",
     "start": "vite",

@@ -7,6 +7,7 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import {
   themeConfigs,
+  themeVariants,
   type ColorMode,
   type ThemeState,
   type ThemeVariant,
@@ -26,14 +27,15 @@ const normalizeThemeVariant = (value: unknown): ThemeVariant => {
   if (value === 'ocean') {
     return 'earth';
   }
+  // Every variant the registry knows, read from the registry: a list written
+  // out here had stopped at five, and picking any of the three added since
+  // (sand, ivory, sun) was silently turned into Earth — the selector changed
+  // and the page did not.
   if (
-    value === 'datalayer' ||
-    value === 'spatial' ||
-    value === 'lovely' ||
-    value === 'matrix' ||
-    value === 'earth'
+    typeof value === 'string' &&
+    (themeVariants as readonly string[]).includes(value)
   ) {
-    return value;
+    return value as ThemeVariant;
   }
   return 'earth';
 };
