@@ -189,6 +189,30 @@ def _build_tunnel_url() -> str:
     return f"{ws_base}/api/runtimes/v1/agent-nodes/tunnel/ws?{query}"
 
 
+def _apply_sharing(sharing: Any) -> bool:
+    """Persist the sharing the owner set from the SaaS.
+
+    The sharing lives here, in the node's configuration, and goes back up with
+    every heartbeat. The service applies the owner's change to its own record
+    at once and hands it down this frame; without persisting it here, the
+    next heartbeat would carry the old sharing and undo the change.
+    """
+    if not isinstance(sharing, dict):
+        return False
+    try:
+        from ..routes.agent_node import (
+            get_agent_node_configuration,
+            set_agent_node_configuration,
+        )
+
+        current = get_agent_node_configuration()
+        set_agent_node_configuration(current.model_copy(update={"sharing": sharing}))
+        return True
+    except Exception as exc:  # noqa: BLE001 - report, keep the tunnel up
+        logger.warning("Agent node tunnel could not apply sharing: %s", exc)
+        return False
+
+
 async def _handle_message(
     websocket: Any, message: str, proxy: Any | None = None
 ) -> None:
@@ -224,6 +248,22 @@ async def _handle_message(
             asyncio.create_task(proxy.handle_ws_send(channel_id, inner))
         else:
             asyncio.create_task(proxy.handle_ws_close(channel_id))
+        return
+
+    if type_value == "configuration.sharing":
+        inner = (
+            envelope.get("payload") if isinstance(envelope.get("payload"), dict) else {}
+        )
+        accepted = _apply_sharing(inner.get("sharing"))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": "ack",
+                    "request_id": request_id,
+                    "payload": {"accepted": accepted},
+                }
+            )
+        )
         return
 
     # Acknowledge every tunneled message so the reverse path is exercised.

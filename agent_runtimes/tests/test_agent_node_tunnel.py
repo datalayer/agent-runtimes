@@ -250,3 +250,91 @@ async def test_relay_needs_to_know_where_the_node_answers(
     assert [f["type"] for f in frames] == ["agui.error"]
     assert "AGENT_NODE_LOCAL_URL" in frames[0]["payload"]["error"]
     assert fake_httpx.calls == []
+
+
+# --- Sharing set from the SaaS ------------------------------------------------
+
+
+class _FakeSocket:
+    def __init__(self) -> None:
+        self.sent: list[dict[str, Any]] = []
+
+    async def send(self, raw: str) -> None:
+        self.sent.append(json.loads(raw))
+
+
+@pytest.mark.asyncio
+async def test_sharing_from_the_saas_is_persisted_on_the_node(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The owner changes sharing on the SaaS; the node keeps it, so the next
+    heartbeat carries the change instead of undoing it."""
+    from agent_runtimes.routes.agent_node import AgentNodeConfiguration
+
+    saved: list[AgentNodeConfiguration] = []
+    current = AgentNodeConfiguration(
+        mode="shared", active_agent_id="keep-me", sharing={"access": {}}
+    )
+    monkeypatch.setattr(
+        "agent_runtimes.routes.agent_node.get_agent_node_configuration",
+        lambda: current,
+    )
+    monkeypatch.setattr(
+        "agent_runtimes.routes.agent_node.set_agent_node_configuration",
+        lambda cfg: saved.append(cfg) or cfg,
+    )
+
+    access = {"view": {"userUids": ["u-2"], "teamUids": [], "organizationUids": []}}
+    socket = _FakeSocket()
+    await tunnel._handle_message(
+        socket,
+        # As the service's tunnel writer wraps it on the wire.
+        json.dumps(
+            {
+                "type": "ui_message",
+                "request_id": "share-1",
+                "payload": {
+                    "type": "configuration.sharing",
+                    "request_id": "share-1",
+                    "payload": {"sharing": {"access": access}},
+                },
+            }
+        ),
+    )
+
+    assert len(saved) == 1
+    assert saved[0].sharing == {"access": access}
+    # Only the sharing changes; the rest of the configuration is kept.
+    assert saved[0].active_agent_id == "keep-me"
+    assert saved[0].mode == "shared"
+    assert socket.sent == [
+        {"type": "ack", "request_id": "share-1", "payload": {"accepted": True}}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_malformed_sharing_is_refused_not_applied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[Any] = []
+    monkeypatch.setattr(
+        "agent_runtimes.routes.agent_node.set_agent_node_configuration",
+        lambda cfg: saved.append(cfg),
+    )
+    socket = _FakeSocket()
+    await tunnel._handle_message(
+        socket,
+        json.dumps(
+            {
+                "type": "ui_message",
+                "request_id": "share-2",
+                "payload": {
+                    "type": "configuration.sharing",
+                    "request_id": "share-2",
+                    "payload": {"sharing": "everyone"},
+                },
+            }
+        ),
+    )
+    assert saved == []
+    assert socket.sent[0]["payload"] == {"accepted": False}
