@@ -25,7 +25,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "agent-client-protocol>=0.7.1", # We should move this to the acp optional dependency group, but it is used in the CLI and the CLI is used in the tests, so we need it here for now.
+    # We should move this to the acp optional dependency group, 
+    # but it is used in the CLI and the CLI is used in the tests,
+    # so we need it here for now.
+    "agent-client-protocol>=0.7.1",
     "agent-codemode",
     "agent-skills",
     "code-sandboxes",
