@@ -1404,11 +1404,11 @@ EXAMPLE_SANDBOX_COLAB_AGENTSPEC_0_0_1 = Agentspec(
     emoji="E",
     color="#1F6FEB",
     suggestions=[
-        "Use execute_code to print('sandbox variant: colab')",
+        "Use execute_code to print('sandbox variant: google-colab')",
         "Use execute_code to compute sum(i*i for i in range(20))",
         "Use execute_code to load pandas and build a small DataFrame",
     ],
-    welcome_message="You're connected to the colab sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
+    welcome_message="You're connected to the google-colab sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="google-colab",

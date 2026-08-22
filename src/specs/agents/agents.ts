@@ -1686,7 +1686,7 @@ export const EXAMPLE_SANDBOX_COLAB_AGENTSPEC_0_0_1: Agentspec = {
     'Use execute_code to load pandas and build a small DataFrame',
   ],
   welcomeMessage:
-    "You're connected to the colab sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
+    "You're connected to the google-colab sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'google-colab',

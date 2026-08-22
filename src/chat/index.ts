@@ -118,3 +118,4 @@ export {
   AgentRuntimeChat,
   type AgentRuntimeChatProps,
 } from '../agents/AgentRuntimeChat';
+export * from './EphemeralSurfaceControl';

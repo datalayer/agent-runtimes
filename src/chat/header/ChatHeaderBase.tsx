@@ -26,9 +26,6 @@ import {
   DeviceMobileIcon,
   SidebarExpandIcon,
   InfoIcon,
-  RowsIcon,
-  FileIcon,
-  CircleSlashIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
@@ -39,6 +36,7 @@ import type {
 } from '../../types/chat';
 import type { SandboxStatusData } from '../../types/context';
 import type { SandboxWsStatus } from '../../types/sandbox';
+import { EphemeralSurfaceControl } from '../EphemeralSurfaceControl';
 
 type RuntimeStatus = SandboxStatusData | SandboxWsStatus;
 
@@ -311,81 +309,12 @@ export function ChatBaseHeader({
           )}
           {/* Companion surface control (Chat only / Notebook / Document) */}
           {showEphemeralSurfaceControl && (
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                bg: 'neutral.muted',
-                borderRadius: '6px',
-                p: '2px',
-                gap: '1px',
-              }}
-            >
-              {(
-                [
-                  {
-                    mode: 'none' as const,
-                    icon: CircleSlashIcon,
-                    label: 'Chat only',
-                    enabled: true,
-                  },
-                  {
-                    mode: 'notebook' as const,
-                    icon: RowsIcon,
-                    label: 'Notebook',
-                    enabled: enableEphemeralNotebookOption,
-                  },
-                  {
-                    mode: 'document' as const,
-                    icon: FileIcon,
-                    label: 'Document',
-                    enabled: enableEphemeralDocumentOption,
-                  },
-                ] as const
-              )
-                .filter(({ enabled }) => enabled)
-                .map(({ mode, icon: ModeIcon, label }) => (
-                  <Tooltip key={mode} text={label} direction="n">
-                    <Box
-                      as="button"
-                      aria-label={label}
-                      onClick={() => onEphemeralSurfaceModeChange?.(mode)}
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 26,
-                        height: 24,
-                        borderRadius: '4px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        bg:
-                          ephemeralSurfaceMode === mode
-                            ? 'canvas.default'
-                            : 'transparent',
-                        boxShadow:
-                          ephemeralSurfaceMode === mode
-                            ? 'shadow.small'
-                            : 'none',
-                        color:
-                          ephemeralSurfaceMode === mode
-                            ? 'fg.default'
-                            : 'fg.muted',
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          color: 'fg.default',
-                          bg:
-                            ephemeralSurfaceMode === mode
-                              ? 'canvas.default'
-                              : 'neutral.subtle',
-                        },
-                      }}
-                    >
-                      <ModeIcon size={14} />
-                    </Box>
-                  </Tooltip>
-                ))}
-            </Box>
+            <EphemeralSurfaceControl
+              mode={ephemeralSurfaceMode}
+              onChange={onEphemeralSurfaceModeChange}
+              enableNotebook={enableEphemeralNotebookOption}
+              enableDocument={enableEphemeralDocumentOption}
+            />
           )}
           {/* View mode segmented toggle */}
           {chatViewMode && onChatViewModeChange && (

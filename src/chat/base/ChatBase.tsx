@@ -87,6 +87,8 @@ import { ChatBaseHeader } from '../header/ChatHeaderBase';
 import { ChatEmptyState } from '../display/EmptyState';
 import { FloatingBrandButton } from '../display/FloatingBrandButton';
 import { PoweredByTag } from '../display/PoweredByTag';
+import type { ToolbarItem } from '@datalayer/primer-addons';
+import { EphemeralSurfaceControl } from '../EphemeralSurfaceControl';
 import {
   ChatMessageList,
   type ToolApprovalConfig,
@@ -954,8 +956,49 @@ function ChatBaseInner({
   const documentVisible =
     enableEphemeralDocument && ephemeralSurfaceMode === 'document';
   const surfaceVisible = notebookVisible || documentVisible;
-  const surfaceCollapsed =
-    surfaceVisible && collapsed && Boolean(onExpandFromCollapsed);
+  /*
+   * Collapsed means collapsed, whether or not there is a way back.
+   *
+   * Offering to reopen the conversation is what `onExpandFromCollapsed`
+   * decides, and the affordance below is guarded by it. Requiring it HERE
+   * meant a surface asked to collapse with nothing to expand into — a Code
+   * Sandbox, where nothing is listening — kept the conversation on screen
+   * instead.
+   */
+  const surfaceCollapsed = surfaceVisible && collapsed;
+
+  /*
+   * The switch between the notebook and the document, for a collapsed chat.
+   *
+   * It normally sits in the chat's header, which is exactly what a collapsed
+   * chat does not draw — so a page without a conversation opened whichever
+   * surface came first and could never leave it. On the surface's own toolbar
+   * it is reachable either way. "Chat only" is not among the choices here:
+   * closing the surface would leave nothing at all.
+   */
+  const collapsedSurfaceControl: ToolbarItem | null = surfaceCollapsed
+    ? {
+        key: 'ephemeral-surface',
+        type: 'custom',
+        // Last of the toolbar, away from what acts on the surface itself.
+        order: 900,
+        render: () => (
+          <EphemeralSurfaceControl
+            mode={ephemeralSurfaceMode}
+            onChange={handleEphemeralSurfaceModeChange}
+            enableNotebook={enableEphemeralNotebook}
+            enableDocument={enableEphemeralDocument}
+            enableChatOnly={false}
+          />
+        ),
+      }
+    : null;
+  const notebookToolbarItems = collapsedSurfaceControl
+    ? [...(ephemeralNotebookToolbarExtraItems ?? []), collapsedSurfaceControl]
+    : ephemeralNotebookToolbarExtraItems;
+  const documentToolbarItems = collapsedSurfaceControl
+    ? [...(ephemeralDocumentToolbarExtraItems ?? []), collapsedSurfaceControl]
+    : ephemeralDocumentToolbarExtraItems;
 
   // Track the ephemeral notebook's live kernel connection so the chat header
   // renders the same rich `KernelIndicator` details (kernel id, client id,
@@ -4121,7 +4164,7 @@ function ChatBaseInner({
                 nbformat={persistedEphemeralNbformat ?? undefined}
                 onNbformatChange={handleEphemeralNotebookChange}
                 toolbarComponent={ephemeralNotebookToolbar}
-                toolbarExtraItems={ephemeralNotebookToolbarExtraItems}
+                toolbarExtraItems={notebookToolbarItems}
                 collaborationProvider={ephemeralNotebookCollaborationProvider}
               />
             ) : (
@@ -4137,7 +4180,7 @@ function ChatBaseInner({
                   onToolsReady={handleDocumentToolsReady}
                   onKernelChange={handleDocumentKernelChange}
                   collaboration={ephemeralDocumentCollaboration}
-                  toolbarExtraItems={ephemeralDocumentToolbarExtraItems}
+                  toolbarExtraItems={documentToolbarItems}
                 />
               </React.Suspense>
             )}
