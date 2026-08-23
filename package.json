@@ -154,6 +154,7 @@
     "@jupyterlab/codeeditor": "^4.5.0",
     "@jupyterlab/coreutils": "^6.0.0",
     "@jupyterlab/documentsearch": "^4.5.0",
+    "@jupyterlab/notebook": "^4.5.0",
     "@jupyterlab/rendermime": "^4.5.0",
     "@jupyterlab/services": "^7.0.0",
     "@jupyterlab/translation": "^4.5.0",

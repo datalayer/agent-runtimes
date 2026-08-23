@@ -42,6 +42,7 @@ import {
 } from '@datalayer/jupyter-react';
 import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { useResumeServerExecutions } from '../../jupyter/useResumeServerExecutions';
 import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
 import { useProgressTask } from '../../hooks/useProgressTask';
 import type { EphemeralNotebookToolbarComponent } from '../../types/chat';
@@ -330,6 +331,16 @@ export function EphemeralNotebook({
   );
   useProgressTask(`ephemeral-notebook-start-${notebookId}`, isRuntimeStarting);
 
+  /*
+   * What a previous page left running on the sandbox.
+   *
+   * The cells come back from the persisted model, each carrying the request
+   * the server accepted for it; once the sandbox is bound again, those
+   * requests are polled back into the cells, so a refresh mid-run finds the
+   * outputs that kept arriving while it was away.
+   */
+  useResumeServerExecutions(notebookId, activeServiceManager ?? undefined);
+
   useEffect(() => {
     // When a collaboration provider is active the shared ydoc is the single
     // source of truth and is synced remotely; the local in-memory persistence
@@ -404,6 +415,24 @@ export function EphemeralNotebook({
     [],
   );
 
+  /*
+   * A session path under `.datalayer/`, so the server executor recovers outputs.
+   *
+   * `jupyter-server-nbmodel` streams a cell's outputs into the shared document
+   * of the server when the session names a file of it, and turns on HTTP
+   * output recovery when it does not — the case for every editor of Datalayer.
+   * Left to default, Jupyter React names the session `kernel-<id>`, which the
+   * executor reads as a real server document, so it keeps recovery OFF and an
+   * ephemeral notebook (which has no shared document on the pod at all) shows
+   * no outputs and loses a running cell on refresh. A `.datalayer/` path is
+   * how the executor is told there is no file here; the notebook id keeps two
+   * ephemeral notebooks on one sandbox from sharing a session.
+   */
+  const sessionPath = useMemo(
+    () => `.datalayer/${notebookId}.ipynb`,
+    [notebookId],
+  );
+
   return (
     <Box
       sx={{
@@ -459,6 +488,7 @@ export function EphemeralNotebook({
               <Notebook
                 nbformat={initialNbformat}
                 id={notebookId}
+                path={sessionPath}
                 serviceManager={activeServiceManager}
                 startDefaultKernel={activeStartDefaultKernel}
                 kernelId={activeKernelId}
