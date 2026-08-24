@@ -79,6 +79,12 @@ export interface AgentDetailsProps {
   onBack: () => void;
   /** Whether to show the header with back button (default: true) */
   showBackHeader?: boolean;
+  /**
+   * Whether the content carries its own padding. Off when the panel is
+   * embedded in a page that already sets the measure — the details then
+   * align with the sections around them instead of sitting inset.
+   */
+  padded?: boolean;
   /** Whether to show context usage/history and context snapshot sections (default: true) */
   showUsage?: boolean;
   /** Live MCP status from WS — bypasses REST polling when provided */
@@ -346,6 +352,7 @@ export function AgentDetails({
   onBack,
   showBackHeader = true,
   showUsage = true,
+  padded = true,
   mcpStatusData,
   codemodeStatusData,
   contextSnapshotData,
@@ -450,7 +457,7 @@ export function AgentDetails({
       )}
 
       {/* Content */}
-      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Box sx={{ p: padded ? 3 : 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {/* Agent Info Section */}
         <Box
           sx={{
