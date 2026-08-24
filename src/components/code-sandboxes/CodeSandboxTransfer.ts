@@ -15,7 +15,15 @@ export interface CodeSandboxTransfer {
    * it as its `given_name`.
    */
   runtime: Partial<
-    Omit<IRuntimeOptions, 'kernelType'> & { id: string; displayName: string }
+    Omit<IRuntimeOptions, 'kernelType'> & {
+      id: string;
+      displayName: string;
+      /**
+       * The pod of an external sandbox (Daytona, E2B), which has no kernel of
+       * its own — the session binds it through the runtimes proxy by this.
+       */
+      pod_name: string;
+    }
   > | null;
   /**
    * List of selected variables

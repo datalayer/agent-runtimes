@@ -303,10 +303,15 @@ export function CodeSandboxPicker(
   );
   const environmentOnlyOptions = useMemo(
     () =>
-      dropdownOptions.filter(option => {
-        const desc = dropdownDescs.get(option.key);
-        return !desc || !isRunningSandbox(desc);
-      }),
+      dropdownOptions
+        .filter(option => {
+          const desc = dropdownDescs.get(option.key);
+          return !desc || !isRunningSandbox(desc);
+        })
+        // The running sandboxes are the radio column beside this; the dropdown
+        // then lists only environments to start, so it needs no group heading
+        // of its own ("Assign a new Code Sandbox" already labels the control).
+        .map(option => ({ ...option, group: undefined })),
     [dropdownDescs, dropdownOptions],
   );
 
@@ -354,11 +359,16 @@ export function CodeSandboxPicker(
                       setRuntimeDesc(k);
                     }}
                     checked={
-                      (k.location === runtimeDesc?.location ||
+                      // An external sandbox is the same one when it is the same
+                      // pod, whatever kernel of the platform is or is not
+                      // attached to it — its kernel id is empty or changes on a
+                      // rebind, its pod does not.
+                      (!!k.podName && k.podName === runtimeDesc?.podName) ||
+                      ((k.location === runtimeDesc?.location ||
                         (isRuntimeRemote(k.location) &&
                           isRuntimeRemote(runtimeDesc?.location ?? 'local'))) &&
-                      (k.kernelId ?? k.name) ===
-                        (runtimeDesc?.kernelId ?? runtimeDesc?.name)
+                        (k.kernelId ?? k.name) ===
+                          (runtimeDesc?.kernelId ?? runtimeDesc?.name))
                     }
                   />
                   <FormControl.Label>
@@ -553,17 +563,37 @@ export function CodeSandboxPicker(
     }
     if (sessionContext && groupedRuntimeDescs) {
       const kernelId = sessionContext.session?.kernel?.id;
-      if (kernelId) {
+      /*
+       * An external sandbox is bound by its POD, not a kernel of this platform.
+       *
+       * Its descriptor carries the pod and — until a kernel of the platform is
+       * ever attached — an empty kernel id, and the session it binds stands on
+       * the pod as its `location`. Matching only on the kernel id therefore
+       * missed it: the picker fell back to the local kernel the notebook never
+       * ran on, opening on "Python 3" while the toolbar rightly showed the
+       * sandbox. So the current sandbox is matched on the pod as well, and the
+       * remote descriptors — which arrive late — are waited for before the
+       * choice is allowed to settle on anything else.
+       */
+      const location = (sessionContext as IDatalayerSessionContext).location;
+      const remoteBound = !!location && isRuntimeRemote(location);
+      const matchesCurrent = (desc: IDatalayerCodeSandboxDesc): boolean =>
+        (!!kernelId && desc.kernelId === kernelId) ||
+        (!!desc.podName && !!location && desc.podName === location);
+      if (kernelId || remoteBound) {
+        if (remoteBound && !remoteModelsReady) {
+          return;
+        }
         let matched = false;
-        Object.entries(groupedRuntimeDescs).forEach(([group, runtimeDescs]) => {
+        Object.values(groupedRuntimeDescs).forEach(runtimeDescs => {
           runtimeDescs.forEach(runtimeDesc => {
-            if (runtimeDesc.kernelId === kernelId) {
+            if (matchesCurrent(runtimeDesc)) {
               matched = true;
               setRuntimeDesc(runtimeDesc);
             }
           });
         });
-        if (!matched) {
+        if (!matched && kernelId) {
           if (!remoteModelsReady) {
             return;
           }
@@ -577,9 +607,8 @@ export function CodeSandboxPicker(
               kernelId,
               language: spec.language,
               displayName: sessionContext.kernelDisplayName,
-              location:
-                (sessionContext as IDatalayerSessionContext).location ??
-                'local',
+              location: location ?? 'local',
+              podName: remoteBound ? location : undefined,
             });
           }
         }
@@ -647,7 +676,12 @@ export function CodeSandboxPicker(
       .get()
       .find(env => env.name === runtimeDesc?.name)?.burning_rate;
   const allowance = useNewCodeSandboxAllowance(resolvedBurningRate);
-  const isNewSandbox = !!runtimeDesc && !runtimeDesc.kernelId;
+  // New means an environment to start, not a sandbox already running. An
+  // external sandbox runs with a pod but no kernel of its own, so keying
+  // "new" on the kernel alone misread it as new — and a new remote sandbox
+  // the account cannot yet price is answered with nothing, which is why
+  // assigning an existing Daytona did nothing.
+  const isNewSandbox = !!runtimeDesc && !isRunningSandbox(runtimeDesc);
   // Offer a name for what was just picked, and leave it alone afterwards: the
   // key is the thing picked, so re-picking the same one keeps what was typed.
   const pickedKey = isNewSandbox
@@ -728,19 +762,31 @@ export function CodeSandboxPicker(
               ? `${runtimeDesc.location}-${runtimeDesc.name}`
               : runtimeDesc.name,
             id: runtimeDesc.kernelId,
+            // The pod names a sandbox that has no kernel of its own — an
+            // external one — so the session can bind it through the proxy.
+            pod_name: runtimeDesc.podName,
             // The name the sandbox is given, carried with the choice.
             //
             // Everything else about the pick travelled in this object and the
             // name did not, so whoever created the sandbox had nothing to name
             // it with and fell back to the kernelspec: the launcher honoured
             // what was typed, the picker silently dropped it.
+            //
+            // Two readers, two fields: a sandbox of a server is named from
+            // `displayName`, a runtime of the platform is started with
+            // `givenName`. A new remote sandbox — a Daytona among them — read
+            // the second, which nothing filled, and came up "Code Sandbox".
+            // Both carry the name now: what the user typed, or the title of the
+            // environment it runs.
             displayName: runtimeDesc.displayName,
+            givenName: givenName || runtimeDesc.displayName,
             creditsLimit,
             capabilities: userStorage ? ['user_storage'] : undefined,
           } satisfies Partial<
             Omit<IRuntimeOptions, 'kernelType'> & {
               id: string;
               displayName: string;
+              pod_name: string;
             }
           > | null)
         : null,
@@ -748,6 +794,7 @@ export function CodeSandboxPicker(
     });
   }, [
     allowance,
+    givenName,
     isNewSandbox,
     onTransferChange,
     resolvedBurningRate,

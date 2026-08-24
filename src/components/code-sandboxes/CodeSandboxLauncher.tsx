@@ -698,7 +698,9 @@ export function CodeSandboxLauncher(
           timeLimit={timeLimit}
           onTimeChange={setTimeLimit}
           max={effectiveMaxMinutes}
-          disabled={outOfCredits}
+          // Nothing to reserve or store until an environment is chosen.
+          disabled={outOfCredits || !selection}
+          storageDisabled={!selection}
           error={
             outOfCredits ? 'You must add credits to your account.' : undefined
           }
@@ -718,6 +720,8 @@ export function CodeSandboxLauncher(
             name="name"
             value={runtimeName}
             onChange={handleKernelNameChange}
+            // A sandbox is named only once there is one to name.
+            disabled={!selection}
             block
           />
         </FormControl>
