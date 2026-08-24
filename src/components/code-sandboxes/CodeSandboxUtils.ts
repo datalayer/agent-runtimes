@@ -141,6 +141,10 @@ export function getGroupedCodeSandboxDescs(
             .remote!.environments.get()
             .find(env => env.name === runtime.environment.name)!;
           return {
+            // Keep the control-plane identity as well as the Jupyter kernel
+            // identity. External sandboxes may not have a kernel until they
+            // are attached, but their runtime uid is already unique.
+            id: runtime.uid,
             // Empty for an external sandbox: it has none, and saying so is
             // what keeps the picker from trying to connect to one.
             kernelId: runtime.id || undefined,

@@ -90,10 +90,32 @@ function isRunningSandbox(desc: IRuntimeDesc): boolean {
 
 /** How a sandbox is identified among the choices; see `dropdownDescs`. */
 function codeSandboxDescKey(desc: IRuntimeDesc): string {
-  // The pod stands in for the kernel of a sandbox that has none — the ones
-  // of an external provider. Without it two Modal sandboxes of the same
-  // environment answer to one key and the list shows a single row.
-  return `${desc.location}:${desc.kernelId ?? desc.podName ?? desc.name}`;
+  // The runtime uid, then the pod, stands in for the kernel of a sandbox that
+  // does not have one yet. Without that identity all Daytona sandboxes of the
+  // same environment answer to one key.
+  return `${desc.location}:${desc.kernelId ?? desc.id ?? desc.podName ?? desc.name}`;
+}
+
+/** The identifier shown beside a running sandbox. */
+function codeSandboxDisplayId(desc: IRuntimeDesc): string | undefined {
+  return desc.kernelId ?? desc.id ?? desc.podName;
+}
+
+/** Whether two descriptions refer to the same choice. */
+function isSameCodeSandbox(
+  left: IRuntimeDesc,
+  right: IRuntimeDesc | undefined,
+): boolean {
+  if (!right) {
+    return false;
+  }
+  if (left.podName && right.podName) {
+    return left.podName === right.podName;
+  }
+  const sameLocation =
+    left.location === right.location ||
+    (isRuntimeRemote(left.location) && isRuntimeRemote(right.location));
+  return sameLocation && codeSandboxDescKey(left) === codeSandboxDescKey(right);
 }
 
 /**
@@ -347,29 +369,20 @@ export function CodeSandboxPicker(
             {group}
           </Box>
           {runtimeDescs.map(k => {
+            const choiceKey = codeSandboxDescKey(k);
+            const displayId = codeSandboxDisplayId(k);
             return (
               // A kernel identifies a runtime that already runs; an
               // environment to start one in has none, and is named
               // by where it runs and what it runs.
-              <Box key={`${k.location}:${k.kernelId ?? k.name}`} title={k.name}>
+              <Box key={choiceKey} title={k.name}>
                 <FormControl>
                   <Radio
-                    value={k.kernelId!}
+                    value={choiceKey}
                     onChange={() => {
                       setRuntimeDesc(k);
                     }}
-                    checked={
-                      // An external sandbox is the same one when it is the same
-                      // pod, whatever kernel of the platform is or is not
-                      // attached to it — its kernel id is empty or changes on a
-                      // rebind, its pod does not.
-                      (!!k.podName && k.podName === runtimeDesc?.podName) ||
-                      ((k.location === runtimeDesc?.location ||
-                        (isRuntimeRemote(k.location) &&
-                          isRuntimeRemote(runtimeDesc?.location ?? 'local'))) &&
-                        (k.kernelId ?? k.name) ===
-                          (runtimeDesc?.kernelId ?? runtimeDesc?.name))
-                    }
+                    checked={isSameCodeSandbox(k, runtimeDesc)}
                   />
                   <FormControl.Label>
                     <Box display="flex" sx={{ alignItems: 'baseline' }}>
@@ -381,7 +394,7 @@ export function CodeSandboxPicker(
                                   Quieter than the name, which is what is being
                                   chosen.
                                 */}
-                      {k.kernelId && (
+                      {displayId && (
                         <Text
                           sx={{
                             ml: 2,
@@ -389,9 +402,9 @@ export function CodeSandboxPicker(
                             color: 'fg.muted',
                             fontFamily: 'mono',
                           }}
-                          title={k.kernelId}
+                          title={displayId}
                         >
-                          {k.kernelId.slice(0, 8)}
+                          {displayId.slice(0, 8)}
                         </Text>
                       )}
                       {k.kernelId && k.location === 'remote' && (
@@ -878,6 +891,8 @@ export function CodeSandboxPicker(
                   <ActionList.Group key={group}>
                     <ActionList.GroupHeading>{group}</ActionList.GroupHeading>
                     {runtimeDescs.map(candidateRuntimeDesc => {
+                      const choiceKey =
+                        codeSandboxDescKey(candidateRuntimeDesc);
                       const annotation = candidateRuntimeDesc.podName
                         ? ` - ${candidateRuntimeDesc.podName.split('-', 2).reverse()[0]}`
                         : candidateRuntimeDesc.kernelId
@@ -895,19 +910,12 @@ export function CodeSandboxPicker(
                           : (candidateRuntimeDesc.displayName ?? '');
                       return (
                         <ActionList.Item
-                          key={candidateRuntimeDesc.name}
+                          key={choiceKey}
                           title={fullDisplayName}
-                          selected={
-                            (candidateRuntimeDesc.location ===
-                              runtimeDesc?.location ||
-                              (isRuntimeRemote(candidateRuntimeDesc.location) &&
-                                isRuntimeRemote(
-                                  runtimeDesc?.location ?? 'local',
-                                ))) &&
-                            (candidateRuntimeDesc.kernelId ??
-                              candidateRuntimeDesc.name) ===
-                              (runtimeDesc?.kernelId ?? runtimeDesc?.name)
-                          }
+                          selected={isSameCodeSandbox(
+                            candidateRuntimeDesc,
+                            runtimeDesc,
+                          )}
                           onSelect={() => {
                             setRuntimeDesc(candidateRuntimeDesc);
                           }}
