@@ -8,7 +8,7 @@
  *
  * The launcher dialog and the picker both offer to start a sandbox, and both
  * used to carry their own copy of the same questions — how long to reserve,
- * whether to mount the user storage — and of the same arithmetic over the
+ * whether to mount the home folder — and of the same arithmetic over the
  * credits of the account. This module is the single copy: the hook computes
  * what the account allows, the component renders the two controls, and the
  * helper turns a time limit into the credits reservation.
@@ -113,8 +113,8 @@ export interface INewCodeSandboxControlsProps {
   error?: string;
   /** Offered next to the error when credits can be added from here. */
   addCredits?: () => void;
-  userStorage: boolean;
-  onUserStorageToggle: () => void;
+  homeFolder: boolean;
+  onHomeFolderToggle: () => void;
   storageDisabled?: boolean;
   /**
    * The name the sandbox is given, when the caller asks for that question.
@@ -132,7 +132,7 @@ export interface INewCodeSandboxControlsProps {
    * this machine: it reserves no time and mounts no storage of the platform,
    * so neither question applies to it.
    */
-  withUserStorage?: boolean;
+  withHomeFolder?: boolean;
 }
 
 /**
@@ -152,11 +152,11 @@ export function NewCodeSandboxControls(
     max,
     onGivenNameChange,
     onTimeChange,
-    onUserStorageToggle,
+    onHomeFolderToggle,
     storageDisabled,
     timeLimit,
-    userStorage,
-    withUserStorage = true,
+    homeFolder,
+    withHomeFolder = true,
   } = props;
   const { configuration } = useCoreStore();
   return (
@@ -173,10 +173,10 @@ export function NewCodeSandboxControls(
           error={error}
         />
       )}
-      {withUserStorage && !configuration.whiteLabel && (
+      {withHomeFolder && !configuration.whiteLabel && (
         <FormControl disabled={storageDisabled} layout="horizontal">
-          <FormControl.Label id="new-sandbox-user-storage-label">
-            User storage
+          <FormControl.Label id="new-sandbox-home-folder-label">
+            Home folder
             <Tooltip
               text="The runtime will be slower to start."
               direction="e"
@@ -187,13 +187,13 @@ export function NewCodeSandboxControls(
           </FormControl.Label>
           <ToggleSwitch
             disabled={storageDisabled}
-            checked={userStorage}
+            checked={homeFolder}
             size="small"
             onClick={event => {
               event.preventDefault();
-              onUserStorageToggle();
+              onHomeFolderToggle();
             }}
-            aria-labelledby="new-sandbox-user-storage-label"
+            aria-labelledby="new-sandbox-home-folder-label"
           />
         </FormControl>
       )}

@@ -314,7 +314,7 @@ export function CodeSandboxLauncher(
   );
   // Whether the runtim name has been changed by the user or not
   const [hasCustomRuntimeName, setHasCustomRuntimeName] = useState(false);
-  const [userStorage, setUserStorage] = useState(false);
+  const [homeFolder, setHomeFolder] = useState(false);
   const [openExample, setOpenExample] = useState(false);
   const [waitingForRuntime, setWaitingForRuntime] = useState(false);
   const [error, setError] = useState<JSX.Element>();
@@ -402,8 +402,8 @@ export function CodeSandboxLauncher(
       if (startRuntime === 'defer') {
         desc.params['creditsLimit'] = creditsLimit;
       }
-      if (userStorage) {
-        desc.params['capabilities'] = ['user_storage'];
+      if (homeFolder) {
+        desc.params['capabilities'] = ['home_folder'];
       }
       let success = true;
       const provider = codeSandboxVariantOf((spec as any)?.owner);
@@ -450,7 +450,7 @@ export function CodeSandboxLauncher(
                 type: 'notebook',
                 givenName: runtimeName,
                 creditsLimit: creditsLimit,
-                capabilities: userStorage ? ['user_storage'] : undefined,
+                capabilities: homeFolder ? ['home_folder'] : undefined,
                 snapshot: kernelSnapshot?.id,
               },
               {
@@ -547,7 +547,7 @@ export function CodeSandboxLauncher(
     startRuntime,
     runtimeName,
     onSubmit,
-    userStorage,
+    homeFolder,
     openExample,
     jupyterLabAdapter,
     timeLimit,
@@ -693,7 +693,7 @@ export function CodeSandboxLauncher(
           // A sandbox of this server costs nothing and starts at once: it has
           // no time to reserve and no storage of the platform to mount.
           withReservation={!!startRuntime && !isLocalSelection}
-          withUserStorage={!isLocalSelection}
+          withHomeFolder={!isLocalSelection}
           burningRate={burningRate}
           timeLimit={timeLimit}
           onTimeChange={setTimeLimit}
@@ -711,8 +711,8 @@ export function CodeSandboxLauncher(
                 }
               : undefined
           }
-          userStorage={userStorage}
-          onUserStorageToggle={() => setUserStorage(current => !current)}
+          homeFolder={homeFolder}
+          onHomeFolderToggle={() => setHomeFolder(current => !current)}
         />
         <FormControl sx={{ paddingTop: '10px' }}>
           <FormControl.Label>Given Name</FormControl.Label>

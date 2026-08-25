@@ -676,7 +676,7 @@ export function CodeSandboxPicker(
    */
   const [givenName, setGivenName] = useState('');
   const givenNameFor = useRef<string | undefined>(undefined);
-  const [userStorage, setUserStorage] = useState(false);
+  const [homeFolder, setHomeFolder] = useState(false);
   const asksForNewSandbox = withNewSandboxControls || !!onTransferChange;
   useEffect(() => {
     if (asksForNewSandbox) {
@@ -794,7 +794,7 @@ export function CodeSandboxPicker(
             displayName: runtimeDesc.displayName,
             givenName: givenName || runtimeDesc.displayName,
             creditsLimit,
-            capabilities: userStorage ? ['user_storage'] : undefined,
+            capabilities: homeFolder ? ['home_folder'] : undefined,
           } satisfies Partial<
             Omit<IRuntimeOptions, 'kernelType'> & {
               id: string;
@@ -814,7 +814,7 @@ export function CodeSandboxPicker(
     runtimeDesc,
     selectedVariables,
     timeLimit,
-    userStorage,
+    homeFolder,
   ]);
   // For cell using submenu instead of group would be nice unfortunately the feature
   // is not yet implemented in the component there has been a not-great demo story.
@@ -983,7 +983,7 @@ export function CodeSandboxPicker(
             radioSections(runningEntries)}
           {defaultSet && (
             // Room below: the controls of a new sandbox follow, and the
-            // toggle of the user storage sat against the dropdown.
+            // toggle of the home folder sat against the dropdown.
             <FormControl sx={{ marginBottom: 4 }}>
               <FormControl.Label>
                 {sandboxLayout === 'separated'
@@ -1051,8 +1051,8 @@ export function CodeSandboxPicker(
               setRuntimeDesc({ ...runtimeDesc, displayName: value });
             }
           }}
-          userStorage={userStorage}
-          onUserStorageToggle={() => setUserStorage(current => !current)}
+          homeFolder={homeFolder}
+          onHomeFolderToggle={() => setHomeFolder(current => !current)}
         />
       )}
       {variables.available && (
