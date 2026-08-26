@@ -323,17 +323,25 @@ class ContentsMcpToolset(AbstractToolset[Any]):
             )
         return token
 
-    async def session(self, *, refresh: bool = False) -> dict[str, Any]:
+    async def session(
+        self, *, refresh: bool = False, token: str | None = None
+    ) -> dict[str, Any]:
+        """
+        The session record, read once with the caller's token.
+
+        Contents answers only the session's own actor, so reading it is the
+        authorization check: a token that is not the session's gets nothing.
+        """
         if self._session is None or refresh:
             self._session = await self._api().get_session(
-                self.session_uid, token=self._token()
+                self.session_uid, token=token or self._token()
             )
             if not self.source_uid:
                 self.source_uid = self._session.get("source_uid")
         return self._session
 
-    async def allowed_tools(self) -> set[str]:
-        session = await self.session()
+    async def allowed_tools(self, *, token: str | None = None) -> set[str]:
+        session = await self.session(token=token)
         return {str(name) for name in session.get("allowed_tools") or []}
 
     async def _discover(self) -> dict[str, ToolDefinition]:
@@ -410,7 +418,7 @@ class ContentsMcpToolset(AbstractToolset[Any]):
         to Contents, and polls the call until it is terminal.
         """
         caller_token = token or self._token()
-        allowed = await self.allowed_tools()
+        allowed = await self.allowed_tools(token=caller_token)
         if name not in allowed:
             raise ContentsMcpError(
                 f"Tool '{name}' is not allowed by Contents MCP session {self.session_uid}"

@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
@@ -863,7 +863,7 @@ def _build_codemode_toolset(
 McpId = str
 
 # Type alias for MCP server origin
-McpOrigin = Literal["config", "catalog"]
+McpOrigin = Literal["config", "catalog", "contents"]
 
 
 class McpServerSelection(BaseModel):
@@ -871,17 +871,43 @@ class McpServerSelection(BaseModel):
     Selection of an MCP server with its origin.
 
     Attributes:
-        id: Unique identifier of the MCP server (McpId)
-        origin: Origin of the server - 'config' (from mcp.json) or 'catalog' (built-in)
+        id: Unique identifier of the MCP server (McpId). For a ``contents``
+            origin this is the Contents source uid — a label, not a server the
+            runtime starts.
+        origin: Origin of the server - 'config' (from mcp.json), 'catalog'
+            (built-in) or 'contents' (an MCP source of Datalayer Contents,
+            reached through a session; the runtime never holds the credential).
+        session_uid: The Contents MCP session the calls go through. Required
+            for, and meaningful only to, the ``contents`` origin: the session's
+            ``allowed_tools`` is the whole toolset, and every call carries the
+            caller's own token.
     """
 
     id: McpId = Field(..., description="The server identifier", alias="id")
     origin: McpOrigin = Field(
         default="config",
-        description="Origin of the server (config from mcp.json, catalog from built-in)",
+        description="Origin of the server (config from mcp.json, catalog from built-in, contents from a Contents MCP source)",
+    )
+    session_uid: str | None = Field(
+        default=None,
+        description="The Contents MCP session uid; required when origin is 'contents'",
     )
 
     model_config = {"populate_by_name": True}
+
+    @model_validator(mode="after")
+    def _contents_needs_a_session(self) -> "McpServerSelection":
+        if self.origin == "contents" and not self.session_uid:
+            raise ValueError(
+                "an MCP server selection of origin 'contents' needs a session_uid"
+            )
+        if self.origin != "contents" and self.session_uid:
+            raise ValueError("session_uid is only meaningful for origin 'contents'")
+        return self
+
+    @property
+    def is_contents(self) -> bool:
+        return self.origin == "contents"
 
 
 class CreateAgentRequest(BaseModel):
@@ -1286,14 +1312,29 @@ async def create_agent(
                         if isinstance(server, dict) and server.get("id"):
                             raw_origin = str(server.get("origin", "config"))
                             origin: McpOrigin = (
-                                "catalog" if raw_origin == "catalog" else "config"
+                                "catalog"
+                                if raw_origin == "catalog"
+                                else "contents"
+                                if raw_origin == "contents"
+                                else "config"
+                            )
+                            session_uid = server.get("session_uid") or server.get(
+                                "sessionUid"
                             )
                             selected_servers.append(
                                 McpServerSelection(
                                     id=str(server.get("id")),
                                     origin=origin,
+                                    session_uid=(
+                                        str(session_uid)
+                                        if origin == "contents" and session_uid
+                                        else None
+                                    ),
                                 )
                             )
+                            if origin == "contents":
+                                # Nothing to start: Contents holds the server.
+                                continue
                             # Register full config with mcp_manager if
                             # the dict contains enough info to start the
                             # server (command or url).
@@ -1422,7 +1463,7 @@ async def create_agent(
             for item in selected_mcp_servers:
                 server_id = item.id
                 is_config = item.origin == "config"
-                if not server_id:
+                if not server_id or item.origin == "contents":
                     continue
 
                 if not lifecycle_manager.is_server_running(
@@ -2985,7 +3026,7 @@ async def update_agent_mcp_servers(
             for item in request.selected_mcp_servers:
                 server_id = item.id
                 is_config = item.origin == "config"
-                if not server_id:
+                if not server_id or item.origin == "contents":
                     continue
 
                 # Start logical check/start...
@@ -3439,6 +3480,10 @@ async def _start_mcp_servers_for_agent(
 
     for selection in selected_servers:
         server_id = selection.id if hasattr(selection, "id") else str(selection)
+        if getattr(selection, "origin", None) == "contents":
+            # Reached through a Contents session; there is no process to start.
+            already_running.append(server_id)
+            continue
         is_config = getattr(selection, "origin", "catalog") == "config"
 
         # Check if already running
@@ -4003,6 +4048,10 @@ async def _stop_mcp_servers_for_agent(
 
     for selection in selected_servers:
         server_id = selection.id if hasattr(selection, "id") else str(selection)
+        if getattr(selection, "origin", None) == "contents":
+            # Reached through a Contents session; there is no process to start.
+            already_running.append(server_id)
+            continue
         is_config = getattr(selection, "origin", "catalog") == "config"
 
         # Check if already stopped
