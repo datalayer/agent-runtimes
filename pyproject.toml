@@ -29,8 +29,9 @@ dependencies = [
     # but it is used in the CLI and the CLI is used in the tests,
     # so we need it here for now.
     "agent-client-protocol>=0.7.1",
-    "agent-codemode",
-    "agent-skills",
+    # The first releases of both on mcp 2; an older one pins mcp<2.
+    "agent-codemode>=1.1.0",
+    "agent-skills>=1.1.0",
     "code-sandboxes",
     "croniter",
     "datalayer-core>=1.1.57",
@@ -39,7 +40,13 @@ dependencies = [
     "httpx",
     "nbformat",
     "jupyter-server>=2.10,<3",
-    "mcp>=1.10.1,<2",
+    # The MCP Python SDK 2. The client-side integration runs through
+    # pydantic-ai, whose `mcp` extra accepts fastmcp-slim 3 (mcp 1) as well
+    # as 4 (mcp 2): the fastmcp-slim floor below is what pins the mcp 2 line,
+    # and it has to name the pre-release explicitly for pip to consider it.
+    # See https://py.sdk.modelcontextprotocol.io/v2/migration/
+    "mcp>=2,<3",
+    "fastmcp-slim[client]>=4.0.0b3,<5",
     "opentelemetry-api>=1.40.0,<2.0.0",
     "opentelemetry-sdk>=1.40.0,<2.0.0",
     "opentelemetry-semantic-conventions>=0.61b0,<0.62",

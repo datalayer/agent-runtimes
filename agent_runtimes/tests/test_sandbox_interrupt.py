@@ -139,92 +139,85 @@ class TestCodeSandboxManagerSidecarGuard:
         ):
             manager._create_sandbox()
 
+    @staticmethod
+    def _fake_client(monkeypatch: Any, created: list[dict[str, Any]]) -> Any:
+        """A `code_sandboxes` whose client records what it was asked to create."""
+
+        class DummySandbox:
+            pass
+
+        class DummyClient:
+            def __init__(self) -> None:
+                self.sandbox = DummySandbox()
+
+            @classmethod
+            def create(cls, *, variant: str, **options: Any) -> "DummyClient":
+                created.append({"variant": variant, **options})
+                return cls()
+
+        fake_package = types.ModuleType("code_sandboxes")
+        fake_package.CodeSandboxClient = DummyClient  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
+        return DummySandbox
+
     def test_jupyter_without_url_allowed_outside_sidecar(
         self, monkeypatch: Any
     ) -> None:
+        """Without a URL, `code_sandboxes` starts its own Jupyter server."""
         manager = CodeSandboxManager()
         manager.configure(variant="jupyter-server", jupyter_url=None)
         monkeypatch.delenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", raising=False)
-
-        fake_package = types.ModuleType("code_sandboxes")
-        fake_package.__path__ = []
-        fake_module = types.ModuleType("code_sandboxes.jupyter_server_sandbox")
-
-        class DummyJupyterSandbox:
-            pass
-
-        fake_module.JupyterServerSandbox = DummyJupyterSandbox
-        monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
-        monkeypatch.setitem(
-            sys.modules,
-            "code_sandboxes.jupyter_server_sandbox",
-            fake_module,
-        )
+        created: list[dict[str, Any]] = []
+        dummy_sandbox = self._fake_client(monkeypatch, created)
 
         sandbox = manager._create_sandbox()
-        assert isinstance(sandbox, DummyJupyterSandbox)
 
-    def test_jupyter_with_url_uses_high_level_factory(self, monkeypatch: Any) -> None:
+        assert isinstance(sandbox, dummy_sandbox)
+        assert created == [{"variant": "jupyter-server"}]
+
+    def test_jupyter_with_url_goes_through_the_client(self, monkeypatch: Any) -> None:
         manager = CodeSandboxManager()
         manager.configure(
             variant="jupyter-server",
             jupyter_url="http://localhost:8888",
             jupyter_token="MY_TOKEN",
         )
-
-        fake_package = types.ModuleType("code_sandboxes")
-
-        class DummySandbox:
-            @staticmethod
-            def create(
-                *, variant: str, server_url: str | None = None, token: str | None = None
-            ) -> dict[str, str | None]:
-                return {
-                    "variant": variant,
-                    "server_url": server_url,
-                    "token": token,
-                }
-
-        fake_package.Sandbox = DummySandbox
-        monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
+        created: list[dict[str, Any]] = []
+        dummy_sandbox = self._fake_client(monkeypatch, created)
 
         sandbox = manager._create_sandbox()
 
-        assert sandbox == {
-            "variant": "jupyter-server",
-            "server_url": "http://localhost:8888",
-            "token": "MY_TOKEN",
-        }
+        assert isinstance(sandbox, dummy_sandbox)
+        assert created == [
+            {
+                "variant": "jupyter-server",
+                "server_url": "http://localhost:8888",
+                "token": "MY_TOKEN",
+            }
+        ]
 
-    def test_jupyter_with_url_falls_back_when_sandbox_symbol_missing(
+    def test_every_variant_goes_through_the_client(self, monkeypatch: Any) -> None:
+        """No variant reaches for an adapter: `eval` included.
+
+        `code_sandboxes.eval_sandbox` and `code_sandboxes.jupyter_server_sandbox`
+        were imported directly when the package looked incomplete, which bound
+        this module to the adapters the provider boundary keeps services out
+        of. A package without the client has no adapters either.
+        """
+        manager = CodeSandboxManager()
+        created: list[dict[str, Any]] = []
+        self._fake_client(monkeypatch, created)
+
+        manager._create_sandbox(variant="eval")
+        manager._create_sandbox(variant="modal")
+
+        assert [item["variant"] for item in created] == ["eval", "modal"]
+
+    def test_a_package_without_the_client_is_an_import_error(
         self, monkeypatch: Any
     ) -> None:
         manager = CodeSandboxManager()
-        manager.configure(
-            variant="jupyter-server",
-            jupyter_url="http://localhost:8888",
-            jupyter_token="MY_TOKEN",
-        )
+        monkeypatch.setitem(sys.modules, "code_sandboxes", types.ModuleType("code_sandboxes"))
 
-        fake_package = types.ModuleType("code_sandboxes")
-        fake_package.__path__ = []
-        fake_module = types.ModuleType("code_sandboxes.jupyter_server_sandbox")
-
-        class DummyJupyterSandbox:
-            def __init__(
-                self, server_url: str | None = None, token: str | None = None
-            ) -> None:
-                self.server_url = server_url
-                self.token = token
-
-        fake_module.JupyterServerSandbox = DummyJupyterSandbox
-        monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
-        monkeypatch.setitem(
-            sys.modules, "code_sandboxes.jupyter_server_sandbox", fake_module
-        )
-
-        sandbox = manager._create_sandbox()
-
-        assert isinstance(sandbox, DummyJupyterSandbox)
-        assert sandbox.server_url == "http://localhost:8888"
-        assert sandbox.token == "MY_TOKEN"
+        with pytest.raises(ImportError):
+            manager._create_sandbox(variant="eval")

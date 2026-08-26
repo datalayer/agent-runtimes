@@ -444,9 +444,7 @@ class MCPLifecycleManager:
                     try:
                         running_tools = await pydantic_server.list_tools()
                         for tool in running_tools:
-                            input_schema = getattr(tool, "input_schema", None)
-                            if input_schema is None and hasattr(tool, "inputSchema"):
-                                input_schema = getattr(tool, "inputSchema")
+                            input_schema = tool.input_schema
                             tools.append(
                                 MCPServerTool(
                                     name=tool.name,

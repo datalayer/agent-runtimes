@@ -138,9 +138,11 @@ async def get_tools_from_mcp(
                     "description": tool.description or "",
                 }
 
-                # Include inputSchema if available
-                if hasattr(tool, "inputSchema") and tool.inputSchema:
-                    tool_dict["inputSchema"] = tool.inputSchema
+                # Include inputSchema if available. The key stays camelCase —
+                # it is the wire name and what the callers read — while the
+                # attribute is snake_case since mcp 2.
+                if getattr(tool, "input_schema", None):
+                    tool_dict["inputSchema"] = tool.input_schema
                 elif (
                     hasattr(tool, "parameters_json_schema")
                     and tool.parameters_json_schema
