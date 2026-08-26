@@ -49,7 +49,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
         sandbox_running = bool(sandbox.get("sandbox_running"))
         # Jupyter sandboxes can be considered available when connected,
         # even if sandbox_running is not explicitly reported.
-        if sandbox_variant == "jupyter-server" and bool(sandbox.get("jupyter_connected")):
+        if sandbox_variant == "jupyter-server" and bool(
+            sandbox.get("jupyter_connected")
+        ):
             sandbox_running = True
 
     if not sandbox_running:

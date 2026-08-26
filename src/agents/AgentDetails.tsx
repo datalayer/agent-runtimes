@@ -457,7 +457,14 @@ export function AgentDetails({
       )}
 
       {/* Content */}
-      <Box sx={{ p: padded ? 3 : 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Box
+        sx={{
+          p: padded ? 3 : 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+        }}
+      >
         {/* Agent Info Section */}
         <Box
           sx={{

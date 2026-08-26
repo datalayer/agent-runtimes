@@ -77,9 +77,9 @@ from agent_runtimes.commands.mcp_servers_config import (
 from agent_runtimes.commands.mcp_servers_config import (
     list_mcp_servers_config,
 )
+from agent_runtimes.commands.memory import app as memory_app
 from agent_runtimes.commands.pools import app as pools_app
 from agent_runtimes.commands.ray import app as ray_app
-from agent_runtimes.commands.memory import app as memory_app
 from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
 from agent_runtimes.commands.sandboxes import app as sandboxes_app
 from agent_runtimes.commands.schedules import app as schedules_app

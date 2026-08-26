@@ -18,13 +18,13 @@ from .config import resolve_mem0_config
 from .ephemeral import EphemeralMemory
 from .identity import MemoryIdentity, resolve_memory_identity
 from .mem0_backend import Mem0Backend
-from .sqlite_backend import SqliteMemory
 from .registry import (
     create_memory_backend,
     get_memory_backend,
     register_memory_backend,
     unregister_memory_backend,
 )
+from .sqlite_backend import SqliteMemory
 
 __all__ = [
     "BaseMemoryBackend",

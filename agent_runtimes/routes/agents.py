@@ -1923,9 +1923,7 @@ async def create_agent(
                         merged_payload["memory"] = request.memory
                     if request.memory_config is not None:
                         merged_payload["memoryConfig"] = request.memory_config
-                    spec_for_runtime_controls = Agentspec.model_validate(
-                        merged_payload
-                    )
+                    spec_for_runtime_controls = Agentspec.model_validate(merged_payload)
                 except Exception as exc:
                     logger.debug(
                         "Could not parse forwarded agent_spec for runtime controls: %s",
@@ -1968,9 +1966,7 @@ async def create_agent(
 
             # Raise the output-token ceiling to the selected model's capability
             # (also enforced across delegated subagent runs).
-            usage_limits = apply_model_output_tokens_limit(
-                usage_limits, request.model
-            )
+            usage_limits = apply_model_output_tokens_limit(usage_limits, request.model)
 
             agent_kwargs: dict[str, Any] = {
                 "instructions": final_system_prompt,

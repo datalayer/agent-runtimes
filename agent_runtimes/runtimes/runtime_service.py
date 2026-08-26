@@ -389,14 +389,10 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
                     if status in (502, 503, 504) and attempt < 3:
                         time.sleep(2)
                         continue
-                    raise RuntimeError(
-                        f"Failed to start code sandbox client: {str(e)}"
-                    )
+                    raise RuntimeError(f"Failed to start code sandbox client: {str(e)}")
                 except Exception as e:
                     last_error = e
-                    raise RuntimeError(
-                        f"Failed to start code sandbox client: {str(e)}"
-                    )
+                    raise RuntimeError(f"Failed to start code sandbox client: {str(e)}")
 
             if self.model.sandbox_client is None:
                 raise RuntimeError(

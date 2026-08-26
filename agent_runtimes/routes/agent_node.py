@@ -181,9 +181,7 @@ def _initial_configuration() -> AgentNodeConfiguration:
     if persisted is not None:
         return persisted
     deployment_target = (
-        (os.environ.get("AGENT_NODE_DEPLOYMENT_TARGET") or "localhost")
-        .strip()
-        .lower()
+        (os.environ.get("AGENT_NODE_DEPLOYMENT_TARGET") or "localhost").strip().lower()
     )
     if deployment_target not in ("localhost", "aws", "other"):
         deployment_target = "localhost"
@@ -191,11 +189,13 @@ def _initial_configuration() -> AgentNodeConfiguration:
         (os.environ.get("AGENT_NODE_CHAT_ACCESS_MODE") or "").strip().lower()
     )
     if chat_access_mode not in ("local_and_saas", "saas_only"):
-        chat_access_mode = "saas_only" if deployment_target == "aws" else "local_and_saas"
+        chat_access_mode = (
+            "saas_only" if deployment_target == "aws" else "local_and_saas"
+        )
     return AgentNodeConfiguration(
         mode=(os.environ.get("AGENT_NODE_MODE") or "sleep").strip().lower() or "sleep",
-        deployment_target=deployment_target,  # type: ignore[arg-type]
-        chat_access_mode=chat_access_mode,  # type: ignore[arg-type]
+        deployment_target=deployment_target,
+        chat_access_mode=chat_access_mode,
     )
 
 
@@ -270,7 +270,9 @@ def set_agent_node_aws_identity(
     """Persist detected AWS identity metadata when it changes."""
     global _CURRENT_CONFIGURATION
     cleaned_account = (aws_account_id or "").strip() or None
-    if cleaned_account and (not cleaned_account.isdigit() or len(cleaned_account) != 12):
+    if cleaned_account and (
+        not cleaned_account.isdigit() or len(cleaned_account) != 12
+    ):
         cleaned_account = None
     cleaned_region = (aws_region or "").strip() or None
     cleaned_arn = (aws_identity_arn or "").strip() or None
@@ -481,9 +483,9 @@ _BOOTSTRAP_CACHE: dict[str, Any] = {"key": None, "result": None}
 
 
 def _bootstrap_iam_url() -> str:
-    return (os.environ.get("DATALAYER_IAM_URL") or "https://prod1.datalayer.run").rstrip(
-        "/"
-    )
+    return (
+        os.environ.get("DATALAYER_IAM_URL") or "https://prod1.datalayer.run"
+    ).rstrip("/")
 
 
 async def _exchange_api_key(api_key: str, iam_url: str) -> dict[str, Any] | None:

@@ -42,7 +42,6 @@ def _pgvector_config(user_id: str, agent_id: str | None) -> dict[str, Any] | Non
     return None
 
 
-
 def register_memory_backend(agent_id: str, backend: BaseMemoryBackend) -> None:
     """Register an agent's memory backend for later lookup."""
     _MEMORY_BACKENDS[agent_id] = backend

@@ -6,13 +6,13 @@
 import asyncio
 import os
 
+from datalayer_core.utils.urls import DatalayerURLs
 from jupyter_server.extension.application import ExtensionApp, ExtensionAppJinjaMixin
 from jupyter_server.utils import url_path_join
 from traitlets import Bool, CInt, Instance, Unicode, default
 from traitlets.config import Configurable
 
 from agent_runtimes._version import __version__
-from datalayer_core.utils.urls import DatalayerURLs
 from agent_runtimes.jupyter.agent import create_jupyter_chat_agent
 from agent_runtimes.jupyter.config import JupyterChatConfig
 from agent_runtimes.jupyter.handlers.chat_handler import VercelAIChatHandler

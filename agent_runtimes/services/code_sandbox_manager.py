@@ -782,7 +782,9 @@ class CodeSandboxManager:
 
             if self._config.jupyter_url:
                 if CodeSandbox is None:
-                    from code_sandboxes.jupyter_server_sandbox import JupyterServerSandbox
+                    from code_sandboxes.jupyter_server_sandbox import (
+                        JupyterServerSandbox,
+                    )
 
                     return JupyterServerSandbox(
                         server_url=self._config.jupyter_url,

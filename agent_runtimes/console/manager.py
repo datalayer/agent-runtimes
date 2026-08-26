@@ -35,13 +35,11 @@ class RuntimeManager:
         Authentication token.
     username : str
         Username for the runtime.
-    **kwargs : dict[str, Any]
+    **kwargs : Any
         Additional keyword arguments.
     """
 
-    def __init__(
-        self, runtimes_url: str, token: str, username: str, **kwargs: dict[str, Any]
-    ):
+    def __init__(self, runtimes_url: str, token: str, username: str, **kwargs: Any):
         """
         Initialize the gateway Runtime manager.
 
@@ -53,7 +51,7 @@ class RuntimeManager:
             Authentication token.
         username : str
             Username for the runtime.
-        **kwargs : dict[str, Any]
+        **kwargs : Any
             Additional keyword arguments.
         """
         _ = kwargs.pop("kernel_id", None)
@@ -205,8 +203,8 @@ class RuntimeManager:
         if runtime is None:
             raise RuntimeError("Unable to find an Agent.")
 
-        self.server_url = runtime["ingress"]
-        self.token = runtime.get("token", "")
+        self.server_url = str(runtime["ingress"] or "")
+        self.token = str(runtime.get("token") or "")
 
         # Ensure runtime endpoint is ready and a usable kernel exists.
         self._kernel_id = self._ensure_kernel_id()

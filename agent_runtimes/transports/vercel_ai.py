@@ -808,9 +808,7 @@ async def _wrap_streaming_body_with_approvals(
                     )
             if suppressed_lines:
                 kept = [
-                    ln
-                    for ln in chunk.split("\n")
-                    if ln.strip() not in suppressed_lines
+                    ln for ln in chunk.split("\n") if ln.strip() not in suppressed_lines
                 ]
                 rebuilt = "\n".join(kept)
                 if rebuilt.strip():
@@ -1206,11 +1204,7 @@ class VercelAITransport(BaseTransport):
             Usage tracking is handled by LLMContextUsageCapability.
             """
             usage_candidate = getattr(result, "usage", None)
-            usage = (
-                usage_candidate()
-                if callable(usage_candidate)
-                else usage_candidate
-            )
+            usage = usage_candidate() if callable(usage_candidate) else usage_candidate
             if usage is None:
                 return
             input_tokens = int(getattr(usage, "input_tokens", 0) or 0)

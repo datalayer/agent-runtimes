@@ -35,7 +35,7 @@ _GENERAL_PURPOSE_INSTRUCTIONS = (
 
 
 def _build_subagent_capabilities(model: str | Model) -> list[Any]:
-    """Capabilities attached to a subagent's inner Agent.
+    """Build the capabilities attached to a subagent's inner Agent.
 
     Adds history compaction budgeted from the subagent model's ``tokens_limit``
     so a delegated run's history stays under the model's limit independently of
@@ -55,13 +55,13 @@ class SubagentDefinition:
 
     Parameters
     ----------
-    name:
+    name : str
         Unique identifier the parent uses to route a task.
-    description:
+    description : str
         Short capability summary shown to the parent model.
-    instructions:
+    instructions : str
         System instructions for the subagent.
-    model:
+    model : str | Model | None
         Optional model override; falls back to the capability default model.
     """
 
@@ -77,16 +77,16 @@ class SubagentsCapability(AbstractCapability[Any]):
 
     Parameters
     ----------
-    subagents:
+    subagents : list[SubagentDefinition]
         The specialist subagents available for delegation.
-    default_model:
+    default_model : str | Model | None
         Model used for subagents that do not define their own.
-    include_general_purpose:
+    include_general_purpose : bool
         When True, add a ``general-purpose`` fallback subagent for tasks that do
         not match a specialist.
-    tool_name:
+    tool_name : str
         Name of the delegation tool exposed to the parent model.
-    tool_retries:
+    tool_retries : int
         Retry budget for the delegation tool.
     """
 
@@ -163,9 +163,9 @@ class SubagentsCapability(AbstractCapability[Any]):
 
             Parameters
             ----------
-            subagent_name:
+            subagent_name : str
                 One of the available subagent names.
-            task:
+            task : str
                 The self-contained task description for the subagent.
             """
             agent = self._agents.get(subagent_name)

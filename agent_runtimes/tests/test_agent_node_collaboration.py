@@ -10,7 +10,8 @@ graceful skip when credentials/spacer URL are unavailable.
 
 from __future__ import annotations
 
-from typing import Callable
+from pathlib import Path
+from typing import Any, Callable
 
 import httpx
 import pytest
@@ -19,7 +20,7 @@ from agent_runtimes.nodes import agent_node_collaboration as collab
 from agent_runtimes.routes import agent_node as node_cfg
 
 
-def _reset_config(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+def _reset_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Isolate the module-level configuration + on-disk state for a test."""
     monkeypatch.setenv("AGENT_NODE_STATE_PATH", str(tmp_path / "agent-node.json"))
     monkeypatch.setattr(
@@ -39,7 +40,7 @@ def _install_mock_client(
     transport = httpx.MockTransport(handler)
     real_async_client = httpx.AsyncClient
 
-    def _factory(*args, **kwargs):
+    def _factory(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
         kwargs["transport"] = transport
         return real_async_client(*args, **kwargs)
 
@@ -48,7 +49,7 @@ def _install_mock_client(
 
 @pytest.mark.asyncio
 async def test_ensure_collaboration_room_provisions_and_persists(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Resolve the library space, create a notebook, and persist its uid."""
     _reset_config(tmp_path, monkeypatch)
@@ -104,7 +105,7 @@ async def test_ensure_collaboration_room_provisions_and_persists(
 
 @pytest.mark.asyncio
 async def test_ensure_collaboration_room_is_idempotent_without_network(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Return the persisted uid without any HTTP call when already provisioned."""
     _reset_config(tmp_path, monkeypatch)
@@ -125,7 +126,7 @@ async def test_ensure_collaboration_room_is_idempotent_without_network(
 
 @pytest.mark.asyncio
 async def test_ensure_collaboration_room_skips_without_credentials(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Return ``None`` (skip) when neither spacer URL nor token is available."""
     _reset_config(tmp_path, monkeypatch)
@@ -141,14 +142,12 @@ async def test_ensure_collaboration_room_skips_without_credentials(
     result = await collab.ensure_collaboration_room("node-1")
 
     assert result is None
-    assert (
-        node_cfg.get_agent_node_configuration().collaboration_notebook_uid is None
-    )
+    assert node_cfg.get_agent_node_configuration().collaboration_notebook_uid is None
 
 
 @pytest.mark.asyncio
 async def test_ensure_collaboration_room_falls_back_to_first_space(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Use the first space when no space carries the ``library`` handle."""
     _reset_config(tmp_path, monkeypatch)

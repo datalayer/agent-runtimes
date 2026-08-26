@@ -279,9 +279,14 @@ async def test_sharing_from_the_saas_is_persisted_on_the_node(
         "agent_runtimes.routes.agent_node.get_agent_node_configuration",
         lambda: current,
     )
+
+    def _record(cfg: AgentNodeConfiguration) -> AgentNodeConfiguration:
+        saved.append(cfg)
+        return cfg
+
     monkeypatch.setattr(
         "agent_runtimes.routes.agent_node.set_agent_node_configuration",
-        lambda cfg: saved.append(cfg) or cfg,
+        _record,
     )
 
     access = {"view": {"userUids": ["u-2"], "teamUids": [], "organizationUids": []}}

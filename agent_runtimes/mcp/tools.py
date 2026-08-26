@@ -141,7 +141,10 @@ async def get_tools_from_mcp(
                 # Include inputSchema if available
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
                     tool_dict["inputSchema"] = tool.inputSchema
-                elif hasattr(tool, "parameters_json_schema") and tool.parameters_json_schema:
+                elif (
+                    hasattr(tool, "parameters_json_schema")
+                    and tool.parameters_json_schema
+                ):
                     tool_dict["inputSchema"] = tool.parameters_json_schema
                 else:
                     tool_dict["inputSchema"] = {

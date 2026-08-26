@@ -21,66 +21,71 @@ from urllib.parse import quote, urlparse
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PGVECTOR_HOST = (
-    'datalayer-postgresql-agent-memories-rw.datalayer-postgresql.svc.cluster.local'
+    "datalayer-postgresql-agent-memories-rw.datalayer-postgresql.svc.cluster.local"
 )
 _DEFAULT_PGVECTOR_PORT = 5432
-_DEFAULT_PGVECTOR_DB = 'mem0'
-_DEFAULT_PGVECTOR_USER = 'mem0'
-_DEFAULT_PGVECTOR_COLLECTION = 'agent_memories'
+_DEFAULT_PGVECTOR_DB = "mem0"
+_DEFAULT_PGVECTOR_USER = "mem0"
+_DEFAULT_PGVECTOR_COLLECTION = "agent_memories"
 
 
 def _local_path(user_id: str, agent_id: str | None) -> str:
-    configured = os.environ.get('AGENT_RUNTIMES_MEM0_LOCAL_PATH', '').strip()
+    configured = os.environ.get("AGENT_RUNTIMES_MEM0_LOCAL_PATH", "").strip()
     if configured:
         return configured
 
     # Backward-compatible fallback for older env var naming.
-    configured = os.environ.get('AGENT_RUNTIMES_MEM0_SQLITE_PATH', '').strip()
+    configured = os.environ.get("AGENT_RUNTIMES_MEM0_SQLITE_PATH", "").strip()
     if configured:
         return configured
 
-    safe_user = user_id.replace('/', '_') or 'default'
-    safe_agent = (agent_id or 'shared').replace('/', '_')
-    base_dir = Path(os.environ.get('AGENT_RUNTIMES_MEM0_DIR', '/tmp/mem0'))
+    safe_user = user_id.replace("/", "_") or "default"
+    safe_agent = (agent_id or "shared").replace("/", "_")
+    # Overridable default; the temp dir is only where an unconfigured dev run lands.
+    base_dir = Path(os.environ.get("AGENT_RUNTIMES_MEM0_DIR", "/tmp/mem0"))  # nosec B108
     base_dir.mkdir(parents=True, exist_ok=True)
-    return str(base_dir / 'faiss')
+    return str(base_dir / "faiss")
 
 
 def _faiss_config(user_id: str, agent_id: str | None) -> dict[str, object]:
-    safe_user = user_id.replace('/', '_') or 'default'
-    safe_agent = (agent_id or 'shared').replace('/', '_')
+    safe_user = user_id.replace("/", "_") or "default"
+    safe_agent = (agent_id or "shared").replace("/", "_")
     return {
-        'vector_store': {
-            'provider': 'faiss',
-            'config': {
-                'path': _local_path(user_id=user_id, agent_id=agent_id),
-                'collection_name': f'{safe_user}_{safe_agent}',
+        "vector_store": {
+            "provider": "faiss",
+            "config": {
+                "path": _local_path(user_id=user_id, agent_id=agent_id),
+                "collection_name": f"{safe_user}_{safe_agent}",
             },
         }
     }
 
 
 def _postgres_config() -> dict[str, object] | None:
-    uri = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_URI', '').strip()
-    password = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD', '').strip()
-    user = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_USER', '').strip()
-    host = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_HOST', '').strip()
-    dbname = os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_DATABASE', '').strip()
+    uri = os.environ.get("DATALAYER_POSTGRESQL_AGENT_MEMORIES_URI", "").strip()
+    password = os.environ.get(
+        "DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD", ""
+    ).strip()
+    user = os.environ.get("DATALAYER_POSTGRESQL_AGENT_MEMORIES_USER", "").strip()
+    host = os.environ.get("DATALAYER_POSTGRESQL_AGENT_MEMORIES_HOST", "").strip()
+    dbname = os.environ.get("DATALAYER_POSTGRESQL_AGENT_MEMORIES_DATABASE", "").strip()
     collection = os.environ.get(
-        'DATALAYER_POSTGRESQL_AGENT_MEMORIES_COLLECTION', _DEFAULT_PGVECTOR_COLLECTION
+        "DATALAYER_POSTGRESQL_AGENT_MEMORIES_COLLECTION", _DEFAULT_PGVECTOR_COLLECTION
     ).strip()
 
     if uri:
         parsed = urlparse(uri)
         host = host or parsed.hostname or _DEFAULT_PGVECTOR_HOST
         port = parsed.port or _DEFAULT_PGVECTOR_PORT
-        dbname = dbname or parsed.path.lstrip('/') or _DEFAULT_PGVECTOR_DB
+        dbname = dbname or parsed.path.lstrip("/") or _DEFAULT_PGVECTOR_DB
         user = user or parsed.username or _DEFAULT_PGVECTOR_USER
-        password = password or parsed.password or ''
+        password = password or parsed.password or ""
     else:
         host = host or _DEFAULT_PGVECTOR_HOST
         port = int(
-            os.environ.get('DATALAYER_POSTGRESQL_AGENT_MEMORIES_PORT', _DEFAULT_PGVECTOR_PORT)
+            os.environ.get(
+                "DATALAYER_POSTGRESQL_AGENT_MEMORIES_PORT", _DEFAULT_PGVECTOR_PORT
+            )
         )
         dbname = dbname or _DEFAULT_PGVECTOR_DB
         user = user or _DEFAULT_PGVECTOR_USER
@@ -95,15 +100,15 @@ def _postgres_config() -> dict[str, object] | None:
         return None
 
     return {
-        'vector_store': {
-            'provider': 'pgvector',
-            'config': {
-                'host': host,
-                'port': port,
-                'dbname': dbname,
-                'user': user,
-                'password': password,
-                'collection_name': collection,
+        "vector_store": {
+            "provider": "pgvector",
+            "config": {
+                "host": host,
+                "port": port,
+                "dbname": dbname,
+                "user": user,
+                "password": password,
+                "collection_name": collection,
             },
         }
     }
@@ -124,22 +129,20 @@ def resolve_mem0_config(
     if explicit_config:
         return explicit_config
 
-    raw_json = os.environ.get('AGENT_RUNTIMES_MEM0_CONFIG_JSON', '').strip()
+    raw_json = os.environ.get("AGENT_RUNTIMES_MEM0_CONFIG_JSON", "").strip()
     if raw_json:
         try:
             parsed = json.loads(raw_json)
             if isinstance(parsed, dict):
                 return parsed
-            logger.warning(
-                'AGENT_RUNTIMES_MEM0_CONFIG_JSON is not an object; ignoring'
-            )
+            logger.warning("AGENT_RUNTIMES_MEM0_CONFIG_JSON is not an object; ignoring")
         except json.JSONDecodeError as exc:
-            logger.warning('Invalid AGENT_RUNTIMES_MEM0_CONFIG_JSON: %s', exc)
+            logger.warning("Invalid AGENT_RUNTIMES_MEM0_CONFIG_JSON: %s", exc)
 
-    mode = os.environ.get('AGENT_RUNTIMES_MEM0_BACKEND', 'auto').strip().lower()
-    if mode in {'sqlite', 'faiss'}:
+    mode = os.environ.get("AGENT_RUNTIMES_MEM0_BACKEND", "auto").strip().lower()
+    if mode in {"sqlite", "faiss"}:
         return _faiss_config(user_id=user_id, agent_id=agent_id)
-    if mode == 'postgres':
+    if mode == "postgres":
         return _postgres_config()
 
     postgres = _postgres_config()

@@ -71,8 +71,12 @@ def display_memory(memory: dict[str, Any]) -> None:
         "created_at",
         "updated_at",
     ):
-        table.add_row(field, "" if memory.get(field) is None else str(memory.get(field)))
-    table.add_row("memory", "" if memory.get("memory") is None else str(memory.get("memory")))
+        table.add_row(
+            field, "" if memory.get(field) is None else str(memory.get(field))
+        )
+    table.add_row(
+        "memory", "" if memory.get("memory") is None else str(memory.get("memory"))
+    )
     metadata = memory.get("metadata") or {}
     if metadata:
         table.add_row("metadata", str(metadata))

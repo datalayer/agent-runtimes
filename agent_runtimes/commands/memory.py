@@ -65,9 +65,7 @@ def _fetch_api(
     url = f"{urls.runtimes_url}/api/runtimes/v1{path}"
     headers = {"Authorization": f"Bearer {resolved_token}"}
 
-    response = requests.request(
-        method, url, headers=headers, params=params, timeout=30
-    )
+    response = requests.request(method, url, headers=headers, params=params, timeout=30)
     response.raise_for_status()
     return response.json()
 

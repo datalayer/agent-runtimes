@@ -22,8 +22,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 try:
-    from pydantic_ai import Agent
     from fastmcp.client.transports import StdioTransport
+    from pydantic_ai import Agent
     from pydantic_ai.mcp import MCPToolset
 
     HAS_PYDANTIC_AI = True

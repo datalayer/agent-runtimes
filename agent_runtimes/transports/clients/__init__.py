@@ -32,14 +32,21 @@ try:
         connect_acp,
     )
 except ImportError:  # pragma: no cover - depends on what is installed
-    ACPClient = ACPClientError = connect_acp = None
-from .ag_ui_client import (
-    AGUIClient,
-    AGUIClientError,
-    AGUIConversation,
-    AGUIEvent,
-    connect_agui,
-)
+    ACPClient = ACPClientError = connect_acp = None  # type: ignore[assignment,misc]
+# Optional for the same reason: the AG-UI client needs `ag-ui-protocol`, which
+# only the `ui` extra installs. Importing it unconditionally made
+# `agent_runtimes.transports` -- and therefore `agent_runtimes.routes` -- fail
+# to import on a plain install.
+try:
+    from .ag_ui_client import (
+        AGUIClient,
+        AGUIClientError,
+        AGUIConversation,
+        AGUIEvent,
+        connect_agui,
+    )
+except ImportError:  # pragma: no cover - depends on what is installed
+    AGUIClient = AGUIClientError = AGUIConversation = AGUIEvent = connect_agui = None  # type: ignore[assignment,misc]
 
 __all__ = [
     # ACP client

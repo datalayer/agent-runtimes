@@ -236,4 +236,3 @@ async def test_reserve_execution_is_idempotent_for_same_in_flight_call() -> None
         assert hijack is None
     finally:
         await _reset_approvals()
-

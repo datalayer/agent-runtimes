@@ -378,9 +378,7 @@ class CodeSandboxExecService:
                             )
                             raise typer.Exit(1)
                         else:
-                            raise RuntimeError(
-                                f"Unknown failure: {json.dumps(reply)}"
-                            )
+                            raise RuntimeError(f"Unknown failure: {json.dumps(reply)}")
 
                     self._print_cell_outputs(i, captured_outputs)
 

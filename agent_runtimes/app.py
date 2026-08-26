@@ -1576,7 +1576,10 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         ):
             _page_handler = _make_page_handler(_page)
             app.add_api_route(
-                f"/html/{_page}", _page_handler, methods=["GET"], include_in_schema=False
+                f"/html/{_page}",
+                _page_handler,
+                methods=["GET"],
+                include_in_schema=False,
             )
             app.add_api_route(
                 f"/static/{_page}",

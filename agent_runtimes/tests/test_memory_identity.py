@@ -5,11 +5,13 @@
 
 from __future__ import annotations
 
+import pytest
+
 from agent_runtimes.memory import resolve_memory_identity
 from agent_runtimes.memory.identity import MemoryIdentity
 
 
-def _clear_identity_env(monkeypatch) -> None:
+def _clear_identity_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in (
         "AGENT_RUNTIMES_MEMORY_USER_ID",
         "DATALAYER_USER_UID",
@@ -18,14 +20,16 @@ def _clear_identity_env(monkeypatch) -> None:
         monkeypatch.delenv(name, raising=False)
 
 
-def test_identity_defaults_to_default_without_env(monkeypatch) -> None:
+def test_identity_defaults_to_default_without_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _clear_identity_env(monkeypatch)
     identity = resolve_memory_identity()
     assert isinstance(identity, MemoryIdentity)
     assert identity.user_id == "default"
 
 
-def test_identity_uses_user_uid_only(monkeypatch) -> None:
+def test_identity_uses_user_uid_only(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_identity_env(monkeypatch)
     monkeypatch.setenv("DATALAYER_USER_UID", "user-123")
     identity = resolve_memory_identity()
@@ -33,7 +37,7 @@ def test_identity_uses_user_uid_only(monkeypatch) -> None:
     assert identity.user_uid == "user-123"
 
 
-def test_identity_ignores_billing_entity(monkeypatch) -> None:
+def test_identity_ignores_billing_entity(monkeypatch: pytest.MonkeyPatch) -> None:
     # Memories are scoped to the personal account; a billing entity must not
     # change the isolation key.
     _clear_identity_env(monkeypatch)
@@ -43,7 +47,7 @@ def test_identity_ignores_billing_entity(monkeypatch) -> None:
     assert identity.user_id == "user-123"
 
 
-def test_identity_falls_back_to_handle(monkeypatch) -> None:
+def test_identity_falls_back_to_handle(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_identity_env(monkeypatch)
     monkeypatch.setenv("DATALAYER_USER_HANDLE", "alice")
     identity = resolve_memory_identity()
@@ -51,7 +55,7 @@ def test_identity_falls_back_to_handle(monkeypatch) -> None:
     assert identity.user_handle == "alice"
 
 
-def test_identity_explicit_override_wins(monkeypatch) -> None:
+def test_identity_explicit_override_wins(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_identity_env(monkeypatch)
     monkeypatch.setenv("DATALAYER_USER_UID", "user-123")
     monkeypatch.setenv("AGENT_RUNTIMES_MEMORY_USER_ID", "explicit-scope")

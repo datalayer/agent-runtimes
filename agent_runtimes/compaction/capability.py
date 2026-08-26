@@ -286,29 +286,29 @@ class CompactionCapability(AbstractCapability[Any]):
 
     Parameters
     ----------
-    max_tokens:
+    max_tokens : int | None
         Token ceiling for the history (typically the model's ``tokens_limit``).
         When ``None``, the budget is resolved per request from the model spec
         via ``request_context.model_id``; if that also fails the capability is a
         no-op.
-    trigger_fraction:
+    trigger_fraction : float
         Compaction runs when the estimated history exceeds this fraction of the
         budget.
-    keep_fraction:
+    keep_fraction : float
         After compaction the preserved tail targets this fraction of the budget.
-    keep_messages:
+    keep_messages : int
         Minimum number of tail messages to preserve regardless of token math.
-    min_messages:
+    min_messages : int
         Never compact a history shorter than this.
-    model:
+    model : str | Model | None
         Model used to generate summaries. Defaults to the request's model.
-    summary_prompt:
+    summary_prompt : str
         Prompt template; must contain a ``{messages}`` placeholder.
-    tokenizer:
+    tokenizer : Callable[[str], int] | None
         Optional exact token counter; defaults to a ~4 chars/token heuristic.
-    preserve_first_user_message:
+    preserve_first_user_message : bool
         Keep the first user prompt after compaction (task anchoring).
-    incremental:
+    incremental : bool
         Feed any prior summary into the next summarization so it is extended
         rather than regenerated.
     """

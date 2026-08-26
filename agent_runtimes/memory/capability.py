@@ -55,15 +55,15 @@ class MemoryCapability(AbstractCapability[Any]):
 
     Parameters
     ----------
-    backend:
+    backend : BaseMemoryBackend
         The memory backend used for retrieval and persistence.
-    max_memories:
+    max_memories : int
         Maximum number of memories injected into the system prompt per run.
-    auto_store:
+    auto_store : bool
         When True, persist the raw user prompt and final answer after each run.
         Off by default so memory holds only durable facts the model chooses to
         save via the ``remember`` tool, instead of verbatim conversation turns.
-    expose_tools:
+    expose_tools : bool
         When True, expose ``search_memory`` and ``remember`` tools to the model.
     """
 
@@ -135,7 +135,7 @@ class MemoryCapability(AbstractCapability[Any]):
 
             Parameters
             ----------
-            query:
+            query : str
                 The text to search stored memories for.
             """
             try:
@@ -157,7 +157,7 @@ class MemoryCapability(AbstractCapability[Any]):
 
             Parameters
             ----------
-            content:
+            content : str
                 The fact or preference to remember.
             """
             try:

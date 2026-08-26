@@ -174,9 +174,14 @@ export function pruneCodeSandboxGivenNames(
  */
 function asGivenName(base: string): string {
   const stripped = (base ?? '')
-    // Pictographs, their skin tones, their joiners and their selectors.
+    /*
+     * Pictographs, their skin tones, their joiners and their selectors.
+     * Split into three alternatives rather than one class: a class whose next
+     * range starts on a combining mark (the variation selectors) reads to
+     * `no-misleading-character-class` as a base character followed by a mark.
+     */
     .replace(
-      /[\u{1F000}-\u{1FAFF}\u{2190}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}]/gu,
+      /[\u{1F000}-\u{1FAFF}\u{2190}-\u{2BFF}]|[\u{FE00}-\u{FE0F}]|\u{200D}/gu,
       ' ',
     )
     .replace(/\s+/g, ' ')

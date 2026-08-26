@@ -219,7 +219,9 @@ class TestCodeSandboxManagerSidecarGuard:
 
         fake_module.JupyterServerSandbox = DummyJupyterSandbox
         monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
-        monkeypatch.setitem(sys.modules, "code_sandboxes.jupyter_server_sandbox", fake_module)
+        monkeypatch.setitem(
+            sys.modules, "code_sandboxes.jupyter_server_sandbox", fake_module
+        )
 
         sandbox = manager._create_sandbox()
 

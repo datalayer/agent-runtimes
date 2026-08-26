@@ -80,7 +80,6 @@ async def test_search_ranks_by_word_overlap(tmp_path: Path) -> None:
     await backend.close()
 
 
-
 @pytest.mark.asyncio
 async def test_persists_across_instances(tmp_path: Path) -> None:
     path = _db_path(tmp_path)
@@ -149,9 +148,7 @@ def test_sqlite_routes_to_pgvector_on_kubernetes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("KUBERNETES_SERVICE_HOST", "10.0.0.1")
-    monkeypatch.setenv(
-        "DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD", "secret"
-    )
+    monkeypatch.setenv("DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD", "secret")
     from agent_runtimes.memory.mem0_backend import Mem0Backend
 
     backend = create_memory_backend(

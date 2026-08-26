@@ -44,22 +44,22 @@ def _resolve_db_path(
             path = configured.strip()
 
     if path is None:
-        configured_env = os.environ.get(
-            "AGENT_RUNTIMES_MEMORY_SQLITE_PATH", ""
-        ).strip()
+        configured_env = os.environ.get("AGENT_RUNTIMES_MEMORY_SQLITE_PATH", "").strip()
         if configured_env:
             path = configured_env
 
     if path is None:
+        # Overridable default; the temp dir is only where an unconfigured dev
+        # run lands.
         base_dir = os.environ.get(
-            "AGENT_RUNTIMES_MEMORY_DIR", "/tmp/agent-runtimes-memory"
+            "AGENT_RUNTIMES_MEMORY_DIR",
+            "/tmp/agent-runtimes-memory",  # nosec B108
         )
         path = str(Path(base_dir) / "memory.db")
 
     # Ensure the parent directory exists regardless of the path source.
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     return path
-
 
 
 class SqliteMemory(BaseMemoryBackend):
@@ -200,7 +200,7 @@ class SqliteMemory(BaseMemoryBackend):
                 SELECT * FROM memories
                 WHERE user_id = ? AND {agent_pred} AND ({like_clause})
                 ORDER BY created_at DESC
-                """,
+                """,  # nosec B608 - both predicates are fixed literals built above
                 [self.user_id, *agent_params, *like_params],
             )
             rows = cursor.fetchall()
@@ -217,7 +217,6 @@ class SqliteMemory(BaseMemoryBackend):
         scored.sort(key=lambda item: item[0], reverse=True)
         return [entry for _, entry in scored[:limit]]
 
-
     async def list_all(self, limit: int = 50) -> list[dict[str, Any]]:
         """Return the most recent stored entries for this user/agent."""
         agent_pred, agent_params = self._agent_match()
@@ -228,7 +227,7 @@ class SqliteMemory(BaseMemoryBackend):
                 WHERE user_id = ? AND {agent_pred}
                 ORDER BY created_at DESC
                 LIMIT ?
-                """,
+                """,  # nosec B608 - `agent_pred` is a fixed literal; values are bound
                 [self.user_id, *agent_params, limit],
             )
             rows = cursor.fetchall()

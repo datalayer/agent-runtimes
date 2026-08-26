@@ -18,6 +18,7 @@ from .a2a import (
     router as a2a_protocol_router,
 )
 from .a2ui import router as a2ui_router
+
 # ACP support is optional: `acp` is not a declared dependency, and importing
 # it unconditionally makes `import agent_runtimes` fail outright wherever it is
 # absent. That took down every consumer that only wants the client — the

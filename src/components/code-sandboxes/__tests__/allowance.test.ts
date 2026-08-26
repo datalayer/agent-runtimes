@@ -21,7 +21,9 @@ describe('codeSandboxAllowance', () => {
 
     expect(allowance.maxFromCredits).toBe(Math.floor(13495.734 / RATE / 60));
     expect(allowance.effectiveMaxMinutes).toBe(allowance.maxFromCredits);
-    expect(allowance.effectiveMaxMinutes).toBeGreaterThan(DEFAULT_MINUTES_FLOOR);
+    expect(allowance.effectiveMaxMinutes).toBeGreaterThan(
+      DEFAULT_MINUTES_FLOOR,
+    );
   });
 
   it('does not read an unusable balance as a known one', () => {
@@ -55,8 +57,10 @@ describe('codeSandboxAllowance', () => {
   });
 
   it('drops to what the credits pay for once the included runs are spent', () => {
+    /* 0.24 credits at 0.0008/s is 300 seconds -- five minutes, under the floor. */
+    const available = 0.24;
     const allowance = codeSandboxAllowance({
-      available: 1,
+      available,
       includedRuns: 5,
       currentRuns: 5,
       burningRate: RATE,
@@ -65,7 +69,9 @@ describe('codeSandboxAllowance', () => {
     // No free run left, so the floor no longer applies: the ceiling is the
     // balance, which here is under ten minutes.
     expect(allowance.hasRemainingRuns).toBe(false);
-    expect(allowance.effectiveMaxMinutes).toBe(Math.floor(1 / RATE / 60));
+    expect(allowance.effectiveMaxMinutes).toBe(
+      Math.floor(available / RATE / 60),
+    );
     expect(allowance.effectiveMaxMinutes).toBeLessThan(DEFAULT_MINUTES_FLOOR);
   });
 

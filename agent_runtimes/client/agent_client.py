@@ -54,6 +54,7 @@ def _runtime_environment_name(runtime_data: dict[str, Any]) -> str:
             return name
     return str(runtime_data.get("environment_name") or "").strip()
 
+
 DEFAULT_LOCAL_HOST = "127.0.0.1"
 DEFAULT_LOCAL_AGENT_NAME = "default"
 DEFAULT_LOCAL_PROTOCOL = "vercel-ai"

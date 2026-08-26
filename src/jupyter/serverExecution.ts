@@ -66,7 +66,8 @@ import {
  * for any identifier — the nil one included, so no kernel has to exist to
  * learn whether the extension is installed. A server without it says 404.
  */
-const NBMODEL_PROBE = 'api/kernels/00000000-0000-0000-0000-000000000000/execute';
+const NBMODEL_PROBE =
+  'api/kernels/00000000-0000-0000-0000-000000000000/execute';
 
 /** What a server said when asked, by the address it was asked at. */
 const installed = new Map<string, Promise<boolean>>();

@@ -44,8 +44,10 @@ _APPROVED_TOOL_GRANTS_BY_SCOPE: dict[str, set[str]] = {}
 
 
 def _agent_scope_key(agent_id: str | None) -> str:
-    """Scope key used when no chat/conversation id is available (see
-    ``ToolsGuardrailCapability._approval_scope_key``)."""
+    """Build the scope key used when no chat/conversation id is available.
+
+    See ``ToolsGuardrailCapability._approval_scope_key``.
+    """
     return f"agent:{agent_id or 'default-agent'}"
 
 
@@ -72,6 +74,7 @@ def has_tool_grant_for_scope(scope_key: str, tool_name: str, tool_args: Any) -> 
     if not granted:
         return False
     return _grant_envelope_key(tool_name, tool_args) in granted
+
 
 _HOOK_DECISION_ALIASES = {
     "allow": "allow",

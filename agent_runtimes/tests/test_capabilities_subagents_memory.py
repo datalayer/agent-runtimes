@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
 from agent_runtimes.memory import MemoryCapability
 from agent_runtimes.subagents import SubagentsCapability
@@ -42,7 +44,9 @@ def test_factory_adds_memory_capability_for_mem0() -> None:
     assert any(isinstance(c, MemoryCapability) for c in caps)
 
 
-def test_factory_memory_isolates_by_trusted_user_not_agent(monkeypatch) -> None:
+def test_factory_memory_isolates_by_trusted_user_not_agent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     # The memory partition key must be the trusted runtime owner (personal
     # account), never the agent id, so two users sharing an agent id never
     # share memories.
