@@ -3,12 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2026 Datalayer, Inc.
- *
- * Datalayer License
- */
-
 /**
  * Pick up, in a React notebook, the executions a previous page left running.
  *

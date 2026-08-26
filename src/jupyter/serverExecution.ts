@@ -3,12 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2026 Datalayer, Inc.
- *
- * Datalayer License
- */
-
 /**
  * Cells that keep running when the page goes away, for the editors of Datalayer.
  *

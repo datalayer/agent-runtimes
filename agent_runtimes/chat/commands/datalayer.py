@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Slash command: /datalayer - Connect this agent to Datalayer Notebooks.
 
 Registers the hosted Jupyter MCP endpoint of Datalayer as a tool source for
