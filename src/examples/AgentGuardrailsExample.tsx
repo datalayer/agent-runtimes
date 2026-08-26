@@ -312,7 +312,6 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
-    configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
     configuration?.aiAgentsUrl ||

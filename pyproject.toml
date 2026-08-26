@@ -46,8 +46,8 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.40.0,<2.0.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.40.0,<2.0.0",
     "opentelemetry-instrumentation>=0.61b0,<0.62",
-    "pydantic-ai-slim[mcp]>=2.21.0,<3",
-    "pydantic-graph>=2.21.0,<3",
+    "pydantic-ai-slim[mcp]>=2.35.0,<3",
+    "pydantic-graph>=2.35.0,<3",
     "pydantic-settings>=2.14.2",
     "pydantic[email]>=2.13.3",
     "tiktoken>=0.5.0",
@@ -66,7 +66,7 @@ Changelog = "https://github.com/datalayer/agent-runtimes/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 anthropic = [
     "anthropic>=0.105.0,<1.0.0",
-    "pydantic-ai-slim[anthropic]>=2.21.0,<3",
+    "pydantic-ai-slim[anthropic]>=2.35.0,<3",
 ]
 openai = [
     # The ceiling is the next MAJOR of the SDK, not the current one.
@@ -77,16 +77,16 @@ openai = [
     # is `AsyncAzureOpenAI`, whose arguments are unchanged in 3.x, so the
     # ceiling was holding back the ecosystem rather than protecting anything.
     "openai>=2.29.0,<4.0.0",
-    "pydantic-ai-slim[openai]>=2.21.0,<3",
+    "pydantic-ai-slim[openai]>=2.35.0,<3",
 ]
 google = [
     "google-auth>=2.52.0",
     "google-api-core>=2.30.3",
-    "pydantic-ai-slim[google]>=2.21.0,<3",
+    "pydantic-ai-slim[google]>=2.35.0,<3",
 ]
 aws = [
     "boto3>=1.42.96,<1.43.0",
-    "pydantic-ai-slim[bedrock]>=2.21.0,<3",
+    "pydantic-ai-slim[bedrock]>=2.35.0,<3",
 ]
 a2a = [
     "a2a-sdk[all]>=0.3.0,<0.4.0",
@@ -103,7 +103,7 @@ memory = [
 ]
 durable = [
     "dbos",
-    "pydantic-ai-slim[dbos]>=2.21.0,<3",
+    "pydantic-ai-slim[dbos]>=2.35.0,<3",
 ]
 logfire = [
     "logfire>=4.32.1",

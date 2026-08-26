@@ -244,7 +244,6 @@ const AgentOtelExampleInner: React.FC<{
   const { configuration } = useCoreStore();
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const resolvedUrl =
-    configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
     configuration?.otelUrl ||

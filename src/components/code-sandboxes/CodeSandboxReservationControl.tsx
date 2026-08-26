@@ -5,7 +5,7 @@
 
 import { FormControl, IconButton, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { PlusIcon } from '@primer/octicons-react';
+import { CreditCardIcon } from '@primer/octicons-react';
 import { Slider } from '@datalayer/primer-addons';
 
 /**
@@ -130,11 +130,24 @@ export function CodeSandboxReservationControl(
         />
         {(max === 0 || max > Number.EPSILON) && (
           <>
-            <Text>out of {maxProps} available minutes</Text>
+            {/*
+              Which limit is binding, rather than one word for both. An
+              account whose credits pay for months would otherwise read "out
+              of 1440 available minutes" and conclude it had 24 hours of
+              credit left.
+            */}
+            <Text>
+              {max < requestedMax
+                ? `out of ${max} minutes per reservation`
+                : `out of ${max} available minutes`}
+            </Text>
             {addCredits && (
               <IconButton
-                icon={PlusIcon}
-                aria-label="Add credits"
+                icon={CreditCardIcon}
+                // It leads to the plan, where credits are read and changed —
+                // not to a checkout, which is what a `+` promised.
+                aria-label="Check your Plan"
+                variant="invisible"
                 onClick={() => addCredits()}
               />
             )}

@@ -29,22 +29,18 @@ import {
   CodeSandboxReservationControl,
   MAXIMAL_CODE_SANDBOX_TIME_RESERVATION_MINUTES,
 } from './CodeSandboxReservationControl';
+import {
+  codeSandboxAllowance,
+  type INewCodeSandboxAllowance,
+} from './codeSandboxAllowance';
 
-/** What the account allows for a new sandbox of a given burning rate. */
-export interface INewCodeSandboxAllowance {
-  /** Minutes the available credits pay for; undefined without a rate. */
-  maxFromCredits?: number;
-  /** The ceiling offered by the reservation control. */
-  effectiveMaxMinutes: number;
-  /** Whether a paid start is impossible: no runs left and no credits. */
-  outOfCredits: boolean;
-  hasKnownCredits: boolean;
-  hasKnownRunAllowance: boolean;
-  hasRemainingRuns: boolean;
-}
+export type { INewCodeSandboxAllowance };
 
 /**
  * The credits arithmetic both the launcher and the picker ask.
+ *
+ * The arithmetic itself lives in `codeSandboxAllowance`, free of React and of
+ * this module's Primer imports, so it can be read and tested on its own.
  *
  * @param burningRate Credits per second of the chosen environment
  */
@@ -52,40 +48,17 @@ export function useNewCodeSandboxAllowance(
   burningRate: number | undefined,
 ): INewCodeSandboxAllowance {
   const { credits, user } = useIAMStore();
-  const includedRuns =
-    user?.subscription?.usage?.included_runs ??
-    user?.subscription?.included_runs;
-  const currentRuns =
-    user?.subscription?.usage?.current_runs ??
-    user?.subscription?.current_runs ??
-    user?.subscription?.used_runs;
-  const hasKnownRunAllowance = typeof includedRuns === 'number';
-  const hasRemainingRuns =
-    hasKnownRunAllowance &&
-    typeof currentRuns === 'number' &&
-    includedRuns > 0 &&
-    currentRuns < includedRuns;
-  const hasKnownCredits = typeof credits?.available === 'number';
-  const maxFromCredits = burningRate
-    ? Math.floor((credits?.available ?? 0) / burningRate / 60.0)
-    : undefined;
-  const effectiveMaxMinutes =
-    hasKnownCredits && hasKnownRunAllowance && !hasRemainingRuns
-      ? Math.max(1, maxFromCredits ?? 0)
-      : Math.max(10, maxFromCredits && maxFromCredits > 0 ? maxFromCredits : 0);
-  const outOfCredits =
-    hasKnownCredits &&
-    hasKnownRunAllowance &&
-    !hasRemainingRuns &&
-    ((credits?.available ?? 0) <= 0 || (maxFromCredits ?? 0) < Number.EPSILON);
-  return {
-    maxFromCredits,
-    effectiveMaxMinutes,
-    outOfCredits,
-    hasKnownCredits,
-    hasKnownRunAllowance,
-    hasRemainingRuns,
-  };
+  return codeSandboxAllowance({
+    available: credits?.available,
+    includedRuns:
+      user?.subscription?.usage?.included_runs ??
+      user?.subscription?.included_runs,
+    currentRuns:
+      user?.subscription?.usage?.current_runs ??
+      user?.subscription?.current_runs ??
+      user?.subscription?.used_runs,
+    burningRate,
+  });
 }
 
 /** The credits a time reservation stands for. */
@@ -176,9 +149,9 @@ export function NewCodeSandboxControls(
       {withHomeFolder && !configuration.whiteLabel && (
         <FormControl disabled={storageDisabled} layout="horizontal">
           <FormControl.Label id="new-sandbox-home-folder-label">
-            Home folder
+            Mount Home Folder
             <Tooltip
-              text="The runtime will be slower to start."
+              text="The sandbox will be slower to start when a Home Folder is mounted."
               direction="e"
               style={{ marginLeft: 3 }}
             >
