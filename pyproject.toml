@@ -144,6 +144,9 @@ all = [
     "agent_runtimes[a2a,anthropic,aws,durable,google,logfire,memory,openai,ui]",
 ]
 test = [
+    # Several tests build agents from `openai:` model strings, and pydantic-ai
+    # resolves those through the provider SDK -- without it they fail on import.
+    "agent_runtimes[openai]",
     "coverage>=7.9.2",
     "mypy>=1.16.1",
     "pytest>=8.4.1",

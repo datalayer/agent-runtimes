@@ -25,7 +25,13 @@ from .clients import (
     connect_acp,
     connect_agui,
 )
-from .mcp_ui import MCPUITransport
+
+# Optional for the same reason: the MCP-UI transport needs `mcp-ui-server`,
+# which only the `ui` extra installs.
+try:
+    from .mcp_ui import MCPUITransport
+except ImportError:  # pragma: no cover - depends on what is installed
+    MCPUITransport = None  # type: ignore[assignment,misc]
 from .vercel_ai import VercelAITransport
 
 __all__ = [

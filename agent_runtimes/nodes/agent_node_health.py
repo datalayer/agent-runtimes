@@ -17,7 +17,9 @@ from ..routes.agent_node import get_agent_node_configuration
 try:  # psutil is optional; degrade gracefully when missing.
     import psutil
 except Exception:  # noqa: BLE001
-    psutil = None  # type: ignore[assignment]
+    # `unused-ignore` too: with psutil absent the import is untyped and the
+    # assignment raises nothing to ignore, which `warn_unused_ignores` calls out.
+    psutil = None  # type: ignore[assignment, unused-ignore]
 
 
 _BOOT_TIME = time.time()
