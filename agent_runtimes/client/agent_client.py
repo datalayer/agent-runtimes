@@ -783,6 +783,8 @@ class AgentClient(
         billing_entity_type: Optional[str] = None,
         billing_entity_handle: Optional[str] = None,
         api_key: Optional[str] = None,
+        pod_name: Optional[str] = None,
+        content_attachment_uids: Optional[list[str]] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -797,6 +799,13 @@ class AgentClient(
             Time reservation in minutes for the runtime. Defaults to 10 minutes.
         snapshot_name : Optional[str], optional
             Name of the snapshot to create from. If provided, the runtime will be created from this snapshot.
+        pod_name : Optional[str], optional
+            Pod name (``runtime-<ULID>``) the Contents attachments were made for;
+            the runtime is created under it.
+        content_attachment_uids : Optional[list[str]], optional
+            Contents attachments to mount, created for ``pod_name`` before the
+            runtime: a Home Folder attachment mounts the caller's home folders,
+            a Volume attachment mounts its Volume.
 
         Returns
         -------
@@ -853,6 +862,8 @@ class AgentClient(
                 billing_entity_uid=billing_entity_uid,
                 billing_entity_type=billing_entity_type,
                 billing_entity_handle=billing_entity_handle,
+                pod_name=pod_name,
+                content_attachment_uids=content_attachment_uids,
             )
         else:
             # Create runtime without snapshot
@@ -865,6 +876,8 @@ class AgentClient(
                 billing_entity_uid=billing_entity_uid,
                 billing_entity_type=billing_entity_type,
                 billing_entity_handle=billing_entity_handle,
+                pod_name=pod_name,
+                content_attachment_uids=content_attachment_uids,
             )
 
         # Process the response and create RuntimesService object

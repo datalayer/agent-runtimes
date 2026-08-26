@@ -110,9 +110,36 @@ export type AgentRuntimeData = {
   billing_entity_uid?: string;
   billing_entity_type?: 'user' | 'organization' | 'team';
   billing_entity_handle?: string;
-  mount_home_folder?: boolean;
-  volume_uid?: string;
-  volume_uids?: string[];
+  /** Home folders the runtime mounts: the caller's own and their memberships. */
+  home_folder_mounts?: RuntimeHomeFolderMount[];
+  /** Contents attachments the runtime mounts, as recorded on its pod. */
+  content_attachments?: RuntimeContentAttachment[];
+};
+
+/** One home folder a runtime mounts, at `~/{handle}`. */
+export type RuntimeHomeFolderMount = {
+  type: 'user' | 'organization' | 'team';
+  uid: string;
+  handle?: string;
+  organization_handle?: string;
+};
+
+/**
+ * A Contents attachment as the runtime reports it.
+ *
+ * `source_kind` is the kind of the attached source — `files` for the Home
+ * Folder, `volume` for a Volume — which is what tells the two mounts apart.
+ */
+export type RuntimeContentAttachment = {
+  uid?: string;
+  source_uid?: string;
+  source_kind?: string;
+  delivery?: 'mount' | 'local-bridge' | 'materialize' | 'client' | 'environment';
+  mount_path?: string | null;
+  mode?: 'ro' | 'rw';
+  required?: boolean;
+  status?: string;
+  provider_resource_id?: string | null;
 };
 
 // ---- Running Agents ----

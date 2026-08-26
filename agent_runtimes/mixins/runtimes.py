@@ -44,6 +44,8 @@ class RuntimesCreateMixin:
         billing_entity_uid: Optional[str] = None,
         billing_entity_type: Optional[str] = None,
         billing_entity_handle: Optional[str] = None,
+        pod_name: Optional[str] = None,
+        content_attachment_uids: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         """
         Create a Runtime with the given environment name.
@@ -58,6 +60,13 @@ class RuntimesCreateMixin:
             Credit limit for the runtime.
         from_snapshot_uid : Optional[str]
             UID of snapshot to create runtime from.
+        pod_name : Optional[str]
+            Pod name (``runtime-<ULID>``) the Contents attachments were made
+            for; the runtime is created under it.
+        content_attachment_uids : Optional[list[str]]
+            Contents attachments to mount, created for ``pod_name`` before the
+            runtime: a Home Folder attachment mounts the caller's home
+            folders, a Volume attachment mounts its Volume.
 
         Returns
         -------
@@ -137,6 +146,11 @@ class RuntimesCreateMixin:
                 body["billing_entity_type"] = billing_entity_type
             if resolved_billing_entity_handle:
                 body["billing_entity_handle"] = resolved_billing_entity_handle
+
+            if pod_name:
+                body["pod_name"] = pod_name
+            if content_attachment_uids:
+                body["content_attachment_uids"] = list(content_attachment_uids)
 
             runtime_url = "{}/api/runtimes/v1/runtimes".format(self.urls.runtimes_url)
             logger.debug(

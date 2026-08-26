@@ -494,14 +494,6 @@ export async function createServiceManagerFromAgentSandbox(
 function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
   const status = typeof raw.status === 'string' ? raw.status.toLowerCase() : '';
   const normalizedStatus: AgentStatus = RUNTIME_STATUS_MAP[status] ?? 'running';
-  const rawVolumeUids = Array.isArray(raw.volume_uids)
-    ? raw.volume_uids
-    : raw.volume_uid
-      ? [raw.volume_uid]
-      : [];
-  const volume_uids = rawVolumeUids
-    .map((uid: unknown) => String(uid || '').trim())
-    .filter(Boolean);
   const environment = raw.environment as
     | {
         name?: string;
@@ -528,8 +520,9 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
     url: raw.ingress,
     messageCount: 0,
     agent_spec_id: raw.agent_spec_id || undefined,
-    volume_uids,
-    volume_uid: raw.volume_uid || volume_uids[0] || undefined,
+    content_attachments: Array.isArray(raw.content_attachments)
+      ? raw.content_attachments
+      : [],
   } as AgentRuntimeData;
 }
 
@@ -1115,11 +1108,9 @@ export function useCreateAgentRuntime() {
 
   return useMutation({
     mutationFn: async (data: CreateAgentRuntimeRequest) => {
-      const normalizedVolumeUids = Array.isArray(data.volumeUids)
-        ? data.volumeUids.map(uid => String(uid || '').trim()).filter(Boolean)
-        : data.volumeUid
-          ? [String(data.volumeUid).trim()]
-          : [];
+      const contentAttachmentUids = (data.contentAttachmentUids ?? [])
+        .map(uid => String(uid || '').trim())
+        .filter(Boolean);
       return requestDatalayer({
         url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes`,
         method: 'POST',
@@ -1142,10 +1133,10 @@ export function useCreateAgentRuntime() {
             data.billingSourceOrganizationUid || undefined,
           billing_source_organization_handle:
             data.billingSourceOrganizationHandle || undefined,
-          mount_home_folder: data.mountHomeFolder ?? false,
-          volume_uids:
-            normalizedVolumeUids.length > 0 ? normalizedVolumeUids : undefined,
-          volume_uid: normalizedVolumeUids[0] || data.volumeUid || undefined,
+          pod_name: data.podName || undefined,
+          content_attachment_uids: contentAttachmentUids.length
+            ? contentAttachmentUids
+            : undefined,
         },
       });
     },

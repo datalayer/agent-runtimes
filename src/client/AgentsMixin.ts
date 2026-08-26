@@ -450,11 +450,9 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
     ): Promise<CreateRuntimeApiResponse> {
       const token = (this as any).getToken();
       const runtimesUrl = (this as any).getRuntimesUrl();
-      const normalizedVolumeUids = Array.isArray(data.volumeUids)
-        ? data.volumeUids.map(uid => String(uid || '').trim()).filter(Boolean)
-        : data.volumeUid
-          ? [String(data.volumeUid).trim()]
-          : [];
+      const contentAttachmentUids = (data.contentAttachmentUids ?? [])
+        .map(uid => String(uid || '').trim())
+        .filter(Boolean);
       return requestDatalayerAPI<CreateRuntimeApiResponse>({
         url: `${runtimesUrl}/api/runtimes/v1/runtimes`,
         method: 'POST',
@@ -478,10 +476,10 @@ export function AgentsMixin<TBase extends Constructor>(Base: TBase) {
             data.billingSourceOrganizationUid || undefined,
           billing_source_organization_handle:
             data.billingSourceOrganizationHandle || undefined,
-          mount_home_folder: data.mountHomeFolder ?? false,
-          volume_uids:
-            normalizedVolumeUids.length > 0 ? normalizedVolumeUids : undefined,
-          volume_uid: normalizedVolumeUids[0] || data.volumeUid || undefined,
+          pod_name: data.podName || undefined,
+          content_attachment_uids: contentAttachmentUids.length
+            ? contentAttachmentUids
+            : undefined,
         },
       });
     }
