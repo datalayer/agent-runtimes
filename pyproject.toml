@@ -72,7 +72,9 @@ Changelog = "https://github.com/datalayer/agent-runtimes/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 anthropic = [
-    "anthropic>=0.105.0,<1.0.0",
+    # pydantic-ai 2.34+ builds on the anthropic SDK 1.x; nothing here calls
+    # the SDK directly, so the floor follows pydantic-ai's.
+    "anthropic>=1.0.0,<2.0.0",
     "pydantic-ai-slim[anthropic]>=2.35.0,<3",
 ]
 openai = [
