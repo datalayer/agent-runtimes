@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Lexical Example - Next generation chat with Lexical editor.
+ * Lexical Example - Next generation chat with Lexical editor.
  *
  * This example demonstrates using the chat component with:
  * - Lexical editor integration
@@ -66,7 +66,6 @@ import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import type { FrontendToolDefinition, ProtocolConfig } from '../types';
 import { DEFAULT_MODEL } from '../specs';
@@ -255,7 +254,7 @@ function LexicalEditor({ serviceManager, endpoint }: LexicalEditorProps) {
 }
 
 /**
- * Agent Runtime Lexical Sidebar Example with Simple integration
+ * Lexical Agent Sidebar Example with Simple integration
  */
 interface ChatLexicalAgentExampleProps {
   serviceManager?: ServiceManager.IManager;
@@ -264,15 +263,13 @@ interface ChatLexicalAgentExampleProps {
 export function ChatLexicalAgentExampleInner({
   serviceManager,
 }: ChatLexicalAgentExampleProps) {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
   const [createRequested, setCreateRequested] = useState(false);
   const jupyterSandboxUrl = useMemo(
     () => getJupyterSandboxUrl(serviceManager),
     [serviceManager],
   );
 
-  const { agentId, isReady, status, error, createAgent } =
+  const { agentId, baseUrl, isReady, status, error, createAgent } =
     useExampleAgentRuntime({
       exampleId: 'LexicalAgentSidebarExample',
       agentName: DEFAULT_AGENT_ID,
@@ -289,6 +286,7 @@ export function ChatLexicalAgentExampleInner({
         jupyterSandbox: jupyterSandboxUrl,
       },
     });
+  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
 
   useEffect(() => {
     if (!jupyterSandboxUrl || createRequested || agentId) {
@@ -355,7 +353,7 @@ export function ChatLexicalAgentExampleInner({
             }}
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-              Agent Runtime Lexical Sidebar Example
+              Lexical Agent Sidebar Example
             </h1>
             <p style={{ margin: '8px 0 0', color: 'var(--fgColor-muted)' }}>
               Next generation chat with Lexical editor integration (NO

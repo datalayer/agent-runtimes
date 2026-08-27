@@ -28,7 +28,7 @@ import { BriefcaseIcon, FileIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { Chat } from '../chat';
 import { useSkills, useSkillActions } from '../hooks';
 import type { SkillInfo } from '../types';
@@ -184,15 +184,25 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
 
-  const [runtimeStatus, setRuntimeStatus] = useState<
-    'launching' | 'ready' | 'error'
-  >('launching');
-  const [isReady, setIsReady] = useState(false);
-  const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(agentName);
-  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
-
-  const agentBaseUrl = useExampleAgentRuntimesUrl();
+  const {
+    agentId = agentName,
+    baseUrl: agentBaseUrl,
+    status: runtimeStatus,
+    isReady,
+    error: hookError,
+  } = useExampleAgentRuntime({
+    exampleId: 'AgentSkillsExample',
+    agentName,
+    specId: AGENTSPEC_ID,
+    agentConfig: {
+      description:
+        'Agent with skills example - module, package and file based skills',
+      protocol: 'vercel-ai',
+      agentSpecId: AGENTSPEC_ID,
+      enableSkills: true,
+      tools: [],
+    },
+  });
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   // WS-sourced skills (reads from codemodeStatus pushed via monitoring WS)
@@ -232,97 +242,6 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const packageBasedSkills = skills.filter(s => s.source_variant === 'package');
   const moduleBasedSkills = skills.filter(s => s.source_variant === 'module');
 
-  const authFetch = useCallback(
-    (url: string, opts: RequestInit = {}) =>
-      fetch(url, {
-        ...opts,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(opts.headers ?? {}),
-        },
-      }),
-    [token],
-  );
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const createAgent = async () => {
-      setRuntimeStatus('launching');
-      setIsReady(false);
-      setHookError(null);
-      setIsReconnectedAgent(false);
-
-      try {
-        // Create local agent runtime using the example-full spec.
-        // The spec contains module-based, package-based and file-based skills.
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'Agent with skills example - module, package and file based skills',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_skills: true,
-            tools: [],
-          }),
-        });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create agent: ${response.status}`,
-            );
-          }
-        }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
-          );
-          setRuntimeStatus('error');
-        }
-      }
-    };
-
-    void createAgent();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [agentBaseUrl, agentName, authFetch]);
-
   if (!isReady && runtimeStatus !== 'error') {
     return (
       <Box
@@ -355,21 +274,6 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         flexDirection: 'column',
       }}
     >
-      {isReconnectedAgent && (
-        <Box
-          sx={{
-            px: 3,
-            py: 1,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
-        >
-          <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-            Agent already running - reconnected.
-          </Text>
-        </Box>
-      )}
-
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Chat

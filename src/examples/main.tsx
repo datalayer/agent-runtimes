@@ -28,7 +28,15 @@ import {
 } from '@datalayer/primer-addons';
 import { AgentSummary } from '../components';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
-import { Button, SegmentedControl, Spinner, Text } from '@primer/react';
+import {
+  ActionList,
+  ActionMenu,
+  Button,
+  SegmentedControl,
+  Spinner,
+  Text,
+  TextInput,
+} from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import { coreStore, iamStore } from '@datalayer/core';
 import {
@@ -58,6 +66,7 @@ import { ExampleWrapper } from './components/ExampleWrapper';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
 import type { RuntimeEnvironmentDetails } from '../hooks/useAgentRuntimes';
+import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
 import { DEFAULT_MODEL } from '../specs/models';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
@@ -77,6 +86,32 @@ const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
   '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
 
+const EXAMPLE_GROUP_ORDER = [
+  'Personas',
+  'A2UI',
+  'AG-UI',
+  'Agent',
+  'Chat',
+  'Lexical',
+  'Notebook',
+  'Cell',
+  'CopilotKit',
+] as const;
+
+const getExampleGroup = (id: string): string => {
+  if (id === 'AgentspecsExample' || id === 'AgentLoopExample') {
+    return 'Personas';
+  }
+  if (id.startsWith('A2Ui')) return 'A2UI';
+  if (id.startsWith('AgUi')) return 'AG-UI';
+  if (id.startsWith('CopilotKit')) return 'CopilotKit';
+  if (id.startsWith('Agent')) return 'Agent';
+  if (id.startsWith('Chat')) return 'Chat';
+  if (id.startsWith('Lexical')) return 'Lexical';
+  if (id.startsWith('Notebook')) return 'Notebook';
+  return 'Cell';
+};
+
 const isNotebookOrCellExample = (exampleId: string): boolean => {
   return (
     (exampleId.includes('Notebook') || exampleId.includes('Cell')) &&
@@ -95,23 +130,6 @@ const safeExampleId = (value: string): string => {
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
-};
-
-const toAgentApiBaseUrl = (ingress: string): string => {
-  const normalized = ingress.replace(/\/$/, '');
-  if (normalized.includes('/api/agent-runtimes')) {
-    return normalized;
-  }
-  if (normalized.includes('/api/jupyter-server')) {
-    return normalized.replace('/api/jupyter-server', '/api/agent-runtimes');
-  }
-  if (normalized.includes('/jupyter/server/')) {
-    return normalized.replace('/jupyter/server/', '/agent-runtimes/');
-  }
-  if (normalized.includes('/jupyter-server/')) {
-    return normalized.replace('/jupyter-server/', '/agent-runtimes/');
-  }
-  return normalized.replace('/jupyter/', '/agent-runtimes/');
 };
 
 const toSurfaceLabel = (exampleId: string): 'cell' | 'notebook' => {
@@ -144,26 +162,6 @@ const normalizeSandboxBaseUrl = (
     return sandboxUrl.toString();
   } catch {
     return sandboxRaw;
-  }
-};
-
-const withTokenQueryParam = (rawUrl: string, token: string): string => {
-  const normalizedUrl = String(rawUrl || '').trim();
-  const normalizedToken = String(token || '').trim();
-  if (!normalizedUrl || !normalizedToken) {
-    return normalizedUrl;
-  }
-  try {
-    const parsed = new URL(normalizedUrl);
-    if (
-      !parsed.searchParams.get('token') &&
-      !parsed.searchParams.get('jupyter_token')
-    ) {
-      parsed.searchParams.set('token', normalizedToken);
-    }
-    return parsed.toString();
-  } catch {
-    return normalizedUrl;
   }
 };
 
@@ -758,6 +756,10 @@ export const ExampleApp: React.FC = () => {
   const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const setRuntimeTarget = useRuntimeTargetStore(state => state.setTarget);
+  const shellRuntime = useAgentRuntimes({
+    autoCreateAgent: false,
+    runtimeCreationTarget: 'backend-services',
+  });
 
   const showTopNotice = useCallback(
     (
@@ -901,176 +903,30 @@ export const ExampleApp: React.FC = () => {
 
       const bootstrapCloudSandbox =
         async (): Promise<CloudSandboxBootstrap> => {
-          const runtimesUrl = resolveRuntimesUrl(configuration.runtimesUrl);
           const exampleSlug = safeExampleId(selectedExample || 'example');
-          const runtimeResp = await fetch(
-            `${runtimesUrl}/api/runtimes/v1/runtimes`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${configuration.token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                environment: {
-                  name: DEFAULT_CLOUD_RUNTIME_ENVIRONMENT,
-                },
-                given_name: `${exampleSlug}-sandbox`,
-                credits_limit: 5,
-                type: 'notebook',
-                editor_variant: 'none',
-              }),
-            },
-          );
-
-          if (!runtimeResp.ok) {
-            const failure = await runtimeResp.json().catch(() => ({}));
-            throw new Error(
-              String(
-                (failure as { detail?: string }).detail ||
-                  `Failed to launch cloud runtime (${runtimeResp.status}).`,
-              ),
-            );
-          }
-
-          const runtimePayload = (await runtimeResp.json()) as {
-            runtime?: {
-              ingress?: string;
-              pod_name?: string;
-              token?: string;
-              jupyter_token?: string;
-              environment?: {
-                name?: string;
-                title?: string;
-                cpu?: string | number;
-                memory?: string | number;
-                gpu?: string | number;
-                resources?: {
-                  cpu?: string | number;
-                  memory?: string | number;
-                  gpu?: string | number;
-                  gpu_count?: string | number;
-                  gpu_type?: string;
-                  gpu_memory?: string;
-                  'nvidia.com/gpu'?: string | number;
-                };
-              };
-            };
-            ingress?: string;
-            pod_name?: string;
-            token?: string;
-            jupyter_token?: string;
-          };
-          const ingress = String(
-            runtimePayload.runtime?.ingress || runtimePayload.ingress || '',
-          ).trim();
-          if (!ingress) {
-            throw new Error(
-              'Cloud runtime launched but did not expose a Jupyter ingress URL.',
-            );
-          }
-
-          const agentBaseUrl = toAgentApiBaseUrl(ingress);
-          const agentId = `${exampleSlug}-cloud-agent`;
-
-          const agentResp = await fetch(`${agentBaseUrl}/api/v1/agents`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${configuration.token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              name: agentId,
-              description: `Cloud sandbox agent for ${selectedExample}`,
-              agent_library: 'pydantic-ai',
-              transport: 'ag-ui',
-              model: DEFAULT_MODEL,
-              system_prompt: 'You are a helpful AI assistant.',
-            }),
+          const connection = await shellRuntime.launchRuntime({
+            environmentName: DEFAULT_CLOUD_RUNTIME_ENVIRONMENT,
+            givenName: `${exampleSlug}-sandbox`,
+            creditsLimit: 5,
+            type: 'notebook',
           });
-
-          if (
-            !agentResp.ok &&
-            agentResp.status !== 400 &&
-            agentResp.status !== 409
-          ) {
-            const failure = await agentResp.json().catch(() => ({}));
-            throw new Error(
-              String(
-                (failure as { detail?: string }).detail ||
-                  `Cloud runtime launched but agent creation failed (${agentResp.status}).`,
-              ),
-            );
-          }
-
-          const agentPayload = (await agentResp
-            .clone()
-            .json()
-            .catch(() => ({}))) as {
-            agent_id?: string;
-            id?: string;
-            token?: string;
-            jupyter_token?: string;
-            agent?: { id?: string; agent_id?: string };
-          };
-          const resolvedAgentId =
-            String(
-              agentPayload.agent_id ||
-                agentPayload.id ||
-                agentPayload.agent?.agent_id ||
-                agentPayload.agent?.id ||
-                '',
-            ).trim() || agentId;
-          const resolvedJupyterToken = String(
-            agentPayload.jupyter_token ||
-              agentPayload.token ||
-              runtimePayload.runtime?.jupyter_token ||
-              runtimePayload.runtime?.token ||
-              runtimePayload.jupyter_token ||
-              runtimePayload.token ||
-              '',
-          ).trim();
+          const agentId = `${exampleSlug}-cloud-agent`;
+          const agent = await shellRuntime.createAgent({
+            name: agentId,
+            description: `Cloud sandbox agent for ${selectedExample}`,
+            agentLibrary: 'pydantic-ai',
+            protocol: 'ag-ui',
+            model: DEFAULT_MODEL,
+            systemPrompt: 'You are a helpful AI assistant.',
+          });
           const runtimeEnvironment: RuntimeEnvironmentDetails = {
-            environmentName:
-              String(runtimePayload.runtime?.environment?.name || '').trim() ||
-              undefined,
-            environmentTitle:
-              String(runtimePayload.runtime?.environment?.title || '').trim() ||
-              undefined,
-            cpu:
-              String(
-                runtimePayload.runtime?.environment?.cpu ||
-                  runtimePayload.runtime?.environment?.resources?.cpu ||
-                  '',
-              ).trim() || undefined,
-            memory:
-              String(
-                runtimePayload.runtime?.environment?.memory ||
-                  runtimePayload.runtime?.environment?.resources?.memory ||
-                  '',
-              ).trim() || undefined,
-            gpu:
-              [
-                runtimePayload.runtime?.environment?.gpu ||
-                  runtimePayload.runtime?.environment?.resources?.gpu ||
-                  runtimePayload.runtime?.environment?.resources?.gpu_count ||
-                  runtimePayload.runtime?.environment?.resources?.[
-                    'nvidia.com/gpu'
-                  ] ||
-                  '',
-                runtimePayload.runtime?.environment?.resources?.gpu_type || '',
-                runtimePayload.runtime?.environment?.resources?.gpu_memory ||
-                  '',
-              ]
-                .map(value => String(value || '').trim())
-                .filter(Boolean)
-                .join(' ') || undefined,
+            environmentName: connection.environmentName,
           };
 
           return {
-            agentBaseUrl,
-            agentId: resolvedAgentId,
-            ingress: withTokenQueryParam(ingress, resolvedJupyterToken),
+            agentBaseUrl: connection.agentBaseUrl,
+            agentId: agent.agentId || agentId,
+            ingress: connection.jupyterBaseUrl,
             runtimeEnvironment,
           };
         };
@@ -1211,9 +1067,12 @@ export const ExampleApp: React.FC = () => {
 
     // 2) Tear down any server-side agents created by the previous example and
     //    wipe in-process agent state so the next example boots fresh.
-    const agentBaseUrl = resolveExampleAgentRuntimesUrl(
-      runtimeTargetStore.getState().target,
-    );
+    const currentTarget = runtimeTargetStore.getState().target;
+    const activeRuntime = agentSummaryStore.getState().active;
+    const agentBaseUrl =
+      activeRuntime?.location === currentTarget && activeRuntime.baseUrl
+        ? activeRuntime.baseUrl
+        : resolveExampleAgentRuntimesUrl(currentTarget);
     const token = useSimpleAuthStore.getState().token;
     await teardownExampleAgents(agentBaseUrl, token ?? undefined);
 
@@ -1257,7 +1116,11 @@ export const ExampleApp: React.FC = () => {
 
     // 2) Tear down the agents created on the OLD target, then wipe state so a
     //    brand-new runtime is launched for the new target.
-    const oldAgentBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const activeRuntime = agentSummaryStore.getState().active;
+    const oldAgentBaseUrl =
+      activeRuntime?.location === runtimeTarget && activeRuntime.baseUrl
+        ? activeRuntime.baseUrl
+        : resolveExampleAgentRuntimesUrl(runtimeTarget);
     const token = useSimpleAuthStore.getState().token;
     await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
 
@@ -1370,7 +1233,45 @@ const ExampleAppThemed: React.FC<{
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [exampleSearch, setExampleSearch] = useState('');
   const shouldShowAuthScreen = showSignIn && !token;
+  const selectedExampleEntry = availableExamples.find(
+    example => example.id === selectedExample,
+  );
+  const exampleMenuGroups = useMemo(() => {
+    const groups = new Map<string, ExampleEntry[]>();
+    for (const example of availableExamples) {
+      if (example.id === 'HomeExample') continue;
+      const groupName = getExampleGroup(example.id);
+      const group = groups.get(groupName) ?? [];
+      group.push(example);
+      groups.set(groupName, group);
+    }
+    for (const [groupName, examples] of groups) {
+      examples.sort((left, right) => {
+        if (groupName === 'Personas') {
+          const personaOrder = (id: string) =>
+            id === 'AgentspecsExample' ? 0 : id === 'AgentLoopExample' ? 1 : 2;
+          const order = personaOrder(left.id) - personaOrder(right.id);
+          if (order !== 0) return order;
+        }
+        return left.title.localeCompare(right.title);
+      });
+    }
+    return groups;
+  }, [availableExamples]);
+  const filteredExampleMenuGroups = useMemo(() => {
+    const query = exampleSearch.trim().toLowerCase();
+    if (!query) return exampleMenuGroups;
+    const filtered = new Map<string, ExampleEntry[]>();
+    for (const [groupName, examples] of exampleMenuGroups) {
+      const matches = examples.filter(example =>
+        example.title.toLowerCase().includes(query),
+      );
+      if (matches.length) filtered.set(groupName, matches);
+    }
+    return filtered;
+  }, [exampleMenuGroups, exampleSearch]);
 
   const syncTokenToIamStore = useCallback((newToken: string | undefined) => {
     import('../state/substates').then(({ iamStore: coreIamStore }) => {
@@ -1502,140 +1403,73 @@ const ExampleAppThemed: React.FC<{
             >
               <HomeIcon size={16} />
             </Box>
-            <Box
-              as="select"
-              value={selectedExample}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                onExampleChange(e.target.value)
-              }
-              disabled={isChangingExample}
-              sx={{
-                px: 2,
-                py: '6px',
-                fontSize: 1,
-                fontFamily: 'inherit',
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                color: 'fg.default',
-                cursor: isChangingExample ? 'not-allowed' : 'pointer',
-                minWidth: '250px',
-                outline: 'none',
-                '&:focus-visible': {
-                  boxShadow:
-                    '0 0 0 2px var(--bgColor-accent-muted, rgba(26,188,156,0.3))',
-                },
-              }}
-            >
-              {(() => {
-                const home = availableExamples.find(
-                  e => e.id === 'HomeExample',
-                );
-                const rest = availableExamples.filter(
-                  e => e.id !== 'HomeExample',
-                );
-
-                // Classify each example into a named group.
-                const groupOf = (id: string): string => {
-                  if (id === 'AgentspecsExample' || id === 'AgentLoopExample')
-                    return 'Personas';
-                  if (id.startsWith('A2Ui')) return 'A2UI';
-                  if (id.startsWith('AgUi')) return 'AG-UI';
-                  if (id.startsWith('CopilotKit')) return 'CopilotKit';
-                  if (id.startsWith('Agent')) return 'Agent';
-                  if (id.startsWith('Chat')) return 'Chat';
-                  if (id.startsWith('Lexical')) return 'Lexical';
-                  if (
-                    id.startsWith('Notebook') ||
-                    id === 'NotebookCollaborationExample'
-                  )
-                    return 'Notebook';
-                  return 'Cell';
-                };
-
-                const groupOrder = [
-                  'Personas',
-                  'A2UI',
-                  'AG-UI',
-                  'Agent',
-                  'Chat',
-                  'Lexical',
-                  'Notebook',
-                  'Cell',
-                  'CopilotKit',
-                ];
-
-                const grouped = new Map<string, typeof rest>();
-                for (const ex of rest) {
-                  const g = groupOf(ex.id);
-                  const group = grouped.get(g);
-                  if (group) {
-                    group.push(ex);
-                  } else {
-                    grouped.set(g, [ex]);
-                  }
-                }
-                for (const [groupName, list] of grouped.entries()) {
-                  if (groupName === 'Personas') {
-                    const personaOrder = (id: string): number => {
-                      if (id === 'AgentspecsExample') return 0;
-                      if (id === 'AgentLoopExample') return 1;
-                      return 2;
-                    };
-                    list.sort((a, b) => {
-                      const orderDelta =
-                        personaOrder(a.id) - personaOrder(b.id);
-                      if (orderDelta !== 0) return orderDelta;
-                      return a.title.localeCompare(b.title);
-                    });
-                  } else {
-                    list.sort((a, b) => a.title.localeCompare(b.title));
-                  }
-                }
-
-                const nodes: React.ReactNode[] = [];
-                if (home) {
-                  nodes.push(
-                    <option
-                      key={home.id}
-                      value={home.id}
-                      disabled={home.id === selectedExample}
-                    >
-                      {home.title}
-                    </option>,
-                  );
-                }
-
-                let sepIndex = 0;
-                for (const g of groupOrder) {
-                  const items = grouped.get(g);
-                  if (!items || items.length === 0) continue;
-                  nodes.push(
-                    <option
-                      key={`__sep_${sepIndex++}`}
-                      disabled
-                      value={`__sep_${sepIndex}`}
-                    >
-                      ────── {g} ──────
-                    </option>,
-                  );
-                  for (const example of items) {
-                    nodes.push(
-                      <option
+            <ActionMenu>
+              <ActionMenu.Button
+                disabled={isChangingExample}
+                aria-label="Select example"
+                sx={{ minWidth: '250px', justifyContent: 'space-between' }}
+                onClick={() => setExampleSearch('')}
+              >
+                {selectedExampleEntry?.title ?? selectedExample}
+              </ActionMenu.Button>
+              <ActionMenu.Overlay
+                width="large"
+                sx={{
+                  maxHeight: 'calc(100vh - 72px)',
+                  overflowY: 'auto',
+                  overscrollBehavior: 'contain',
+                }}
+              >
+                <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'border.default' }}>
+                  <TextInput
+                    autoFocus
+                    block
+                    aria-label="Filter examples"
+                    placeholder="Filter examples..."
+                    value={exampleSearch}
+                    onChange={event => setExampleSearch(event.target.value)}
+                  />
+                </Box>
+                <ActionList selectionVariant="single">
+                  {availableExamples
+                    .filter(
+                      example =>
+                        example.id === 'HomeExample' &&
+                        (!exampleSearch.trim() ||
+                          example.title
+                            .toLowerCase()
+                            .includes(exampleSearch.trim().toLowerCase())),
+                    )
+                    .map(example => (
+                      <ActionList.Item
                         key={example.id}
-                        value={example.id}
-                        disabled={example.id === selectedExample}
+                        selected={example.id === selectedExample}
+                        onSelect={() => void onExampleChange(example.id)}
                       >
                         {example.title}
-                      </option>,
+                      </ActionList.Item>
+                    ))}
+                  <ActionList.Divider />
+                  {EXAMPLE_GROUP_ORDER.map(groupName => {
+                    const examples = filteredExampleMenuGroups.get(groupName);
+                    if (!examples?.length) return null;
+                    return (
+                      <ActionList.Group key={groupName} title={groupName}>
+                        {examples.map(example => (
+                          <ActionList.Item
+                            key={example.id}
+                            selected={example.id === selectedExample}
+                            onSelect={() => void onExampleChange(example.id)}
+                          >
+                            {example.title}
+                          </ActionList.Item>
+                        ))}
+                      </ActionList.Group>
                     );
-                  }
-                }
-
-                return <>{nodes}</>;
-              })()}
-            </Box>
+                  })}
+                </ActionList>
+              </ActionMenu.Overlay>
+            </ActionMenu>
             <Box
               aria-label="Runtime target"
               title="Runtime target"

@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Notebook Example - Chat with Jupyter Notebook.
+ * Notebook Agent Sidebar Example - Chat with Jupyter Notebook.
  *
  * This example demonstrates using the chat component with:
  * - Jupyter Notebook integration
@@ -29,7 +29,6 @@ import { ThemedJupyterProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
 import type { ProtocolConfig } from '../types';
 import { DEFAULT_MODEL } from '../specs';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
@@ -116,15 +115,13 @@ interface ChatJupyterNotebookExampleProps {
 export function AgentRuntimeNotebookExampleInner({
   serviceManager,
 }: ChatJupyterNotebookExampleProps) {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
   const [createRequested, setCreateRequested] = useState(false);
   const jupyterSandboxUrl = useMemo(
     () => getJupyterSandboxUrl(serviceManager),
     [serviceManager],
   );
 
-  const { agentId, isReady, status, error, createAgent } =
+  const { agentId, baseUrl, isReady, status, error, createAgent } =
     useExampleAgentRuntime({
       exampleId: 'NotebookAgentSidebarExample',
       agentName: DEFAULT_AGENT_ID,
@@ -141,6 +138,7 @@ export function AgentRuntimeNotebookExampleInner({
         jupyterSandbox: jupyterSandboxUrl,
       },
     });
+  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
 
   useEffect(() => {
     if (!jupyterSandboxUrl || createRequested || agentId) {

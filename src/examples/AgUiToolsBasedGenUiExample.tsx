@@ -18,7 +18,6 @@ import { Text, ProgressBar, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
@@ -346,9 +345,8 @@ const AGENTSPEC_ID = 'example-agentic-generative-ui';
 
 const AgUiToolsBasedGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId } = useExampleAgentRuntime({
+  const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiToolsBasedGenUiExample',
     agentName,
     specId: AGENTSPEC_ID,

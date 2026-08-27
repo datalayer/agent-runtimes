@@ -4,40 +4,26 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useAgentRuntimes } from '../../hooks/useAgentRuntimes';
+import type { UseAgentReturn } from '../../hooks/useAgentRuntimes';
 import type { AgentConfig } from '../../types/config';
-import { useExampleAgentRuntimesUrl } from '../utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from '../utils/runtimeTargetStore';
 import { agentSummaryStore } from '../utils/agentSummaryStore';
+import { useExampleAgentRuntimes } from './useExampleAgentRuntimes';
 
-interface UseExampleAgentRuntimeOptions {
+export interface UseExampleAgentRuntimeOptions {
   exampleId: string;
   agentName: string;
   specId?: string;
-  environmentName?: string;
   autoStart?: boolean;
   autoCreateAgent?: boolean;
   agentConfig?: AgentConfig;
 }
 
-interface UseExampleAgentRuntimeResult {
+export interface UseExampleAgentRuntimeResult extends UseAgentReturn {
   location: 'local' | 'cloud';
   baseUrl: string;
   agentId?: string;
   agentBaseUrl?: string;
-  status: string;
-  isReady: boolean;
-  error: string | null;
-  createAgent: (config?: AgentConfig) => Promise<{
-    agentId?: string;
-    endpoint?: string;
-    isReady?: boolean;
-  }>;
-  /**
-   * Tear down the agent launched by this hook: delete it on the server and
-   * wipe in-process agent state so a fresh runtime can be launched.
-   */
-  teardown: () => Promise<void>;
 }
 
 /**
@@ -51,14 +37,12 @@ export function useExampleAgentRuntime(
     exampleId,
     agentName,
     specId,
-    environmentName = 'local-agent-runtimes',
     autoStart = true,
     autoCreateAgent = true,
     agentConfig,
   } = options;
 
   const location = useRuntimeTargetStore(state => state.target);
-  const baseUrl = useExampleAgentRuntimesUrl();
   const isCloud = location === 'cloud';
 
   const combinedConfig = useMemo<AgentConfig>(
@@ -70,35 +54,16 @@ export function useExampleAgentRuntime(
     [agentName, specId, agentConfig],
   );
 
-  const {
-    runtime,
-    status,
-    isReady,
-    error,
-    connectToRuntime,
-    createAgent,
-    teardown,
-  } = useAgentRuntimes({
-    agentSpecId: isCloud ? specId : undefined,
+  const result = useExampleAgentRuntimes({
+    agentSpecId: specId,
     autoCreateAgent,
-    autoStart: isCloud ? autoStart : false,
-    runtimeCreationTarget: isCloud
-      ? 'backend-services'
-      : 'local-agent-runtimes',
-    runtimeCreationBaseUrl: isCloud ? undefined : baseUrl,
+    autoStart,
     agentConfig: combinedConfig,
   });
-
-  useEffect(() => {
-    if (isCloud) {
-      return;
-    }
-    connectToRuntime({
-      podName: agentName,
-      environmentName,
-      jupyterBaseUrl: baseUrl,
-    });
-  }, [isCloud, connectToRuntime, agentName, environmentName, baseUrl]);
+  const { runtime, status, isReady, error } = result;
+  const baseUrl = isCloud
+    ? runtime?.agentBaseUrl || result.runtimeCreationBaseUrl
+    : result.runtimeCreationBaseUrl;
 
   useEffect(() => {
     // Agent status and code sandbox status are both reported by the
@@ -140,6 +105,7 @@ export function useExampleAgentRuntime(
   ]);
 
   return {
+    ...result,
     location,
     baseUrl,
     agentId: runtime?.agentId,
@@ -147,7 +113,5 @@ export function useExampleAgentRuntime(
     status,
     isReady,
     error,
-    createAgent,
-    teardown,
   };
 }

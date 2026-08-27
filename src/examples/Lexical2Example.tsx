@@ -128,7 +128,7 @@ function CustomToolsRegistrar() {
     ],
     handler: async ({ name }: { name: string }) => {
       return {
-        greeting: `Hello, ${name}! Welcome to Agent Runtime Lexical Example.`,
+        greeting: `Hello, ${name}! Welcome to Lexical Example.`,
       };
     },
   });

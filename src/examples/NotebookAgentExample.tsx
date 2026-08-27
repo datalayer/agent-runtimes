@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Notebook Example with Agent-Runtimes Integration
+ * Notebook Agent with Agent-Runtimes Integration
  *
  * This example demonstrates using the agent-runtimes ChatFloating component
  * with notebook tools for AI-assisted notebook editing.
@@ -26,7 +26,6 @@ import { ThemedJupyterProvider } from './utils/themedProvider';
 // Agent-runtimes imports
 import { ChatFloating } from '../chat';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 // Import Matplotlib notebook
@@ -99,7 +98,7 @@ const NotebookUI = React.memo(function NotebookUI({
         }}
       >
         <Box as="h1" sx={{ margin: 0 }}>
-          Agent Runtime Notebook Example
+          Notebook Agent Example
         </Box>
         <p>
           Platform-agnostic tool usage with agent-runtimes integration. Use the
@@ -148,7 +147,6 @@ interface NotebookWithChatProps {
 function NotebookWithChat({
   serviceManager,
 }: NotebookWithChatProps): JSX.Element {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const jupyterSandboxUrl = useMemo(
     () => getJupyterSandboxUrl(serviceManager),
     [serviceManager],
@@ -157,7 +155,7 @@ function NotebookWithChat({
   const [notebookKernel, setNotebookKernel] =
     useState<IKernelConnection | null>(null);
 
-  const { agentId, isReady, status, error, createAgent } =
+  const { agentId, baseUrl, isReady, status, error, createAgent } =
     useExampleAgentRuntime({
       exampleId: 'NotebookAgentExample',
       agentName: AGENT_ID,

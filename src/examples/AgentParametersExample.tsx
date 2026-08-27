@@ -12,7 +12,6 @@ import validator from '@rjsf/validator-ajv8';
 import { Form, yamlSchemaToJsonSchema } from '@datalayer/primer-rjsf';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
@@ -139,7 +138,6 @@ function hasRequiredValues(
 }
 
 const AgentParametersExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const [agentName] = useState(() => uniqueAgentId(AGENT_NAME));
   const [showSchemaForm, setShowSchemaForm] = useState(false);
   const [isSchemaLoading, setIsSchemaLoading] = useState(false);
@@ -153,6 +151,7 @@ const AgentParametersExample: React.FC = () => {
     agentId,
     error: runtimeError,
     createAgent,
+    baseUrl,
   } = useExampleAgentRuntime({
     exampleId: 'AgentParametersExample',
     agentName,

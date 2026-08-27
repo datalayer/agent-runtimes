@@ -36,7 +36,6 @@ import { ThemedJupyterProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
 import type { LoopSpec, ProtocolConfig } from '../types';
 import { DEFAULT_MODEL, listLoops, getLoop, DEFAULT_LOOP } from '../specs';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
@@ -229,8 +228,6 @@ interface AgentLoopExampleInnerProps {
 export function AgentLoopExampleInner({
   serviceManager,
 }: AgentLoopExampleInnerProps) {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
   const [createRequested, setCreateRequested] = useState(false);
 
   // All available loops come from the generated loop catalogue.
@@ -251,7 +248,7 @@ export function AgentLoopExampleInner({
     [selectedLoop],
   );
 
-  const { agentId, isReady, status, error, createAgent } =
+  const { agentId, baseUrl, isReady, status, error, createAgent } =
     useExampleAgentRuntime({
       exampleId: 'AgentLoopExample',
       agentName: DEFAULT_AGENT_ID,
@@ -267,6 +264,7 @@ export function AgentLoopExampleInner({
         jupyterSandbox: jupyterSandboxUrl,
       },
     });
+  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
 
   // Launch the loop agent once the sandbox is ready, using the loop that was
   // selected at launch time.
@@ -349,6 +347,8 @@ export function AgentLoopExampleInner({
           width: '100vw',
           display: 'flex',
           overflow: 'hidden',
+          bg: 'canvas.default',
+          color: 'fg.default',
         }}
       >
         {/* Main content area */}

@@ -103,7 +103,13 @@ export { useVercelAI } from './useVercelAI';
 /**
  * Unified hook for managing agents — both ephemeral and durable.
  */
-export { useAgentRuntimes } from './useAgentRuntimes';
+export {
+  useAgentRuntimes,
+  type AgentRuntimeConnectionOptions,
+  type RuntimeCreationTarget,
+  type UseAgentOptions,
+  type UseAgentReturn,
+} from './useAgentRuntimes';
 
 /**
  * Runtime query and mutation hooks.

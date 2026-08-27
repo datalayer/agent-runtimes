@@ -25,10 +25,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    # We should move this to the acp optional dependency group,
-    # but it is used in the CLI and the CLI is used in the tests,
-    # so we need it here for now.
-    "agent-client-protocol>=0.7.1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
@@ -131,6 +127,7 @@ examples = [
     "uvicorn",
 ]
 cli = [
+    "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
     "prompt_toolkit>=3.0.0",
@@ -150,12 +147,14 @@ agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
 all = [
-    "agent_runtimes[a2a,anthropic,aws,durable,google,logfire,memory,openai,ui]",
+    "agent_runtimes[a2a,anthropic,aws,cli,durable,google,logfire,memory,openai,ui]",
 ]
 test = [
     # Several tests build agents from `openai:` model strings, and pydantic-ai
     # resolves those through the provider SDK -- without it they fail on import.
-    "agent_runtimes[openai]",
+    # CLI tests also import the ACP client, so keep the test dependency explicit
+    # instead of promoting agent-client-protocol to a core runtime dependency.
+    "agent_runtimes[cli,openai]",
     "coverage>=7.9.2",
     "mypy>=1.16.1",
     "pytest>=8.4.1",

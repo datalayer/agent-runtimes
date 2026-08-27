@@ -9,7 +9,6 @@ import { SyncIcon } from '@primer/octicons-react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
@@ -20,9 +19,8 @@ const AGENTSPEC_ID = 'example-hooks';
 const AGENT_NAME = 'hooks-example-agent';
 
 const AgentHooksExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId, error, status, isReady } = useExampleAgentRuntime({
+  const { agentId, baseUrl, error, status, isReady } = useExampleAgentRuntime({
     exampleId: 'AgentHooksExample',
     agentName,
     specId: AGENTSPEC_ID,

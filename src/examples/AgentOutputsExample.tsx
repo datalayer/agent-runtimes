@@ -7,7 +7,7 @@
  * AgentOutputsExample
  *
  * Demonstrates rich output rendering for agent responses. The agent (spec
- * `example-outputs`) is prompted to return exactly one of four output types per
+ * `example-output`) is prompted to return exactly one of four output types per
  * response:
  *   - TABLE  → GitHub-flavored Markdown table
  *   - JSON   → ```json fenced block
@@ -53,7 +53,8 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'outputs-example-agent';
-const AGENTSPEC_ID = 'demo-outputs';
+// Keep this aligned with the generated agentspec catalog (`example-output`).
+const AGENTSPEC_ID = 'example-output';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

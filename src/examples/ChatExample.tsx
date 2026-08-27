@@ -21,7 +21,6 @@ import { Text, Spinner } from '@primer/react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
@@ -32,9 +31,8 @@ const AGENTSPEC_ID = 'example-simple';
 const AGENT_NAME = 'simple';
 
 const AgentRuntimeChatExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId, error, status, isReady } = useExampleAgentRuntime({
+  const { agentId, baseUrl, error, status, isReady } = useExampleAgentRuntime({
     exampleId: 'ChatExample',
     agentName,
     specId: AGENTSPEC_ID,

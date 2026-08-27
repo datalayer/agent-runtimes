@@ -38,7 +38,6 @@ import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useA2uiProcessor } from './utils/a2ui';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { uniqueAgentId } from './utils/agentId';
 import {
@@ -308,7 +307,6 @@ const InlineA2uiSurface: React.FC<{
 };
 
 const A2UiAgentExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
 
   const {
@@ -316,6 +314,7 @@ const A2UiAgentExample: React.FC = () => {
     error: chatError,
     status,
     isReady,
+    baseUrl,
   } = useExampleAgentRuntime({
     exampleId: 'A2UiAgentExample',
     agentName,

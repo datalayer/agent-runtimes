@@ -302,11 +302,28 @@ function getTransportEndpoint(
   }
 }
 
+function toAgentRuntimeBaseUrl(baseUrl: string): string {
+  const normalized = baseUrl.replace(/\/$/, '');
+  if (normalized.includes('/api/agent-runtimes')) return normalized;
+  if (normalized.includes('/api/jupyter-server')) {
+    return normalized.replace('/api/jupyter-server', '/api/agent-runtimes');
+  }
+  if (normalized.includes('/jupyter/server/')) {
+    return normalized.replace('/jupyter/server/', '/agent-runtimes/');
+  }
+  if (normalized.includes('/jupyter-server/')) {
+    return normalized.replace('/jupyter-server/', '/agent-runtimes/');
+  }
+  return normalized.replace('/jupyter/', '/agent-runtimes/');
+}
+
 async function createAgentOnRuntime(
   agentBaseUrl: string,
   agentId: string,
   config: AgentConfig = {},
 ): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
+  const { iamStore } = await import('@datalayer/core/lib/state');
+  const token = iamStore.getState().token || '';
   if (!config.protocol && !config.agentSpecId) {
     throw new Error(
       'Agent protocol is required. Provide config.protocol from the selected spec/config.',
@@ -355,7 +372,10 @@ async function createAgentOnRuntime(
 
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
   });
 
@@ -644,10 +664,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               'connectAgent requires either jupyterBaseUrl or serviceManager',
             );
           }
-          const agentBaseUrl = baseUrl.replace(
-            '/jupyter/server/',
-            '/agent-runtimes/',
-          );
+          const agentBaseUrl = toAgentRuntimeBaseUrl(baseUrl);
           set({
             runtime: {
               podName: connection.podName,
@@ -685,10 +702,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             });
             set({ status: 'connecting' });
             const jupyterBaseUrl = runtimePod.ingress;
-            const agentBaseUrl = jupyterBaseUrl.replace(
-              '/jupyter/server/',
-              '/agent-runtimes/',
-            );
+            const agentBaseUrl = toAgentRuntimeBaseUrl(jupyterBaseUrl);
             const conn: AgentConnection = {
               podName: runtimePod.pod_name,
               environmentName: runtimePod.environment.name,

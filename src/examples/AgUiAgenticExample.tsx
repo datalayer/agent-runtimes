@@ -20,7 +20,6 @@ import { Spinner, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
@@ -39,9 +38,8 @@ const AGENT_NAME = 'ag-ui-agentic';
 const AGENTSPEC_ID = 'example-agentic-chat';
 
 const AgUiAgenticExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId, status, error, isReady } = useExampleAgentRuntime({
+  const { agentId, baseUrl, status, error, isReady } = useExampleAgentRuntime({
     exampleId: 'AgUiAgenticExample',
     agentName,
     specId: AGENTSPEC_ID,

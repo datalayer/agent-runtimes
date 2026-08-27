@@ -51,6 +51,15 @@ import { disposeSandboxServiceManagers } from '../services/sandboxServiceManager
 
 export type RuntimeCreationTarget = 'backend-services' | 'local-agent-runtimes';
 
+/** Existing runtime connection used by connect-mode consumers. */
+export interface AgentRuntimeConnectionOptions {
+  podName: string;
+  environmentName: string;
+  serviceManager?: ServiceManager.IManager;
+  jupyterBaseUrl?: string;
+  kernelId?: string;
+}
+
 /**
  * Options for the useAgents hook.
  */
@@ -73,6 +82,11 @@ export interface UseAgentOptions {
   runtimeCreationTarget?: RuntimeCreationTarget;
   /** Explicit base URL for runtime create/list operations. */
   runtimeCreationBaseUrl?: string;
+  /**
+   * Existing runtime to connect to. When supplied, the hook owns the
+   * connection bootstrap as well as agent creation.
+   */
+  runtimeConnection?: AgentRuntimeConnectionOptions;
 }
 
 /**
@@ -89,13 +103,7 @@ export interface UseAgentReturn {
   /** Launch a new runtime */
   launchRuntime: (options?: IRuntimeOptions) => Promise<AgentConnection>;
   /** Connect to an existing runtime */
-  connectToRuntime: (options: {
-    podName: string;
-    environmentName: string;
-    serviceManager?: ServiceManager.IManager;
-    jupyterBaseUrl?: string;
-    kernelId?: string;
-  }) => void;
+  connectToRuntime: (options: AgentRuntimeConnectionOptions) => void;
   /** Disconnect from the runtime */
   disconnect: () => void;
 
@@ -567,6 +575,7 @@ export function useAgentRuntimes(
     agentSpec,
     runtimeCreationTarget = 'backend-services',
     runtimeCreationBaseUrl,
+    runtimeConnection,
   } = options;
 
   const { configuration } = useCoreStore();
@@ -594,8 +603,21 @@ export function useAgentRuntimes(
   const agentConfigRef = useRef(agentConfig);
   agentConfigRef.current = agentConfig;
 
-  // Whether we're managing a full agent lifecycle (agentSpecId provided)
-  const hasSpec = !!agentSpecId;
+  // Specs use the backend lifecycle only when this hook owns a cloud runtime.
+  // A local agent-runtimes server is already running, so it remains connect
+  // mode even when agent creation references a spec.
+  const hasSpec = !!agentSpecId && runtimeCreationTarget === 'backend-services';
+
+  const runtimeConnectionKey = runtimeConnection
+    ? [
+        runtimeConnection.podName,
+        runtimeConnection.environmentName,
+        runtimeConnection.jupyterBaseUrl ||
+          runtimeConnection.serviceManager?.serverSettings.baseUrl ||
+          '',
+        runtimeConnection.kernelId || '',
+      ].join(':')
+    : null;
 
   const resolvedRuntimeCreationBaseUrl = useMemo(() => {
     if (runtimeCreationBaseUrl) {
@@ -632,6 +654,29 @@ export function useAgentRuntimes(
       return { token: '', aiAgentsUrl: '', runtimesUrl: '' };
     }
   }, [resolvedRuntimeCreationBaseUrl]);
+
+  // ─── Connect to a supplied runtime ─────────────────────────────────
+
+  useEffect(() => {
+    if (!runtimeConnection || !runtimeConnectionKey) {
+      return;
+    }
+
+    const currentConnectionKey = runtime
+      ? [
+          runtime.podName,
+          runtime.environmentName,
+          runtime.jupyterBaseUrl || '',
+          runtime.kernelId || '',
+        ].join(':')
+      : null;
+    if (currentConnectionKey === runtimeConnectionKey) {
+      return;
+    }
+
+    hasCreatedAgentRef.current = false;
+    storeConnectAgent(runtimeConnection);
+  }, [runtimeConnection, runtimeConnectionKey, runtime, storeConnectAgent]);
 
   // ─── Launch Runtime ─────────────────────────────────────────────────
 

@@ -32,7 +32,6 @@ import {
   HaikuDisplay,
   type HaikuResult,
 } from './components/haiku';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
@@ -107,9 +106,8 @@ const AGENTSPEC_ID = 'example-haiku-generative-ui';
 
 const AgUiHaikuGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId } = useExampleAgentRuntime({
+  const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiHaikuGenUiExample',
     agentName,
     specId: AGENTSPEC_ID,

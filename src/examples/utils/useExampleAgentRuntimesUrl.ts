@@ -8,6 +8,7 @@ import {
   type ExampleRuntimeTarget,
   useRuntimeTargetStore,
 } from './runtimeTargetStore';
+import { useAgentSummaryStore } from './agentSummaryStore';
 
 const normalizeBaseUrl = (value?: string): string | undefined => {
   if (!value) {
@@ -48,8 +49,14 @@ export function resolveExampleAgentRuntimesUrl(
  */
 export function useExampleAgentRuntimesUrl(override?: string): string {
   const target = useRuntimeTargetStore(state => state.target);
+  const activeRuntimeBaseUrl = useAgentSummaryStore(state =>
+    state.active?.location === target ? state.active.baseUrl : undefined,
+  );
 
   return useMemo(() => {
+    if (target === 'cloud' && activeRuntimeBaseUrl) {
+      return normalizeBaseUrl(activeRuntimeBaseUrl) ?? activeRuntimeBaseUrl;
+    }
     return resolveExampleAgentRuntimesUrl(target, override);
-  }, [target, override]);
+  }, [activeRuntimeBaseUrl, target, override]);
 }
