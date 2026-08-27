@@ -186,7 +186,7 @@ module.exports = {
             },
             {
               label: 'Bluesky',
-              href: 'https://assets.datalayer.tech/logos-social-grey/youtube.svg',
+              href: 'https://assets.datalayer.tech/logos-social-grey/bluesky.svg',
             },
             {
               label: 'LinkedIn',
