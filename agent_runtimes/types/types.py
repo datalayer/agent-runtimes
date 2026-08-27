@@ -243,6 +243,39 @@ class AIModel(BaseModel):
             "(maps to pydantic-ai output_tokens_limit)."
         ),
     )
+    local: bool = Field(
+        default=False,
+        description=(
+            "Whether the model runs on the user's own machine (Ollama, LM "
+            "Studio, vLLM, llama.cpp). A local model needs no API key, and "
+            "choosing one moves execution to a local sandbox so the code stays "
+            "where the tokens do."
+        ),
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        description=(
+            "OpenAI-compatible base URL to reach the model. Set for local "
+            "models and for self-hosted endpoints; falls back to the provider's "
+            "default when omitted."
+        ),
+    )
+    api_key_env: Optional[str] = Field(
+        default=None,
+        description=(
+            "Environment variable holding an API key, for endpoints that want "
+            "one without requiring it (a vLLM server behind a gateway)."
+        ),
+    )
+    capabilities: List[str] = Field(
+        default_factory=list,
+        description=(
+            "What the model can be trusted with: 'tools', 'codemode', "
+            "'vision', 'thinking'. Empty means unstated rather than incapable. "
+            "A small local model that lists no 'tools' is warned about at "
+            "selection instead of failing mysteriously mid-run."
+        ),
+    )
 
 
 class AIModels(str, Enum):

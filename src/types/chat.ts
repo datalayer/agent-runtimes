@@ -577,6 +577,19 @@ export interface ChatCommonProps {
    */
   pendingPrompt?: string;
 
+  /**
+   * Hands an imperative send function to the host, once the chat is able to
+   * send.
+   *
+   * `pendingPrompt` deliberately sends a given text only once, which makes it
+   * unusable as a live input channel: a user asking the same question twice
+   * would be ignored the second time. A host that owns the input box — the LOOP
+   * workspace, whose prompt is the shell — needs a channel with no such memory.
+   *
+   * Called again with `null` when the chat can no longer send.
+   */
+  onSendReady?: (send: ((message: string) => void) | null) => void;
+
   // ============ Information ============
 
   /**

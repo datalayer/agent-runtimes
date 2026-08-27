@@ -324,6 +324,7 @@ export default defineConfig(({ mode, command }) => {
       'agent-node': path.resolve(__dirname, 'html/agent-node.html'),
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
       'agent-document': path.resolve(__dirname, 'html/agent-document.html'),
+      loop: path.resolve(__dirname, 'html/loop.html'),
     };
   }
 

@@ -40,6 +40,9 @@ export const AIModels = {
     'bedrock:us.anthropic.claude-sonnet-4-6',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
+  OLLAMA_GEMMA3_4B: 'ollama:gemma3:4b',
+  OLLAMA_LLAMA3_1_8B: 'ollama:llama3.1:8b',
+  OLLAMA_QWEN2_5_CODER_7B: 'ollama:qwen2.5-coder:7b',
   OPENAI_GPT_4_1_MINI: 'openai:gpt-4.1-mini',
   OPENAI_GPT_4_1_NANO: 'openai:gpt-4.1-nano',
   OPENAI_GPT_4_1: 'openai:gpt-4.1',
@@ -261,6 +264,48 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
     tokensLimit: 64000,
   };
 
+export const OLLAMA_GEMMA3_4B_0_0_1: AIModel = {
+  id: 'ollama:gemma3:4b',
+  version: '0.0.1',
+  name: 'Gemma 3 4B (Ollama)',
+  description:
+    'Gemma 3 4B running locally through Ollama - small and fast, no tool calling',
+  provider: 'ollama',
+  default: false,
+  requiredEnvVars: [],
+  tokensLimit: 4096,
+  local: true,
+  capabilities: ['chat'],
+};
+
+export const OLLAMA_LLAMA3_1_8B_0_0_1: AIModel = {
+  id: 'ollama:llama3.1:8b',
+  version: '0.0.1',
+  name: 'Llama 3.1 8B (Ollama)',
+  description:
+    'Meta Llama 3.1 8B running locally through Ollama - tool calling, no data leaves the machine',
+  provider: 'ollama',
+  default: false,
+  requiredEnvVars: [],
+  tokensLimit: 4096,
+  local: true,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
+
+export const OLLAMA_QWEN2_5_CODER_7B_0_0_1: AIModel = {
+  id: 'ollama:qwen2.5-coder:7b',
+  version: '0.0.1',
+  name: 'Qwen2.5 Coder 7B (Ollama)',
+  description:
+    'Qwen2.5 Coder 7B running locally through Ollama - code-focused with tool calling',
+  provider: 'ollama',
+  default: false,
+  requiredEnvVars: [],
+  tokensLimit: 4096,
+  local: true,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
+
 export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   id: 'openai:gpt-4.1-mini',
   version: '0.0.1',
@@ -358,6 +403,9 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
+  'ollama:gemma3:4b': OLLAMA_GEMMA3_4B_0_0_1,
+  'ollama:llama3.1:8b': OLLAMA_LLAMA3_1_8B_0_0_1,
+  'ollama:qwen2.5-coder:7b': OLLAMA_QWEN2_5_CODER_7B_0_0_1,
   'openai:gpt-4.1-mini': OPENAI_GPT_4_1_MINI_0_0_1,
   'openai:gpt-4.1-nano': OPENAI_GPT_4_1_NANO_0_0_1,
   'openai:gpt-4.1': OPENAI_GPT_4_1_0_0_1,

@@ -28,6 +28,21 @@ export interface AIModel {
    * (maps to pydantic-ai output_tokens_limit).
    */
   tokensLimit?: number;
+  /**
+   * Whether the model runs on the user's own machine (Ollama, LM Studio,
+   * vLLM, llama.cpp). A local model needs no API key, and choosing one moves
+   * execution to a local sandbox so the code stays where the tokens do.
+   */
+  local?: boolean;
+  /** OpenAI-compatible base URL, for local and self-hosted endpoints. */
+  baseUrl?: string;
+  /** Environment variable holding an API key, when the endpoint wants one. */
+  apiKeyEnv?: string;
+  /**
+   * What the model can be trusted with: 'tools', 'codemode', 'vision',
+   * 'thinking'. Empty means unstated rather than incapable.
+   */
+  capabilities?: string[];
 }
 
 /**

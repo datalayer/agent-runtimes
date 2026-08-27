@@ -73,6 +73,8 @@ from .routes import (
     tool_approvals_ws_router,
     triggers_webhook_router,
     vercel_ai_router,
+    loop_router,
+    mcp_auth_router,
 )
 from .routes.agents import set_api_prefix
 from .specs.agents import get_agent_spec
@@ -1430,7 +1432,9 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     if acp_router is not None:
         app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)
+    app.include_router(loop_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
+    app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
     app.include_router(sandbox_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
@@ -1572,6 +1576,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             "agent.html",
             "agent-notebook.html",
             "agent-document.html",
+            "loop.html",
             "index.html",
         ):
             _page_handler = _make_page_handler(_page)
@@ -1587,6 +1592,16 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 methods=["GET"],
                 include_in_schema=False,
             )
+
+        # `/loop` is the workspace's own address: `/browser` hands a session
+        # over by opening `/loop?handoff=<code>`, and that URL should read like
+        # a place rather than a file.
+        app.add_api_route(
+            "/loop",
+            _make_page_handler("loop.html"),
+            methods=["GET"],
+            include_in_schema=False,
+        )
 
         # Mount AFTER all API routes so it never shadows them.
         # html=True enables serving index.html for directory requests.

@@ -130,6 +130,7 @@ cli = [
     "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
+    "keyring>=24.0.0",
     "prompt_toolkit>=3.0.0",
     "requests",
     "rich>=13.0.0",
@@ -138,6 +139,7 @@ cli = [
 chat = [
     "jupyter-nbmodel-client",
     "pillow",
+    "keyring>=24.0.0",
     "prompt_toolkit>=3.0.0",
     "requests",
     "rich>=13.0.0",

@@ -109,21 +109,32 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             str(tokens_limit) if tokens_limit is not None else "None"
         )
 
-        lines.extend(
-            [
-                f"{const_name} = AIModel(",
-                f'    id="{spec["id"]}",',
-                f'    version="{spec["version"]}",',
-                f'    name="{spec["name"]}",',
-                f'    description="{spec.get("description", "")}",',
-                f'    provider="{spec["provider"]}",',
-                f"    default={spec.get('default', False)},",
-                f"    required_env_vars={env_vars_formatted},",
-                f"    tokens_limit={tokens_limit_formatted},",
-                ")",
-                "",
-            ]
-        )
+        model_lines = [
+            f"{const_name} = AIModel(",
+            f'    id="{spec["id"]}",',
+            f'    version="{spec["version"]}",',
+            f'    name="{spec["name"]}",',
+            f'    description="{spec.get("description", "")}",',
+            f'    provider="{spec["provider"]}",',
+            f"    default={spec.get('default', False)},",
+            f"    required_env_vars={env_vars_formatted},",
+            f"    tokens_limit={tokens_limit_formatted},",
+        ]
+
+        # Local-model fields, emitted only when set so hosted models stay terse.
+        if spec.get("local"):
+            model_lines.append("    local=True,")
+        if spec.get("base_url"):
+            model_lines.append(f'    base_url="{spec["base_url"]}",')
+        if spec.get("api_key_env"):
+            model_lines.append(f'    api_key_env="{spec["api_key_env"]}",')
+        capabilities = spec.get("capabilities") or []
+        if capabilities:
+            formatted = "[" + ", ".join(f'"{c}"' for c in capabilities) + "]"
+            model_lines.append(f"    capabilities={formatted},")
+
+        model_lines.extend([")", ""])
+        lines.extend(model_lines)
 
     # Generate catalog dictionary
     lines.extend(
@@ -308,6 +319,16 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         ]
         if tokens_limit is not None:
             model_lines.append(f"  tokensLimit: {tokens_limit},")
+        if spec.get("local"):
+            model_lines.append("  local: true,")
+        if spec.get("base_url"):
+            model_lines.append(f"  baseUrl: '{spec['base_url']}',")
+        if spec.get("api_key_env"):
+            model_lines.append(f"  apiKeyEnv: '{spec['api_key_env']}',")
+        capabilities = spec.get("capabilities") or []
+        if capabilities:
+            formatted = "[" + ", ".join(f"'{c}'" for c in capabilities) + "]"
+            model_lines.append(f"  capabilities: {formatted},")
         model_lines.extend(
             [
                 "};",

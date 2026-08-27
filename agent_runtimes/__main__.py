@@ -385,6 +385,16 @@ def main_callback(
     # When no subcommand is given, default to the interactive `chat` command
     # so that running `loop` behaves like running `loop chat`.
     if ctx.invoked_subcommand is None:
+        # Four console scripts share this callback. `loop` and `l` open the
+        # interactive workspace; `agent-runtimes` and `datalayer-agents` print
+        # help, so scripts and documentation calling them keep behaving as they
+        # read. Anything with a subcommand routes normally either way.
+        from agent_runtimes.loop.entrypoint import opens_workspace
+
+        if not opens_workspace():
+            typer.echo(ctx.get_help())
+            raise typer.Exit()
+
         from agent_runtimes.chat.cli import app as chat_app
 
         chat_args: list[str] = []

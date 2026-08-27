@@ -24,8 +24,6 @@ import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 // This corresponds to the notebook ID in the URL when you open an existing notbook in your library
 const NOTEBOOK_ID = '01JZQRQ35GG871QQCZW9TB1A8J';
 const ROOM_PATH = 'notebook-collaboration-example.ipynb';
-const LOCAL_COLLABORATOR_1_ID = 'notebook-collaboration-example-1';
-const LOCAL_COLLABORATOR_2_ID = 'notebook-collaboration-example-2';
 
 /**
  * Example demonstrating how to use Datalayer services with Notebook
@@ -80,7 +78,11 @@ const NotebookCollaborationExample = (
         try {
           await serviceManager.contents.get(ROOM_PATH, { content: false });
         } catch (error) {
-          if ((error as { response?: { status?: number } }).response?.status !== 404) throw error;
+          if (
+            (error as { response?: { status?: number } }).response?.status !==
+            404
+          )
+            throw error;
           try {
             await serviceManager.contents.save(ROOM_PATH, {
               type: 'notebook',
@@ -172,7 +174,13 @@ const NotebookCollaborationExample = (
       new DatalayerCollaborationProvider({ spacerUrl, token }),
       new DatalayerCollaborationProvider({ spacerUrl, token }),
     ] as const;
-  }, [enableCollaboration, collaborationReady, runtimeTarget, configuration?.spacerUrl, configuration?.token]);
+  }, [
+    enableCollaboration,
+    collaborationReady,
+    runtimeTarget,
+    configuration?.spacerUrl,
+    configuration?.token,
+  ]);
 
   const [collaborationProvider1, collaborationProvider2] =
     collaborationProviders;
@@ -223,6 +231,12 @@ const NotebookCollaborationExample = (
           <Box sx={{ mb: 2, p: 2, bg: 'attention.subtle' }}>
             Note: DatalayerServiceManager is not available. Notebook
             functionality will be limited.
+          </Box>
+        )}
+
+        {collaborationError && (
+          <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
+            Collaboration could not start: {collaborationError}
           </Box>
         )}
 

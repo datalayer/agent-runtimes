@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The workspace's one piece of navigation.
+ *
+ * It is built from contributions rather than a hard-coded list of modes, which
+ * is the whole difference from `EphemeralSurfaceControl`: a fifth view costs a
+ * plugin, not an edit to a union type.
+ *
+ * @module loop/shell/ViewSwitcher
+ */
+
+import { Box, Tooltip } from '@primer/react';
+import type { Contribution } from '@datalayer/reactor';
+import {
+  canOpenView,
+  type LoopWorkspaceContext,
+  type ViewTypeContribution,
+} from '../core';
+
+export type ViewSwitcherProps = {
+  views: Contribution<ViewTypeContribution>[];
+  workspace: LoopWorkspaceContext;
+};
+
+export function ViewSwitcher({
+  views,
+  workspace,
+}: ViewSwitcherProps): JSX.Element | null {
+  // One choice is not a choice.
+  if (views.length < 2) {
+    return null;
+  }
+
+  return (
+    <Box
+      role="tablist"
+      aria-label="Workspace views"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        bg: 'neutral.muted',
+        borderRadius: '6px',
+        p: '2px',
+        gap: '1px',
+      }}
+    >
+      {views.map(entry => {
+        const view = entry.value;
+        const open = canOpenView(view, workspace);
+        const active = workspace.activeViewType === view.viewType;
+        const Icon = view.icon;
+        // A greyed-out tab with no explanation is worse than no tab.
+        const label = open
+          ? view.title
+          : view.unavailableReason?.(workspace) ?? `${view.title} is unavailable`;
+
+        return (
+          <Tooltip key={view.viewType} text={label} direction="n">
+            <Box
+              as="button"
+              role="tab"
+              aria-selected={active}
+              // `aria-disabled` rather than `disabled`: a disabled button is
+              // not focusable, so a keyboard or screen-reader user would never
+              // hear *why* the view is unavailable. It stays focusable, the
+              // tooltip explains, and the handler declines.
+              aria-disabled={!open}
+              onClick={() => open && workspace.setActiveViewType(view.viewType)}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                border: 'none',
+                borderRadius: '5px',
+                px: 2,
+                py: '4px',
+                fontSize: 0,
+                cursor: open ? 'pointer' : 'not-allowed',
+                opacity: open ? 1 : 0.5,
+                bg: active ? 'canvas.default' : 'transparent',
+                color: active ? 'fg.default' : 'fg.muted',
+                boxShadow: active ? 'shadow.small' : 'none',
+              }}
+            >
+              {Icon ? <Icon size={14} /> : null}
+              {view.title}
+            </Box>
+          </Tooltip>
+        );
+      })}
+    </Box>
+  );
+}

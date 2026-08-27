@@ -12,6 +12,11 @@ from pydantic_ai.settings import ModelSettings
 from agent_runtimes.specs.models import (
     AI_MODEL_CATALOGUE as AI_MODEL_CATALOGUE_DICT,
 )
+from agent_runtimes.models.local import (
+    LOCAL_PROVIDERS,
+    build_local_model,
+    is_local_model,
+)
 from agent_runtimes.types import AIModelRuntime
 
 logger = logging.getLogger(__name__)
@@ -215,6 +220,14 @@ def create_model_with_provider(
             provider=openai_provider,
             settings=ModelSettings(parallel_tool_calls=False, temperature=0),
         )
+    elif model_provider.lower() in LOCAL_PROVIDERS:
+        # Ollama, LM Studio, vLLM and llama.cpp all speak OpenAI-compatible
+        # HTTP, so one branch serves every local runtime.
+        from agent_runtimes.models.local import build_local_model
+
+        return build_local_model(
+            f"{model_provider.lower()}:{model_name}", timeout=timeout
+        )
     else:
         # For other providers, use the standard string format
         # Note: String format doesn't allow custom timeout configuration
@@ -232,6 +245,14 @@ def resolve_model_for_inference_provider(
     - ``datalayer``: routes OpenAI-compatible requests through the
       datalayer-ai-inference service URL.
     """
+    # A local model is routed to the machine it runs on, whatever inference
+    # provider was requested: sending a prompt meant for Ollama to a hosted
+    # gateway is never what the person choosing it wanted.
+    if is_local_model(model):
+        local_model = build_local_model(model, timeout=timeout)
+        if local_model is not None:
+            return local_model
+
     provider = (inference_provider or "local").strip().lower()
     if provider in {"", "local"}:
         logger.info(

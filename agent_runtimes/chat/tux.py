@@ -24,7 +24,9 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from .commands import SlashCommand, build_commands
+from agent_runtimes.loop import LoopSession, SlashCommandRegistry
+
+from .commands import SlashCommand, build_registry
 from .execution import TuxExecutionGateway
 
 # Rich styles matching Datalayer brand
@@ -62,12 +64,47 @@ class SlashCommandCompleter(Completer):
     def __init__(self, commands: dict[str, "SlashCommand"]):
         self.commands = commands
 
+    def _argument_completions(self, text: str) -> Any:
+        """Complete a command's arguments once its name has been typed.
+
+        Arguments are declared on the command (``ARGS``), and their choices may
+        be a callable, so a command completes against live state — the servers
+        actually configured, the models actually reachable.
+        """
+        head, _, partial_arg = text[1:].partition(" ")
+        command = self.commands.get(head.strip().lower())
+        if command is None or not getattr(command, "args", ()):  # unknown command
+            return
+
+        # Complete the argument the cursor is on: everything before it is settled.
+        typed = partial_arg.split(" ")
+        index = max(0, len(typed) - 1)
+        current = typed[index].lower()
+        if index >= len(command.args):
+            return
+
+        argument = command.args[index]
+        for choice in argument.resolve_choices():
+            if not choice.lower().startswith(current):
+                continue
+            yield Completion(
+                text=choice,
+                start_position=-len(typed[index]),
+                display=HTML(f"<ansicyan>{choice}</ansicyan>"),
+                display_meta=HTML(f"<ansibrightblack>{argument.name}</ansibrightblack>"),
+            )
+
     def get_completions(self, document: Any, complete_event: Any) -> Any:
         """Yield completions for slash commands."""
         text = document.text_before_cursor
 
         # Only show completions when input starts with /
         if not text.startswith("/"):
+            return
+
+        # Past the first space the command is settled: complete its arguments.
+        if " " in text:
+            yield from self._argument_completions(text)
             return
 
         # Get the partial command (without the leading /)
@@ -198,9 +235,21 @@ class CliTux:
         self._executor = TuxExecutionGateway(agent_id, server_url=self.server_url)
         self.startup_message = startup_message
 
-        # Initialize slash commands
-        self.commands: dict[str, SlashCommand] = build_commands(
+        # Initialize slash commands. The registry is the source of truth —
+        # built-ins plus whatever the installed plugins contributed — and
+        # `self.commands` stays the name-and-alias mapping this UI reads.
+        self.command_registry: SlashCommandRegistry = build_registry(
             self, eggs=eggs, jupyter_url=jupyter_url
+        )
+        self.commands: dict[str, SlashCommand] = self.command_registry.as_mapping()
+
+        # What a command is allowed to know about the session it runs in, so a
+        # command can be written against the session rather than against this
+        # terminal (and can therefore also run in the browser workspace).
+        self.session = LoopSession(
+            server_url=self.server_url,
+            agent_id=agent_id,
+            owns_server=False,
         )
 
         # Initialize prompt session with slash command completer
@@ -610,12 +659,12 @@ class CliTux:
 
         parts = user_input[1:].split(maxsplit=1)
         cmd_name = parts[0].lower() if parts else ""
-        # args = parts[1] if len(parts) > 1 else ""
+        args = parts[1].strip() if len(parts) > 1 else ""
 
         if cmd_name in self.commands:
             cmd = self.commands[cmd_name]
             if cmd.handler:
-                result = await cmd.handler()
+                result = await cmd.handler(args)
                 # Commands may return a string to use as the next prompt
                 if result:
                     return result

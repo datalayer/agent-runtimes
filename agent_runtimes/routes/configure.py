@@ -354,6 +354,159 @@ async def list_inference_models() -> dict[str, Any]:
     }
 
 
+@router.get("/models")
+async def list_catalog_models() -> dict[str, Any]:
+    """The model catalog, with readiness and — for local models — reachability.
+
+    The list comes from agentspecs: that is what decides which models are
+    *offerable*. Discovery only reports what is **reachable right now**, because
+    a local model is available when something is listening on a port, not when
+    an API key happens to be set.
+
+    A model installed locally with no spec is reported separately, as an
+    invitation to add a spec — never as a silent option.
+    """
+    from agent_runtimes.models.local import (
+        LOCAL_PROVIDERS,
+        capability_warning,
+        discover_installed_models,
+        split_model_id,
+    )
+    from agent_runtimes.specs.models import AI_MODEL_CATALOGUE
+
+    installed = discover_installed_models()
+
+    models: list[dict[str, Any]] = []
+    catalogued_local: set[tuple[str, str]] = set()
+
+    for model in AI_MODEL_CATALOGUE.values():
+        missing = [
+            name for name in model.required_env_vars if not os.getenv(name.split(":")[0])
+        ]
+        entry: dict[str, Any] = {
+            "id": model.id,
+            "name": model.name,
+            "description": model.description,
+            "provider": model.provider,
+            "default": model.default,
+            "tokens_limit": model.tokens_limit,
+            "local": model.local,
+            "capabilities": list(model.capabilities),
+            "required_env_vars": list(model.required_env_vars),
+            "missing_env_vars": missing,
+        }
+
+        if model.local:
+            provider_name, model_name = split_model_id(model.id)
+            catalogued_local.add((provider_name, model_name))
+            provider_models = installed.get(provider_name)
+            # Reachability is a three-state answer: installed, runtime is up but
+            # this model is not pulled, or the runtime is not running at all.
+            if provider_models is None:
+                entry["reachable"] = False
+                entry["reason"] = f"{provider_name} is not running"
+            elif model_name in provider_models:
+                entry["reachable"] = True
+            else:
+                entry["reachable"] = False
+                entry["reason"] = f"not installed in {provider_name}"
+            entry["warning"] = capability_warning(model)
+            entry["available"] = entry["reachable"]
+        else:
+            entry["reachable"] = None
+            entry["warning"] = None
+            entry["available"] = not missing
+
+        models.append(entry)
+
+    uncatalogued = [
+        {"provider": provider_name, "name": name}
+        for provider_name, names in installed.items()
+        for name in names
+        if (provider_name, name) not in catalogued_local
+    ]
+
+    runtimes = {
+        name: {
+            "label": spec.label,
+            "base_url": spec.base_url(),
+            "reachable": name in installed,
+            "installed": list(installed.get(name, ())),
+        }
+        for name, spec in LOCAL_PROVIDERS.items()
+    }
+
+    return {
+        "models": models,
+        "local_runtimes": runtimes,
+        "uncatalogued_local": uncatalogued,
+    }
+
+
+@router.get("/skills")
+async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
+    """The skill catalog, with readiness — and, when a sandbox is up, what is live.
+
+    The catalogue is what *exists*, and it answers without a sandbox: someone
+    should be able to see what a skill is before paying for compute to run it.
+    Whether a skill is installed and active is a second question, answerable
+    only when something is running.
+    """
+    from agent_runtimes.specs.skills import list_skill_specs
+
+    skills: list[dict[str, Any]] = []
+    for spec in list_skill_specs():
+        # Env var refs are versioned (`TAVILY_API_KEY:0.0.1`); the variable is
+        # the part before the colon.
+        required = [ref.split(":")[0] for ref in (spec.envvars or [])]
+        # `optional_env_vars` and `enabled` are written in the YAML but are not
+        # fields on SkillSpec, so pydantic drops them: read them defensively
+        # rather than assuming either shape.
+        optional = [
+            str(ref).split(":")[0]
+            for ref in (getattr(spec, "optional_env_vars", None) or [])
+        ]
+        missing = [name for name in required if not os.getenv(name)]
+
+        skills.append(
+            {
+                "id": spec.id,
+                "version": spec.version,
+                "name": spec.name,
+                "description": spec.description,
+                "tags": list(spec.tags or []),
+                "icon": spec.icon,
+                "emoji": spec.emoji,
+                "enabled": bool(getattr(spec, "enabled", True)),
+                "dependencies": list(spec.dependencies or []),
+                "required_env_vars": required,
+                "optional_env_vars": optional,
+                "missing_env_vars": missing,
+                "ready": not missing,
+            }
+        )
+
+    active: list[str] = []
+    sandbox: dict[str, Any] = {}
+    try:
+        status = await get_codemode_status(agent_id=agent_id)  # type: ignore[call-arg]
+        if isinstance(status, dict):
+            sandbox = status.get("sandbox") or {}
+            active = [
+                str(entry.get("name"))
+                for entry in status.get("skills") or []
+                if isinstance(entry, dict) and entry.get("name")
+            ]
+    except Exception as error:  # noqa: BLE001
+        # No sandbox is not an error here: the catalogue still answers.
+        logger.debug("Codemode status unavailable while listing skills: %s", error)
+
+    for entry in skills:
+        entry["active"] = entry["id"] in active
+
+    return {"skills": skills, "active": active, "sandbox": sandbox}
+
+
 @router.get("", response_model=FrontendConfig)
 async def get_configuration(
     mcp_url: str | None = Query(

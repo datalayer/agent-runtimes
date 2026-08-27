@@ -55,7 +55,9 @@ from .configure import router as configure_router
 from .health import router as health_router
 from .history import router as history_router
 from .identity import router as identity_router
+from .loop import router as loop_router
 from .mcp import router as mcp_router
+from .mcp_auth import router as mcp_auth_router
 from .mcp_proxy import router as mcp_proxy_router
 from .mcp_ui import register_mcp_ui_agent, unregister_mcp_ui_agent
 from .mcp_ui import router as mcp_ui_router
@@ -93,7 +95,9 @@ __all__ = [
     "health_router",
     "history_router",
     "identity_router",
+    "loop_router",
     "mcp_proxy_router",
+    "mcp_auth_router",
     "mcp_router",
     "mcp_ui_router",
     "register_a2a_agent",

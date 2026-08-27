@@ -144,6 +144,7 @@
     "@datalayer/lexical-loro": "^1.0.0",
     "@datalayer/jupyter-react": "^2.0.7",
     "@datalayer/jupyter-server-nbmodel": "^0.2.8",
+    "@datalayer/reactor": "^1.1.0",
     "@datalayer/primer-addons": "^1.0.15",
     "@datalayer/primer-rjsf": "^1.0.3",
     "@excalidraw/excalidraw": "^0.18.0",
