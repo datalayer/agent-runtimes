@@ -784,6 +784,7 @@ function ChatBaseInner({
   useStore: useStoreMode = true,
   protocol: protocolRaw,
   onSendMessage,
+  onSendReady,
   enableStreaming = false,
   // Extended props
   brandIcon,
@@ -3432,6 +3433,22 @@ function ChatBaseInner({
       getEnabledSkillIds,
     ],
   );
+
+  // Hand the send function to a host that owns the input box (the LOOP
+  // workspace). Withdrawn on unmount so nothing holds a stale sender.
+  useEffect(() => {
+    if (!onSendReady) return undefined;
+    if (!adapterReady && !onSendMessage) {
+      onSendReady(null);
+      return undefined;
+    }
+    onSendReady((message: string) => {
+      void handleSend(message);
+    });
+    return () => {
+      onSendReady(null);
+    };
+  }, [onSendReady, adapterReady, onSendMessage, handleSend]);
 
   // Send pending prompt once history loaded and adapter/handler available
   useEffect(() => {
