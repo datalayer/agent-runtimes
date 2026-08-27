@@ -173,4 +173,4 @@ export type IRuntimeType = 'notebook' | 'cell';
 /**
  * Runtime optional capabilities.
  */
-export type IRuntimeCapabilities = 'home_folder';
+export type IRuntimeCapabilities = 'home-folder';

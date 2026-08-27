@@ -403,7 +403,7 @@ export function CodeSandboxLauncher(
         desc.params['creditsLimit'] = creditsLimit;
       }
       if (homeFolder) {
-        desc.params['capabilities'] = ['home_folder'];
+        desc.params['capabilities'] = ['home-folder'];
       }
       let success = true;
       const provider = codeSandboxVariantOf((spec as any)?.owner);
@@ -450,7 +450,7 @@ export function CodeSandboxLauncher(
                 type: 'notebook',
                 givenName: runtimeName,
                 creditsLimit: creditsLimit,
-                capabilities: homeFolder ? ['home_folder'] : undefined,
+                capabilities: homeFolder ? ['home-folder'] : undefined,
                 snapshot: kernelSnapshot?.id,
               },
               {

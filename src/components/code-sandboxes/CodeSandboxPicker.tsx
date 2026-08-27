@@ -794,7 +794,7 @@ export function CodeSandboxPicker(
             displayName: runtimeDesc.displayName,
             givenName: givenName || runtimeDesc.displayName,
             creditsLimit,
-            capabilities: homeFolder ? ['home_folder'] : undefined,
+            capabilities: homeFolder ? ['home-folder'] : undefined,
           } satisfies Partial<
             Omit<IRuntimeOptions, 'kernelType'> & {
               id: string;
