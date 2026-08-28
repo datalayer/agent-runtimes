@@ -101,6 +101,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'A2UI viewer integration example.',
   ),
   makeEntry(
+    'A2UiJupyterOutputExample',
+    () => import('./A2UiJupyterOutputExample'),
+    'One Jupyter execution shown twice: raw kernel outputs, and the A2UI surface the server converter makes of them.',
+  ),
+  makeEntry(
     'A2UiAgentExample',
     () => import('./A2UiAgentExample'),
     'A2UI Agent with built-in chat component and Python A2UI extension surface.',

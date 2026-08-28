@@ -295,3 +295,75 @@ class TestInteractionRoundTrip:
         # so the surface's Code card is the reader's line.
         result = ExecutionResult.from_payload({"code": original, "stdout": ""})
         assert result.code == original
+
+
+class TestTheOutputsReachTheConverter:
+    """The route has to carry what the converter knows how to read.
+
+    `execution_to_a2ui` could always draw an image; nothing ever handed it one.
+    `SandboxExecuteResponse` reported `results` — the `text/plain` of each rich
+    result and nothing else — so a figure arrived as the string
+    `<Figure size 640x480>` and the Image branch was unreachable code.
+    """
+
+    def test_the_response_model_carries_jupyter_outputs(self) -> None:
+        from agent_runtimes.routes.sandbox import SandboxExecuteResponse
+
+        response = SandboxExecuteResponse(
+            success=True,
+            execution_ok=True,
+            outputs=[
+                {
+                    "output_type": "display_data",
+                    "data": {"image/png": "iVBORw0KGgo="},
+                    "metadata": {},
+                }
+            ],
+        )
+
+        assert response.outputs[0]["data"]["image/png"] == "iVBORw0KGgo="
+
+    def test_a_figure_becomes_an_image_the_whole_way_through(self) -> None:
+        from agent_runtimes.routes.sandbox import SandboxExecuteResponse
+
+        # What the route now returns for a plot…
+        payload = SandboxExecuteResponse(
+            success=True,
+            execution_ok=True,
+            stdout="",
+            results=["<Figure size 640x480 with 1 Axes>"],
+            outputs=[
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "image/png": "iVBORw0KGgo=",
+                        "text/plain": "<Figure size 640x480 with 1 Axes>",
+                    },
+                    "metadata": {},
+                }
+            ],
+        ).model_dump()
+        payload["code"] = "figure"
+
+        # …reaches the surface as a picture rather than as its repr.
+        messages = execution_to_a2ui(ExecutionResult.from_payload(payload))
+        images = [
+            c
+            for c in messages[1]["updateComponents"]["components"]
+            if c.get("component") == "Image"
+        ]
+        assert len(images) == 1
+        assert images[0]["url"] == "data:image/png;base64,iVBORw0KGgo="
+        assert messages[2]["updateDataModel"]["value"]["execution"]["images"] == 1
+
+    def test_a_response_without_outputs_still_renders(self) -> None:
+        from agent_runtimes.routes.sandbox import SandboxExecuteResponse
+
+        # The plain case must not depend on the new field being populated.
+        payload = SandboxExecuteResponse(
+            success=True, execution_ok=True, stdout="hello"
+        ).model_dump()
+        payload["code"] = "print('hello')"
+
+        messages = execution_to_a2ui(ExecutionResult.from_payload(payload))
+        assert "hello" in _text_of(messages, "output")

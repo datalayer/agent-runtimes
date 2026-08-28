@@ -57,6 +57,10 @@ class SandboxExecuteResponse(BaseModel):
     stdout: str = ""
     stderr: str = ""
     results: list[str] = Field(default_factory=list)
+    #: The rich results as Jupyter outputs, mime bundles intact. `results` is
+    #: their `text/plain` and nothing else, which is enough to print and not
+    #: enough to draw — a figure arrives there as `<Figure size 640x480>`.
+    outputs: list[dict[str, Any]] = Field(default_factory=list)
     error: Optional[str] = None
     variant: Optional[str] = None
 
@@ -162,6 +166,7 @@ async def execute_sandbox_code(
             stdout_lines: list[str] = []
             stderr_lines: list[str] = []
             results: list[str] = []
+            streamed_outputs: list[dict[str, Any]] = []
             error: str | None = None
 
             async for event in client.execute_code_streaming_async(
@@ -180,6 +185,14 @@ async def execute_sandbox_code(
                     text = data.get("text/plain")
                     if text is not None:
                         results.append(str(text))
+                    if data:
+                        streamed_outputs.append(
+                            {
+                                "output_type": "display_data",
+                                "data": dict(data),
+                                "metadata": {},
+                            }
+                        )
                 elif hasattr(event, "name") and hasattr(event, "value"):
                     error = f"{getattr(event, 'name', 'Error')}: {getattr(event, 'value', '')}"
 
@@ -189,6 +202,7 @@ async def execute_sandbox_code(
                 stdout="\n".join(stdout_lines),
                 stderr="\n".join(stderr_lines),
                 results=results,
+                outputs=streamed_outputs,
                 error=error,
                 variant=str(client.variant) if client.variant else None,
             )
@@ -210,6 +224,7 @@ async def execute_sandbox_code(
         stdout=outcome.stdout,
         stderr=outcome.stderr,
         results=outcome.results,
+        outputs=list(getattr(outcome, "outputs", []) or []),
         error=outcome.error,
         variant=str(client.variant) if client.variant else None,
     )
