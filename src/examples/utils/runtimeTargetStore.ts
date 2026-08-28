@@ -112,11 +112,6 @@ const readStoredTarget = (): ExampleRuntimeTarget => {
     return 'local';
   }
   const value = window.localStorage.getItem(STORAGE_KEY);
-  // `cloud` was this control's old word for the authenticated runtime. Reading
-  // it as `datalayer` costs a line and saves a person their choice.
-  if (value === 'cloud') {
-    return 'datalayer';
-  }
   return isTarget(value) ? value : 'local';
 };
 

@@ -48,6 +48,16 @@ class _FakeSyncClient(_FakeStreamingClient):
             stdout="hello",
             stderr="",
             results=["42"],
+            # The mime bundles behind `results`, which is what the A2UI
+            # converter draws from. A stub without them is not a
+            # `CodeExecutionOutcome`.
+            outputs=[
+                {
+                    "output_type": "execute_result",
+                    "data": {"text/plain": "42"},
+                    "metadata": {},
+                }
+            ],
             error=None,
         )
 

@@ -83,9 +83,10 @@ describe('the reason the chat is off', () => {
 
 describe('an unknown target', () => {
   it('falls back to local rather than throwing', () => {
-    // A stored preference from an older build must not break the shell.
+    // Not a compatibility path — a name that is not one of the four is a bug,
+    // and the shell should still come up so the bug is visible.
     const capabilities = runtimeTargetCapabilities(
-      'cloud' as ExampleRuntimeTarget,
+      'nonsense' as ExampleRuntimeTarget,
     );
     expect(capabilities.label).toBe('Local');
   });

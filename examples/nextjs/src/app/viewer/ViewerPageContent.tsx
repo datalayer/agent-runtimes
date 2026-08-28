@@ -59,7 +59,7 @@ function ViewerContent() {
   const [error, setError] = useState<string | null>(null);
   const [isTerminating, setIsTerminating] = useState(false);
   const runtimeIdRef = useRef<string | null>(null);
-  const podNameRef = useRef<string | null>(null);
+  const runtimeNameRef = useRef<string | null>(null);
 
   const notebookId = searchParams.get('notebook');
   const environment = searchParams.get('environment');
@@ -182,7 +182,7 @@ function ViewerContent() {
 
     try {
       // Get pod name from multiple sources
-      let runtimeName = activeNotebook?.runtimeName || podNameRef.current;
+      let runtimeName = activeNotebook?.runtimeName || runtimeNameRef.current;
 
       // If no pod name from state, try to get it from localStorage
       if (!runtimeName && notebookId && environment) {
@@ -365,7 +365,7 @@ function ViewerContent() {
             notebookContent={notebookData?.content}
             onRuntimeCreated={(runtimeId, runtimeName) => {
               runtimeIdRef.current = runtimeId;
-              podNameRef.current = runtimeName;
+              runtimeNameRef.current = runtimeName;
               // Update active notebook with runtime ID and pod name
               if (notebookId && environment) {
                 const viewerUrl = `/viewer?notebook=${encodeURIComponent(notebookId)}&environment=${encodeURIComponent(environment)}`;

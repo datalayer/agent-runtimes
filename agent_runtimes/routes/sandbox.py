@@ -224,7 +224,7 @@ async def execute_sandbox_code(
         stdout=outcome.stdout,
         stderr=outcome.stderr,
         results=outcome.results,
-        outputs=list(getattr(outcome, "outputs", []) or []),
+        outputs=list(outcome.outputs),
         error=outcome.error,
         variant=str(client.variant) if client.variant else None,
     )
