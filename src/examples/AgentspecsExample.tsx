@@ -543,7 +543,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const cloudCatalogBaseUrl = useMemo(() => {
     const configured = normalizeHttpUrl(configuration?.runtimesUrl);
     const resolvedCloudBaseUrl = normalizeHttpUrl(
-      resolveExampleAgentRuntimesUrl('cloud'),
+      resolveExampleAgentRuntimesUrl('datalayer'),
     );
     if (configured && !isLocalhostUrl(configured)) {
       return configured;

@@ -415,7 +415,7 @@ def _failure_cause_detail_lines(cause: dict[str, Any]) -> list[str]:
     for key, label in (
         ("stage", "Stage"),
         ("type", "Type"),
-        ("runtime_pod_name", "Runtime pod"),
+        ("runtime_name", "Runtime pod"),
         ("runtime_id", "Runtime ID"),
         ("environment_name", "Environment"),
         ("execution_url", "Execution URL"),
@@ -2608,7 +2608,7 @@ def _run_detail_block_lines(
     lines.append(f"- Pass rate: {pass_text}")
     lines.append(f"- Created: {created}")
     summary_for_header = _as_dict(run.get("summary"))
-    runtime_pod = str(summary_for_header.get("runtime_pod_name") or "").strip()
+    runtime_pod = str(summary_for_header.get("runtime_name") or "").strip()
     if runtime_pod:
         lines.append(f"- Runtime: `{runtime_pod}`")
     runtime_id = str(summary_for_header.get("runtime_id") or "").strip()
@@ -2755,7 +2755,7 @@ def _run_detail_block_lines(
             "credits_consumed",
             "captured_at",
             "reservation_id",
-            "runtime_pod_name",
+            "runtime_name",
         ]
         usage_rows: list[list[str]] = []
         for key in preferred_keys:

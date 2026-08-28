@@ -78,8 +78,14 @@ export interface FrontendToolSpec {
   tags: string[];
   /** Whether the frontend tool is enabled */
   enabled: boolean;
-  /** Which tools from the toolset to include ('all' or specific list) */
-  toolset: string;
+  /**
+   * Which tools of the underlying toolset this bundle grants: `'all'`, or an
+   * explicit list of tool names.
+   *
+   * A list is how a specialist takes only what it needs — an agent that may
+   * read and edit a notebook but must never delete from it.
+   */
+  toolset: string | string[];
   /** Icon identifier */
   icon?: string;
   /** Emoji identifier */

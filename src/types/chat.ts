@@ -322,6 +322,27 @@ export interface ChatCommonProps {
   disableInputPrompt?: boolean;
 
   /**
+   * Whether the chat can be used at all.
+   *
+   * Different from `launching`, which says "not yet": this says "not here".
+   * A sandbox with no agent behind it — code running in the browser, or an
+   * anonymous Jupyter server — has nothing to chat with, and the honest answer
+   * is to show the chat as it will look and say why it is off, rather than
+   * hide it and leave the person wondering where it went.
+   *
+   * The input and the selectors go dead; the header stays readable.
+   */
+  disabled?: boolean;
+
+  /**
+   * Why the chat is off, in the person's terms — "No agent in browser mode".
+   *
+   * Shown in the header beside the title, because that is where someone looks
+   * when a control does not respond. Ignored unless `disabled` is true.
+   */
+  disableReason?: string;
+
+  /**
    * Whether the underlying agent runtime is still launching. When true, the
    * chat shell is rendered with the input and controls disabled and a spinner
    * overlay is shown, so the plain chat view appears as soon as the agent
@@ -577,18 +598,6 @@ export interface ChatCommonProps {
    */
   pendingPrompt?: string;
 
-  /**
-   * Hands an imperative send function to the host, once the chat is able to
-   * send.
-   *
-   * `pendingPrompt` deliberately sends a given text only once, which makes it
-   * unusable as a live input channel: a user asking the same question twice
-   * would be ignored the second time. A host that owns the input box — the LOOP
-   * workspace, whose prompt is the shell — needs a channel with no such memory.
-   *
-   * Called again with `null` when the chat can no longer send.
-   */
-  onSendReady?: (send: ((message: string) => void) | null) => void;
 
   // ============ Information ============
 
@@ -717,6 +726,28 @@ export interface ChatCommonProps {
  * ChatBase props
  */
 export interface ChatBaseProps {
+  /**
+   * Hands an imperative send function to the host, once the chat is able to
+   * send.
+   *
+   * `pendingPrompt` deliberately sends a given text only once, which makes it
+   * unusable as a live input channel: a user asking the same question twice
+   * would be ignored the second time. A host that owns the input box — the LOOP
+   * workspace, whose prompt is the shell — needs a channel with no such memory.
+   *
+   * Called again with `null` when the chat can no longer send.
+   */
+  onSendReady?: (
+    controls: { send: (message: string) => void; stop: () => void } | null,
+  ) => void;
+
+  /**
+   * Reports whether the chat is streaming a reply, so a host that owns the
+   * input box can show the spinner and the stop button where the user is
+   * actually looking.
+   */
+  onLoadingChange?: (isLoading: boolean) => void;
+
   /** Chat title */
   title?: string;
 
@@ -774,6 +805,17 @@ export interface ChatBaseProps {
 
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
+
+  /**
+   * Whether the chat can be used at all — see `ChatCommonProps.disabled`.
+   *
+   * `launching` says "not yet"; this says "not here". A sandbox with no agent
+   * behind it has nothing to chat with.
+   */
+  disabled?: boolean;
+
+  /** Why the chat is off, shown in the header. Ignored unless `disabled`. */
+  disableReason?: string;
 
   /**
    * Whether the underlying agent runtime is still launching. When true, the

@@ -81,11 +81,11 @@ export interface AgentRuntimesClient extends DatalayerCoreClient {
     options?: ListRuntimeMemoriesOptions,
   ): Promise<RuntimeMemory[]>;
   getRuntimeMemory(memoryId: string): Promise<RuntimeMemory>;
-  getRuntime(podName: string): Promise<RuntimeDTO>;
-  deleteRuntime(podName: string): Promise<void>;
+  getRuntime(runtimeName: string): Promise<RuntimeDTO>;
+  deleteRuntime(runtimeName: string): Promise<void>;
   terminateAllRuntimes(): Promise<PromiseSettledResult<void>[]>;
   createSnapshot(
-    podName: string,
+    runtimeName: string,
     name: string,
     description: string,
     stop?: boolean,

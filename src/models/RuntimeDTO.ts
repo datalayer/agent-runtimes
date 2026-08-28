@@ -12,17 +12,17 @@
 import { updateRuntime } from '../api/runtimes/runtimes';
 import type { AgentRuntimesClient as DatalayerClient } from '../client/AgentRuntimesClient';
 import { CodeSandboxSnapshotDTO } from './CodeSandboxSnapshotDTO';
-import type { IRuntimePod } from './Runtime';
+import type { IRuntimeRecord } from './Runtime';
 import { validateJSON } from '@datalayer/core/lib/api/utils/validation';
 
 /**
  * Represents a running instance of a computing environment.
  *
- * Alias of the canonical {@link IRuntimePod} (see `Runtime.ts`) so the raw
+ * Alias of the canonical {@link IRuntimeRecord} (see `Runtime.ts`) so the raw
  * snake_case pod payload is defined in a single place. Kept as a named export
  * for the Datalayer Client's public API surface.
  */
-export type RuntimeData = IRuntimePod;
+export type RuntimeData = IRuntimeRecord;
 
 /**
  * Stable public interface for Runtime data.
@@ -33,7 +33,7 @@ export interface RuntimeJSON {
   /** ulid for the runtime */
   uid: string;
   /** Kubernetes pod name for the runtime instance */
-  podName: string;
+  runtimeName: string;
   /** User-friendly name for the runtime */
   givenName: string;
   /** Name of the environment this runtime is based on */
@@ -139,7 +139,7 @@ export class RuntimeDTO {
   private _checkDeleted(): void {
     if (this._deleted) {
       throw new Error(
-        `Runtime ${this._data.pod_name} has been deleted and no longer exists`,
+        `Runtime ${this._data.runtime_name} has been deleted and no longer exists`,
       );
     }
   }
@@ -149,9 +149,9 @@ export class RuntimeDTO {
   // ========================================================================
 
   /** Kubernetes pod name for the runtime instance. */
-  get podName(): string {
+  get runtimeName(): string {
     this._checkDeleted();
-    return this._data.pod_name;
+    return this._data.runtime_name;
   }
 
   /** Unique identifier for the runtime. */
@@ -223,7 +223,7 @@ export class RuntimeDTO {
    * After deletion, subsequent calls to dynamic methods will throw errors.
    */
   async delete(): Promise<void> {
-    await this._client.deleteRuntime(this.podName);
+    await this._client.deleteRuntime(this.runtimeName);
     this._deleted = true;
   }
 
@@ -237,7 +237,7 @@ export class RuntimeDTO {
     this._checkDeleted();
     const updated = await updateRuntime(
       (this._client as any).getToken(),
-      this.podName,
+      this.runtimeName,
       from,
       (this._client as any).getRuntimesUrl(),
     );
@@ -259,7 +259,7 @@ export class RuntimeDTO {
   ): Promise<CodeSandboxSnapshotDTO> {
     this._checkDeleted();
     return await (this._client as any).createSnapshot(
-      this.podName,
+      this.runtimeName,
       name,
       description,
       stop,
@@ -295,7 +295,7 @@ export class RuntimeDTO {
     const obj = {
       // Core identifiers
       uid: this.uid,
-      podName: this.podName,
+      runtimeName: this.runtimeName,
       givenName: this.givenName,
 
       // Environment info
@@ -336,6 +336,6 @@ export class RuntimeDTO {
   /** String representation of the runtime. */
   toString(): string {
     this._checkDeleted();
-    return `Runtime(${this.podName}, ${this.environmentName})`;
+    return `Runtime(${this.runtimeName}, ${this.environmentName})`;
   }
 }

@@ -71,7 +71,7 @@ export interface CodeSandboxSnapshotJSON {
  */
 export interface CreateCodeSandboxSnapshotRequest {
   /** Pod name of the runtime to snapshot */
-  pod_name: string;
+  runtime_name: string;
   /** Name for the snapshot */
   name: string;
   /** Description of the snapshot */

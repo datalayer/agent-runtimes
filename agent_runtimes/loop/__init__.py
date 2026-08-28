@@ -26,6 +26,11 @@ from agent_runtimes.loop.entrypoint import (
     opens_workspace,
 )
 from agent_runtimes.loop.session import LoopSession
+from agent_runtimes.loop.sync import (
+    DEFAULT_INTERVAL_SECONDS,
+    ForeignTurn,
+    SessionSync,
+)
 
 __all__ = [
     "ENTRY_POINT_GROUP",
@@ -33,7 +38,10 @@ __all__ = [
     "CommandArgSpec",
     "CommandCollisionError",
     "CommandHandler",
+    "DEFAULT_INTERVAL_SECONDS",
+    "ForeignTurn",
     "LoopSession",
+    "SessionSync",
     "SlashCommandRegistry",
     "SlashCommandSpec",
     "discover_slash_commands",

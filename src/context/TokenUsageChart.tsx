@@ -299,8 +299,8 @@ function extractRuntimeId(row: Record<string, unknown>): string | undefined {
   const directCandidates = [
     row.runtime_id,
     row.runtime,
-    row.pod_name,
-    row.k8s_pod_name,
+    row.runtime_name,
+    row.k8s_runtime_name,
   ];
   for (const candidate of directCandidates) {
     if (typeof candidate === 'string' && candidate.trim().length > 0) {
@@ -311,7 +311,7 @@ function extractRuntimeId(row: Record<string, unknown>): string | undefined {
   const attrs = parseAttributes(row.attributes);
   const attrCandidates = [
     attrs['runtime.id'],
-    attrs['runtime.pod_name'],
+    attrs['runtime.runtime_name'],
     attrs['k8s.pod.name'],
   ];
   for (const candidate of attrCandidates) {
@@ -323,7 +323,7 @@ function extractRuntimeId(row: Record<string, unknown>): string | undefined {
   const resourceAttributes = parseResourceAttributes(row.resource_attributes);
   const resourceCandidates = [
     resourceAttributes['runtime.id'],
-    resourceAttributes['runtime.pod_name'],
+    resourceAttributes['runtime.runtime_name'],
     resourceAttributes['k8s.pod.name'],
   ];
   for (const candidate of resourceCandidates) {

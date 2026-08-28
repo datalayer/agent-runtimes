@@ -52,10 +52,76 @@ export type LoopWorkspaceContext = {
   model?: string;
   /** The sandbox, as last reported. */
   sandbox: SandboxSnapshot;
+  /**
+   * For whichever plugin owns the sandbox to keep the workspace informed.
+   *
+   * The shell does not know which plugin that is — it just needs the value,
+   * because `canOpen` gates are asked about the live workspace and a stale
+   * snapshot would grey out a notebook that has a perfectly good kernel.
+   */
+  setSandbox: (sandbox: SandboxSnapshot) => void;
   /** Which view is on screen. */
   activeViewType: string;
   /** Put another view on screen. */
   setActiveViewType: (viewType: string) => void;
+  /** Prompts typed in the shell, for whichever view answers them. */
+  prompts: PromptChannel;
+  /** What the active view is doing, as it last reported. */
+  viewControls: ViewControls;
+  /** For a view to report itself. Pass `null` on unmount. */
+  setViewControls: (controls: ViewControls | null) => void;
+};
+
+/**
+ * How a prompt typed in the shell reaches whatever should answer it.
+ *
+ * The prompt belongs to the shell and the answer belongs to a view, so
+ * something has to carry a message across without the shell knowing which
+ * plugin is listening. A channel does that in both directions: the shell
+ * publishes, a mounted view subscribes, and neither imports the other.
+ */
+export type PromptChannel = {
+  /** Publish a prompt. Returns whether anything was listening. */
+  submit: (message: string) => boolean;
+  /** Listen for prompts. Returns an unsubscribe. */
+  subscribe: (listener: (message: string) => void) => () => void;
+};
+
+/** Create a prompt channel. The shell owns one per workspace. */
+export function createPromptChannel(): PromptChannel {
+  const listeners = new Set<(message: string) => void>();
+  return {
+    submit(message: string) {
+      if (listeners.size === 0) {
+        return false;
+      }
+      for (const listener of [...listeners]) {
+        listener(message);
+      }
+      return true;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
+/**
+ * What the active view tells the shell about itself.
+ *
+ * The prompt lives in the shell but the work happens in a view, so the spinner
+ * and the stop button would otherwise be in the wrong place: a chat streaming a
+ * reply, a notebook running a cell and a sandbox starting up all need the same
+ * two facts said the same way.
+ */
+export type ViewControls = {
+  /** Whether the view is working on something. */
+  busy?: boolean;
+  /** How to stop it, when it can be stopped. */
+  stop?: () => void;
 };
 
 /** Props every view receives. */

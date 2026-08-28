@@ -85,7 +85,7 @@ type IDisplayMode = 'menu' | 'radio' | 'dropdown';
  * "Assign a new Code Sandbox" and never among the ones already running.
  */
 function isRunningSandbox(desc: IRuntimeDesc): boolean {
-  return !!desc.kernelId || !!desc.podName;
+  return !!desc.kernelId || !!desc.runtimeName;
 }
 
 /** How a sandbox is identified among the choices; see `dropdownDescs`. */
@@ -93,12 +93,12 @@ function codeSandboxDescKey(desc: IRuntimeDesc): string {
   // The runtime uid, then the pod, stands in for the kernel of a sandbox that
   // does not have one yet. Without that identity all Daytona sandboxes of the
   // same environment answer to one key.
-  return `${desc.location}:${desc.kernelId ?? desc.id ?? desc.podName ?? desc.name}`;
+  return `${desc.location}:${desc.kernelId ?? desc.id ?? desc.runtimeName ?? desc.name}`;
 }
 
 /** The identifier shown beside a running sandbox. */
 function codeSandboxDisplayId(desc: IRuntimeDesc): string | undefined {
-  return desc.kernelId ?? desc.id ?? desc.podName;
+  return desc.kernelId ?? desc.id ?? desc.runtimeName;
 }
 
 /** Whether two descriptions refer to the same choice. */
@@ -109,8 +109,8 @@ function isSameCodeSandbox(
   if (!right) {
     return false;
   }
-  if (left.podName && right.podName) {
-    return left.podName === right.podName;
+  if (left.runtimeName && right.runtimeName) {
+    return left.runtimeName === right.runtimeName;
   }
   const sameLocation =
     left.location === right.location ||
@@ -592,7 +592,7 @@ export function CodeSandboxPicker(
       const remoteBound = !!location && isRuntimeRemote(location);
       const matchesCurrent = (desc: IDatalayerCodeSandboxDesc): boolean =>
         (!!kernelId && desc.kernelId === kernelId) ||
-        (!!desc.podName && !!location && desc.podName === location);
+        (!!desc.runtimeName && !!location && desc.runtimeName === location);
       if (kernelId || remoteBound) {
         if (remoteBound && !remoteModelsReady) {
           return;
@@ -621,7 +621,7 @@ export function CodeSandboxPicker(
               language: spec.language,
               displayName: sessionContext.kernelDisplayName,
               location: location ?? 'local',
-              podName: remoteBound ? location : undefined,
+              runtimeName: remoteBound ? location : undefined,
             });
           }
         }
@@ -777,7 +777,7 @@ export function CodeSandboxPicker(
             id: runtimeDesc.kernelId,
             // The pod names a sandbox that has no kernel of its own — an
             // external one — so the session can bind it through the proxy.
-            pod_name: runtimeDesc.podName,
+            runtime_name: runtimeDesc.runtimeName,
             // The name the sandbox is given, carried with the choice.
             //
             // Everything else about the pick travelled in this object and the
@@ -799,7 +799,7 @@ export function CodeSandboxPicker(
             Omit<IRuntimeOptions, 'kernelType'> & {
               id: string;
               displayName: string;
-              pod_name: string;
+              runtime_name: string;
             }
           > | null)
         : null,
@@ -893,8 +893,8 @@ export function CodeSandboxPicker(
                     {runtimeDescs.map(candidateRuntimeDesc => {
                       const choiceKey =
                         codeSandboxDescKey(candidateRuntimeDesc);
-                      const annotation = candidateRuntimeDesc.podName
-                        ? ` - ${candidateRuntimeDesc.podName.split('-', 2).reverse()[0]}`
+                      const annotation = candidateRuntimeDesc.runtimeName
+                        ? ` - ${candidateRuntimeDesc.runtimeName.split('-', 2).reverse()[0]}`
                         : candidateRuntimeDesc.kernelId
                           ? ` - ${candidateRuntimeDesc.kernelId}`
                           : '';

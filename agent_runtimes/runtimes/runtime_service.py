@@ -27,7 +27,7 @@ from datalayer_core.utils.types import (
 )
 from datalayer_core.utils.urls import DEFAULT_DATALAYER_RUNTIMES_URL, DatalayerURLs
 
-from agent_runtimes.mixins.runtimes import RuntimesMixin
+from agent_runtimes.runtimes.client import RuntimesMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
 from agent_runtimes.models.runtime import RuntimeModel
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
@@ -61,7 +61,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         iam_url: Optional[str] = None,
         token: Optional[str] = None,
         api_key: Optional[str] = None,
-        pod_name: Optional[str] = None,
+        runtime_name: Optional[str] = None,
         ingress: Optional[str] = None,
         reservation_id: Optional[str] = None,
         uid: Optional[str] = None,
@@ -89,7 +89,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             Authentication token (can also be set via DATALAYER_API_KEY env var).
         api_key : Optional[str]
             Authentication API key alias for ``token``.
-        pod_name : Optional[str]
+        runtime_name : Optional[str]
             Name of the pod running the runtime.
         ingress : Optional[str]
             Ingress URL for the runtime.
@@ -115,7 +115,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             iam_url=iam_url,
             token=token or api_key,
             external_token=None,
-            pod_name=pod_name,
+            runtime_name=runtime_name,
             ingress=ingress,
             reservation_id=reservation_id,
             uid=uid,
@@ -138,7 +138,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         - Configuration: name, environment, runtimes_url, iam_url
         - Authentication: token, external_token
         - Runtime state: sandbox_client, kernel_id, executing
-        - Infrastructure: pod_name, ingress, uid, reservation_id
+        - Infrastructure: runtime_name, ingress, uid, reservation_id
 
         Returns
         -------
@@ -191,9 +191,9 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         )
 
     @property
-    def pod_name(self) -> Optional[str]:
+    def runtime_name(self) -> Optional[str]:
         """Get the pod name."""
-        return self._model.pod_name
+        return self._model.runtime_name
 
     @property
     def name(self) -> str:
@@ -311,7 +311,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             self.model.sandbox_client.start()
 
         if self.model.sandbox_client is None:
-            self.model.runtime = self._create_runtime(self.model.environment)
+            self.model.runtime = self.runtimes.create(self.model.environment)
 
             # Check if runtime creation was successful
             if not self.model.runtime.get("success", True):
@@ -332,7 +332,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             required_fields = [
                 "ingress",
                 "token",
-                "pod_name",
+                "runtime_name",
                 "uid",
                 "reservation_id",
                 "burning_rate",
@@ -351,7 +351,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             # print("runtime", runtime)
             self.model.ingress = runtime["ingress"]
             self.model.jupyter_token = runtime["token"]
-            self.model.pod_name = runtime["pod_name"]
+            self.model.runtime_name = runtime["runtime_name"]
             self.model.uid = runtime["uid"]
             self.model.reservation_id = runtime["reservation_id"]
 
@@ -413,8 +413,8 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             self.model.sandbox_client.stop()
             self.model.sandbox_client = None
             self.model.kernel_id = None
-            if self.model.pod_name:
-                return self._terminate_runtime(self.model.pod_name)["success"]
+            if self.model.runtime_name:
+                return self.runtimes.stop(self.model.runtime_name)["success"]
         return False
 
     def _check_file(self, path: Union[str, Path]) -> bool:
@@ -704,12 +704,12 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         SandboxSnapshot
             A new snapshot object.
         """
-        if self.model.pod_name is None:
+        if self.model.runtime_name is None:
             raise RuntimeError("Runtime not started!")
 
         name, description = create_snapshot(name=name, description=description)
         response = self._create_snapshot(
-            pod_name=self.model.pod_name,
+            runtime_name=self.model.runtime_name,
             name=name,
             description=description,
             stop=stop,
@@ -722,8 +722,8 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             self.model.sandbox_client = None
             self.model.kernel_id = None
             try:
-                if self.model.pod_name:
-                    self._terminate_runtime(self.model.pod_name)
+                if self.model.runtime_name:
+                    self.runtimes.stop(self.model.runtime_name)
             except Exception:
                 pass
 

@@ -9,7 +9,10 @@ import {
   type UseAgentReturn,
 } from '../../hooks/useAgentRuntimes';
 import { useMemo } from 'react';
-import { useRuntimeTargetStore } from '../utils/runtimeTargetStore';
+import {
+  runtimeTargetCapabilities,
+  useRuntimeTargetStore,
+} from '../utils/runtimeTargetStore';
 import { useExampleAgentRuntimesUrl } from '../utils/useExampleAgentRuntimesUrl';
 
 /**
@@ -20,11 +23,14 @@ export function useExampleAgentRuntimes(
   options: UseAgentOptions,
 ): UseAgentReturn {
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
+  const capabilities = runtimeTargetCapabilities(runtimeTarget);
   const localRuntimeBaseUrl = useExampleAgentRuntimesUrl();
 
   const runtimeCreationTarget =
     options.runtimeCreationTarget ??
-    (runtimeTarget === 'cloud' ? 'backend-services' : 'local-agent-runtimes');
+    (runtimeTarget === 'datalayer'
+      ? 'backend-services'
+      : 'local-agent-runtimes');
 
   const runtimeCreationBaseUrl =
     options.runtimeCreationBaseUrl ??
@@ -32,10 +38,14 @@ export function useExampleAgentRuntimes(
       ? localRuntimeBaseUrl
       : undefined);
 
-  const autoStart =
-    options.autoStart ?? runtimeCreationTarget === 'backend-services';
+  // Two of the four targets are a sandbox and nothing else. Launching an agent
+  // there would call a service that is not running, so the hook simply does
+  // not — and `useExampleAgentRuntime` reports why, for the chat to show.
+  const autoStart = capabilities.hasAgent
+    ? (options.autoStart ?? runtimeCreationTarget === 'backend-services')
+    : false;
 
-  const fallbackPodName = useMemo(() => {
+  const fallbackRuntimeName = useMemo(() => {
     const configuredName = options.agentConfig?.name?.trim();
     return (
       configuredName || options.agentSpecId?.trim() || 'example-agent-runtime'
@@ -46,12 +56,12 @@ export function useExampleAgentRuntimes(
     () =>
       runtimeCreationTarget === 'local-agent-runtimes'
         ? {
-            podName: fallbackPodName,
+            runtimeName: fallbackRuntimeName,
             environmentName: 'local-agent-runtimes',
             jupyterBaseUrl: runtimeCreationBaseUrl,
           }
         : undefined,
-    [fallbackPodName, runtimeCreationBaseUrl, runtimeCreationTarget],
+    [fallbackRuntimeName, runtimeCreationBaseUrl, runtimeCreationTarget],
   );
 
   const agentConfig = useMemo(
@@ -72,6 +82,9 @@ export function useExampleAgentRuntimes(
     runtimeCreationTarget,
     runtimeCreationBaseUrl,
     autoStart,
+    autoCreateAgent: capabilities.hasAgent
+      ? options.autoCreateAgent
+      : false,
     runtimeConnection: options.runtimeConnection ?? runtimeConnection,
   });
 }

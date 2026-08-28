@@ -45,7 +45,7 @@ def sum_test(x: float, y: float, z: float = 1) -> float:
         (
             [1, 4.5, 2],
             7.5,
-            datalayer(runtime_name="runtime-test", token=TEST_DATALAYER_API_KEY),
+            datalayer(given_name="runtime-test", token=TEST_DATALAYER_API_KEY),
         ),
         ([1, 4.5, 2], 7.5, datalayer(output="result", token=TEST_DATALAYER_API_KEY)),
         (

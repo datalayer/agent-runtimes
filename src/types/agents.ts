@@ -74,13 +74,13 @@ export interface AgentRuntimeState {
 /**
  * Agent Runtime data type (mapped from runtimes service).
  *
- * Backend RuntimePod fields: pod_name, environment{name,title,cpu,memory,gpu,resources}, uid,
+ * Backend RuntimeRecord fields: runtime_name, environment{name,title,cpu,memory,gpu,resources}, uid,
  * type, given_name, token, ingress, reservation_id, started_at, expired_at, burning_rate.
  *
  * We map `ingress` to `url` for consistency with the UI.
  */
 export type AgentRuntimeData = {
-  pod_name: string;
+  runtime_name: string;
   id: string;
   name: string;
   environment: {
@@ -148,7 +148,7 @@ export interface RunningAgent {
   /** Unique agent ID within the runtime */
   agentId: string;
   /** Pod name in Kubernetes */
-  podName: string;
+  runtimeName: string;
   /** Agent display name */
   name: string;
   /** Agentspec ID used to create the agent */

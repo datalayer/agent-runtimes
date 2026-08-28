@@ -6,7 +6,10 @@
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 
-export type AgentSummaryLocation = 'local' | 'cloud';
+import type { ExampleRuntimeTarget } from './runtimeTargetStore';
+
+/** Where the summarised runtime lives — the same four the control offers. */
+export type AgentSummaryLocation = ExampleRuntimeTarget;
 
 export interface AgentSummary {
   exampleId: string;

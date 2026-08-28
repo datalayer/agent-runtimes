@@ -17,7 +17,7 @@ of the underlying sandbox variant.
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -59,6 +59,76 @@ class SandboxExecuteResponse(BaseModel):
     results: list[str] = Field(default_factory=list)
     error: Optional[str] = None
     variant: Optional[str] = None
+
+
+class SurfaceExecuteRequest(BaseModel):
+    """Code to run, and optionally what the reader just did to a surface."""
+
+    code: str = Field(description="Code to execute")
+    action: Optional[dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "An A2UI action the reader triggered — a button, a filter, a table "
+            "selection. Bound into the run as `a2ui_action` so the code can "
+            "answer it, which is the difference between a surface you can use "
+            "and a screenshot."
+        ),
+    )
+    surface_id: str = Field(
+        default="sandbox-execution",
+        description="Surface to update, so a re-run replaces rather than stacks",
+    )
+
+
+def _bind_action(code: str, action: Optional[dict[str, Any]]) -> str:
+    """Put the action in front of the code as a plain Python value.
+
+    A literal rather than a template: the reader's selections reach the code as
+    data, and nothing they typed is ever spliced into the source.
+    """
+    if not action:
+        return code
+    import json
+
+    literal = json.dumps(action)
+    return (
+        "import json as _json\n"
+        f"a2ui_action = _json.loads({literal!r})\n"
+        f"{code}"
+    )
+
+
+@router.post("/execute/a2ui")
+async def execute_as_surface(
+    request: SurfaceExecuteRequest,
+) -> dict[str, Any]:
+    """Run code and return the result as an A2UI surface.
+
+    The same execution as `/execute`, rendered rather than dumped — a prompt
+    that runs code should come back as something you can read. Server-side
+    (D20) so the browser, the terminal and JupyterLab all get the same surface
+    from one converter.
+
+    Given an `action`, this is the round-trip: the reader filtered something,
+    the code runs again knowing that, and the surface it returns replaces the
+    one they were looking at.
+    """
+    from agent_runtimes.a2ui import ExecutionResult, execution_to_a2ui
+
+    result = await execute_sandbox_code(
+        SandboxExecuteRequest(code=_bind_action(request.code, request.action))
+    )
+    payload = result.model_dump() if hasattr(result, "model_dump") else dict(result)
+    # The reader's code, not the bound version: the surface should show what
+    # they wrote, not the plumbing that carried their click into it.
+    payload["code"] = request.code
+
+    return {
+        "execution": payload,
+        "messages": execution_to_a2ui(
+            ExecutionResult.from_payload(payload), surface_id=request.surface_id
+        ),
+    }
 
 
 @router.post("/execute", response_model=SandboxExecuteResponse)

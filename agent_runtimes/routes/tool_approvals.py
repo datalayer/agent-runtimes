@@ -61,7 +61,7 @@ class ToolApprovalCreateRequest(BaseModel):
     """Payload to create a pending tool approval request."""
 
     agent_id: str = Field(default="default")
-    pod_name: str = Field(default="")
+    runtime_name: str = Field(default="")
     tool_name: str
     tool_args: dict[str, Any] = Field(default_factory=dict)
     tool_call_id: str | None = None
@@ -78,7 +78,7 @@ class ToolApprovalRecord(BaseModel):
 
     id: str
     agent_id: str
-    pod_name: str = ""
+    runtime_name: str = ""
     tool_name: str
     tool_args: dict[str, Any] = Field(default_factory=dict)
     tool_call_id: str | None = None
@@ -476,7 +476,7 @@ async def mirror_approval_to_local(data: dict) -> ToolApprovalRecord:
     record = ToolApprovalRecord(
         id=data.get("id", str(uuid4())),
         agent_id=data.get("agent_id", ""),
-        pod_name=data.get("pod_name", ""),
+        runtime_name=data.get("runtime_name", ""),
         tool_name=data.get("tool_name", ""),
         tool_args=data.get("tool_args", {}),
         tool_call_id=data.get("tool_call_id"),
@@ -584,7 +584,7 @@ async def forward_approval_to_ai_agents(
                 f"{ai_agents_url}/api/ai-agents/v1/tool-approvals",
                 json={
                     "agent_id": record.agent_id,
-                    "pod_name": record.pod_name or "",
+                    "runtime_name": record.runtime_name or "",
                     "tool_name": record.tool_name,
                     "tool_args": record.tool_args or {},
                     "tool_call_id": record.tool_call_id,
@@ -642,7 +642,7 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
     record = ToolApprovalRecord(
         id=str(uuid4()),
         agent_id=body.agent_id,
-        pod_name=body.pod_name,
+        runtime_name=body.runtime_name,
         tool_name=body.tool_name,
         tool_args=body.tool_args or {},
         tool_call_id=body.tool_call_id,

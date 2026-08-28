@@ -22,7 +22,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -148,6 +148,55 @@ async def create_handoff(session_id: str, body: HandoffRequest) -> HandoffRespon
         expires_in=HANDOFF_TTL_SECONDS,
         url=f"/loop?handoff={code}",
     )
+
+
+class SwitchAgentRequest(BaseModel):
+    """Which agent the session should be bound to."""
+
+    agent_id: str = Field(description="Agentspec id, with or without a version")
+
+
+@router.post("/sessions/{session_id}/agent")
+async def switch_agent(
+    session_id: str,
+    body: SwitchAgentRequest,
+    http_request: Request,
+) -> dict[str, Any]:
+    """Bind this session to another agent.
+
+    Activating an agent means binding its spec — model, prompt, MCP servers,
+    skills, tools, sandbox variant — to the session. That is applied through
+    `configure-from-spec`, the same route the pod companion calls at boot, so
+    there is one way to reconfigure a running agent rather than two that can
+    disagree.
+    """
+    from agent_runtimes.specs.agents.agents import get_agent_spec
+
+    spec = get_agent_spec(body.agent_id)
+    if spec is None:
+        raise HTTPException(
+            status_code=404, detail=f"Unknown agentspec: {body.agent_id}"
+        )
+
+    from agent_runtimes.routes.agents import (
+        ConfigureFromSpecRequest,
+        configure_from_spec_endpoint,
+    )
+
+    payload = spec.model_dump(by_alias=False) if hasattr(spec, "model_dump") else {}
+    await configure_from_spec_endpoint(
+        http_request,
+        ConfigureFromSpecRequest(agent_spec_id=spec.id, agent_spec=payload),
+    )
+
+    logger.info("Session %s switched to agent %s", session_id, spec.id)
+    return {
+        "session_id": session_id,
+        "agent_id": spec.id,
+        "name": spec.name,
+        "model": spec.model,
+        "sandbox_variant": spec.sandbox_variant,
+    }
 
 
 @router.post("/handoff/exchange")

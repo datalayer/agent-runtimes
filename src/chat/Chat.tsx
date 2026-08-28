@@ -268,6 +268,8 @@ export function Chat({
   showToolsMenu = true,
   showInput = true,
   disableInputPrompt = false,
+  disabled,
+  disableReason,
   overlay,
   launching = false,
   launchingMessage,
@@ -703,6 +705,8 @@ export function Chat({
               showToolsMenu={showToolsMenu}
               showInput={showInput}
               disableInputPrompt={disableInputPrompt}
+              disabled={disabled}
+              disableReason={disableReason}
               overlay={overlay}
               launching={launching}
               launchingMessage={launchingMessage}

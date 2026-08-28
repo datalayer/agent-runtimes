@@ -325,6 +325,7 @@ export default defineConfig(({ mode, command }) => {
       'agent-notebook': path.resolve(__dirname, 'html/agent-notebook.html'),
       'agent-document': path.resolve(__dirname, 'html/agent-document.html'),
       loop: path.resolve(__dirname, 'html/loop.html'),
+      'loop-example': path.resolve(__dirname, 'html/loop-example.html'),
     };
   }
 

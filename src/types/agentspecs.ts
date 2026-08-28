@@ -130,8 +130,18 @@ export interface SubAgentspecConfig {
   name: string;
   /** Brief description shown to the parent agent */
   description: string;
-  /** System prompt for the subagent */
-  instructions: string;
+  /**
+   * System prompt for the subagent. Optional when `ref` names an agentspec to
+   * take it from.
+   */
+  instructions?: string;
+  /**
+   * An agentspec this subagent *is*, as `<id>:<version>`.
+   *
+   * A specialist defined once and referenced by many parents, rather than its
+   * instructions copy-pasted into each — which is how they drift apart.
+   */
+  ref?: string;
   /** LLM model to use (defaults to parent agent's model) */
   model?: string;
   /** Whether the subagent can ask the parent for clarification */

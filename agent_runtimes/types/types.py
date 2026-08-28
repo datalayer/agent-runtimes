@@ -4,7 +4,7 @@
 """Pydantic models for chat functionality and agent specifications."""
 
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
@@ -179,9 +179,14 @@ class FrontendToolSpec(BaseModel):
     enabled: bool = Field(
         default=True, description="Whether the frontend tool is enabled"
     )
-    toolset: str = Field(
+    toolset: Union[str, List[str]] = Field(
         default="all",
-        description="Which tools from the toolset to include ('all' or a list)",
+        description=(
+            "Which tools of the underlying toolset this bundle grants: the "
+            "string 'all', or an explicit list of tool names. A list is how a "
+            "specialist takes only what it needs — an agent that may read and "
+            "edit a notebook but must never delete from it."
+        ),
     )
     icon: Optional[str] = Field(
         default=None,
@@ -1011,7 +1016,21 @@ class SubAgentspecConfig(BaseModel):
     description: str = Field(
         ..., description="Brief description shown to the parent agent"
     )
-    instructions: str = Field(..., description="System prompt for the subagent")
+    instructions: str = Field(
+        default="",
+        description=(
+            "System prompt for the subagent. Optional when `ref` names an "
+            "agentspec to take it from."
+        ),
+    )
+    ref: Optional[str] = Field(
+        default=None,
+        description=(
+            "An agentspec this subagent *is*, as `<id>:<version>`. A specialist "
+            "defined once and referenced by many parents, rather than its "
+            "instructions copy-pasted into each — which is how they drift."
+        ),
+    )
     model: Optional[str] = Field(
         default=None,
         description="LLM model to use (defaults to parent agent's model)",

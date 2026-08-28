@@ -102,7 +102,7 @@ export const listRuntimes = async (
 /**
  * Get details for a specific runtime instance.
  * @param token - Authentication token
- * @param podName - The unique pod name of the runtime
+ * @param runtimeName - The unique pod name of the runtime
  * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
  * @returns Promise resolving to runtime details
  * @throws {Error} If authentication token is missing or invalid
@@ -111,15 +111,15 @@ export const listRuntimes = async (
  */
 export const getRuntime = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
 ): Promise<RuntimeData> => {
   validateToken(token);
-  validateRequiredString(podName, 'Pod name');
+  validateRequiredString(runtimeName, 'Pod name');
 
   try {
     const response = await requestDatalayerAPI<any>({
-      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${podName}`,
+      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${runtimeName}`,
       method: 'GET',
       token,
     });
@@ -131,7 +131,7 @@ export const getRuntime = async (
     if (response.runtime) {
       return {
         ...response.runtime,
-        pod_name: response.runtime.pod_name || podName,
+        runtime_name: response.runtime.runtime_name || runtimeName,
       } as RuntimeData;
     }
 
@@ -139,7 +139,7 @@ export const getRuntime = async (
     if (response.kernel) {
       return {
         ...response.kernel,
-        pod_name: response.kernel.pod_name || podName,
+        runtime_name: response.kernel.runtime_name || runtimeName,
       } as RuntimeData;
     }
 
@@ -150,7 +150,7 @@ export const getRuntime = async (
     if (error.response && error.response.status === 404) {
       // Runtime not found
       throw new Error(
-        `Runtime with pod name '${podName}' not found. Please check the pod name and try again.`,
+        `Runtime with pod name '${runtimeName}' not found. Please check the pod name and try again.`,
       );
     }
 
@@ -162,7 +162,7 @@ export const getRuntime = async (
 /**
  * Delete a runtime instance.
  * @param token - Authentication token
- * @param podName - The unique pod name of the runtime to delete
+ * @param runtimeName - The unique pod name of the runtime to delete
  * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
  * @returns Promise resolving when deletion is complete
  * @throws {Error} If authentication token is missing or invalid
@@ -171,15 +171,15 @@ export const getRuntime = async (
  */
 export const deleteRuntime = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
 ): Promise<void> => {
   validateToken(token);
-  validateRequiredString(podName, 'Pod name');
+  validateRequiredString(runtimeName, 'Pod name');
 
   try {
     return await requestDatalayerAPI<void>({
-      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${podName}`,
+      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${runtimeName}`,
       method: 'DELETE',
       token,
     });
@@ -188,7 +188,7 @@ export const deleteRuntime = async (
     if (error.response && error.response.status === 404) {
       // Runtime not found
       throw new Error(
-        `Runtime with pod name '${podName}' not found. Cannot delete a non-existent runtime.`,
+        `Runtime with pod name '${runtimeName}' not found. Cannot delete a non-existent runtime.`,
       );
     }
 
@@ -200,7 +200,7 @@ export const deleteRuntime = async (
 /**
  * Update a runtime instance.
  * @param token - Authentication token
- * @param podName - The unique pod name of the runtime
+ * @param runtimeName - The unique pod name of the runtime
  * @param from - The source to update from
  * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
  * @returns Promise resolving to updated runtime details
@@ -210,16 +210,16 @@ export const deleteRuntime = async (
  */
 export const updateRuntime = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   from: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
 ): Promise<RuntimeData> => {
   validateToken(token);
-  validateRequiredString(podName, 'Pod name');
+  validateRequiredString(runtimeName, 'Pod name');
 
   try {
     return await requestDatalayerAPI<RuntimeData>({
-      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${podName}`,
+      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${runtimeName}`,
       method: 'PUT',
       token,
       body: { from },
@@ -229,7 +229,7 @@ export const updateRuntime = async (
     if (error.response && error.response.status === 404) {
       // Runtime not found
       throw new Error(
-        `Runtime with pod name '${podName}' not found. Cannot update a non-existent runtime.`,
+        `Runtime with pod name '${runtimeName}' not found. Cannot update a non-existent runtime.`,
       );
     }
 
@@ -278,7 +278,7 @@ export interface PauseRuntimeBody {
  * poll for status via the runtime-checkpoints API.
  *
  * @param token - Authentication token
- * @param podName - The unique pod name of the runtime to pause
+ * @param runtimeName - The unique pod name of the runtime to pause
  * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
  * @param body - Optional metadata to store in the checkpoint record
  * @returns Promise resolving with the checkpoint ID for status tracking
@@ -287,15 +287,15 @@ export interface PauseRuntimeBody {
  */
 export const pauseRuntime = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
   body?: PauseRuntimeBody,
 ): Promise<PauseResumeResponse> => {
   validateToken(token);
-  validateRequiredString(podName, 'Pod name');
+  validateRequiredString(runtimeName, 'Pod name');
 
   return await requestDatalayerAPI<PauseResumeResponse>({
-    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${encodeURIComponent(podName)}/pause`,
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${encodeURIComponent(runtimeName)}/pause`,
     method: 'POST',
     token,
     ...(body ? { body } : {}),
@@ -455,7 +455,7 @@ export const getRuntimeMemory = async (
  * poll for status.
  *
  * @param token - Authentication token
- * @param podName - The unique pod name of the runtime to resume
+ * @param runtimeName - The unique pod name of the runtime to resume
  * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
  * @param body - Optional body with agent_spec_id and restore options
  * @returns Promise resolving with the checkpoint ID for status tracking
@@ -464,15 +464,15 @@ export const getRuntimeMemory = async (
  */
 export const resumeRuntime = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
   body?: ResumeRuntimeBody,
 ): Promise<PauseResumeResponse> => {
   validateToken(token);
-  validateRequiredString(podName, 'Pod name');
+  validateRequiredString(runtimeName, 'Pod name');
 
   return await requestDatalayerAPI<PauseResumeResponse>({
-    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${encodeURIComponent(podName)}/resume`,
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/runtimes/${encodeURIComponent(runtimeName)}/resume`,
     method: 'POST',
     token,
     ...(body ? { body } : {}),

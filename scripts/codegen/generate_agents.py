@@ -23,6 +23,8 @@ from versioning import (
     versioned_ref,
 )
 
+from compose import resolve_spec  # noqa: E402  (sibling module, same folder)
+
 
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
@@ -107,9 +109,34 @@ def _sanitize_spec_for_codegen(spec: Dict[str, Any]) -> Dict[str, Any]:
     return sanitized
 
 
+def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
+    """Load capability fragments, which live beside the agents.
+
+    A fragment is not a runnable agent — no model, no system prompt, only
+    capability — so it is loaded separately and never generated into the
+    catalogue. See `scripts/codegen/compose.py`.
+    """
+    fragments_dir = specs_dir.parent / "fragments"
+    if not fragments_dir.is_dir():
+        return []
+
+    fragments: List[Dict[str, Any]] = []
+    for yaml_file in sorted(fragments_dir.glob("*.yaml")):
+        with open(yaml_file, "r") as f:
+            fragment = yaml.safe_load(f)
+            if fragment:
+                fragments.append(fragment)
+    return fragments
+
+
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     """
     Load all YAML agent specifications from directory and subdirectories.
+
+    Specs that declare `extends` or `includes` are flattened here, at
+    generation time, so the generated catalogue stays flat, the runtime keeps
+    no inheritance logic, and the pod companion — which forwards specs without
+    interpreting a field (D33) — never meets an unresolved reference.
 
     Returns list of tuples: (subfolder_name, spec_dict)
     where subfolder_name is the immediate parent folder name, or "" for root level.
@@ -134,7 +161,17 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
                         ensure_spec_version(spec)
                         specs.append((subdir.name, spec))
 
-    return specs
+    fragments = load_fragments(specs_dir)
+    by_id = {str(spec.get("id")): spec for _, spec in specs if spec.get("id")}
+    fragments_by_id = {str(f.get("id")): f for f in fragments if f.get("id")}
+
+    resolved: List[tuple[str, Dict[str, Any]]] = []
+    for subfolder, spec in specs:
+        if spec.get("extends") or spec.get("includes"):
+            spec = resolve_spec(spec, by_id, fragments_by_id)
+        resolved.append((subfolder, spec))
+
+    return resolved
 
 
 def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
@@ -337,9 +374,12 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                     sa_fields = [
                         f"name={_fmt_py_literal(sa['name'])}",
                         f"description={_fmt_py_literal(sa['description'])}",
-                        f"instructions={_fmt_py_literal(sa['instructions'])}",
+                        # Optional: a subagent that names a `ref` takes its
+                        # instructions from the spec it refers to.
+                        f"instructions={_fmt_py_literal(sa.get('instructions', ''))}",
                     ]
                     for opt_key in (
+                        "ref",
                         "model",
                         "can_ask_questions",
                         "max_questions",
@@ -347,24 +387,38 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                         "typical_complexity",
                         "typically_needs_context",
                     ):
+                        camel_key = "".join(
+                            part if index == 0 else part.capitalize()
+                            for index, part in enumerate(opt_key.split("_"))
+                        )
                         opt_val = sa.get(opt_key)
+                        if opt_val is None:
+                            opt_val = sa.get(camel_key)
                         if opt_val is not None:
                             sa_fields.append(f"{opt_key}={_fmt_py_literal(opt_val)}")
                     sa_items.append("SubAgentspecConfig(" + ", ".join(sa_fields) + ")")
                 sa_list_str = "[" + ", ".join(sa_items) + "]"
+                # The specs are written in camelCase (`includeGeneralPurpose`),
+                # matching the TypeScript aliases, but only snake_case was read
+                # here — so `maxNestingDepth: 2` in a YAML silently generated
+                # the default of 0. Accept both spellings.
+                def _subagents_option(snake: str) -> Any:
+                    camel = "".join(
+                        part if index == 0 else part.capitalize()
+                        for index, part in enumerate(snake.split("_"))
+                    )
+                    value = subagents_val.get(snake)
+                    return value if value is not None else subagents_val.get(camel)
+
                 cfg_parts = [f"subagents={sa_list_str}"]
-                if subagents_val.get("default_model") is not None:
-                    cfg_parts.append(
-                        f"default_model={_fmt_py_literal(subagents_val['default_model'])}"
-                    )
-                if subagents_val.get("include_general_purpose") is not None:
-                    cfg_parts.append(
-                        f"include_general_purpose={_fmt_py_literal(subagents_val['include_general_purpose'])}"
-                    )
-                if subagents_val.get("max_nesting_depth") is not None:
-                    cfg_parts.append(
-                        f"max_nesting_depth={_fmt_py_literal(subagents_val['max_nesting_depth'])}"
-                    )
+                for option in (
+                    "default_model",
+                    "include_general_purpose",
+                    "max_nesting_depth",
+                ):
+                    option_value = _subagents_option(option)
+                    if option_value is not None:
+                        cfg_parts.append(f"{option}={_fmt_py_literal(option_value)}")
                 subagents_str = "SubAgentsConfig(" + ", ".join(cfg_parts) + ")"
 
             domain_value = spec.get("domain") or spec.get("vertical")

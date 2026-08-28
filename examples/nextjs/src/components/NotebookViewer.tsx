@@ -57,7 +57,7 @@ export default function NotebookViewer({
   notebookContent,
   onRuntimeCreated,
 }: NotebookViewerProps & {
-  onRuntimeCreated?: (runtimeId: string, podName: string) => void;
+  onRuntimeCreated?: (runtimeId: string, runtimeName: string) => void;
 }) {
   const [serviceManager, setServiceManager] =
     useState<ServiceManager.IManager | null>(null);
@@ -121,7 +121,7 @@ export default function NotebookViewer({
         const runtimeKey = `${notebookPath}_${runtime}`;
         const storedRuntimeData = getStoredRuntime(runtimeKey);
 
-        let manager, runtimeId, podName;
+        let manager, runtimeId, runtimeName;
 
         if (storedRuntimeData) {
           console.log('Reusing existing runtime:', storedRuntimeData);
@@ -129,14 +129,14 @@ export default function NotebookViewer({
           // Reconnect to existing runtime
           manager = await reconnectToRuntime({
             runtimeId: storedRuntimeData.runtimeId,
-            podName: storedRuntimeData.podName,
+            runtimeName: storedRuntimeData.runtimeName,
             ingress: storedRuntimeData.ingress,
             token: storedRuntimeData.token,
             environmentName: runtime,
           });
 
           runtimeId = storedRuntimeData.runtimeId;
-          podName = storedRuntimeData.podName;
+          runtimeName = storedRuntimeData.runtimeName;
         }
 
         // Create new runtime if we don't have one
@@ -154,12 +154,12 @@ export default function NotebookViewer({
 
           if (matchingRuntime && matchingRuntime.reservation_id) {
             runtimeId = matchingRuntime.reservation_id;
-            podName = matchingRuntime.pod_name;
+            runtimeName = matchingRuntime.runtime_name;
 
             // Store runtime info for reuse
             storeRuntime(runtimeKey, {
               runtimeId: matchingRuntime.reservation_id,
-              podName: matchingRuntime.pod_name,
+              runtimeName: matchingRuntime.runtime_name,
               ingress: matchingRuntime.ingress,
               token: matchingRuntime.token,
               environment: runtime,
@@ -169,8 +169,8 @@ export default function NotebookViewer({
           }
         }
 
-        if (onRuntimeCreated && runtimeId && podName) {
-          onRuntimeCreated(runtimeId, podName);
+        if (onRuntimeCreated && runtimeId && runtimeName) {
+          onRuntimeCreated(runtimeId, runtimeName);
         }
 
         if (manager && !manager.isDisposed) {

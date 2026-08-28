@@ -197,7 +197,7 @@ export interface AgentRuntimeStoreActions {
   // ─── Runtime connection ──────────────────────────────────────────
   launchAgent: (options: LaunchAgentOptions) => Promise<AgentConnection>;
   connectAgent: (connection: {
-    podName: string;
+    runtimeName: string;
     environmentName: string;
     serviceManager?: ServiceManager.IManager;
     jupyterBaseUrl?: string;
@@ -667,7 +667,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           const agentBaseUrl = toAgentRuntimeBaseUrl(baseUrl);
           set({
             runtime: {
-              podName: connection.podName,
+              runtimeName: connection.runtimeName,
               environmentName: connection.environmentName,
               jupyterBaseUrl: baseUrl,
               agentBaseUrl,
@@ -692,7 +692,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             }
 
             const { runtimesUrl: _runtimesUrl, ...runtimeOptions } = config;
-            const runtimePod = await createRuntime({
+            const runtimeRecord = await createRuntime({
               environmentName: runtimeOptions.environmentName,
               creditsLimit: runtimeOptions.creditsLimit,
               type: runtimeOptions.type || 'notebook',
@@ -701,11 +701,11 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               snapshot: runtimeOptions.snapshot,
             });
             set({ status: 'connecting' });
-            const jupyterBaseUrl = runtimePod.ingress;
+            const jupyterBaseUrl = runtimeRecord.ingress;
             const agentBaseUrl = toAgentRuntimeBaseUrl(jupyterBaseUrl);
             const conn: AgentConnection = {
-              podName: runtimePod.pod_name,
-              environmentName: runtimePod.environment.name,
+              runtimeName: runtimeRecord.runtime_name,
+              environmentName: runtimeRecord.environment.name,
               jupyterBaseUrl,
               agentBaseUrl,
               status: 'ready',
@@ -728,7 +728,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             );
           }
           try {
-            const agentId = config.name || runtime.podName;
+            const agentId = config.name || runtime.runtimeName;
             const agentConnection = await createAgentOnRuntime(
               runtime.agentBaseUrl,
               agentId,

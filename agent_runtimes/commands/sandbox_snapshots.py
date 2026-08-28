@@ -63,7 +63,7 @@ def list_snapshots(
 
 @app.command(name="create")
 def create_snapshot(
-    pod_name: Optional[str] = typer.Option(
+    runtime_name: Optional[str] = typer.Option(
         None,
         "--pod-name",
         help="Pod name of the runtime to snapshot",
@@ -94,7 +94,7 @@ def create_snapshot(
         client = AgentClient(api_key=token)
 
         snapshot = client.create_snapshot(
-            pod_name=pod_name,
+            runtime_name=runtime_name,
             name=name,
             description=description,
             stop=stop,

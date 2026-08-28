@@ -24,11 +24,19 @@ import {
 export type ViewSwitcherProps = {
   views: Contribution<ViewTypeContribution>[];
   workspace: LoopWorkspaceContext;
+  /**
+   * Drop the labels and keep the icons.
+   *
+   * For a side panel, where four labelled tabs would use the width the views
+   * need. The tooltip still carries the title, so nothing is lost but space.
+   */
+  compact?: boolean;
 };
 
 export function ViewSwitcher({
   views,
   workspace,
+  compact = false,
 }: ViewSwitcherProps): JSX.Element | null {
   // One choice is not a choice.
   if (views.length < 2) {
@@ -54,9 +62,13 @@ export function ViewSwitcher({
         const active = workspace.activeViewType === view.viewType;
         const Icon = view.icon;
         // A greyed-out tab with no explanation is worse than no tab.
+        // In compact mode the tooltip is the only place the title appears, so
+        // it says the title even when the view is fine.
         const label = open
           ? view.title
-          : view.unavailableReason?.(workspace) ?? `${view.title} is unavailable`;
+          : `${view.title} — ${
+              view.unavailableReason?.(workspace) ?? 'unavailable'
+            }`;
 
         return (
           <Tooltip key={view.viewType} text={label} direction="n">
@@ -87,7 +99,7 @@ export function ViewSwitcher({
               }}
             >
               {Icon ? <Icon size={14} /> : null}
-              {view.title}
+              {compact && Icon ? null : view.title}
             </Box>
           </Tooltip>
         );

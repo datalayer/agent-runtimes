@@ -40,7 +40,9 @@ export function resolveExampleAgentRuntimesUrl(
     normalizeBaseUrl(import.meta.env.VITE_DATALAYER_RUNTIMES_URL) ??
     CLOUD_DEFAULT;
 
-  return target === 'cloud' ? cloudUrl : localUrl;
+  // Only the Datalayer target reaches the hosted service; the rest are local
+  // or have no agent at all, and asking the cloud for one would be wrong.
+  return target === 'datalayer' ? cloudUrl : localUrl;
 }
 
 /**
@@ -54,7 +56,7 @@ export function useExampleAgentRuntimesUrl(override?: string): string {
   );
 
   return useMemo(() => {
-    if (target === 'cloud' && activeRuntimeBaseUrl) {
+    if (target === 'datalayer' && activeRuntimeBaseUrl) {
       return normalizeBaseUrl(activeRuntimeBaseUrl) ?? activeRuntimeBaseUrl;
     }
     return resolveExampleAgentRuntimesUrl(target, override);

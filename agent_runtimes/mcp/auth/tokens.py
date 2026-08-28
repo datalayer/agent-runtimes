@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional, Protocol
@@ -221,36 +222,145 @@ class KeyringTokenStore:
         self._write_index(servers)
 
 
+#: Marks a secret as an MCP login rather than a user's own API key, so the two
+#: never collide in one vault and a listing can tell them apart.
+PLATFORM_SECRET_VARIANT = "mcp-oauth"
+
+#: Secret name for a server's credentials.
+def _secret_name(server_id: str) -> str:
+    return f"mcp:{server_id}"
+
+
 class PlatformTokenStore:
     """The connected tier: credentials held by the Datalayer platform.
 
-    This is the seam for the `k8s/services` deliverable named in the plan
-    (D26, risk 12). Until that service exists it reports itself unavailable, so
-    the CLI falls through to the keychain and nothing pretends to work.
+    Not a new service — IAM already keeps per-user secrets in the vault, which
+    is exactly what this needs: encrypted at rest, scoped to a user, reachable
+    from wherever that user is. An MCP login is a secret with a variant that
+    says what it is.
+
+    That is what makes "authenticate once, works in every front-end" true: the
+    ephemeral server the CLI spawns, the SaaS server and the JupyterLab
+    extension all read the same vault, so a login survives the process that
+    created it.
     """
 
     name = "platform"
 
     def __init__(self, base_url: str = "", token: str = "") -> None:
-        self._base_url = base_url.rstrip("/")
-        self._token = token
+        self._base_url = (base_url or os.getenv("DATALAYER_IAM_URL") or "").rstrip("/")
+        self._token = token or os.getenv("DATALAYER_API_KEY") or ""
+
+    # -- plumbing ---------------------------------------------------------
+
+    @property
+    def _secrets_url(self) -> str:
+        return f"{self._base_url}/api/iam/v1/secrets"
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self._token}",
+            "content-type": "application/json",
+        }
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> Any:
+        import httpx
+
+        response = httpx.request(
+            method, url, headers=self._headers(), timeout=15.0, **kwargs
+        )
+        response.raise_for_status()
+        return response.json() if response.content else {}
+
+    def _secrets(self) -> list[dict[str, Any]]:
+        """Every MCP secret this user has, with uids so one can be replaced."""
+        payload = self._request("GET", self._secrets_url)
+        secrets = payload.get("secrets") if isinstance(payload, dict) else payload
+        return [
+            secret
+            for secret in (secrets or [])
+            if isinstance(secret, dict)
+            and secret.get("variant_s", secret.get("variant")) == PLATFORM_SECRET_VARIANT
+        ]
+
+    # -- the store --------------------------------------------------------
 
     def available(self) -> bool:
-        # Deliberately conservative: the endpoint does not exist yet, and a
-        # store that silently drops credentials is worse than one that says no.
-        return False
+        """Whether there is a platform to talk to, and a way in.
 
-    def get(self, server_id: str) -> Optional[OAuthToken]:  # pragma: no cover
-        raise NotImplementedError("The platform credential store is not deployed yet")
+        Conservative on purpose: a store that silently drops credentials is
+        worse than one that says no and lets the keychain take over.
+        """
+        return bool(self._base_url and self._token)
 
-    def put(self, server_id: str, token: OAuthToken) -> None:  # pragma: no cover
-        raise NotImplementedError("The platform credential store is not deployed yet")
+    def get(self, server_id: str) -> Optional[OAuthToken]:
+        name = _secret_name(server_id)
+        try:
+            values = self._request("GET", f"{self._secrets_url}/values")
+        except Exception as error:  # noqa: BLE001
+            logger.warning("Could not read credentials from the platform: %s", error)
+            return None
 
-    def delete(self, server_id: str) -> None:  # pragma: no cover
-        raise NotImplementedError("The platform credential store is not deployed yet")
+        raw = (values or {}).get(name)
+        if not raw:
+            return None
+        try:
+            return OAuthToken.from_json(_decode(raw))
+        except Exception as error:  # noqa: BLE001
+            logger.warning("Stored credentials for %s are unreadable: %s", server_id, error)
+            return None
 
-    def list_servers(self) -> tuple[str, ...]:  # pragma: no cover
-        raise NotImplementedError("The platform credential store is not deployed yet")
+    def put(self, server_id: str, token: OAuthToken) -> None:
+        name = _secret_name(server_id)
+        body = {
+            "name": name,
+            "description": f"MCP login for {server_id}",
+            "variant": PLATFORM_SECRET_VARIANT,
+            # The API's convention: clients base64 the value before sending.
+            "value": _encode(token.to_json()),
+        }
+
+        existing = next(
+            (s for s in self._secrets() if s.get("name_s", s.get("name")) == name),
+            None,
+        )
+        if existing and existing.get("uid"):
+            self._request("PUT", f"{self._secrets_url}/{existing['uid']}", json=body)
+        else:
+            self._request("POST", self._secrets_url, json=body)
+
+    def delete(self, server_id: str) -> None:
+        name = _secret_name(server_id)
+        for secret in self._secrets():
+            if secret.get("name_s", secret.get("name")) == name and secret.get("uid"):
+                self._request("DELETE", f"{self._secrets_url}/{secret['uid']}")
+
+    def list_servers(self) -> tuple[str, ...]:
+        prefix = _secret_name("")
+        names = [
+            str(secret.get("name_s", secret.get("name", "")))
+            for secret in self._secrets()
+        ]
+        return tuple(
+            sorted(name[len(prefix) :] for name in names if name.startswith(prefix))
+        )
+
+
+def _encode(value: str) -> str:
+    import base64
+
+    return base64.b64encode(value.encode("utf-8")).decode("ascii")
+
+
+def _decode(value: str) -> str:
+    import base64
+
+    try:
+        return base64.b64decode(value).decode("utf-8")
+    except Exception:  # noqa: BLE001
+        # Tolerate a value that was stored unencoded: refusing to read a
+        # credential because of its wrapping helps nobody.
+        return value
 
 
 def get_token_store(

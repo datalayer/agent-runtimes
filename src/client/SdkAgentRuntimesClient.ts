@@ -51,18 +51,18 @@ export interface AgentsSdkLike {
   /** Lists every running agent across runtimes the caller can see. */
   getRunningAgents(): Promise<RunningAgent[]>;
   /** Retrieves the detailed status of a specific running agent. */
-  getAgentStatus(podName: string, agentId?: string): Promise<RunningAgent>;
+  getAgentStatus(runtimeName: string, agentId?: string): Promise<RunningAgent>;
   /** Pauses a running agent. */
-  pauseAgent(podName: string): Promise<void>;
+  pauseAgent(runtimeName: string): Promise<void>;
   /** Resumes a previously paused agent. */
-  resumeAgent(podName: string): Promise<void>;
+  resumeAgent(runtimeName: string): Promise<void>;
   /** Lists conversation checkpoints for an agent. */
   getAgentCheckpoints(
-    podName: string,
+    runtimeName: string,
     agentId?: string,
   ): Promise<ConversationCheckpoint[]>;
   /** Retrieves the token and cost usage summary for an agent. */
-  getAgentUsage(podName: string, agentId?: string): Promise<AgentUsageSummary>;
+  getAgentUsage(runtimeName: string, agentId?: string): Promise<AgentUsageSummary>;
   /** Lists agent notifications with optional filters. */
   getNotifications(filters?: NotificationFilters): Promise<AgentNotification[]>;
   /** Marks a single notification as read. */
@@ -161,36 +161,36 @@ export class SdkAgentRuntimesClient implements IAgentRuntimesClient {
 
   /** @inheritdoc */
   async getAgentStatus(
-    podName: string,
+    runtimeName: string,
     agentId?: string,
   ): Promise<RunningAgent> {
-    return this.requireSdk().getAgentStatus(podName, agentId);
+    return this.requireSdk().getAgentStatus(runtimeName, agentId);
   }
 
   /** @inheritdoc */
-  async pauseAgent(podName: string): Promise<void> {
-    return this.requireSdk().pauseAgent(podName);
+  async pauseAgent(runtimeName: string): Promise<void> {
+    return this.requireSdk().pauseAgent(runtimeName);
   }
 
   /** @inheritdoc */
-  async resumeAgent(podName: string): Promise<void> {
-    return this.requireSdk().resumeAgent(podName);
+  async resumeAgent(runtimeName: string): Promise<void> {
+    return this.requireSdk().resumeAgent(runtimeName);
   }
 
   /** @inheritdoc */
   async getAgentCheckpoints(
-    podName: string,
+    runtimeName: string,
     agentId?: string,
   ): Promise<ConversationCheckpoint[]> {
-    return this.requireSdk().getAgentCheckpoints(podName, agentId);
+    return this.requireSdk().getAgentCheckpoints(runtimeName, agentId);
   }
 
   /** @inheritdoc */
   async getAgentUsage(
-    podName: string,
+    runtimeName: string,
     agentId?: string,
   ): Promise<AgentUsageSummary> {
-    return this.requireSdk().getAgentUsage(podName, agentId);
+    return this.requireSdk().getAgentUsage(runtimeName, agentId);
   }
 
   /** @inheritdoc */

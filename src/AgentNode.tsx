@@ -599,7 +599,7 @@ export function AgentNode() {
 
   // ── Local sandbox runtime override for the ephemeral surfaces ─────────────
   // In the node-local webapp the agent's Jupyter sandbox is a LOCAL server, not
-  // a Kubernetes pod resolvable by `pod_name`, so the ephemeral notebook and
+  // a Kubernetes pod resolvable by `runtime_name`, so the ephemeral notebook and
   // document surfaces cannot bind their kernel through the runtimes pod lookup.
   // Instead we read the live sandbox Jupyter endpoint from `/health/startup`
   // and pass it as an explicit override so the surfaces connect a service
@@ -639,7 +639,7 @@ export function AgentNode() {
         return {
           baseUrl: LOCAL_JUPYTER_SANDBOX.baseUrl,
           token: LOCAL_JUPYTER_SANDBOX.token || undefined,
-          podName: 'agent-node-sandbox',
+          runtimeName: 'agent-node-sandbox',
         };
       });
       return;
@@ -687,7 +687,7 @@ export function AgentNode() {
           return {
             baseUrl: jupyterUrl,
             token: jupyterToken || undefined,
-            podName: 'agent-node-sandbox',
+            runtimeName: 'agent-node-sandbox',
           };
         });
         // Endpoint resolved — stop the fast poll.

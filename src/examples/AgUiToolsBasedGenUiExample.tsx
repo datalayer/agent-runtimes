@@ -430,7 +430,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Tool-Based Generative UI Example
+            AG-UI Tool-Based Generative UI Example
           </Text>
           <Text
             as="p"

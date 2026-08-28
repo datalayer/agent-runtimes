@@ -142,7 +142,7 @@ export interface EphemeralDocumentProps {
    */
   documentId: string;
   /** Preferred runtime pod name to bind the document kernel to. */
-  runtimePodName?: string;
+  runtimeName?: string;
   /** Optional explicit runtime endpoint (agent-node tunnel proxy path). */
   runtimeOverride?: EphemeralRuntimeOverride;
   /** Optional theme variant override from host chat context. */
@@ -177,6 +177,16 @@ export interface EphemeralDocumentProps {
    * change it — the same way the notebook surface does through the
    * `extraItems` of its toolbar.
    */
+  /**
+   * Render without wrapping the content in a theme provider.
+   *
+   * For a host that already owns one — the LOOP workspace, where the entry
+   * point provides the theme and the views inherit it. Nested providers fight
+   * over `BaseStyles` and font tokens, and the inner one wins for the wrong
+   * reasons.
+   */
+  inheritTheme?: boolean;
+
   toolbarExtraItems?: ToolbarItem[];
 }
 
@@ -262,9 +272,42 @@ function DocumentToolbar({
 /**
  * Renders an in-memory Lexical document backed by a sandbox kernel.
  */
+
+/**
+ * The theme provider, or nothing.
+ *
+ * A host that already owns a theme root passes `inherit`; nested providers
+ * fight over `BaseStyles` and font tokens, and the inner one wins for the wrong
+ * reasons.
+ */
+function ThemeRoot({
+  inherit,
+  colorMode,
+  themeConfig,
+  children,
+}: {
+  inherit: boolean;
+  colorMode: 'light' | 'dark' | 'auto';
+  themeConfig: { primerTheme: unknown; themeStyles: unknown };
+  children: React.ReactNode;
+}): JSX.Element {
+  if (inherit) {
+    return <>{children}</>;
+  }
+  return (
+    <DatalayerThemeProvider
+      colorMode={colorMode}
+      theme={themeConfig.primerTheme as never}
+      themeStyles={themeConfig.themeStyles as never}
+    >
+      {children}
+    </DatalayerThemeProvider>
+  );
+}
+
 export function EphemeralDocument({
   documentId,
-  runtimePodName,
+  runtimeName,
   runtimeOverride,
   themeVariant,
   colorMode,
@@ -274,6 +317,7 @@ export function EphemeralDocument({
   onKernelChange,
   collaboration,
   toolbarExtraItems,
+  inheritTheme = false,
 }: EphemeralDocumentProps) {
   // Real-time collaboration is active only when both a WebSocket endpoint and a
   // room id are supplied. In that mode the shared Loro CRDT is the single source
@@ -340,20 +384,20 @@ export function EphemeralDocument({
         url: overrideBaseUrl,
         wsUrl: String(runtimeOverride?.wsUrl || '').trim() || undefined,
         token: String(runtimeOverride?.token || '').trim(),
-        pod_name:
-          String(runtimeOverride?.podName || '').trim() || 'agent-node-proxy',
+        runtime_name:
+          String(runtimeOverride?.runtimeName || '').trim() || 'agent-node-proxy',
       };
     }
-    const preferredPod = String(runtimePodName || '').trim();
-    if (!preferredPod) {
+    const preferredRuntime = String(runtimeName || '').trim();
+    if (!preferredRuntime) {
       return undefined;
     }
-    return runtimes.find(rt => String(rt?.pod_name || '') === preferredPod);
-  }, [runtimeOverride, runtimePodName, runtimes]);
+    return runtimes.find(rt => String(rt?.runtime_name || '') === preferredRuntime);
+  }, [runtimeOverride, runtimeName, runtimes]);
 
   const needsRuntimeLookup = Boolean(
     !runtimeOverride?.baseUrl &&
-    String(runtimePodName || '').trim() &&
+    String(runtimeName || '').trim() &&
     !selectedRuntime,
   );
   useEffect(() => {
@@ -406,7 +450,7 @@ export function EphemeralDocument({
         // Central sandbox registry: runtime terminate/pause disposes this
         // manager immediately so its pollers cannot hit the dead pod ingress.
         unregisterManager = registerSandboxServiceManager(
-          String(selectedRuntime?.pod_name || ''),
+          String(selectedRuntime?.runtime_name || ''),
           manager,
         );
         await manager.ready;
@@ -440,7 +484,7 @@ export function EphemeralDocument({
         disposeServiceManager(manager);
       }
     };
-  }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
+  }, [selectedRuntime?.runtime_name, selectedRuntime?.url, selectedRuntime?.token]);
 
   // Surface the document's live kernel connection to the parent so the chat
   // header's kernel indicator reflects the real connected kernel instead of
@@ -454,7 +498,7 @@ export function EphemeralDocument({
 
   const activeServiceManager = runtimeServiceManager;
   const isRuntimeStarting = Boolean(
-    (String(runtimePodName || '').trim() ||
+    (String(runtimeName || '').trim() ||
       String(runtimeOverride?.baseUrl || '').trim()) &&
     !activeServiceManager,
   );
@@ -528,10 +572,10 @@ export function EphemeralDocument({
       }}
     >
       {activeServiceManager ? (
-        <DatalayerThemeProvider
+        <ThemeRoot
+          inherit={inheritTheme}
           colorMode={effectiveColorMode}
-          theme={themeConfig.primerTheme}
-          themeStyles={themeConfig.themeStyles}
+          themeConfig={themeConfig}
         >
           <JupyterReactTheme
             colormode={resolvedMode}
@@ -707,7 +751,7 @@ export function EphemeralDocument({
               </LexicalConfigProvider>
             </Box>
           </JupyterReactTheme>
-        </DatalayerThemeProvider>
+        </ThemeRoot>
       ) : isRuntimeStarting ? (
         <Box
           sx={{

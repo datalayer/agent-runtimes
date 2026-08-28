@@ -91,7 +91,7 @@ export interface AgentStreamMessage<TPayload = Record<string, unknown>> {
 export interface AgentStreamToolApprovalPayload {
   id: string;
   agent_id?: string;
-  pod_name?: string;
+  runtime_name?: string;
   tool_name: string;
   tool_call_id?: string;
   tool_args?: Record<string, unknown>;

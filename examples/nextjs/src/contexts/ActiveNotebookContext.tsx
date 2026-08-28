@@ -12,7 +12,7 @@ interface ActiveNotebook {
   name: string;
   environment: string;
   runtimeId?: string;
-  podName?: string;
+  runtimeName?: string;
   viewerUrl: string;
 }
 

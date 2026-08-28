@@ -104,7 +104,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
   const chatAuthToken: string | undefined = token === null ? undefined : token;
   const agentBaseUrl = useExampleAgentRuntimesUrl();
-  const podName = 'localhost';
+  const runtimeName = 'localhost';
   const approvals = useAgentRuntimeApprovals();
   const pendingApprovalCount = useMemo(
     () =>
@@ -276,7 +276,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
             baseUrl={agentBaseUrl}
             agentId={agentId}
             authToken={chatAuthToken}
-            title={`Tool Approval Agent - ${podName}`}
+            title={`Tool Approval Agent - ${runtimeName}`}
             brandIcon={<CheckCircleIcon size={16} />}
             placeholder="Ask for actions that require approval..."
             showHeader={true}

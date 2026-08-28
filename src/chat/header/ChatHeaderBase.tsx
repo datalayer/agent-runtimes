@@ -14,7 +14,14 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Text, Tooltip, Truncate } from '@primer/react';
+import {
+  Heading,
+  IconButton,
+  Label,
+  Text,
+  Tooltip,
+  Truncate,
+} from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
@@ -80,6 +87,13 @@ export function toRuntimeExecutionState(
 export interface ChatBaseHeaderProps {
   title?: string;
   subtitle?: string;
+  /**
+   * Why the chat is off, shown beside the title.
+   *
+   * The header is where someone looks when a control does not respond, so the
+   * reason belongs here rather than in a tooltip they would have to find.
+   */
+  disableReason?: string;
   brandIcon?: ReactNode;
   headerContent?: ReactNode;
   headerActions?: ReactNode;
@@ -141,6 +155,7 @@ export interface ChatBaseHeaderProps {
 export function ChatBaseHeader({
   title,
   subtitle,
+  disableReason,
   brandIcon,
   headerContent,
   headerActions,
@@ -260,6 +275,13 @@ export function ChatBaseHeader({
                 </Text>
               )}
             </Box>
+          )}
+          {/* Why the chat is off, next to what it is. Said plainly rather
+              than implied by a dead input box. */}
+          {disableReason && (
+            <Label variant="attention" sx={{ flexShrink: 0 }}>
+              {disableReason}
+            </Label>
           )}
           {/* Inline header content (e.g., protocol label) */}
           {headerContent}

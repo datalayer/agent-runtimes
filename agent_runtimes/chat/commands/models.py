@@ -56,7 +56,7 @@ async def _fetch_catalog(tux: "CliTux") -> Optional[dict[str, Any]]:
 
 def _active_model(tux: "CliTux") -> str:
     """The model in use, as far as this session knows."""
-    session = getattr(tux, "session", None)
+    session = getattr(tux, "loop_session", None)
     return str(getattr(session, "model", "") or getattr(tux, "model", "") or "")
 
 
@@ -196,7 +196,7 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
         tux.console.print(f"[red]Unable to switch model: {error}[/red]")
         return
 
-    session = getattr(tux, "session", None)
+    session = getattr(tux, "loop_session", None)
     if session is not None:
         session.model = model_id
 
@@ -211,10 +211,63 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
     tux.console.print()
 
 
+async def _set_fallbacks(tux: "CliTux", ids: str) -> None:
+    """Set the chain to fall back through when the active model fails.
+
+    Order matters and is kept as typed: a fallback list is a preference, and
+    sorting it would quietly change what the user asked for.
+    """
+    from agent_runtimes.specs.models import get_model
+
+    from ..tux import STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
+
+    wanted = [part.strip() for part in ids.split(",") if part.strip()]
+    known: list[str] = []
+    unknown: list[str] = []
+    for model_id in wanted:
+        (known if get_model(model_id) else unknown).append(model_id)
+
+    if unknown:
+        tux.console.print(
+            f"  Unknown: {', '.join(unknown)} — /models to see the catalogue.",
+            style=STYLE_WARNING,
+        )
+    if not known:
+        return
+
+    session = getattr(tux, "loop_session", None)
+    if session is not None:
+        session.extras["model_fallbacks"] = known
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{tux.server_url}/api/v1/configure/inference/provider",
+                json={"fallback_models": known},
+                timeout=30.0,
+            )
+            applied = response.status_code < 400
+    except Exception:  # noqa: BLE001
+        applied = False
+
+    tux.console.print()
+    tux.console.print(f"● Fallback chain: {' → '.join(known)}", style=STYLE_PRIMARY)
+    if not applied:
+        # Honest about scope: the session knows, the server may not yet.
+        tux.console.print(
+            "  Kept for this session; the server did not accept it.",
+            style=STYLE_MUTED,
+        )
+    tux.console.print()
+
+
 async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
-    """List models, or switch to the one named."""
+    """List models, switch to one, or set the fallback chain."""
     target = (argv or "").strip()
-    if target:
+
+    if target.startswith("--fallback"):
+        await _set_fallbacks(tux, target[len("--fallback") :].strip())
+    elif target:
         await _switch(tux, target)
     else:
         await _show(tux)

@@ -48,12 +48,13 @@ import type {
 } from '../types/agents-lifecycle';
 import { ServiceManager } from '@jupyterlab/services/lib/manager';
 import { disposeSandboxServiceManagers } from '../services/sandboxServiceManagers';
+import { runtimeUrl, runtimesUrl } from '../runtimes/lifecycle';
 
 export type RuntimeCreationTarget = 'backend-services' | 'local-agent-runtimes';
 
 /** Existing runtime connection used by connect-mode consumers. */
 export interface AgentRuntimeConnectionOptions {
-  podName: string;
+  runtimeName: string;
   environmentName: string;
   serviceManager?: ServiceManager.IManager;
   jupyterBaseUrl?: string;
@@ -154,8 +155,8 @@ export const agentQueryKeys = {
     all: () => ['agentRuntimes'] as const,
     lists: () => [...agentQueryKeys.agentRuntimes.all(), 'list'] as const,
     details: () => [...agentQueryKeys.agentRuntimes.all(), 'detail'] as const,
-    detail: (podName: string) =>
-      [...agentQueryKeys.agentRuntimes.details(), podName] as const,
+    detail: (runtimeName: string) =>
+      [...agentQueryKeys.agentRuntimes.details(), runtimeName] as const,
   },
   checkpoints: {
     all: () => ['checkpoints'] as const,
@@ -181,13 +182,13 @@ export const agentQueryKeys = {
  * forever; resume/create mutations also clear the tombstone eagerly.
  */
 const DELETED_POD_TOMBSTONE_TTL_MS = 5 * 60 * 1000;
-const deletedRuntimePodTombstones = new Map<string, number>();
+const deletedRuntimeTombstones = new Map<string, number>();
 
 /** Mark a runtime pod as deleted by this client (tombstone). */
-export function markRuntimePodDeleted(podName: string): void {
-  const normalized = String(podName || '').trim();
+export function markRuntimeDeleted(runtimeName: string): void {
+  const normalized = String(runtimeName || '').trim();
   if (normalized) {
-    deletedRuntimePodTombstones.set(normalized, Date.now());
+    deletedRuntimeTombstones.set(normalized, Date.now());
     // Centralized teardown: dispose every ServiceManager any surface opened
     // against this pod's sandbox so their kernelspecs/sessions/users pollers
     // stop immediately instead of waiting for query-cache propagation.
@@ -196,8 +197,8 @@ export function markRuntimePodDeleted(podName: string): void {
 }
 
 /** Clear a deleted-pod tombstone (pod legitimately exists again). */
-export function clearRuntimePodDeleted(podName: string): void {
-  deletedRuntimePodTombstones.delete(String(podName || '').trim());
+export function clearRuntimeDeleted(runtimeName: string): void {
+  deletedRuntimeTombstones.delete(String(runtimeName || '').trim());
 }
 
 /** Statuses that imply a live pod the client would connect to. */
@@ -214,13 +215,13 @@ const LIVE_RUNTIME_STATUSES = new Set<AgentStatus>([
  * Checkpoint-synthesised `paused` records pass through (no live pod to poll).
  */
 function isStaleDeletedRuntime(runtime: AgentRuntimeData): boolean {
-  const podName = String((runtime as any)?.pod_name || '').trim();
-  const deletedAt = deletedRuntimePodTombstones.get(podName);
+  const runtimeName = String((runtime as any)?.runtime_name || '').trim();
+  const deletedAt = deletedRuntimeTombstones.get(runtimeName);
   if (deletedAt === undefined) {
     return false;
   }
   if (Date.now() - deletedAt > DELETED_POD_TOMBSTONE_TTL_MS) {
-    deletedRuntimePodTombstones.delete(podName);
+    deletedRuntimeTombstones.delete(runtimeName);
     return false;
   }
   return LIVE_RUNTIME_STATUSES.has(runtime.status as AgentStatus);
@@ -523,8 +524,8 @@ function toAgentRuntimeData(raw: Record<string, any>): AgentRuntimeData {
       resources: environment?.resources,
     },
     status: normalizedStatus,
-    name: raw.given_name || raw.pod_name,
-    id: raw.pod_name,
+    name: raw.given_name || raw.runtime_name,
+    id: raw.runtime_name,
     url: raw.ingress,
     messageCount: 0,
     agent_spec_id: raw.agent_spec_id || undefined,
@@ -598,7 +599,7 @@ export function useAgentRuntimes(
   const [isCreating, setIsCreating] = useState(false);
   const hasAutoStarted = useRef(false);
   const hasCreatedAgentRef = useRef(false);
-  const lastRuntimePodRef = useRef<string | null>(null);
+  const lastRuntimeRef = useRef<string | null>(null);
   const creatingRef = useRef(false);
   const agentConfigRef = useRef(agentConfig);
   agentConfigRef.current = agentConfig;
@@ -610,7 +611,7 @@ export function useAgentRuntimes(
 
   const runtimeConnectionKey = runtimeConnection
     ? [
-        runtimeConnection.podName,
+        runtimeConnection.runtimeName,
         runtimeConnection.environmentName,
         runtimeConnection.jupyterBaseUrl ||
           runtimeConnection.serviceManager?.serverSettings.baseUrl ||
@@ -664,7 +665,7 @@ export function useAgentRuntimes(
 
     const currentConnectionKey = runtime
       ? [
-          runtime.podName,
+          runtime.runtimeName,
           runtime.environmentName,
           runtime.jupyterBaseUrl || '',
           runtime.kernelId || '',
@@ -774,7 +775,7 @@ export function useAgentRuntimes(
           name:
             config?.name ||
             agentConfig?.name ||
-            (hasSpec && agentSpecId ? agentSpecId : runtime?.podName),
+            (hasSpec && agentSpecId ? agentSpecId : runtime?.runtimeName),
         };
 
         return await storeCreateAgent(mergedConfig);
@@ -863,16 +864,16 @@ export function useAgentRuntimes(
 
   // If runtime pod changes (e.g. after restore), force re-creation on new pod.
   useEffect(() => {
-    const currentPod = runtime?.podName || null;
-    if (!currentPod) {
-      lastRuntimePodRef.current = null;
+    const currentRuntime = runtime?.runtimeName || null;
+    if (!currentRuntime) {
+      lastRuntimeRef.current = null;
       return;
     }
-    if (lastRuntimePodRef.current && lastRuntimePodRef.current !== currentPod) {
+    if (lastRuntimeRef.current && lastRuntimeRef.current !== currentRuntime) {
       hasCreatedAgentRef.current = false;
     }
-    lastRuntimePodRef.current = currentPod;
-  }, [runtime?.podName]);
+    lastRuntimeRef.current = currentRuntime;
+  }, [runtime?.runtimeName]);
 
   // ─── Bootstrap: connect to existing runtime on initial load ─────────
 
@@ -909,12 +910,12 @@ export function useAgentRuntimes(
           return bTs - aTs;
         })[0];
 
-        if (cancelled || !latestRuntime?.pod_name || !latestRuntime?.ingress) {
+        if (cancelled || !latestRuntime?.runtime_name || !latestRuntime?.ingress) {
           return;
         }
 
         storeConnectAgent({
-          podName: latestRuntime.pod_name,
+          runtimeName: latestRuntime.runtime_name,
           environmentName: latestRuntime.environment.name,
           jupyterBaseUrl: latestRuntime.ingress,
         });
@@ -1080,7 +1081,7 @@ export function useAgentRuntimesQuery(
       }
       const query = params.toString();
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes${query ? `?${query}` : ''}`,
+        url: `${runtimesUrl(configuration.runtimesUrl)}${query ? `?${query}` : ''}`,
         method: 'GET',
       });
       if (resp.success && resp.runtimes) {
@@ -1092,7 +1093,7 @@ export function useAgentRuntimesQuery(
           .filter(runtime => !isStaleDeletedRuntime(runtime));
         agentRuntimes.forEach((runtime: AgentRuntimeData) => {
           queryClient.setQueryData(
-            agentQueryKeys.agentRuntimes.detail(runtime.pod_name),
+            agentQueryKeys.agentRuntimes.detail(runtime.runtime_name),
             runtime,
           );
         });
@@ -1109,17 +1110,20 @@ export function useAgentRuntimesQuery(
 }
 
 /**
- * Hook to fetch a single agent runtime by pod name.
+ * Hook to fetch a single agent runtime by name.
  */
-export function useAgentRuntimeByPodName(podName: string | undefined) {
+export function useAgentRuntimeByName(runtimeName: string | undefined) {
   const { configuration } = useCoreStore();
   const { requestDatalayer } = useDatalayer({ notifyOnError: false });
+  // The query is disabled without a name, but the URL is built before the
+  // guard runs, so it needs one either way.
+  const name = runtimeName ?? '';
 
   return useQuery({
-    queryKey: agentQueryKeys.agentRuntimes.detail(podName ?? ''),
+    queryKey: agentQueryKeys.agentRuntimes.detail(name),
     queryFn: async () => {
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
+        url: runtimeUrl(configuration.runtimesUrl, name),
         method: 'GET',
       });
       if (resp.runtime) {
@@ -1139,7 +1143,7 @@ export function useAgentRuntimeByPodName(podName: string | undefined) {
       return 5000;
     },
     retry: false,
-    enabled: !!podName,
+    enabled: !!runtimeName,
   });
 }
 
@@ -1157,7 +1161,7 @@ export function useCreateAgentRuntime() {
         .map(uid => String(uid || '').trim())
         .filter(Boolean);
       return requestDatalayer({
-        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes`,
+        url: runtimesUrl(configuration.runtimesUrl),
         method: 'POST',
         body: {
           environment: {
@@ -1178,7 +1182,7 @@ export function useCreateAgentRuntime() {
             data.billingSourceOrganizationUid || undefined,
           billing_source_organization_handle:
             data.billingSourceOrganizationHandle || undefined,
-          pod_name: data.podName || undefined,
+          runtime_name: data.runtimeName || undefined,
           content_attachment_uids: contentAttachmentUids.length
             ? contentAttachmentUids
             : undefined,
@@ -1189,9 +1193,9 @@ export function useCreateAgentRuntime() {
       if (resp.success && resp.runtime) {
         const mapped = toAgentRuntimeData(resp.runtime as Record<string, any>);
         // A fresh runtime legitimately exists — drop any stale tombstone.
-        clearRuntimePodDeleted(mapped.pod_name);
+        clearRuntimeDeleted(mapped.runtime_name);
         queryClient.setQueryData(
-          agentQueryKeys.agentRuntimes.detail(mapped.pod_name),
+          agentQueryKeys.agentRuntimes.detail(mapped.runtime_name),
           mapped,
         );
         queryClient.invalidateQueries({
@@ -1203,7 +1207,11 @@ export function useCreateAgentRuntime() {
 }
 
 /**
- * Hook to delete an agent runtime.
+ * Hook to stop an agent runtime — running or paused.
+ *
+ * One hook, because there is one endpoint: `DELETE /runtimes/{runtimeName}` reaps
+ * the pod when there is one and the checkpoint records when there is not, so a
+ * caller that wants the runtime gone does not have to know which it is.
  */
 export function useDeleteAgentRuntime() {
   const { configuration } = useCoreStore();
@@ -1237,10 +1245,10 @@ export function useDeleteAgentRuntime() {
   };
 
   return useMutation({
-    mutationFn: async (podName: string) => {
+    mutationFn: async (runtimeName: string) => {
       try {
         return await requestDatalayer({
-          url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
+          url: runtimeUrl(configuration.runtimesUrl, runtimeName),
           method: 'DELETE',
         });
       } catch (error) {
@@ -1261,7 +1269,7 @@ export function useDeleteAgentRuntime() {
         // the runtime detail endpoint still exists.
         try {
           await requestDatalayer({
-            url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}`,
+            url: runtimeUrl(configuration.runtimesUrl, runtimeName),
             method: 'GET',
           });
           // Runtime still exists: propagate original DELETE failure.
@@ -1275,29 +1283,29 @@ export function useDeleteAgentRuntime() {
         }
       }
     },
-    onSuccess: (_data, podName) => {
+    onSuccess: (_data, runtimeName) => {
       // Tombstone the pod so refetches that still echo it from the control
       // plane (deletion lag) do not re-add it to the caches below.
-      markRuntimePodDeleted(podName);
+      markRuntimeDeleted(runtimeName);
       // Prune the pod from the runtimes store immediately so the remote service
       // managers dispose right away and stop polling the now-dead pod ingress
       // (otherwise `/api/kernels` requests keep firing until the next
-      // `refreshRuntimePods()` poll tick, producing CORS errors).
-      runtimesStore.getState().removeRuntimePod(podName);
+      // `refreshRuntimes()` poll tick, producing CORS errors).
+      runtimesStore.getState().removeRuntime(runtimeName);
       queryClient.setQueriesData(
         { queryKey: agentQueryKeys.agentRuntimes.lists() },
         (current: AgentRuntimeData[] | undefined) => {
           if (!Array.isArray(current)) {
             return current;
           }
-          return current.filter(runtime => runtime.pod_name !== podName);
+          return current.filter(runtime => runtime.runtime_name !== runtimeName);
         },
       );
       queryClient.cancelQueries({
-        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
+        queryKey: agentQueryKeys.agentRuntimes.detail(runtimeName),
       });
       queryClient.removeQueries({
-        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
+        queryKey: agentQueryKeys.agentRuntimes.detail(runtimeName),
       });
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.lists(),
@@ -1305,6 +1313,11 @@ export function useDeleteAgentRuntime() {
       queryClient.refetchQueries({
         queryKey: agentQueryKeys.agentRuntimes.lists(),
         type: 'active',
+      });
+      // Stopping also removes any checkpoint records, so a paused agent does
+      // not linger in the checkpoint views after it is gone.
+      queryClient.invalidateQueries({
+        queryKey: agentQueryKeys.checkpoints.all(),
       });
     },
   });
@@ -1409,11 +1422,16 @@ export interface UseAgentsRuntimesReturn {
   runtimesError: unknown;
   refetchRuntimes: () => Promise<{ data?: AgentRuntimeData[] }>;
   refreshRuntimes: () => void;
-  terminateRuntimeByPod: (
-    podName: string,
-    options?: { beforeTerminate?: () => void | Promise<void> },
+  /**
+   * Stop a runtime, running or paused.
+   *
+   * `beforeStop` runs first, for callers that must tear a connection down
+   * before the pod goes away.
+   */
+  stopRuntimeByName: (
+    runtimeName: string,
+    options?: { beforeStop?: () => void | Promise<void> },
   ) => Promise<unknown>;
-  deleteRuntimeByPod: (podName: string) => Promise<unknown>;
   createRuntime: (
     data: CreateAgentRuntimeRequest,
   ) => Promise<CreateRuntimeApiResponse>;
@@ -1439,19 +1457,19 @@ export function useAgentsRuntimes(
   const deleteRuntimeMutation = useDeleteAgentRuntime();
   const refreshRuntimes = useRefreshAgentRuntimes();
 
-  const terminateRuntimeByPod = useCallback(
+  const stopRuntimeByName = useCallback(
     async (
-      podName: string,
-      options?: { beforeTerminate?: () => void | Promise<void> },
+      runtimeName: string,
+      options?: { beforeStop?: () => void | Promise<void> },
     ) => {
-      const normalizedPodName = String(podName || '').trim();
-      if (!normalizedPodName) {
+      const normalizedRuntimeName = String(runtimeName || '').trim();
+      if (!normalizedRuntimeName) {
         return;
       }
-      if (options?.beforeTerminate) {
-        await options.beforeTerminate();
+      if (options?.beforeStop) {
+        await options.beforeStop();
       }
-      return deleteRuntimeMutation.mutateAsync(normalizedPodName);
+      return deleteRuntimeMutation.mutateAsync(normalizedRuntimeName);
     },
     [deleteRuntimeMutation],
   );
@@ -1464,9 +1482,7 @@ export function useAgentsRuntimes(
       runtimesError: runtimesQuery.error,
       refetchRuntimes: () => runtimesQuery.refetch(),
       refreshRuntimes,
-      terminateRuntimeByPod,
-      deleteRuntimeByPod: async (podName: string) =>
-        terminateRuntimeByPod(podName),
+      stopRuntimeByName,
       createRuntime: async (data: CreateAgentRuntimeRequest) =>
         createRuntimeMutation.mutateAsync(data),
     }),
@@ -1477,7 +1493,7 @@ export function useAgentsRuntimes(
       runtimesQuery.error,
       runtimesQuery.refetch,
       refreshRuntimes,
-      terminateRuntimeByPod,
+      stopRuntimeByName,
       createRuntimeMutation,
       deleteRuntimeMutation,
     ],

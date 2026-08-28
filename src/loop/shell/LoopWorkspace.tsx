@@ -38,9 +38,11 @@ import {
   LoopSlots,
   LoopViewType,
   canOpenView,
+  createPromptChannel,
   parseCommand,
   type LoopWorkspaceContext,
   type SandboxSnapshot,
+  type ViewControls,
 } from '../core';
 import { InputPrompt } from '../../chat/prompt/InputPrompt';
 import { ViewSwitcher } from './ViewSwitcher';
@@ -57,11 +59,29 @@ export type LoopWorkspaceProps = {
   extensions?: ExtensionRef[];
   /** A prebuilt platform, for hosts that assemble their own. */
   reactor?: ReactorPlatform;
+  /**
+   * Whether the workspace registers and starts the platform.
+   *
+   * A host that renders its own reactor-aware UI *around* the workspace — a
+   * plugin checkbox list, say — has to register the platform before that UI
+   * renders, and therefore owns the lifecycle. Passing `false` stops the
+   * workspace from starting it a second time.
+   */
+  manageReactor?: boolean;
   /** View to open on. Defaults to the first that can be opened. */
   initialViewType?: string;
   /** Where a prompt goes when it is not a command. */
   onSend?: (message: string, workspace: LoopWorkspaceContext) => void;
   placeholder?: string;
+  /**
+   * How much room there is.
+   *
+   * `page` is the default: the shell owns the viewport. `panel` is a
+   * JupyterLab side panel — a column, not a page — where the switcher shows
+   * icons rather than labels and the header wraps instead of overflowing. The
+   * views are the same views; only the chrome around them gives way.
+   */
+  layout?: 'page' | 'panel';
 };
 
 /** Build the platform for a set of plugins. */
@@ -78,9 +98,11 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     sandbox = { state: 'idle' as const },
     extensions = [],
     reactor: providedReactor,
+    manageReactor = true,
     initialViewType,
     onSend,
     placeholder = 'Ask anything, or type / for commands',
+    layout = 'page',
   } = props;
 
   // Building the platform is a one-time act: rebuilding it on every render
@@ -90,7 +112,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [providedReactor],
   );
-  useReactor(reactor);
+  useReactor(reactor, { autoStart: manageReactor });
 
   return (
     <WorkspaceBody
@@ -98,16 +120,17 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       agentId={agentId}
       conversationId={conversationId}
       model={model}
-      sandbox={sandbox}
+      initialSandbox={sandbox}
       initialViewType={initialViewType}
       onSend={onSend}
       placeholder={placeholder}
+      layout={layout}
     />
   );
 }
 
-type BodyProps = Omit<LoopWorkspaceProps, 'extensions' | 'reactor'> & {
-  sandbox: SandboxSnapshot;
+type BodyProps = Omit<LoopWorkspaceProps, 'extensions' | 'reactor' | 'sandbox'> & {
+  initialSandbox: SandboxSnapshot;
   placeholder: string;
 };
 
@@ -121,16 +144,29 @@ function WorkspaceBody({
   agentId,
   conversationId,
   model,
-  sandbox,
+  initialSandbox,
   initialViewType,
   onSend,
   placeholder,
+  layout = 'page',
 }: BodyProps): JSX.Element {
   const [activeViewType, setActiveViewType] = useState(initialViewType ?? '');
+  // Seeded by the host (a handoff carries what the terminal knew), then kept
+  // current by whichever plugin owns the sandbox.
+  const [sandbox, setSandbox] = useState<SandboxSnapshot>(initialSandbox);
   const [transient, setTransient] = useState<ReactNode>(null);
+  // One channel per workspace, created once: recreating it would drop whatever
+  // the mounted view had subscribed with.
+  const [prompts] = useState(createPromptChannel);
+  const [viewControls, setViewControlsState] = useState<ViewControls>({});
+
+  const setViewControls = useCallback((controls: ViewControls | null) => {
+    setViewControlsState(controls ?? {});
+  }, []);
 
   const views = useContributions(LoopViewType);
   const commands = useContributions(LoopCommand);
+  const compact = layout === 'panel';
 
   const workspace = useMemo<LoopWorkspaceContext>(
     () => ({
@@ -139,10 +175,24 @@ function WorkspaceBody({
       conversationId,
       model,
       sandbox,
+      setSandbox,
       activeViewType,
       setActiveViewType,
+      prompts,
+      viewControls,
+      setViewControls,
     }),
-    [serverUrl, agentId, conversationId, model, sandbox, activeViewType],
+    [
+      serverUrl,
+      agentId,
+      conversationId,
+      model,
+      sandbox,
+      activeViewType,
+      prompts,
+      viewControls,
+      setViewControls,
+    ],
   );
 
   // With nothing chosen, open the first view that can be opened. Falling back
@@ -161,6 +211,12 @@ function WorkspaceBody({
       if (!command) {
         setTransient(null);
         onSend?.(message, workspace);
+        // The active view answers ordinary prompts. When nothing is listening —
+        // no view mounted yet, or a view that does not take prompts — say so
+        // rather than swallowing what the person typed.
+        if (!prompts.submit(message) && !onSend) {
+          setTransient('Nothing is listening for prompts in this view yet.');
+        }
         return;
       }
 
@@ -182,7 +238,7 @@ function WorkspaceBody({
         onSend?.(result.prompt, workspace);
       }
     },
-    [commands, onSend, workspace],
+    [commands, onSend, prompts, workspace],
   );
 
   return (
@@ -201,16 +257,19 @@ function WorkspaceBody({
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          // In a column there is no room for a row: the header wraps rather
+          // than pushing the model chip off the edge.
+          justifyContent: compact ? 'flex-start' : 'space-between',
+          flexWrap: compact ? 'wrap' : 'nowrap',
           gap: 2,
-          px: 3,
+          px: compact ? 2 : 3,
           py: 2,
           borderBottom: '1px solid',
           borderColor: 'border.default',
           flex: '0 0 auto',
         }}
       >
-        <ViewSwitcher views={views} workspace={workspace} />
+        <ViewSwitcher views={views} workspace={workspace} compact={compact} />
         <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
       </Box>
 
@@ -248,6 +307,10 @@ function WorkspaceBody({
       <Box sx={{ flex: '0 0 auto' }}>
         <InputPrompt
           onSend={message => void handleSend(message)}
+          // The work happens in a view; the spinner and the stop button belong
+          // where the person is typing.
+          isLoading={viewControls.busy}
+          onStop={viewControls.stop}
           placeholder={placeholder}
           showBorderTop
           footerContent={

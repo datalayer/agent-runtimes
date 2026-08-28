@@ -97,7 +97,7 @@ export async function createSandboxSnapshot(
 ): Promise<CodeSandboxSnapshotData | Record<string, any>> {
   // Legacy browser snapshots pass a rich object (connection, metadata, callbacks)
   // that is handled client-side. Keep compatibility by returning early.
-  if (!('pod_name' in data)) {
+  if (!('runtime_name' in data)) {
     return data;
   }
   const response = await createSnapshot(

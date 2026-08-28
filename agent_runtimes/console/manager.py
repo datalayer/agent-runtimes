@@ -61,8 +61,8 @@ class RuntimeManager:
         self.token = ""
         self.log = kwargs.pop("log", None) or logging.getLogger(__name__)
         self.runtime_uid = ""
+        self.given_name = ""
         self.runtime_name = ""
-        self.runtime_pod_name = ""
         self.runtime_created_in_start = False
         self.runtimes_url = runtimes_url
         self.run_token = token
@@ -143,13 +143,13 @@ class RuntimeManager:
         # Reset per-start state markers.
         self.runtime_created_in_start = False
 
-        runtime_name = name
+        given_name = name
         runtime = None
 
         # Use AgentClient to get runtime information.
         runtimes = self._client.list_runtimes()
 
-        if not runtime_name:
+        if not given_name:
             self.log.debug("No Agent name provided. Picking the first available Agent…")
             if not runtimes:
                 # Historical behaviour: when no Agent is running, offer to
@@ -172,12 +172,12 @@ class RuntimeManager:
                 # kernel endpoint is reachable.
                 selected = runtimes[0]
 
-            runtime_name = selected.name or selected.uid or selected.pod_name or ""
+            given_name = selected.name or selected.uid or selected.runtime_name or ""
             self.runtime_uid = str(selected.uid or "")
-            self.runtime_name = str(selected.name or runtime_name or "")
-            self.runtime_pod_name = str(selected.pod_name or "")
+            self.given_name = str(selected.name or given_name or "")
+            self.runtime_name = str(selected.runtime_name or "")
             runtime = {
-                "pod_name": selected.pod_name,
+                "runtime_name": selected.runtime_name,
                 "ingress": selected.ingress,
                 "token": selected.jupyter_token or self.run_token,
                 "expired_at": selected.expired_at,
@@ -185,16 +185,16 @@ class RuntimeManager:
         else:
             selected = None
             for r in runtimes:
-                if r.name == runtime_name or r.uid == runtime_name:
+                if r.name == given_name or r.uid == given_name:
                     selected = r
                     break
             if selected is None:
-                raise RuntimeError(f"Agent '{runtime_name}' not found")
+                raise RuntimeError(f"Agent '{given_name}' not found")
             self.runtime_uid = str(selected.uid or "")
-            self.runtime_name = str(selected.name or runtime_name or "")
-            self.runtime_pod_name = str(selected.pod_name or "")
+            self.given_name = str(selected.name or given_name or "")
+            self.runtime_name = str(selected.runtime_name or "")
             runtime = {
-                "pod_name": selected.pod_name,
+                "runtime_name": selected.runtime_name,
                 "ingress": selected.ingress,
                 "token": selected.jupyter_token or self.run_token,
                 "expired_at": selected.expired_at,
@@ -219,7 +219,7 @@ class RuntimeManager:
         self._sandbox_client.start()
 
         kernel_model = self.refresh_model()
-        msg = f"RuntimeManager using existing Agent {runtime_name}"
+        msg = f"RuntimeManager using existing Agent {given_name}"
         expired_at = runtime.get("expired_at")
         if expired_at is not None:
             msg += f" expiring at {timestamp_to_local_date(expired_at)}"
@@ -305,7 +305,7 @@ class RuntimeManager:
                     {
                         "given_name": new_runtime.name,
                         "environment_name": new_runtime.environment,
-                        "pod_name": new_runtime.pod_name,
+                        "runtime_name": new_runtime.runtime_name,
                         "ingress": new_runtime.ingress,
                         "reservation_id": getattr(new_runtime, "reservation_id", ""),
                         "uid": new_runtime.uid,

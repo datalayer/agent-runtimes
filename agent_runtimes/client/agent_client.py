@@ -33,7 +33,7 @@ from agent_runtimes.mixins.environments import EnvironmentsMixin
 from agent_runtimes.mixins.evals import EvalsMixin
 from agent_runtimes.mixins.events import EventsMixin
 from agent_runtimes.mixins.ray import RayMixin
-from agent_runtimes.mixins.runtimes import RuntimesMixin
+from agent_runtimes.runtimes.client import RuntimesMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
 from agent_runtimes.models.environment import EnvironmentModel
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
@@ -638,11 +638,11 @@ def runtime_route_candidates(
     *,
     agent_name: Optional[str] = None,
     agent_spec_id: Optional[str] = None,
-    pod_name: Optional[str] = None,
+    runtime_name: Optional[str] = None,
 ) -> list[str]:
     """Build ordered and de-duplicated Vercel AI route candidates."""
     candidates: list[str] = []
-    for value in (agent_name, agent_spec_id, pod_name, DEFAULT_LOCAL_AGENT_NAME):
+    for value in (agent_name, agent_spec_id, runtime_name, DEFAULT_LOCAL_AGENT_NAME):
         token = str(value or "").strip()
         if token and token not in candidates:
             candidates.append(token)
@@ -783,7 +783,7 @@ class AgentClient(
         billing_entity_type: Optional[str] = None,
         billing_entity_handle: Optional[str] = None,
         api_key: Optional[str] = None,
-        pod_name: Optional[str] = None,
+        runtime_name: Optional[str] = None,
         content_attachment_uids: Optional[list[str]] = None,
     ) -> RuntimeService:
         """
@@ -799,11 +799,11 @@ class AgentClient(
             Time reservation in minutes for the runtime. Defaults to 10 minutes.
         snapshot_name : Optional[str], optional
             Name of the snapshot to create from. If provided, the runtime will be created from this snapshot.
-        pod_name : Optional[str], optional
+        runtime_name : Optional[str], optional
             Pod name (``runtime-<ULID>``) the Contents attachments were made for;
             the runtime is created under it.
         content_attachment_uids : Optional[list[str]], optional
-            Contents attachments to mount, created for ``pod_name`` before the
+            Contents attachments to mount, created for ``runtime_name`` before the
             runtime: a Home Folder attachment mounts the caller's home folders,
             a Volume attachment mounts its Volume.
 
@@ -852,7 +852,7 @@ class AgentClient(
                     f"Snapshot '{snapshot_name}' not found. Available snapshots: {[s.name for s in snapshots]}"
                 )
 
-            response = client_for_request._create_runtime(
+            response = client_for_request.runtimes.create(
                 given_name=name,
                 environment_name=environment,
                 from_snapshot_uid=snapshot_uid,
@@ -862,12 +862,12 @@ class AgentClient(
                 billing_entity_uid=billing_entity_uid,
                 billing_entity_type=billing_entity_type,
                 billing_entity_handle=billing_entity_handle,
-                pod_name=pod_name,
+                runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
             )
         else:
             # Create runtime without snapshot
-            response = client_for_request._create_runtime(
+            response = client_for_request.runtimes.create(
                 given_name=name,
                 environment_name=environment,
                 agent_spec_id=agent_spec_id,
@@ -876,7 +876,7 @@ class AgentClient(
                 billing_entity_uid=billing_entity_uid,
                 billing_entity_type=billing_entity_type,
                 billing_entity_handle=billing_entity_handle,
-                pod_name=pod_name,
+                runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
             )
 
@@ -923,7 +923,7 @@ class AgentClient(
         list[Runtime]
             List of Runtime objects representing active runtimes.
         """
-        response = self._list_runtimes()
+        response = self.runtimes.list()
 
         if not response.get("success", True):
             message = response.get("message", "Unknown error")
@@ -947,7 +947,7 @@ class AgentClient(
                 RuntimeService(
                     name=runtime["given_name"],
                     environment=_runtime_environment_name(runtime),
-                    pod_name=runtime["pod_name"],
+                    runtime_name=runtime["runtime_name"],
                     token=self._get_api_key(),
                     ingress=runtime["ingress"],
                     reservation_id=runtime["reservation_id"],
@@ -962,36 +962,131 @@ class AgentClient(
             )
         return runtime_services
 
-    def terminate_runtime(
+    def stop_runtime(
         self,
         runtime: Union[RuntimeService, str],
         api_key: Optional[str] = None,
     ) -> bool:
         """
-        Terminate a running Runtime.
+        Stop a Runtime, running or paused.
+
+        Named for the lifecycle vocabulary in `code_sandboxes.lifecycle`: a pod
+        and a sandbox stop the same way, so callers that hold either can say the
+        same word.
 
         Parameters
         ----------
-        runtime : Union[Runtime, str]
-            Runtime object or pod name string to terminate.
+        runtime : Union[RuntimeService, str]
+            Runtime object or pod name string to stop.
+        api_key : Optional[str]
+            Act as a different caller than the one this client authenticated as.
 
         Returns
         -------
         bool
-            True if termination was successful, False otherwise.
+            True if the runtime was stopped, False otherwise.
         """
-        pod_name = runtime.pod_name if isinstance(runtime, RuntimeService) else runtime
-        if pod_name is not None:
-            if api_key:
-                client_for_request = _BaseDatalayerClient(
-                    urls=self._urls, api_key=api_key
-                )
-                return client_for_request._terminate_runtime(pod_name).get(
-                    "success", False
-                )
-            return self._terminate_runtime(pod_name)["success"]
-        else:
+        return self._lifecycle("stop", runtime, api_key)
+
+    def pause_runtime(
+        self,
+        runtime: Union[RuntimeService, str],
+        api_key: Optional[str] = None,
+    ) -> bool:
+        """
+        Suspend a Runtime, keeping its state so it can be resumed.
+
+        Asynchronous: the service accepts the request and checkpoints in the
+        background, so a True answer means "accepted", not "already paused".
+
+        Parameters
+        ----------
+        runtime : Union[RuntimeService, str]
+            Runtime object or pod name string to pause.
+        api_key : Optional[str]
+            Act as a different caller than the one this client authenticated as.
+
+        Returns
+        -------
+        bool
+            True if the pause was accepted, False otherwise.
+        """
+        return self._lifecycle("pause", runtime, api_key)
+
+    def resume_runtime(
+        self,
+        runtime: Union[RuntimeService, str],
+        api_key: Optional[str] = None,
+    ) -> bool:
+        """
+        Bring a paused Runtime back with its state intact.
+
+        Also asynchronous — the restore runs in the background.
+
+        Parameters
+        ----------
+        runtime : Union[RuntimeService, str]
+            Runtime object or pod name string to resume.
+        api_key : Optional[str]
+            Act as a different caller than the one this client authenticated as.
+
+        Returns
+        -------
+        bool
+            True if the resume was accepted, False otherwise.
+        """
+        return self._lifecycle("resume", runtime, api_key)
+
+    def snapshot_runtime(
+        self,
+        runtime: Union[RuntimeService, str],
+        name: str,
+        api_key: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """
+        Capture a Runtime's state under a name, without ending it.
+
+        Parameters
+        ----------
+        runtime : Union[RuntimeService, str]
+            Runtime object or pod name string to snapshot.
+        name : str
+            Name to give the snapshot.
+        api_key : Optional[str]
+            Act as a different caller than the one this client authenticated as.
+
+        Returns
+        -------
+        dict[str, Any]
+            The snapshot payload, or a failure with its message.
+        """
+        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        if not runtime_name:
+            return {"success": False, "message": "No pod name to snapshot."}
+        return self._runtimes_as(api_key).snapshot(runtime_name, name)
+
+    def _runtimes_as(self, api_key: Optional[str]) -> Any:
+        """The Runtimes API, as this client or as whoever ``api_key`` names."""
+        if api_key:
+            return _BaseDatalayerClient(urls=self._urls, api_key=api_key).runtimes
+        return self.runtimes
+
+    def _lifecycle(
+        self,
+        verb: str,
+        runtime: Union[RuntimeService, str],
+        api_key: Optional[str],
+    ) -> bool:
+        """Ask the Runtimes API for one lifecycle verb, by name.
+
+        The three verbs differ only in which word they send, so they say so
+        here rather than each repeating the same unwrapping.
+        """
+        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        if not runtime_name:
             return False
+        response = getattr(self._runtimes_as(api_key), verb)(runtime_name)
+        return bool(response.get("success", False))
 
     def get_runtime(self, runtime: Union[RuntimeService, str]) -> RuntimeService:
         """
@@ -1012,25 +1107,25 @@ class AgentClient(
         RuntimeError
             If the runtime cannot be retrieved.
         """
-        pod_name = runtime.pod_name if isinstance(runtime, RuntimeService) else runtime
-        if not pod_name:
+        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        if not runtime_name:
             raise RuntimeError("A pod name is required to get a runtime.")
 
-        response = self._get_runtime(pod_name)
+        response = self.runtimes.get(runtime_name)
         if not response.get("success", True):
             message = response.get("message", "Unknown error")
-            raise RuntimeError(f"Failed to get runtime '{pod_name}': {message}")
+            raise RuntimeError(f"Failed to get runtime '{runtime_name}': {message}")
 
         runtime_data = response.get("runtime")
         if not isinstance(runtime_data, dict):
             raise RuntimeError(
-                f"Failed to get runtime '{pod_name}': missing 'runtime' field in response"
+                f"Failed to get runtime '{runtime_name}': missing 'runtime' field in response"
             )
 
         return RuntimeService(
-            name=runtime_data.get("given_name", pod_name),
+            name=runtime_data.get("given_name", runtime_name),
             environment=_runtime_environment_name(runtime_data),
-            pod_name=runtime_data.get("pod_name", pod_name),
+            runtime_name=runtime_data.get("runtime_name", runtime_name),
             token=self._get_api_key(),
             ingress=runtime_data.get("ingress"),
             reservation_id=runtime_data.get("reservation_id"),
@@ -1068,14 +1163,14 @@ class AgentClient(
         RuntimeError
             If the update fails.
         """
-        pod_name = runtime.pod_name if isinstance(runtime, RuntimeService) else runtime
-        if not pod_name:
+        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        if not runtime_name:
             raise RuntimeError("A pod name is required to update a runtime.")
 
-        response = self._update_runtime(pod_name, capabilities)
+        response = self.runtimes.update(runtime_name, capabilities)
         if not response.get("success", True):
             message = response.get("message", "Unknown error")
-            raise RuntimeError(f"Failed to update runtime '{pod_name}': {message}")
+            raise RuntimeError(f"Failed to update runtime '{runtime_name}': {message}")
         return True
 
     def check_runtime_health(
@@ -1121,8 +1216,8 @@ class AgentClient(
         result: dict[str, Any] = {
             "success": False,
             "runtime_uid": runtime_service.uid,
-            "runtime_pod_name": runtime_service.pod_name,
-            "runtime_name": runtime_service.name,
+            "runtime_name": runtime_service.runtime_name,
+            "given_name": runtime_service.name,
             "ingress": endpoint,
             "probe_mode": "sandbox_execute_code",
         }
@@ -1190,7 +1285,7 @@ class AgentClient(
     def create_snapshot(
         self,
         runtime: Optional["RuntimeService"] = None,
-        pod_name: Optional[str] = None,
+        runtime_name: Optional[str] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
         stop: bool = True,
@@ -1202,7 +1297,7 @@ class AgentClient(
         ----------
         runtime : Optional[Runtime]
             The runtime object to create a snapshot from.
-        pod_name : Optional[str]
+        runtime_name : Optional[str]
             The pod name of the runtime.
         name : Optional[str]
             Name for the new snapshot.
@@ -1216,21 +1311,21 @@ class AgentClient(
         SandboxSnapshotModel
             The created snapshot object.
         """
-        if pod_name is None and runtime is None:
+        if runtime_name is None and runtime is None:
             raise ValueError(
-                "Either 'runtime' or 'pod_name' must be provided to create a snapshot."
+                "Either 'runtime' or 'runtime_name' must be provided to create a snapshot."
             )
         elif runtime is not None:
-            pod_name = runtime.pod_name
+            runtime_name = runtime.runtime_name
 
-        if pod_name is None:
+        if runtime_name is None:
             raise ValueError(
-                "Pod name is required to create a snapshot. Ensure the runtime has a valid pod_name."
+                "Pod name is required to create a snapshot. Ensure the runtime has a valid runtime_name."
             )
 
         name, description = create_snapshot(name=name, description=description)
         response = self._create_snapshot(
-            pod_name=pod_name,
+            runtime_name=runtime_name,
             name=name,
             description=description,
             stop=stop,
@@ -1495,7 +1590,7 @@ class AgentClient(
         route_candidates: Optional[list[str]] = None,
         agent_name: Optional[str] = None,
         agent_spec_id: Optional[str] = None,
-        pod_name: Optional[str] = None,
+        runtime_name: Optional[str] = None,
         token: Optional[str] = None,
         timeout: int = 300,
     ) -> dict[str, Any]:
@@ -1509,12 +1604,12 @@ class AgentClient(
             Prompt to send.
         route_candidates : Optional[list[str]]
             Explicit ordered route candidates. When omitted they are derived
-            from ``agent_name``/``agent_spec_id``/``pod_name``.
+            from ``agent_name``/``agent_spec_id``/``runtime_name``.
         agent_name : Optional[str]
             Agent name used to derive route candidates.
         agent_spec_id : Optional[str]
             Agentspec id used to derive route candidates.
-        pod_name : Optional[str]
+        runtime_name : Optional[str]
             Runtime pod name used to derive route candidates.
         token : Optional[str]
             Bearer token; falls back to this client's API key when omitted.
@@ -1529,7 +1624,7 @@ class AgentClient(
         candidates = route_candidates or runtime_route_candidates(
             agent_name=agent_name,
             agent_spec_id=agent_spec_id,
-            pod_name=pod_name,
+            runtime_name=runtime_name,
         )
         return run_cloud_agent_chat(
             ingress=ingress,

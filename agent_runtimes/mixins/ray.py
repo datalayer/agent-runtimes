@@ -107,7 +107,7 @@ class RayMixin:
         name: str,
         *,
         namespace: str = "default",
-        pod_name: Optional[str] = None,
+        runtime_name: Optional[str] = None,
         container: Optional[str] = None,
         tail_lines: int = 200,
     ) -> dict[str, Any]:
@@ -115,8 +115,8 @@ class RayMixin:
             "namespace": namespace,
             "tail_lines": tail_lines,
         }
-        if pod_name:
-            params["pod_name"] = pod_name
+        if runtime_name:
+            params["runtime_name"] = runtime_name
         if container:
             params["container"] = container
         return self._ray_request(

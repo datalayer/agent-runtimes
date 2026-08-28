@@ -11,12 +11,18 @@ import { PromiseDelegate } from '@lumino/coreutils';
 import { Upload } from 'tus-js-client';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api';
 import type { IRuntimeOptions } from './apis';
+import {
+  runtimeUrl,
+  runtimesUrl,
+  sandboxSnapshotUrl,
+  sandboxSnapshotsUrl,
+} from './lifecycle';
 import { asCodeSandboxSnapshot } from '../models';
 import type {
   ICodeSandboxSnapshot,
   IAPICodeSandboxSnapshot,
   IDatalayerEnvironment,
-  IRuntimePod,
+  IRuntimeRecord,
 } from '../models';
 import { iamStore, runtimesStore } from '../state/substates';
 
@@ -47,7 +53,7 @@ export async function getEnvironments(): Promise<IDatalayerEnvironment[]> {
  */
 export async function createRuntime(
   options: IRuntimeOptions,
-): Promise<IRuntimePod> {
+): Promise<IRuntimeRecord> {
   const { externalToken, token } = iamStore.getState();
   /*
    * A limit is required; ZERO is one of the answers.
@@ -88,12 +94,9 @@ export async function createRuntime(
   const data = await requestDatalayerAPI<{
     success: boolean;
     message: string;
-    runtime?: IRuntimePod;
+    runtime?: IRuntimeRecord;
   }>({
-    url: URLExt.join(
-      runtimesStore.getState().runtimesUrl,
-      `api/runtimes/v1/runtimes`,
-    ),
+    url: runtimesUrl(runtimesStore.getState().runtimesUrl),
     method: 'POST',
     body,
     token: token,
@@ -116,16 +119,13 @@ export async function createRuntime(
 /**
  * Get the Runtimes.
  */
-export async function getRuntimes(): Promise<IRuntimePod[]> {
+export async function getRuntimes(): Promise<IRuntimeRecord[]> {
   const data = await requestDatalayerAPI<{
     success: boolean;
     message: string;
-    runtimes?: IRuntimePod[];
+    runtimes?: IRuntimeRecord[];
   }>({
-    url: URLExt.join(
-      runtimesStore.getState().runtimesUrl,
-      'api/runtimes/v1/runtimes',
-    ),
+    url: runtimesUrl(runtimesStore.getState().runtimesUrl),
     token: iamStore.getState().token,
   });
   if (!data.success) {
@@ -152,10 +152,7 @@ export async function deleteRuntime(options: {
   const externalToken = iamStore.getState().externalToken;
   await requestDatalayerAPI({
     url:
-      URLExt.join(
-        runtimesStore.getState().runtimesUrl,
-        `api/runtimes/v1/runtimes/${options.id}`,
-      ) +
+      runtimeUrl(runtimesStore.getState().runtimesUrl, options.id) +
       URLExt.objectToQueryString(
         options.reason ? { reason: options.reason } : {},
       ),
@@ -196,13 +193,10 @@ export async function snapshotRuntime(options: {
     message: string;
     snapshot?: IAPICodeSandboxSnapshot;
   }>({
-    url: URLExt.join(
-      runtimesStore.getState().runtimesUrl,
-      'api/runtimes/v1/sandbox-snapshots',
-    ),
+    url: sandboxSnapshotsUrl(runtimesStore.getState().runtimesUrl),
     method: 'POST',
     body: {
-      pod_name: options.id,
+      runtime_name: options.id,
       name: options.name,
       description: options.description,
       stop: options.stop,
@@ -233,10 +227,7 @@ export async function getSandboxSnapshots(): Promise<ICodeSandboxSnapshot[]> {
     message: string;
     snapshots?: IAPICodeSandboxSnapshot[];
   }>({
-    url: URLExt.join(
-      runtimesStore.getState().runtimesUrl,
-      'api/runtimes/v1/sandbox-snapshots',
-    ),
+    url: sandboxSnapshotsUrl(runtimesStore.getState().runtimesUrl),
     token: iamStore.getState().token,
   });
   if (!data.success) {
@@ -263,11 +254,7 @@ export async function loadSandboxSnapshot(options: {
     success: boolean;
     message: string;
   }>({
-    url: URLExt.join(
-      runtimesStore.getState().runtimesUrl,
-      'api/runtimes/v1/runtimes',
-      options.id,
-    ),
+    url: runtimeUrl(runtimesStore.getState().runtimesUrl, options.id),
     method: 'PUT',
     body: {
       from: options.from,
@@ -290,10 +277,7 @@ export async function loadSandboxSnapshot(options: {
  */
 export function createSandboxSnapshotDownloadURL(id: string): string {
   return (
-    URLExt.join(
-      runtimesStore.getState().runtimesUrl,
-      `api/runtimes/v1/sandbox-snapshots/${id}`,
-    ) +
+    sandboxSnapshotUrl(runtimesStore.getState().runtimesUrl, id) +
     URLExt.objectToQueryString({
       download: '1',
       token: iamStore.getState().token ?? '',
@@ -325,10 +309,7 @@ export async function deleteCodeSandboxSnapshot(id: string): Promise<void> {
     message: string;
     snapshots?: IAPICodeSandboxSnapshot[];
   }>({
-    url: URLExt.join(
-      runtimesStore.getState().runtimesUrl,
-      `api/runtimes/v1/sandbox-snapshots/${id}`,
-    ),
+    url: sandboxSnapshotUrl(runtimesStore.getState().runtimesUrl, id),
     method: 'DELETE',
     token: iamStore.getState().token,
   });
@@ -347,10 +328,7 @@ export async function updateCodeSandboxSnapshot(
       message: string;
       snapshot?: IAPICodeSandboxSnapshot;
     }>({
-      url: URLExt.join(
-        runtimesStore.getState().runtimesUrl,
-        `api/runtimes/v1/sandbox-snapshots/${id}`,
-      ),
+      url: sandboxSnapshotUrl(runtimesStore.getState().runtimesUrl, id),
       method: 'PATCH',
       body: { ...metadata },
       token: iamStore.getState().token,
@@ -375,7 +353,7 @@ export async function uploadCodeSandboxSnapshot(options: {
   // Create a new tus upload.
   const upload = new Upload(options.file, {
     // Endpoint is the upload creation URL from your tus server.
-    endpoint: `${runtimesStore.getState().runtimesUrl}/api/runtimes/v1/sandbox-snapshots/upload`,
+    endpoint: `${sandboxSnapshotsUrl(runtimesStore.getState().runtimesUrl)}/upload`,
     headers: { Authorization: `Bearer ${iamStore.getState().token}` },
     // Retry delays will enable tus-js-client to automatically retry on errors.
     // retryDelays: [0, 3000, 5000, 10000, 20000],

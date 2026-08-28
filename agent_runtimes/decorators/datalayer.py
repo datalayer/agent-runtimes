@@ -25,7 +25,7 @@ CallableOrOptionalString: TypeAlias = Union[Callable[..., Any], Optional[str]]
 
 
 def datalayer(
-    runtime_name: CallableOrOptionalString = None,
+    given_name: CallableOrOptionalString = None,
     environment: str = DEFAULT_ENVIRONMENT,
     inputs: Optional[list[str]] = None,
     output: Optional[str] = None,
@@ -39,7 +39,7 @@ def datalayer(
 
     Parameters
     ----------
-    runtime_name : str, optional
+    given_name : str, optional
         The name of the runtime to use. If not provided, a default runtime will be used.
     environment : str, optional
         The name of the environment to use. If not provided, a default environment will be used.
@@ -70,7 +70,7 @@ def datalayer(
     ...     return x + y
 
     >>> from datalayer_core.client.decorators import datalayer
-    >>> @datalayer(runtime_name="example-runtime", inputs=["x", "y"], output="z")
+    >>> @datalayer(given_name="example-runtime", inputs=["x", "y"], output="z")
     ... def example(x: float, y: float) -> float:
     ...     return x + y
     """
@@ -79,10 +79,10 @@ def datalayer(
     output_decorated = output
     snapshot_name_decorated = snapshot_name
 
-    if callable(runtime_name):
-        runtime_name_decorated = None
+    if callable(given_name):
+        given_name_decorated = None
     else:
-        runtime_name_decorated = runtime_name
+        given_name_decorated = given_name
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         """
@@ -185,7 +185,7 @@ def datalayer(
 
             client = AgentClient(api_key=token)  # Resolves token from param/env/keyring
             with client.create_runtime(
-                name=runtime_name_decorated,
+                name=given_name_decorated,
                 snapshot_name=snapshot_name_decorated,
                 environment=environment,
             ) as runtime:
@@ -204,8 +204,8 @@ def datalayer(
 
         return wrapper
 
-    # print(f"Using runtime: {runtime_name}, inputs: {inputs}, output: {output}")
-    if callable(runtime_name):
-        return decorator(runtime_name)
+    # print(f"Using runtime: {given_name}, inputs: {inputs}, output: {output}")
+    if callable(given_name):
+        return decorator(given_name)
     else:
         return decorator

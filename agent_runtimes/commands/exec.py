@@ -116,8 +116,8 @@ class CodeSandboxExecService:
                 if not self.sandbox_client:
                     raise RuntimeError("Failed to create code sandbox client")
                 self._probe_kernel_execution()
-                manager_runtime_name = str(
-                    getattr(self.kernel_manager, "runtime_name", "")
+                manager_given_name = str(
+                    getattr(self.kernel_manager, "given_name", "")
                     or sandbox_name
                     or "auto-selected"
                 )
@@ -132,7 +132,7 @@ class CodeSandboxExecService:
                         "#"
                     )
                     console.print(
-                        f"[green]Connected to code sandbox: {manager_runtime_name} ({runtime_ref})[/green]"
+                        f"[green]Connected to code sandbox: {manager_given_name} ({runtime_ref})[/green]"
                     )
                 else:
                     console.print(
@@ -186,9 +186,9 @@ class CodeSandboxExecService:
             "/"
         )
         sandbox_token = str(getattr(self.kernel_manager, "token", "") or "")
-        sandbox_name = str(getattr(self.kernel_manager, "runtime_name", "") or "")
+        sandbox_name = str(getattr(self.kernel_manager, "given_name", "") or "")
         sandbox_uid = str(getattr(self.kernel_manager, "runtime_uid", "") or "")
-        sandbox_pod = str(getattr(self.kernel_manager, "runtime_pod_name", "") or "")
+        sandbox_pod = str(getattr(self.kernel_manager, "runtime_name", "") or "")
 
         response = fetch(f"{server_url}/api/kernels", token=sandbox_token, timeout=15)
         kernels = response.json() if response.content else []
@@ -914,7 +914,7 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
 
             sandbox_name = str(created_runtime.name or "")
             sandbox_uid = str(created_runtime.uid or "")
-            sandbox_pod = str(created_runtime.pod_name or "")
+            sandbox_pod = str(created_runtime.runtime_name or "")
             sandbox_ingress = str(created_runtime.ingress or "").rstrip("/")
             sandbox_token = str(
                 created_runtime.jupyter_token or client._get_api_key() or ""

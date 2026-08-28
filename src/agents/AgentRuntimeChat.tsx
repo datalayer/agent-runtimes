@@ -126,21 +126,21 @@ export function AgentRuntimeChat({
   const launchingError = launch ? error : null;
   const runtimeAgentId = runtime?.agentId || '';
   const hasAssignedAgent = runtimeAgentId.trim().length > 0;
-  const assignmentAttemptedForPodRef = useRef<string | null>(null);
+  const assignmentAttemptedForRuntimeRef = useRef<string | null>(null);
   const launchStateLogRef = useRef<string>('');
   const isInteractiveReady =
     launch && isReady && !!endpoint && hasAssignedAgent;
 
   useEffect(() => {
-    const podName = String(runtime?.podName || '').trim();
+    const runtimeName = String(runtime?.runtimeName || '').trim();
 
-    if (!podName) {
-      assignmentAttemptedForPodRef.current = null;
+    if (!runtimeName) {
+      assignmentAttemptedForRuntimeRef.current = null;
       return;
     }
 
     if (hasAssignedAgent) {
-      assignmentAttemptedForPodRef.current = podName;
+      assignmentAttemptedForRuntimeRef.current = runtimeName;
       return;
     }
 
@@ -148,14 +148,14 @@ export function AgentRuntimeChat({
       return;
     }
 
-    if (assignmentAttemptedForPodRef.current === podName) {
+    if (assignmentAttemptedForRuntimeRef.current === runtimeName) {
       return;
     }
 
-    assignmentAttemptedForPodRef.current = podName;
+    assignmentAttemptedForRuntimeRef.current = runtimeName;
     void createAgent();
   }, [
-    runtime?.podName,
+    runtime?.runtimeName,
     hasAssignedAgent,
     launch,
     isReady,
@@ -180,7 +180,7 @@ export function AgentRuntimeChat({
 
     const signature = [
       state,
-      String(runtime?.podName || ''),
+      String(runtime?.runtimeName || ''),
       String(endpoint || ''),
     ].join('|');
     if (launchStateLogRef.current === signature) {
@@ -191,7 +191,7 @@ export function AgentRuntimeChat({
     if (state === 'error') {
       console.error('[AgentRuntimeChat] launch failed', {
         agentSpecId,
-        podName: runtime?.podName,
+        runtimeName: runtime?.runtimeName,
         endpoint,
         error: launchingError,
       });
@@ -201,7 +201,7 @@ export function AgentRuntimeChat({
     if (state === 'waiting-endpoint') {
       console.info('[AgentRuntimeChat] waiting for runtime endpoint', {
         agentSpecId,
-        podName: runtime?.podName,
+        runtimeName: runtime?.runtimeName,
         isReady,
         endpoint,
       });
@@ -211,7 +211,7 @@ export function AgentRuntimeChat({
     if (state === 'waiting-assignment') {
       console.info('[AgentRuntimeChat] waiting for agent assignment', {
         agentSpecId,
-        podName: runtime?.podName,
+        runtimeName: runtime?.runtimeName,
         endpoint,
       });
       return;
@@ -219,7 +219,7 @@ export function AgentRuntimeChat({
 
     console.info('[AgentRuntimeChat] runtime ready', {
       agentSpecId,
-      podName: runtime?.podName,
+      runtimeName: runtime?.runtimeName,
       endpoint,
       agentId: runtimeAgentId,
     });
@@ -230,7 +230,7 @@ export function AgentRuntimeChat({
     isReady,
     endpoint,
     hasAssignedAgent,
-    runtime?.podName,
+    runtime?.runtimeName,
     runtimeAgentId,
     agentSpecId,
   ]);

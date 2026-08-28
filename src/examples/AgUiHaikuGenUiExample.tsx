@@ -206,7 +206,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Haiku Generative UI
+            AG-UI Haiku Generative UI
           </Text>
           <Text
             as="p"

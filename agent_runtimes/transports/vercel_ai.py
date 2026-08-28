@@ -446,7 +446,7 @@ async def _wrap_streaming_body_with_approvals(
     approval_tool_ids: list[str],
     agent_id: str,
     user_jwt_token: str | None = None,
-    pod_name: str | None = None,
+    runtime_name: str | None = None,
 ) -> AsyncIterator[str]:
     """Wrap a streaming body to create local approval records for deferred tools.
 
@@ -513,7 +513,7 @@ async def _wrap_streaming_body_with_approvals(
                     "/api/ai-agents/v1/tool-approvals",
                     json={
                         "agent_id": agent_id,
-                        "pod_name": pod_name or "",
+                        "runtime_name": runtime_name or "",
                         "tool_name": tool_name,
                         "tool_args": tool_args,
                         "tool_call_id": tool_call_id,
@@ -1523,7 +1523,7 @@ class VercelAITransport(BaseTransport):
                         approval_tool_ids=self._approval_tool_ids,
                         agent_id=agent_id,
                         user_jwt_token=metric_user_jwt_token,
-                        pod_name=None,
+                        runtime_name=None,
                     )
                     # Inject pydantic-ai token usage into the message-metadata
                     # event so eval reports can read token counts from the stream.

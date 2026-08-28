@@ -14,6 +14,22 @@
  * @module loop-main
  */
 
+// `@jupyter-widgets` assigns to a bare `__webpack_public_path__` at module
+// scope — a webpack-ism that survives into the bundle, because Vite's `define`
+// rewrites reads of an identifier and not assignments to one. In an ES module
+// that assignment is a ReferenceError unless the binding exists as a global.
+//
+// The other entry points get away with it by accident of chunking: the module
+// that declares the name happens to land in the same chunk. This entry loads
+// its views lazily, so it does not, and the chat view failed to load with
+// `__webpack_public_path__ is not defined`. Declaring it here, before anything
+// else runs, does not depend on that luck. Written through `globalThis` with a
+// string key so `define` leaves it alone.
+const globals = globalThis as Record<string, unknown>;
+if (globals['__webpack_public_path__'] === undefined) {
+  globals['__webpack_public_path__'] = '';
+}
+
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -25,12 +41,23 @@ import {
   useSystemColorMode,
   useThemeStore,
 } from '@datalayer/primer-addons';
+import { configExtension } from '@datalayer/reactor';
 import { LoopWorkspace } from './loop/shell/LoopWorkspace';
 import { ChatExtension } from './loop/plugins/chat';
+import { A2uiExtension } from './loop/plugins/a2ui';
+import { AgentsExtension } from './loop/plugins/agents';
+import { CodeSandboxExtension } from './loop/plugins/code-sandbox';
+import { ModelsExtension } from './loop/plugins/models';
+import { DocumentExtension } from './loop/plugins/document';
+import { NotebookExtension } from './loop/plugins/notebook';
 import { internalQueryClient } from './utils';
 import type { SandboxSnapshot } from './loop/core';
 
-import './index.css';
+// `src/index.css` is the Vite starter template's stylesheet: it sets
+// `body { display: flex; place-items: center }`, which shrink-wraps #root to
+// its content — the workspace filled 407px of a 1280px window. The agent page
+// uses the primitives stylesheet instead; so does this one.
+import '../style/primer-primitives.css';
 
 type Session = {
   serverUrl: string;
@@ -136,7 +163,23 @@ function LoopPage(): JSX.Element {
               model={session.model}
               sandbox={session.sandbox}
               initialViewType={session.view}
-              extensions={[ChatExtension]}
+              // The notebook and document plugins depend on the sandbox, so
+              // the reactor pulls it in; it is named here only to be told which
+              // server it talks to.
+              extensions={[
+                ChatExtension,
+                configExtension(CodeSandboxExtension, {
+                  serverUrl: session.serverUrl,
+                  // A session handed over from the terminal is server-backed;
+                  // the header control can move it from there.
+                  target: 'local',
+                }),
+                NotebookExtension,
+                DocumentExtension,
+                A2uiExtension,
+                AgentsExtension,
+                ModelsExtension,
+              ]}
             />
           ) : null}
         </Box>

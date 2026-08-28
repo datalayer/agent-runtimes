@@ -318,7 +318,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     OTEL_BASE_URL_ENV ||
     AI_AGENTS_URL_ENV ||
     agentBaseUrl;
-  const podName = agentId;
+  const runtimeName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
 
   // Authenticated fetch helper (for sidecar endpoints)
@@ -646,7 +646,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <ShieldCheckIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2 }}>
-            Guardrails Demo — {podName}
+            Guardrails Demo — {runtimeName}
           </Heading>
         </Box>
         <Label variant={wsState === 'connected' ? 'success' : 'secondary'}>

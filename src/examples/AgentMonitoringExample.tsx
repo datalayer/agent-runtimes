@@ -104,7 +104,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     OTEL_BASE_URL_ENV ||
     OTEL_URL_ENV ||
     agentBaseUrl;
-  const podName = agentId;
+  const runtimeName = agentId;
   // The OTEL service_name resource attribute is 'agent-runtimes' (the
   // application name), NOT the individual agent ID.  Use the correct value
   // so the TokenUsageChart WS filter and HTTP query match actual rows.
@@ -408,7 +408,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       >
         <GraphIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Monitoring — {podName}
+          Monitoring — {runtimeName}
         </Heading>
         {isReconnectedAgent && (
           <Label variant="secondary" size="small">

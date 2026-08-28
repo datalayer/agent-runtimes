@@ -17,7 +17,7 @@ from agent_runtimes._version import __version__
 from agent_runtimes.console.manager import RuntimeManager
 
 aliases = {
-    "agent": "RuntimesConsoleApp.runtime_name",
+    "agent": "RuntimesConsoleApp.given_name",
     "runtimes-url": "RuntimesConsoleApp.runtimes_url",
     "api-key": "RuntimesConsoleApp.token",
     "external-token": "RuntimesConsoleApp.external_token",
@@ -42,7 +42,7 @@ class RuntimesConsoleApp(AuthnMixin, JupyterApp):
     aliases = Dict(aliases)
     flags = Dict(flags)
 
-    runtime_name = Unicode("", config=True, help="Runtime name to connect to.")
+    given_name = Unicode("", config=True, help="Runtime name to connect to.")
     user_handle = Unicode("", config=True, help="Username for authentication.")
     runtimes_url = Unicode("", config=True, help="Datalayer Runtimes server URL.")
     iam_url = Unicode("", config=True, help="Datalayer IAM server URL.")
@@ -85,7 +85,7 @@ class RuntimesConsoleApp(AuthnMixin, JupyterApp):
             log=self.log,
         )
         self.runtime_manager.start_kernel(
-            name=self.runtime_name or self.kernel_name,
+            name=self.given_name or self.kernel_name,
             path=self.kernel_path or None,
         )
 

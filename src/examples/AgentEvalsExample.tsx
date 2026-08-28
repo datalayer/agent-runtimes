@@ -49,6 +49,7 @@ import {
   useExampleAgentRuntimesUrl,
 } from './utils/useExampleAgentRuntimesUrl';
 import {
+  runtimeTargetCapabilities,
   useRuntimeTargetStore,
   type ExampleRuntimeTarget,
 } from './utils/runtimeTargetStore';
@@ -128,7 +129,7 @@ const AgentEvalsInner: React.FC<{
     if (configuredRuntimesUrl && !isLocalhostUrl(configuredRuntimesUrl)) {
       return configuredRuntimesUrl;
     }
-    return resolveExampleAgentRuntimesUrl('cloud');
+    return resolveExampleAgentRuntimesUrl('datalayer');
   }, [configuration?.runtimesUrl]);
 
   const {
@@ -139,7 +140,7 @@ const AgentEvalsInner: React.FC<{
     runtimeCreationBaseUrl,
   } = useAgentRuntimes({
     agentSpecId: AGENTSPEC_ID,
-    autoStart: executionTarget === 'cloud',
+    autoStart: executionTarget === 'datalayer',
     runtimeCreationTarget:
       executionTarget === 'local' ? 'local-agent-runtimes' : 'backend-services',
     runtimeCreationBaseUrl:
@@ -173,10 +174,10 @@ const AgentEvalsInner: React.FC<{
     executionTarget === 'local'
       ? localAgentId || agentName
       : runtime?.agentId || AGENT_NAME;
-  const podName =
+  const runtimeName =
     executionTarget === 'local'
       ? `local:${agentId}`
-      : runtime?.podName || '(launching…)';
+      : runtime?.runtimeName || '(launching…)';
   const controlPlaneBaseUrl =
     (import.meta.env.VITE_RUN_URL as string | undefined) ||
     configuration?.aiAgentsUrl ||
@@ -376,7 +377,7 @@ const AgentEvalsInner: React.FC<{
                 config: {
                   mode: 'offline',
                   target_agent_id: agentId,
-                  target_pod_name: podName,
+                  target_runtime_name: runtimeName,
                 },
                 summary: {},
                 tags: ['example'],
@@ -400,7 +401,7 @@ const AgentEvalsInner: React.FC<{
     };
 
     void bootstrap();
-  }, [isAgentReady, controlPlaneBaseUrl, agentId, podName, evalApiFetch]);
+  }, [isAgentReady, controlPlaneBaseUrl, agentId, runtimeName, evalApiFetch]);
 
   // ── Poll eval results ─────────────────────────────────────────────────
 
@@ -447,7 +448,7 @@ const AgentEvalsInner: React.FC<{
               suite_name: 'default-suite',
               passed,
               failed,
-              runtime_id: podName,
+              runtime_id: runtimeName,
             },
             report: {
               source: 'AgentEvalsExample',
@@ -477,7 +478,7 @@ const AgentEvalsInner: React.FC<{
     experimentId,
     evalApiFetch,
     mapRuns,
-    podName,
+    runtimeName,
     evalId,
     agentId,
   ]);
@@ -559,7 +560,7 @@ const AgentEvalsInner: React.FC<{
         <BeakerIcon size={16} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Heading as="h3" sx={{ fontSize: 2 }}>
-            Evaluation — {podName}
+            Evaluation — {runtimeName}
           </Heading>
           <Text
             sx={{
@@ -575,7 +576,7 @@ const AgentEvalsInner: React.FC<{
           </Text>
         </Box>
         <Label size="small" variant="accent">
-          Target: {executionTarget === 'cloud' ? 'Cloud' : 'Local'}
+          Target: {runtimeTargetCapabilities(executionTarget).label}
         </Label>
       </Box>
 
@@ -598,7 +599,7 @@ const AgentEvalsInner: React.FC<{
             kernelIndicatorPlacement="right"
             autoFocus
             height="100%"
-            runtimeId={podName}
+            runtimeId={runtimeName}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {

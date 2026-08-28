@@ -56,7 +56,7 @@ _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Context", ("context", "context_export")),
     ("Agents", ("agents", "models", "tools", "tools_last", "codemode_toggle")),
     ("Capabilities", ("mcp_servers", "skills", "code_sandbox")),
-    ("Open", ("browser", "browser_notebook", "browser_document", "jupyter", "datalayer")),
+    ("Open", ("browser", "browser_notebook", "browser_document", "jupyter", "datalayer", "surface")),
     ("Fun", ("rain", "about", "gif")),
 )
 
@@ -106,6 +106,7 @@ def build_registry(
         skills,
         status,
         suggestions,
+        surface,
         tools,
         tools_last,
     )
@@ -129,6 +130,7 @@ def build_registry(
         tools_last,
         cls,
         browser,
+        surface,
         browser_notebook,
         browser_document,
         suggestions,

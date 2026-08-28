@@ -34,19 +34,72 @@ _GENERAL_PURPOSE_INSTRUCTIONS = (
 )
 
 
-def _build_subagent_capabilities(model: str | Model) -> list[Any]:
+def _resolve_referenced_spec(ref: str) -> Any:
+    """The agentspec a subagent refers to, or ``None``.
+
+    Looked up lazily so importing this module does not pull the whole spec
+    catalogue in, and tolerant of a missing one: a referenced specialist that is
+    not installed is a warning about that subagent, not a dead parent agent.
+    """
+    try:
+        from agent_runtimes.specs.agents.agents import get_agent_spec
+    except Exception:  # noqa: BLE001  # pragma: no cover - catalogue absent
+        return None
+    try:
+        return get_agent_spec(ref)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _build_subagent_capabilities(
+    model: str | Model,
+    *,
+    parent: "SubagentsCapability | None" = None,
+    subagent_name: str = "",
+) -> list[Any]:
     """Build the capabilities attached to a subagent's inner Agent.
 
     Adds history compaction budgeted from the subagent model's ``tokens_limit``
     so a delegated run's history stays under the model's limit independently of
     the parent. Skips it when the model is an instance (no spec id to resolve).
-    """
-    if not isinstance(model, str):
-        return []
-    from ..compaction import build_compaction_capability
 
-    capability = build_compaction_capability(model)
-    return [capability] if capability is not None else []
+    Also decides whether this subagent may delegate further. It may, if the
+    spec allows the depth *and* the specialists it would be offered are not
+    already on the stack above it — an agent that can delegate to itself is a
+    loop with a token budget attached.
+    """
+    capabilities: list[Any] = []
+
+    if isinstance(model, str):
+        from ..compaction import build_compaction_capability
+
+        compaction = build_compaction_capability(model)
+        if compaction is not None:
+            capabilities.append(compaction)
+
+    if parent is not None and parent.depth + 1 < parent.max_nesting_depth:
+        stack = (*parent.chain, subagent_name)
+        # The cycle guard: a specialist already on the stack is not offered
+        # again, so the loop cannot form rather than being caught mid-run.
+        onward = [
+            definition
+            for definition in parent.subagents
+            if definition.name not in stack
+        ]
+        if onward:
+            capabilities.append(
+                SubagentsCapability(
+                    subagents=onward,
+                    default_model=parent.default_model,
+                    include_general_purpose=False,
+                    agent_id=parent.agent_id,
+                    max_nesting_depth=parent.max_nesting_depth,
+                    depth=parent.depth + 1,
+                    chain=stack,
+                )
+            )
+
+    return capabilities
 
 
 @dataclass(frozen=True)
@@ -88,6 +141,17 @@ class SubagentsCapability(AbstractCapability[Any]):
         Name of the delegation tool exposed to the parent model.
     tool_retries : int
         Retry budget for the delegation tool.
+    max_nesting_depth : int
+        How far delegation may go. ``0`` — the default — means a subagent
+        cannot delegate further, which is the safe default: an agent calling an
+        agent calling an agent spends a budget nobody watched being spent.
+    depth : int
+        How deep this capability already is. Set by the reactor of capabilities
+        rather than by a spec.
+    chain : tuple[str, ...]
+        The delegation stack above this capability, newest last. It is the cycle
+        guard — a specialist already on the stack is not offered again — and it
+        is what makes a nested delegation legible in the transcript.
     """
 
     subagents: list[SubagentDefinition] = field(default_factory=list)
@@ -96,6 +160,9 @@ class SubagentsCapability(AbstractCapability[Any]):
     tool_name: str = "delegate_task"
     tool_retries: int = 1
     agent_id: str | None = None
+    max_nesting_depth: int = 0
+    depth: int = 0
+    chain: tuple[str, ...] = ()
     _agents: dict[str, Agent[Any, str]] = field(
         default_factory=dict, init=False, repr=False
     )
@@ -130,7 +197,9 @@ class SubagentsCapability(AbstractCapability[Any]):
                 model,
                 name=definition.name,
                 instructions=definition.instructions,
-                capabilities=_build_subagent_capabilities(model),
+                capabilities=_build_subagent_capabilities(
+                    model, parent=self, subagent_name=definition.name
+                ),
             )
             self._descriptions[definition.name] = definition.description
 
@@ -317,6 +386,11 @@ class SubagentsCapability(AbstractCapability[Any]):
                     "subagentName": subagent_name,
                     "toolCallId": tool_call_id,
                     "phase": phase,
+                    # Who asked, and how deep. A nested delegation that looks
+                    # like a top-level one leaves a reader unable to tell what
+                    # spent their tokens.
+                    "depth": self.depth,
+                    "chain": [*self.chain, subagent_name],
                     **payload,
                 },
                 agent_id=parent_agent_id,
@@ -363,12 +437,39 @@ def build_subagents_capability(
     raw_subagents = list(getattr(subagents_config, "subagents", None) or [])
     definitions: list[SubagentDefinition] = []
     for sa in raw_subagents:
+        instructions = sa.instructions
+        model = getattr(sa, "model", None)
+
+        # A subagent may *be* another agentspec rather than repeat it: the
+        # specialist is defined once and referenced by every parent that wants
+        # it, instead of having its instructions copy-pasted into each — which
+        # is how they drift apart.
+        ref = getattr(sa, "ref", None)
+        if ref:
+            referenced = _resolve_referenced_spec(str(ref))
+            if referenced is None:
+                logger.warning(
+                    "Subagent %r references unknown agentspec %r; skipping",
+                    sa.name,
+                    ref,
+                )
+                continue
+            instructions = instructions or getattr(referenced, "system_prompt", "") or ""
+            model = model or getattr(referenced, "model", None)
+
+        if not instructions:
+            logger.warning(
+                "Subagent %r has no instructions and no usable ref; skipping",
+                sa.name,
+            )
+            continue
+
         definitions.append(
             SubagentDefinition(
                 name=sa.name,
                 description=sa.description,
-                instructions=sa.instructions,
-                model=getattr(sa, "model", None),
+                instructions=instructions,
+                model=model,
             )
         )
 
@@ -384,4 +485,7 @@ def build_subagents_capability(
         default_model=resolved_default,
         include_general_purpose=include_general_purpose,
         agent_id=agent_id,
+        # `0` unless a spec says otherwise: an agent calling an agent calling an
+        # agent spends a budget nobody watched being spent.
+        max_nesting_depth=int(getattr(subagents_config, "max_nesting_depth", 0) or 0),
     )

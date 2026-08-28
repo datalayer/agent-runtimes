@@ -24,7 +24,7 @@
 import type { ServiceManager } from '@jupyterlab/services';
 import { disposeServiceManager } from '@datalayer/jupyter-react';
 
-const sandboxManagersByPod = new Map<string, Set<ServiceManager.IManager>>();
+const sandboxManagersByRuntime = new Map<string, Set<ServiceManager.IManager>>();
 
 /**
  * Register a `ServiceManager` connected to a sandbox pod.
@@ -33,25 +33,25 @@ const sandboxManagersByPod = new Map<string, Set<ServiceManager.IManager>>();
  *   manager itself (cleanup). Unregistering does NOT dispose the manager.
  */
 export function registerSandboxServiceManager(
-  podName: string,
+  runtimeName: string,
   manager: ServiceManager.IManager,
 ): () => void {
-  const normalized = String(podName || '').trim();
+  const normalized = String(runtimeName || '').trim();
   if (!normalized || !manager) {
     return () => {};
   }
-  let managers = sandboxManagersByPod.get(normalized);
+  let managers = sandboxManagersByRuntime.get(normalized);
   if (!managers) {
     managers = new Set();
-    sandboxManagersByPod.set(normalized, managers);
+    sandboxManagersByRuntime.set(normalized, managers);
   }
   managers.add(manager);
   return () => {
-    const registered = sandboxManagersByPod.get(normalized);
+    const registered = sandboxManagersByRuntime.get(normalized);
     if (registered) {
       registered.delete(manager);
       if (registered.size === 0) {
-        sandboxManagersByPod.delete(normalized);
+        sandboxManagersByRuntime.delete(normalized);
       }
     }
   };
@@ -62,16 +62,16 @@ export function registerSandboxServiceManager(
  * sandbox pod. Safe to call multiple times — `disposeServiceManager` is
  * idempotent, and disposed managers are dropped from the registry.
  */
-export function disposeSandboxServiceManagers(podName: string): void {
-  const normalized = String(podName || '').trim();
+export function disposeSandboxServiceManagers(runtimeName: string): void {
+  const normalized = String(runtimeName || '').trim();
   if (!normalized) {
     return;
   }
-  const managers = sandboxManagersByPod.get(normalized);
+  const managers = sandboxManagersByRuntime.get(normalized);
   if (!managers) {
     return;
   }
-  sandboxManagersByPod.delete(normalized);
+  sandboxManagersByRuntime.delete(normalized);
   managers.forEach(manager => {
     try {
       disposeServiceManager(manager);

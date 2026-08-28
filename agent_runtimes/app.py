@@ -1577,6 +1577,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
             "agent-notebook.html",
             "agent-document.html",
             "loop.html",
+            "loop-example.html",
             "index.html",
         ):
             _page_handler = _make_page_handler(_page)

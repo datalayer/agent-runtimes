@@ -74,49 +74,49 @@ export interface IAgentRuntimesClient {
   /**
    * Retrieves the detailed status of a specific running agent.
    *
-   * @param podName - Pod name hosting the agent.
+   * @param runtimeName - Pod name hosting the agent.
    * @param agentId - Optional agent ID within the pod (for multi-agent pods).
    *
    * @returns The agent's current status record.
    */
-  getAgentStatus(podName: string, agentId?: string): Promise<RunningAgent>;
+  getAgentStatus(runtimeName: string, agentId?: string): Promise<RunningAgent>;
 
   /**
    * Pauses a running agent (light checkpoint by default).
    *
-   * @param podName - Pod name hosting the agent.
+   * @param runtimeName - Pod name hosting the agent.
    */
-  pauseAgent(podName: string): Promise<void>;
+  pauseAgent(runtimeName: string): Promise<void>;
 
   /**
    * Resumes a previously paused / checkpointed agent.
    *
-   * @param podName - Pod name hosting the agent.
+   * @param runtimeName - Pod name hosting the agent.
    */
-  resumeAgent(podName: string): Promise<void>;
+  resumeAgent(runtimeName: string): Promise<void>;
 
   /**
    * Lists conversation checkpoints for an agent.
    *
-   * @param podName - Pod name hosting the agent.
+   * @param runtimeName - Pod name hosting the agent.
    * @param agentId - Optional agent ID within the pod.
    *
    * @returns Array of conversation checkpoints.
    */
   getAgentCheckpoints(
-    podName: string,
+    runtimeName: string,
     agentId?: string,
   ): Promise<ConversationCheckpoint[]>;
 
   /**
    * Retrieves the token and cost usage summary for an agent.
    *
-   * @param podName - Pod name hosting the agent.
+   * @param runtimeName - Pod name hosting the agent.
    * @param agentId - Optional agent ID within the pod.
    *
    * @returns Aggregated usage totals.
    */
-  getAgentUsage(podName: string, agentId?: string): Promise<AgentUsageSummary>;
+  getAgentUsage(runtimeName: string, agentId?: string): Promise<AgentUsageSummary>;
 
   // ==========================================================================
   // Notifications

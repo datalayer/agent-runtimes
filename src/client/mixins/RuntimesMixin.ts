@@ -46,12 +46,12 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
     // Helper Functions
     // ========================================================================
 
-    _extractRuntimePodName(
-      runtimePodNameOrInstance: string | RuntimeDTO,
+    _extractRuntimeName(
+      runtimeNameOrInstance: string | RuntimeDTO,
     ): string {
-      return typeof runtimePodNameOrInstance === 'string'
-        ? runtimePodNameOrInstance
-        : runtimePodNameOrInstance.podName;
+      return typeof runtimeNameOrInstance === 'string'
+        ? runtimeNameOrInstance
+        : runtimeNameOrInstance.runtimeName;
     }
 
     _extractSnapshotId(
@@ -154,15 +154,15 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * Get details for a specific runtime by pod name.
-     * @param podName - Runtime pod name
+     * @param runtimeName - Runtime pod name
      * @returns Runtime details
      */
-    async getRuntime(podName: string): Promise<RuntimeDTO> {
+    async getRuntime(runtimeName: string): Promise<RuntimeDTO> {
       const token = (this as any).getToken();
       const runtimesUrl = (this as any).getRuntimesUrl();
       const runtimeData = await runtimes.getRuntime(
         token,
-        podName,
+        runtimeName,
         runtimesUrl,
       );
       return new RuntimeDTO(runtimeData, this as any);
@@ -170,12 +170,12 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * Delete a runtime permanently.
-     * @param podName - Runtime pod name
+     * @param runtimeName - Runtime pod name
      */
-    async deleteRuntime(podName: string): Promise<void> {
+    async deleteRuntime(runtimeName: string): Promise<void> {
       const token = (this as any).getToken();
       const runtimesUrl = (this as any).getRuntimesUrl();
-      await runtimes.deleteRuntime(token, podName, runtimesUrl);
+      await runtimes.deleteRuntime(token, runtimeName, runtimesUrl);
     }
 
     /**
@@ -225,7 +225,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
 
       // Delete all runtimes in parallel
       const deletePromises = response.runtimes.map(runtime =>
-        runtimes.deleteRuntime(token, runtime.pod_name, runtimesUrl),
+        runtimes.deleteRuntime(token, runtime.runtime_name, runtimesUrl),
       );
 
       return Promise.allSettled(deletePromises);
@@ -237,14 +237,14 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * Create a snapshot of a runtime.
-     * @param podName - Pod name of the runtime to snapshot
+     * @param runtimeName - Pod name of the runtime to snapshot
      * @param name - Name for the snapshot
      * @param description - Description of the snapshot
      * @param stop - Whether to stop the runtime after creating snapshot (defaults to false)
      * @returns Created snapshot
      */
     async createSnapshot(
-      podName: string,
+      runtimeName: string,
       name: string,
       description: string,
       stop: boolean = false,
@@ -253,7 +253,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
       const runtimesUrl = (this as any).getRuntimesUrl();
 
       const data: CreateCodeSandboxSnapshotRequest = {
-        pod_name: podName,
+        runtime_name: runtimeName,
         name,
         description,
         stop,

@@ -385,7 +385,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Human in the Loop Example
+            AG-UI Human in the Loop Example
           </Text>
           <Text
             as="p"

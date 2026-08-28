@@ -45,9 +45,9 @@ export type CreateAgentRuntimeRequest = {
    * Pod name (`runtime-<ULID>`) the Contents attachments were made for; the
    * runtime is created under it so the attachments name the right sandbox.
    */
-  podName?: string;
+  runtimeName?: string;
   /**
-   * Contents attachments to mount, created for `podName` before the runtime:
+   * Contents attachments to mount, created for `runtimeName` before the runtime:
    * a Home Folder attachment mounts the caller's home folders, a Volume
    * attachment mounts its Volume. There is no other way to ask for a mount.
    */

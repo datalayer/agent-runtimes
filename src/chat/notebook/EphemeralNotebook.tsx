@@ -89,7 +89,7 @@ export interface EphemeralRuntimeOverride {
   /** Bearer/JWT token appended to requests (`appendToken`). */
   token?: string;
   /** Stable identifier used for the sandbox service-manager registry. */
-  podName?: string;
+  runtimeName?: string;
 }
 
 export interface EphemeralNotebookProps {
@@ -99,7 +99,7 @@ export interface EphemeralNotebookProps {
    */
   notebookId: string;
   /** Preferred runtime pod name to bind the notebook kernel to. */
-  runtimePodName?: string;
+  runtimeName?: string;
   /**
    * Explicit runtime endpoint override. When supplied, the notebook binds its
    * kernel to this endpoint directly instead of resolving a pod from the user's
@@ -137,15 +137,82 @@ export interface EphemeralNotebookProps {
    * tunnel.
    */
   collaborationProvider?: ICollaborationProvider;
+
+  /**
+   * A `ServiceManager` to bind to instead of resolving one from a runtime.
+   *
+   * For hosts that already own the connection — a browser (Pyodide) sandbox,
+   * where the kernel runs in the page and there is no pod to look up. Binding
+   * to the host's manager is what puts the agent's executions and the reader's
+   * cells in the same kernel.
+   */
+
+  /**
+   * Render without wrapping the content in a theme provider.
+   *
+   * For a host that already owns one — the LOOP workspace, where the entry
+   * point provides the theme and the views inherit it. Nested providers fight
+   * over `BaseStyles` and font tokens, and the inner one wins for the wrong
+   * reasons.
+   */
+  inheritTheme?: boolean;
+  serviceManager?: ServiceManager.IManager;
+
+  /**
+   * A kernel already running on that manager to bind to.
+   *
+   * Supplied with `serviceManager` when the host has a kernel of its own — a
+   * browser sandbox, say. Without it the notebook starts a second kernel on the
+   * same manager, which for Pyodide dies on arrival and, more importantly,
+   * would put the reader's cells and the agent's executions in different
+   * kernels.
+   */
+  kernelId?: string;
 }
 
 /**
  * Renders an in-memory notebook backed by a sandbox kernel.
  */
+
+/**
+ * The theme provider, or nothing.
+ *
+ * A host that already owns a theme root passes `inherit`; nested providers
+ * fight over `BaseStyles` and font tokens, and the inner one wins for the wrong
+ * reasons.
+ */
+function ThemeRoot({
+  inherit,
+  colorMode,
+  themeConfig,
+  children,
+}: {
+  inherit: boolean;
+  colorMode: 'light' | 'dark' | 'auto';
+  themeConfig: { primerTheme: unknown; themeStyles: unknown };
+  children: React.ReactNode;
+}): JSX.Element {
+  if (inherit) {
+    return <>{children}</>;
+  }
+  return (
+    <DatalayerThemeProvider
+      colorMode={colorMode}
+      theme={themeConfig.primerTheme as never}
+      themeStyles={themeConfig.themeStyles as never}
+    >
+      {children}
+    </DatalayerThemeProvider>
+  );
+}
+
 export function EphemeralNotebook({
   notebookId,
-  runtimePodName,
+  runtimeName,
   runtimeOverride,
+  serviceManager: externalServiceManager,
+  inheritTheme = false,
+  kernelId: externalKernelId,
   cellSidebarMargin = 120,
   nbformat,
   onNbformatChange,
@@ -181,13 +248,13 @@ export function EphemeralNotebook({
   // notebook must bind to exactly the runtime assigned to this agent, or to
   // none at all (straight path).
   const { runtimes, refetchRuntimes } = useAgentsRuntimes();
-  const podResolvedRuntime = useMemo(() => {
-    const preferredPod = String(runtimePodName || '').trim();
-    if (!preferredPod) {
+  const resolvedRuntime = useMemo(() => {
+    const preferredRuntime = String(runtimeName || '').trim();
+    if (!preferredRuntime) {
       return undefined;
     }
-    return runtimes.find(rt => String(rt?.pod_name || '') === preferredPod);
-  }, [runtimePodName, runtimes]);
+    return runtimes.find(rt => String(rt?.runtime_name || '') === preferredRuntime);
+  }, [runtimeName, runtimes]);
 
   // An explicit endpoint override wins over the pod lookup: it lets a SaaS
   // browser bind the kernel through the runtimes tunnel proxy (the node's
@@ -199,12 +266,12 @@ export function EphemeralNotebook({
         url: overrideBaseUrl,
         wsUrl: String(runtimeOverride?.wsUrl || '').trim() || undefined,
         token: String(runtimeOverride?.token || '').trim(),
-        pod_name:
-          String(runtimeOverride?.podName || '').trim() || 'agent-node-proxy',
+        runtime_name:
+          String(runtimeOverride?.runtimeName || '').trim() || 'agent-node-proxy',
       };
     }
-    return podResolvedRuntime;
-  }, [runtimeOverride, podResolvedRuntime]);
+    return resolvedRuntime;
+  }, [runtimeOverride, resolvedRuntime]);
 
   // While the assigned pod has not yet appeared in the runtimes list, poll the
   // list quickly instead of waiting for the default (10s) refresh interval.
@@ -213,7 +280,7 @@ export function EphemeralNotebook({
   // override path binds immediately, so no polling is needed there.
   const needsRuntimeLookup = Boolean(
     !runtimeOverride?.baseUrl &&
-    String(runtimePodName || '').trim() &&
+    String(runtimeName || '').trim() &&
     !selectedRuntime,
   );
   useEffect(() => {
@@ -268,7 +335,7 @@ export function EphemeralNotebook({
         // Central sandbox registry: runtime terminate/pause disposes this
         // manager immediately so its pollers cannot hit the dead pod ingress.
         unregisterManager = registerSandboxServiceManager(
-          String(selectedRuntime?.pod_name || ''),
+          String(selectedRuntime?.runtime_name || ''),
           manager,
         );
         await manager.ready;
@@ -299,7 +366,7 @@ export function EphemeralNotebook({
       }
     };
   }, [
-    selectedRuntime?.pod_name,
+    selectedRuntime?.runtime_name,
     selectedRuntime?.url,
     selectedRuntime?.token,
     (selectedRuntime as { wsUrl?: string })?.wsUrl,
@@ -308,9 +375,19 @@ export function EphemeralNotebook({
   // Bind strictly to the agent runtime sandbox; there is NO local fallback
   // kernel. The notebook executes on the agent's runtime or shows a waiting
   // state until the runtime is ready.
-  const activeServiceManager = runtimeServiceManager;
-  const activeKernelId = runtimeKernelId;
-  const activeStartDefaultKernel = runtimeStartDefaultKernel;
+  // A host that already owns a `ServiceManager` — a browser (Pyodide) sandbox,
+  // where the kernel runs in the page and there is no pod to resolve — passes
+  // it in. Binding to *that* manager is what puts the agent's executions and
+  // the reader's cells in the same kernel.
+  const activeServiceManager = externalServiceManager ?? runtimeServiceManager;
+  const activeKernelId = externalKernelId ?? runtimeKernelId;
+  // Join the host's kernel when there is one; only start a kernel of our own
+  // when the host handed us a manager without one. Starting a second kernel
+  // beside the host's would split the reader's cells from the agent's
+  // executions — and for Pyodide the second one dies on arrival.
+  const activeStartDefaultKernel = externalServiceManager
+    ? !externalKernelId
+    : runtimeStartDefaultKernel;
   // The toolbar of the notebook, with the items of the host merged in. A host
   // replacing the toolbar altogether receives them as well, as every toolbar
   // built on the notebook one takes `extraItems`.
@@ -325,7 +402,7 @@ export function EphemeralNotebook({
   }, [toolbarComponent, toolbarExtraItems]);
 
   const isRuntimeStarting = Boolean(
-    (String(runtimePodName || '').trim() ||
+    (String(runtimeName || '').trim() ||
       String(runtimeOverride?.baseUrl || '').trim()) &&
     !activeServiceManager,
   );
@@ -445,10 +522,10 @@ export function EphemeralNotebook({
       }}
     >
       {activeServiceManager ? (
-        <DatalayerThemeProvider
+        <ThemeRoot
+          inherit={inheritTheme}
           colorMode={effectiveColorMode}
-          theme={themeConfig.primerTheme}
-          themeStyles={themeConfig.themeStyles}
+          themeConfig={themeConfig}
         >
           <JupyterReactTheme
             colormode={resolvedMode}
@@ -500,7 +577,7 @@ export function EphemeralNotebook({
               />
             </Box>
           </JupyterReactTheme>
-        </DatalayerThemeProvider>
+        </ThemeRoot>
       ) : null}
     </Box>
   );

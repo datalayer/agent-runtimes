@@ -120,7 +120,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Backend Tool Rendering (Inline)
+            AG-UI Backend Tool Rendering (Inline)
           </Text>
           <Text
             as="p"
@@ -209,6 +209,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
             description="Ask me about the weather anywhere in the world!"
             position="bottom-right"
             brandColor={brandColor}
+            defaultOpen={true}
             onStateUpdate={handleStateUpdate}
             renderToolResult={renderToolResult}
             suggestions={[

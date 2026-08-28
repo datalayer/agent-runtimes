@@ -21,11 +21,13 @@ DESCRIPTION = "List MCP servers, connect to them, and inspect their tools"
 SHORTCUT = "escape m"
 GROUP = "Capabilities"
 
-ACTIONS = ("auth", "logout", "tools", "refresh")
+ACTIONS = ("auth", "logout", "tools", "refresh", "add", "remove", "enable", "disable")
 
 ARGS = (
     CommandArgSpec(
-        name="action", description="auth, logout, tools or refresh", choices=ACTIONS
+        name="action",
+        description="auth, logout, tools, refresh, add, remove, enable or disable",
+        choices=ACTIONS
     ),
     CommandArgSpec(name="server", description="MCP server id"),
 )
@@ -212,6 +214,103 @@ async def _refresh(tux: "CliTux", server_id: str) -> None:
     tux.console.print()
 
 
+async def _add(tux: "CliTux", server_id: str, rest: list[str]) -> None:
+    """Register an HTTP MCP server by URL.
+
+    Writes through `routes/mcp.py`, which is what the web application's MCP
+    pages read — so a server added from the terminal is one the team can see,
+    and a policy that forbids it is enforced there rather than by this command's
+    good manners.
+    """
+    from ..tux import STYLE_MUTED, STYLE_PRIMARY
+
+    url = ""
+    for index, token in enumerate(rest):
+        if token in {"--url", "-u"} and index + 1 < len(rest):
+            url = rest[index + 1]
+    if not url and rest and rest[0].startswith("http"):
+        url = rest[0]
+
+    if not url:
+        tux.console.print("  /mcp add <name> --url <url>", style=STYLE_MUTED)
+        return
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{tux.server_url}/api/v1/mcp",
+                json={
+                    "id": server_id,
+                    "name": server_id,
+                    "url": url,
+                    "transport": "http",
+                    "enabled": True,
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+    except Exception as error:  # noqa: BLE001
+        tux.console.print(f"[red]Could not add {server_id}: {error}[/red]")
+        return
+
+    tux.console.print()
+    tux.console.print(f"● {server_id} added", style=STYLE_PRIMARY)
+    tux.console.print(f"  /mcp auth {server_id} to connect", style=STYLE_MUTED)
+    tux.console.print()
+
+
+async def _remove(tux: "CliTux", server_id: str) -> None:
+    """Forget a server. Its credentials go with it."""
+    from ..tux import STYLE_MUTED, STYLE_PRIMARY
+
+    try:
+        async with httpx.AsyncClient() as client:
+            # Credentials first: a token we drop but never revoked is one that
+            # still works in the world.
+            await client.delete(
+                f"{tux.server_url}/api/v1/mcp/servers/{server_id}/auth", timeout=30.0
+            )
+            response = await client.delete(
+                f"{tux.server_url}/api/v1/mcp/{server_id}", timeout=30.0
+            )
+            response.raise_for_status()
+    except Exception as error:  # noqa: BLE001
+        tux.console.print(f"[red]Could not remove {server_id}: {error}[/red]")
+        return
+
+    tux.console.print()
+    tux.console.print(f"● {server_id} removed", style=STYLE_PRIMARY)
+    tux.console.print("  Its credentials were revoked and forgotten.", style=STYLE_MUTED)
+    tux.console.print()
+
+
+async def _toggle(tux: "CliTux", server_id: str, *, on: bool) -> None:
+    """Enable or disable a catalogue server for this agent."""
+    from ..tux import STYLE_PRIMARY
+
+    verb = "enable" if on else "disable"
+    try:
+        async with httpx.AsyncClient() as client:
+            if on:
+                response = await client.post(
+                    f"{tux.server_url}/api/v1/mcp/catalog/{server_id}/enable",
+                    timeout=60.0,
+                )
+            else:
+                response = await client.delete(
+                    f"{tux.server_url}/api/v1/mcp/catalog/{server_id}/disable",
+                    timeout=60.0,
+                )
+            response.raise_for_status()
+    except Exception as error:  # noqa: BLE001
+        tux.console.print(f"[red]Could not {verb} {server_id}: {error}[/red]")
+        return
+
+    tux.console.print()
+    tux.console.print(f"● {server_id} {verb}d", style=STYLE_PRIMARY)
+    tux.console.print()
+
+
 async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     """List MCP servers, or act on one."""
     parts = (argv or "").split()
@@ -237,6 +336,18 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         tux.console.print(f"  Which server? /mcp {action} <server>", style=STYLE_MUTED)
         return None
 
-    handler = {"auth": _auth, "logout": _logout, "tools": _tools, "refresh": _refresh}[action]
-    await handler(tux, server_id)
+    if action == "add":
+        await _add(tux, server_id, rest[1:])
+    elif action == "remove":
+        await _remove(tux, server_id)
+    elif action in {"enable", "disable"}:
+        await _toggle(tux, server_id, on=action == "enable")
+    else:
+        handler = {
+            "auth": _auth,
+            "logout": _logout,
+            "tools": _tools,
+            "refresh": _refresh,
+        }[action]
+        await handler(tux, server_id)
     return None

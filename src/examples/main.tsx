@@ -54,7 +54,10 @@ import {
   type ExampleEntry,
 } from './example-selector';
 import {
+  RUNTIME_TARGETS,
+  runtimeTargetCapabilities,
   runtimeTargetStore,
+  targetHasAgent,
   useRuntimeTargetStore,
   type ExampleRuntimeTarget,
 } from './utils/runtimeTargetStore';
@@ -218,6 +221,19 @@ const isProd1JupyterServerUrl = (value?: string | null): boolean => {
   }
 };
 
+/**
+ * The anonymous Jupyter server the `jupyter` target uses.
+ *
+ * The same one the jupyter-react examples point at: a real server, reachable
+ * without an account, so an example can execute code with nothing installed
+ * and nobody signed in. It is a sandbox and only a sandbox — no agent lives
+ * there, which is why that target shows the chat switched off.
+ */
+const ANONYMOUS_JUPYTER_SERVER_URL =
+  'https://prod1.datalayer.run/api/jupyter-server';
+const ANONYMOUS_JUPYTER_SERVER_TOKEN =
+  '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
+
 const resolveLocalJupyterServerUrl = (): string => {
   const normalizeLoopbackHost = (raw: string): string => {
     const trimmed = raw.trim().replace(/\/$/, '');
@@ -248,6 +264,29 @@ const resolveLocalJupyterServerUrl = (): string => {
   }
   return normalizeLoopbackHost(DEFAULT_LOCAL_JUPYTER_SERVER_URL);
 };
+
+/** A sandbox in this page: JupyterLite over a Pyodide kernel, no server. */
+const createBrowserServiceManager =
+  async (): Promise<ServiceManager.IManager> => {
+    // JupyterLite and the Pyodide kernel are megabytes; a person who never
+    // picks this target should not pay for them.
+    const { createLiteServiceManager } = await import('@datalayer/jupyter-react');
+    return (await createLiteServiceManager()) as ServiceManager.IManager;
+  };
+
+/** A sandbox on the anonymous Jupyter server — real server, no account. */
+const createAnonymousJupyterServiceManager =
+  async (): Promise<ServiceManager.IManager> => {
+    setJupyterServerUrl(ANONYMOUS_JUPYTER_SERVER_URL);
+    setJupyterServerToken(ANONYMOUS_JUPYTER_SERVER_TOKEN);
+    const serverSettings = createServerSettings(
+      ANONYMOUS_JUPYTER_SERVER_URL,
+      ANONYMOUS_JUPYTER_SERVER_TOKEN,
+    );
+    const manager = new ServiceManager({ serverSettings });
+    await manager.ready;
+    return manager;
+  };
 
 const ensureLocalJupyterToken = (): void => {
   const token = (getJupyterServerToken() || '').trim();
@@ -639,12 +678,12 @@ const NotebookOnlyApp: React.FC = () => {
 
         // Create service manager
         if (
-          runtimeTargetStore.getState().target === 'cloud' &&
+          runtimeTargetStore.getState().target === 'datalayer' &&
           configuration?.token
         ) {
           try {
             const activeSummary = agentSummaryStore.getState().active;
-            if (!activeSummary || activeSummary.location !== 'cloud') {
+            if (!activeSummary || activeSummary.location !== 'datalayer') {
               throw new Error(
                 'No active cloud agent sandbox found for notebook-only mode.',
               );
@@ -669,14 +708,25 @@ const NotebookOnlyApp: React.FC = () => {
             setServiceManager(manager);
           }
         } else {
-          setJupyterServerUrl(resolveLocalJupyterServerUrl());
-          ensureLocalJupyterToken();
-          const serverSettings = createServerSettings(
-            getJupyterServerUrl(),
-            getJupyterServerToken(),
-          );
-          const manager = new ServiceManager({ serverSettings });
-          await manager.ready;
+          // Notebook-only mode has no agent of its own, but it still runs on
+          // whichever sandbox the person picked.
+          const target = runtimeTargetStore.getState().target;
+          const manager =
+            target === 'browser'
+              ? await createBrowserServiceManager()
+              : target === 'jupyter'
+                ? await createAnonymousJupyterServiceManager()
+                : await (async () => {
+                    setJupyterServerUrl(resolveLocalJupyterServerUrl());
+                    ensureLocalJupyterToken();
+                    const serverSettings = createServerSettings(
+                      getJupyterServerUrl(),
+                      getJupyterServerToken(),
+                    );
+                    const local = new ServiceManager({ serverSettings });
+                    await local.ready;
+                    return local;
+                  })();
           setServiceManager(manager);
         }
 
@@ -933,7 +983,7 @@ export const ExampleApp: React.FC = () => {
 
       const activeSummary = agentSummaryStore.getState().active;
       if (
-        activeSummary?.location === 'cloud' &&
+        activeSummary?.location === 'datalayer' &&
         (activeSummary.sandboxBaseUrl || activeSummary.baseUrl)
       ) {
         try {
@@ -967,7 +1017,7 @@ export const ExampleApp: React.FC = () => {
         exampleId: selectedExample,
         agentName: launched.agentId,
         agentId: launched.agentId,
-        location: 'cloud',
+        location: 'datalayer',
         baseUrl: launched.agentBaseUrl,
         sandboxBaseUrl: launched.ingress,
         runtimeEnvironment: launched.runtimeEnvironment,
@@ -988,6 +1038,33 @@ export const ExampleApp: React.FC = () => {
       });
     };
 
+  /**
+   * The service manager for a target.
+   *
+   * The single place that knows what each of the four positions means. The
+   * examples never see this: they read the target and what it offers, and the
+   * shell hands them a connected manager.
+   */
+  const createServiceManagerForTarget = useCallback(
+    async (target: ExampleRuntimeTarget): Promise<ServiceManager.IManager> => {
+      switch (target) {
+        case 'browser':
+          return createBrowserServiceManager();
+        case 'jupyter':
+          return createAnonymousJupyterServiceManager();
+        case 'datalayer':
+          return createCloudServiceManager();
+        case 'local':
+        default:
+          return createLocalServiceManager();
+      }
+    },
+    // The factories close over stable setters and store reads; re-creating this
+    // on every render would restart the sandbox on each keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   useEffect(() => {
     // Load configurations
     loadConfigurations();
@@ -996,42 +1073,35 @@ export const ExampleApp: React.FC = () => {
     const initializeApp = async () => {
       try {
         const runtimeTarget = runtimeTargetStore.getState().target;
+        const capabilities = runtimeTargetCapabilities(runtimeTarget);
 
-        // Only create a cloud Datalayer runtime when the user picked "cloud".
-        // In "local" mode we must never hit the cloud runtimes API.
-        if (runtimeTarget === 'cloud') {
-          try {
-            const manager = await createCloudServiceManager();
-            setServiceManager(manager);
-            showTopNotice(
-              'Code sandbox connected successfully (cloud).',
-              'success',
-              2600,
-            );
-
-            // Load initial example
-            await loadExample(selectedExample, manager);
-          } catch (error) {
-            console.error('Failed to create DatalayerServiceManager:', error);
-            showTopNotice(
-              `Cloud runtime unavailable, using local instead: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-              'warning',
-              5500,
-            );
-            const manager = await createLocalServiceManager();
-            setServiceManager(manager);
-
-            // Load initial example
-            await loadExample(selectedExample, manager);
-          }
-        } else {
-          // Local runtime target (or no token): use the local Jupyter server.
+        try {
+          const manager = await createServiceManagerForTarget(runtimeTarget);
+          setServiceManager(manager);
+          showTopNotice(
+            `Code sandbox connected successfully (${capabilities.label.toLowerCase()}).`,
+            'success',
+            2600,
+          );
+          await loadExample(selectedExample, manager);
+        } catch (error) {
+          console.error(
+            `Failed to create a service manager for ${runtimeTarget}:`,
+            error,
+          );
+          // Local is the fallback because it needs neither an account nor the
+          // network. Falling back to the target that just failed would only
+          // fail again.
+          showTopNotice(
+            `${capabilities.label} unavailable, using local instead: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            'warning',
+            5500,
+          );
+          setRuntimeTarget('local');
           const manager = await createLocalServiceManager();
           setServiceManager(manager);
-
-          // Load initial example
           await loadExample(selectedExample, manager);
         }
 
@@ -1074,7 +1144,9 @@ export const ExampleApp: React.FC = () => {
         ? activeRuntime.baseUrl
         : resolveExampleAgentRuntimesUrl(currentTarget);
     const token = useSimpleAuthStore.getState().token;
-    await teardownExampleAgents(agentBaseUrl, token ?? undefined);
+    if (targetHasAgent(currentTarget)) {
+      await teardownExampleAgents(agentBaseUrl, token ?? undefined);
+    }
 
     // 3) Load and mount the new example.
     setSelectedExample(newExample);
@@ -1089,10 +1161,7 @@ export const ExampleApp: React.FC = () => {
 
     let nextManager: ServiceManager.IManager;
     try {
-      nextManager =
-        newTarget === 'cloud'
-          ? await createCloudServiceManager()
-          : await createLocalServiceManager();
+      nextManager = await createServiceManagerForTarget(newTarget);
     } catch (switchError) {
       showTopNotice(
         `Failed to switch to ${newTarget}: ${
@@ -1122,7 +1191,9 @@ export const ExampleApp: React.FC = () => {
         ? activeRuntime.baseUrl
         : resolveExampleAgentRuntimesUrl(runtimeTarget);
     const token = useSimpleAuthStore.getState().token;
-    await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
+    if (targetHasAgent(runtimeTarget)) {
+      await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
+    }
 
     // 3) Switch the target and re-mount the example (its key includes the
     //    target, so this launches/connects a fresh runtime).
@@ -1471,36 +1542,44 @@ const ExampleAppThemed: React.FC<{
               </ActionMenu.Overlay>
             </ActionMenu>
             <Box
-              aria-label="Runtime target"
-              title="Runtime target"
+              aria-label="Where the example runs"
               sx={{
-                minWidth: '160px',
+                minWidth: '320px',
                 opacity: isHome || isChangingExample ? 0.6 : 1,
               }}
             >
-              <SegmentedControl aria-label="Runtime target" fullWidth>
-                <SegmentedControl.Button
-                  selected={runtimeTarget === 'local'}
-                  disabled={isHome}
-                  onClick={() => {
-                    if (!isHome && !isChangingExample) {
-                      void onRuntimeTargetChange('local');
-                    }
-                  }}
-                >
-                  Local
-                </SegmentedControl.Button>
-                <SegmentedControl.Button
-                  selected={runtimeTarget === 'cloud'}
-                  disabled={isHome}
-                  onClick={() => {
-                    if (!isHome && !isChangingExample) {
-                      void onRuntimeTargetChange('cloud');
-                    }
-                  }}
-                >
-                  Cloud
-                </SegmentedControl.Button>
+              <SegmentedControl
+                aria-label="Where the example runs"
+                fullWidth
+                size="small"
+              >
+                {RUNTIME_TARGETS.map(target => {
+                  const capabilities = runtimeTargetCapabilities(target);
+                  // Signing in is what the Datalayer target needs; saying so on
+                  // the button beats letting the switch fail and explaining
+                  // afterwards.
+                  const needsSignIn = capabilities.requiresAuth && !token;
+                  const unavailable = isHome || needsSignIn;
+                  return (
+                    <SegmentedControl.Button
+                      key={target}
+                      selected={runtimeTarget === target}
+                      disabled={unavailable}
+                      title={
+                        needsSignIn
+                          ? `${capabilities.hint} Sign in to use it.`
+                          : capabilities.hint
+                      }
+                      onClick={() => {
+                        if (!unavailable && !isChangingExample) {
+                          void onRuntimeTargetChange(target);
+                        }
+                      }}
+                    >
+                      {capabilities.label}
+                    </SegmentedControl.Button>
+                  );
+                })}
               </SegmentedControl>
             </Box>
             {!isHome && <AgentSummary summary={agentSummary} />}

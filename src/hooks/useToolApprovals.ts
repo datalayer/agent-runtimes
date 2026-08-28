@@ -37,8 +37,8 @@ export type ApprovalRecord = {
   id: string;
   agent_id: string;
   agentId: string;
-  pod_name: string;
-  podName: string;
+  runtime_name: string;
+  runtimeName: string;
   tool_name: string;
   toolName: string;
   tool_call_id?: string;
@@ -96,7 +96,7 @@ function normalizeApproval(raw: unknown): ApprovalRecord | null {
   if (!id) return null;
 
   const agent = str(rec.agent_id ?? rec.agentId);
-  const pod = str(rec.pod_name ?? rec.podName);
+  const pod = str(rec.runtime_name ?? rec.runtimeName);
   const tool = str(rec.tool_name ?? rec.toolName ?? 'unknown');
   const toolCall = rec.tool_call_id ?? rec.toolCallId;
   const args =
@@ -122,8 +122,8 @@ function normalizeApproval(raw: unknown): ApprovalRecord | null {
     id,
     agent_id: agent,
     agentId: agent,
-    pod_name: pod,
-    podName: pod,
+    runtime_name: pod,
+    runtimeName: pod,
     tool_name: tool,
     toolName: tool,
     tool_call_id: typeof toolCall === 'string' ? toolCall : undefined,

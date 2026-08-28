@@ -84,6 +84,7 @@ import {
   useAgentRuntimeWsState,
 } from '../../stores/agentRuntimeStore';
 import { ChatBaseHeader } from '../header/ChatHeaderBase';
+import { useChatAvailability } from './ChatAvailability';
 import { ChatEmptyState } from '../display/EmptyState';
 import { FloatingBrandButton } from '../display/FloatingBrandButton';
 import { PoweredByTag } from '../display/PoweredByTag';
@@ -756,6 +757,8 @@ function ChatBaseInner({
   showToolsMenu = true,
   showSkillsMenu = true,
   disableInputPrompt = false,
+  disabled: disabledProp,
+  disableReason: disableReasonProp,
   overlay,
   launching = false,
   launchingMessage,
@@ -785,6 +788,7 @@ function ChatBaseInner({
   protocol: protocolRaw,
   onSendMessage,
   onSendReady,
+  onLoadingChange,
   enableStreaming = false,
   // Extended props
   brandIcon,
@@ -855,6 +859,13 @@ function ChatBaseInner({
   useEffect(() => {
     setupPrimerPortals();
   }, []);
+
+  // Whether there is anything to talk to. The host usually knows — a browser
+  // sandbox has no agent beside it — and says so once for everything beneath
+  // it; an explicit prop still wins for one particular chat.
+  const ambientAvailability = useChatAvailability();
+  const disabled = disabledProp ?? ambientAvailability.disabled;
+  const disableReason = disableReasonProp ?? ambientAvailability.disableReason;
 
   const { theme } = useThemeStore();
   const assistantIconColor = getColorPalette(theme, 'dark').textLight;
@@ -2694,6 +2705,10 @@ function ChatBaseInner({
     // the runtime endpoint is still being created). The chat shell, companion
     // surface and launching overlay still render; we simply do not connect.
     if (!autoConnect) return;
+    // Nor when there is nothing to connect to. A browser sandbox has no agent
+    // behind it, and dialling one would only produce errors the person cannot
+    // act on — the header already says why the chat is off.
+    if (disabled) return;
 
     const adapter = createProtocolAdapter(protocol);
     if (!adapter) return;
@@ -3434,22 +3449,6 @@ function ChatBaseInner({
     ],
   );
 
-  // Hand the send function to a host that owns the input box (the LOOP
-  // workspace). Withdrawn on unmount so nothing holds a stale sender.
-  useEffect(() => {
-    if (!onSendReady) return undefined;
-    if (!adapterReady && !onSendMessage) {
-      onSendReady(null);
-      return undefined;
-    }
-    onSendReady((message: string) => {
-      void handleSend(message);
-    });
-    return () => {
-      onSendReady(null);
-    };
-  }, [onSendReady, adapterReady, onSendMessage, handleSend]);
-
   // Send pending prompt once history loaded and adapter/handler available
   useEffect(() => {
     if (!pendingPrompt) return;
@@ -3578,6 +3577,30 @@ function ChatBaseInner({
     onNewChat?.();
     headerButtons?.onNewChat?.();
   }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode, runtimeId]);
+
+  // Hand the send function to a host that owns the input box (the LOOP
+  // workspace). Withdrawn on unmount so nothing holds a stale sender.
+  useEffect(() => {
+    if (!onSendReady) return undefined;
+    if (!adapterReady && !onSendMessage) {
+      onSendReady(null);
+      return undefined;
+    }
+    onSendReady({
+      send: (message: string) => {
+        void handleSend(message);
+      },
+      stop: handleStop,
+    });
+    return () => {
+      onSendReady(null);
+    };
+  }, [onSendReady, adapterReady, onSendMessage, handleSend, handleStop]);
+
+  // Streaming state, for a host that draws the prompt.
+  useEffect(() => {
+    onLoadingChange?.(isLoading);
+  }, [onLoadingChange, isLoading]);
 
   // ---- handleClear ----
   const handleClear = useCallback(() => {
@@ -4003,7 +4026,7 @@ function ChatBaseInner({
       padding={padding}
       onSend={() => handleSend()}
       onStop={handleStop}
-      disableInputPrompt={disableInputPrompt || !!overlay || launching}
+      disableInputPrompt={disableInputPrompt || disabled || !!overlay || launching}
       showTokenUsage={showTokenUsage}
       agentUsage={agentUsage}
       showModelSelector={showModelSelector}
@@ -4046,6 +4069,7 @@ function ChatBaseInner({
     <ChatBaseHeader
       title={title}
       subtitle={subtitle}
+      disableReason={disabled ? disableReason : undefined}
       brandIcon={brandIcon}
       headerContent={headerContent}
       headerActions={headerActions}
@@ -4174,7 +4198,7 @@ function ChatBaseInner({
             ) : notebookVisible ? (
               <EphemeralNotebook
                 notebookId={ephemeralNotebookId}
-                runtimePodName={runtimeId || activeAgentId}
+                runtimeName={runtimeId || activeAgentId}
                 runtimeOverride={ephemeralRuntimeOverride}
                 themeVariant={themeVariant}
                 colorMode={colorMode}
@@ -4188,7 +4212,7 @@ function ChatBaseInner({
               <React.Suspense fallback={null}>
                 <EphemeralDocument
                   documentId={ephemeralDocumentId}
-                  runtimePodName={runtimeId || activeAgentId}
+                  runtimeName={runtimeId || activeAgentId}
                   runtimeOverride={ephemeralRuntimeOverride}
                   themeVariant={themeVariant}
                   colorMode={colorMode}

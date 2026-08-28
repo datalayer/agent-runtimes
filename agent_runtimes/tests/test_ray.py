@@ -48,7 +48,7 @@ def test_ray_mixin_job_logs_and_events_paths() -> None:
     logs_payload = client.ray_get_job_logs(
         "job-1",
         namespace="team-a",
-        pod_name="pod-1",
+        runtime_name="pod-1",
         container="submitter",
         tail_lines=50,
     )
@@ -62,7 +62,7 @@ def test_ray_mixin_job_logs_and_events_paths() -> None:
     assert logs_kwargs["params"] == {
         "namespace": "team-a",
         "tail_lines": 50,
-        "pod_name": "pod-1",
+        "runtime_name": "pod-1",
         "container": "submitter",
     }
 

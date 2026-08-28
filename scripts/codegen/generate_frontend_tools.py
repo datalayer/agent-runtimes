@@ -31,6 +31,24 @@ def load_frontend_tool_specs(specs_dir: Path) -> list[dict[str, Any]]:
     return specs
 
 
+
+def _fmt_toolset(value):
+    """A toolset is `"all"` or a list of tool names — emit whichever it is.
+
+    Quoting a list turns it into a string containing brackets, which then reads
+    as one very strange tool name.
+    """
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(f'"{name}"' for name in value) + "]"
+    return f'"{value}"'
+
+
+def _fmt_toolset_ts(value):
+    """The same, for TypeScript."""
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(f"'{name}'" for name in value) + "]"
+    return f"'{value}'"
+
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
     lines = [
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -71,7 +89,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    description="{spec.get("description", "")}",',
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
-                f'    toolset="{spec.get("toolset", "all")}",',
+                f"    toolset={_fmt_toolset(spec.get('toolset', 'all'))},",
                 f"    icon={icon},",
                 f"    emoji={emoji},",
                 ")",
@@ -162,7 +180,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  description: '{spec.get('description', '')}',",
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
-                f"  toolset: '{spec.get('toolset', 'all')}',",
+                f"  toolset: {_fmt_toolset_ts(spec.get('toolset', 'all'))},",
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
                 "};",

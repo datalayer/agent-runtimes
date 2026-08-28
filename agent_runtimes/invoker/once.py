@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Once invoker – runs an agent exactly once and terminates the runtime."""
+"""Once invoker – runs an agent exactly once and stops the runtime."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agent_runtimes.events import create_event
-from agent_runtimes.services.runtime_lifecycle import terminate_runtime_and_local_agent
+from agent_runtimes.services.runtime_lifecycle import stop_runtime_and_local_agent
 
 from .base import BaseInvoker, InvokerResult
 
@@ -32,7 +32,7 @@ class OnceInvoker(BaseInvoker):
     1. Emit an ``agent-started`` event.
     2. Run the agent adapter's ``run`` method with the trigger prompt.
     3. Emit an ``agent-output`` event carrying the output summary.
-    4. Request runtime termination (best-effort).
+    4. Request the runtime stop (best-effort).
     """
 
     async def invoke(self, trigger_config: dict[str, Any]) -> InvokerResult:
@@ -146,12 +146,12 @@ class OnceInvoker(BaseInvoker):
                 traceback.format_exc(),
             )
 
-        # ── 4. Request runtime termination (best-effort) ─────────
+        # ── 4. Request the runtime stop (best-effort) ───────────
         try:
-            await self._terminate_runtime()
+            await self._stop_runtime()
         except Exception:
             logger.warning(
-                "Failed to terminate runtime for %s: %s",
+                "Failed to stop runtime for %s: %s",
                 self.agent_id,
                 traceback.format_exc(),
             )
@@ -266,14 +266,14 @@ class OnceInvoker(BaseInvoker):
         content = "".join(content_parts).strip()
         return content or None
 
-    async def _terminate_runtime(self) -> None:
-        """Terminate the runtime after a once-trigger completes.
+    async def _stop_runtime(self) -> None:
+        """Stop the runtime after a once-trigger completes.
 
         1. Delete the agent registration from the local server.
         2. Ask the Datalayer platform to delete the runtime pod
            (uses ``runtime_id`` which is the Kubernetes pod name).
         """
-        await terminate_runtime_and_local_agent(
+        await stop_runtime_and_local_agent(
             agent_id=self.agent_id,
             runtime_id=self.runtime_id,
             runtime_base_url=self.runtime_base_url,

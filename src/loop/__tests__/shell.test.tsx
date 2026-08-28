@@ -11,7 +11,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { contribution, defineExtension } from '@datalayer/reactor';
 import { buildLoopReactor } from '../shell/LoopWorkspace';
-import { LoopCommand, LoopViewType, type LoopWorkspaceContext } from '../core';
+import {
+  LoopCommand,
+  LoopViewType,
+  createPromptChannel,
+  type LoopWorkspaceContext,
+} from '../core';
 
 let root: Root | null = null;
 let container: HTMLDivElement;
@@ -31,6 +36,9 @@ const workspace: LoopWorkspaceContext = {
   sandbox: { state: 'idle' },
   activeViewType: 'chat',
   setActiveViewType: () => {},
+  prompts: createPromptChannel(),
+  viewControls: {},
+  setViewControls: () => {},
 };
 
 describe('a plugin contributing to the workspace', () => {
@@ -235,5 +243,84 @@ describe('slash dispatch', () => {
     await match?.value.run({ workspace, argv: 'ollama:llama3.1:8b' });
 
     expect(ran).toHaveBeenCalledWith('ollama:llama3.1:8b');
+  });
+});
+
+describe('view controls', () => {
+  it('carry busy and stop from the view to the shell', () => {
+    // The prompt lives in the shell and the work happens in a view, so the
+    // spinner and the stop button would otherwise be in the wrong place.
+    let published: import('../core').ViewControls | null = null;
+    const stop = vi.fn();
+
+    const setViewControls = (controls: import('../core').ViewControls | null) => {
+      published = controls;
+    };
+
+    // What a view does on mount, when it starts working, and on unmount.
+    setViewControls({ stop });
+    expect(published).toEqual({ stop });
+
+    setViewControls({ busy: true, stop });
+    expect(published?.busy).toBe(true);
+    published?.stop?.();
+    expect(stop).toHaveBeenCalled();
+
+    setViewControls(null);
+    expect(published).toBeNull();
+  });
+});
+
+describe('plugin toggles', () => {
+  it('reflect the reactor rather than a copy of it', () => {
+    const make = (id: string) =>
+      defineExtension({
+        name: `@datalayer/loop-plugin-${id}`,
+        contributes: [
+          contribution(
+            LoopViewType,
+            {
+              viewType: id,
+              title: id,
+              load: async () => ({ default: () => null }),
+            },
+            { id },
+          ),
+        ],
+      });
+
+    const reactor = buildLoopReactor([make('one'), make('two')]);
+    reactor.start();
+
+    expect(reactor.listExtensions()).toHaveLength(2);
+    expect(reactor.isEnabled('@datalayer/loop-plugin-one')).toBe(true);
+
+    reactor.disable('@datalayer/loop-plugin-one');
+
+    // What the checkbox reads, and what the switcher reads, are the same facts.
+    expect(reactor.isEnabled('@datalayer/loop-plugin-one')).toBe(false);
+    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual(['two']);
+
+    reactor.enable('@datalayer/loop-plugin-one');
+    expect(reactor.getContributions(LoopViewType).map(v => v.id).sort()).toEqual([
+      'one',
+      'two',
+    ]);
+  });
+
+  it('notifies subscribers on every toggle, so a checkbox list re-renders', () => {
+    const Plugin = defineExtension({ name: '@datalayer/loop-plugin-x' });
+    const reactor = buildLoopReactor([Plugin]);
+    reactor.start();
+
+    let notifications = 0;
+    reactor.subscribe(() => {
+      notifications += 1;
+    });
+
+    reactor.disable('@datalayer/loop-plugin-x');
+    reactor.enable('@datalayer/loop-plugin-x');
+
+    expect(notifications).toBe(2);
   });
 });

@@ -474,7 +474,7 @@ def jobs_logs(
     namespace: str = typer.Option(
         "default", "--namespace", help="Kubernetes namespace."
     ),
-    pod_name: Optional[str] = typer.Option(
+    runtime_name: Optional[str] = typer.Option(
         None, "--pod-name", help="Optional explicit pod name."
     ),
     container: Optional[str] = typer.Option(
@@ -487,13 +487,13 @@ def jobs_logs(
     payload = client.ray_get_job_logs(
         name,
         namespace=namespace,
-        pod_name=pod_name,
+        runtime_name=runtime_name,
         container=container,
         tail_lines=tail_lines,
     )
     console.print(
         f"[bold]Logs[/bold] job={payload.get('job_name', name)} "
-        f"pod={payload.get('pod_name', '')}"
+        f"pod={payload.get('runtime_name', '')}"
     )
     console.print(_normalize_logs_text(payload.get("logs", "")))
 

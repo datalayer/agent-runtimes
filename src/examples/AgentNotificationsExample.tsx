@@ -120,7 +120,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
-  const podName = isReady ? `local:${agentId}` : '(launching…)';
+  const runtimeName = isReady ? `local:${agentId}` : '(launching…)';
 
   // Authenticated fetch helper
   const authFetch = useCallback(
@@ -300,7 +300,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
       >
         <BellIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Notifications — {podName}
+          Notifications — {runtimeName}
         </Heading>
         {unreadCount > 0 && (
           <Label variant="accent" size="small">
@@ -324,7 +324,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
             kernelIndicatorPlacement="right"
             autoFocus
             height="100%"
-            runtimeId={podName}
+            runtimeId={runtimeName}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {

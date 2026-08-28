@@ -9,6 +9,7 @@ import {
   LoopMention,
   LoopViewType,
   canOpenView,
+  createPromptChannel,
   parseCommand,
   type LoopWorkspaceContext,
   type ViewTypeContribution,
@@ -20,6 +21,9 @@ const workspace: LoopWorkspaceContext = {
   sandbox: { state: 'idle' },
   activeViewType: 'chat',
   setActiveViewType: () => {},
+  prompts: createPromptChannel(),
+  viewControls: {},
+  setViewControls: () => {},
 };
 
 function view(overrides: Partial<ViewTypeContribution> = {}): ViewTypeContribution {
@@ -79,5 +83,61 @@ describe('parseCommand', () => {
     expect(parseCommand('what does a/b mean?')).toBeUndefined();
     expect(parseCommand('/')).toBeUndefined();
     expect(parseCommand('')).toBeUndefined();
+  });
+});
+
+describe('the prompt channel', () => {
+  it('reports that nothing was listening', () => {
+    const channel = createPromptChannel();
+
+    // The shell needs to know, so it can say so instead of swallowing input.
+    expect(channel.submit('hello')).toBe(false);
+  });
+
+  it('delivers to every subscriber', () => {
+    const channel = createPromptChannel();
+    const seen: string[] = [];
+    channel.subscribe(message => seen.push(`a:${message}`));
+    channel.subscribe(message => seen.push(`b:${message}`));
+
+    expect(channel.submit('hello')).toBe(true);
+    expect(seen).toEqual(['a:hello', 'b:hello']);
+  });
+
+  it('stops delivering once unsubscribed', () => {
+    const channel = createPromptChannel();
+    const seen: string[] = [];
+    const stop = channel.subscribe(message => seen.push(message));
+
+    channel.submit('first');
+    stop();
+    expect(channel.submit('second')).toBe(false);
+    expect(seen).toEqual(['first']);
+  });
+
+  it('delivers the same text as often as it is sent', () => {
+    // The reason this exists rather than reusing `pendingPrompt`, which
+    // deliberately sends a given text only once.
+    const channel = createPromptChannel();
+    const seen: string[] = [];
+    channel.subscribe(message => seen.push(message));
+
+    channel.submit('again');
+    channel.submit('again');
+
+    expect(seen).toEqual(['again', 'again']);
+  });
+
+  it('survives a subscriber unsubscribing during delivery', () => {
+    const channel = createPromptChannel();
+    const seen: string[] = [];
+    const stop = channel.subscribe(message => {
+      seen.push(message);
+      stop();
+    });
+    channel.subscribe(message => seen.push(`other:${message}`));
+
+    expect(() => channel.submit('once')).not.toThrow();
+    expect(seen).toEqual(['once', 'other:once']);
   });
 });

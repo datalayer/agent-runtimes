@@ -310,7 +310,7 @@ class ToolApprovalConfig:
     """Configuration for the tool-approval flow."""
 
     agent_id: str = "default"
-    pod_name: str = ""
+    runtime_name: str = ""
     tools_requiring_approval: list[str] = field(default_factory=list)
     timeout: float = 300.0
     tool_hooks: dict[str, Any] = field(default_factory=dict)
@@ -330,7 +330,7 @@ class ToolApprovalConfig:
     def from_env(cls) -> ToolApprovalConfig:
         import os
 
-        pod_name = (
+        runtime_name = (
             os.environ.get("POD_NAME")
             or os.environ.get("DATALAYER_RUNTIME_ID")
             or os.environ.get("HOSTNAME")
@@ -339,7 +339,7 @@ class ToolApprovalConfig:
 
         return cls(
             agent_id=os.environ.get("AGENT_ID", "default"),
-            pod_name=pod_name,
+            runtime_name=runtime_name,
             actor=os.environ.get("DATALAYER_ACTOR") or os.environ.get("USER") or None,
             audit_log_path=os.environ.get(
                 "DATALAYER_TOOL_APPROVAL_AUDIT_LOG",
@@ -573,7 +573,7 @@ class ToolApprovalManager:
 
         req = ToolApprovalCreateRequest(
             agent_id=self.config.agent_id,
-            pod_name=self.config.pod_name,
+            runtime_name=self.config.runtime_name,
             tool_name=tool_name,
             tool_args=tool_args,
             tool_call_id=tool_call_id,
@@ -763,7 +763,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             "run_id": run_id,
             "tool_call_id": getattr(call, "tool_call_id", None),
             "agent_id": self.config.agent_id,
-            "pod_name": self.config.pod_name,
+            "runtime_name": self.config.runtime_name,
         }
 
     def _get_steps_for_phase(

@@ -389,7 +389,7 @@ const AgUiSharedStateExample: React.FC = () => {
                   marginBottom: 2,
                 }}
               >
-                AG-UI: Shared State Example
+                AG-UI Shared State Example
               </Text>
               <Text
                 as="p"

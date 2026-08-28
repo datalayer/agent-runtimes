@@ -20,7 +20,7 @@ describe('Runtimes API', () => {
   it('should list runtimes', async () => {
     const mockResponse = {
       success: true,
-      runtimes: [{ pod_name: 'test-runtime' }],
+      runtimes: [{ runtime_name: 'test-runtime' }],
     };
     vi.mocked(requestDatalayerAPI).mockResolvedValue(mockResponse);
 

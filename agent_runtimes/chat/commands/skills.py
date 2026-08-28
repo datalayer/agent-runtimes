@@ -34,8 +34,8 @@ def _catalog_ids() -> list[str]:
 ARGS = (
     CommandArgSpec(
         name="action",
-        description="enable, disable or info",
-        choices=("enable", "disable", "info"),
+        description="enable, disable, add or info",
+        choices=("enable", "disable", "add", "info"),
     ),
     CommandArgSpec(name="skill-id", description="Skill to act on", choices=_catalog_ids),
 )
@@ -237,6 +237,58 @@ async def _toggle(tux: "CliTux", skill_id: str, *, on: bool) -> None:
     tux.console.print()
 
 
+async def _add(tux: "CliTux", skill_id: str) -> None:
+    """Install a skill's dependencies into the running sandbox, then enable it.
+
+    Installing is separate from enabling because they can fail separately: a
+    skill can be enabled on a spec long before any sandbox exists to hold its
+    packages.
+    """
+    from agent_runtimes.specs.skills import get_skill_spec
+
+    from ..tux import STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
+
+    skill = get_skill_spec(skill_id)
+    if skill is None:
+        tux.console.print(f"[red]Unknown skill: {skill_id}[/red]")
+        return
+
+    if skill.dependencies:
+        packages = " ".join(skill.dependencies)
+        tux.console.print()
+        tux.console.print(f"● Installing {packages}", style=STYLE_PRIMARY)
+        code = (
+            "import subprocess, sys\n"
+            f"print(subprocess.run([sys.executable, '-m', 'pip', 'install', "
+            f"*{skill.dependencies!r}], capture_output=True, text=True).stdout[-2000:])"
+        )
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{tux.server_url}/api/v1/sandbox/execute",
+                    json={"code": code},
+                    timeout=600.0,
+                )
+                response.raise_for_status()
+                result = response.json()
+        except Exception as error:  # noqa: BLE001
+            tux.console.print(f"[red]Install failed: {error}[/red]")
+            tux.console.print(
+                "  A sandbox has to be running to hold the packages.",
+                style=STYLE_WARNING,
+            )
+            return
+
+        if result.get("error"):
+            tux.console.print(f"[red]{result['error']}[/red]")
+            return
+        tail = (result.get("stdout") or "").strip().splitlines()[-3:]
+        for line in tail:
+            tux.console.print(f"  {line}", style=STYLE_MUTED)
+
+    await _toggle(tux, skill_id, on=True)
+
+
 async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     """List skills, or enable / disable / inspect one."""
     parts = (argv or "").split()
@@ -248,7 +300,9 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
     action = action.lower()
     target = rest[0] if rest else ""
 
-    if action in {"enable", "on"} and target:
+    if action == "add" and target:
+        await _add(tux, target)
+    elif action in {"enable", "on"} and target:
         await _toggle(tux, target, on=True)
     elif action in {"disable", "off"} and target:
         await _toggle(tux, target, on=False)
@@ -258,7 +312,7 @@ async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
         from ..tux import STYLE_MUTED
 
         tux.console.print(
-            "  /skills · /skills enable <id> · /skills disable <id> · /skills info <id>",
+            "  /skills · /skills enable|disable|add|info <id>",
             style=STYLE_MUTED,
         )
     return None

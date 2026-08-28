@@ -77,7 +77,7 @@ const AgUiAgenticExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Agentic Example
+            AG-UI Agentic Example
           </Text>
           <Text
             as="p"

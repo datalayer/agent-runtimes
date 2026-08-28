@@ -84,7 +84,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [searching, setSearching] = useState(false);
 
-  const podName = isReady ? `local:${agentId}` : '(launching…)';
+  const runtimeName = isReady ? `local:${agentId}` : '(launching…)';
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -331,7 +331,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       >
         <DatabaseIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Durable Memory — {podName}
+          Durable Memory — {runtimeName}
         </Heading>
       </Box>
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
@@ -357,7 +357,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             showTokenUsage={true}
             autoFocus
             height="100%"
-            runtimeId={podName}
+            runtimeId={runtimeName}
             historyEndpoint={`${agentBaseUrl}/api/v1/history`}
             suggestions={[
               {

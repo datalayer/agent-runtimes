@@ -117,7 +117,7 @@ export {
 export {
   useAgentsRuntimes,
   useAgentRuntimesQuery,
-  useAgentRuntimeByPodName,
+  useAgentRuntimeByName,
   useCreateAgentRuntime,
   useDeleteAgentRuntime,
   useRefreshAgentRuntimes,
@@ -125,8 +125,8 @@ export {
   AGENT_QUERY_OPTIONS,
   useAgentLifecycleStore,
   getAgentLifecycleKey,
-  markRuntimePodDeleted,
-  clearRuntimePodDeleted,
+  markRuntimeDeleted,
+  clearRuntimeDeleted,
 } from './useAgentRuntimes';
 
 /**
@@ -165,7 +165,6 @@ export {
   useCheckpoints,
   useCheckpointsQuery,
   useRefreshCheckpoints,
-  useDeletePausedAgentRuntime,
   useResumePausedAgentRuntime,
   usePauseAgent,
   useResumeAgent,

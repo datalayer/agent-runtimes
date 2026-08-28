@@ -5,7 +5,7 @@
 
 export interface StoredRuntime {
   runtimeId: string;
-  podName: string;
+  runtimeName: string;
   ingress: string;
   token: string;
   timestamp: number;

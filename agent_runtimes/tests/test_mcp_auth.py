@@ -116,10 +116,26 @@ class TestTokens:
         with pytest.raises(ValueError):
             get_token_store(prefer="nowhere")
 
-    def test_the_platform_tier_reports_itself_unavailable(self) -> None:
+    def test_the_platform_tier_is_preferred_when_it_is_configured(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from agent_runtimes.mcp.auth import PlatformTokenStore, get_token_store
+
+        monkeypatch.setenv("DATALAYER_IAM_URL", "https://iam.example")
+        monkeypatch.setenv("DATALAYER_API_KEY", "tok")
+        assert PlatformTokenStore().available() is True
+        # Most durable first: a login that survives the process that made it.
+        assert get_token_store().name == "platform"
+
+    def test_it_steps_aside_when_there_is_no_platform(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from agent_runtimes.mcp.auth import PlatformTokenStore
 
-        # It is a seam, not a store: better to say so than to drop credentials.
+        monkeypatch.delenv("DATALAYER_IAM_URL", raising=False)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+
+        # And the keychain takes over, rather than credentials going nowhere.
         assert PlatformTokenStore().available() is False
 
 
@@ -436,3 +452,135 @@ class TestEndpoints:
         from agent_runtimes.routes.mcp_auth import logout
 
         assert asyncio.run(logout("srv"))["forgotten"] is False
+
+
+class TestPlatformStore:
+    """The connected tier, on IAM's per-user vault secrets."""
+
+    def _store(self, monkeypatch: pytest.MonkeyPatch, calls: list):
+        from agent_runtimes.mcp.auth.tokens import PlatformTokenStore
+
+        store = PlatformTokenStore(base_url="https://iam.example", token="tok")
+
+        state: dict[str, Any] = {"secrets": [], "values": {}}
+
+        def fake_request(method: str, url: str, **kwargs):
+            calls.append((method, url, kwargs.get("json")))
+            if method == "GET" and url.endswith("/values"):
+                return dict(state["values"])
+            if method == "GET":
+                return {"secrets": list(state["secrets"])}
+            if method == "POST":
+                body = kwargs["json"]
+                state["secrets"].append(
+                    {"uid": "uid-1", "name_s": body["name"], "variant_s": body["variant"]}
+                )
+                state["values"][body["name"]] = body["value"]
+                return {"success": True}
+            if method == "PUT":
+                body = kwargs["json"]
+                state["values"][body["name"]] = body["value"]
+                return {"success": True}
+            if method == "DELETE":
+                uid = url.rsplit("/", 1)[-1]
+                kept = [s for s in state["secrets"] if s["uid"] != uid]
+                removed = [s for s in state["secrets"] if s["uid"] == uid]
+                state["secrets"] = kept
+                for secret in removed:
+                    state["values"].pop(secret["name_s"], None)
+                return {}
+            raise AssertionError(method)
+
+        monkeypatch.setattr(store, "_request", fake_request)
+        return store
+
+    def test_needs_both_a_platform_and_a_way_in(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from agent_runtimes.mcp.auth.tokens import PlatformTokenStore
+
+        monkeypatch.delenv("DATALAYER_IAM_URL", raising=False)
+        monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+
+        # A store that silently drops credentials is worse than one that says no.
+        assert PlatformTokenStore().available() is False
+        assert PlatformTokenStore(base_url="https://iam").available() is False
+        assert PlatformTokenStore(base_url="https://iam", token="t").available() is True
+
+    def test_a_login_round_trips(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list = []
+        store = self._store(monkeypatch, calls)
+
+        store.put("tavily", OAuthToken(access_token="at", refresh_token="rt"))
+        restored = store.get("tavily")
+
+        assert restored is not None
+        assert restored.access_token == "at"
+        assert restored.refresh_token == "rt"
+
+    def test_it_is_stored_as_a_tagged_secret(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list = []
+        store = self._store(monkeypatch, calls)
+
+        store.put("tavily", OAuthToken(access_token="at"))
+        body = next(body for method, _, body in calls if method == "POST")
+
+        # Tagged so an MCP login never collides with a user's own API key, and
+        # base64 because that is the API's convention for values.
+        assert body["variant"] == "mcp-oauth"
+        assert body["name"] == "mcp:tavily"
+        import base64
+
+        assert "access_token" in base64.b64decode(body["value"]).decode()
+
+    def test_a_second_login_replaces_rather_than_duplicates(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list = []
+        store = self._store(monkeypatch, calls)
+
+        store.put("tavily", OAuthToken(access_token="first"))
+        store.put("tavily", OAuthToken(access_token="second"))
+
+        assert store.get("tavily").access_token == "second"
+        # The second one updated the secret it found rather than adding another.
+        assert sum(1 for method, _, _ in calls if method == "POST") == 1
+        assert sum(1 for method, _, _ in calls if method == "PUT") == 1
+
+    def test_logging_out_removes_the_secret(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list = []
+        store = self._store(monkeypatch, calls)
+        store.put("tavily", OAuthToken(access_token="at"))
+
+        store.delete("tavily")
+
+        assert store.get("tavily") is None
+        assert store.list_servers() == ()
+
+    def test_it_lists_only_mcp_logins(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list = []
+        store = self._store(monkeypatch, calls)
+        store.put("tavily", OAuthToken(access_token="a"))
+        store.put("github", OAuthToken(access_token="b"))
+
+        assert store.list_servers() == ("github", "tavily")
+
+    def test_an_unreadable_platform_does_not_take_the_session_down(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from agent_runtimes.mcp.auth.tokens import PlatformTokenStore
+
+        store = PlatformTokenStore(base_url="https://iam.example", token="tok")
+
+        def explode(*args, **kwargs):
+            raise ConnectionError("IAM is down")
+
+        monkeypatch.setattr(store, "_request", explode)
+
+        # No credentials is a state the caller already handles; a raised
+        # exception at prompt time is not.
+        assert store.get("tavily") is None

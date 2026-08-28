@@ -47,7 +47,7 @@ async def _mint_handoff(tux: "CliTux", view: str) -> Optional[str]:
     Returns the code, or ``None`` when the server is too old to know about
     handoffs — in which case the browser still opens, just without continuity.
     """
-    session = getattr(tux, "session", None)
+    session = getattr(tux, "loop_session", None)
     session_id = (
         getattr(session, "conversation_id", None)
         or getattr(tux, "conversation_id", None)

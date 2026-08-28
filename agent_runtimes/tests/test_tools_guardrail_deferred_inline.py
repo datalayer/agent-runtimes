@@ -59,7 +59,7 @@ async def test_inline_handle_uses_existing_approved_decision() -> None:
             ToolApprovalRecord(
                 id="approval-1",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-1",
@@ -103,7 +103,7 @@ async def test_inline_handle_does_not_reuse_same_tool_call_id_with_changed_args(
             ToolApprovalRecord(
                 id="approval-args-old",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-args",
@@ -143,7 +143,7 @@ async def test_inline_handle_uses_existing_rejected_decision() -> None:
             ToolApprovalRecord(
                 id="approval-2",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-2",
@@ -208,7 +208,7 @@ async def test_inline_handle_accepts_json_string_args() -> None:
             ToolApprovalRecord(
                 id="approval-4",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello", "reason": "audit"},
                 tool_call_id="tool-4",
@@ -272,7 +272,7 @@ async def test_create_approval_reuses_existing_record_for_matching_envelope() ->
             ToolApprovalRecord(
                 id="approval-create-existing",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-create",
@@ -306,7 +306,7 @@ async def test_create_approval_mints_new_record_for_changed_args() -> None:
             ToolApprovalRecord(
                 id="approval-create-old",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-create",
@@ -342,7 +342,7 @@ async def test_create_approval_does_not_reuse_executing_record() -> None:
             ToolApprovalRecord(
                 id="approval-create-executing",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-create",

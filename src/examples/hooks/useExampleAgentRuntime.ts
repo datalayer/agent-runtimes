@@ -6,7 +6,11 @@
 import { useEffect, useMemo } from 'react';
 import type { UseAgentReturn } from '../../hooks/useAgentRuntimes';
 import type { AgentConfig } from '../../types/config';
-import { useRuntimeTargetStore } from '../utils/runtimeTargetStore';
+import {
+  runtimeTargetCapabilities,
+  useRuntimeTargetStore,
+  type ExampleRuntimeTarget,
+} from '../utils/runtimeTargetStore';
 import { agentSummaryStore } from '../utils/agentSummaryStore';
 import { useExampleAgentRuntimes } from './useExampleAgentRuntimes';
 
@@ -20,10 +24,20 @@ export interface UseExampleAgentRuntimeOptions {
 }
 
 export interface UseExampleAgentRuntimeResult extends UseAgentReturn {
-  location: 'local' | 'cloud';
+  location: ExampleRuntimeTarget;
   baseUrl: string;
   agentId?: string;
   agentBaseUrl?: string;
+  /** Whether an agent runs on the current target at all. */
+  hasAgent: boolean;
+  /**
+   * What to spread onto a `ChatBase` so it shows itself switched off, with the
+   * reason, wherever there is no agent to talk to.
+   *
+   * Computed here so no example has to know which targets have agents — the
+   * question is about the target, and the target is the shell's business.
+   */
+  chatGate: { disabled: boolean; disableReason?: string };
 }
 
 /**
@@ -43,7 +57,8 @@ export function useExampleAgentRuntime(
   } = options;
 
   const location = useRuntimeTargetStore(state => state.target);
-  const isCloud = location === 'cloud';
+  const capabilities = runtimeTargetCapabilities(location);
+  const isCloud = location === 'datalayer';
 
   const combinedConfig = useMemo<AgentConfig>(
     () => ({
@@ -110,6 +125,10 @@ export function useExampleAgentRuntime(
     baseUrl,
     agentId: runtime?.agentId,
     agentBaseUrl: runtime?.agentBaseUrl,
+    hasAgent: capabilities.hasAgent,
+    chatGate: capabilities.hasAgent
+      ? { disabled: false }
+      : { disabled: true, disableReason: capabilities.noAgentReason },
     status,
     isReady,
     error,

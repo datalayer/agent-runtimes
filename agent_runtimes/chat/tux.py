@@ -24,7 +24,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from agent_runtimes.loop import LoopSession, SlashCommandRegistry
+from agent_runtimes.loop import LoopSession, SessionSync, SlashCommandRegistry
 
 from .commands import SlashCommand, build_registry
 from .execution import TuxExecutionGateway
@@ -251,6 +251,26 @@ class CliTux:
             agent_id=agent_id,
             owns_server=False,
         )
+
+        # `/browser` hands this session to a page, and both ends stay attached
+        # to it. The sandbox and the agent are shared by construction — one
+        # server holds them — but each front-end renders only what it saw
+        # happen, so this watches the shared history and shows what the other
+        # end did.
+        self.sync = SessionSync(server_url=self.server_url, agent_id=agent_id)
+
+    @property
+    def loop_session(self) -> LoopSession:
+        """This session, with the terminal's live values folded in.
+
+        `CliTux` mutates `agent_id` and `server_url` as the session goes on —
+        `/agents use` switches agent, a reconnect changes the URL — so the
+        session is refreshed on read rather than left to drift from the terminal
+        it describes. Commands should read this, not the attributes.
+        """
+        self.session.server_url = self.server_url
+        self.session.agent_id = self.agent_id or self.session.agent_id
+        return self.session
 
         # Initialize prompt session with slash command completer
         # Style for the completion menu matching Datalayer brand colors
@@ -616,6 +636,28 @@ class CliTux:
             kb.add(*keys)(make_handler(cmd_name))
 
         return kb
+
+    async def _show_foreign_turns(self) -> None:
+        """Print anything the browser did since we last looked.
+
+        Before the prompt rather than during it: interrupting a half-typed line
+        to announce someone else's turn would be worse than showing it a moment
+        later.
+        """
+        try:
+            turns = await self.sync.poll()
+        except Exception:  # noqa: BLE001
+            # Silent by design: the two ends being briefly out of step is not
+            # something to interrupt a prompt over, and the next poll fixes it.
+            return
+
+        for turn in turns:
+            self.console.print()
+            who = "you, in the browser" if turn.role == "user" else "the agent"
+            self.console.print(f"  ↔ {who}", style=STYLE_MUTED)
+            self.console.print(f"  {turn.content}", style=STYLE_MUTED)
+        if turns:
+            self.console.print()
 
     async def show_prompt(self) -> str:
         """Display the prompt and get user input with slash command completion."""
@@ -1125,6 +1167,9 @@ class CliTux:
 
         while self.running:
             try:
+                # Both ends stay live: whatever happened in the browser since
+                # the last prompt is shown before this one is drawn.
+                await self._show_foreign_turns()
                 user_input = await self.show_prompt()
 
                 if not user_input:
@@ -1143,8 +1188,10 @@ class CliTux:
                     result = await self.handle_command(user_input)
                     # If a command returned a prompt string, send it to the agent
                     if result:
+                        self.sync.note_local(result)
                         await self.send_message(result)
                 else:
+                    self.sync.note_local(user_input)
                     await self.send_message(user_input)
 
             except KeyboardInterrupt:

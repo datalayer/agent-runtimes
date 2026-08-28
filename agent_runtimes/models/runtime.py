@@ -54,7 +54,7 @@ class RuntimeModel(BaseModel):
     )
 
     # Runtime configuration fields
-    pod_name: Optional[str] = Field(
+    runtime_name: Optional[str] = Field(
         default=None, description="Name of the pod running the runtime"
     )
     ingress: Optional[str] = Field(

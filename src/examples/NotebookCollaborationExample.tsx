@@ -69,7 +69,7 @@ const NotebookCollaborationExample = (
       }
       setCollaborationReady(false);
       setCollaborationError(null);
-      if (runtimeTarget === 'cloud') {
+      if (runtimeTarget === 'datalayer') {
         setCollaborationReady(true);
         return;
       }
@@ -211,7 +211,7 @@ const NotebookCollaborationExample = (
               Enable Datalayer Collaboration
             </FormControl.Label>
           </FormControl>
-          {enableCollaboration && runtimeTarget !== 'cloud' && (
+          {enableCollaboration && runtimeTarget !== 'datalayer' && (
             <Box sx={{ mt: 1, color: 'fg.muted', fontSize: 0 }}>
               Real-time Datalayer collaboration requires the cloud runtime
               target. Local mode does not expose a collaboration room.

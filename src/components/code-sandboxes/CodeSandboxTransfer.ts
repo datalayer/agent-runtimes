@@ -22,7 +22,7 @@ export interface CodeSandboxTransfer {
        * The pod of an external sandbox (Daytona, E2B), which has no kernel of
        * its own — the session binds it through the runtimes proxy by this.
        */
-      pod_name: string;
+      runtime_name: string;
     }
   > | null;
   /**

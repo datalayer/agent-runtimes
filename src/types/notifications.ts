@@ -62,7 +62,7 @@ export interface AgentNotification {
   /** Agent that generated the notification */
   agentId: string;
   /** Pod running the agent */
-  podName: string;
+  runtimeName: string;
   /** Notification severity */
   level: NotificationLevel;
   /** Notification title */
