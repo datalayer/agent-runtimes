@@ -17,6 +17,15 @@ from agent_runtimes.mcp.auth.oauth import (
     register_client,
     revoke,
 )
+from agent_runtimes.mcp.auth.machine import (
+    CLIENT_ASSERTION_TYPE,
+    ClientCredentials,
+    MachineAuthError,
+    MachineTokenProvider,
+    build_assertion,
+    exchange_for_subagent,
+    fetch_token,
+)
 from agent_runtimes.mcp.auth.tokens import (
     KEYRING_SERVICE,
     KeyringTokenStore,
@@ -28,9 +37,13 @@ from agent_runtimes.mcp.auth.tokens import (
 )
 
 __all__ = [
+    "CLIENT_ASSERTION_TYPE",
     "CLIENT_NAME",
+    "ClientCredentials",
     "KEYRING_SERVICE",
     "KeyringTokenStore",
+    "MachineAuthError",
+    "MachineTokenProvider",
     "MemoryTokenStore",
     "OAuthError",
     "OAuthToken",
@@ -39,9 +52,12 @@ __all__ = [
     "ServerMetadata",
     "TokenStore",
     "authorization_url",
+    "build_assertion",
     "choose_scope",
     "discover",
     "exchange_code",
+    "exchange_for_subagent",
+    "fetch_token",
     "generate_pkce",
     "get_token_store",
     "refresh_token",
