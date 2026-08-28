@@ -13,6 +13,46 @@ import { defineConfig, loadEnv, type ServerOptions } from 'vite';
 import { treatAsCommonjs } from 'vite-plugin-treat-umd-as-commonjs';
 import wasm from 'vite-plugin-wasm';
 
+/** What JupyterLite asks for, at the root of the site. */
+const WORKER_FILE_NAME = 'lite-service-worker.js';
+const WORKER_VIRTUAL_ID = `\0${WORKER_FILE_NAME}`;
+
+/** The worker is TypeScript on disk; a browser needs it as plain JavaScript. */
+async function transpileWorker(source: string): Promise<{ code: string }> {
+  const esbuild = await import('esbuild');
+  return esbuild.transform(source, { loader: 'ts', target: 'es2020' });
+}
+
+/**
+ * The JupyterLite service worker, as shipped by `@datalayer/jupyter-react`.
+ *
+ * Returns null when the package is not resolvable — the browser sandbox then
+ * runs without contents syncing, which is a degradation rather than a failure,
+ * and a missing optional dependency should not break the build.
+ */
+function liteServiceWorkerSource(): string | null {
+  try {
+    // The package's `exports` map does not expose `./package.json`, so the root
+    // is found by walking up from the entry it does expose.
+    const require = createRequire(import.meta.url);
+    let directory = path.dirname(require.resolve('@datalayer/jupyter-react'));
+    for (let depth = 0; depth < 8; depth += 1) {
+      const worker = path.join(directory, 'dist', 'lite-service-worker.ts');
+      if (fs.existsSync(worker)) {
+        return fs.readFileSync(worker, 'utf8');
+      }
+      const parent = path.dirname(directory);
+      if (parent === directory) {
+        break;
+      }
+      directory = parent;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolve the `loro-crdt` base64 entry point.
  *
@@ -37,7 +77,9 @@ function resolveLoroBase64Entry(): string {
         '../../../node_modules/loro-crdt/base64/index.js',
       ),
     ];
-    return candidates.find(candidate => fs.existsSync(candidate)) ?? candidates[0];
+    return (
+      candidates.find(candidate => fs.existsSync(candidate)) ?? candidates[0]
+    );
   }
 }
 
@@ -54,6 +96,54 @@ export default defineConfig(({ mode, command }) => {
     react(),
     wasm(),
     treatAsCommonjs(),
+    // JupyterLite asks the page for `/lite-service-worker.js` — the worker that
+    // keeps a Pyodide kernel's filesystem and the JupyterLite contents in step.
+    // `@datalayer/jupyter-react` ships it as TypeScript (`dist/lite-service-worker.ts`),
+    // which a browser cannot run, so without this the request 404s and the
+    // browser sandbox comes up with contents syncing silently switched off.
+    //
+    // A service worker must be served from the scope it claims, so it is served
+    // at the root under its own name rather than bundled with a hashed one.
+    {
+      name: 'serve-jupyterlite-service-worker',
+      resolveId(id: string) {
+        return id === WORKER_VIRTUAL_ID ? id : null;
+      },
+      configureServer(server: any) {
+        server.middlewares.use(
+          `/${WORKER_FILE_NAME}`,
+          async (_request: any, response: any, next: any) => {
+            const source = liteServiceWorkerSource();
+            if (!source) {
+              next();
+              return;
+            }
+            try {
+              const { code } = await transpileWorker(source);
+              response.setHeader('Content-Type', 'text/javascript');
+              // The worker's scope is the whole page; without this header a
+              // browser refuses to let it claim the root.
+              response.setHeader('Service-Worker-Allowed', '/');
+              response.end(code);
+            } catch (error) {
+              next(error);
+            }
+          },
+        );
+      },
+      async generateBundle(this: any) {
+        const source = liteServiceWorkerSource();
+        if (!source) {
+          return;
+        }
+        const { code } = await transpileWorker(source);
+        this.emitFile({
+          type: 'asset',
+          fileName: WORKER_FILE_NAME,
+          source: code,
+        });
+      },
+    },
     // After build, move HTML files from dist/html/ to dist/ so the FastAPI
     // StaticFiles mount can serve them at /static/agent.html etc.
     {
@@ -68,18 +158,29 @@ export default defineConfig(({ mode, command }) => {
             }
           }
           // Remove the now-empty html/ directory (best-effort)
-          try { fs.rmdirSync(htmlDir); } catch { /* not empty – leave it */ }
+          try {
+            fs.rmdirSync(htmlDir);
+          } catch {
+            /* not empty – leave it */
+          }
         }
       },
     },
     {
       name: 'raw-css-as-string',
       enforce: 'pre' as const,
-      async resolveId(source: string, importer: string | undefined): Promise<string | null> {
+      async resolveId(
+        source: string,
+        importer: string | undefined,
+      ): Promise<string | null> {
         if (source.endsWith('.raw.css') && !source.includes('?raw')) {
-          const resolved = await (this as any).resolve(source + '?raw', importer, {
-            skipSelf: true,
-          });
+          const resolved = await (this as any).resolve(
+            source + '?raw',
+            importer,
+            {
+              skipSelf: true,
+            },
+          );
           if (resolved) return resolved.id;
           return null;
         }
@@ -89,10 +190,15 @@ export default defineConfig(({ mode, command }) => {
     {
       name: 'fix-text-query',
       enforce: 'pre' as const,
-      async resolveId(source: string, importer: string | undefined): Promise<string | null> {
+      async resolveId(
+        source: string,
+        importer: string | undefined,
+      ): Promise<string | null> {
         if (source.includes('?text')) {
           const fixed = source.replace('?text', '?raw');
-          const resolved = await (this as any).resolve(fixed, importer, { skipSelf: true });
+          const resolved = await (this as any).resolve(fixed, importer, {
+            skipSelf: true,
+          });
           if (resolved) return resolved.id;
           return fixed;
         }
@@ -155,94 +261,91 @@ export default defineConfig(({ mode, command }) => {
       transformIndexHtml: {
         order: 'pre' as const,
         handler(html: string) {
-        return html
-          .replaceAll('%VITE_DATALAYER_API_KEY%', env.VITE_DATALAYER_API_KEY || '')
-          .replaceAll(
-            '%VITE_DATALAYER_RUNTIMES_URL%',
-            env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_AGENT_RUNTIMES_URL%',
-            env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
-              'https://r1.datalayer.run',
-          )
-          // One URL per service. In production they sit behind one gateway, so
-          // they share a default; local dev overrides each to its own port so
-          // http + ws both target local servers.
-          .replaceAll(
-            '%VITE_DATALAYER_AI_AGENTS_URL%',
-            env.VITE_DATALAYER_AI_AGENTS_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_AI_INFERENCE_URL%',
-            env.VITE_DATALAYER_AI_INFERENCE_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_JUPYTER_MCP_SERVER_URL%',
-            env.VITE_DATALAYER_JUPYTER_MCP_SERVER_URL ||
-              'https://mcp.datalayer.run/mcp',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_IAM_URL%',
-            env.VITE_DATALAYER_IAM_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_LIBRARY_URL%',
-            env.VITE_DATALAYER_LIBRARY_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_SPACER_URL%',
-            env.VITE_DATALAYER_SPACER_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_OTEL_URL%',
-            env.VITE_DATALAYER_OTEL_URL ||
-              env.VITE_OTEL_IN_BASE_URL ||
-              env.VITE_OTEL_BASE_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_GROWTH_URL%',
-            env.VITE_DATALAYER_GROWTH_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_SUCCESS_URL%',
-            env.VITE_DATALAYER_SUCCESS_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_INBOUNDS_URL%',
-            env.VITE_DATALAYER_INBOUNDS_URL || 'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_SUPPORT_URL%',
-            env.VITE_DATALAYER_SUPPORT_URL ||
-              'https://r1.datalayer.run',
-          )
-          .replaceAll(
-            '%VITE_DATALAYER_RUNTIMES_URL_WS%',
-            (env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run').replace(
-              'http',
-              'ws',
-            ),
-          )
-          .replaceAll(
-            '%VITE_JUPYTER_SERVER_URL%',
-            env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run'}/api/jupyter-server`,
-          )
-          .replaceAll(
-            '%VITE_JUPYTER_SERVER_URL_WS%',
-            (
-              env.VITE_JUPYTER_SERVER_URL ||
-              `${env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run'}/api/jupyter-server`
-            ).replace('http', 'ws'),
+          return (
+            html
+              .replaceAll(
+                '%VITE_DATALAYER_API_KEY%',
+                env.VITE_DATALAYER_API_KEY || '',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_RUNTIMES_URL%',
+                env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_AGENT_RUNTIMES_URL%',
+                env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
+                  'https://r1.datalayer.run',
+              )
+              // One URL per service. In production they sit behind one gateway, so
+              // they share a default; local dev overrides each to its own port so
+              // http + ws both target local servers.
+              .replaceAll(
+                '%VITE_DATALAYER_AI_AGENTS_URL%',
+                env.VITE_DATALAYER_AI_AGENTS_URL || 'https://r1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_AI_INFERENCE_URL%',
+                env.VITE_DATALAYER_AI_INFERENCE_URL ||
+                  'https://r1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_JUPYTER_MCP_SERVER_URL%',
+                env.VITE_DATALAYER_JUPYTER_MCP_SERVER_URL ||
+                  'https://mcp.datalayer.run/mcp',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_IAM_URL%',
+                env.VITE_DATALAYER_IAM_URL || 'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_LIBRARY_URL%',
+                env.VITE_DATALAYER_LIBRARY_URL || 'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_SPACER_URL%',
+                env.VITE_DATALAYER_SPACER_URL || 'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_OTEL_URL%',
+                env.VITE_DATALAYER_OTEL_URL ||
+                  env.VITE_OTEL_IN_BASE_URL ||
+                  env.VITE_OTEL_BASE_URL ||
+                  'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_GROWTH_URL%',
+                env.VITE_DATALAYER_GROWTH_URL || 'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_SUCCESS_URL%',
+                env.VITE_DATALAYER_SUCCESS_URL || 'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_INBOUNDS_URL%',
+                env.VITE_DATALAYER_INBOUNDS_URL || 'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_SUPPORT_URL%',
+                env.VITE_DATALAYER_SUPPORT_URL || 'https://prod1.datalayer.run',
+              )
+              .replaceAll(
+                '%VITE_DATALAYER_RUNTIMES_URL_WS%',
+                (
+                  env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run'
+                ).replace('http', 'ws'),
+              )
+              .replaceAll(
+                '%VITE_JUPYTER_SERVER_URL%',
+                env.VITE_JUPYTER_SERVER_URL ||
+                  `${env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run'}/api/jupyter-server`,
+              )
+              .replaceAll(
+                '%VITE_JUPYTER_SERVER_URL_WS%',
+                (
+                  env.VITE_JUPYTER_SERVER_URL ||
+                  `${env.VITE_DATALAYER_RUNTIMES_URL || 'https://r1.datalayer.run'}/api/jupyter-server`
+                ).replace('http', 'ws'),
+              )
           );
         },
       },
@@ -260,7 +363,6 @@ export default defineConfig(({ mode, command }) => {
           port: 3000,
           open: isExamples2 ? '/html/examples2.html' : '/html/examples.html',
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
-
         }
       : {
           fs: { strict: false, allow: ['..', '../..', '../../..'] },
@@ -273,8 +375,7 @@ export default defineConfig(({ mode, command }) => {
           proxy: {
             '/api': {
               target:
-                env.VITE_AGENT_RUNTIMES_SERVER_URL ||
-                'http://localhost:8765',
+                env.VITE_AGENT_RUNTIMES_SERVER_URL || 'http://localhost:8765',
               changeOrigin: true,
               ws: true,
             },
@@ -286,8 +387,7 @@ export default defineConfig(({ mode, command }) => {
             // sandbox runtime override never resolves.
             '/health': {
               target:
-                env.VITE_AGENT_RUNTIMES_SERVER_URL ||
-                'http://localhost:8765',
+                env.VITE_AGENT_RUNTIMES_SERVER_URL || 'http://localhost:8765',
               changeOrigin: true,
             },
           },
@@ -311,7 +411,10 @@ export default defineConfig(({ mode, command }) => {
   if (isShowcaseVercelAiElements) {
     build.outDir = 'dist/showcase';
     build.emptyOutDir = true;
-    build.rollupOptions.input = path.resolve(__dirname, 'html/index-showcase-vercel-ai-elements.html');
+    build.rollupOptions.input = path.resolve(
+      __dirname,
+      'html/index-showcase-vercel-ai-elements.html',
+    );
   } else if (isExamplesTarget) {
     build.rollupOptions.input = path.resolve(
       __dirname,
@@ -412,7 +515,9 @@ export default defineConfig(({ mode, command }) => {
               ],
             };
             for (const [lang, deps] of Object.entries(prismDeps)) {
-              const re = new RegExp(`prismjs[\\/\\\\]components[\\/\\\\]${lang}\\.js$`);
+              const re = new RegExp(
+                `prismjs[\\/\\\\]components[\\/\\\\]${lang}\\.js$`,
+              );
               build.onLoad({ filter: re }, async (args: any) => {
                 const original = await fs.promises.readFile(args.path, 'utf8');
                 return {
@@ -429,7 +534,15 @@ export default defineConfig(({ mode, command }) => {
 
   if (isShowcaseVercelAiElements) {
     // For showcase, move jupyterlab packages from include to exclude
-    optimizeDeps.include = ['crypto-browserify', 'buffer', 'jwt-decode', 'url-parse', 'prop-types', 'shallowequal', 'react-is'];
+    optimizeDeps.include = [
+      'crypto-browserify',
+      'buffer',
+      'jwt-decode',
+      'url-parse',
+      'prop-types',
+      'shallowequal',
+      'react-is',
+    ];
     optimizeDeps.exclude.push(
       '@jupyterlab/apputils',
       '@jupyterlab/apputils-extension',
@@ -448,7 +561,10 @@ export default defineConfig(({ mode, command }) => {
   // the FastAPI StaticFiles mount, so we set base accordingly.
   // In dev mode (vite serve), use '/' so pages are accessible without the prefix.
   const isServe = command === 'serve';
-  const base = (isShowcaseVercelAiElements || isExamplesTarget || isServe) ? '/' : '/static/';
+  const base =
+    isShowcaseVercelAiElements || isExamplesTarget || isServe
+      ? '/'
+      : '/static/';
 
   return {
     base,
@@ -507,19 +623,34 @@ export default defineConfig(({ mode, command }) => {
         // attribute (e.g. sx="[object Object]").
         {
           find: /@datalayer\/primer-addons\/lib\/components\/box\/Box(\.js)?$/,
-          replacement: path.resolve(__dirname, './src/shims/primerAddonsBox.tsx'),
+          replacement: path.resolve(
+            __dirname,
+            './src/shims/primerAddonsBox.tsx',
+          ),
         },
         {
           find: /\/src\/tech\/primer\/addons\/lib\/components\/box\/Box\.js$/,
-          replacement: path.resolve(__dirname, './src/shims/primerAddonsBox.tsx'),
+          replacement: path.resolve(
+            __dirname,
+            './src/shims/primerAddonsBox.tsx',
+          ),
         },
         // json5 v2 ESM default export may not expose named exports expected by
         // @datalayer/jupyter-react; route through a shim that re-exports
         // parse/stringify explicitly.
-        { find: /^json5$/, replacement: path.resolve(__dirname, './src/shims/json5.ts') },
+        {
+          find: /^json5$/,
+          replacement: path.resolve(__dirname, './src/shims/json5.ts'),
+        },
         // Stub out keytar for browser builds - it's a native Node.js module
-        { find: 'keytar', replacement: path.resolve(__dirname, './src/stubs/keytar.ts') },
-        { find: '@vscode/keytar', replacement: path.resolve(__dirname, './src/stubs/keytar.ts') },
+        {
+          find: 'keytar',
+          replacement: path.resolve(__dirname, './src/stubs/keytar.ts'),
+        },
+        {
+          find: '@vscode/keytar',
+          replacement: path.resolve(__dirname, './src/stubs/keytar.ts'),
+        },
       ],
     },
     optimizeDeps,

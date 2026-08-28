@@ -32,6 +32,7 @@ import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 
 import { DEFAULT_MODEL } from '../specs';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agui-notebook-example';
@@ -120,6 +121,7 @@ const NotebookUI = React.memo(function NotebookUI({
             <Notebook
               nbformat={NOTEBOOK_CONTENT}
               id={NOTEBOOK_ID}
+              Toolbar={ExampleNotebookToolbar}
               serviceManager={serviceManager}
               onSessionConnection={onSessionConnection}
               height="calc(100vh - 300px)"

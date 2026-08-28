@@ -210,15 +210,37 @@ const toAgentRuntimesBaseUrl = (value?: string | null): string | undefined => {
   return normalized;
 };
 
-const isProd1JupyterServerUrl = (value?: string | null): boolean => {
+/**
+ * Whether a URL names a Jupyter server on this machine.
+ *
+ * Asked this way round on purpose. The previous test was "is this prod1?",
+ * which took every host it did not recognise for a local one — so once the
+ * configured server moved to `r1`, Local mode accepted the cloud URL as its
+ * own and the browser dialled it from `localhost`, where CORS refused it.
+ *
+ * The set of remote hosts is open — `prod1`, `r1`, whatever a deployment adds
+ * next — while the set of local ones is not, so the closed set is the one
+ * worth enumerating.
+ */
+const isLocalJupyterServerUrl = (value?: string | null): boolean => {
   if (!value) {
     return false;
   }
+  let host: string;
   try {
-    return new URL(value).hostname === 'prod1.datalayer.run';
+    host = new URL(value).hostname.toLowerCase();
   } catch {
-    return value.includes('prod1.datalayer.run');
+    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(value);
   }
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host === '::1' ||
+    host === '[::1]' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local')
+  );
 };
 
 /**
@@ -259,19 +281,52 @@ const resolveLocalJupyterServerUrl = (): string => {
   }
 
   const configured = getJupyterServerUrl();
-  if (configured && !isProd1JupyterServerUrl(configured)) {
+  if (configured && isLocalJupyterServerUrl(configured)) {
     return normalizeLoopbackHost(configured);
   }
   return normalizeLoopbackHost(DEFAULT_LOCAL_JUPYTER_SERVER_URL);
 };
 
+/**
+ * The one in-page JupyterLite manager, created at most once.
+ *
+ * A `LiteServer` registers a mock WebSocket server per kernel URL, so building
+ * a second one on the same page throws `A mock server is already listening on
+ * this url` and leaves the notebook without a kernel. Switching to Browser,
+ * away, and back is an ordinary thing to do, so the manager is remembered
+ * rather than rebuilt — which is what jupyter-react does behind `<Jupyter
+ * lite>`, where it is created only `if (!serviceManager)`.
+ *
+ * The promise is cached, not the resolved value: a second switch arriving
+ * mid-start awaits the same start instead of racing it into the same error.
+ */
+let browserServiceManager: Promise<ServiceManager.IManager> | null = null;
+
 /** A sandbox in this page: JupyterLite over a Pyodide kernel, no server. */
 const createBrowserServiceManager =
   async (): Promise<ServiceManager.IManager> => {
-    // JupyterLite and the Pyodide kernel are megabytes; a person who never
-    // picks this target should not pay for them.
-    const { createLiteServiceManager } = await import('@datalayer/jupyter-react');
-    return (await createLiteServiceManager()) as ServiceManager.IManager;
+    // The in-page server is this page. Whichever target ran before left the
+    // Jupyter base url pointing at its own server — `prod1`, or localhost —
+    // and JupyterLite builds its kernel WebSocket addresses from that, so
+    // without this the browser sandbox dials a remote host for a kernel that
+    // only exists here.
+    setJupyterServerUrl(window.location.origin);
+    setJupyterServerToken('');
+
+    browserServiceManager =
+      browserServiceManager ??
+      // JupyterLite and the Pyodide kernel are megabytes; a person who never
+      // picks this target should not pay for them.
+      import('@datalayer/jupyter-react')
+        .then(({ createLiteServiceManager }) => createLiteServiceManager())
+        .then(manager => manager as ServiceManager.IManager)
+        .catch(error => {
+          // A failed start must not be cached, or the target stays dead for
+          // the rest of the session.
+          browserServiceManager = null;
+          throw error;
+        });
+    return browserServiceManager;
   };
 
 /** A sandbox on the anonymous Jupyter server — real server, no account. */
@@ -1454,7 +1509,13 @@ const ExampleAppThemed: React.FC<{
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box
               as="button"
-              onClick={() => void onExampleChange('HomeExample')}
+              onClick={() => {
+                // Also the way back out of the sign-in view, which nothing
+                // else dismisses: with the example chooser hidden behind it,
+                // a person who changed their mind would otherwise be stuck.
+                setShowSignIn(false);
+                void onExampleChange('HomeExample');
+              }}
               title="Home"
               aria-label="Go to examples home"
               sx={{
@@ -1474,115 +1535,127 @@ const ExampleAppThemed: React.FC<{
             >
               <HomeIcon size={16} />
             </Box>
-            <ActionMenu>
-              <ActionMenu.Button
-                disabled={isChangingExample}
-                aria-label="Select example"
-                sx={{ minWidth: '250px', justifyContent: 'space-between' }}
-                onClick={() => setExampleSearch('')}
-              >
-                {selectedExampleEntry?.title ?? selectedExample}
-              </ActionMenu.Button>
-              <ActionMenu.Overlay
-                width="large"
+            {!shouldShowAuthScreen && (
+              <ActionMenu>
+                <ActionMenu.Button
+                  disabled={isChangingExample}
+                  aria-label="Select example"
+                  sx={{ minWidth: '250px', justifyContent: 'space-between' }}
+                  onClick={() => setExampleSearch('')}
+                >
+                  {selectedExampleEntry?.title ?? selectedExample}
+                </ActionMenu.Button>
+                <ActionMenu.Overlay
+                  width="large"
+                  sx={{
+                    maxHeight: 'calc(100vh - 72px)',
+                    overflowY: 'auto',
+                    overscrollBehavior: 'contain',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderBottom: '1px solid',
+                      borderColor: 'border.default',
+                    }}
+                  >
+                    <TextInput
+                      autoFocus
+                      block
+                      aria-label="Filter examples"
+                      placeholder="Filter examples..."
+                      value={exampleSearch}
+                      onChange={event => setExampleSearch(event.target.value)}
+                    />
+                  </Box>
+                  <ActionList selectionVariant="single">
+                    {availableExamples
+                      .filter(
+                        example =>
+                          example.id === 'HomeExample' &&
+                          (!exampleSearch.trim() ||
+                            example.title
+                              .toLowerCase()
+                              .includes(exampleSearch.trim().toLowerCase())),
+                      )
+                      .map(example => (
+                        <ActionList.Item
+                          key={example.id}
+                          selected={example.id === selectedExample}
+                          onSelect={() => void onExampleChange(example.id)}
+                        >
+                          {example.title}
+                        </ActionList.Item>
+                      ))}
+                    <ActionList.Divider />
+                    {EXAMPLE_GROUP_ORDER.map(groupName => {
+                      const examples = filteredExampleMenuGroups.get(groupName);
+                      if (!examples?.length) return null;
+                      return (
+                        <ActionList.Group key={groupName} title={groupName}>
+                          {examples.map(example => (
+                            <ActionList.Item
+                              key={example.id}
+                              selected={example.id === selectedExample}
+                              onSelect={() => void onExampleChange(example.id)}
+                            >
+                              {example.title}
+                            </ActionList.Item>
+                          ))}
+                        </ActionList.Group>
+                      );
+                    })}
+                  </ActionList>
+                </ActionMenu.Overlay>
+              </ActionMenu>
+            )}
+            {!shouldShowAuthScreen && (
+              <Box
+                aria-label="Where the example runs"
                 sx={{
-                  maxHeight: 'calc(100vh - 72px)',
-                  overflowY: 'auto',
-                  overscrollBehavior: 'contain',
+                  minWidth: '320px',
+                  opacity: isHome || isChangingExample ? 0.6 : 1,
                 }}
               >
-                <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'border.default' }}>
-                  <TextInput
-                    autoFocus
-                    block
-                    aria-label="Filter examples"
-                    placeholder="Filter examples..."
-                    value={exampleSearch}
-                    onChange={event => setExampleSearch(event.target.value)}
-                  />
-                </Box>
-                <ActionList selectionVariant="single">
-                  {availableExamples
-                    .filter(
-                      example =>
-                        example.id === 'HomeExample' &&
-                        (!exampleSearch.trim() ||
-                          example.title
-                            .toLowerCase()
-                            .includes(exampleSearch.trim().toLowerCase())),
-                    )
-                    .map(example => (
-                      <ActionList.Item
-                        key={example.id}
-                        selected={example.id === selectedExample}
-                        onSelect={() => void onExampleChange(example.id)}
-                      >
-                        {example.title}
-                      </ActionList.Item>
-                    ))}
-                  <ActionList.Divider />
-                  {EXAMPLE_GROUP_ORDER.map(groupName => {
-                    const examples = filteredExampleMenuGroups.get(groupName);
-                    if (!examples?.length) return null;
+                <SegmentedControl
+                  aria-label="Where the example runs"
+                  fullWidth
+                  size="small"
+                >
+                  {RUNTIME_TARGETS.map(target => {
+                    const capabilities = runtimeTargetCapabilities(target);
+                    // Signing in is what the Datalayer target needs; saying so on
+                    // the button beats letting the switch fail and explaining
+                    // afterwards.
+                    const needsSignIn = capabilities.requiresAuth && !token;
+                    const unavailable = isHome || needsSignIn;
                     return (
-                      <ActionList.Group key={groupName} title={groupName}>
-                        {examples.map(example => (
-                          <ActionList.Item
-                            key={example.id}
-                            selected={example.id === selectedExample}
-                            onSelect={() => void onExampleChange(example.id)}
-                          >
-                            {example.title}
-                          </ActionList.Item>
-                        ))}
-                      </ActionList.Group>
+                      <SegmentedControl.Button
+                        key={target}
+                        selected={runtimeTarget === target}
+                        disabled={unavailable}
+                        title={
+                          needsSignIn
+                            ? `${capabilities.hint} Sign in to use it.`
+                            : capabilities.hint
+                        }
+                        onClick={() => {
+                          if (!unavailable && !isChangingExample) {
+                            void onRuntimeTargetChange(target);
+                          }
+                        }}
+                      >
+                        {capabilities.label}
+                      </SegmentedControl.Button>
                     );
                   })}
-                </ActionList>
-              </ActionMenu.Overlay>
-            </ActionMenu>
-            <Box
-              aria-label="Where the example runs"
-              sx={{
-                minWidth: '320px',
-                opacity: isHome || isChangingExample ? 0.6 : 1,
-              }}
-            >
-              <SegmentedControl
-                aria-label="Where the example runs"
-                fullWidth
-                size="small"
-              >
-                {RUNTIME_TARGETS.map(target => {
-                  const capabilities = runtimeTargetCapabilities(target);
-                  // Signing in is what the Datalayer target needs; saying so on
-                  // the button beats letting the switch fail and explaining
-                  // afterwards.
-                  const needsSignIn = capabilities.requiresAuth && !token;
-                  const unavailable = isHome || needsSignIn;
-                  return (
-                    <SegmentedControl.Button
-                      key={target}
-                      selected={runtimeTarget === target}
-                      disabled={unavailable}
-                      title={
-                        needsSignIn
-                          ? `${capabilities.hint} Sign in to use it.`
-                          : capabilities.hint
-                      }
-                      onClick={() => {
-                        if (!unavailable && !isChangingExample) {
-                          void onRuntimeTargetChange(target);
-                        }
-                      }}
-                    >
-                      {capabilities.label}
-                    </SegmentedControl.Button>
-                  );
-                })}
-              </SegmentedControl>
-            </Box>
-            {!isHome && <AgentSummary summary={agentSummary} />}
+                </SegmentedControl>
+              </Box>
+            )}
+            {!isHome && !shouldShowAuthScreen && (
+              <AgentSummary summary={agentSummary} />
+            )}
             {isChangingExample && (
               <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
                 Loading…

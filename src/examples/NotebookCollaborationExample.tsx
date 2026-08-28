@@ -20,6 +20,7 @@ import { ThemedJupyterProvider } from './utils/themedProvider';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // This corresponds to the notebook ID in the URL when you open an existing notbook in your library
 const NOTEBOOK_ID = '01JZQRQ35GG871QQCZW9TB1A8J';
@@ -270,6 +271,7 @@ const NotebookCollaborationExample = (
               {serviceManager ? (
                 <Notebook
                   id={NOTEBOOK_ID}
+                  Toolbar={ExampleNotebookToolbar}
                   path={ROOM_PATH}
                   height="calc(100vh - 280px)"
                   nbformat={nbformat}
@@ -306,6 +308,7 @@ const NotebookCollaborationExample = (
               {serviceManager ? (
                 <Notebook
                   id={NOTEBOOK_ID}
+                  Toolbar={ExampleNotebookToolbar}
                   path={ROOM_PATH}
                   height="calc(100vh - 280px)"
                   nbformat={nbformat}
@@ -332,6 +335,7 @@ const NotebookCollaborationExample = (
             {serviceManager ? (
               <Notebook
                 id={NOTEBOOK_ID}
+                Toolbar={ExampleNotebookToolbar}
                 height="calc(100vh - 200px)"
                 nbformat={nbformat}
                 readonly={readonly}

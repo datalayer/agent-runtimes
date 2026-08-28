@@ -32,6 +32,7 @@ import { DEFAULT_MODEL } from '../specs';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'chat-notebook-example';
@@ -97,6 +98,7 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
     <Notebook
       nbformat={NOTEBOOK_CONTENT}
       id={NOTEBOOK_ID}
+      Toolbar={ExampleNotebookToolbar}
       serviceManager={serviceManager}
       height="100%"
       cellSidebarMargin={120}

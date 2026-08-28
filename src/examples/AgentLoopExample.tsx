@@ -30,15 +30,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
-import { Notebook, useJupyter } from '@datalayer/jupyter-react';
+import { Notebook } from '@datalayer/jupyter-react';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
-import { ThemedJupyterProvider } from './utils/themedProvider';
+import { ThemedJupyterProvider, ThemedProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
 import type { LoopSpec, ProtocolConfig } from '../types';
 import { DEFAULT_MODEL, listLoops, getLoop, DEFAULT_LOOP } from '../specs';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agent-loop-example';
@@ -158,15 +159,28 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
     );
   }
 
+  /*
+   * Scoped to the notebook, not to the example.
+   *
+   * `JupyterReactTheme` nests a Primer theme of its own, and Primer tokens
+   * resolve against the nearest one — so anything rendered inside it reads
+   * `canvas.default` from that theme rather than from the Datalayer theme the
+   * picker drives. Wrapping the whole example is why its chrome came out
+   * white while every other example followed the theme; the working examples
+   * all wrap the notebook alone.
+   */
   return (
-    <Notebook
-      nbformat={NOTEBOOK_CONTENT}
-      id={NOTEBOOK_ID}
-      serviceManager={serviceManager}
-      height="100%"
-      cellSidebarMargin={120}
-      startDefaultKernel={true}
-    />
+    <ThemedJupyterProvider>
+      <Notebook
+        nbformat={NOTEBOOK_CONTENT}
+        id={NOTEBOOK_ID}
+        Toolbar={ExampleNotebookToolbar}
+        serviceManager={serviceManager}
+        height="100%"
+        cellSidebarMargin={120}
+        startDefaultKernel={true}
+      />
+    </ThemedJupyterProvider>
   );
 }
 
@@ -343,8 +357,12 @@ export function AgentLoopExampleInner({
     <>
       <Box
         sx={{
-          height: 'calc(100vh - 70px)',
-          width: '100vw',
+          // The wrapper is the viewport, not the window: it sits below the
+          // header and beside the sidebar, so viewport units size this box to
+          // an area it is not in — and the wrapper paints no background of its
+          // own, so wherever this box failed to reach showed through white.
+          height: '100%',
+          width: '100%',
           display: 'flex',
           overflow: 'hidden',
           bg: 'canvas.default',
@@ -504,17 +522,16 @@ export function AgentLoopExampleInner({
 /**
  * Main example component with Jupyter provider wrapper.
  */
-export function AgentLoopExample() {
+export function AgentLoopExample({
+  serviceManager,
+}: {
+  serviceManager?: ServiceManager.IManager;
+}) {
   return (
-    <ThemedJupyterProvider>
-      <SimpleWrapper />
-    </ThemedJupyterProvider>
+    <ThemedProvider>
+      <AgentLoopExampleInner serviceManager={serviceManager} />
+    </ThemedProvider>
   );
-}
-
-function SimpleWrapper() {
-  const { serviceManager } = useJupyter();
-  return <AgentLoopExampleInner serviceManager={serviceManager} />;
 }
 
 export default AgentLoopExample;

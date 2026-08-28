@@ -46,15 +46,37 @@ const resolveRuntimesUrl = (configured?: string): string => {
   return candidate.replace(/\/$/, '');
 };
 
-const isProd1JupyterServerUrl = (value?: string | null): boolean => {
+/**
+ * Whether a URL names a Jupyter server on this machine.
+ *
+ * Asked this way round on purpose. The previous test was "is this prod1?",
+ * which took every host it did not recognise for a local one — so once the
+ * configured server moved to `r1`, Local mode accepted the cloud URL as its
+ * own and the browser dialled it from `localhost`, where CORS refused it.
+ *
+ * The set of remote hosts is open — `prod1`, `r1`, whatever a deployment adds
+ * next — while the set of local ones is not, so the closed set is the one
+ * worth enumerating.
+ */
+const isLocalJupyterServerUrl = (value?: string | null): boolean => {
   if (!value) {
     return false;
   }
+  let host: string;
   try {
-    return new URL(value).hostname === 'prod1.datalayer.run';
+    host = new URL(value).hostname.toLowerCase();
   } catch {
-    return value.includes('prod1.datalayer.run');
+    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(value);
   }
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host === '::1' ||
+    host === '[::1]' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local')
+  );
 };
 
 const resolveLocalJupyterServerUrl = (): string => {
@@ -65,7 +87,7 @@ const resolveLocalJupyterServerUrl = (): string => {
     return envLocalUrl.replace(/\/$/, '');
   }
   const configured = getJupyterServerUrl();
-  if (configured && !isProd1JupyterServerUrl(configured)) {
+  if (configured && isLocalJupyterServerUrl(configured)) {
     return configured;
   }
   return DEFAULT_LOCAL_JUPYTER_SERVER_URL;
