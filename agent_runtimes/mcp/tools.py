@@ -14,6 +14,8 @@ from urllib.parse import urljoin
 
 from pydantic_ai.mcp import MCPToolset
 
+from agent_runtimes.mcp.tracing import tracing_client
+
 from agent_runtimes.types import BuiltinTool
 
 logger = logging.getLogger(__name__)
@@ -90,14 +92,20 @@ def create_mcp_server(
 
     logger.info(f"Creating MCP server connection to {mcp_url}")
 
-    # Create MCP server with authentication headers if token is provided
-    if token:
-        headers = {"Authorization": f"token {token}"}
-        server = MCPToolset(mcp_url, headers=headers)
-        logger.info("MCP server connection created successfully with authentication")
-    else:
-        server = MCPToolset(mcp_url)
-        logger.info("MCP server connection created successfully without authentication")
+    # One client, carrying the credential and the trace. `MCPToolset` refuses
+    # `headers` beside an `http_client` — deliberately, since two sources of
+    # headers is one of them silently losing — so the token goes on the client.
+    #
+    # The trace goes with every *request* rather than being fixed here: an MCP
+    # session is long-lived and spans many of the agent's own spans, so a
+    # header set at construction would file every call in the session under
+    # whichever trace happened to be current when the connection opened.
+    headers = {"Authorization": f"token {token}"} if token else {}
+    server = MCPToolset(mcp_url, http_client=tracing_client(headers=headers))
+    logger.info(
+        "MCP server connection created successfully %s",
+        "with authentication" if token else "without authentication",
+    )
 
     return server
 
