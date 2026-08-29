@@ -28,10 +28,7 @@ import type {
   AgentConnection,
   CheckpointRecord,
 } from '../types';
-import {
-  runtimeCheckpointsUrl,
-  runtimeResumeUrl,
-} from '../runtimes/lifecycle';
+import { runtimeCheckpointsUrl, runtimeResumeUrl } from '../runtimes/lifecycle';
 
 /**
  * Checkpoint data returned by the runtime-checkpoints API.
@@ -278,16 +275,21 @@ export function useCheckpointAgent() {
         await import('../api/runtimes/checkpoints');
 
       const mode = params.mode || 'criu';
-      const pauseResp = await pauseRuntime(token, params.runtimeName, runtimesUrl, {
-        name: params.name || `checkpoint-${Date.now()}`,
-        description: `${mode.toUpperCase()} checkpoint for ${params.agentSpecId}`,
-        checkpoint_mode: mode,
-        ...(params.messages && mode === 'light'
-          ? { messages: params.messages }
-          : {}),
-        agent_spec_id: params.agentSpecId,
-        agentspec: params.agentSpec || {},
-      });
+      const pauseResp = await pauseRuntime(
+        token,
+        params.runtimeName,
+        runtimesUrl,
+        {
+          name: params.name || `checkpoint-${Date.now()}`,
+          description: `${mode.toUpperCase()} checkpoint for ${params.agentSpecId}`,
+          checkpoint_mode: mode,
+          ...(params.messages && mode === 'light'
+            ? { messages: params.messages }
+            : {}),
+          agent_spec_id: params.agentSpecId,
+          agentspec: params.agentSpec || {},
+        },
+      );
 
       const checkpointId = pauseResp.checkpoint_id;
       if (!checkpointId) {

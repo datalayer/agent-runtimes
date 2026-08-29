@@ -31,16 +31,16 @@ const BASE = 'https://runtimes.example';
 /** The verbs Python names, read out of `code_sandboxes/lifecycle.py`. */
 function pythonOperations(): Record<string, string> {
   const source = readFileSync(
-    join(
-      __dirname,
-      '../../../../code-sandboxes/code_sandboxes/lifecycle.py',
-    ),
+    join(__dirname, '../../../../code-sandboxes/code_sandboxes/lifecycle.py'),
     'utf8',
   );
   const block = source.match(
     /LIFECYCLE_OPERATIONS: dict\[str, str\] = \{([\s\S]*?)\n\}/,
   );
-  expect(block, 'LIFECYCLE_OPERATIONS not found in the Python module').toBeTruthy();
+  expect(
+    block,
+    'LIFECYCLE_OPERATIONS not found in the Python module',
+  ).toBeTruthy();
   const operations: Record<string, string> = {};
   for (const line of block![1].split('\n')) {
     const entry = line.match(/^\s*"([^"]+)":\s*"([^"]*)"/);
@@ -78,7 +78,10 @@ describe('the runtime URLs', () => {
     for (const [verb, url] of Object.entries(built)) {
       const path = LIFECYCLE_OPERATIONS[
         verb as keyof typeof LIFECYCLE_OPERATIONS
-      ].split(' ').slice(1).join(' ');
+      ]
+        .split(' ')
+        .slice(1)
+        .join(' ');
       expect(url, verb).toBe(`${BASE}/api/runtimes/v1${path}`);
     }
   });

@@ -55,7 +55,11 @@ export {
 // The plugins that ship with it.
 export { A2uiPlugin, A2UI_PLUGIN_NAME } from './plugins/a2ui';
 export { AgentsPlugin, AGENTS_PLUGIN_NAME } from './plugins/agents';
-export { ChatPlugin, CHAT_PLUGIN_NAME, type ChatPluginConfig } from './plugins/chat';
+export {
+  ChatPlugin,
+  CHAT_PLUGIN_NAME,
+  type ChatPluginConfig,
+} from './plugins/chat';
 export {
   GraphViewPlugin,
   GRAPH_PLUGIN_NAME,

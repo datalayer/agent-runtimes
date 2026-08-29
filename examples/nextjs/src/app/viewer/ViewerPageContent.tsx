@@ -194,7 +194,10 @@ function ViewerContent() {
         }
       }
 
-      console.log('Attempting to terminate runtime with pod name:', runtimeName);
+      console.log(
+        'Attempting to terminate runtime with pod name:',
+        runtimeName,
+      );
 
       // If we have a pod name, terminate it
       if (runtimeName) {

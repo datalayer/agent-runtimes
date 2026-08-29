@@ -100,10 +100,7 @@ export function useBrowserAgent(
     ],
   );
 
-  const transport = useMemo(
-    () => new DirectChatTransport({ agent }),
-    [agent],
-  );
+  const transport = useMemo(() => new DirectChatTransport({ agent }), [agent]);
 
   return useChat({
     id: chatId ?? `browser-agent-${spec.id}`,

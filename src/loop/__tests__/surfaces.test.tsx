@@ -135,7 +135,8 @@ describe('the jupyter-react fallback', () => {
     );
     // ...and consulted again in the effect, for one that mounted before.
     const effect = source!.slice(source!.indexOf('if (!serviceManager) {'));
-    expect(effect.indexOf('jupyterReactStore.getState().serviceManager')).
-      toBeLessThan(effect.indexOf('if (lite) {'));
+    expect(
+      effect.indexOf('jupyterReactStore.getState().serviceManager'),
+    ).toBeLessThan(effect.indexOf('if (lite) {'));
   });
 });

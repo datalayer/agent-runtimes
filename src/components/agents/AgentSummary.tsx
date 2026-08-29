@@ -12,6 +12,19 @@ export interface AgentSummaryData {
   agentName: string;
   location: string;
   specId?: string;
+  /**
+   * The framework turning this agent's loop, as its spec declares it —
+   * `pydantic-ai` server-side, `vercel-ai` in the page.
+   */
+  harness?: string;
+  /**
+   * The runtime variant the host chose: `<location>-<harness>`.
+   *
+   * Shown next to the harness rather than instead of it, because they answer
+   * different questions and can disagree: the harness is what the spec asked
+   * for, the variant is what it actually got.
+   */
+  variant?: string;
   status?: string;
   baseUrl?: string;
   sandboxBaseUrl?: string;
@@ -188,6 +201,12 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           <Box sx={{ color: 'fg.muted' }}>Name: {summary.agentName}</Box>
           <Box sx={{ color: 'fg.muted' }}>Location: {summary.location}</Box>
           <Box sx={{ color: 'fg.muted' }}>Spec: {summary.specId || '—'}</Box>
+          <Box sx={{ color: 'fg.muted' }}>
+            Harness: {summary.harness || '—'}
+          </Box>
+          <Box sx={{ color: 'fg.muted' }}>
+            Variant: {summary.variant || '—'}
+          </Box>
           <Box sx={{ color: 'fg.muted' }}>
             Status: {isCreating ? 'creating' : summary.status || '—'}
           </Box>

@@ -15,10 +15,7 @@
  */
 
 import { useReactorPlatform } from '@datalayer/reactor/react';
-import {
-  CODE_SANDBOX_PLUGIN_NAME,
-  type CodeSandboxOutput,
-} from './plugin';
+import { CODE_SANDBOX_PLUGIN_NAME, type CodeSandboxOutput } from './plugin';
 import type { SwitchableSandboxService } from './switchable';
 
 /** The sandbox service, or `undefined` when the plugin is not mounted. */

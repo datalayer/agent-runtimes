@@ -55,13 +55,13 @@ bundle for everyone, including people who never open it.
 
 ## Contribution points
 
-| Point | For | Rendered by |
-| --- | --- | --- |
+| Point          | For                           | Rendered by                  |
+| -------------- | ----------------------------- | ---------------------------- |
 | `LoopViewType` | a view the workspace may open | the view host, one at a time |
-| `LoopCommand` | a slash command | the prompt, on `/name` |
-| `LoopMention` | an `@` namespace | the prompt's typeahead |
+| `LoopCommand`  | a slash command               | the prompt, on `/name`       |
+| `LoopMention`  | an `@` namespace              | the prompt's typeahead       |
 
-And three slots, which render *everything* contributed rather than choosing:
+And three slots, which render _everything_ contributed rather than choosing:
 `LoopSlots.header`, `LoopSlots.promptAction`, `LoopSlots.status`.
 
 Reach for a **slot** when everything contributed should appear (a status chip, a
@@ -87,7 +87,9 @@ contribution(
     description: 'Say hello',
     group: 'Session',
     args: [{ name: 'who', description: 'Who to greet' }],
-    run: async ({ workspace, argv }) => ({ content: `Hello ${argv || 'there'}` }),
+    run: async ({ workspace, argv }) => ({
+      content: `Hello ${argv || 'there'}`,
+    }),
   },
   { id: 'hello' },
 );
@@ -106,7 +108,7 @@ that will be:
 ```ts
 definePlugin({
   name: '@datalayer/loop-plugin-notebook',
-  contributionPoints: [LoopNotebookToolbar],   // declared, so the graph shows it empty
+  contributionPoints: [LoopNotebookToolbar], // declared, so the graph shows it empty
 });
 ```
 
@@ -142,7 +144,7 @@ contribution(
 descriptors, do the work in `onClick`, or render a component for anything that
 needs state of its own.
 
-This is why the chat's "Compact" and "Reproduce" buttons live on the *chat*
+This is why the chat's "Compact" and "Reproduce" buttons live on the _chat_
 plugin rather than on the notebook. They only work because there is a
 conversation to submit to, so having the notebook draw them meant the notebook
 knew about the chat. Now switching the chat off takes its buttons off the
@@ -156,7 +158,7 @@ module is not fetched until then:
 ```ts
 export const MyToolbarPlugin = defineLazyPlugin({
   name: '@acme/loop-plugin-my-toolbar',
-  displayName: 'My toolbar',            // listed and describable meanwhile
+  displayName: 'My toolbar', // listed and describable meanwhile
   activationEvents: [onContributionPoint(LoopNotebookToolbar)],
   load: () => import('./plugin'),
 });
@@ -206,17 +208,20 @@ the reactor's README for why it is deliberately that thin.
 Declare it, and read its build output:
 
 ```ts
-import { CodeSandboxPlugin, useSandboxService } from '@datalayer/loop-plugin-code-sandbox';
+import {
+  CodeSandboxPlugin,
+  useSandboxService,
+} from '@datalayer/loop-plugin-code-sandbox';
 
 export const MyPlugin = definePlugin({
   name: '@acme/loop-plugin-mine',
-  dependencies: [CodeSandboxPlugin],   // pulled in whether or not the host mounted it
+  dependencies: [CodeSandboxPlugin], // pulled in whether or not the host mounted it
   // …
 });
 ```
 
 ```tsx
-const sandbox = useSandboxService();      // throws if the dependency is missing
+const sandbox = useSandboxService(); // throws if the dependency is missing
 const snapshot = useSignalValue(sandbox.snapshot);
 ```
 
@@ -230,7 +235,7 @@ A plugin that holds a connection, a kernel or a cache must say so:
 ```ts
 definePlugin({
   name: '@acme/loop-plugin-mine',
-  preserveOutput: true,     // enable() keeps what I built
+  preserveOutput: true, // enable() keeps what I built
   build: () => ({ connection: connect() }),
 });
 ```
@@ -272,7 +277,9 @@ A plugin is testable without a DOM, because contributions are data:
 const reactor = buildReactorFromPlugins([MyPlugin]);
 reactor.start();
 
-expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual(['hello']);
+expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+  'hello',
+]);
 
 reactor.disable('@acme/loop-plugin-mine');
 expect(reactor.getContributions(LoopViewType)).toHaveLength(0);

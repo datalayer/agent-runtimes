@@ -260,9 +260,7 @@ const kernelsPoll = new Poll({
 
 // Force refresh at expiration date if next tick is after it.
 runtimesStore.subscribe((state: RuntimesState, prevState: RuntimesState) => {
-  if (
-    !JSONExt.deepEqual(state.runtimes as any, prevState.runtimes as any)
-  ) {
+  if (!JSONExt.deepEqual(state.runtimes as any, prevState.runtimes as any)) {
     const now = Date.now();
     const minExpiredAt =
       Math.min(

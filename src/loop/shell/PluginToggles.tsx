@@ -29,7 +29,9 @@ export type PluginTogglesProps = {
 
 /** Trim the package scope so the list reads as names rather than paths. */
 function shortName(name: string): string {
-  return name.replace(/^@datalayer\/loop-plugin-/, '').replace(/^@datalayer\//, '');
+  return name
+    .replace(/^@datalayer\/loop-plugin-/, '')
+    .replace(/^@datalayer\//, '');
 }
 
 export function PluginToggles({
@@ -61,7 +63,9 @@ export function PluginToggles({
         bg: 'canvas.subtle',
       }}
     >
-      <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>{title}</Text>
+      <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
+        {title}
+      </Text>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
         {reactor.listPlugins().map(name => {
           const isLocked = locked.includes(name);

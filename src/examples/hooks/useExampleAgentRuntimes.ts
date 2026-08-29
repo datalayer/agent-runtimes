@@ -14,6 +14,7 @@ import {
   useRuntimeTargetStore,
 } from '../utils/runtimeTargetStore';
 import { useExampleAgentRuntimesUrl } from '../utils/useExampleAgentRuntimesUrl';
+import { locationOf, toAgentRuntimeVariant } from '../../runtimes/variants';
 
 /**
  * High-level examples hook that applies the shared Local/Cloud runtime target
@@ -26,23 +27,27 @@ export function useExampleAgentRuntimes(
   const capabilities = runtimeTargetCapabilities(runtimeTarget);
   const localRuntimeBaseUrl = useExampleAgentRuntimesUrl();
 
-  const runtimeCreationTarget =
-    options.runtimeCreationTarget ??
-    (runtimeTarget === 'datalayer'
-      ? 'backend-services'
-      : 'local-agent-runtimes');
+  // The examples' four targets collapse to two runtimes: only `datalayer` is
+  // the cloud one. `variant` is what the hook speaks now, so the summary and
+  // the chat can name what is actually running rather than infer it.
+  const variant = toAgentRuntimeVariant(
+    options.variant ??
+      options.runtimeCreationTarget ??
+      (runtimeTarget === 'datalayer'
+        ? 'backend-services'
+        : 'local-agent-runtimes'),
+  );
+  const isLocal = locationOf(variant) === 'local';
 
   const runtimeCreationBaseUrl =
     options.runtimeCreationBaseUrl ??
-    (runtimeCreationTarget === 'local-agent-runtimes'
-      ? localRuntimeBaseUrl
-      : undefined);
+    (isLocal ? localRuntimeBaseUrl : undefined);
 
   // Two of the four targets are a sandbox and nothing else. Launching an agent
   // there would call a service that is not running, so the hook simply does
   // not — and `useExampleAgentRuntime` reports why, for the chat to show.
   const autoStart = capabilities.hasAgent
-    ? (options.autoStart ?? runtimeCreationTarget === 'backend-services')
+    ? (options.autoStart ?? !isLocal)
     : false;
 
   const fallbackRuntimeName = useMemo(() => {
@@ -54,37 +59,35 @@ export function useExampleAgentRuntimes(
 
   const runtimeConnection = useMemo(
     () =>
-      runtimeCreationTarget === 'local-agent-runtimes'
+      isLocal
         ? {
             runtimeName: fallbackRuntimeName,
             environmentName: 'local-agent-runtimes',
             jupyterBaseUrl: runtimeCreationBaseUrl,
           }
         : undefined,
-    [fallbackRuntimeName, runtimeCreationBaseUrl, runtimeCreationTarget],
+    [fallbackRuntimeName, runtimeCreationBaseUrl, isLocal],
   );
 
   const agentConfig = useMemo(
     () =>
-      runtimeCreationTarget === 'local-agent-runtimes' && options.agentSpecId
+      isLocal && options.agentSpecId
         ? {
             ...options.agentConfig,
             agentSpecId:
               options.agentConfig?.agentSpecId ?? options.agentSpecId,
           }
         : options.agentConfig,
-    [options.agentConfig, options.agentSpecId, runtimeCreationTarget],
+    [options.agentConfig, options.agentSpecId, isLocal],
   );
 
   return useAgentRuntimes({
     ...options,
     agentConfig,
-    runtimeCreationTarget,
+    variant,
     runtimeCreationBaseUrl,
     autoStart,
-    autoCreateAgent: capabilities.hasAgent
-      ? options.autoCreateAgent
-      : false,
+    autoCreateAgent: capabilities.hasAgent ? options.autoCreateAgent : false,
     runtimeConnection: options.runtimeConnection ?? runtimeConnection,
   });
 }

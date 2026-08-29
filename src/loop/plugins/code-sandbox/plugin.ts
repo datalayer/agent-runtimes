@@ -32,8 +32,7 @@ import {
   targetHasAgent,
 } from './switchable';
 
-export const CODE_SANDBOX_PLUGIN_NAME =
-  '@datalayer/loop-plugin-code-sandbox';
+export const CODE_SANDBOX_PLUGIN_NAME = '@datalayer/loop-plugin-code-sandbox';
 
 export type CodeSandboxConfig = {
   /** Server the server-backed targets are reached through. */

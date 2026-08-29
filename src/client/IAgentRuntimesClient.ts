@@ -116,7 +116,10 @@ export interface IAgentRuntimesClient {
    *
    * @returns Aggregated usage totals.
    */
-  getAgentUsage(runtimeName: string, agentId?: string): Promise<AgentUsageSummary>;
+  getAgentUsage(
+    runtimeName: string,
+    agentId?: string,
+  ): Promise<AgentUsageSummary>;
 
   // ==========================================================================
   // Notifications

@@ -24,7 +24,10 @@
 import type { ServiceManager } from '@jupyterlab/services';
 import { disposeServiceManager } from '@datalayer/jupyter-react';
 
-const sandboxManagersByRuntime = new Map<string, Set<ServiceManager.IManager>>();
+const sandboxManagersByRuntime = new Map<
+  string,
+  Set<ServiceManager.IManager>
+>();
 
 /**
  * Register a `ServiceManager` connected to a sandbox pod.

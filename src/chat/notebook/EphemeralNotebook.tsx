@@ -263,7 +263,9 @@ export function EphemeralNotebook({
     if (!preferredRuntime) {
       return undefined;
     }
-    return runtimes.find(rt => String(rt?.runtime_name || '') === preferredRuntime);
+    return runtimes.find(
+      rt => String(rt?.runtime_name || '') === preferredRuntime,
+    );
   }, [runtimeName, runtimes]);
 
   // An explicit endpoint override wins over the pod lookup: it lets a SaaS
@@ -277,7 +279,8 @@ export function EphemeralNotebook({
         wsUrl: String(runtimeOverride?.wsUrl || '').trim() || undefined,
         token: String(runtimeOverride?.token || '').trim(),
         runtime_name:
-          String(runtimeOverride?.runtimeName || '').trim() || 'agent-node-proxy',
+          String(runtimeOverride?.runtimeName || '').trim() ||
+          'agent-node-proxy',
       };
     }
     return resolvedRuntime;

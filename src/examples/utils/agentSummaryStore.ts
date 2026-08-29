@@ -16,6 +16,10 @@ export interface AgentSummary {
   agentName: string;
   agentId?: string;
   specId?: string;
+  /** The framework turning the loop, as the spec declares it. */
+  harness?: string;
+  /** The runtime variant the example runs on: `<location>-<harness>`. */
+  variant?: string;
   location: AgentSummaryLocation;
   /**
    * Base URL of the agent-runtimes API server. Hosts both the agent status

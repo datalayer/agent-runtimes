@@ -963,7 +963,11 @@ export function useAgentRuntimes(
           return bTs - aTs;
         })[0];
 
-        if (cancelled || !latestRuntime?.runtime_name || !latestRuntime?.ingress) {
+        if (
+          cancelled ||
+          !latestRuntime?.runtime_name ||
+          !latestRuntime?.ingress
+        ) {
           return;
         }
 
@@ -1368,7 +1372,9 @@ export function useDeleteAgentRuntime() {
           if (!Array.isArray(current)) {
             return current;
           }
-          return current.filter(runtime => runtime.runtime_name !== runtimeName);
+          return current.filter(
+            runtime => runtime.runtime_name !== runtimeName,
+          );
         },
       );
       queryClient.cancelQueries({

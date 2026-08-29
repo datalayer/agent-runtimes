@@ -18,8 +18,7 @@ import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 import PluginsPanel from './PluginsPanel';
 
-export const PLUGINS_PANEL_PLUGIN_NAME =
-  '@datalayer/loop-plugin-plugins-panel';
+export const PLUGINS_PANEL_PLUGIN_NAME = '@datalayer/loop-plugin-plugins-panel';
 
 export const PluginsPanelPlugin = definePlugin<
   Record<string, never>,

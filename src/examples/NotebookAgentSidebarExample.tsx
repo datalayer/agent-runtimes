@@ -108,7 +108,7 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
 }
 
 /**
- * Agent Runtime Notebook Chat  Sidebar Example with Simple integration
+ * Notebook Chat Sidebar Example
  */
 interface ChatJupyterNotebookExampleProps {
   serviceManager?: ServiceManager.IManager;
@@ -207,7 +207,7 @@ export function AgentRuntimeNotebookExampleInner({
             }}
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-              Agent Runtime Notebook Chat Sidebar Example
+              Notebook Chat Sidebar Example
             </h1>
             <p style={{ margin: '8px 0 0', color: 'var(--fgColor-muted)' }}>
               Chat with Jupyter Notebook integration

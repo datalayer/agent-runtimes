@@ -36,7 +36,8 @@ import { NotebookToolbarPlugin } from './plugins/notebook-toolbar';
 export const NotebookExtension = defineExtension({
   name: '@datalayer/loop-extension-notebook',
   displayName: 'Notebooks',
-  description: 'A notebook beside the chat, and the toolbar that reports on it.',
+  description:
+    'A notebook beside the chat, and the toolbar that reports on it.',
   octicon: 'rows',
   emoji: '\u{1F4D3}',
   plugins: [NotebookPlugin, NotebookToolbarPlugin],

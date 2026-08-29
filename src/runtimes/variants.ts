@@ -226,9 +226,7 @@ export function legacyTargetOf(
  * that says nothing is run by the framework that has always run it. That
  * default is what lets every spec written before this field stay correct.
  */
-export function specHarnessOf(
-  spec: Pick<Agentspec, 'harness'>,
-): AgentHarness {
+export function specHarnessOf(spec: Pick<Agentspec, 'harness'>): AgentHarness {
   return HARNESS_BY_SPEC_HARNESS[spec.harness ?? ''] ?? 'pydanticai';
 }
 

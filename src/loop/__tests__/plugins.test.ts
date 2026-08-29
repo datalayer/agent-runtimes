@@ -6,10 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  buildReactorFromPlugins,
-  configurePlugin,
-} from '@datalayer/reactor';
+import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
 import {
   LoopChatSurface,
   LoopCommand,
@@ -126,10 +123,7 @@ describe('summarize', () => {
 describe('the editor plugins', () => {
   it('pull the sandbox in as a dependency', () => {
     // Mounted without the base plugin: the reactor resolves it anyway.
-    const reactor = buildReactorFromPlugins([
-      NotebookPlugin,
-      DocumentPlugin,
-    ]);
+    const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
     expect(reactor.hasPlugin(CODE_SANDBOX_PLUGIN_NAME)).toBe(true);
@@ -138,10 +132,7 @@ describe('the editor plugins', () => {
   it('are contributed to the chat, not to the workspace', () => {
     // A notebook is what the conversation is about; it belongs beside the
     // reply rather than in a tab of its own.
-    const reactor = buildReactorFromPlugins([
-      NotebookPlugin,
-      DocumentPlugin,
-    ]);
+    const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
     expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
@@ -155,10 +146,7 @@ describe('the editor plugins', () => {
   });
 
   it('offer their editors only with a running sandbox', () => {
-    const reactor = buildReactorFromPlugins([
-      NotebookPlugin,
-      DocumentPlugin,
-    ]);
+    const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
     const surfaces = reactor.getContributions(LoopChatSurface);
@@ -177,10 +165,7 @@ describe('the editor plugins', () => {
   });
 
   it('orders the editors: notebook, then document', () => {
-    const reactor = buildReactorFromPlugins([
-      NotebookPlugin,
-      DocumentPlugin,
-    ]);
+    const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
     expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
@@ -204,10 +189,7 @@ describe('the editor plugins', () => {
   });
 
   it('each contribute a command that brings the chat forward', async () => {
-    const reactor = buildReactorFromPlugins([
-      NotebookPlugin,
-      DocumentPlugin,
-    ]);
+    const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
     const opened: string[] = [];
@@ -226,10 +208,7 @@ describe('the editor plugins', () => {
   });
 
   it('takes its editor away when a plugin is disabled', () => {
-    const reactor = buildReactorFromPlugins([
-      NotebookPlugin,
-      DocumentPlugin,
-    ]);
+    const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
     reactor.disable('@datalayer/loop-plugin-document');
@@ -499,8 +478,7 @@ describe('toggling the sandbox plugin', () => {
     // The same service, so the notebook showing its kernel is not detached by
     // someone ticking a checkbox.
     expect(
-      reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)!
-        .sandbox,
+      reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)!.sandbox,
     ).toBe(before);
   });
 
@@ -622,8 +600,8 @@ describe('the Loop workspace example', () => {
   });
 
   it('names an agent only for the targets that bring one', () => {
-    expect(source).toContain('targetHasAgent(sandboxTarget) ? agentId : undefined');
+    expect(source).toContain(
+      'targetHasAgent(sandboxTarget) ? agentId : undefined',
+    );
   });
-
-
 });

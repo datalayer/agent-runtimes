@@ -4026,7 +4026,9 @@ function ChatBaseInner({
       padding={padding}
       onSend={() => handleSend()}
       onStop={handleStop}
-      disableInputPrompt={disableInputPrompt || disabled || !!overlay || launching}
+      disableInputPrompt={
+        disableInputPrompt || disabled || !!overlay || launching
+      }
       showTokenUsage={showTokenUsage}
       agentUsage={agentUsage}
       showModelSelector={showModelSelector}

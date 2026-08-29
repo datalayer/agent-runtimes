@@ -134,7 +134,8 @@ export type RuntimeContentAttachment = {
   uid?: string;
   source_uid?: string;
   source_kind?: string;
-  delivery?: 'mount' | 'local-bridge' | 'materialize' | 'client' | 'environment';
+  delivery?:
+    'mount' | 'local-bridge' | 'materialize' | 'client' | 'environment';
   mount_path?: string | null;
   mode?: 'ro' | 'rw';
   required?: boolean;

@@ -268,7 +268,11 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const handleResume = useCallback(
-    async (mode: CheckpointMode, checkpointId?: string, runtimeName?: string) => {
+    async (
+      mode: CheckpointMode,
+      checkpointId?: string,
+      runtimeName?: string,
+    ) => {
       setActionLoading(true);
       setActionError(null);
       try {

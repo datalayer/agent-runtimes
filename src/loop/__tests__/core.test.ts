@@ -26,7 +26,9 @@ const workspace: LoopWorkspaceContext = {
   setViewControls: () => {},
 };
 
-function view(overrides: Partial<ViewTypeContribution> = {}): ViewTypeContribution {
+function view(
+  overrides: Partial<ViewTypeContribution> = {},
+): ViewTypeContribution {
   return {
     viewType: 'notebook',
     title: 'Notebook',

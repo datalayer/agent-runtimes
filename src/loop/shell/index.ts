@@ -9,6 +9,10 @@
  * @module loop/shell
  */
 
-export { LoopWorkspace, buildLoopReactor, type LoopWorkspaceProps } from './LoopWorkspace';
+export {
+  LoopWorkspace,
+  buildLoopReactor,
+  type LoopWorkspaceProps,
+} from './LoopWorkspace';
 export { ViewSwitcher, type ViewSwitcherProps } from './ViewSwitcher';
 export { PluginToggles, type PluginTogglesProps } from './PluginToggles';

@@ -36,10 +36,14 @@ export default function DocumentView({
   // whether a sandbox happens to be running. As with the notebook, the bar
   // itself belongs to a plugin — switch that off and the document has no
   // toolbar rather than an empty one.
-  const toolbar = useEditorToolbar(LoopDocumentToolbar, LoopDocumentToolbarItem, {
-    workspace,
-    editorId: documentId,
-  });
+  const toolbar = useEditorToolbar(
+    LoopDocumentToolbar,
+    LoopDocumentToolbarItem,
+    {
+      workspace,
+      editorId: documentId,
+    },
+  );
 
   if (snapshot.state !== 'running') {
     return (

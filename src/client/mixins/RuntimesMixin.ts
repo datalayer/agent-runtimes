@@ -46,9 +46,7 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
     // Helper Functions
     // ========================================================================
 
-    _extractRuntimeName(
-      runtimeNameOrInstance: string | RuntimeDTO,
-    ): string {
+    _extractRuntimeName(runtimeNameOrInstance: string | RuntimeDTO): string {
       return typeof runtimeNameOrInstance === 'string'
         ? runtimeNameOrInstance
         : runtimeNameOrInstance.runtimeName;

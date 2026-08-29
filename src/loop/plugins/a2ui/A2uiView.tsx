@@ -61,12 +61,15 @@ export default function A2uiView({ workspace }: LoopViewProps): JSX.Element {
 
   const processor = useMemo(
     () =>
-      new MessageProcessor<ReactComponentImplementation>([basicCatalog], action => {
-        // The round-trip: what the reader did goes back to the code that drew
-        // the surface, and the surface it returns replaces this one. Without
-        // this a surface is a screenshot with buttons on it.
-        void renderRef.current?.(sourceRef.current, action);
-      }),
+      new MessageProcessor<ReactComponentImplementation>(
+        [basicCatalog],
+        action => {
+          // The round-trip: what the reader did goes back to the code that drew
+          // the surface, and the surface it returns replaces this one. Without
+          // this a surface is a screenshot with buttons on it.
+          void renderRef.current?.(sourceRef.current, action);
+        },
+      ),
     [],
   );
 
@@ -97,7 +100,9 @@ export default function A2uiView({ workspace }: LoopViewProps): JSX.Element {
           },
         );
         if (!response.ok) {
-          setError(`The server could not render that execution (${response.status}).`);
+          setError(
+            `The server could not render that execution (${response.status}).`,
+          );
           return;
         }
         const payload = await response.json();
@@ -145,7 +150,10 @@ export default function A2uiView({ workspace }: LoopViewProps): JSX.Element {
   }
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', px: 4, py: 3 }} style={INHERIT_THEME}>
+    <Box
+      sx={{ height: '100%', overflowY: 'auto', px: 4, py: 3 }}
+      style={INHERIT_THEME}
+    >
       {surfaces.map(surface => (
         <A2uiSurfaceComposed key={surface.id} surface={surface} />
       ))}

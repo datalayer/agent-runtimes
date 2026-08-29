@@ -95,9 +95,7 @@ export function AgentPicker({
   const label = current?.name || active || 'Agent';
 
   if (agents.length === 0) {
-    return (
-      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{label}</Text>
-    );
+    return <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{label}</Text>;
   }
 
   return (

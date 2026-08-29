@@ -66,7 +66,9 @@ const isLocalJupyterServerUrl = (value?: string | null): boolean => {
   try {
     host = new URL(value).hostname.toLowerCase();
   } catch {
-    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(value);
+    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(
+      value,
+    );
   }
   return (
     host === 'localhost' ||

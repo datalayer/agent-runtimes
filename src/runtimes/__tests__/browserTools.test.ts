@@ -59,7 +59,12 @@ describe('frontend tool schemas', () => {
     expect(
       toolInputSchema({
         parameters: [
-          { name: 'path', type: 'string', description: 'Where', required: true },
+          {
+            name: 'path',
+            type: 'string',
+            description: 'Where',
+            required: true,
+          },
           { name: 'count', type: 'number' },
           { name: 'kind', type: 'string', enum: ['code', 'markdown'] },
           { name: 'tags', type: 'string[]' },

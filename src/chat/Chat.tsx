@@ -97,11 +97,15 @@ function getEndpointPath(protocol: Protocol, agentId?: string): string {
 }
 
 /**
- * Map transport type to protocol type
+ * Map transport type to protocol type.
+ *
+ * Only `vercel-ai-jupyter` collapses: it is the same wire protocol reached
+ * through Jupyter's request machinery. Everything else, `browser-vercel-ai`
+ * included, is its own adapter and passes through.
  */
 function getProtocolType(
   protocol: Protocol,
-): 'ag-ui' | 'a2a' | 'acp' | 'vercel-ai' {
+): Exclude<Protocol, 'vercel-ai-jupyter'> {
   switch (protocol) {
     case 'vercel-ai-jupyter':
       return 'vercel-ai';

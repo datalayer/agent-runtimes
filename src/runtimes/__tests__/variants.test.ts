@@ -60,7 +60,9 @@ describe('the legacy target names', () => {
   });
 
   it('fall back for anything unrecognised, including nothing at all', () => {
-    expect(toAgentRuntimeVariant(undefined)).toBe(DEFAULT_AGENT_RUNTIME_VARIANT);
+    expect(toAgentRuntimeVariant(undefined)).toBe(
+      DEFAULT_AGENT_RUNTIME_VARIANT,
+    );
     expect(toAgentRuntimeVariant('nonsense' as never)).toBe(
       DEFAULT_AGENT_RUNTIME_VARIANT,
     );
@@ -101,7 +103,9 @@ describe('matching a spec to a variant', () => {
   it('treats a spec that says nothing as the framework that always ran it', () => {
     // What lets every spec written before the field existed stay correct.
     expect(specHarnessOf({})).toBe('pydanticai');
-    expect(variantSupportsSpecHarness('cloud-pydanticai', undefined)).toBe(true);
+    expect(variantSupportsSpecHarness('cloud-pydanticai', undefined)).toBe(
+      true,
+    );
     expect(variantSupportsSpecHarness('browser-vercelai', undefined)).toBe(
       false,
     );

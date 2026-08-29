@@ -135,7 +135,9 @@ export function getGroupedCodeSandboxDescs(
          * picker, which is the one place a notebook can be pointed at them.
          * What they always have is the pod that stands for them.
          */
-        .filter(k => (k.id || k.runtime_name) && !listedAsSession.includes(k.id))
+        .filter(
+          k => (k.id || k.runtime_name) && !listedAsSession.includes(k.id),
+        )
         .map(runtime => {
           const environment = multiServiceManager
             .remote!.environments.get()

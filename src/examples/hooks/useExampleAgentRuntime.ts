@@ -13,6 +13,7 @@ import {
 } from '../utils/runtimeTargetStore';
 import { agentSummaryStore } from '../utils/agentSummaryStore';
 import { useExampleAgentRuntimes } from './useExampleAgentRuntimes';
+import { harnessOf, SPEC_HARNESS_BY_HARNESS } from '../../runtimes/variants';
 
 export interface UseExampleAgentRuntimeOptions {
   exampleId: string;
@@ -75,7 +76,11 @@ export function useExampleAgentRuntime(
     autoStart,
     agentConfig: combinedConfig,
   });
-  const { runtime, status, isReady, error } = result;
+  const { runtime, status, isReady, error, variant } = result;
+  // The harness reported is the one actually turning the loop, read off the
+  // variant rather than off the spec: a spec states what it needs, and this
+  // says what it got.
+  const harness = SPEC_HARNESS_BY_HARNESS[harnessOf(variant)];
   const baseUrl = isCloud
     ? runtime?.agentBaseUrl || result.runtimeCreationBaseUrl
     : result.runtimeCreationBaseUrl;
@@ -94,6 +99,8 @@ export function useExampleAgentRuntime(
       agentName,
       agentId: runtime?.agentId,
       specId,
+      harness,
+      variant,
       location,
       baseUrl: agentApiBaseUrl,
       sandboxBaseUrl: runtime?.agentBaseUrl,
@@ -111,6 +118,8 @@ export function useExampleAgentRuntime(
     runtime?.agentId,
     runtime?.agentBaseUrl,
     specId,
+    harness,
+    variant,
     location,
     baseUrl,
     isCloud,

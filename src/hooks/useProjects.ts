@@ -110,7 +110,8 @@ export function useProjects() {
         description: space.description ?? space.description_t ?? '',
         createdAt: space.created_at ? new Date(space.created_at) : new Date(),
         isPublic: space.public ?? space.public_b ?? false,
-        attachedAgentRuntimeName: space.attached_agent_runtime_name_s || undefined,
+        attachedAgentRuntimeName:
+          space.attached_agent_runtime_name_s || undefined,
         attachedAgentSpecId: space.attached_agent_spec_id_s || undefined,
       }));
   }, [allSpaces]);

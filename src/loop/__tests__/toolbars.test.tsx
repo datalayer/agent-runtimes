@@ -147,13 +147,15 @@ describe('the chat', () => {
 
 describe('the toolbar plugins', () => {
   it('are delivered by the editor extensions, and grouped as such', () => {
-    const reactor = buildReactorFromPlugins([NotebookExtension, DocumentExtension]);
+    const reactor = buildReactorFromPlugins([
+      NotebookExtension,
+      DocumentExtension,
+    ]);
     reactor.start();
 
-    expect(reactor.getExtensionManifest(NotebookExtension.name)?.plugins).toEqual([
-      NotebookPlugin.name,
-      NOTEBOOK_TOOLBAR_PLUGIN_NAME,
-    ]);
+    expect(
+      reactor.getExtensionManifest(NotebookExtension.name)?.plugins,
+    ).toEqual([NotebookPlugin.name, NOTEBOOK_TOOLBAR_PLUGIN_NAME]);
     expect(reactor.getManifest(NOTEBOOK_TOOLBAR_PLUGIN_NAME)?.extension).toBe(
       NotebookExtension.name,
     );
@@ -203,9 +205,9 @@ describe('an extension', () => {
   });
 
   it('refuses to group nothing', () => {
-    expect(() =>
-      defineExtension({ name: '@loop/empty', plugins: [] }),
-    ).toThrow(/at least one plugin/);
+    expect(() => defineExtension({ name: '@loop/empty', plugins: [] })).toThrow(
+      /at least one plugin/,
+    );
   });
 });
 

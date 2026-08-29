@@ -598,7 +598,6 @@ export interface ChatCommonProps {
    */
   pendingPrompt?: string;
 
-
   // ============ Information ============
 
   /**

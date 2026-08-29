@@ -37,10 +37,14 @@ export default function NotebookView({
   // plugin's kernel light, the chat's agent actions — and this view names none
   // of them. It used to hardcode two buttons that submitted prompts, which
   // meant the notebook knew about the chat.
-  const toolbar = useEditorToolbar(LoopNotebookToolbar, LoopNotebookToolbarItem, {
-    workspace,
-    editorId: notebookId,
-  });
+  const toolbar = useEditorToolbar(
+    LoopNotebookToolbar,
+    LoopNotebookToolbarItem,
+    {
+      workspace,
+      editorId: notebookId,
+    },
+  );
 
   // The switcher's `canOpen` gate should have kept this view shut, but a
   // sandbox can go away while it is on screen — say so rather than rendering a

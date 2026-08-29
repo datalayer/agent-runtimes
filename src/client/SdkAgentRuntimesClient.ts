@@ -62,7 +62,10 @@ export interface AgentsSdkLike {
     agentId?: string,
   ): Promise<ConversationCheckpoint[]>;
   /** Retrieves the token and cost usage summary for an agent. */
-  getAgentUsage(runtimeName: string, agentId?: string): Promise<AgentUsageSummary>;
+  getAgentUsage(
+    runtimeName: string,
+    agentId?: string,
+  ): Promise<AgentUsageSummary>;
   /** Lists agent notifications with optional filters. */
   getNotifications(filters?: NotificationFilters): Promise<AgentNotification[]>;
   /** Marks a single notification as read. */

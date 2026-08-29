@@ -39,7 +39,9 @@ export type EditorToolbar = {
 
 /** Build one plugin's items, without letting a broken one take the editor down. */
 function itemsOf(
-  entry: Contribution<{ items?: (context: EditorToolbarContext) => ToolbarItem[] }>,
+  entry: Contribution<{
+    items?: (context: EditorToolbarContext) => ToolbarItem[];
+  }>,
   context: EditorToolbarContext,
 ): ToolbarItem[] {
   try {
