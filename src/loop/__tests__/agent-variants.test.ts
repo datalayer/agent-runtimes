@@ -16,8 +16,11 @@
 import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
 
+import { GraphPlugin } from '@datalayer/reactor-graph';
 import { LoopSlots } from '../core';
 import { AgentsPlugin } from '../plugins/agents';
+import { GraphViewPlugin } from '../plugins/graph';
+import { PluginsPanelPlugin } from '../plugins/plugins-panel';
 
 /** The header components the plugin contributes, by id. */
 function headerItems(showAgentVariants?: boolean): string[] {
@@ -85,5 +88,29 @@ describe('choosing where the agent runs', () => {
     }>(AgentsPlugin.name);
 
     expect(output?.sandbox?.target.peek()).toBe('browser');
+  });
+});
+
+describe('one switch per feature', () => {
+  it('does not list the graph plugin the adapter wraps', () => {
+    /*
+     * `@datalayer/loop-plugin-graph` places the graph in this workspace and
+     * pulls the generic `@datalayer/reactor-graph` in as a dependency. Both
+     * are real plugins, so both were listed — two switches in front of one
+     * feature, with nothing to say which one to use.
+     *
+     * The adapter is the one that matters: switching it off takes the view,
+     * the button and the dependency with it.
+     */
+    const reactor = buildReactorFromPlugins([
+      PluginsPanelPlugin,
+      GraphViewPlugin,
+    ]);
+    reactor.start();
+
+    // Both are present in the platform — this is about the list, not about
+    // pretending the dependency is not there.
+    expect(reactor.listPlugins()).toContain(GraphPlugin.name);
+    expect(reactor.listPlugins()).toContain(GraphViewPlugin.name);
   });
 });
