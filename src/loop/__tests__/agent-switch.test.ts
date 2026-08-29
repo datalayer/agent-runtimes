@@ -98,3 +98,60 @@ describe('the Datalayer bridge', () => {
     expect(bridge).not.toContain('sandbox_running: Boolean(runtime.isReady)');
   });
 });
+
+describe('the prompt', () => {
+  const chat = () => read('plugins', 'chat', 'ChatView.tsx');
+
+  it('is the Lexical one, which is the only one with an `@` menu', () => {
+    /*
+     * `InputPrompt` defaults to a plain textarea. Handing it
+     * `mentionableAgents` compiles and renders and does nothing: the menu
+     * lives in `InputPromptLexical`, so typing `@` produced no overlay.
+     */
+    expect(chat()).toContain('variant="lexical"');
+    expect(chat()).toContain('mentionableAgents={mentionable}');
+  });
+
+  it('takes focus, so the workspace opens ready to type', () => {
+    expect(chat()).toMatch(/\n\s+autoFocus\n/);
+  });
+});
+
+describe('the `@` menu', () => {
+  const chat = () => read('plugins', 'chat', 'ChatView.tsx');
+
+  it('offers the whole team, not only the members you are not', () => {
+    // `subagentsFor(member)` alone made a team of two offer exactly one name.
+    expect(chat()).toContain('team.members.map(entry => ({');
+    expect(chat()).toContain('disabled: entry.id === member.id');
+  });
+
+  it('greys the member already being addressed rather than dropping it', () => {
+    const plugin = readFileSync(
+      join(__dirname, '..', '..', 'chat', 'prompt', 'AgentMentionPlugin.tsx'),
+      'utf8',
+    );
+    // Shown but not choosable: the keyboard walks `choosable`, the list
+    // renders `matches`.
+    expect(plugin).toContain(
+      'const choosable = matches.filter(agent => !agent.disabled)',
+    );
+    expect(plugin).toContain('const agent = choosable[highlighted]');
+  });
+});
+
+describe('a host that asked for no view chooser', () => {
+  it('gets neither of them', () => {
+    /*
+     * There are two: the shell's `ViewSwitcher` and the chat's own strip.
+     * Hiding the shell's and leaving the chat's is why the selector was still
+     * on screen after being switched off.
+     */
+    const example = readFileSync(
+      join(__dirname, '..', '..', 'examples', 'LoopWorkspaceExample.tsx'),
+      'utf8',
+    );
+    expect(example).toContain('showSurfaceSelector: showViewSelector');
+    expect(example).toContain('showViewSelector={showViewSelector}');
+  });
+});

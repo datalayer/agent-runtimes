@@ -158,7 +158,14 @@ export function LoopWorkspaceExample({
       buildLoopReactor([
         // The chat owns the editor beside it, so which one opens is its
         // configuration rather than the workspace's.
-        configurePlugin(ChatPlugin, { defaultSurface: defaultEditor }),
+        configurePlugin(ChatPlugin, {
+          defaultSurface: defaultEditor,
+          // The same answer as the shell's switcher: hiding one chooser and
+          // leaving the other is how the workspace kept offering a choice of
+          // view after being told not to. The chat contributes its own strip,
+          // and it is the one people actually see.
+          showSurfaceSelector: showViewSelector,
+        }),
         configurePlugin(AgentsPlugin, {
           serverUrl,
           target: initialTarget,
@@ -199,6 +206,7 @@ export function LoopWorkspaceExample({
       teamId,
       showGraph,
       showPluginsManager,
+      showViewSelector,
       defaultEditor,
     ],
   );

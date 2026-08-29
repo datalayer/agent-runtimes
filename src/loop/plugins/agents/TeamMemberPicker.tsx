@@ -104,12 +104,20 @@ function TeamMemberMenu({
               ) : null}
             </Box>
             {member.description ? (
-              <ActionList.Description variant="block">
-                {/* Wrapped rather than laid on one line, which is what made
-                    the overlay wider than the workspace. */}
-                <Box as="span" sx={{ display: 'block', whiteSpace: 'normal' }}>
-                  {member.description}
-                </Box>
+              <ActionList.Description
+                variant="block"
+                /* Wrapped and breakable. `minWidth: 0` is the load-bearing
+                   one: a grid item defaults to `min-content`, so without it
+                   the description refuses to be narrower than its longest
+                   unbroken run and pushes the row wide. */
+                sx={{
+                  display: 'block',
+                  whiteSpace: 'normal',
+                  overflowWrap: 'anywhere',
+                  minWidth: 0,
+                }}
+              >
+                {member.description}
               </ActionList.Description>
             ) : null}
             {/* The tick, so the menu says which agent is listening rather than

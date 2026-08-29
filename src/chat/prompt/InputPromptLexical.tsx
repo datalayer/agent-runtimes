@@ -128,10 +128,54 @@ function AutoFocusPlugin({ autoFocus }: { autoFocus?: boolean }) {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    if (autoFocus) {
-      const t = setTimeout(() => editor.focus(), 100);
-      return () => clearTimeout(t);
+    if (!autoFocus) {
+      return undefined;
     }
+    /*
+     * Asked for repeatedly, briefly, rather than once after a guessed delay.
+     *
+     * One `setTimeout(100)` assumed the editor was mounted and focusable by
+     * then. In a workspace that arrives through a lazy chunk it often is not:
+     * the notebook mounts alongside and takes focus, or the contenteditable
+     * is not in the document yet, and the single attempt lands on nothing and
+     * is never retried — which is exactly the prompt that would not focus.
+     *
+     * So: try immediately, then keep trying for a second, and stop the moment
+     * it works or the moment the person clicks somewhere themselves. Giving
+     * up matters as much as retrying — stealing focus back from someone who
+     * has started typing in a cell would be worse than never taking it.
+     */
+    let cancelled = false;
+    const deadline = Date.now() + 1000;
+
+    const focused = () => {
+      const root = editor.getRootElement();
+      return !!root && document.activeElement === root;
+    };
+
+    const attempt = () => {
+      if (cancelled || focused()) {
+        return;
+      }
+      const active = document.activeElement;
+      const stolen =
+        active &&
+        active !== document.body &&
+        !editor.getRootElement()?.contains(active);
+      if (stolen) {
+        return;
+      }
+      editor.focus();
+      if (!focused() && Date.now() < deadline) {
+        timer = window.setTimeout(attempt, 50);
+      }
+    };
+
+    let timer = window.setTimeout(attempt, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [editor, autoFocus]);
 
   return null;

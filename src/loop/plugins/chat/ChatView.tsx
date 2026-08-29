@@ -292,16 +292,38 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * silent no-ops. Derived here rather than in the plugin because it changes
    * with the selected member.
    */
-  const mentionable = useMemo(
-    () =>
-      team && member
-        ? subagentsFor(team.team, member.id).map(subagent => ({
-            name: subagent.name,
-            description: subagent.description,
-          }))
-        : [],
-    [team, member],
-  );
+  const mentionable = useMemo(() => {
+    if (!team || !member) {
+      return [];
+    }
+    /*
+     * The team, plus whatever specialists the selected member brings.
+     *
+     * It used to be `subagentsFor(member)` alone, which made the list read as
+     * arbitrary: a team of two offered one name, and the name was whichever
+     * member you were *not* talking to. Everyone the team contains is listed,
+     * because "who is on this team" is the question a person types `@` to
+     * ask; the one already being addressed is shown greyed rather than
+     * dropped, so the list is stable as the selection moves.
+     */
+    const roster = team.members.map(entry => ({
+      name: entry.name,
+      description: entry.description,
+      emoji: entry.emoji,
+      disabled: entry.id === member.id,
+      disabledReason:
+        entry.id === member.id
+          ? `You are already talking to ${entry.name}`
+          : undefined,
+    }));
+    const specialists = subagentsFor(team.team, member.id)
+      .filter(subagent => !team.members.some(m => m.name === subagent.name))
+      .map(subagent => ({
+        name: subagent.name,
+        description: subagent.description,
+      }));
+    return [...roster, ...specialists];
+  }, [team, member]);
   const { inference } = useBrowserInference();
 
   const protocol = useMemo<ProtocolConfig>(
@@ -357,7 +379,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         flexDirection: 'column',
       }}
     >
-      {surfaces.length > 0 ? (
+      {surfaces.length > 0 && config?.showSurfaceSelector !== false ? (
         <SurfacePicker
           surfaces={surfaces.map(entry => entry.value)}
           active={surfaceId}
@@ -440,6 +462,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           // person types rather than after nothing happens.
           placeholder={disabledReason ?? placeholder}
           disabled={chatDisabled}
+          // The `@` menu lives in the Lexical editor, and the default variant
+          // is the plain textarea — so `mentionableAgents` was being handed to
+          // a prompt with nowhere to show them, and typing `@` did nothing at
+          // all. A team is only addressable from a prompt that can offer it.
+          variant="lexical"
+          // Ready to type. This prompt is the reason the workspace is on
+          // screen; making someone click into it first is a step that exists
+          // only because nobody removed it.
+          autoFocus
           // Everyone this member may hand work to, offered on `@`. The same
           // list the harness was given, so a name the menu suggests is a name
           // the model can actually reach.

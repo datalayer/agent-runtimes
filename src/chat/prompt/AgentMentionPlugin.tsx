@@ -42,6 +42,17 @@ export type MentionableAgent = {
   /** One line about what it is for. */
   description?: string;
   emoji?: string;
+  /**
+   * Shown, but not choosable.
+   *
+   * The member already being addressed is the case this exists for: leaving
+   * it out made the list look arbitrary — a team of two offering one name —
+   * while offering it would let a person address the agent they are already
+   * talking to. It stays visible, greyed, and says why.
+   */
+  disabled?: boolean;
+  /** Why it cannot be chosen, when it cannot. */
+  disabledReason?: string;
 };
 
 /** The `@word` being typed, if the caret is in one. */
@@ -98,12 +109,18 @@ export function AgentMentionPlugin({
       )
     : [];
   const open = matches.length > 0;
+  /*
+   * Where the arrows and Enter may land. A disabled row is in `matches` so it
+   * renders, and out of here so the keyboard never selects it — the two lists
+   * exist because "shown" and "choosable" stopped being the same thing.
+   */
+  const choosable = matches.filter(agent => !agent.disabled);
 
   // Kept in range as the list narrows: a highlight past the end would submit
   // nothing on Enter, which reads as the key being broken.
   useEffect(() => {
-    setHighlighted(current => (current < matches.length ? current : 0));
-  }, [matches.length]);
+    setHighlighted(current => (current < choosable.length ? current : 0));
+  }, [choosable.length]);
 
   useEffect(() => {
     return editor.registerUpdateListener(() => {
@@ -147,7 +164,7 @@ export function AgentMentionPlugin({
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
         () => {
-          setHighlighted(current => (current + 1) % matches.length);
+          setHighlighted(current => (current + 1) % choosable.length);
           return true;
         },
         COMMAND_PRIORITY_LOW,
@@ -156,7 +173,7 @@ export function AgentMentionPlugin({
         KEY_ARROW_UP_COMMAND,
         () => {
           setHighlighted(
-            current => (current - 1 + matches.length) % matches.length,
+            current => (current - 1 + choosable.length) % choosable.length,
           );
           return true;
         },
@@ -165,7 +182,7 @@ export function AgentMentionPlugin({
       editor.registerCommand(
         KEY_ENTER_COMMAND,
         () => {
-          const agent = matches[highlighted];
+          const agent = choosable[highlighted];
           if (!agent) {
             return false;
           }
@@ -184,7 +201,7 @@ export function AgentMentionPlugin({
       ),
     ];
     return () => unregister.forEach(remove => remove());
-  }, [editor, open, matches, highlighted, insert]);
+  }, [editor, open, choosable, highlighted, insert]);
 
   if (!open || !query?.rect) {
     return null;
@@ -213,6 +230,17 @@ export function AgentMentionPlugin({
         // The caret already has focus and must keep it: a person is still
         // typing, and the menu is a suggestion rather than a destination.
         preventFocusOnOpen
+        /*
+         * Primer's own width prop, not an `sx` width.
+         *
+         * `Overlay` renders its width as a `data-width-*` attribute backed by
+         * a CSS-module rule, and the default `auto` means "size to content" —
+         * which an `sx` width does not reliably beat, since the two are equal
+         * specificity and the module's rule wins on source order. That is why
+         * the menu stayed as wide as the longest description in it. `medium`
+         * is 320px.
+         */
+        width="medium"
         sx={{
           position: 'fixed',
           left: query.rect.left,
@@ -220,28 +248,57 @@ export function AgentMentionPlugin({
           transform: 'translateY(-100%)',
           maxHeight: 240,
           overflowY: 'auto',
-          minWidth: 260,
+          maxWidth: 'calc(100vw - 16px)',
         }}
       >
-        <ActionList selectionVariant="single">
-          {matches.map((agent, index) => (
-            <ActionList.Item
-              key={agent.name}
-              active={index === highlighted}
-              onSelect={() => insert(agent)}
-            >
-              <ActionList.LeadingVisual>
-                <Text aria-hidden>{agent.emoji ?? '🤖'}</Text>
-              </ActionList.LeadingVisual>
-              {agent.name}
-              {agent.description ? (
-                <ActionList.Description variant="block">
-                  {agent.description}
-                </ActionList.Description>
-              ) : null}
-            </ActionList.Item>
-          ))}
-        </ActionList>
+        {/* The width again, held from the inside. The overlay is positioned
+            `fixed`, so nothing in the layout constrains it; without a bounded
+            child, a long description sets the width of everything above it. */}
+        <Box sx={{ width: '100%', maxWidth: 320, minWidth: 0 }}>
+          <ActionList selectionVariant="single">
+            {matches.map(agent => {
+              const index = choosable.indexOf(agent);
+              return (
+                <ActionList.Item
+                  key={agent.name}
+                  active={index >= 0 && index === highlighted}
+                  // Focusable while inert, so the reason is readable rather
+                  // than merely implied by the grey.
+                  aria-disabled={agent.disabled}
+                  title={agent.disabledReason}
+                  onSelect={() => {
+                    if (!agent.disabled) {
+                      insert(agent);
+                    }
+                  }}
+                  sx={agent.disabled ? { opacity: 0.5 } : undefined}
+                >
+                  <ActionList.LeadingVisual>
+                    <Text aria-hidden>{agent.emoji ?? '🤖'}</Text>
+                  </ActionList.LeadingVisual>
+                  {agent.name}
+                  {agent.description ? (
+                    <ActionList.Description
+                      variant="block"
+                      /* Wrapped and breakable. `minWidth: 0` is the load-bearing
+                       one: a grid item defaults to `min-content`, so without
+                       it the description refuses to be narrower than its
+                       longest unbroken run and pushes the row wide. */
+                      sx={{
+                        display: 'block',
+                        whiteSpace: 'normal',
+                        overflowWrap: 'anywhere',
+                        minWidth: 0,
+                      }}
+                    >
+                      {agent.description}
+                    </ActionList.Description>
+                  ) : null}
+                </ActionList.Item>
+              );
+            })}
+          </ActionList>
+        </Box>
       </Overlay>
     </>
   );

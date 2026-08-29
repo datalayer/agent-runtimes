@@ -87,6 +87,15 @@ export type ChatPluginConfig = {
    * chat rather than an error.
    */
   defaultSurface: string;
+  /**
+   * Whether a person may change which editor sits beside the chat.
+   *
+   * True by default. False leaves `defaultSurface` open and removes the
+   * control, for a host that has already decided what the workspace is for —
+   * an embed showing one notebook does not want a strip inviting the reader
+   * to swap it for a document or for nothing at all.
+   */
+  showSurfaceSelector: boolean;
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
@@ -98,6 +107,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     // The notebook: it is what most of these agents work on, and a workspace
     // that opens on an empty chat hides the half of itself that does the work.
     defaultSurface: 'notebook',
+    showSurfaceSelector: true,
   },
   displayName: 'Chat',
   description: 'The conversation, the prompt, and the point editors plug into.',
