@@ -26,10 +26,14 @@
 
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
+import { GraphPlugin } from '@datalayer/reactor-graph';
 import { PluginsManagerView } from '@datalayer/reactor-manager';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 
 export const PLUGINS_PANEL_PLUGIN_NAME = '@datalayer/loop-plugin-plugins-panel';
+
+/** The generic graph plugin, which the loop's own adapter wraps. */
+const REACTOR_GRAPH_PLUGIN_NAME = GraphPlugin.name;
 
 export const PluginsPanelPlugin = definePlugin<
   Record<string, never>,
@@ -55,6 +59,11 @@ export const PluginsPanelPlugin = definePlugin<
         Component: ({ workspace }: { workspace?: LoopWorkspaceContext }) => (
           <PluginsManagerView
             protectedPlugins={[PLUGINS_PANEL_PLUGIN_NAME]}
+            // `@datalayer/loop-plugin-graph` is the switch that matters: it
+            // places the graph in this workspace and pulls the generic plugin
+            // in as a dependency. Listing both put two switches in front of
+            // one feature, with no way to tell which to use.
+            hiddenPlugins={[REACTOR_GRAPH_PLUGIN_NAME]}
             workspace={workspace}
           />
         ),
