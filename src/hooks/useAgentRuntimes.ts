@@ -50,7 +50,16 @@ import { ServiceManager } from '@jupyterlab/services/lib/manager';
 import { disposeSandboxServiceManagers } from '../services/sandboxServiceManagers';
 import { runtimeUrl, runtimesUrl } from '../runtimes/lifecycle';
 
-export type RuntimeCreationTarget = 'backend-services' | 'local-agent-runtimes';
+import {
+  legacyTargetOf,
+  locationOf,
+  runsInBrowser,
+  toAgentRuntimeVariant,
+  type AgentRuntimeVariant,
+  type RuntimeCreationTarget,
+} from '../runtimes/variants';
+
+export type { AgentRuntimeVariant, RuntimeCreationTarget };
 
 /** Existing runtime connection used by connect-mode consumers. */
 export interface AgentRuntimeConnectionOptions {
@@ -76,9 +85,17 @@ export interface UseAgentOptions {
   /** Full agent spec object (persisted with checkpoints) */
   agentSpec?: Record<string, any>;
   /**
-   * Where runtime create/list operations should be sent.
-   * - `backend-services`: use backend runtimes service URL
-   * - `local-agent-runtimes`: use local agent-runtimes URL
+   * Where the agent's loop runs, and what runs it.
+   *
+   * - `cloud-pydanticai`: a runtime in the backend runtimes service
+   * - `local-pydanticai`: a local agent-runtimes server
+   * - `browser-vercelai`: the page itself — no runtime is created at all
+   */
+  variant?: AgentRuntimeVariant;
+  /**
+   * @deprecated Pass {@link UseAgentOptions.variant} instead.
+   * `backend-services` is `cloud-pydanticai`, `local-agent-runtimes` is
+   * `local-pydanticai`.
    */
   runtimeCreationTarget?: RuntimeCreationTarget;
   /** Explicit base URL for runtime create/list operations. */
@@ -130,7 +147,9 @@ export interface UseAgentReturn {
   isReady: boolean;
   /** Error if any */
   error: string | null;
-  /** Effective runtime creation target mode. */
+  /** Effective variant: where the loop runs, and what runs it. */
+  variant: AgentRuntimeVariant;
+  /** @deprecated Read {@link UseAgentReturn.variant}. */
   runtimeCreationTarget: RuntimeCreationTarget;
   /** Effective base URL used for runtime create/list operations. */
   runtimeCreationBaseUrl: string;
@@ -142,6 +161,25 @@ export interface UseAgentReturn {
 
 /** Stable fallback to avoid new-reference on every render. */
 const EMPTY_RUNTIMES: AgentRuntimeData[] = [];
+
+/**
+ * What a browser agent has instead of a runtime.
+ *
+ * Every field that names a host is empty because there is no host: the loop
+ * runs in this page, so there is no pod, no Jupyter server and no agent
+ * service to address. It is ready because nothing has to happen first.
+ *
+ * Frozen and shared rather than built per call, so a host comparing the value
+ * it got back sees the same object each time.
+ */
+const BROWSER_AGENT_CONNECTION: AgentConnection = Object.freeze({
+  runtimeName: '',
+  environmentName: '',
+  jupyterBaseUrl: '',
+  agentBaseUrl: '',
+  status: 'ready' as AgentStatus,
+  isReady: true,
+});
 
 /** Default query options for all agent runtime queries. */
 export const AGENT_QUERY_OPTIONS = {
@@ -574,10 +612,15 @@ export function useAgentRuntimes(
     autoCreateAgent = true,
     autoStart = false,
     agentSpec,
-    runtimeCreationTarget = 'backend-services',
+    variant: variantOption,
+    runtimeCreationTarget,
     runtimeCreationBaseUrl,
     runtimeConnection,
   } = options;
+
+  // Both vocabularies funnel into one value here, so no branch below has to
+  // remember that the old names exist.
+  const variant = toAgentRuntimeVariant(variantOption ?? runtimeCreationTarget);
 
   const { configuration } = useCoreStore();
 
@@ -606,8 +649,9 @@ export function useAgentRuntimes(
 
   // Specs use the backend lifecycle only when this hook owns a cloud runtime.
   // A local agent-runtimes server is already running, so it remains connect
-  // mode even when agent creation references a spec.
-  const hasSpec = !!agentSpecId && runtimeCreationTarget === 'backend-services';
+  // mode even when agent creation references a spec — and a browser agent has
+  // no runtime to own at all.
+  const hasSpec = !!agentSpecId && locationOf(variant) === 'cloud';
 
   const runtimeConnectionKey = runtimeConnection
     ? [
@@ -624,7 +668,12 @@ export function useAgentRuntimes(
     if (runtimeCreationBaseUrl) {
       return runtimeCreationBaseUrl;
     }
-    if (runtimeCreationTarget === 'local-agent-runtimes') {
+    // A browser agent reaches no runtime service; the empty string keeps the
+    // return shape without naming a host nothing will call.
+    if (runsInBrowser(variant)) {
+      return '';
+    }
+    if (locationOf(variant) === 'local') {
       return (
         import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
         'http://localhost:8765'
@@ -635,11 +684,7 @@ export function useAgentRuntimes(
       import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL ||
       'https://r1.datalayer.run'
     );
-  }, [
-    configuration?.runtimesUrl,
-    runtimeCreationBaseUrl,
-    runtimeCreationTarget,
-  ]);
+  }, [configuration?.runtimesUrl, runtimeCreationBaseUrl, variant]);
 
   // ─── Auth helpers ─────────────────────────────────────────────────
 
@@ -683,6 +728,13 @@ export function useAgentRuntimes(
 
   const launchRuntime = useCallback(
     async (runtimeOptions?: IRuntimeOptions) => {
+      if (runsInBrowser(variant)) {
+        // Nothing to launch: the loop runs in this page. Resolving rather than
+        // throwing keeps one launch button correct for every variant — a host
+        // that calls this because a person pressed the button gets a runtime
+        // that is already, truthfully, ready.
+        return BROWSER_AGENT_CONNECTION;
+      }
       if (hasSpec) {
         setLifecycleStatus('launching');
         setLifecycleError(null);
@@ -737,6 +789,7 @@ export function useAgentRuntimes(
       hasSpec,
       resolvedRuntimeCreationBaseUrl,
       storeLaunchAgent,
+      variant,
     ],
   );
 
@@ -995,14 +1048,27 @@ export function useAgentRuntimes(
 
   // ─── Derived state ─────────────────────────────────────────────────
 
-  const status: AgentStatus = hasSpec
-    ? lifecycleStatus
-    : (baseStatus as AgentStatus);
-  const error = hasSpec ? lifecycleError || storeError : storeError;
-  const isReady = hasSpec
-    ? (lifecycleStatus === 'ready' || lifecycleStatus === 'resumed') &&
-      !!runtime?.isReady
-    : baseStatus === 'ready' && !!runtime?.isReady;
+  // A browser agent is ready the moment the page is: there is no runtime to
+  // start, so a host that waits on `isReady` before showing its chat would
+  // otherwise wait forever for something that is never going to happen.
+  const inBrowser = runsInBrowser(variant);
+
+  const status: AgentStatus = inBrowser
+    ? 'ready'
+    : hasSpec
+      ? lifecycleStatus
+      : (baseStatus as AgentStatus);
+  const error = inBrowser
+    ? null
+    : hasSpec
+      ? lifecycleError || storeError
+      : storeError;
+  const isReady = inBrowser
+    ? true
+    : hasSpec
+      ? (lifecycleStatus === 'ready' || lifecycleStatus === 'resumed') &&
+        !!runtime?.isReady
+      : baseStatus === 'ready' && !!runtime?.isReady;
   const endpoint = runtime?.endpoint || null;
   const serviceManager = runtime?.serviceManager || null;
 
@@ -1025,7 +1091,11 @@ export function useAgentRuntimes(
     // Status
     isReady,
     error,
-    runtimeCreationTarget,
+    variant,
+    // Derived rather than passed through: a caller that gave neither option
+    // still gets a truthful legacy value, and one that gave a variant gets its
+    // nearest old name instead of `undefined`.
+    runtimeCreationTarget: legacyTargetOf(variant),
     runtimeCreationBaseUrl: resolvedRuntimeCreationBaseUrl,
   };
 }

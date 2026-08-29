@@ -598,3 +598,32 @@ describe('the agent picker', () => {
     expect(source).toContain('setActive(workspace.agentId)');
   });
 });
+
+describe('the Loop workspace example', () => {
+  const source = readFileSync(
+    join(__dirname, '..', '..', 'examples', 'LoopWorkspaceExample.tsx'),
+    'utf8',
+  );
+
+  it('tells the examples page where the workspace is running', () => {
+    // The shell draws its "Active Agent" panel from a summary store, and the
+    // workspace's segmented control drives a different signal — so switching
+    // Browser to Local moved the sandbox and left the header saying `browser`
+    // with no agent id.
+    expect(source).toContain('agentSummaryStore.getState().setActive');
+  });
+
+  it('does not drive the page-level runtime target', () => {
+    // The page mounts each example under `key={example:runtimeTarget}`, so
+    // writing that store tears the workspace down and rebuilds it at its
+    // initial target — the segmented control snapped back to Browser the
+    // instant it was clicked.
+    expect(source).not.toContain('setTarget(');
+  });
+
+  it('names an agent only for the targets that bring one', () => {
+    expect(source).toContain('targetHasAgent(sandboxTarget) ? agentId : undefined');
+  });
+
+
+});

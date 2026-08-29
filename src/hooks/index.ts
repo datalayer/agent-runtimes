@@ -22,7 +22,8 @@
  * - `useAgUi` - AG-UI protocol (Pydantic AI's native protocol)
  * - `useA2A` - A2A protocol (Agent-to-Agent with JSON-RPC)
  * - `useAcp` - ACP protocol (Agent Client Protocol via WebSocket)
- * - `useVercelAI` - Vercel AI SDK chat protocol
+ * - `useVercelAI` - Vercel AI SDK chat protocol, spoken to a runtime
+ * - `useBrowserAgent` - the loop itself, running in the page
  *
  * ## Datalayer-Specific Hooks
  * Hooks for Datalayer platform integration.
@@ -96,6 +97,13 @@ export * from './useAcp';
  */
 export { useVercelAI } from './useVercelAI';
 
+// The browser harness. Same `useChat` helpers as `useVercelAI` — the branch is
+// one transport, so every chat component downstream is shared.
+export {
+  useBrowserAgent,
+  type UseBrowserAgentOptions,
+} from './useBrowserAgent';
+
 // =============================================================================
 // Datalayer Platform Hooks
 // =============================================================================
@@ -106,6 +114,7 @@ export { useVercelAI } from './useVercelAI';
 export {
   useAgentRuntimes,
   type AgentRuntimeConnectionOptions,
+  type AgentRuntimeVariant,
   type RuntimeCreationTarget,
   type UseAgentOptions,
   type UseAgentReturn,

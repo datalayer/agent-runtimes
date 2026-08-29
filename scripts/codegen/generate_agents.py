@@ -334,6 +334,10 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
             sandbox_variant_str = f'"{sandbox_variant}"' if sandbox_variant else "None"
+            # Defaulted rather than optional: every agent is run by something,
+            # and a spec that says nothing is run by the server-side harness
+            # that has always run it.
+            harness = spec.get("harness") or "pydantic-ai"
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -446,6 +450,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
     welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else "None"},
     welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
     sandbox_variant={sandbox_variant_str},
+    harness="{harness}",
     system_prompt={system_prompt_str},
     system_prompt_codemode_addons={system_prompt_codemode_addons_str},
     goal={goal_str},
@@ -953,6 +958,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             sandbox_variant_ts = (
                 f"'{sandbox_variant}'" if sandbox_variant else "undefined"
             )
+            harness = spec.get("harness") or "pydantic-ai"
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -1016,6 +1022,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     welcomeNotebook: {_fmt_ts_literal(welcome_notebook)},
     welcomeDocument: {_fmt_ts_literal(welcome_document)},
     sandboxVariant: {sandbox_variant_ts},
+    harness: '{harness}',
     systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
     systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
     goal: {goal_ts},

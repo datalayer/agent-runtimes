@@ -1202,6 +1202,20 @@ class Agentspec(BaseModel):
         description="Path to Lexical document to show on agent creation",
         alias="welcomeDocument",
     )
+    harness: str = Field(
+        default="pydantic-ai",
+        description=(
+            "Which agent framework runs this agent's loop. "
+            "'pydantic-ai' (default) runs it server-side in the agent runtime; "
+            "'vercel-ai' runs it in the browser with the Vercel AI SDK, for an "
+            "agent that has to work with no server behind it. "
+            "Distinct from `protocol`, which says how a client and an agent "
+            "talk to each other rather than what runs the loop — the two can "
+            "name the same word and mean different things."
+        ),
+        alias="harness",
+    )
+
     sandbox_variant: Optional[str] = Field(
         default=None,
         description=(

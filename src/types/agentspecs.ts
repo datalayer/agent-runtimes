@@ -75,6 +75,15 @@ export interface Agentspec {
   welcomeNotebook?: string;
   /** Path to Lexical document to show on agent creation */
   welcomeDocument?: string;
+  /**
+   * Which agent framework runs this agent's loop.
+   *
+   * `pydantic-ai` (the default) runs it server-side in the agent runtime;
+   * `vercel-ai` runs it in the browser with the Vercel AI SDK, for an agent
+   * that has to work with no server behind it. Distinct from `protocol`,
+   * which says how a client and an agent talk rather than what runs the loop.
+   */
+  harness?: string;
   /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter-server', 'kaggle'). */
   sandboxVariant?: string;
   /** User-facing objective for the agent */

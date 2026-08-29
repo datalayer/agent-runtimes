@@ -136,6 +136,7 @@
     "@ag-ui/encoder": "^0.0.57",
     "@ag-ui/proto": "^0.0.57",
     "@agentclientprotocol/sdk": "^0.8.0",
+    "@ai-sdk/openai": "4.0.20",
     "@ai-sdk/react": "4.0.23",
     "@anthropic-ai/sdk": "^0.52.0",
     "@datalayer/core": "^1.1.57",

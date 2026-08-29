@@ -63,6 +63,7 @@ tags:
 
 enabled: true
 model: "bedrock:us.anthropic.claude-opus-4-8"
+harness: pydantic-ai
 
 sandbox_variant: {variant}
 memory: ephemeral

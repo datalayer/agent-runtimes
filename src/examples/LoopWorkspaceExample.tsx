@@ -29,17 +29,19 @@
  * @module examples/LoopWorkspaceExample
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Box } from '@primer/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { configurePlugin } from '@datalayer/reactor';
-import { useReactor } from '@datalayer/reactor/react';
+import { useReactor, useSignalValue } from '@datalayer/reactor/react';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
 import { A2uiPlugin } from '../loop/plugins/a2ui';
 import { AgentsPlugin } from '../loop/plugins/agents';
 import { ChatPlugin } from '../loop/plugins/chat';
 import {
+  CODE_SANDBOX_PLUGIN_NAME,
   CodeSandboxPlugin,
+  type CodeSandboxOutput,
   type SandboxTarget,
 } from '../loop/plugins/code-sandbox';
 import { DocumentExtension, NotebookExtension } from '../loop/extensions';
@@ -49,6 +51,8 @@ import { PluginsPanelPlugin } from '../loop/plugins/plugins-panel';
 import { internalQueryClient } from '../utils';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ThemedProvider } from './utils/themedProvider';
+import { agentSummaryStore } from './utils/agentSummaryStore';
+import { targetHasAgent } from './utils/runtimeTargetStore';
 
 export type LoopWorkspaceExampleProps = {
   /** Server backing the session. Defaults to this page's origin. */
@@ -105,6 +109,68 @@ export function LoopWorkspaceExample({
 
   // The plugin list is a plugin, so it arrives through the sidebar slot rather
   // than being wrapped around the workspace. Nothing here is above the shell.
+  // Tell the page where this workspace is running.
+  //
+  // The examples shell draws its "Active Agent" panel from a summary store,
+  // and the workspace's segmented control is a *different* control over a
+  // *different* signal — so switching from Browser to Local moved the sandbox
+  // and left the header saying `browser` with no agent id.
+  //
+  // The summary only. Writing the page's `runtimeTargetStore` too looked
+  // tidier — one notion of where things run — but the page mounts each example
+  // under `key={`${example}:${runtimeTarget}`}`, so changing it tore the
+  // workspace down and rebuilt it at its initial target: the control snapped
+  // straight back to Browser. The page-level target is which target the
+  // *example* was opened for; this workspace moves within that, and the two
+  // are not the same fact.
+  //
+  // This example is where they meet: the plugin must not know an examples page
+  // exists, and the page cannot see inside the reactor.
+  const sandbox = reactor.getOutput<CodeSandboxOutput>(
+    CODE_SANDBOX_PLUGIN_NAME,
+  )?.sandbox;
+  const sandboxTarget = useSignalValue(sandbox?.target ?? IDLE_TARGET);
+  const sandboxSnapshot = useSignalValue(sandbox?.snapshot ?? IDLE_SNAPSHOT);
+  const sandboxState = sandboxSnapshot.state;
+  const sandboxJupyterUrl = sandboxSnapshot.jupyterUrl;
+
+  useEffect(() => {
+    if (!sandboxTarget) {
+      return;
+    }
+    const summary = {
+      exampleId: 'LoopWorkspaceExample',
+      agentName: agentId,
+      // Only the targets that bring an agent report one. On Browser and
+      // Jupyter the panel should say there is none rather than name one that
+      // cannot answer.
+      agentId: targetHasAgent(sandboxTarget) ? agentId : undefined,
+      location: sandboxTarget,
+      baseUrl: serverUrl,
+      sandboxBaseUrl: sandboxJupyterUrl,
+      status: sandboxState,
+      isReady: sandboxState === 'running',
+    };
+    const publish = () => agentSummaryStore.getState().setActive(summary);
+    publish();
+
+    // Hold it against the page's own seed.
+    //
+    // The shell re-seeds a base summary whenever its inputs change, and only
+    // spares a richer one whose `location` matches the *page* target — which
+    // this one deliberately does not, because the workspace moves within the
+    // target it was opened at. Without this, an unrelated change on the page
+    // would quietly put the panel back to `browser`.
+    //
+    // Compared by identity against the exact object published above, so a
+    // re-publish cannot trigger itself.
+    return agentSummaryStore.subscribe(state => {
+      if (state.active !== summary) {
+        publish();
+      }
+    });
+  }, [agentId, sandboxTarget, sandboxState, sandboxJupyterUrl, serverUrl]);
+
   return (
     // The theme, as every other example provides it.
     //
@@ -135,5 +201,21 @@ export function LoopWorkspaceExample({
     </ThemedProvider>
   );
 }
+
+/**
+ * Read while the sandbox plugin is absent, so the hook order never changes.
+ *
+ * `useSignalValue` has to be called unconditionally, and the plugin can be
+ * switched off from the sidebar.
+ */
+const IDLE_TARGET = {
+  value: undefined as SandboxTarget | undefined,
+  peek: () => undefined as SandboxTarget | undefined,
+} as never;
+
+const IDLE_SNAPSHOT = {
+  value: { state: 'idle' as const },
+  peek: () => ({ state: 'idle' as const }),
+} as never;
 
 export default LoopWorkspaceExample;
