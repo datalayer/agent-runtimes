@@ -23,9 +23,19 @@
  * @module loop/plugins/agents/team
  */
 
-import { computed, signal, type ReadonlySignal, type Signal } from '@preact/signals-core';
+import {
+  computed,
+  signal,
+  type ReadonlySignal,
+  type Signal,
+} from '@datalayer/reactor';
 
-import type { TeamContextSharing, TeamSpec } from '../../../types/teams';
+import type {
+  TeamAgentspec,
+  TeamContextSharing,
+  TeamSpec,
+} from '../../../types/teams';
+import type { BrowserSubagent } from '../../../runtimes/browser';
 import { TEAM_SPECS } from '../../../specs/teams/teams';
 import { AGENTSPECS } from '../../../specs/agents/agents';
 
@@ -75,7 +85,9 @@ function specIdOf(ref: string | undefined): string {
 export function teamMembers(team: TeamSpec): TeamMember[] {
   const supervisorSpecId = specIdOf(team.supervisor?.ref);
 
-  const describe = (specId: string): { description?: string; emoji?: string } => {
+  const describe = (
+    specId: string,
+  ): { description?: string; emoji?: string } => {
     const spec = AGENTSPECS[specId];
     return { description: spec?.description, emoji: spec?.emoji };
   };
@@ -132,4 +144,73 @@ export function createTeamSelection(teamId: string): TeamSelection | undefined {
       members.find(member => member.id === selected.value),
     ),
   };
+}
+
+/**
+ * The agents a given member may hand work to.
+ *
+ * Read from the teamspec rather than assumed, because a team says two separate
+ * things about delegation and they mean different things:
+ *
+ * - `delegation.allowPeerDelegation` — whether a member may reach *another
+ *   member*. The jupyter-notebook team says no: the Tutor handing work to the
+ *   Compactor would edit a notebook the learner is working in, which is the one
+ *   thing the Tutor exists not to do. Routing between them is the supervisor's
+ *   job, where a person can see it happen.
+ * - a member's own `subagents` — specialists that belong to it alone. The
+ *   Compactor has a CellFixer and a NotebookReproducer, and neither is a member
+ *   of the team.
+ *
+ * So the supervisor gets the other members, everyone gets their own subagents,
+ * and a peer only appears where the team allows it.
+ */
+export function subagentsFor(
+  team: TeamSpec,
+  memberId: string,
+): BrowserSubagent[] {
+  const members = teamMembers(team);
+  const member = members.find(entry => entry.id === memberId);
+  if (!member) {
+    return [];
+  }
+
+  const asSubagent = (
+    name: string,
+    specId: string,
+    description: string | undefined,
+  ): BrowserSubagent | undefined => {
+    const spec = AGENTSPECS[specId];
+    if (!spec) {
+      return undefined;
+    }
+    return {
+      name,
+      // The description is what the parent's model chooses on, so a team's own
+      // wording wins over the spec's: it says when to reach for this one *in
+      // this team*, which is the question being asked.
+      description: description || spec.description || name,
+      instructions: spec.systemPrompt,
+      model: spec.model,
+    };
+  };
+
+  const peers =
+    member.isSupervisor || team.delegation?.allowPeerDelegation
+      ? members
+          .filter(entry => entry.id !== memberId)
+          .map(entry => asSubagent(entry.name, entry.specId, entry.description))
+      : [];
+
+  const declared = (team.agents ?? []).find(
+    (entry: TeamAgentspec) => entry.id === memberId,
+  );
+  const own = (declared?.subagents ?? []).map(subagent =>
+    asSubagent(
+      subagent.name,
+      (subagent.ref ?? '').split(':')[0] ?? '',
+      subagent.description,
+    ),
+  );
+
+  return [...peers, ...own].filter(Boolean) as BrowserSubagent[];
 }

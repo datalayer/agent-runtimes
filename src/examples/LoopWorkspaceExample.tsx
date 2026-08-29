@@ -35,6 +35,10 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { configurePlugin } from '@datalayer/reactor';
 import { useReactor, useSignalValue } from '@datalayer/reactor/react';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
+import {
+  IDLE_SANDBOX_SNAPSHOT_SIGNAL,
+  IDLE_SANDBOX_TARGET_SIGNAL,
+} from '../loop/core';
 import { A2uiPlugin } from '../loop/plugins/a2ui';
 import { AgentspecsPlugin } from '../loop/plugins/agentspecs';
 import { ChatPlugin } from '../loop/plugins/chat';
@@ -57,6 +61,24 @@ import { targetHasAgent } from './utils/runtimeTargetStore';
 export type LoopWorkspaceExampleProps = {
   /** Server backing the session. Defaults to this page's origin. */
   serverUrl?: string;
+  /**
+   * Render without wrapping the workspace in a theme provider.
+   *
+   * For a host that owns the theme — the landing page embeds this example, and
+   * `ThemedProvider` does not merely provide a theme: it writes the examples'
+   * own choice into the shared primer-addons singleton, which is where that
+   * host reads its theme from. Mounting this unconditionally overwrote the
+   * reader's theme the moment the workspace finished loading.
+   */
+  inheritTheme?: boolean;
+  /**
+   * Which editor opens beside the chat.
+   *
+   * `'none'` leaves the chat full width; the others open that editor as soon
+   * as it can be opened — its plugin has loaded and, for these two, a sandbox
+   * is running.
+   */
+  defaultEditor?: 'none' | 'notebook' | 'document';
   /** Agent to start with. */
   agentId?: string;
   /** Where the sandbox starts. Defaults to the browser, which needs nothing. */
@@ -73,6 +95,27 @@ export type LoopWorkspaceExampleProps = {
    * doors of which two are locked.
    */
   showAgentVariants?: boolean;
+  /**
+   * The team to work with, by id.
+   *
+   * Given one, the header gains a control for choosing which member the next
+   * prompt reaches. `jupyter-notebook` is the tutor and the compactor behind a
+   * supervising tutor.
+   */
+  teamId?: string;
+  /**
+   * Whether the plugin graph is available.
+   *
+   * True by default: the graph is one of the things this example exists to
+   * show, and switching it off in the sidebar is part of that.
+   *
+   * False leaves the plugin out entirely — no view, and no button in the
+   * sidebar, since the graph plugin owns that button. What a public page
+   * wants: a visitor came for a notebook and an agent, and a diagram of the
+   * plugin system is a developer's tool shown to somebody who did not ask for
+   * one.
+   */
+  showGraph?: boolean;
 };
 
 export function LoopWorkspaceExample({
@@ -83,16 +126,23 @@ export function LoopWorkspaceExample({
   agentId = 'loop-workspace',
   initialTarget = 'browser',
   showAgentVariants = true,
+  teamId = 'jupyter-notebook',
+  showGraph = true,
+  inheritTheme = false,
+  defaultEditor = 'notebook',
 }: LoopWorkspaceExampleProps): JSX.Element {
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
     () =>
       buildLoopReactor([
-        ChatPlugin,
+        // The chat owns the editor beside it, so which one opens is its
+        // configuration rather than the workspace's.
+        configurePlugin(ChatPlugin, { defaultSurface: defaultEditor }),
         configurePlugin(AgentsPlugin, {
           serverUrl,
           target: initialTarget,
           showAgentVariants,
+          teamId,
           localAgent: {
             createPayload: {
               description: 'Local agent for the Loop workspace example',
@@ -111,10 +161,21 @@ export function LoopWorkspaceExample({
         A2uiPlugin,
         AgentspecsPlugin,
         ModelsPlugin,
-        GraphViewPlugin,
+        // Left out rather than mounted-and-hidden: the graph plugin pulls the
+        // generic `@datalayer/reactor-graph` in as a dependency, and mounting
+        // both to show neither would put two plugins in the sidebar list that
+        // do nothing.
+        ...(showGraph ? [GraphViewPlugin] : []),
         PluginsPanelPlugin,
       ]),
-    [serverUrl, initialTarget, showAgentVariants],
+    [
+      serverUrl,
+      initialTarget,
+      showAgentVariants,
+      teamId,
+      showGraph,
+      defaultEditor,
+    ],
   );
 
   // Registered here rather than inside the workspace: the checkbox list below
@@ -141,8 +202,12 @@ export function LoopWorkspaceExample({
   // This example is where they meet: the plugin must not know an examples page
   // exists, and the page cannot see inside the reactor.
   const sandbox = reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)?.sandbox;
-  const sandboxTarget = useSignalValue(sandbox?.target ?? IDLE_TARGET);
-  const sandboxSnapshot = useSignalValue(sandbox?.snapshot ?? IDLE_SNAPSHOT);
+  const sandboxTarget = useSignalValue(
+    sandbox?.target ?? IDLE_SANDBOX_TARGET_SIGNAL,
+  );
+  const sandboxSnapshot = useSignalValue(
+    sandbox?.snapshot ?? IDLE_SANDBOX_SNAPSHOT_SIGNAL,
+  );
   const sandboxState = sandboxSnapshot.state;
   const sandboxJupyterUrl = sandboxSnapshot.jupyterUrl;
 
@@ -183,6 +248,24 @@ export function LoopWorkspaceExample({
     });
   }, [agentId, sandboxTarget, sandboxState, sandboxJupyterUrl, serverUrl]);
 
+  const workspace = (
+    <QueryClientProvider client={internalQueryClient}>
+      <Box sx={{ height: '100%', minHeight: 0 }}>
+        <LoopWorkspace
+          serverUrl={serverUrl}
+          agentId={agentId}
+          reactor={reactor}
+          manageReactor={false}
+        />
+      </Box>
+    </QueryClientProvider>
+  );
+
+  // A host that owns the theme gets the workspace and nothing else.
+  if (inheritTheme) {
+    return workspace;
+  }
+
   return (
     // The theme, as every other example provides it.
     //
@@ -199,35 +282,8 @@ export function LoopWorkspaceExample({
     // The plugins the views mount pass `inheritTheme`, so this is the one
     // provider in the tree — nested providers fight over BaseStyles and font
     // tokens, and the inner one wins for the wrong reasons.
-    <ThemedProvider>
-      <QueryClientProvider client={internalQueryClient}>
-        <Box sx={{ height: '100%', minHeight: 0 }}>
-          <LoopWorkspace
-            serverUrl={serverUrl}
-            agentId={agentId}
-            reactor={reactor}
-            manageReactor={false}
-          />
-        </Box>
-      </QueryClientProvider>
-    </ThemedProvider>
+    <ThemedProvider>{workspace}</ThemedProvider>
   );
 }
-
-/**
- * Read while the sandbox plugin is absent, so the hook order never changes.
- *
- * `useSignalValue` has to be called unconditionally, and the plugin can be
- * switched off from the sidebar.
- */
-const IDLE_TARGET = {
-  value: undefined as SandboxTarget | undefined,
-  peek: () => undefined as SandboxTarget | undefined,
-} as never;
-
-const IDLE_SNAPSHOT = {
-  value: { state: 'idle' as const },
-  peek: () => ({ state: 'idle' as const }),
-} as never;
 
 export default LoopWorkspaceExample;

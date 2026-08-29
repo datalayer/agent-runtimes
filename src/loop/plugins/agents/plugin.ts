@@ -33,6 +33,8 @@ import {
 import { SandboxStatusBridge } from './SandboxStatusBridge';
 import type { ServiceManagerSource } from './browserService';
 import { SandboxSelector } from './SandboxSelector';
+import { TeamMemberPicker } from './TeamMemberPicker';
+import { createTeamSelection, type TeamSelection } from './team';
 import {
   createSwitchableSandboxService,
   type SandboxTarget,
@@ -77,10 +79,27 @@ export type AgentsConfig = {
    * them is offering three doors of which two are locked.
    */
   showAgentVariants?: boolean;
+  /**
+   * The team this workspace works with, by id.
+   *
+   * A team is a group of agents with one front door — `jupyter-notebook` is a
+   * tutor and a compactor behind a supervising tutor. Given one, the header
+   * gains a control for choosing which member the next prompt reaches, and the
+   * teamspec decides what each of them is told about the conversation.
+   */
+  teamId?: string;
 };
 
 export type AgentsOutput = {
   sandbox: SwitchableSandboxService;
+  /**
+   * Who the next prompt goes to, when this workspace runs a team.
+   *
+   * Absent for the ordinary case of one agent: a workspace with nothing to
+   * choose between should not have to carry a selection, and a picker with one
+   * option is furniture.
+   */
+  team?: TeamSelection;
   /** Rendered by `ReactorSlot`; see `ReactorReactOutput`. */
   components: ReactorSlotComponent[];
 };
@@ -102,7 +121,11 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
     // Read once: it decides both what is offered and where the sandbox starts,
     // and those two must not be able to disagree.
     const showVariants = config.showAgentVariants ?? true;
+    // Undefined for a workspace with no team, or a team id that names nothing:
+    // a picker is worth having only when there is a choice to make.
+    const team = config.teamId ? createTeamSelection(config.teamId) : undefined;
     return {
+      team,
       sandbox: createSwitchableSandboxService({
         serverUrl: config.serverUrl,
         // Pinned when there is no choice to make: a host that hid the control
@@ -123,6 +146,17 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         // In the header, where the reader can see where their code is running
         // and move it. Left out entirely rather than disabled when the host
         // gave no choice: a control with one option is furniture.
+        // Beside the sandbox control: one says where the agent runs, the
+        // other which agent it is, and a person reads them together.
+        ...(team
+          ? [
+              {
+                slot: LoopSlots.header,
+                id: 'team-member-picker',
+                Component: TeamMemberPicker as never,
+              },
+            ]
+          : []),
         ...(showVariants
           ? [
               {

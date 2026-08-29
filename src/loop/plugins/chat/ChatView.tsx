@@ -24,8 +24,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Box, SegmentedControl, Text } from '@primer/react';
+import { signal } from '@datalayer/reactor';
 import {
   useContributions,
+  useSignalValue,
   useGate,
   useReactorPlatform,
   ReactorLazy,
@@ -34,17 +36,29 @@ import { ChatBase } from '../../../chat/base/ChatBase';
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
 import { AGENTSPECS } from '../../../specs/agents/agents';
+import { useNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
 import type { ProtocolConfig } from '../../../types/protocol';
 import {
   targetRunsAgentInPage,
   type SandboxTarget,
 } from '../agents/switchable';
+import { subagentsFor } from '../agents/team';
+import { useOptionalTeamSelection } from '../agents/useTeamSelection';
+
+/**
+ * Stands in for a workspace with no team.
+ *
+ * `useSignalValue` needs a signal on every render, and a hook cannot be
+ * skipped for the ordinary single-agent case.
+ */
+const EMPTY_SELECTION = signal('');
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
 import { InputPrompt } from '../../../chat/prompt/InputPrompt';
 import {
   LoopAgentGate,
   LoopChatSurface,
   canOpenView,
+  loopSurfaceId,
   type ChatSurfaceContribution,
   type LoopViewProps,
 } from '../../core';
@@ -58,16 +72,30 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const controlsRef = useRef<ChatControls | null>(null);
   const { setViewControls } = workspace;
   const [transient, setTransient] = useState<ReactNode>(null);
-  const [surfaceId, setSurfaceId] = useState<string>(NO_SURFACE);
+  // Read from the reactor rather than taken as a prop: the placeholder and the
+  // default editor are the chat plugin's own configuration, so a host sets them
+  // where it sets anything else about this plugin.
+  const reactor = useReactorPlatform();
+  const config = reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME);
+  const placeholder =
+    config?.placeholder ?? 'Ask anything, or type / for commands';
+  const defaultSurface = config?.defaultSurface ?? 'notebook';
+
+  /*
+   * The default editor is the opening selection, not something switched on
+   * later.
+   *
+   * It used to be applied by an effect that waited for the surface to become
+   * openable, which meant the picker read `None` until a sandbox existed —
+   * a workspace configured for the notebook opened saying it was configured
+   * for nothing. What the host configured is true from the first render; what
+   * the surface can do about it yet is the surface's business.
+   */
+  const [surfaceId, setSurfaceId] = useState<string>(() =>
+    defaultSurface === 'none' ? NO_SURFACE : defaultSurface,
+  );
 
   const surfaces = useContributions(LoopChatSurface);
-  // Read from the reactor rather than taken as a prop: the placeholder is the
-  // chat plugin's own configuration, so a host sets it where it sets anything
-  // else about this plugin.
-  const reactor = useReactorPlatform();
-  const placeholder =
-    reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME)?.placeholder ??
-    'Ask anything, or type / for commands';
   // Asked, not assumed: the chat cannot know whether anything is listening,
   // and whichever plugin does answers the gate. Re-asked on every render with
   // the live workspace, so switching the sandbox switches the prompt.
@@ -129,10 +157,30 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     [surfaces, surfaceId],
   );
 
+  /**
+   * Whether the surface on screen has ever been openable.
+   *
+   * The effect below closes an editor whose sandbox went away, and that is a
+   * transition: it has to have been openable to stop being so. Without this it
+   * also fires on a surface that is not openable *yet*, which is every default
+   * editor for as long as the sandbox takes to start — the selection would be
+   * cleared a render after it was made.
+   */
+  const wasOpenable = useRef(false);
+
   // An editor that stops being openable — its sandbox went away — should not
   // stay on screen claiming otherwise.
   useEffect(() => {
-    if (active && !canOpenView(active, workspace)) {
+    if (!active) {
+      wasOpenable.current = false;
+      return;
+    }
+    if (canOpenView(active, workspace)) {
+      wasOpenable.current = true;
+      return;
+    }
+    if (wasOpenable.current) {
+      wasOpenable.current = false;
       setSurfaceId(NO_SURFACE);
     }
   }, [active, workspace]);
@@ -157,17 +205,77 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const inPage = targetRunsAgentInPage(
     (workspace.sandbox.target as SandboxTarget) ?? 'local',
   );
-  const spec = AGENTSPECS[agentId];
+
+  /*
+   * Who is being addressed, when this workspace runs a team.
+   *
+   * The team's own answer, not the workspace's: `workspace.agentId` is the
+   * session's agent, and a team has several behind one front door. Picking a
+   * member changes which spec the next prompt is answered by, and nothing
+   * else — the sandbox, the notebook and the transcript stay where they are.
+   */
+  const team = useOptionalTeamSelection();
+  const selectedMemberId = useSignalValue(team?.selected ?? EMPTY_SELECTION);
+  const member = team?.members.find(entry => entry.id === selectedMemberId);
+
+  const spec = AGENTSPECS[member?.specId ?? agentId];
+
+  /*
+   * How an in-page agent reaches the notebook.
+   *
+   * On every other target the agent runs on a server with a sandbox of its
+   * own, and "run this cell" happens there — in the same kernel the notebook
+   * is bound to, which is why it appears to work by magic. In the browser
+   * there is no server and no second kernel: the only way to touch the
+   * notebook is a frontend tool, executed here.
+   *
+   * Without these the browser agent could hold a conversation and do nothing,
+   * which is exactly how it behaved — it answered, and the cell never ran.
+   *
+   * Addressed by `loopSurfaceId` so the tools and the surface on screen can
+   * never be pointed at different notebooks.
+   */
+  const notebookTools = useNotebookTools(loopSurfaceId(workspace.agentId));
+
+  /*
+   * Who a single request may be addressed to.
+   *
+   * The same set the harness gets as tools, and deliberately so: a menu that
+   * offered a name the model could not reach would be a menu that produces
+   * silent no-ops. Derived here rather than in the plugin because it changes
+   * with the selected member.
+   */
+  const mentionable = useMemo(
+    () =>
+      team && member
+        ? subagentsFor(team.team, member.id).map(subagent => ({
+            name: subagent.name,
+            description: subagent.description,
+          }))
+        : [],
+    [team, member],
+  );
   const { inference } = useBrowserInference();
 
   const protocol = useMemo<ProtocolConfig>(
     () =>
       inPage
         ? browserProtocolConfig({
-            agentId,
+            agentId: member?.specId ?? agentId,
             instructions: spec?.systemPrompt,
             model: workspace.model || spec?.model,
             inference,
+            // Who this member may hand work to, and what they are told. Both
+            // come from the teamspec: the supervisor routes to the others, a
+            // member reaches only its own specialists, and `context.sharing`
+            // decides whether the child sees this conversation.
+            // The agent runs them itself, so they go to the harness rather
+            // than to the chat — handing them to both would run each tool
+            // twice.
+            frontendTools: notebookTools,
+            subagents:
+              team && member ? subagentsFor(team.team, member.id) : undefined,
+            sharing: team?.sharing,
           })
         : {
             type: 'ag-ui',
@@ -183,6 +291,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       agentId,
       inPage,
       inference,
+      member,
+      notebookTools,
+      team,
       spec?.model,
       spec?.systemPrompt,
       workspace.model,
@@ -209,7 +320,34 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ) : null}
 
       <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: '1 1 0', minWidth: 0, minHeight: 0 }}>
+        {active ? (
+          <Box sx={{ flex: '1 1 0', minWidth: 0, minHeight: 0 }}>
+            <ReactorLazy
+              load={active.load}
+              props={{ surfaceId: active.surfaceId, workspace }}
+              fallback={<Centered>Loading {active.title}…</Centered>}
+              errorFallback={error => (
+                <Centered>
+                  {active.title} failed to load: {error.message}
+                </Centered>
+              )}
+            />
+          </Box>
+        ) : null}
+
+        {/* The chat sits to the right of whatever is being worked on: the
+            editor is the subject, and the conversation is about it. The rule
+            goes on this side for the same reason, and only when there is
+            something to its left to be separated from. */}
+        <Box
+          sx={{
+            flex: '1 1 0',
+            minWidth: 0,
+            minHeight: 0,
+            borderLeft: active ? '1px solid' : undefined,
+            borderColor: 'border.default',
+          }}
+        >
           <ChatBase
             // The header says why, beside the title, for the same reason the
             // placeholder does: a dead control with no explanation is worse
@@ -226,29 +364,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             enableStreaming
           />
         </Box>
-
-        {active ? (
-          <Box
-            sx={{
-              flex: '1 1 0',
-              minWidth: 0,
-              minHeight: 0,
-              borderLeft: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
-            <ReactorLazy
-              load={active.load}
-              props={{ surfaceId: active.surfaceId, workspace }}
-              fallback={<Centered>Loading {active.title}…</Centered>}
-              errorFallback={error => (
-                <Centered>
-                  {active.title} failed to load: {error.message}
-                </Centered>
-              )}
-            />
-          </Box>
-        ) : null}
       </Box>
 
       {transient ? (
@@ -278,6 +393,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           // person types rather than after nothing happens.
           placeholder={disabledReason ?? placeholder}
           disabled={chatDisabled}
+          // Everyone this member may hand work to, offered on `@`. The same
+          // list the harness was given, so a name the menu suggests is a name
+          // the model can actually reach.
+          mentionableAgents={mentionable}
           showBorderTop
         />
       </Box>

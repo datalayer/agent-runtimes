@@ -32,6 +32,16 @@ import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 
 export const PLUGINS_PANEL_PLUGIN_NAME = '@datalayer/loop-plugin-plugins-panel';
 
+/**
+ * How wide the panel is, and the aside around it.
+ *
+ * Declared here rather than in the shell so the two cannot disagree: the panel
+ * truncates its descriptions to the width it was given, and truncating to a
+ * width the container does not actually have is how text ends up cut short in
+ * the middle of empty space.
+ */
+export const SIDEBAR_WIDTH = 420;
+
 /** The generic graph plugin, which the loop's own adapter wraps. */
 const REACTOR_GRAPH_PLUGIN_NAME = GraphPlugin.name;
 
@@ -64,6 +74,7 @@ export const PluginsPanelPlugin = definePlugin<
             // in as a dependency. Listing both put two switches in front of
             // one feature, with no way to tell which to use.
             hiddenPlugins={[REACTOR_GRAPH_PLUGIN_NAME]}
+            width={SIDEBAR_WIDTH}
             workspace={workspace}
           />
         ),

@@ -72,13 +72,33 @@ export type ChatPluginConfig = {
    * words are.
    */
   placeholder: string;
+  /**
+   * Which editor is open beside the chat when the workspace opens.
+   *
+   * `'none'` leaves the chat full width. Any other value is the `surfaceId` of
+   * a contributed chat surface — `'notebook'`, `'document'`, or one a plugin
+   * this host mounts brings of its own; the field is a plain string rather
+   * than a union so a new surface does not have to change this type to be
+   * choosable.
+   *
+   * A surface that is not contributed, or cannot open yet, is simply not
+   * opened: the default is a preference, not a demand, and a host that asks
+   * for the notebook in a workspace with no notebook plugin gets a working
+   * chat rather than an error.
+   */
+  defaultSurface: string;
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
 
 export const ChatPlugin = definePlugin<ChatPluginConfig>({
   name: CHAT_PLUGIN_NAME,
-  config: { placeholder: 'Ask anything, or type / for commands' },
+  config: {
+    placeholder: 'Ask anything, or type / for commands',
+    // The notebook: it is what most of these agents work on, and a workspace
+    // that opens on an empty chat hides the half of itself that does the work.
+    defaultSurface: 'notebook',
+  },
   displayName: 'Chat',
   description: 'The conversation, the prompt, and the point editors plug into.',
   octicon: 'comment-discussion',

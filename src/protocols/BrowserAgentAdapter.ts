@@ -34,9 +34,12 @@ import type { ChatMessage } from '../types/messages';
 import { createAssistantMessage, generateMessageId } from '../types/messages';
 import type { FrontendToolDefinition } from '../types/tools';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
+import type { TeamContextSharing } from '../types/teams';
 import {
   createBrowserModel,
   frontendToolsToVercelAI,
+  subagentTools,
+  type BrowserSubagent,
   DEFAULT_BROWSER_MAX_STEPS,
   type BrowserModelOptions,
   type FrontendToolsToVercelAIOptions,
@@ -64,6 +67,16 @@ export interface BrowserAgentAdapterConfig
   languageModel?: LanguageModel;
   /** Turn ceiling for one request. */
   maxSteps?: number;
+  /**
+   * Agents this one may hand work to.
+   *
+   * They join the frontend tools as tools of their own, which is how the SDK
+   * models delegation: a subagent is another agent the parent reaches by
+   * calling it.
+   */
+  subagents?: BrowserSubagent[];
+  /** What a subagent is told about the conversation so far. */
+  sharing?: TeamContextSharing;
 }
 
 /** The text of a chat message, whatever shape it arrived in. */
@@ -99,10 +112,23 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
   constructor(config: BrowserAgentAdapterConfig) {
     super(config);
     this.browserConfig = config;
-    this.tools = frontendToolsToVercelAI(config.frontendTools ?? [], {
-      onHitlRequired: config.onHitlRequired,
-      onStatusChange: config.onStatusChange,
-    });
+    // One set: to the model there is no difference between reaching into the
+    // page and reaching another agent — both are tools it may call, and the
+    // names are what it chooses between.
+    this.tools = {
+      ...frontendToolsToVercelAI(config.frontendTools ?? [], {
+        onHitlRequired: config.onHitlRequired,
+        onStatusChange: config.onStatusChange,
+      }),
+      ...(config.subagents?.length && config.inference
+        ? subagentTools({
+            subagents: config.subagents,
+            inference: config.inference,
+            model: config.model,
+            sharing: config.sharing,
+          })
+        : {}),
+    };
   }
 
   /**

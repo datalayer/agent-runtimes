@@ -24,6 +24,7 @@ import {
 } from '@datalayer/jupyter-react/kernel-indicator';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopWorkspaceContext } from '../../core';
+import { IDLE_SANDBOX_SNAPSHOT_SIGNAL } from '../../core';
 import { useOptionalSandboxService } from './useSandboxService';
 import {
   SANDBOX_TARGETS,
@@ -40,7 +41,9 @@ export function SandboxSelector(_props: {
 
   // Hooks run before the early return, so a workspace without the sandbox
   // plugin does not change hook order on the next render.
-  const snapshot = useSignalValue(service?.snapshot ?? IDLE);
+  const snapshot = useSignalValue(
+    service?.snapshot ?? IDLE_SANDBOX_SNAPSHOT_SIGNAL,
+  );
   const status = useSignalValue(service?.status ?? EMPTY_STATUS);
   const target = useSignalValue(service?.target ?? DEFAULT_TARGET);
 
@@ -172,12 +175,6 @@ function toKernelIndicatorState(
 function toWebsocketUrl(url?: string): string | undefined {
   return url?.replace(/^http/, 'ws');
 }
-
-/** Read when the plugin is absent, so the hook order never changes. */
-const IDLE = {
-  value: { state: 'idle' as const },
-  peek: () => ({ state: 'idle' as const }),
-} as never;
 
 const EMPTY_STATUS = {
   value: null,

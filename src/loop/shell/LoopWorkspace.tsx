@@ -53,6 +53,7 @@ import {
   type SandboxSnapshot,
   type ViewControls,
 } from '../core';
+import { SIDEBAR_WIDTH } from '../plugins/plugins-panel';
 import { ViewSwitcher } from './ViewSwitcher';
 
 export type LoopWorkspaceProps = {
@@ -337,9 +338,9 @@ function WorkspaceBody({
             sx={{
               flex: '0 0 auto',
               // Wide enough for a plugin's name, its description and a switch
-              // on one line: at half this the descriptions wrapped to three
-              // lines each and the list stopped being scannable.
-              width: compact ? '100%' : '560px',
+              // on one line. The panel truncates to the same number, and takes
+              // it from `SIDEBAR_WIDTH` so the two cannot drift.
+              width: compact ? '100%' : `${SIDEBAR_WIDTH}px`,
               minWidth: 0,
               // On the trailing edge: the work is what a person reads first,
               // and the switches belong beside it rather than in front of it.

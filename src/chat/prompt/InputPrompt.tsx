@@ -25,6 +25,7 @@ import { InputPromptHeader } from './InputPromptHeader';
 import { InputPromptFooter } from './InputPromptFooter';
 import { InputPromptText } from './InputPromptText';
 import { InputPromptLexical } from './InputPromptLexical';
+import type { MentionableAgent } from './AgentMentionPlugin';
 
 /** Input variant type. */
 export type InputPromptVariant = 'text' | 'lexical';
@@ -59,6 +60,13 @@ export interface InputPromptProps {
   disabled?: boolean;
   /** Whether the prompt is read-only */
   readOnly?: boolean;
+  /**
+   * Agents this prompt may address by typing `@`.
+   *
+   * Lexical only: the plain textarea has nowhere to draw a menu, and a
+   * suggestion a person cannot see is worse than none.
+   */
+  mentionableAgents?: MentionableAgent[];
   /** Additional sx props for the outer container */
   sx?: Record<string, unknown>;
   /** Controlled input value (external state) */
@@ -90,6 +98,7 @@ export function InputPrompt({
   padding = 3,
   disabled = false,
   readOnly = false,
+  mentionableAgents,
   sx,
   value: controlledValue,
   onChange: controlledOnChange,
@@ -199,6 +208,7 @@ export function InputPrompt({
               readOnly={readOnly}
               onSubmit={handleSend}
               autoFocus={autoFocus}
+              mentionableAgents={mentionableAgents}
             />
           ) : (
             <InputPromptText

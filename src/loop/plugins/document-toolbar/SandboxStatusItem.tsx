@@ -20,6 +20,7 @@
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
 import { useOptionalSandboxService } from '../agents';
+import { IDLE_SANDBOX_SNAPSHOT_SIGNAL } from '../../core';
 
 /** How each state reads, and what colour it reads in. */
 const APPEARANCE: Record<string, { label: string; color: string }> = {
@@ -34,7 +35,9 @@ export function SandboxStatusItem(): JSX.Element | null {
   // Optional: the document is usable without the sandbox plugin, and a status
   // item is the last thing that should insist on it.
   const service = useOptionalSandboxService();
-  const snapshot = useSignalValue(service?.snapshot ?? FALLBACK);
+  const snapshot = useSignalValue(
+    service?.snapshot ?? IDLE_SANDBOX_SNAPSHOT_SIGNAL,
+  );
 
   if (!service) {
     return null;
@@ -56,11 +59,5 @@ export function SandboxStatusItem(): JSX.Element | null {
     </Box>
   );
 }
-
-/** Read when the plugin is absent, so the hook order never changes. */
-const FALLBACK = {
-  value: { state: 'idle' as const },
-  peek: () => ({ state: 'idle' as const }),
-} as never;
 
 export default SandboxStatusItem;

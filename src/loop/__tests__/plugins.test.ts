@@ -596,3 +596,35 @@ describe('the Loop workspace example', () => {
     );
   });
 });
+
+describe('the editor beside the chat', () => {
+  const source = readFileSync(
+    join(__dirname, '..', 'plugins', 'chat', 'ChatView.tsx'),
+    'utf8',
+  );
+
+  it('opens the configured surface rather than starting empty', () => {
+    expect(source).toContain('defaultSurface');
+    expect(source).toContain("setSurfaceId(defaultSurface)");
+  });
+
+  it('waits until the surface can actually be opened', () => {
+    // Surfaces arrive as their plugins activate, and these two need a running
+    // sandbox — so the moment to open one is not the first render.
+    expect(source).toContain('canOpenView(wanted.value, workspace)');
+  });
+
+  it('never reopens a surface the reader closed', () => {
+    // Without this the default re-applies every time a new surface lands.
+    expect(source).toContain('surfaceChosen.current = true');
+    expect(source).toContain('onChange={chooseSurface}');
+  });
+
+  it('defaults to the notebook', () => {
+    const plugin = readFileSync(
+      join(__dirname, '..', 'plugins', 'chat', 'index.tsx'),
+      'utf8',
+    );
+    expect(plugin).toContain("defaultSurface: 'notebook'");
+  });
+});

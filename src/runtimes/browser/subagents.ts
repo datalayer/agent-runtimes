@@ -148,10 +148,7 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
               ? ((executionOptions?.messages ?? []) as ModelMessage[])
               : [];
           const result = await child.generate({
-            messages: [
-              ...history,
-              { role: 'user' as const, content: task },
-            ],
+            messages: [...history, { role: 'user' as const, content: task }],
             abortSignal: executionOptions?.abortSignal,
           });
           return { agent: subagent.name, result: result.text };

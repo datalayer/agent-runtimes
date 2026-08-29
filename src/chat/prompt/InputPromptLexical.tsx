@@ -33,6 +33,10 @@ import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { Box } from '@datalayer/primer-addons';
+import {
+  AgentMentionPlugin,
+  type MentionableAgent,
+} from './AgentMentionPlugin';
 
 // ---- Lexical config (plain-text only) ------------------------------------
 
@@ -160,6 +164,13 @@ export interface InputPromptLexicalProps {
   onSubmit?: () => void;
   /** Auto-focus the editor on mount */
   autoFocus?: boolean;
+  /**
+   * Agents this prompt may address by typing `@`.
+   *
+   * Empty or absent means no menu: a workspace with one agent has nobody to
+   * choose between, and a menu on every `@` would be in the way.
+   */
+  mentionableAgents?: MentionableAgent[];
 }
 
 export function InputPromptLexical({
@@ -170,6 +181,7 @@ export function InputPromptLexical({
   readOnly = false,
   onSubmit,
   autoFocus = false,
+  mentionableAgents,
 }: InputPromptLexicalProps) {
   return (
     <Box
@@ -224,6 +236,9 @@ export function InputPromptLexical({
           readOnly={readOnly}
         />
         <AutoFocusPlugin autoFocus={autoFocus} />
+        {mentionableAgents?.length ? (
+          <AgentMentionPlugin agents={mentionableAgents} />
+        ) : null}
       </LexicalComposer>
     </Box>
   );

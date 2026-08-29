@@ -16,6 +16,7 @@
  */
 
 import { defineContributionPoint, defineGate } from '@datalayer/reactor';
+import type { ReadonlySignal } from '@datalayer/reactor';
 import type { ComponentType } from 'react';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 
@@ -48,6 +49,61 @@ export type SandboxSnapshot = {
    */
   target?: string;
 };
+
+/**
+ * What a view reads while the sandbox plugin is absent.
+ *
+ * Every plugin that watches the sandbox has to call `useSignalValue`
+ * unconditionally — the plugin can be switched off from the sidebar, and hook
+ * order cannot depend on that — so each needs something signal-shaped to read
+ * instead. They used to declare their own, and all four made the same mistake:
+ * building the value inside `peek()`.
+ *
+ * `useSignalValue` is a `useSyncExternalStore`, so `peek()` *is* the snapshot
+ * and React compares it by identity. A fresh object per call means the snapshot
+ * never settles, and the page re-renders without bound — React says "the result
+ * of getSnapshot should be cached", and then a nested-update overflow surfaces
+ * wherever the fiftieth render happens to land, which is nowhere near here.
+ *
+ * So: one frozen value, read by every caller. Typed rather than cast, because
+ * the `as never` the four copies used is exactly what let the wrong shape
+ * through without a word from the compiler.
+ */
+export const IDLE_SANDBOX_SNAPSHOT: SandboxSnapshot = Object.freeze({
+  state: 'idle',
+});
+
+/** {@link IDLE_SANDBOX_SNAPSHOT}, shaped as a signal to be read like one. */
+export const IDLE_SANDBOX_SNAPSHOT_SIGNAL: ReadonlySignal<SandboxSnapshot> = {
+  value: IDLE_SANDBOX_SNAPSHOT,
+  peek: () => IDLE_SANDBOX_SNAPSHOT,
+};
+
+/**
+ * The target read while the sandbox plugin is absent.
+ *
+ * Typed as `undefined` rather than `string | undefined` so that
+ * `service?.target ?? IDLE_SANDBOX_TARGET_SIGNAL` keeps whatever the service
+ * says a target is: widening it here would quietly turn every caller's
+ * `SandboxTarget` into a bare string.
+ */
+export const IDLE_SANDBOX_TARGET_SIGNAL: ReadonlySignal<undefined> = {
+  value: undefined,
+  peek: () => undefined,
+};
+
+/**
+ * The id the workspace's surfaces are known by.
+ *
+ * One expression in one place, because three things have to agree on it: the
+ * notebook that renders, the document that renders, and the frontend tools an
+ * in-page agent is given to reach them. A tool addressed to a different id than
+ * the surface on screen edits nothing and reports success, which is the worst
+ * way for this to be wrong.
+ */
+export function loopSurfaceId(agentId: string | undefined): string {
+  return `loop-${agentId || 'default'}`;
+}
 
 /**
  * What a view or a command is allowed to know about the session it runs in.

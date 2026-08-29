@@ -22,7 +22,9 @@
 
 import type { ProtocolConfig } from '../../types/protocol';
 import type { FrontendToolDefinition } from '../../types/tools';
+import type { TeamContextSharing } from '../../types/teams';
 import type { BrowserModelOptions } from './model';
+import type { BrowserSubagent } from './subagents';
 
 export type BrowserProtocolOptions = {
   /** The agent's id, for the chat to name it by. */
@@ -35,6 +37,16 @@ export type BrowserProtocolOptions = {
   frontendTools?: FrontendToolDefinition[];
   /** Where to reach a model. */
   inference: Omit<BrowserModelOptions, 'model'>;
+  /**
+   * Agents this one may hand work to.
+   *
+   * Each becomes a tool named after it, so the model reaches for `Compactor`
+   * rather than `delegate_task('Compactor', …)`. What the child is told about
+   * the conversation is {@link sharing}.
+   */
+  subagents?: BrowserSubagent[];
+  /** What a subagent is told about the conversation so far. */
+  sharing?: TeamContextSharing;
 };
 
 /**
@@ -53,12 +65,27 @@ export type BrowserProtocolOptions = {
 export function browserProtocolConfig(
   options: BrowserProtocolOptions,
 ): ProtocolConfig {
-  const { agentId, instructions, model, frontendTools, inference } = options;
+  const {
+    agentId,
+    instructions,
+    model,
+    frontendTools,
+    inference,
+    subagents,
+    sharing,
+  } = options;
   return {
     type: 'browser-vercel-ai',
     endpoint: '',
     agentId,
     enableConfigQuery: false,
-    options: { instructions, model, frontendTools, inference },
+    options: {
+      instructions,
+      model,
+      frontendTools,
+      inference,
+      subagents,
+      sharing,
+    },
   };
 }
