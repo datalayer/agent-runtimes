@@ -186,7 +186,7 @@ export function createSwitchableSandboxService({
    */
   async function applyVariant(next: SandboxTarget): Promise<void> {
     if (next === 'local' && localAgent) {
-      await ensureLocalAgent();
+      await ensureLocalAgent(localAgent.createPayload);
       return;
     }
     const configure = TARGET_SPECS[next]?.configure;
@@ -235,8 +235,16 @@ export function createSwitchableSandboxService({
     }
   }
 
-  /** Create the agent whose per-agent Jupyter sandbox backs Local. */
-  async function ensureLocalAgent(): Promise<void> {
+  /**
+   * Create the agent whose per-agent Jupyter sandbox backs Local.
+   *
+   * The payload is passed rather than read from the closure: the caller has
+   * already established that it exists, and TypeScript cannot carry that
+   * narrowing across a function boundary.
+   */
+  async function ensureLocalAgent(
+    createPayload: Record<string, unknown>,
+  ): Promise<void> {
     const id = agentId?.trim();
     if (!id) {
       throw new Error('Local needs an agent id before its runtime can start.');
@@ -256,6 +264,13 @@ export function createSwitchableSandboxService({
       );
     }
     if (existing.ok) {
+      // The agent is there, which does not mean its sandbox is. Reconfiguring
+      // or restarting the manager stops the per-agent sandboxes, because they
+      // were built under the previous settings — so coming back to Local after
+      // a spell on Jupyter finds the agent alive and nothing behind it. Asking
+      // for the sandbox is idempotent, so it costs a round trip and nothing
+      // else when one is already running.
+      await ensureLocalSandbox(id);
       return;
     }
     if (existing.status !== 404) {
@@ -269,7 +284,7 @@ export function createSwitchableSandboxService({
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        ...localAgent.createPayload,
+        ...createPayload,
         name: id,
         transport: 'ag-ui',
         sandbox_variant: 'jupyter-server',
@@ -279,6 +294,34 @@ export function createSwitchableSandboxService({
       throw new Error(
         `The server could not launch local agent ${id} (${created.status} ${created.statusText}). ` +
           (await detail(created)),
+      );
+    }
+    // A 409 means somebody else created it between the two calls above, and
+    // that agent is as unlikely to have a sandbox as one found by the GET.
+    if (created.status === 409) {
+      await ensureLocalSandbox(id);
+    }
+  }
+
+  /**
+   * Make sure the agent has somewhere to run.
+   *
+   * Creating an agent starts its sandbox, so this is only ever needed for one
+   * that already existed. Selecting a target is an operation, not a
+   * preference: when the promise resolves the sandbox is meant to be up, and
+   * without this the kernel indicator sits empty and the notebook binds to
+   * nothing.
+   */
+  async function ensureLocalSandbox(id: string): Promise<void> {
+    const response = await fetch(
+      `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}/sandbox/ensure`,
+      { method: 'POST' },
+    );
+    if (!response.ok) {
+      throw new Error(
+        `The server could not start a sandbox for local agent ${id} ` +
+          `(${response.status} ${response.statusText}). ` +
+          (await detail(response)),
       );
     }
   }

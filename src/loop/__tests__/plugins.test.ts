@@ -3,6 +3,8 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   buildReactorFromPlugins,
@@ -573,5 +575,26 @@ describe('a server sandbox summary', () => {
       'idle',
     );
     expect(snapshot.jupyterToken).toBeUndefined();
+  });
+});
+
+describe('the agent picker', () => {
+  const source = readFileSync(
+    join(__dirname, '..', 'plugins', 'agents', 'AgentPicker.tsx'),
+    'utf8',
+  );
+
+  it('re-reads the agent list when the sandbox moves', () => {
+    // Choosing Local *creates* an agent — the one whose own Jupyter sandbox
+    // backs that target. A list fetched once on mount cannot contain it, so
+    // the indicator went on naming the previous agent and the switch looked
+    // like it had done nothing.
+    const deps = source.slice(source.indexOf('void fetch('));
+    expect(deps).toContain('sandboxTarget');
+    expect(deps).toContain('sandboxState');
+  });
+
+  it('follows the workspace when it is pointed at another agent', () => {
+    expect(source).toContain('setActive(workspace.agentId)');
   });
 });

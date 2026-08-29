@@ -33,6 +33,15 @@ export function AgentPicker({
   const [switching, setSwitching] = useState(false);
   const [active, setActive] = useState(workspace.agentId);
 
+  // Re-read when the sandbox moves, not only once on mount.
+  //
+  // Choosing a target can *create* an agent — the Local target brings up the
+  // agent whose own Jupyter sandbox backs it — and a list fetched before that
+  // happened does not contain it. The indicator then names an agent that is no
+  // longer the one in use, which reads as the switch having done nothing.
+  const sandboxTarget = workspace.sandbox.target;
+  const sandboxState = workspace.sandbox.state;
+
   useEffect(() => {
     let cancelled = false;
     void fetch(`${workspace.serverUrl}/api/v1/agents`)
@@ -49,7 +58,14 @@ export function AgentPicker({
     return () => {
       cancelled = true;
     };
-  }, [workspace.serverUrl]);
+  }, [workspace.serverUrl, sandboxTarget, sandboxState]);
+
+  // The workspace can be pointed at a different agent while this is mounted —
+  // the host re-renders it with a new `agentId` — and a name captured once at
+  // mount would go on showing the old one.
+  useEffect(() => {
+    setActive(workspace.agentId);
+  }, [workspace.agentId]);
 
   const choose = useCallback(
     async (agentId: string) => {

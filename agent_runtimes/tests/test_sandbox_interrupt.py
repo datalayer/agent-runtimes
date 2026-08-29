@@ -366,3 +366,76 @@ class TestRestartCoversEverySandbox:
         # Both stopped before anything is built, so the new sandbox is the only
         # one alive when the next status goes out.
         assert calls == ["global", "agents", "create"]
+
+
+class TestEnsureAgentSandbox:
+    """An agent can outlive its sandbox, and must be able to get one back.
+
+    `restart()` stops the per-agent sandboxes because they were built under the
+    previous configuration. Without a way to ask for one back, coming back to a
+    target that reuses an existing agent found the agent alive and nothing
+    behind it: no kernel, no Jupyter URL, and a workspace that looked dead.
+    """
+
+    def test_the_route_exists_and_takes_an_agent(self):
+        from agent_runtimes.routes.agents import router
+
+        routes = {
+            (route.path, frozenset(route.methods))
+            for route in router.routes
+            if hasattr(route, "methods")
+        }
+        assert ("/agents/{agent_id}/sandbox/ensure", frozenset({"POST"})) in routes
+
+    def test_creates_a_sandbox_when_the_agent_has_none(self, monkeypatch):
+        import asyncio
+
+        from agent_runtimes.routes import agents as agents_routes
+        from agent_runtimes.services import code_sandbox_manager
+
+        created: list[tuple[str, str]] = []
+
+        class _Manager:
+            def get_agent_sandbox(self, agent_id):
+                return None
+
+            def create_agent_sandbox(self, agent_id, variant):
+                created.append((agent_id, variant))
+
+            def get_status(self):
+                return {"variant": "jupyter-server", "sandbox_running": True}
+
+        monkeypatch.setattr(
+            code_sandbox_manager, "get_code_sandbox_manager", lambda: _Manager()
+        )
+
+        asyncio.run(agents_routes.ensure_agent_sandbox("a1"))
+
+        assert created == [("a1", "jupyter-server")]
+
+    def test_leaves_an_agent_that_already_has_one_alone(self, monkeypatch):
+        import asyncio
+
+        from agent_runtimes.routes import agents as agents_routes
+        from agent_runtimes.services import code_sandbox_manager
+
+        created: list[str] = []
+
+        class _Manager:
+            def get_agent_sandbox(self, agent_id):
+                return object()
+
+            def create_agent_sandbox(self, agent_id, variant):
+                created.append(agent_id)
+
+            def get_status(self):
+                return {"variant": "jupyter-server", "sandbox_running": True}
+
+        monkeypatch.setattr(
+            code_sandbox_manager, "get_code_sandbox_manager", lambda: _Manager()
+        )
+
+        asyncio.run(agents_routes.ensure_agent_sandbox("a1"))
+
+        # Idempotent: selecting Local twice must not build a second sandbox.
+        assert created == []

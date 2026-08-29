@@ -3160,6 +3160,53 @@ async def get_sandbox_status() -> SandboxStatusResponse:
         )
 
 
+@router.post("/{agent_id}/sandbox/ensure")
+async def ensure_agent_sandbox(agent_id: str) -> SandboxStatusResponse:
+    """
+    Guarantee this agent has a running sandbox, creating one if it does not.
+
+    Creating an agent with ``sandbox_variant="jupyter-server"`` already starts
+    its sandbox eagerly, so this exists for the case where the agent outlives
+    it: reconfiguring or restarting the manager stops the per-agent sandboxes,
+    because they were built under the previous configuration. Without a way to
+    ask for one back, a caller that selects an existing agent gets an agent
+    with nowhere to run — no kernel, no Jupyter URL, and a workspace that looks
+    dead for no visible reason.
+
+    Idempotent: an agent that already has a sandbox is left alone.
+
+    Args:
+        agent_id: The agent whose sandbox to guarantee.
+
+    Returns:
+        The sandbox status after the call.
+    """
+    try:
+        from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+        manager = get_code_sandbox_manager()
+        if manager.get_agent_sandbox(agent_id) is None:
+            manager.create_agent_sandbox(agent_id=agent_id, variant="jupyter-server")
+            logger.info("Started the sandbox for agent '%s' on request", agent_id)
+
+        try:
+            from .configure import notify_sandbox_status_change
+
+            await notify_sandbox_status_change(agent_id)
+        except Exception as exc:
+            logger.debug("Failed to notify agent sandbox change: %s", exc)
+
+        return SandboxStatusResponse(**manager.get_status())
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to ensure the sandbox for agent %s: %s", agent_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to ensure the sandbox for agent {agent_id}: {str(e)}",
+        )
+
+
 @router.post("/sandbox/configure")
 async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusResponse:
     """
