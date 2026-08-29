@@ -9,12 +9,18 @@ import React from 'react';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { contribution, defineExtension } from '@datalayer/reactor';
-import { buildLoopReactor } from '../shell/LoopWorkspace';
+import {
+  buildReactorFromPlugins,
+  contribution,
+  definePlugin,
+} from '@datalayer/reactor';
+import { buildLoopReactor, LoopWorkspace } from '../shell/LoopWorkspace';
+import { PluginsPanelPlugin } from '../plugins/plugins-panel';
 import {
   LoopCommand,
   LoopViewType,
   createPromptChannel,
+  type LoopViewProps,
   type LoopWorkspaceContext,
 } from '../core';
 
@@ -43,7 +49,7 @@ const workspace: LoopWorkspaceContext = {
 
 describe('a plugin contributing to the workspace', () => {
   it('offers its view and its command through the reactor', () => {
-    const Plugin = defineExtension({
+    const Plugin = definePlugin({
       name: '@tests/loop-plugin',
       contributes: [
         contribution(
@@ -59,7 +65,11 @@ describe('a plugin contributing to the workspace', () => {
         ),
         contribution(
           LoopCommand,
-          { name: 'notebook', description: 'Open the notebook', run: async () => {} },
+          {
+            name: 'notebook',
+            description: 'Open the notebook',
+            run: async () => {},
+          },
           { id: 'notebook' },
         ),
       ],
@@ -72,11 +82,13 @@ describe('a plugin contributing to the workspace', () => {
     expect(views.map(v => v.id)).toEqual(['notebook']);
     // The gate is the plugin's, evaluated against the live workspace.
     expect(views[0].value.canOpen?.(workspace)).toBe(false);
-    expect(reactor.getContributions(LoopCommand)[0].value.name).toBe('notebook');
+    expect(reactor.getContributions(LoopCommand)[0].value.name).toBe(
+      'notebook',
+    );
   });
 
   it('takes its view away with it when disabled', () => {
-    const Plugin = defineExtension({
+    const Plugin = definePlugin({
       name: '@tests/removable',
       contributes: [
         contribution(
@@ -103,7 +115,7 @@ describe('a plugin contributing to the workspace', () => {
 
   it('orders views by their declared order', () => {
     const make = (id: string, order: number) =>
-      defineExtension({
+      definePlugin({
         name: `@tests/${id}`,
         contributes: [
           contribution(
@@ -204,7 +216,9 @@ describe('the view switcher', () => {
     root = createRoot(container);
     const mounted = root;
     act(() => {
-      mounted.render(<ViewSwitcher views={views as never} workspace={workspace} />);
+      mounted.render(
+        <ViewSwitcher views={views as never} workspace={workspace} />,
+      );
     });
 
     // One choice is not a choice.
@@ -215,7 +229,7 @@ describe('the view switcher', () => {
 describe('slash dispatch', () => {
   it('runs the command whose name or alias matches', async () => {
     const ran = vi.fn();
-    const Plugin = defineExtension({
+    const Plugin = definePlugin({
       name: '@tests/commands',
       contributes: [
         contribution(
@@ -238,7 +252,8 @@ describe('slash dispatch', () => {
 
     const commands = reactor.getContributions(LoopCommand);
     const match = commands.find(
-      c => c.value.name === 'model' || (c.value.aliases ?? []).includes('model'),
+      c =>
+        c.value.name === 'model' || (c.value.aliases ?? []).includes('model'),
     );
     await match?.value.run({ workspace, argv: 'ollama:llama3.1:8b' });
 
@@ -253,7 +268,9 @@ describe('view controls', () => {
     let published: import('../core').ViewControls | null = null;
     const stop = vi.fn();
 
-    const setViewControls = (controls: import('../core').ViewControls | null) => {
+    const setViewControls = (
+      controls: import('../core').ViewControls | null,
+    ) => {
       published = controls;
     };
 
@@ -274,7 +291,7 @@ describe('view controls', () => {
 describe('plugin toggles', () => {
   it('reflect the reactor rather than a copy of it', () => {
     const make = (id: string) =>
-      defineExtension({
+      definePlugin({
         name: `@datalayer/loop-plugin-${id}`,
         contributes: [
           contribution(
@@ -292,24 +309,28 @@ describe('plugin toggles', () => {
     const reactor = buildLoopReactor([make('one'), make('two')]);
     reactor.start();
 
-    expect(reactor.listExtensions()).toHaveLength(2);
+    expect(reactor.listPlugins()).toHaveLength(2);
     expect(reactor.isEnabled('@datalayer/loop-plugin-one')).toBe(true);
 
     reactor.disable('@datalayer/loop-plugin-one');
 
     // What the checkbox reads, and what the switcher reads, are the same facts.
     expect(reactor.isEnabled('@datalayer/loop-plugin-one')).toBe(false);
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual(['two']);
-
-    reactor.enable('@datalayer/loop-plugin-one');
-    expect(reactor.getContributions(LoopViewType).map(v => v.id).sort()).toEqual([
-      'one',
+    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
       'two',
     ]);
+
+    reactor.enable('@datalayer/loop-plugin-one');
+    expect(
+      reactor
+        .getContributions(LoopViewType)
+        .map(v => v.id)
+        .sort(),
+    ).toEqual(['one', 'two']);
   });
 
   it('notifies subscribers on every toggle, so a checkbox list re-renders', () => {
-    const Plugin = defineExtension({ name: '@datalayer/loop-plugin-x' });
+    const Plugin = definePlugin({ name: '@datalayer/loop-plugin-x' });
     const reactor = buildLoopReactor([Plugin]);
     reactor.start();
 
@@ -322,5 +343,125 @@ describe('plugin toggles', () => {
     reactor.enable('@datalayer/loop-plugin-x');
 
     expect(notifications).toBe(2);
+  });
+});
+
+describe('the blank base', () => {
+  it('renders no prompt of its own', async () => {
+    // The prompt is the chat's. A workspace mounted without a chat plugin
+    // should have nothing to type into — an input box wired to nothing is
+    // worse than no input box.
+    const reactor = buildReactorFromPlugins([]);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+    });
+
+    expect(container.querySelector('textarea')).toBeNull();
+    expect(container.querySelector('input')).toBeNull();
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+
+  it('draws no sidebar when no plugin fills it', async () => {
+    const reactor = buildReactorFromPlugins([]);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+    });
+
+    // Chrome around nothing is still chrome.
+    expect(container.querySelector('aside')).toBeNull();
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+
+  it('draws one when a plugin does', async () => {
+    const reactor = buildReactorFromPlugins([PluginsPanelPlugin]);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+    });
+
+    expect(container.querySelector('aside')).not.toBeNull();
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+});
+
+describe('dispatch', () => {
+  it('stays with the workspace, so a plugin prompt can run any command', async () => {
+    // No single plugin can see the others' commands, which is why `submit`
+    // is the workspace's and not the chat's.
+    let submit: LoopWorkspaceContext['submit'] | undefined;
+    const ran: string[] = [];
+
+    const probe = definePlugin({
+      name: 'probe',
+      contributes: [
+        contribution(
+          LoopCommand,
+          {
+            name: 'ping',
+            description: 'ping',
+            run: async () => {
+              ran.push('ping');
+            },
+          },
+          { id: 'ping' },
+        ),
+        contribution(
+          LoopViewType,
+          {
+            viewType: 'probe',
+            title: 'Probe',
+            load: async () => ({
+              default: ({ workspace }: LoopViewProps) => {
+                submit = workspace.submit;
+                return <div />;
+              },
+            }),
+          },
+          { id: 'probe' },
+        ),
+      ],
+    });
+
+    const reactor = buildReactorFromPlugins([probe]);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const outcome = await submit!('/ping');
+    expect(ran).toEqual(['ping']);
+    expect(outcome.handled).toBe(true);
+    expect(outcome.command).toBe('ping');
+
+    // And an unknown one comes back with something to show the person.
+    const unknown = await submit!('/nope');
+    expect(unknown.handled).toBe(false);
+    expect(unknown.reason).toMatch(/unknown command/i);
+
+    await act(async () => root.unmount());
+    container.remove();
   });
 });

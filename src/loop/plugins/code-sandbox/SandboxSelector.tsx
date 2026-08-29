@@ -17,43 +17,31 @@
  */
 
 import { useCallback, useState } from 'react';
-import { Box, SegmentedControl, Spinner, Text, Tooltip } from '@primer/react';
+import { Box, SegmentedControl, Spinner, Text } from '@primer/react';
+import {
+  KernelIndicator,
+  type ExecutionState,
+} from '@datalayer/jupyter-react/kernel-indicator';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopWorkspaceContext } from '../../core';
 import { useOptionalSandboxService } from './useSandboxService';
-import type { SandboxTarget } from './switchable';
-
-const TARGETS: ReadonlyArray<{
-  target: SandboxTarget;
-  label: string;
-  hint: string;
-}> = [
-  {
-    target: 'browser',
-    label: 'Browser',
-    hint: 'Python in this page (Pyodide). Nothing leaves your machine.',
-  },
-  {
-    target: 'local',
-    label: 'Local',
-    hint: 'A Jupyter server beside you.',
-  },
-  {
-    target: 'cloud',
-    label: 'Cloud',
-    hint: 'A Datalayer runtime.',
-  },
-];
+import {
+  SANDBOX_TARGETS,
+  TARGET_SPECS,
+  type SandboxTarget,
+} from './switchable';
 
 export function SandboxSelector(_props: {
   workspace: LoopWorkspaceContext;
 }): JSX.Element | null {
   const service = useOptionalSandboxService();
   const [moving, setMoving] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
   // Hooks run before the early return, so a workspace without the sandbox
   // plugin does not change hook order on the next render.
   const snapshot = useSignalValue(service?.snapshot ?? IDLE);
+  const status = useSignalValue(service?.status ?? EMPTY_STATUS);
   const target = useSignalValue(service?.target ?? DEFAULT_TARGET);
 
   const choose = useCallback(
@@ -62,8 +50,13 @@ export function SandboxSelector(_props: {
         return;
       }
       setMoving(true);
+      setFailure(null);
       try {
         await service.setTarget(next);
+      } catch (error) {
+        // Said where the person clicked. A switch that fails silently leaves
+        // them looking at a control that did nothing and no reason why.
+        setFailure(error instanceof Error ? error.message : String(error));
       } finally {
         setMoving(false);
       }
@@ -75,47 +68,84 @@ export function SandboxSelector(_props: {
     return null;
   }
 
-  const index = Math.max(
-    0,
-    TARGETS.findIndex(entry => entry.target === target),
-  );
+  const index = Math.max(0, SANDBOX_TARGETS.indexOf(target));
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
       {moving ? <Spinner size="small" /> : null}
-      <Text
+      <KernelIndicator
+        state={toKernelIndicatorState(snapshot.state, status?.execution_state)}
+        environmentName={snapshot.variant ?? TARGET_SPECS[target].label}
+        overlayTitle={`${TARGET_SPECS[target].label} Kernel`}
+        position="se"
+        bordered={false}
+      />
+      <SegmentedControl
+        aria-label="Where code runs"
+        size="small"
+        // Inline, deliberately. `sx` compiles to a class, and the examples
+        // page applies its typography list styles *after* Primer's sheet — so
+        // a class loses on order and the markers come back. An inline style
+        // outranks both. Primer does not type `style` on this component but
+        // forwards it to the element, hence the cast.
+        {...({ style: { listStyle: 'none', margin: 0, padding: 0 } } as object)}
         sx={{
-          fontSize: 0,
-          color: snapshot.state === 'running' ? 'success.fg' : 'fg.muted',
+          // SegmentedControl is a list. Some example-page typography styles
+          // restore list markers globally, so reset both the list and its
+          // direct items here instead of leaking a page-specific CSS fix into
+          // the plugin.
+          listStyle: 'none',
+          m: 0,
+          p: 0,
+          '& > li': { listStyle: 'none' },
+          '& > li::marker': { content: 'none' },
         }}
-        aria-label={`Sandbox ${snapshot.state}`}
       >
-        ●
-      </Text>
-      <SegmentedControl aria-label="Where code runs" size="small">
-        {TARGETS.map((entry, position) => (
+        {SANDBOX_TARGETS.map((entry, position) => (
           <SegmentedControl.Button
-            key={entry.target}
+            key={entry}
             selected={position === index}
-            onClick={() => void choose(entry.target)}
+            sx={{ listStyle: 'none' }}
+            title={TARGET_SPECS[entry].hint}
+            onClick={() => void choose(entry)}
           >
-            {entry.label}
+            {TARGET_SPECS[entry].label}
           </SegmentedControl.Button>
         ))}
       </SegmentedControl>
-      <Tooltip text={TARGETS[index]?.hint ?? ''} direction="s">
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-          {snapshot.variant ?? snapshot.state}
-        </Text>
-      </Tooltip>
+      {/* A status readout, not a control. Primer's `Tooltip` requires its
+          child to *be* the interactive element and throws otherwise, so the
+          hint rides on the native attribute. */}
+      <Text
+        sx={{ fontSize: 0, color: failure ? 'danger.fg' : 'fg.muted' }}
+        title={failure ?? TARGET_SPECS[SANDBOX_TARGETS[index]].hint}
+      >
+        {failure ? 'switch failed' : (snapshot.variant ?? snapshot.state)}
+      </Text>
     </Box>
   );
+}
+
+function toKernelIndicatorState(
+  state: LoopWorkspaceContext['sandbox']['state'],
+  executionState?: string,
+): ExecutionState {
+  if (state === 'error') return 'connected-dead';
+  if (state === 'starting') return 'connected-starting';
+  if (state === 'stopping') return 'disconnecting';
+  if (state !== 'running') return 'disconnected';
+  return executionState === 'busy' ? 'connected-busy' : 'connected-idle';
 }
 
 /** Read when the plugin is absent, so the hook order never changes. */
 const IDLE = {
   value: { state: 'idle' as const },
   peek: () => ({ state: 'idle' as const }),
+} as never;
+
+const EMPTY_STATUS = {
+  value: null,
+  peek: () => null,
 } as never;
 
 const DEFAULT_TARGET = {

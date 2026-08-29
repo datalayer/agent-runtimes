@@ -9,6 +9,7 @@ export { default as A2UiContactCardExample } from './A2UiContactCardExample';
 export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
 export { default as A2UiAgentExample } from './A2UiAgentExample';
 export { default as A2UiViewerExample } from './A2UiViewerExample';
+export { default as LoopWorkspaceExample } from './LoopWorkspaceExample';
 export { default as A2UiJupyterOutputExample } from './A2UiJupyterOutputExample';
 export { default as AgUiAgenticExample } from './AgUiAgenticExample';
 export { default as AgUiBackendToolRenderingExample } from './AgUiBackendToolRenderingExample';

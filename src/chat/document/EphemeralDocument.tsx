@@ -145,6 +145,24 @@ export interface EphemeralDocumentProps {
   runtimeName?: string;
   /** Optional explicit runtime endpoint (agent-node tunnel proxy path). */
   runtimeOverride?: EphemeralRuntimeOverride;
+  /**
+   * Services the host already has, used instead of building some from a URL.
+   *
+   * An in-page sandbox — JupyterLite over Pyodide — has no address to connect
+   * to: it *is* the services. Without this the document had no way to reach
+   * such a kernel and rendered an empty editor with nothing in the console,
+   * because "no base url" was a silent early return rather than a failure.
+   *
+   * The host keeps ownership: a manager passed in is never disposed here.
+   */
+  serviceManager?: ServiceManager.IManager;
+  /**
+   * Kernel to join on that manager, rather than starting another.
+   *
+   * The agent and the reader should be looking at one kernel; starting a
+   * second one beside it is how they end up with different variables.
+   */
+  kernelId?: string;
   /** Optional theme variant override from host chat context. */
   themeVariant?: string;
   /** Optional color mode override from host chat context. */
@@ -309,6 +327,8 @@ export function EphemeralDocument({
   documentId,
   runtimeName,
   runtimeOverride,
+  serviceManager: providedServiceManager,
+  kernelId,
   themeVariant,
   colorMode,
   content,
@@ -385,14 +405,17 @@ export function EphemeralDocument({
         wsUrl: String(runtimeOverride?.wsUrl || '').trim() || undefined,
         token: String(runtimeOverride?.token || '').trim(),
         runtime_name:
-          String(runtimeOverride?.runtimeName || '').trim() || 'agent-node-proxy',
+          String(runtimeOverride?.runtimeName || '').trim() ||
+          'agent-node-proxy',
       };
     }
     const preferredRuntime = String(runtimeName || '').trim();
     if (!preferredRuntime) {
       return undefined;
     }
-    return runtimes.find(rt => String(rt?.runtime_name || '') === preferredRuntime);
+    return runtimes.find(
+      rt => String(rt?.runtime_name || '') === preferredRuntime,
+    );
   }, [runtimeOverride, runtimeName, runtimes]);
 
   const needsRuntimeLookup = Boolean(
@@ -427,6 +450,46 @@ export function EphemeralDocument({
     let unregisterManager: (() => void) | null = null;
 
     const connectRuntime = async () => {
+      // Services handed over by the host — an in-page JupyterLite sandbox —
+      // are used as they are. There is no URL to connect to in that case, and
+      // the old code read "no url" as "nothing to do" and returned silently,
+      // which is why the editor came up blank with an empty console.
+      if (providedServiceManager) {
+        try {
+          await providedServiceManager.ready;
+          const connection = kernelId
+            ? providedServiceManager.kernels.connectTo({
+                model: { id: kernelId, name: 'python' },
+              })
+            : await providedServiceManager.kernels.startNew();
+          if (!cancelled) {
+            setRuntimeServiceManager(providedServiceManager);
+            setDocumentKernel(
+              new Kernel({
+                kernelName: connection.model.name,
+                kernelSpecName: connection.model.name,
+                kernelModel: connection.model,
+                kernelManager: providedServiceManager.kernels,
+                kernelspecsManager: providedServiceManager.kernelspecs,
+                sessionManager: providedServiceManager.sessions,
+              }),
+            );
+          }
+        } catch (reason) {
+          // Said out loud. A document that silently shows nothing is the
+          // hardest kind of failure to chase.
+          console.error(
+            '[agent-runtimes] The document could not reach the kernel of the sandbox it was given.',
+            reason,
+          );
+          if (!cancelled) {
+            setRuntimeServiceManager(null);
+            setDocumentKernel(undefined);
+          }
+        }
+        return;
+      }
+
       const baseUrl = String(selectedRuntime?.url || '').trim();
       if (!baseUrl) {
         if (!cancelled) {
@@ -480,11 +543,19 @@ export function EphemeralDocument({
     return () => {
       cancelled = true;
       unregisterManager?.();
+      // Only what this component built. A manager the host passed in is still
+      // theirs, and disposing it would take the sandbox down with the view.
       if (manager) {
         disposeServiceManager(manager);
       }
     };
-  }, [selectedRuntime?.runtime_name, selectedRuntime?.url, selectedRuntime?.token]);
+  }, [
+    providedServiceManager,
+    kernelId,
+    selectedRuntime?.runtime_name,
+    selectedRuntime?.url,
+    selectedRuntime?.token,
+  ]);
 
   // Surface the document's live kernel connection to the parent so the chat
   // header's kernel indicator reflects the real connected kernel instead of
@@ -497,9 +568,13 @@ export function EphemeralDocument({
   }, [documentKernel, onKernelChange]);
 
   const activeServiceManager = runtimeServiceManager;
+  // Starting covers the supplied-services path too. Without it the spinner
+  // appeared and vanished in the same frame — the only sign that anything was
+  // happening — and then the editor sat empty while the kernel connected.
   const isRuntimeStarting = Boolean(
     (String(runtimeName || '').trim() ||
-      String(runtimeOverride?.baseUrl || '').trim()) &&
+      String(runtimeOverride?.baseUrl || '').trim() ||
+      providedServiceManager) &&
     !activeServiceManager,
   );
   useProgressTask(`ephemeral-document-start-${documentId}`, isRuntimeStarting);

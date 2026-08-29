@@ -19,7 +19,12 @@
  * @module loop/plugins/code-sandbox/service
  */
 
-import { computed, signal, type ReadonlySignal, type Signal } from '@datalayer/reactor';
+import {
+  computed,
+  signal,
+  type ReadonlySignal,
+  type Signal,
+} from '@datalayer/reactor';
 import type { SandboxSnapshot, SandboxState } from '../../core';
 
 /** Status as the server reports it over the configure WebSocket. */

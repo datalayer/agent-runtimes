@@ -63,7 +63,7 @@ export function PluginToggles({
     >
       <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>{title}</Text>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
-        {reactor.listExtensions().map(name => {
+        {reactor.listPlugins().map(name => {
           const isLocked = locked.includes(name);
           return (
             <Box

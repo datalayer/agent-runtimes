@@ -29,23 +29,29 @@ export function SandboxStatusBridge({
   workspace: LoopWorkspaceContext;
 }): JSX.Element | null {
   const service = useOptionalSandboxService();
-  const snapshot = useSignalValue(
-    service?.snapshot ?? FALLBACK_SNAPSHOT,
-  );
+  const snapshot = useSignalValue(service?.snapshot ?? FALLBACK_SNAPSHOT);
+  // Watched as a signal so a switch re-renders this bridge, and carried into
+  // the snapshot so it re-renders everyone reading the workspace.
+  const target = useSignalValue(service?.target ?? FALLBACK_TARGET);
   const { setSandbox, agentId } = workspace;
 
   useEffect(() => service?.connect(agentId), [service, agentId]);
 
   useEffect(() => {
     if (service) {
-      setSandbox(snapshot);
+      setSandbox({ ...snapshot, target });
     }
-  }, [service, snapshot, setSandbox]);
+  }, [service, snapshot, target, setSandbox]);
 
   return null;
 }
 
 /** Read when the plugin is absent, so the hook order never changes. */
+const FALLBACK_TARGET = {
+  value: undefined as string | undefined,
+  peek: () => undefined as string | undefined,
+} as never;
+
 const FALLBACK_SNAPSHOT = {
   value: { state: 'idle' as const },
   peek: () => ({ state: 'idle' as const }),

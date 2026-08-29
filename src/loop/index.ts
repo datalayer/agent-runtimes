@@ -15,7 +15,9 @@
 // The contracts. A plugin depends on these and on the reactor, never on the shell.
 export {
   LoopCommand,
+  LoopDocumentToolbar,
   LoopMention,
+  LoopNotebookToolbar,
   LoopSlots,
   LoopViewType,
   canOpenView,
@@ -24,6 +26,8 @@ export {
   type CommandArgSpec,
   type CommandContribution,
   type CommandResult,
+  type EditorToolbarContext,
+  type EditorToolbarContribution,
   type LoopCommandContext,
   type LoopViewProps,
   type LoopWorkspaceContext,
@@ -35,6 +39,7 @@ export {
   type ViewControls,
   type ViewTypeContribution,
 } from './core';
+export { useEditorToolbarItems } from './core/toolbar';
 
 // The shell.
 export {
@@ -48,12 +53,23 @@ export {
 } from './shell';
 
 // The plugins that ship with it.
-export { A2uiExtension, A2UI_EXTENSION_NAME } from './plugins/a2ui';
-export { AgentsExtension, AGENTS_EXTENSION_NAME } from './plugins/agents';
-export { ChatExtension } from './plugins/chat';
+export { A2uiPlugin, A2UI_PLUGIN_NAME } from './plugins/a2ui';
+export { AgentsPlugin, AGENTS_PLUGIN_NAME } from './plugins/agents';
+export { ChatPlugin, CHAT_PLUGIN_NAME, type ChatPluginConfig } from './plugins/chat';
 export {
-  CODE_SANDBOX_EXTENSION_NAME,
-  CodeSandboxExtension,
+  GraphViewPlugin,
+  GRAPH_PLUGIN_NAME,
+  GRAPH_VIEW_TYPE,
+} from './plugins/graph';
+export {
+  PluginsPanelPlugin,
+  PLUGINS_PANEL_PLUGIN_NAME,
+  PluginsPanel,
+  type PluginsPanelProps,
+} from './plugins/plugins-panel';
+export {
+  CODE_SANDBOX_PLUGIN_NAME,
+  CodeSandboxPlugin,
   SandboxSelector,
   browserSource,
   createBrowserSandboxService,
@@ -70,6 +86,18 @@ export {
   type ServiceManagerSource,
   type SwitchableSandboxService,
 } from './plugins/code-sandbox';
-export { DocumentExtension, DOCUMENT_EXTENSION_NAME } from './plugins/document';
-export { ModelsExtension, MODELS_EXTENSION_NAME } from './plugins/models';
-export { NotebookExtension, NOTEBOOK_EXTENSION_NAME } from './plugins/notebook';
+export { DocumentPlugin, DOCUMENT_PLUGIN_NAME } from './plugins/document';
+export {
+  DocumentToolbarPlugin,
+  DOCUMENT_TOOLBAR_PLUGIN_NAME,
+} from './plugins/document-toolbar';
+export { ModelsPlugin, MODELS_PLUGIN_NAME } from './plugins/models';
+export { NotebookPlugin, NOTEBOOK_PLUGIN_NAME } from './plugins/notebook';
+export {
+  NotebookToolbarPlugin,
+  NOTEBOOK_TOOLBAR_PLUGIN_NAME,
+} from './plugins/notebook-toolbar';
+
+// The extensions that group them, for hosts that would rather install a
+// capability than assemble one.
+export { DocumentExtension, NotebookExtension } from './extensions';

@@ -15,8 +15,9 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { ActionList, ActionMenu, Box, Text } from '@primer/react';
-import type { LoopWorkspaceContext } from '../../core';
+import { ActionList, ActionMenu, Box } from '@primer/react';
+import { useGate } from '@datalayer/reactor/react';
+import { LoopAgentGate, type LoopWorkspaceContext } from '../../core';
 
 type CatalogModel = {
   id: string;
@@ -36,8 +37,13 @@ export function ModelChip({
 }): JSX.Element | null {
   const [models, setModels] = useState<CatalogModel[]>([]);
   const [active, setActive] = useState(workspace.model ?? '');
+  const agent = useGate(LoopAgentGate, workspace);
 
   useEffect(() => {
+    if (!agent.allowed) {
+      setModels([]);
+      return;
+    }
     let cancelled = false;
     void fetch(`${workspace.serverUrl}/api/v1/configure/models`)
       .then(response => (response.ok ? response.json() : { models: [] }))
@@ -53,26 +59,25 @@ export function ModelChip({
     return () => {
       cancelled = true;
     };
-  }, [workspace.serverUrl]);
+  }, [agent.allowed, workspace.serverUrl]);
 
   const choose = useCallback(
     async (modelId: string) => {
       setActive(modelId);
-      await fetch(`${workspace.serverUrl}/api/v1/configure/inference/provider`, {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ model: modelId }),
-      }).catch(() => undefined);
+      await fetch(
+        `${workspace.serverUrl}/api/v1/configure/inference/provider`,
+        {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ model: modelId }),
+        },
+      ).catch(() => undefined);
     },
     [workspace.serverUrl],
   );
 
   const current = models.find(model => model.id === active);
   const label = current?.name || active || 'Model';
-
-  if (models.length === 0) {
-    return <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{label}</Text>;
-  }
 
   const local = models.filter(model => model.local);
   const hosted = models.filter(model => !model.local);
@@ -100,22 +105,45 @@ export function ModelChip({
   return (
     <Box sx={{ display: 'flex', alignItems: 'center' }}>
       <ActionMenu>
-        <ActionMenu.Button variant="invisible" size="small">
+        <ActionMenu.Button
+          variant="invisible"
+          size="small"
+          disabled={!agent.allowed || models.length === 0}
+          title={
+            agent.allowed
+              ? models.length === 0
+                ? 'No models are available'
+                : 'Choose the model used by this agent'
+              : agent.reason
+          }
+        >
           {current?.local ? '◆ ' : ''}
           {label}
         </ActionMenu.Button>
+        {/* Always rendered. `ActionMenu` reads its two children directly and
+            throws on a null second one — the anchor being disabled is what
+            keeps this from opening when there is nothing to choose. */}
         <ActionMenu.Overlay width="large">
           <ActionList selectionVariant="single" showDividers>
             {local.length > 0 ? (
               <ActionList.Group>
-                <ActionList.GroupHeading>On this machine</ActionList.GroupHeading>
+                <ActionList.GroupHeading>
+                  On this machine
+                </ActionList.GroupHeading>
                 {local.map(item)}
               </ActionList.Group>
             ) : null}
-            <ActionList.Group>
-              <ActionList.GroupHeading>Cloud</ActionList.GroupHeading>
-              {hosted.map(item)}
-            </ActionList.Group>
+            {hosted.length > 0 ? (
+              <ActionList.Group>
+                <ActionList.GroupHeading>Cloud</ActionList.GroupHeading>
+                {hosted.map(item)}
+              </ActionList.Group>
+            ) : null}
+            {models.length === 0 ? (
+              <ActionList.Item disabled>
+                {agent.allowed ? 'No models are available' : agent.reason}
+              </ActionList.Item>
+            ) : null}
           </ActionList>
         </ActionMenu.Overlay>
       </ActionMenu>

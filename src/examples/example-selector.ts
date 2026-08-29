@@ -219,6 +219,15 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'inference', 'provider', 'runtime'],
   ),
   makeEntry(
+    'LoopWorkspaceExample',
+    () => import('./LoopWorkspaceExample'),
+    'The LOOP workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
+    // `owns-sandbox-control`: this example brings its own sandbox switch, so
+    // the shell hides the one in its header rather than showing two controls
+    // for one sandbox — and a second one that would not agree with the first.
+    ['example', 'loop', 'workspace', 'sandbox', 'owns-sandbox-control'],
+  ),
+  makeEntry(
     'AgentLoopExample',
     () => import('./AgentLoopExample'),
     'Define and launch an agent execution loop (observe/think/act/evaluate) over a live notebook, driven by generic loop specs.',

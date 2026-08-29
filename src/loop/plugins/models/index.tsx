@@ -9,23 +9,31 @@
  * @module loop/plugins/models
  */
 
-import { contribution, defineExtension } from '@datalayer/reactor';
+import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
 import { LoopCommand, LoopSlots } from '../../core';
 import { ModelChip } from './ModelChip';
 
-export const MODELS_EXTENSION_NAME = '@datalayer/loop-plugin-models';
+export const MODELS_PLUGIN_NAME = '@datalayer/loop-plugin-models';
 
-export const ModelsExtension = defineExtension<
+export const ModelsPlugin = definePlugin<
   Record<string, never>,
   unknown,
   { components: ReactorSlotComponent[] }
 >({
-  name: MODELS_EXTENSION_NAME,
+  name: MODELS_PLUGIN_NAME,
+  displayName: 'Models',
+  description: 'Which model answers, from the agentspecs catalog.',
+  octicon: 'cpu',
+  emoji: '\u{1F9E0}',
   build() {
     return {
       components: [
-        { slot: LoopSlots.header, id: 'model-chip', Component: ModelChip as never },
+        {
+          slot: LoopSlots.header,
+          id: 'model-chip',
+          Component: ModelChip as never,
+        },
       ],
     };
   },
@@ -58,4 +66,4 @@ export const ModelsExtension = defineExtension<
   ],
 });
 
-export default ModelsExtension;
+export default ModelsPlugin;

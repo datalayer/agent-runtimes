@@ -10,12 +10,12 @@
  */
 
 export {
-  CODE_SANDBOX_EXTENSION_NAME,
-  CodeSandboxExtension,
+  CODE_SANDBOX_PLUGIN_NAME,
+  CodeSandboxPlugin,
   type CodeSandboxConfig,
   type CodeSandboxOutput,
-} from './extension';
-export { CodeSandboxExtension as default } from './extension';
+} from './plugin';
+export { CodeSandboxPlugin as default } from './plugin';
 export {
   browserSource,
   createBrowserSandboxService,
@@ -30,11 +30,16 @@ export {
   type SandboxService,
   type SandboxStatusPayload,
 } from './service';
-export { useOptionalSandboxService, useSandboxService } from './useSandboxService';
+export {
+  useOptionalSandboxService,
+  useSandboxService,
+} from './useSandboxService';
 export { SandboxStatusBridge } from './SandboxStatusBridge';
 export { SandboxSelector } from './SandboxSelector';
 export {
-  TARGET_VARIANTS,
+  SANDBOX_TARGETS,
+  TARGET_SPECS,
+  targetHasAgent,
   createSwitchableSandboxService,
   type SandboxTarget,
   type SwitchableSandboxService,

@@ -41,15 +41,15 @@ import {
   useSystemColorMode,
   useThemeStore,
 } from '@datalayer/primer-addons';
-import { configExtension } from '@datalayer/reactor';
+import { configurePlugin } from '@datalayer/reactor';
 import { LoopWorkspace } from './loop/shell/LoopWorkspace';
-import { ChatExtension } from './loop/plugins/chat';
-import { A2uiExtension } from './loop/plugins/a2ui';
-import { AgentsExtension } from './loop/plugins/agents';
-import { CodeSandboxExtension } from './loop/plugins/code-sandbox';
-import { ModelsExtension } from './loop/plugins/models';
-import { DocumentExtension } from './loop/plugins/document';
-import { NotebookExtension } from './loop/plugins/notebook';
+import { ChatPlugin } from './loop/plugins/chat';
+import { A2uiPlugin } from './loop/plugins/a2ui';
+import { AgentsPlugin } from './loop/plugins/agents';
+import { CodeSandboxPlugin } from './loop/plugins/code-sandbox';
+import { ModelsPlugin } from './loop/plugins/models';
+import { DocumentPlugin } from './loop/plugins/document';
+import { NotebookPlugin } from './loop/plugins/notebook';
 import { internalQueryClient } from './utils';
 import type { SandboxSnapshot } from './loop/core';
 
@@ -167,18 +167,18 @@ function LoopPage(): JSX.Element {
               // the reactor pulls it in; it is named here only to be told which
               // server it talks to.
               extensions={[
-                ChatExtension,
-                configExtension(CodeSandboxExtension, {
+                ChatPlugin,
+                configurePlugin(CodeSandboxPlugin, {
                   serverUrl: session.serverUrl,
                   // A session handed over from the terminal is server-backed;
                   // the header control can move it from there.
                   target: 'local',
                 }),
-                NotebookExtension,
-                DocumentExtension,
-                A2uiExtension,
-                AgentsExtension,
-                ModelsExtension,
+                NotebookPlugin,
+                DocumentPlugin,
+                A2uiPlugin,
+                AgentsPlugin,
+                ModelsPlugin,
               ]}
             />
           ) : null}

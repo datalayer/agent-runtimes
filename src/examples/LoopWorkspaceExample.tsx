@@ -4,12 +4,17 @@
  */
 
 /**
- * The LOOP workspace: every plugin on a checkbox, and the sandbox on a switch.
+ * The LOOP workspace: a blank shell, and everything else on a checkbox.
  *
  * Two claims made checkable in one page.
  *
- * The **checkboxes** say the extension model is real: untick the notebook and
- * its tab and its `/notebook` command leave together, and nothing else changes.
+ * The **sidebar** says the extension model is real. The workspace itself
+ * renders one view host and some slots — no prompt, no chat, no editor. Untick
+ * the chat and the prompt goes with it, because the prompt is the chat's.
+ * Untick the notebook and it leaves the chat's editor picker. The panel doing
+ * the unticking is itself a plugin, which is the joke and also the proof — and
+ * the button above it draws the whole graph, so the relationships being claimed
+ * here can be looked at rather than taken on trust.
  *
  * The **browser / local / cloud** control in the header says the sandbox is an
  * interface rather than one implementation with a type annotation. `browser` is
@@ -24,23 +29,25 @@
  * @module examples/LoopWorkspaceExample
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Box } from '@primer/react';
-import { configExtension } from '@datalayer/reactor';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { configurePlugin } from '@datalayer/reactor';
 import { useReactor } from '@datalayer/reactor/react';
-import { buildLoopReactor, LoopWorkspace, PluginToggles } from '../loop/shell';
-import { A2uiExtension } from '../loop/plugins/a2ui';
-import { AgentsExtension } from '../loop/plugins/agents';
-import { ChatExtension } from '../loop/plugins/chat';
+import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
+import { A2uiPlugin } from '../loop/plugins/a2ui';
+import { AgentsPlugin } from '../loop/plugins/agents';
+import { ChatPlugin } from '../loop/plugins/chat';
 import {
-  CODE_SANDBOX_EXTENSION_NAME,
-  CodeSandboxExtension,
-  type CodeSandboxOutput,
+  CodeSandboxPlugin,
   type SandboxTarget,
 } from '../loop/plugins/code-sandbox';
-import { DocumentExtension } from '../loop/plugins/document';
-import { ModelsExtension } from '../loop/plugins/models';
-import { NotebookExtension } from '../loop/plugins/notebook';
+import { DocumentExtension, NotebookExtension } from '../loop/extensions';
+import { ModelsPlugin } from '../loop/plugins/models';
+import { GraphViewPlugin } from '../loop/plugins/graph';
+import { PluginsPanelPlugin } from '../loop/plugins/plugins-panel';
+import { internalQueryClient } from '../utils';
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 export type LoopWorkspaceExampleProps = {
   /** Server backing the session. Defaults to this page's origin. */
@@ -52,7 +59,10 @@ export type LoopWorkspaceExampleProps = {
 };
 
 export function LoopWorkspaceExample({
-  serverUrl = typeof window === 'undefined' ? '' : window.location.origin,
+  // The examples Vite server deliberately has no /api proxy. Using the page
+  // origin here sends sandbox switches to port 3000 and produces the exact
+  // "clicked, nothing happened" failure this example is meant to expose.
+  serverUrl = resolveExampleAgentRuntimesUrl('local'),
   agentId = 'default',
   initialTarget = 'browser',
 }: LoopWorkspaceExampleProps): JSX.Element {
@@ -60,16 +70,22 @@ export function LoopWorkspaceExample({
   const reactor = useMemo(
     () =>
       buildLoopReactor([
-        ChatExtension,
-        configExtension(CodeSandboxExtension, {
+        ChatPlugin,
+        configurePlugin(CodeSandboxPlugin, {
           serverUrl,
           target: initialTarget,
         }),
+        // Two extensions rather than four plugins: each delivers an editor
+        // and the toolbar that reports on it, and the sidebar lists them as
+        // capabilities rather than as peers. Every member is still switched
+        // on and off individually.
         NotebookExtension,
         DocumentExtension,
-        A2uiExtension,
-        AgentsExtension,
-        ModelsExtension,
+        A2uiPlugin,
+        AgentsPlugin,
+        ModelsPlugin,
+        GraphViewPlugin,
+        PluginsPanelPlugin,
       ]),
     [serverUrl, initialTarget],
   );
@@ -78,25 +94,11 @@ export function LoopWorkspaceExample({
   // renders first and reads the platform, so it has to exist by then.
   useReactor(reactor);
 
-  // Connect the sandbox on open. Pyodide takes seconds to boot, and a notebook
-  // that waits for a tab press to *begin* loading reads as broken.
-  useEffect(() => {
-    const sandbox = reactor.getOutput<CodeSandboxOutput>(
-      CODE_SANDBOX_EXTENSION_NAME,
-    )?.sandbox;
-    return sandbox?.connect(agentId);
-  }, [reactor, agentId]);
-
+  // The plugin list is a plugin, so it arrives through the sidebar slot rather
+  // than being wrapped around the workspace. Nothing here is above the shell.
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <PluginToggles
-        title="Plugins — untick one and watch its view and its command leave together"
-        // The chat plugin is what makes the workspace usable at all here; the
-        // shell survives without it, but an example that can be switched into
-        // an empty room is not demonstrating anything.
-        locked={['@datalayer/loop-plugin-chat']}
-      />
-      <Box sx={{ flex: '1 1 auto', minHeight: 0 }}>
+    <QueryClientProvider client={internalQueryClient}>
+      <Box sx={{ height: '100%', minHeight: 0 }}>
         <LoopWorkspace
           serverUrl={serverUrl}
           agentId={agentId}
@@ -104,7 +106,7 @@ export function LoopWorkspaceExample({
           manageReactor={false}
         />
       </Box>
-    </Box>
+    </QueryClientProvider>
   );
 }
 

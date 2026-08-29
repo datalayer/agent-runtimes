@@ -4,20 +4,32 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { buildReactorFromExtensions, configExtension } from '@datalayer/reactor';
-import { LoopCommand, LoopViewType, canOpenView, createPromptChannel } from '../core';
+import {
+  buildReactorFromPlugins,
+  configurePlugin,
+} from '@datalayer/reactor';
+import {
+  LoopChatSurface,
+  LoopCommand,
+  LoopViewType,
+  canOpenView,
+  createPromptChannel,
+} from '../core';
 import type { LoopWorkspaceContext } from '../core';
 import {
-  CODE_SANDBOX_EXTENSION_NAME,
-  CodeSandboxExtension,
+  CODE_SANDBOX_PLUGIN_NAME,
+  CodeSandboxPlugin,
   summarize,
   type CodeSandboxOutput,
 } from '../plugins/code-sandbox';
-import { NotebookExtension } from '../plugins/notebook';
-import { DocumentExtension } from '../plugins/document';
-import { A2uiExtension } from '../plugins/a2ui';
+import { NotebookPlugin } from '../plugins/notebook';
+import { DocumentPlugin } from '../plugins/document';
+import { A2uiPlugin } from '../plugins/a2ui';
+import { ChatPlugin } from '../plugins/chat';
 
-function workspaceWith(state: LoopWorkspaceContext['sandbox']): LoopWorkspaceContext {
+function workspaceWith(
+  state: LoopWorkspaceContext['sandbox'],
+): LoopWorkspaceContext {
   return {
     serverUrl: 'http://server',
     agentId: 'default',
@@ -33,23 +45,25 @@ function workspaceWith(state: LoopWorkspaceContext['sandbox']): LoopWorkspaceCon
 
 describe('the sandbox service', () => {
   it('is published as the plugin build output', () => {
-    const reactor = buildReactorFromExtensions([
-      configExtension(CodeSandboxExtension, { serverUrl: 'http://server' }),
+    const reactor = buildReactorFromPlugins([
+      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
 
-    const output = reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_EXTENSION_NAME);
+    const output = reactor.getOutput<CodeSandboxOutput>(
+      CODE_SANDBOX_PLUGIN_NAME,
+    );
     expect(output?.sandbox.serverUrl).toBe('http://server');
     expect(output?.sandbox.snapshot.peek()).toEqual({ state: 'idle' });
   });
 
   it('tracks status reports', () => {
-    const reactor = buildReactorFromExtensions([
-      configExtension(CodeSandboxExtension, { serverUrl: 'http://server' }),
+    const reactor = buildReactorFromPlugins([
+      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
     const service = reactor.getOutput<CodeSandboxOutput>(
-      CODE_SANDBOX_EXTENSION_NAME,
+      CODE_SANDBOX_PLUGIN_NAME,
     )!.sandbox;
 
     service.report({
@@ -69,14 +83,16 @@ describe('the sandbox service', () => {
   });
 
   it('mounts its components in slots, not inside a view', () => {
-    const reactor = buildReactorFromExtensions([
-      configExtension(CodeSandboxExtension, { serverUrl: 'http://server' }),
+    const reactor = buildReactorFromPlugins([
+      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
 
     // The sandbox does not stop existing when someone switches tabs, and the
     // control that moves it belongs where its state is shown.
-    const output = reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_EXTENSION_NAME);
+    const output = reactor.getOutput<CodeSandboxOutput>(
+      CODE_SANDBOX_PLUGIN_NAME,
+    );
     expect(output?.components?.map(c => c.slot)).toEqual([
       'loop.status',
       'loop.header',
@@ -88,7 +104,8 @@ describe('summarize', () => {
   it('treats a connected Jupyter sandbox as running', () => {
     // Two spellings of the same fact, resolved once rather than in every view.
     expect(
-      summarize({ variant: 'jupyter-server', jupyter_connected: true }, 'idle').state,
+      summarize({ variant: 'jupyter-server', jupyter_connected: true }, 'idle')
+        .state,
     ).toBe('running');
     expect(summarize({ sandbox_running: true }, 'idle').state).toBe('running');
   });
@@ -98,56 +115,80 @@ describe('summarize', () => {
   });
 
   it('does not claim to be running when the report says otherwise', () => {
-    expect(summarize({ variant: 'docker', sandbox_running: false }, 'running').state).toBe(
-      'idle',
-    );
+    expect(
+      summarize({ variant: 'docker', sandbox_running: false }, 'running').state,
+    ).toBe('idle');
   });
 });
 
-describe('the surface plugins', () => {
+describe('the editor plugins', () => {
   it('pull the sandbox in as a dependency', () => {
     // Mounted without the base plugin: the reactor resolves it anyway.
-    const reactor = buildReactorFromExtensions([NotebookExtension, DocumentExtension]);
-    reactor.start();
-
-    expect(reactor.hasExtension(CODE_SANDBOX_EXTENSION_NAME)).toBe(true);
-  });
-
-  it('offer their views only with a running sandbox', () => {
-    const reactor = buildReactorFromExtensions([NotebookExtension, DocumentExtension]);
-    reactor.start();
-
-    const views = reactor.getContributions(LoopViewType);
-    const notebook = views.find(v => v.id === 'notebook')!.value;
-    const document = views.find(v => v.id === 'document')!.value;
-
-    expect(canOpenView(notebook, workspaceWith({ state: 'idle' }))).toBe(false);
-    expect(canOpenView(notebook, workspaceWith({ state: 'running' }))).toBe(true);
-    expect(canOpenView(document, workspaceWith({ state: 'idle' }))).toBe(false);
-    // A greyed tab explains itself.
-    expect(notebook.unavailableReason?.(workspaceWith({ state: 'idle' }))).toMatch(
-      /sandbox/i,
-    );
-  });
-
-  it('order the views: notebook, document, surface, then sandbox', () => {
-    const reactor = buildReactorFromExtensions([
-      NotebookExtension,
-      DocumentExtension,
-      A2uiExtension,
+    const reactor = buildReactorFromPlugins([
+      NotebookPlugin,
+      DocumentPlugin,
     ]);
     reactor.start();
 
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+    expect(reactor.hasPlugin(CODE_SANDBOX_PLUGIN_NAME)).toBe(true);
+  });
+
+  it('are contributed to the chat, not to the workspace', () => {
+    // A notebook is what the conversation is about; it belongs beside the
+    // reply rather than in a tab of its own.
+    const reactor = buildReactorFromPlugins([
+      NotebookPlugin,
+      DocumentPlugin,
+    ]);
+    reactor.start();
+
+    expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
       'notebook',
       'document',
-      'a2ui',
+    ]);
+    // And nothing of theirs lands in the workspace's own view point.
+    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
       'sandbox',
     ]);
   });
 
+  it('offer their editors only with a running sandbox', () => {
+    const reactor = buildReactorFromPlugins([
+      NotebookPlugin,
+      DocumentPlugin,
+    ]);
+    reactor.start();
+
+    const surfaces = reactor.getContributions(LoopChatSurface);
+    const notebook = surfaces.find(v => v.id === 'notebook')!.value;
+    const document = surfaces.find(v => v.id === 'document')!.value;
+
+    expect(canOpenView(notebook, workspaceWith({ state: 'idle' }))).toBe(false);
+    expect(canOpenView(notebook, workspaceWith({ state: 'running' }))).toBe(
+      true,
+    );
+    expect(canOpenView(document, workspaceWith({ state: 'idle' }))).toBe(false);
+    // A greyed control explains itself.
+    expect(
+      notebook.unavailableReason?.(workspaceWith({ state: 'idle' })),
+    ).toMatch(/sandbox/i);
+  });
+
+  it('orders the editors: notebook, then document', () => {
+    const reactor = buildReactorFromPlugins([
+      NotebookPlugin,
+      DocumentPlugin,
+    ]);
+    reactor.start();
+
+    expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
+      'notebook',
+      'document',
+    ]);
+  });
+
   it('gates the surface view on a sandbox too', () => {
-    const reactor = buildReactorFromExtensions([A2uiExtension]);
+    const reactor = buildReactorFromPlugins([A2uiPlugin]);
     reactor.start();
 
     const surface = reactor
@@ -155,11 +196,16 @@ describe('the surface plugins', () => {
       .find(v => v.id === 'a2ui')!.value;
 
     expect(canOpenView(surface, workspaceWith({ state: 'idle' }))).toBe(false);
-    expect(canOpenView(surface, workspaceWith({ state: 'running' }))).toBe(true);
+    expect(canOpenView(surface, workspaceWith({ state: 'running' }))).toBe(
+      true,
+    );
   });
 
-  it('each contribute a command that opens their view', async () => {
-    const reactor = buildReactorFromExtensions([NotebookExtension, DocumentExtension]);
+  it('each contribute a command that brings the chat forward', async () => {
+    const reactor = buildReactorFromPlugins([
+      NotebookPlugin,
+      DocumentPlugin,
+    ]);
     reactor.start();
 
     const opened: string[] = [];
@@ -172,27 +218,53 @@ describe('the surface plugins', () => {
       await entry.value.run({ workspace, argv: '' });
     }
 
-    expect(opened.sort()).toEqual(['document', 'notebook', 'sandbox']);
+    // The editors live in the chat now, so their commands open the chat; the
+    // sandbox still has a view of its own.
+    expect(opened.sort()).toEqual(['chat', 'chat', 'sandbox']);
   });
 
-  it('takes its view away when a surface plugin is disabled', () => {
-    const reactor = buildReactorFromExtensions([NotebookExtension, DocumentExtension]);
+  it('takes its editor away when a plugin is disabled', () => {
+    const reactor = buildReactorFromPlugins([
+      NotebookPlugin,
+      DocumentPlugin,
+    ]);
     reactor.start();
 
     reactor.disable('@datalayer/loop-plugin-document');
 
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+    expect(reactor.getContributions(LoopChatSurface).map(v => v.id)).toEqual([
       'notebook',
-      'sandbox',
     ]);
+  });
+});
+
+describe('the chat plugin', () => {
+  it('opens the point the editors arrive through', () => {
+    const reactor = buildReactorFromPlugins([ChatPlugin]);
+    reactor.start();
+
+    // Declared rather than merely used: a host can draw the relationship
+    // before anything has contributed to it.
+    expect(reactor.getManifest(ChatPlugin.name)?.contributionPoints).toContain(
+      LoopChatSurface.id,
+    );
+  });
+
+  it('is the only thing that brings a prompt', () => {
+    // The shell renders no prompt of its own, so a workspace without the chat
+    // has nothing in its footer slot.
+    const withoutChat = buildReactorFromPlugins([NotebookPlugin]);
+    withoutChat.start();
+    expect(
+      withoutChat.getContributions(LoopViewType).map(v => v.id),
+    ).not.toContain('chat');
   });
 });
 
 describe('the browser sandbox', () => {
   it('is the same interface with a different thing behind it', async () => {
-    const { createBrowserSandboxService } = await import(
-      '../plugins/code-sandbox/browserService'
-    );
+    const { createBrowserSandboxService } =
+      await import('../plugins/code-sandbox/browserService');
     const service = createBrowserSandboxService();
 
     // Everything a view asks a sandbox for, without a server anywhere.
@@ -212,14 +284,15 @@ describe('the browser sandbox', () => {
 
 describe('moving the sandbox', () => {
   function build(target?: 'browser' | 'local' | 'cloud') {
-    const reactor = buildReactorFromExtensions([
-      configExtension(CodeSandboxExtension, {
+    const reactor = buildReactorFromPlugins([
+      configurePlugin(CodeSandboxPlugin, {
         serverUrl: 'http://server',
         ...(target ? { target } : {}),
       }),
     ]);
     reactor.start();
-    return reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_EXTENSION_NAME)!.sandbox;
+    return reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)!
+      .sandbox;
   }
 
   it('starts where it was told to', () => {
@@ -257,17 +330,44 @@ describe('moving the sandbox', () => {
 
     try {
       const sandbox = build('browser');
-      await sandbox.setTarget('cloud');
+      await sandbox.setTarget('datalayer');
       await sandbox.setTarget('local');
+      await sandbox.setTarget('jupyter');
     } finally {
       globalThis.fetch = original;
     }
 
-    expect(asked.map(a => (a.body as { variant: string }).variant)).toEqual([
-      'datalayer',
-      'jupyter-server',
-    ]);
-    expect(asked[0].url).toContain('/api/v1/agents/sandbox/configure');
+    const configured = asked.filter(a => a.url.endsWith('/sandbox/configure'));
+    const restarted = asked.filter(a => a.url.endsWith('/sandbox/restart'));
+    expect(
+      configured.map(a => (a.body as { variant: string }).variant),
+    ).toEqual(['datalayer', 'jupyter-server', 'jupyter-server']);
+    // Local and the anonymous server run the same variant and differ by the
+    // URL, which is the only thing that tells them apart on the wire.
+    expect(
+      (configured[1].body as { jupyter_url?: string }).jupyter_url,
+    ).toBeUndefined();
+    expect(
+      (configured[2].body as { jupyter_url?: string }).jupyter_url,
+    ).toContain('prod1.datalayer.run');
+    expect(restarted).toHaveLength(3);
+  });
+
+  it('puts the sandbox back when the server refuses the switch', async () => {
+    // A failed switch should cost the person the switch, not the sandbox they
+    // already had — and it must not leave the control claiming otherwise.
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => ({ ok: false, status: 500 })) as never;
+
+    try {
+      const sandbox = build('browser');
+      await expect(sandbox.setTarget('datalayer')).rejects.toThrow(
+        /could not/i,
+      );
+      expect(sandbox.target.peek()).toBe('browser');
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 
   it('does nothing when asked to move where it already is', async () => {
@@ -288,14 +388,17 @@ describe('moving the sandbox', () => {
   });
 
   it('closes the surface view rather than opening it onto nothing', () => {
-    const reactor = buildReactorFromExtensions([A2uiExtension]);
+    const reactor = buildReactorFromPlugins([A2uiPlugin]);
     reactor.start();
     const surface = reactor
       .getContributions(LoopViewType)
       .find(v => v.id === 'a2ui')!.value;
 
     const browser = workspaceWith({ state: 'running', variant: 'pyodide' });
-    const server = workspaceWith({ state: 'running', variant: 'jupyter-server' });
+    const server = workspaceWith({
+      state: 'running',
+      variant: 'jupyter-server',
+    });
 
     // The converter lives on the server; a browser sandbox has nothing to
     // render with, and the tab says which.
@@ -305,50 +408,56 @@ describe('moving the sandbox', () => {
   });
 
   it('lets the notebook open on a browser sandbox', () => {
-    const reactor = buildReactorFromExtensions([NotebookExtension]);
+    const reactor = buildReactorFromPlugins([NotebookPlugin]);
     reactor.start();
     const notebook = reactor
-      .getContributions(LoopViewType)
+      .getContributions(LoopChatSurface)
       .find(v => v.id === 'notebook')!.value;
 
     // The notebook does not care where the kernel lives.
     expect(
-      canOpenView(notebook, workspaceWith({ state: 'running', variant: 'pyodide' })),
+      canOpenView(
+        notebook,
+        workspaceWith({ state: 'running', variant: 'pyodide' }),
+      ),
     ).toBe(true);
   });
 });
 
 describe('toggling the sandbox plugin', () => {
   it('keeps the sandbox it owns', () => {
-    const reactor = buildReactorFromExtensions([
-      configExtension(CodeSandboxExtension, { serverUrl: 'http://server' }),
+    const reactor = buildReactorFromPlugins([
+      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
     const before = reactor.getOutput<CodeSandboxOutput>(
-      CODE_SANDBOX_EXTENSION_NAME,
+      CODE_SANDBOX_PLUGIN_NAME,
     )!.sandbox;
 
-    reactor.disable(CODE_SANDBOX_EXTENSION_NAME);
-    reactor.enable(CODE_SANDBOX_EXTENSION_NAME);
+    reactor.disable(CODE_SANDBOX_PLUGIN_NAME);
+    reactor.enable(CODE_SANDBOX_PLUGIN_NAME);
 
     // The same service, so the notebook showing its kernel is not detached by
     // someone ticking a checkbox.
     expect(
-      reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_EXTENSION_NAME)!.sandbox,
+      reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)!
+        .sandbox,
     ).toBe(before);
   });
 
   it('brings its view and its command back with it', () => {
-    const reactor = buildReactorFromExtensions([
-      configExtension(CodeSandboxExtension, { serverUrl: 'http://server' }),
+    const reactor = buildReactorFromPlugins([
+      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
 
-    reactor.disable(CODE_SANDBOX_EXTENSION_NAME);
+    reactor.disable(CODE_SANDBOX_PLUGIN_NAME);
     expect(reactor.getContributions(LoopViewType)).toHaveLength(0);
 
-    reactor.enable(CODE_SANDBOX_EXTENSION_NAME);
-    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual(['sandbox']);
+    reactor.enable(CODE_SANDBOX_PLUGIN_NAME);
+    expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
+      'sandbox',
+    ]);
   });
 });
 

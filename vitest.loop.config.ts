@@ -20,6 +20,9 @@ export default defineConfig({
     include: ['src/loop/__tests__/**/*.test.{ts,tsx}'],
     environment: 'node',
     environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
+    // Browser globals jsdom lacks, installed before any module is imported —
+    // a stub written inside a test file runs too late.
+    setupFiles: ['./src/loop/__tests__/setup.ts'],
   },
   esbuild: { jsx: 'automatic' },
 });

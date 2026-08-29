@@ -10,15 +10,19 @@
  */
 
 import { BrowserIcon } from '@primer/octicons-react';
-import { contribution, defineExtension } from '@datalayer/reactor';
+import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopCommand, LoopViewType } from '../../core';
-import { CodeSandboxExtension } from '../code-sandbox';
+import { CodeSandboxPlugin } from '../code-sandbox';
 
-export const A2UI_EXTENSION_NAME = '@datalayer/loop-plugin-a2ui';
+export const A2UI_PLUGIN_NAME = '@datalayer/loop-plugin-a2ui';
 
-export const A2uiExtension = defineExtension({
-  name: A2UI_EXTENSION_NAME,
-  dependencies: [CodeSandboxExtension],
+export const A2uiPlugin = definePlugin({
+  name: A2UI_PLUGIN_NAME,
+  displayName: 'A2UI surfaces',
+  description: 'The last execution, rendered as a surface rather than dumped.',
+  octicon: 'browser',
+  emoji: '\u{1F5BC}',
+  dependencies: [CodeSandboxPlugin],
   contributes: [
     contribution(
       LoopViewType,
@@ -57,4 +61,4 @@ export const A2uiExtension = defineExtension({
   ],
 });
 
-export default A2uiExtension;
+export default A2uiPlugin;

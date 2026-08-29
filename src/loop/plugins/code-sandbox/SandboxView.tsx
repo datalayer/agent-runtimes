@@ -55,7 +55,15 @@ export default function SandboxView(_props: LoopViewProps): JSX.Element {
       <Row label="Execution state" value={status?.execution_state} />
 
       {snapshot.state !== 'running' ? (
-        <Box sx={{ mt: 3, p: 3, bg: 'attention.subtle', borderRadius: 2, fontSize: 1 }}>
+        <Box
+          sx={{
+            mt: 3,
+            p: 3,
+            bg: 'attention.subtle',
+            borderRadius: 2,
+            fontSize: 1,
+          }}
+        >
           No sandbox is attached. Views that need one — the notebook, the
           document — stay unavailable until there is a kernel to bind to.
         </Box>
@@ -78,12 +86,26 @@ export default function SandboxView(_props: LoopViewProps): JSX.Element {
             {lastExecution.code}
           </Box>
           {lastExecution.stdout ? (
-            <Box sx={{ mt: 1, fontFamily: 'mono', fontSize: 0, whiteSpace: 'pre-wrap' }}>
+            <Box
+              sx={{
+                mt: 1,
+                fontFamily: 'mono',
+                fontSize: 0,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
               {lastExecution.stdout}
             </Box>
           ) : null}
           {lastExecution.error ? (
-            <Box sx={{ mt: 1, color: 'danger.fg', fontFamily: 'mono', fontSize: 0 }}>
+            <Box
+              sx={{
+                mt: 1,
+                color: 'danger.fg',
+                fontFamily: 'mono',
+                fontSize: 0,
+              }}
+            >
               {lastExecution.error}
             </Box>
           ) : null}

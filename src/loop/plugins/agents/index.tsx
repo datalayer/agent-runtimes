@@ -9,19 +9,23 @@
  * @module loop/plugins/agents
  */
 
-import { contribution, defineExtension } from '@datalayer/reactor';
+import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
 import { LoopCommand, LoopSlots } from '../../core';
 import { AgentPicker } from './AgentPicker';
 
-export const AGENTS_EXTENSION_NAME = '@datalayer/loop-plugin-agents';
+export const AGENTS_PLUGIN_NAME = '@datalayer/loop-plugin-agents';
 
-export const AgentsExtension = defineExtension<
+export const AgentsPlugin = definePlugin<
   Record<string, never>,
   unknown,
   { components: ReactorSlotComponent[] }
 >({
-  name: AGENTS_EXTENSION_NAME,
+  name: AGENTS_PLUGIN_NAME,
+  displayName: 'Agents',
+  description: 'Pick the agent this session talks to.',
+  octicon: 'people',
+  emoji: '\u{1F916}',
   build() {
     return {
       components: [
@@ -45,7 +49,9 @@ export const AgentsExtension = defineExtension<
         run: async ({ workspace, argv }) => {
           const agentId = argv.trim();
           if (!agentId) {
-            return { content: 'Pick an agent from the header, or /agents <id>.' };
+            return {
+              content: 'Pick an agent from the header, or /agents <id>.',
+            };
           }
           const response = await fetch(
             `${workspace.serverUrl}/api/v1/loop/sessions/${encodeURIComponent(
@@ -69,4 +75,4 @@ export const AgentsExtension = defineExtension<
   ],
 });
 
-export default AgentsExtension;
+export default AgentsPlugin;

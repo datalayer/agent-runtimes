@@ -13,9 +13,14 @@
  */
 
 import { ServerIcon } from '@primer/octicons-react';
-import { contribution, defineExtension } from '@datalayer/reactor';
+import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
-import { LoopCommand, LoopSlots, LoopViewType } from '../../core';
+import {
+  LoopAgentGate,
+  LoopCommand,
+  LoopSlots,
+  LoopViewType,
+} from '../../core';
 import { SandboxStatusBridge } from './SandboxStatusBridge';
 import type { ServiceManagerSource } from './browserService';
 import { SandboxSelector } from './SandboxSelector';
@@ -23,9 +28,12 @@ import {
   createSwitchableSandboxService,
   type SandboxTarget,
   type SwitchableSandboxService,
+  TARGET_SPECS,
+  targetHasAgent,
 } from './switchable';
 
-export const CODE_SANDBOX_EXTENSION_NAME = '@datalayer/loop-plugin-code-sandbox';
+export const CODE_SANDBOX_PLUGIN_NAME =
+  '@datalayer/loop-plugin-code-sandbox';
 
 export type CodeSandboxConfig = {
   /** Server the server-backed targets are reached through. */
@@ -54,12 +62,17 @@ export type CodeSandboxOutput = {
   components: ReactorSlotComponent[];
 };
 
-export const CodeSandboxExtension = defineExtension<
+export const CodeSandboxPlugin = definePlugin<
   CodeSandboxConfig,
   unknown,
   CodeSandboxOutput
 >({
-  name: CODE_SANDBOX_EXTENSION_NAME,
+  name: CODE_SANDBOX_PLUGIN_NAME,
+  displayName: 'Code sandbox',
+  description:
+    'Where code runs: this page, a local server, or a Datalayer runtime.',
+  octicon: 'container',
+  emoji: '\u{1F4E6}',
   config: { serverUrl: '', target: 'local' },
   // This plugin owns a sandbox — a kernel, a WebSocket, an execution history.
   // Rebuilding it on enable would hand every view a fresh service while the
@@ -93,6 +106,35 @@ export const CodeSandboxExtension = defineExtension<
       ],
     };
   },
+  /**
+   * Tell the chat whether there is anything to talk to.
+   *
+   * Through `ctx.contribute` rather than the declarative `contributes` list,
+   * because the answer depends on the service this plugin *built* — the target
+   * it is currently on. This is the whole of the coupling between the two
+   * plugins: the chat imports no sandbox, the sandbox imports no chat, and the
+   * reactor carries the one fact that has to cross.
+   */
+  register({ contribute, state }) {
+    const sandbox = state.getOutput()?.sandbox;
+    if (!sandbox) {
+      return;
+    }
+    return contribute(
+      LoopAgentGate,
+      {
+        // Read from the workspace, not from the signal: this is called during
+        // the chat's render, and the workspace is what React re-runs it for.
+        check: workspace => {
+          const target =
+            (workspace.sandbox.target as SandboxTarget) ??
+            sandbox.target.peek();
+          return targetHasAgent(target) || TARGET_SPECS[target].noAgentReason;
+        },
+      },
+      { id: 'sandbox-target' },
+    );
+  },
   contributes: [
     contribution(
       LoopViewType,
@@ -121,4 +163,4 @@ export const CodeSandboxExtension = defineExtension<
   ],
 });
 
-export default CodeSandboxExtension;
+export default CodeSandboxPlugin;

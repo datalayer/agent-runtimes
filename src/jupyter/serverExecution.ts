@@ -254,10 +254,29 @@ async function discoverActiveExecutions(
     { method: 'GET' },
     settings,
   );
+  if (response.status === 404) {
+    // This server does not offer server-side execution at all — a JupyterLite
+    // kernel in the page, or a plain Jupyter server without the agent-runtimes
+    // extension. That is a permanent answer, not a hiccup, so it is recorded
+    // like a successful discovery: asking again on every sweep would fill the
+    // console with a failure that is really just a feature this server lacks.
+    discovered.add(key);
+    return 0;
+  }
   if (!response.ok) {
     // Not marked discovered: a server briefly unreachable, or one still
     // starting, is asked again by the next sweep rather than never.
-    throw await ServerConnection.ResponseError.create(response);
+    //
+    // `ResponseError.create` reads the body to build its message, and throws a
+    // `SyntaxError` of its own when there is no body — which replaces the
+    // status the caller needed with a parse error from the error path. The
+    // status is the useful part, so it survives either way.
+    throw await ServerConnection.ResponseError.create(response).catch(
+      () =>
+        new Error(
+          `Invalid response: ${response.status} ${response.statusText}`.trim(),
+        ),
+    );
   }
   discovered.add(key);
   const payload = (await response.json()) as { requests?: IActiveExecution[] };

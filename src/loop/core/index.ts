@@ -15,16 +15,13 @@
  * @module loop/core
  */
 
-import { defineExtensionPoint } from '@datalayer/reactor';
+import { defineContributionPoint, defineGate } from '@datalayer/reactor';
 import type { ComponentType } from 'react';
+import type { ToolbarItem } from '@datalayer/primer-addons';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
-  | 'idle'
-  | 'starting'
-  | 'running'
-  | 'stopping'
-  | 'error';
+  'idle' | 'starting' | 'running' | 'stopping' | 'error';
 
 /** What the workspace knows about the sandbox behind it. */
 export type SandboxSnapshot = {
@@ -32,6 +29,15 @@ export type SandboxSnapshot = {
   variant?: string;
   kernelId?: string;
   jupyterUrl?: string;
+  /**
+   * Where it runs, as the sandbox plugin names it.
+   *
+   * Part of the snapshot rather than read from a signal, because this is the
+   * path that already re-renders whoever is watching: the workspace holds the
+   * snapshot in state, so a plugin asking "is there an agent here?" gets a
+   * fresh answer when the target moves instead of a stale closure.
+   */
+  target?: string;
 };
 
 /**
@@ -64,8 +70,18 @@ export type LoopWorkspaceContext = {
   activeViewType: string;
   /** Put another view on screen. */
   setActiveViewType: (viewType: string) => void;
-  /** Prompts typed in the shell, for whichever view answers them. */
+  /** Prompts typed by whoever renders the prompt, for whichever view answers. */
   prompts: PromptChannel;
+  /**
+   * Run what a person typed: a slash command when it is one, the prompt
+   * channel otherwise.
+   *
+   * The prompt is not the shell's any more — the chat plugin renders it — but
+   * dispatch still belongs to the workspace, which is the only thing that can
+   * see every command every plugin contributed. A plugin rendering a prompt
+   * calls this and shows whatever comes back.
+   */
+  submit: (message: string) => Promise<SubmitOutcome>;
   /** What the active view is doing, as it last reported. */
   viewControls: ViewControls;
   /** For a view to report itself. Pass `null` on unmount. */
@@ -159,6 +175,24 @@ export type ViewTypeContribution = {
   load: () => Promise<{ default: ComponentType<LoopViewProps> }>;
 };
 
+/**
+ * What running a typed message did.
+ *
+ * `handled` distinguishes the two silences: a command that ran and printed
+ * nothing, and a prompt nobody was listening for. Only the second is worth
+ * telling the person about.
+ */
+export type SubmitOutcome = {
+  /** Whether anything took the message — a command, or a listening view. */
+  handled: boolean;
+  /** The command's name, when it was one. */
+  command?: string;
+  /** What the command returned, for the caller to render. */
+  result?: CommandResult;
+  /** Why it was not handled, in the person's terms. */
+  reason?: string;
+};
+
 /** What a command run produces. */
 export type CommandResult = {
   /** Rendered by the shell as a transient panel. */
@@ -172,7 +206,8 @@ export type CommandArgSpec = {
   name: string;
   description?: string;
   required?: boolean;
-  choices?: readonly string[] | (() => readonly string[] | Promise<readonly string[]>);
+  choices?:
+    readonly string[] | (() => readonly string[] | Promise<readonly string[]>);
 };
 
 /** What a command is given when it runs. */
@@ -227,17 +262,115 @@ export type MentionContribution = {
   ) => Promise<MentionBinding>;
 };
 
+/**
+ * An editor the chat can host beside the conversation.
+ *
+ * A notebook and a document are not alternatives *to* the chat — they are what
+ * the conversation is about, and a person reading a reply wants the cell it
+ * just changed in view, not one tab away. So they are contributed to the chat
+ * rather than to the workspace, and the chat decides where they sit.
+ *
+ * The shape is deliberately close to `ViewTypeContribution`: the same gating,
+ * the same lazy `load`, so a plugin author who has written one has written the
+ * other.
+ */
+export type ChatSurfaceContribution = {
+  /** Stable id: 'notebook' | 'document'. */
+  surfaceId: string;
+  title: string;
+  icon?: ComponentType<any>;
+  /** Ordering in the chat's surface picker. Lower is earlier. */
+  order?: number;
+  /** Whether it can be opened right now, judged against the live workspace. */
+  canOpen?: (workspace: LoopWorkspaceContext) => boolean;
+  /** Why it cannot be, for the disabled control's tooltip. */
+  unavailableReason?: (workspace: LoopWorkspaceContext) => string;
+  /** Lazy module, for the same reason views are lazy. */
+  load: () => Promise<{ default: ComponentType<ChatSurfaceProps> }>;
+};
+
+/** Props a chat surface receives. */
+export type ChatSurfaceProps = {
+  surfaceId: string;
+  workspace: LoopWorkspaceContext;
+};
+
 /** Views the workspace may open. */
 export const LoopViewType =
-  defineExtensionPoint<ViewTypeContribution>('loop.viewType');
+  defineContributionPoint<ViewTypeContribution>('loop.viewType');
+
+/** Editors the chat hosts beside the conversation. */
+export const LoopChatSurface =
+  defineContributionPoint<ChatSurfaceContribution>('loop.chat.surface');
+
+/**
+ * Whether there is anything to chat with.
+ *
+ * A gate rather than an extension point of its own: `defineGate` is the
+ * reactor's primitive for exactly this — one plugin asking the others whether
+ * something may happen, and being told why not in words it can show. The chat
+ * asks; the sandbox plugin answers, because only some of the places code runs
+ * bring an agent with them. Neither imports the other.
+ *
+ * Nothing answering means allowed, so a workspace with no sandbox plugin has a
+ * working chat.
+ */
+export const LoopAgentGate = defineGate<LoopWorkspaceContext>(
+  'loop.agent.available',
+);
+
+/** @deprecated Use `LoopAgentGate`; chat is one consumer of agent availability. */
+export const LoopChatGate = LoopAgentGate;
+
+/**
+ * What an editor hands a toolbar contributor.
+ *
+ * The workspace, so an item can submit a prompt or switch views, and the id of
+ * the editor instance, so an item that reports on *this* editor — a kernel
+ * light, a dirty marker — can find it. Deliberately not the editor's adapter:
+ * a toolbar item that could reach inside the editor would couple every
+ * contributor to the editor's internals, and the point of the split is that
+ * they do not know each other.
+ */
+export type EditorToolbarContext = {
+  workspace: LoopWorkspaceContext;
+  /** The id of the editor this toolbar belongs to. */
+  editorId: string;
+};
+
+/**
+ * A plugin's addition to an editor's toolbar.
+ *
+ * `items` is called during the editor's render and must be pure — build the
+ * descriptors, do the work in `onClick` or inside a `render` component. It
+ * returns a list rather than a single item so one plugin can contribute a
+ * spacer and the thing after it as one indivisible unit.
+ */
+export type EditorToolbarContribution = {
+  items: (context: EditorToolbarContext) => ToolbarItem[];
+};
+
+/**
+ * The notebook editor's toolbar.
+ *
+ * Offered by the notebook plugin, filled by anyone: the toolbar plugin puts
+ * the kernel light there, the chat puts the agent actions there. The notebook
+ * names neither of them, and neither of them imports the notebook.
+ */
+export const LoopNotebookToolbar =
+  defineContributionPoint<EditorToolbarContribution>('loop.notebook.toolbar');
+
+/** The document editor's toolbar. The same arrangement, for prose. */
+export const LoopDocumentToolbar =
+  defineContributionPoint<EditorToolbarContribution>('loop.document.toolbar');
 
 /** Slash commands, shared in shape with the CLI. */
 export const LoopCommand =
-  defineExtensionPoint<CommandContribution>('loop.command');
+  defineContributionPoint<CommandContribution>('loop.command');
 
 /** `@` namespaces. */
 export const LoopMention =
-  defineExtensionPoint<MentionContribution>('loop.mention');
+  defineContributionPoint<MentionContribution>('loop.mention');
 
 /** Slot names the shell renders. Slots render everything; points choose one. */
 export const LoopSlots = {
@@ -245,13 +378,29 @@ export const LoopSlots = {
   header: 'loop.header',
   /** Buttons beside the prompt. */
   promptAction: 'loop.promptAction',
+  /**
+   * Under the view, above the status line.
+   *
+   * Where the chat plugin puts its prompt. A slot rather than a fixed place in
+   * the shell, so a workspace mounted without a chat has nothing there instead
+   * of an input box wired to nothing.
+   */
+  footer: 'loop.footer',
   /** Small status items under the prompt. */
   status: 'loop.status',
+  /**
+   * The trailing edge, beside the view: the plugin list, and anything else
+   * that belongs next to the work rather than in front of it.
+   *
+   * A slot, so a workspace with no sidebar plugin has no sidebar at all — the
+   * column is not drawn when nothing fills it.
+   */
+  sidebar: 'loop.sidebar',
 } as const;
 
-/** Whether a view can be opened right now. */
+/** Whether a view or a chat surface can be opened right now. */
 export function canOpenView(
-  contribution: ViewTypeContribution,
+  contribution: Pick<ViewTypeContribution, 'canOpen'>,
   workspace: LoopWorkspaceContext,
 ): boolean {
   return contribution.canOpen ? contribution.canOpen(workspace) : true;

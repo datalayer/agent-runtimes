@@ -15,13 +15,18 @@
  */
 
 import { useReactorPlatform } from '@datalayer/reactor/react';
-import { CODE_SANDBOX_EXTENSION_NAME, type CodeSandboxOutput } from './extension';
+import {
+  CODE_SANDBOX_PLUGIN_NAME,
+  type CodeSandboxOutput,
+} from './plugin';
 import type { SwitchableSandboxService } from './switchable';
 
 /** The sandbox service, or `undefined` when the plugin is not mounted. */
-export function useOptionalSandboxService(): SwitchableSandboxService | undefined {
+export function useOptionalSandboxService():
+  SwitchableSandboxService | undefined {
   const reactor = useReactorPlatform();
-  return reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_EXTENSION_NAME)?.sandbox;
+  return reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)
+    ?.sandbox;
 }
 
 /**
@@ -35,7 +40,7 @@ export function useSandboxService(): SwitchableSandboxService {
   const service = useOptionalSandboxService();
   if (!service) {
     throw new Error(
-      `The code sandbox plugin (${CODE_SANDBOX_EXTENSION_NAME}) is not mounted. ` +
+      `The code sandbox plugin (${CODE_SANDBOX_PLUGIN_NAME}) is not mounted. ` +
         'A view that needs a sandbox must declare it as a dependency.',
     );
   }

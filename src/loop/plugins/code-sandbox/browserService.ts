@@ -23,7 +23,11 @@
 import { computed, signal, type Signal } from '@datalayer/reactor';
 import type { ServiceManager } from '@jupyterlab/services';
 import type { SandboxSnapshot, SandboxState } from '../../core';
-import type { SandboxExecution, SandboxService, SandboxStatusPayload } from './service';
+import type {
+  SandboxExecution,
+  SandboxService,
+  SandboxStatusPayload,
+} from './service';
 
 /** What a browser sandbox additionally exposes. */
 export type BrowserSandboxService = SandboxService & {
@@ -50,7 +54,10 @@ type KernelConnection = {
 };
 
 /** Collects one execution's outputs from the kernel's IOPub stream. */
-function collect(message: any, into: { outputs: any[]; stdout: string[]; error: string }) {
+function collect(
+  message: any,
+  into: { outputs: any[]; stdout: string[]; error: string },
+) {
   const type = message?.header?.msg_type;
   const content = message?.content ?? {};
 
@@ -94,8 +101,17 @@ export function browserSource(): ServiceManagerSource {
     // Dynamic: JupyterLite and the Pyodide kernel are megabytes, and a
     // workspace that never opens a browser sandbox should never pay for them.
     acquire: async () => {
-      const { createLiteServiceManager } = await import('@datalayer/jupyter-react');
-      return createLiteServiceManager();
+      const { createLiteServiceManager, jupyterReactStore } =
+        await import('@datalayer/jupyter-react');
+      const manager = await createLiteServiceManager();
+      // Publish it to jupyter-react's store, which is what any component
+      // reached through `useJupyter()` without a manager of its own falls back
+      // to. Without this, a Jupyter cell dropped into the document built a
+      // second manager from the page's configured Jupyter URL and polled a
+      // server nobody asked for — the CORS failures came from there, while the
+      // cell itself ran perfectly on the kernel in this page.
+      jupyterReactStore.getState().setServiceManager(manager);
+      return manager;
     },
     owned: true,
   };
@@ -175,12 +191,14 @@ export function createBrowserSandboxService(
     connect() {
       // Starting a Pyodide kernel takes seconds and megabytes; do it once, and
       // let a second caller await the same start rather than racing it.
-      starting = starting ?? start().catch(error => {
-        lifecycle.value = 'error';
-        status.value = null;
-        starting = null;
-        throw error;
-      });
+      starting =
+        starting ??
+        start().catch(error => {
+          lifecycle.value = 'error';
+          status.value = null;
+          starting = null;
+          throw error;
+        });
       void starting;
 
       return () => {
@@ -203,7 +221,11 @@ export function createBrowserSandboxService(
           throw new Error('The browser kernel did not start');
         }
 
-        const gathered = { outputs: [] as any[], stdout: [] as string[], error: '' };
+        const gathered = {
+          outputs: [] as any[],
+          stdout: [] as string[],
+          error: '',
+        };
         const future = kernel.requestExecute({ code });
         future.onIOPub = message => collect(message, gathered);
         await future.done;

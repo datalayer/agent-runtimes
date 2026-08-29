@@ -102,7 +102,11 @@ const EXAMPLE_GROUP_ORDER = [
 ] as const;
 
 const getExampleGroup = (id: string): string => {
-  if (id === 'AgentspecsExample' || id === 'AgentLoopExample') {
+  if (
+    id === 'AgentspecsExample' ||
+    id === 'AgentLoopExample' ||
+    id === 'LoopWorkspaceExample'
+  ) {
     return 'Personas';
   }
   if (id.startsWith('A2Ui')) return 'A2UI';
@@ -230,7 +234,9 @@ const isLocalJupyterServerUrl = (value?: string | null): boolean => {
   try {
     host = new URL(value).hostname.toLowerCase();
   } catch {
-    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(value);
+    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(
+      value,
+    );
   }
   return (
     host === 'localhost' ||
@@ -1354,6 +1360,14 @@ const ExampleAppThemed: React.FC<{
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const agentSummary = useAgentSummaryStore(state => state.active);
+  // Some examples bring their own sandbox switch — the LOOP workspace has one
+  // in its header. Two controls for one sandbox is one too many, and the
+  // second would not agree with the first.
+  const exampleOwnsSandboxControl = Boolean(
+    availableExamples
+      .find(entry => entry.id === selectedExample)
+      ?.tags?.includes('owns-sandbox-control'),
+  );
   const isHome = selectedExample === 'HomeExample';
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
@@ -1610,7 +1624,7 @@ const ExampleAppThemed: React.FC<{
                 </ActionMenu.Overlay>
               </ActionMenu>
             )}
-            {!shouldShowAuthScreen && (
+            {!shouldShowAuthScreen && !exampleOwnsSandboxControl && (
               <Box
                 aria-label="Where the example runs"
                 sx={{

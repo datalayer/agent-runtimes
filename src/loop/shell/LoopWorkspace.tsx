@@ -4,12 +4,18 @@
  */
 
 /**
- * The workspace: a prompt at the bottom, one view above it, and slots for the
- * rest.
+ * The workspace: one view, and slots for whatever a plugin wants beside it.
  *
- * The base is deliberately almost nothing. The prompt is the shell and is never
- * contributed; everything above it is. Chat is a view like any other — the
- * shell has no idea it is special.
+ * The base is blank. It renders no prompt, no chat, no editor — those are all
+ * plugins, and a workspace mounted with none of them shows an empty frame,
+ * which is the honest picture of what the shell actually is. Even the prompt
+ * belongs to the chat plugin: it is the chat's input, and putting it in the
+ * shell made a workspace without a chat carry an input box wired to nothing.
+ *
+ * What the shell keeps is what only it can do: hold the view host, render the
+ * slots, and dispatch a typed message against every command every plugin
+ * contributed. That last one stays here — as `workspace.submit` — because no
+ * single plugin can see the others' commands.
  *
  * It mounts no providers of its own (no theme, no router, no query client): the
  * entry point owns those and the workspace inherits them, which is what lets
@@ -19,18 +25,21 @@
  * @module loop/shell/LoopWorkspace
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Box } from '@primer/react';
 import {
-  buildReactorFromExtensions,
-  type ExtensionRef,
+  buildReactorFromPlugins,
+  onView,
+  type PluginRef,
   type ReactorPlatform,
 } from '@datalayer/reactor';
 import {
   ReactorSlot,
   ReactorViewHost,
   useContributions,
+  useReactorEvent,
+  useSlotComponents,
   useReactor,
 } from '@datalayer/reactor/react';
 import {
@@ -44,7 +53,6 @@ import {
   type SandboxSnapshot,
   type ViewControls,
 } from '../core';
-import { InputPrompt } from '../../chat/prompt/InputPrompt';
 import { ViewSwitcher } from './ViewSwitcher';
 
 export type LoopWorkspaceProps = {
@@ -56,7 +64,7 @@ export type LoopWorkspaceProps = {
   model?: string;
   sandbox?: SandboxSnapshot;
   /** Plugins to mount. Ignored when `reactor` is given. */
-  extensions?: ExtensionRef[];
+  extensions?: PluginRef[];
   /** A prebuilt platform, for hosts that assemble their own. */
   reactor?: ReactorPlatform;
   /**
@@ -70,9 +78,13 @@ export type LoopWorkspaceProps = {
   manageReactor?: boolean;
   /** View to open on. Defaults to the first that can be opened. */
   initialViewType?: string;
-  /** Where a prompt goes when it is not a command. */
+  /**
+   * Where a prompt goes when no view answers it.
+   *
+   * A host embedding the workspace in something that already has a
+   * conversation — the Datalayer app — takes the message itself.
+   */
   onSend?: (message: string, workspace: LoopWorkspaceContext) => void;
-  placeholder?: string;
   /**
    * How much room there is.
    *
@@ -85,8 +97,8 @@ export type LoopWorkspaceProps = {
 };
 
 /** Build the platform for a set of plugins. */
-export function buildLoopReactor(extensions: ExtensionRef[]): ReactorPlatform {
-  return buildReactorFromExtensions(extensions);
+export function buildLoopReactor(extensions: PluginRef[]): ReactorPlatform {
+  return buildReactorFromPlugins(extensions);
 }
 
 export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
@@ -101,7 +113,6 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     manageReactor = true,
     initialViewType,
     onSend,
-    placeholder = 'Ask anything, or type / for commands',
     layout = 'page',
   } = props;
 
@@ -123,15 +134,16 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       initialSandbox={sandbox}
       initialViewType={initialViewType}
       onSend={onSend}
-      placeholder={placeholder}
       layout={layout}
     />
   );
 }
 
-type BodyProps = Omit<LoopWorkspaceProps, 'extensions' | 'reactor' | 'sandbox'> & {
+type BodyProps = Omit<
+  LoopWorkspaceProps,
+  'extensions' | 'reactor' | 'sandbox'
+> & {
   initialSandbox: SandboxSnapshot;
-  placeholder: string;
 };
 
 /**
@@ -147,14 +159,12 @@ function WorkspaceBody({
   initialSandbox,
   initialViewType,
   onSend,
-  placeholder,
   layout = 'page',
 }: BodyProps): JSX.Element {
   const [activeViewType, setActiveViewType] = useState(initialViewType ?? '');
   // Seeded by the host (a handoff carries what the terminal knew), then kept
   // current by whichever plugin owns the sandbox.
   const [sandbox, setSandbox] = useState<SandboxSnapshot>(initialSandbox);
-  const [transient, setTransient] = useState<ReactNode>(null);
   // One channel per workspace, created once: recreating it would drop whatever
   // the mounted view had subscribed with.
   const [prompts] = useState(createPromptChannel);
@@ -166,7 +176,57 @@ function WorkspaceBody({
 
   const views = useContributions(LoopViewType);
   const commands = useContributions(LoopCommand);
+  // Read to decide whether the column exists at all, not to render it: the
+  // slot does that.
+  const sidebar = useSlotComponents(LoopSlots.sidebar);
+  const commandsRef = useRef(commands);
+  const currentWorkspace = useRef<LoopWorkspaceContext | null>(null);
   const compact = layout === 'panel';
+
+  // Dispatch stays with the shell because only the shell sees every command
+  // every plugin contributed. Whoever renders a prompt calls this.
+  const submit = useCallback<LoopWorkspaceContext['submit']>(
+    async message => {
+      const command = parseCommand(message);
+      if (!command) {
+        onSend?.(message, currentWorkspace.current!);
+        const heard = prompts.submit(message);
+        return heard || onSend
+          ? { handled: true }
+          : {
+              handled: false,
+              reason: 'Nothing is listening for prompts in this view yet.',
+            };
+      }
+
+      const match = commandsRef.current.find(
+        entry =>
+          entry.value.name === command.name ||
+          (entry.value.aliases ?? []).includes(command.name),
+      );
+      if (!match) {
+        return {
+          handled: false,
+          command: command.name,
+          reason: `Unknown command: /${command.name}. Type /help to see what there is.`,
+        };
+      }
+
+      const result = await match.value.run({
+        workspace: currentWorkspace.current!,
+        argv: command.argv,
+      });
+      if (result?.prompt) {
+        onSend?.(result.prompt, currentWorkspace.current!);
+      }
+      return {
+        handled: true,
+        command: command.name,
+        result: result ?? undefined,
+      };
+    },
+    [onSend, prompts],
+  );
 
   const workspace = useMemo<LoopWorkspaceContext>(
     () => ({
@@ -179,6 +239,7 @@ function WorkspaceBody({
       activeViewType,
       setActiveViewType,
       prompts,
+      submit,
       viewControls,
       setViewControls,
     }),
@@ -190,10 +251,16 @@ function WorkspaceBody({
       sandbox,
       activeViewType,
       prompts,
+      submit,
       viewControls,
       setViewControls,
     ],
   );
+
+  // `submit` must not be rebuilt whenever the workspace object changes — the
+  // chat holds on to it — so it reads the current values through refs.
+  currentWorkspace.current = workspace;
+  commandsRef.current = commands;
 
   // With nothing chosen, open the first view that can be opened. Falling back
   // to "nothing" would leave a shell that looks broken on first paint.
@@ -205,41 +272,12 @@ function WorkspaceBody({
     return openable?.value.viewType ?? '';
   }, [activeViewType, views, workspace]);
 
-  const handleSend = useCallback(
-    async (message: string) => {
-      const command = parseCommand(message);
-      if (!command) {
-        setTransient(null);
-        onSend?.(message, workspace);
-        // The active view answers ordinary prompts. When nothing is listening —
-        // no view mounted yet, or a view that does not take prompts — say so
-        // rather than swallowing what the person typed.
-        if (!prompts.submit(message) && !onSend) {
-          setTransient('Nothing is listening for prompts in this view yet.');
-        }
-        return;
-      }
-
-      const match = commands.find(
-        entry =>
-          entry.value.name === command.name ||
-          (entry.value.aliases ?? []).includes(command.name),
-      );
-      if (!match) {
-        setTransient(
-          `Unknown command: /${command.name}. Type /help to see what there is.`,
-        );
-        return;
-      }
-
-      const result = await match.value.run({ workspace, argv: command.argv });
-      setTransient((result?.content as ReactNode) ?? null);
-      if (result?.prompt) {
-        onSend?.(result.prompt, workspace);
-      }
-    },
-    [commands, onSend, prompts, workspace],
-  );
+  // Tell the reactor which view is open, so plugins that only matter inside
+  // one can wait for it and stand down when it closes. One line, and it is
+  // both halves: `fire` deactivates whatever declared this event before it
+  // activates whatever was waiting for it. A plugin that declares neither is
+  // untouched, so this costs nothing until somebody uses it.
+  useReactorEvent(effectiveViewType ? onView(effectiveViewType) : undefined);
 
   return (
     <Box
@@ -273,50 +311,50 @@ function WorkspaceBody({
         <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
       </Box>
 
-      <Box sx={{ flex: '1 1 auto', minHeight: 0, position: 'relative' }}>
-        <ReactorViewHost
-          point={LoopViewType}
-          active={effectiveViewType}
-          props={{ viewType: effectiveViewType, workspace }}
-          fallback={<Centered>Loading…</Centered>}
-          empty={<Centered>No view is available yet.</Centered>}
-          errorFallback={error => (
-            <Centered>This view failed to load: {error.message}</Centered>
-          )}
-        />
-      </Box>
-
-      {transient ? (
+      <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
         <Box
           sx={{
-            flex: '0 0 auto',
-            px: 3,
-            py: 2,
-            borderTop: '1px solid',
-            borderColor: 'border.default',
-            bg: 'canvas.subtle',
-            fontSize: 1,
-            maxHeight: '40%',
-            overflowY: 'auto',
+            flex: '1 1 auto',
+            minWidth: 0,
+            minHeight: 0,
+            position: 'relative',
           }}
         >
-          {transient}
+          <ReactorViewHost
+            point={LoopViewType}
+            active={effectiveViewType}
+            props={{ viewType: effectiveViewType, workspace }}
+            fallback={<Centered>Loading…</Centered>}
+            empty={<Centered>No view is available yet.</Centered>}
+            errorFallback={error => (
+              <Centered>This view failed to load: {error.message}</Centered>
+            )}
+          />
         </Box>
-      ) : null}
+        {sidebar.length > 0 ? (
+          <Box
+            as="aside"
+            sx={{
+              flex: '0 0 auto',
+              width: compact ? '100%' : '280px',
+              minWidth: 0,
+              // On the trailing edge: the work is what a person reads first,
+              // and the switches belong beside it rather than in front of it.
+              borderLeft: compact ? 'none' : '1px solid',
+              borderTop: compact ? '1px solid' : 'none',
+              borderColor: 'border.default',
+              bg: 'canvas.subtle',
+              overflowY: 'auto',
+            }}
+          >
+            <ReactorSlot slot={LoopSlots.sidebar} props={{ workspace }} />
+          </Box>
+        ) : null}
+      </Box>
 
+      {/* Whatever a plugin puts under the view: the chat's prompt lands here. */}
       <Box sx={{ flex: '0 0 auto' }}>
-        <InputPrompt
-          onSend={message => void handleSend(message)}
-          // The work happens in a view; the spinner and the stop button belong
-          // where the person is typing.
-          isLoading={viewControls.busy}
-          onStop={viewControls.stop}
-          placeholder={placeholder}
-          showBorderTop
-          footerContent={
-            <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
-          }
-        />
+        <ReactorSlot slot={LoopSlots.footer} props={{ workspace }} />
         <ReactorSlot slot={LoopSlots.status} props={{ workspace }} />
       </Box>
     </Box>
