@@ -16,11 +16,11 @@ import {
 } from '../core';
 import type { LoopWorkspaceContext } from '../core';
 import {
-  CODE_SANDBOX_PLUGIN_NAME,
-  CodeSandboxPlugin,
+  AGENTS_PLUGIN_NAME,
+  AgentsPlugin,
   summarize,
-  type CodeSandboxOutput,
-} from '../plugins/code-sandbox';
+  type AgentsOutput,
+} from '../plugins/agents';
 import { NotebookPlugin } from '../plugins/notebook';
 import { DocumentPlugin } from '../plugins/document';
 import { A2uiPlugin } from '../plugins/a2ui';
@@ -45,12 +45,12 @@ function workspaceWith(
 describe('the sandbox service', () => {
   it('is published as the plugin build output', () => {
     const reactor = buildReactorFromPlugins([
-      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
+      configurePlugin(AgentsPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
 
-    const output = reactor.getOutput<CodeSandboxOutput>(
-      CODE_SANDBOX_PLUGIN_NAME,
+    const output = reactor.getOutput<AgentsOutput>(
+      AGENTS_PLUGIN_NAME,
     );
     expect(output?.sandbox.serverUrl).toBe('http://server');
     expect(output?.sandbox.snapshot.peek()).toEqual({ state: 'idle' });
@@ -58,11 +58,11 @@ describe('the sandbox service', () => {
 
   it('tracks status reports', () => {
     const reactor = buildReactorFromPlugins([
-      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
+      configurePlugin(AgentsPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
-    const service = reactor.getOutput<CodeSandboxOutput>(
-      CODE_SANDBOX_PLUGIN_NAME,
+    const service = reactor.getOutput<AgentsOutput>(
+      AGENTS_PLUGIN_NAME,
     )!.sandbox;
 
     service.report({
@@ -83,14 +83,14 @@ describe('the sandbox service', () => {
 
   it('mounts its components in slots, not inside a view', () => {
     const reactor = buildReactorFromPlugins([
-      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
+      configurePlugin(AgentsPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
 
     // The sandbox does not stop existing when someone switches tabs, and the
     // control that moves it belongs where its state is shown.
-    const output = reactor.getOutput<CodeSandboxOutput>(
-      CODE_SANDBOX_PLUGIN_NAME,
+    const output = reactor.getOutput<AgentsOutput>(
+      AGENTS_PLUGIN_NAME,
     );
     expect(output?.components?.map(c => c.slot)).toEqual([
       'loop.status',
@@ -126,7 +126,7 @@ describe('the editor plugins', () => {
     const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
-    expect(reactor.hasPlugin(CODE_SANDBOX_PLUGIN_NAME)).toBe(true);
+    expect(reactor.hasPlugin(AGENTS_PLUGIN_NAME)).toBe(true);
   });
 
   it('are contributed to the chat, not to the workspace', () => {
@@ -245,7 +245,7 @@ describe('the chat plugin', () => {
 describe('the browser sandbox', () => {
   it('is the same interface with a different thing behind it', async () => {
     const { createBrowserSandboxService } =
-      await import('../plugins/code-sandbox/browserService');
+      await import('../plugins/agents/browserService');
     const service = createBrowserSandboxService();
 
     // Everything a view asks a sandbox for, without a server anywhere.
@@ -266,13 +266,13 @@ describe('the browser sandbox', () => {
 describe('moving the sandbox', () => {
   function build(target?: 'browser' | 'local' | 'cloud') {
     const reactor = buildReactorFromPlugins([
-      configurePlugin(CodeSandboxPlugin, {
+      configurePlugin(AgentsPlugin, {
         serverUrl: 'http://server',
         ...(target ? { target } : {}),
       }),
     ]);
     reactor.start();
-    return reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)!
+    return reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!
       .sandbox;
   }
 
@@ -353,7 +353,7 @@ describe('moving the sandbox', () => {
 
     try {
       const reactor = buildReactorFromPlugins([
-        configurePlugin(CodeSandboxPlugin, {
+        configurePlugin(AgentsPlugin, {
           serverUrl: 'http://server',
           target: 'browser',
           localAgent: {
@@ -365,8 +365,8 @@ describe('moving the sandbox', () => {
         }),
       ]);
       reactor.start();
-      const sandbox = reactor.getOutput<CodeSandboxOutput>(
-        CODE_SANDBOX_PLUGIN_NAME,
+      const sandbox = reactor.getOutput<AgentsOutput>(
+        AGENTS_PLUGIN_NAME,
       )!.sandbox;
       const disconnect = sandbox.connect('loop-workspace');
 
@@ -465,33 +465,33 @@ describe('moving the sandbox', () => {
 describe('toggling the sandbox plugin', () => {
   it('keeps the sandbox it owns', () => {
     const reactor = buildReactorFromPlugins([
-      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
+      configurePlugin(AgentsPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
-    const before = reactor.getOutput<CodeSandboxOutput>(
-      CODE_SANDBOX_PLUGIN_NAME,
+    const before = reactor.getOutput<AgentsOutput>(
+      AGENTS_PLUGIN_NAME,
     )!.sandbox;
 
-    reactor.disable(CODE_SANDBOX_PLUGIN_NAME);
-    reactor.enable(CODE_SANDBOX_PLUGIN_NAME);
+    reactor.disable(AGENTS_PLUGIN_NAME);
+    reactor.enable(AGENTS_PLUGIN_NAME);
 
     // The same service, so the notebook showing its kernel is not detached by
     // someone ticking a checkbox.
     expect(
-      reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)!.sandbox,
+      reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox,
     ).toBe(before);
   });
 
   it('brings its view and its command back with it', () => {
     const reactor = buildReactorFromPlugins([
-      configurePlugin(CodeSandboxPlugin, { serverUrl: 'http://server' }),
+      configurePlugin(AgentsPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
 
-    reactor.disable(CODE_SANDBOX_PLUGIN_NAME);
+    reactor.disable(AGENTS_PLUGIN_NAME);
     expect(reactor.getContributions(LoopViewType)).toHaveLength(0);
 
-    reactor.enable(CODE_SANDBOX_PLUGIN_NAME);
+    reactor.enable(AGENTS_PLUGIN_NAME);
     expect(reactor.getContributions(LoopViewType).map(v => v.id)).toEqual([
       'sandbox',
     ]);
@@ -558,7 +558,7 @@ describe('a server sandbox summary', () => {
 
 describe('the agent picker', () => {
   const source = readFileSync(
-    join(__dirname, '..', 'plugins', 'agents', 'AgentPicker.tsx'),
+    join(__dirname, '..', 'plugins', 'agentspecs', 'AgentspecPicker.tsx'),
     'utf8',
   );
 

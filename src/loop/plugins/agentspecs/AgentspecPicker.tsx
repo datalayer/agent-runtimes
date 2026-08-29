@@ -10,7 +10,7 @@
  * goes through `configure-from-spec` — one way to reconfigure a running agent
  * rather than two that can disagree.
  *
- * @module loop/plugins/agents/AgentPicker
+ * @module loop/plugins/agents/AgentspecPicker
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -24,7 +24,7 @@ type AgentSummary = {
   emoji?: string;
 };
 
-export function AgentPicker({
+export function AgentspecPicker({
   workspace,
 }: {
   workspace: LoopWorkspaceContext;
@@ -130,4 +130,4 @@ export function AgentPicker({
   );
 }
 
-export default AgentPicker;
+export default AgentspecPicker;

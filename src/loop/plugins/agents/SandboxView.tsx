@@ -9,7 +9,7 @@
  * The browser twin of `/code-sandbox` in the terminal — the same facts, drawn
  * rather than printed.
  *
- * @module loop/plugins/code-sandbox/SandboxView
+ * @module loop/plugins/agents/SandboxView
  */
 
 import { Box, Label, Text } from '@primer/react';

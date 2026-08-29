@@ -20,7 +20,7 @@
  * switching is a real swap rather than a flag: the old backing is disconnected
  * before the new one starts, and every signal a view reads follows across.
  *
- * @module loop/plugins/code-sandbox/switchable
+ * @module loop/plugins/agents/switchable
  */
 
 import {
@@ -61,7 +61,13 @@ export const ANONYMOUS_JUPYTER_TOKEN =
 export type SandboxTargetSpec = {
   label: string;
   hint: string;
-  /** Whether an agent runs alongside the sandbox. */
+  /**
+   * Whether an agent runs alongside the sandbox.
+   *
+   * True in the browser as well now, though not the same kind: there the loop
+   * turns in the page rather than on a server. {@link targetRunsAgentInPage}
+   * is the question a chat asks to know which of the two it is talking to.
+   */
   hasAgent: boolean;
   /** Why there is nothing to chat with. Empty when there is. */
   noAgentReason: string;
@@ -80,9 +86,13 @@ export const SANDBOX_TARGETS: readonly SandboxTarget[] = [
 export const TARGET_SPECS: Record<SandboxTarget, SandboxTargetSpec> = {
   browser: {
     label: 'Browser',
-    hint: 'Python in this page (Pyodide). Nothing leaves your machine.',
-    hasAgent: false,
-    noAgentReason: 'No agent in the browser',
+    hint: 'Python in this page (Pyodide), with the agent loop running here too. Only the model is asked over the network.',
+    // The agent runs here now, with the Vercel AI SDK. "No server" stopped
+    // meaning "no agent" when the loop learned to turn in the page — and the
+    // location decides the harness, whatever a spec's own `harness` asks for,
+    // because a page cannot turn a pydantic-ai loop at all.
+    hasAgent: true,
+    noAgentReason: '',
   },
   local: {
     label: 'Local',
@@ -114,6 +124,17 @@ export const TARGET_SPECS: Record<SandboxTarget, SandboxTargetSpec> = {
 /** Whether an agent runs on this target — the question the chat asks. */
 export function targetHasAgent(target: SandboxTarget): boolean {
   return TARGET_SPECS[target]?.hasAgent ?? false;
+}
+
+/**
+ * Whether that agent's loop turns in this page rather than on a server.
+ *
+ * The other half of {@link targetHasAgent}, and the one that decides which
+ * protocol a chat speaks: an in-page agent is reached by calling it, not by
+ * addressing it.
+ */
+export function targetRunsAgentInPage(target: SandboxTarget): boolean {
+  return target === 'browser';
 }
 
 export type SwitchableSandboxService = SandboxService & {

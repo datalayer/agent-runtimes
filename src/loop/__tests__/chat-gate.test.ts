@@ -16,8 +16,12 @@ import { describe, expect, it } from 'vitest';
 import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
 import { LoopAgentGate, createPromptChannel } from '../core';
 import type { LoopWorkspaceContext, SandboxSnapshot } from '../core';
-import { CodeSandboxPlugin } from '../plugins/code-sandbox';
-import { SANDBOX_TARGETS, TARGET_SPECS } from '../plugins/code-sandbox';
+import { AgentsPlugin } from '../plugins/agents';
+import {
+  SANDBOX_TARGETS,
+  TARGET_SPECS,
+  targetRunsAgentInPage,
+} from '../plugins/agents';
 
 function workspaceOn(target: string): LoopWorkspaceContext {
   const sandbox: SandboxSnapshot = { state: 'running', target };
@@ -37,7 +41,7 @@ function workspaceOn(target: string): LoopWorkspaceContext {
 
 function sandboxReactor() {
   const reactor = buildReactorFromPlugins([
-    configurePlugin(CodeSandboxPlugin, { serverUrl: '', target: 'browser' }),
+    configurePlugin(AgentsPlugin, { serverUrl: '', target: 'browser' }),
   ]);
   reactor.start();
   return reactor;
@@ -66,45 +70,56 @@ describe('with the sandbox plugin', () => {
   });
 
   it('says which targets those are', () => {
-    // Browser and anonymous Jupyter are sandbox-only. Local and Datalayer
-    // runtimes both have an agent for chat and model selection.
+    // Only the anonymous Jupyter server is sandbox-only now. The browser
+    // joined the others when the loop learned to turn in the page: it has no
+    // server, which used to be the same thing as having no agent, and is not
+    // any more.
     const withAgent = SANDBOX_TARGETS.filter(t => TARGET_SPECS[t].hasAgent);
-    expect(withAgent).toEqual(['local', 'datalayer']);
+    expect(withAgent).toEqual(['browser', 'local', 'datalayer']);
   });
 
   it('gives the chat a reason it can show', () => {
     const reactor = sandboxReactor();
-    const verdict = reactor.checkGate(LoopAgentGate, workspaceOn('browser'));
+    const verdict = reactor.checkGate(LoopAgentGate, workspaceOn('jupyter'));
 
     expect(verdict.reason).toMatch(/no agent/i);
     // And names who refused, for a host that shows provenance.
-    expect(verdict.blockedBy).toBe(CodeSandboxPlugin.name);
+    expect(verdict.blockedBy).toBe(AgentsPlugin.name);
   });
 
   it('follows the target the workspace is on, not the one it started on', () => {
-    // The service started on `browser`; the ask carries `datalayer`.
+    // The service started on `browser`; the ask carries `jupyter`.
     const reactor = sandboxReactor();
 
     expect(
       reactor.checkGate(LoopAgentGate, workspaceOn('datalayer')).allowed,
     ).toBe(true);
     expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('browser')).allowed,
+      reactor.checkGate(LoopAgentGate, workspaceOn('jupyter')).allowed,
     ).toBe(false);
+  });
+
+  it('says where the loop turns, not only whether there is one', () => {
+    // Two kinds of yes, and a chat has to tell them apart: an in-page agent is
+    // reached by calling it, a remote one by addressing it.
+    expect(targetRunsAgentInPage('browser')).toBe(true);
+    for (const target of ['local', 'jupyter', 'datalayer'] as const) {
+      expect(targetRunsAgentInPage(target), target).toBe(false);
+    }
   });
 
   it('stops refusing when the sandbox plugin is switched off', () => {
     const reactor = sandboxReactor();
     expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('browser')).allowed,
+      reactor.checkGate(LoopAgentGate, workspaceOn('jupyter')).allowed,
     ).toBe(false);
 
-    reactor.disable(CodeSandboxPlugin.name);
+    reactor.disable(AgentsPlugin.name);
 
     // Its answer went with it: a chat should not stay disabled by a plugin
     // that is no longer there.
     expect(
-      reactor.checkGate(LoopAgentGate, workspaceOn('browser')).allowed,
+      reactor.checkGate(LoopAgentGate, workspaceOn('jupyter')).allowed,
     ).toBe(true);
   });
 });

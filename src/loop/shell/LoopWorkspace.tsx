@@ -336,7 +336,10 @@ function WorkspaceBody({
             as="aside"
             sx={{
               flex: '0 0 auto',
-              width: compact ? '100%' : '280px',
+              // Wide enough for a plugin's name, its description and a switch
+              // on one line: at half this the descriptions wrapped to three
+              // lines each and the list stopped being scannable.
+              width: compact ? '100%' : '560px',
               minWidth: 0,
               // On the trailing edge: the work is what a person reads first,
               // and the switches belong beside it rather than in front of it.
@@ -345,6 +348,11 @@ function WorkspaceBody({
               borderColor: 'border.default',
               bg: 'canvas.subtle',
               overflowY: 'auto',
+              // The shell's chrome, not the plugins': a contributed panel
+              // should not have to guess how far its host keeps things from
+              // the edge, and two of them would guess differently.
+              px: 3,
+              py: 3,
             }}
           >
             <ReactorSlot slot={LoopSlots.sidebar} props={{ workspace }} />

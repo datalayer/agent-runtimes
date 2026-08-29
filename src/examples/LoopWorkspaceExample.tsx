@@ -36,14 +36,14 @@ import { configurePlugin } from '@datalayer/reactor';
 import { useReactor, useSignalValue } from '@datalayer/reactor/react';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
 import { A2uiPlugin } from '../loop/plugins/a2ui';
-import { AgentsPlugin } from '../loop/plugins/agents';
+import { AgentspecsPlugin } from '../loop/plugins/agentspecs';
 import { ChatPlugin } from '../loop/plugins/chat';
 import {
-  CODE_SANDBOX_PLUGIN_NAME,
-  CodeSandboxPlugin,
-  type CodeSandboxOutput,
+  AGENTS_PLUGIN_NAME,
+  AgentsPlugin,
+  type AgentsOutput,
   type SandboxTarget,
-} from '../loop/plugins/code-sandbox';
+} from '../loop/plugins/agents';
 import { DocumentExtension, NotebookExtension } from '../loop/extensions';
 import { ModelsPlugin } from '../loop/plugins/models';
 import { GraphViewPlugin } from '../loop/plugins/graph';
@@ -61,6 +61,18 @@ export type LoopWorkspaceExampleProps = {
   agentId?: string;
   /** Where the sandbox starts. Defaults to the browser, which needs nothing. */
   initialTarget?: SandboxTarget;
+  /**
+   * Whether a reader may choose where the agent runs.
+   *
+   * True by default: the segmented control in the header is most of what this
+   * example is for.
+   *
+   * False pins the workspace to the browser and hides the control. That is
+   * what a public page needs — a visitor with no account cannot reach a local
+   * server or a Datalayer runtime, so offering all four is offering three
+   * doors of which two are locked.
+   */
+  showAgentVariants?: boolean;
 };
 
 export function LoopWorkspaceExample({
@@ -70,15 +82,17 @@ export function LoopWorkspaceExample({
   serverUrl = resolveExampleAgentRuntimesUrl('local'),
   agentId = 'loop-workspace',
   initialTarget = 'browser',
+  showAgentVariants = true,
 }: LoopWorkspaceExampleProps): JSX.Element {
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
     () =>
       buildLoopReactor([
         ChatPlugin,
-        configurePlugin(CodeSandboxPlugin, {
+        configurePlugin(AgentsPlugin, {
           serverUrl,
           target: initialTarget,
+          showAgentVariants,
           localAgent: {
             createPayload: {
               description: 'Local agent for the Loop workspace example',
@@ -95,12 +109,12 @@ export function LoopWorkspaceExample({
         NotebookExtension,
         DocumentExtension,
         A2uiPlugin,
-        AgentsPlugin,
+        AgentspecsPlugin,
         ModelsPlugin,
         GraphViewPlugin,
         PluginsPanelPlugin,
       ]),
-    [serverUrl, initialTarget],
+    [serverUrl, initialTarget, showAgentVariants],
   );
 
   // Registered here rather than inside the workspace: the checkbox list below
@@ -126,8 +140,8 @@ export function LoopWorkspaceExample({
   //
   // This example is where they meet: the plugin must not know an examples page
   // exists, and the page cannot see inside the reactor.
-  const sandbox = reactor.getOutput<CodeSandboxOutput>(
-    CODE_SANDBOX_PLUGIN_NAME,
+  const sandbox = reactor.getOutput<AgentsOutput>(
+    AGENTS_PLUGIN_NAME,
   )?.sandbox;
   const sandboxTarget = useSignalValue(sandbox?.target ?? IDLE_TARGET);
   const sandboxSnapshot = useSignalValue(sandbox?.snapshot ?? IDLE_SNAPSHOT);

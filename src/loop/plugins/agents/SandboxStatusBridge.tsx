@@ -15,7 +15,7 @@
  * module is reached from the plugin's entry point, so anything it pulls in
  * lands in the shell's bundle.
  *
- * @module loop/plugins/code-sandbox/SandboxStatusBridge
+ * @module loop/plugins/agents/SandboxStatusBridge
  */
 
 import { useEffect } from 'react';

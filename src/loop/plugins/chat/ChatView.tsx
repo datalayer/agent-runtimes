@@ -31,6 +31,14 @@ import {
   ReactorLazy,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
+import { browserProtocolConfig } from '../../../runtimes/browser';
+import { useBrowserInference } from '../../../hooks/useBrowserInference';
+import { AGENTSPECS } from '../../../specs/agents/agents';
+import type { ProtocolConfig } from '../../../types/protocol';
+import {
+  targetRunsAgentInPage,
+  type SandboxTarget,
+} from '../agents/switchable';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
 import { InputPrompt } from '../../../chat/prompt/InputPrompt';
 import {
@@ -134,6 +142,54 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   // something.
   const agentId = workspace.agentId?.trim() || 'default';
 
+  /*
+   * Which protocol, decided by where the sandbox is.
+   *
+   * On the browser target there is no server to mount an agent on, so the loop
+   * turns in this page with the Vercel AI SDK and the chat calls it rather
+   * than addressing it. Everywhere else the agent lives on the runtime and the
+   * chat speaks AG-UI to it, exactly as before.
+   *
+   * The spec's own `harness` does not decide this. It says where the agent
+   * normally runs, and a page cannot turn a pydantic-ai loop whatever it asks
+   * for — so the location wins, which is the same rule the examples follow.
+   */
+  const inPage = targetRunsAgentInPage(
+    (workspace.sandbox.target as SandboxTarget) ?? 'local',
+  );
+  const spec = AGENTSPECS[agentId];
+  const { inference } = useBrowserInference();
+
+  const protocol = useMemo<ProtocolConfig>(
+    () =>
+      inPage
+        ? browserProtocolConfig({
+            agentId,
+            instructions: spec?.systemPrompt,
+            model: workspace.model || spec?.model,
+            inference,
+          })
+        : {
+            type: 'ag-ui',
+            endpoint: `${workspace.serverUrl}/api/v1/ag-ui/${agentId}/`,
+            agentId,
+            // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
+            // strip one trailing `config`/`configure` segment to find the API
+            // base, so the longer form doubles it.
+            configEndpoint: `${workspace.serverUrl}/api/v1/configure`,
+            enableConfigQuery: true,
+          },
+    [
+      agentId,
+      inPage,
+      inference,
+      spec?.model,
+      spec?.systemPrompt,
+      workspace.model,
+      workspace.serverUrl,
+    ],
+  );
+
   return (
     <Box
       sx={{
@@ -160,16 +216,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // than an absent one.
             disabled={chatDisabled}
             disableReason={disabledReason}
-            protocol={{
-              type: 'ag-ui',
-              endpoint: `${workspace.serverUrl}/api/v1/ag-ui/${agentId}/`,
-              agentId,
-              // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
-              // strip one trailing `config`/`configure` segment to find the API
-              // base, so the longer form doubles it.
-              configEndpoint: `${workspace.serverUrl}/api/v1/configure`,
-              enableConfigQuery: true,
-            }}
+            protocol={protocol}
             showHeader
             // This view owns the prompt, below, so the chat does not draw a
             // second one: two input boxes on one screen is one too many.

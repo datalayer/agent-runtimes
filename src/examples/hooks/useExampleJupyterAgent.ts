@@ -29,8 +29,10 @@ import type { AgentConfig } from '../../types/config';
 import type { ProtocolConfig } from '../../types/protocol';
 import type { FrontendToolDefinition } from '../../types/tools';
 import { DEFAULT_MODEL } from '../../specs';
-import { browserModelRequiresSignIn } from '../../runtimes/browser';
-import { useCoreStore, useIAMStore } from '../../state';
+import {
+  BROWSER_SIGN_IN_REASON,
+  useExampleAgentProtocol,
+} from './useExampleAgentProtocol';
 import { exampleJupyterSandboxUrl } from '../utils/jupyterSandboxUrl';
 import { runsInBrowser } from '../../runtimes/variants';
 import { useCreateAgentOnce } from './useCreateAgentOnce';
@@ -143,9 +145,6 @@ export function useExampleJupyterAgent(
     frontendTools,
   } = options;
 
-  const { configuration } = useCoreStore();
-  const token = useIAMStore(state => state.token);
-
   const jupyterSandboxUrl = useMemo(
     () => exampleJupyterSandboxUrl(serviceManager),
     [serviceManager],
@@ -185,17 +184,14 @@ export function useExampleJupyterAgent(
   // agent differs between a runtime and this page; nothing else does.
   const inBrowser = runsInBrowser(variant);
 
-  const inference = useMemo(
-    () => ({
-      inferenceUrl:
-        configuration?.aiInferenceUrl || 'https://prod1.datalayer.run',
-      // The signed-in person's token, forwarded so the completion is made as
-      // them and metered to them.
-      token: token || undefined,
-    }),
-    [configuration?.aiInferenceUrl, token],
-  );
-  const needsSignIn = inBrowser && browserModelRequiresSignIn(inference);
+  const { protocol, chatFrontendTools, needsSignIn } = useExampleAgentProtocol({
+    inBrowser,
+    agentName,
+    systemPrompt,
+    model,
+    frontendTools,
+    remoteBaseUrl: result.baseUrl,
+  });
 
   const {
     attempted,
@@ -232,7 +228,7 @@ export function useExampleJupyterAgent(
     ? chatGate.disableReason
     : inBrowser
       ? needsSignIn
-        ? 'Sign in to use this agent. The loop runs in your browser and needs no runtime, but the model it asks is reached through the Datalayer inference service, which answers to signed-in members only.'
+        ? BROWSER_SIGN_IN_REASON
         : undefined
       : !jupyterSandboxUrl
         ? 'No Jupyter server to run this agent on. Start one and set VITE_JUPYTER_SANDBOX_URL, or switch the runtime target.'
@@ -246,45 +242,6 @@ export function useExampleJupyterAgent(
             : 'No runtime is connected, so there is nowhere to create this agent. Try switching the runtime target again.'
           : createError;
 
-  const protocol = useMemo<ProtocolConfig>(
-    () =>
-      inBrowser
-        ? {
-            type: 'browser-vercel-ai',
-            // Nothing to address: the loop is in this page. The live objects
-            // travel in `options`, which is the seam `createProtocolAdapter`
-            // leaves for an adapter whose configuration is not a URL.
-            endpoint: '',
-            agentId: agentName,
-            // Nothing to ask: models, tools and skills all come from a runtime
-            // this agent does not have. Said explicitly because the composer
-            // waits on that query before it will accept a keystroke.
-            enableConfigQuery: false,
-            options: {
-              instructions: systemPrompt,
-              model,
-              frontendTools,
-              inference,
-            },
-          }
-        : {
-            type: 'vercel-ai',
-            endpoint: `${result.baseUrl}/api/v1/vercel-ai/${agentName}`,
-            agentId: agentName,
-            enableConfigQuery: true,
-            configEndpoint: `${result.baseUrl}/api/v1/configure`,
-          },
-    [
-      agentName,
-      frontendTools,
-      inBrowser,
-      inference,
-      model,
-      result.baseUrl,
-      systemPrompt,
-    ],
-  );
-
   return {
     ...result,
     // In the browser there is nothing to wait for: no runtime to start and no
@@ -293,7 +250,7 @@ export function useExampleJupyterAgent(
     // agent id whenever anything reconnects, and which the shell writes to too.
     agentReady: inBrowser ? !needsSignIn : !!created || agentId === agentName,
     protocol,
-    chatFrontendTools: inBrowser ? undefined : frontendTools,
+    chatFrontendTools,
     jupyterSandboxUrl,
     createAttempted: attempted,
     unavailableReason,

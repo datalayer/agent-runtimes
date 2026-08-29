@@ -19,7 +19,7 @@
 
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
-import { useOptionalSandboxService } from '../code-sandbox';
+import { useOptionalSandboxService } from '../agents';
 
 /** How each state reads, and what colour it reads in. */
 const APPEARANCE: Record<string, { label: string; color: string }> = {

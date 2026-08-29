@@ -23,7 +23,7 @@ import {
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
-import { useSandboxService } from '../code-sandbox';
+import { useSandboxService } from '../agents';
 
 export default function DocumentView({
   workspace,

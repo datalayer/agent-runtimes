@@ -16,13 +16,21 @@
 
 import { WorkflowIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
+import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { GraphPlugin } from '@datalayer/reactor-graph';
-import { LoopCommand, LoopViewType } from '../../core';
+import { MANAGER_ACTIONS_SLOT } from '@datalayer/reactor-manager';
+import { LoopCommand, LoopViewType, type LoopWorkspaceContext } from '../../core';
+import GraphToggle from './GraphToggle';
+import { GRAPH_VIEW_TYPE } from './viewType';
 
-export const GRAPH_VIEW_TYPE = 'graph';
+export { GRAPH_VIEW_TYPE } from './viewType';
 export const GRAPH_PLUGIN_NAME = '@datalayer/loop-plugin-graph';
 
-export const GraphViewPlugin = definePlugin({
+export const GraphViewPlugin = definePlugin<
+  Record<string, never>,
+  unknown,
+  ReactorReactOutput
+>({
   name: GRAPH_PLUGIN_NAME,
   displayName: 'Plugin graph',
   description:
@@ -32,6 +40,25 @@ export const GraphViewPlugin = definePlugin({
   // The generic graph plugin is pulled in rather than assumed: mounting this
   // one is enough, whether or not the host remembered the other.
   dependencies: [GraphPlugin],
+  /*
+   * The way in, contributed beside the view it opens.
+   *
+   * It used to be drawn by the plugins panel, which had to ask whether a graph
+   * view existed before showing it — a panel checking for a plugin it knows by
+   * name. Owning the button here means switching this plugin off takes the
+   * button with it, and the manager needs to know nothing about graphs.
+   */
+  build: () => ({
+    components: [
+      {
+        id: 'graph-toggle',
+        slot: MANAGER_ACTIONS_SLOT,
+        Component: ({ workspace }: { workspace?: LoopWorkspaceContext }) => (
+          <GraphToggle workspace={workspace} />
+        ),
+      },
+    ],
+  }),
   contributes: [
     contribution(
       LoopViewType,

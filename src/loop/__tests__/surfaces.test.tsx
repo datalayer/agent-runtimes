@@ -87,7 +87,7 @@ describe('the document component', () => {
 
 describe('the in-page sandbox', () => {
   const source = readFileSync(
-    join(VIEWS, 'code-sandbox', 'browserService.ts'),
+    join(VIEWS, 'agents', 'browserService.ts'),
     'utf8',
   );
 

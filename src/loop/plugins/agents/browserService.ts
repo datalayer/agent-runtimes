@@ -17,7 +17,7 @@
  * dynamic `import()` inside `connect()`, so a workspace that never starts a
  * browser sandbox never downloads one.
  *
- * @module loop/plugins/code-sandbox/browserService
+ * @module loop/plugins/agents/browserService
  */
 
 import { computed, signal, type Signal } from '@datalayer/reactor';

@@ -12,7 +12,7 @@
 import { BrowserIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopCommand, LoopViewType } from '../../core';
-import { CodeSandboxPlugin } from '../code-sandbox';
+import { AgentsPlugin } from '../agents';
 
 export const A2UI_PLUGIN_NAME = '@datalayer/loop-plugin-a2ui';
 
@@ -22,7 +22,7 @@ export const A2uiPlugin = definePlugin({
   description: 'The last execution, rendered as a surface rather than dumped.',
   octicon: 'browser',
   emoji: '\u{1F5BC}',
-  dependencies: [CodeSandboxPlugin],
+  dependencies: [AgentsPlugin],
   contributes: [
     contribution(
       LoopViewType,

@@ -29,7 +29,7 @@ import {
 import { useSignalValue } from '@datalayer/reactor/react';
 import { A2uiSurfaceComposed } from '../../../components/a2ui';
 import type { LoopViewProps } from '../../core';
-import { useSandboxService } from '../code-sandbox';
+import { useSandboxService } from '../agents';
 
 type Surface = SurfaceModel<ReactComponentImplementation>;
 

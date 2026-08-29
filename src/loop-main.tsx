@@ -45,8 +45,8 @@ import { configurePlugin } from '@datalayer/reactor';
 import { LoopWorkspace } from './loop/shell/LoopWorkspace';
 import { ChatPlugin } from './loop/plugins/chat';
 import { A2uiPlugin } from './loop/plugins/a2ui';
+import { AgentspecsPlugin } from './loop/plugins/agentspecs';
 import { AgentsPlugin } from './loop/plugins/agents';
-import { CodeSandboxPlugin } from './loop/plugins/code-sandbox';
 import { ModelsPlugin } from './loop/plugins/models';
 import { DocumentPlugin } from './loop/plugins/document';
 import { NotebookPlugin } from './loop/plugins/notebook';
@@ -168,7 +168,7 @@ function LoopPage(): JSX.Element {
               // server it talks to.
               extensions={[
                 ChatPlugin,
-                configurePlugin(CodeSandboxPlugin, {
+                configurePlugin(AgentsPlugin, {
                   serverUrl: session.serverUrl,
                   // A session handed over from the terminal is server-backed;
                   // the header control can move it from there.
@@ -177,7 +177,7 @@ function LoopPage(): JSX.Element {
                 NotebookPlugin,
                 DocumentPlugin,
                 A2uiPlugin,
-                AgentsPlugin,
+                AgentspecsPlugin,
                 ModelsPlugin,
               ]}
             />

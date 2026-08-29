@@ -15,7 +15,7 @@
 import { FileIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopChatSurface, LoopCommand, LoopDocumentToolbar } from '../../core';
-import { CodeSandboxPlugin } from '../code-sandbox';
+import { AgentsPlugin } from '../agents';
 
 export const DOCUMENT_PLUGIN_NAME = '@datalayer/loop-plugin-document';
 
@@ -25,7 +25,7 @@ export const DocumentPlugin = definePlugin({
   description: 'A rich-text document beside the chat, driven by the agent.',
   octicon: 'file',
   emoji: '\u{1F4C4}',
-  dependencies: [CodeSandboxPlugin],
+  dependencies: [AgentsPlugin],
   // Declared, not merely used: the registry knows who contributed to a
   // point, it cannot know who opened it. Declaring it is also what makes
   // the document toolbar visible on the plugin graph before anything has

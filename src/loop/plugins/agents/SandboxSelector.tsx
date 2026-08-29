@@ -13,7 +13,7 @@
  * Contributed by the sandbox plugin, so every workspace that mounts it gets the
  * control: the examples, the standalone page, and the Datalayer app.
  *
- * @module loop/plugins/code-sandbox/SandboxSelector
+ * @module loop/plugins/agents/SandboxSelector
  */
 
 import { useCallback, useState } from 'react';

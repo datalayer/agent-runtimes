@@ -11,18 +11,18 @@
  * extension graph and what lets a host swap the implementation — a JupyterLab
  * front-end backed by the running server instead of a cloud runtime.
  *
- * @module loop/plugins/code-sandbox/useSandboxService
+ * @module loop/plugins/agents/useSandboxService
  */
 
 import { useReactorPlatform } from '@datalayer/reactor/react';
-import { CODE_SANDBOX_PLUGIN_NAME, type CodeSandboxOutput } from './plugin';
+import { AGENTS_PLUGIN_NAME, type AgentsOutput } from './plugin';
 import type { SwitchableSandboxService } from './switchable';
 
 /** The sandbox service, or `undefined` when the plugin is not mounted. */
 export function useOptionalSandboxService():
   SwitchableSandboxService | undefined {
   const reactor = useReactorPlatform();
-  return reactor.getOutput<CodeSandboxOutput>(CODE_SANDBOX_PLUGIN_NAME)
+  return reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)
     ?.sandbox;
 }
 
@@ -37,7 +37,7 @@ export function useSandboxService(): SwitchableSandboxService {
   const service = useOptionalSandboxService();
   if (!service) {
     throw new Error(
-      `The code sandbox plugin (${CODE_SANDBOX_PLUGIN_NAME}) is not mounted. ` +
+      `The code sandbox plugin (${AGENTS_PLUGIN_NAME}) is not mounted. ` +
         'A view that needs a sandbox must declare it as a dependency.',
     );
   }

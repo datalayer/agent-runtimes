@@ -118,8 +118,20 @@ function getProtocolType(
  * Chat props — extends ChatCommonProps with transport-specific configuration.
  */
 export interface ChatProps extends ChatCommonProps {
-  /** Transport to use — REQUIRED (narrows protocol to string enum) */
-  protocol: Protocol;
+  /**
+   * Transport to use — REQUIRED.
+   *
+   * A `Protocol` string is the usual form: this component then builds the
+   * endpoint, the config endpoint and the auth token from `baseUrl` and
+   * `agentId`, which is what makes it convenient.
+   *
+   * A full `ProtocolConfig` is taken as given instead, for an adapter whose
+   * configuration cannot be derived from a base URL — the in-page harness
+   * carries live objects (its instructions, its tools, where to reach a model)
+   * rather than an address. `ChatFloating` has always accepted both; this is
+   * the same seam.
+   */
+  protocol: Protocol | ProtocolConfig;
 
   /** Extensions for chat features */
   extensions?: Extension[];
@@ -377,6 +389,12 @@ export function Chat({
     }
   }, [showDetails]);
 
+  /** The protocol's name, whichever form it was given in. */
+  const transportName: Protocol =
+    typeof transport === 'object' && transport !== null
+      ? transport.type
+      : transport;
+
   // Build protocol config based on transport.
   // Keep this pure: never call React state setters inside this memo.
   const protocolConfigResult = useMemo((): {
@@ -384,6 +402,12 @@ export function Chat({
     error: string | null;
   } => {
     try {
+      // A config given outright is used as it stands: there is nothing here
+      // that could improve on an adapter's own description of itself.
+      if (typeof transport === 'object' && transport !== null) {
+        return { config: transport, error: null };
+      }
+
       let endpoint: string;
       let authToken: string | undefined = authTokenProp;
       let options: Record<string, unknown> | undefined;
@@ -592,7 +616,8 @@ export function Chat({
           >
             <Spinner size="large" />
             <Text sx={{ mt: 3, color: 'fg.muted' }}>
-              Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+              Connecting to {transportName.toUpperCase().replace('-', ' ')}{' '}
+              agent...
             </Text>
           </Box>
         </QueryClientProvider>
@@ -624,7 +649,7 @@ export function Chat({
             <AgentDetails
               name={title || 'AI Agent'}
               icon={brandIcon}
-              protocol={transport}
+              protocol={transportName}
               url={protocolConfig?.endpoint || baseUrl}
               messageCount={messageCount}
               agentId={agentId}

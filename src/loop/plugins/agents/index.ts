@@ -4,18 +4,18 @@
  */
 
 /**
- * `@datalayer/loop-plugin-code-sandbox` — the sandbox, owned in one place.
+ * `@datalayer/loop-plugin-agents` — the sandbox, owned in one place.
  *
- * @module loop/plugins/code-sandbox
+ * @module loop/plugins/agents
  */
 
 export {
-  CODE_SANDBOX_PLUGIN_NAME,
-  CodeSandboxPlugin,
-  type CodeSandboxConfig,
-  type CodeSandboxOutput,
+  AGENTS_PLUGIN_NAME,
+  AgentsPlugin,
+  type AgentsConfig,
+  type AgentsOutput,
 } from './plugin';
-export { CodeSandboxPlugin as default } from './plugin';
+export { AgentsPlugin as default } from './plugin';
 export {
   browserSource,
   createBrowserSandboxService,
@@ -40,6 +40,7 @@ export {
   SANDBOX_TARGETS,
   TARGET_SPECS,
   targetHasAgent,
+  targetRunsAgentInPage,
   createSwitchableSandboxService,
   type SandboxTarget,
   type SwitchableSandboxService,

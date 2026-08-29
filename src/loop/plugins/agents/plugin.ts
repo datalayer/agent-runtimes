@@ -4,12 +4,21 @@
  */
 
 /**
- * The Code Sandbox plugin: the base every other view leans on.
+ * The Agents plugin: where the agent runs, and the sandbox that comes with it.
+ *
+ * It was the "code sandbox" plugin, and the rename follows what the choice
+ * came to mean. Picking a target used to say only where *code* ran; now it
+ * decides where the *agent* runs too — in this page with the Vercel AI SDK, or
+ * on a server with pydantic-ai — because the location is what a harness can
+ * be, whatever a spec asks for. One control, one answer.
  *
  * It owns the sandbox and publishes it as a service; the notebook and document
- * plugins depend on this extension rather than on a connection of their own.
+ * plugins depend on this plugin rather than on a connection of their own.
  *
- * @module loop/plugins/code-sandbox/extension
+ * Which agentspec the session runs is a different question, and belongs to
+ * `@datalayer/loop-plugin-agentspecs`.
+ *
+ * @module loop/plugins/agents/plugin
  */
 
 import { ServerIcon } from '@primer/octicons-react';
@@ -32,9 +41,9 @@ import {
   targetHasAgent,
 } from './switchable';
 
-export const CODE_SANDBOX_PLUGIN_NAME = '@datalayer/loop-plugin-code-sandbox';
+export const AGENTS_PLUGIN_NAME = '@datalayer/loop-plugin-agents';
 
-export type CodeSandboxConfig = {
+export type AgentsConfig = {
   /** Server the server-backed targets are reached through. */
   serverUrl: string;
   /**
@@ -55,23 +64,36 @@ export type CodeSandboxConfig = {
    * in the kernel the user is already looking at.
    */
   kernelSource?: ServiceManagerSource;
+  /**
+   * Whether a reader may choose where the agent runs.
+   *
+   * True by default: the control in the header is the thing that makes
+   * "browser, local or cloud" a choice rather than a build-time decision.
+   *
+   * A host that has already decided passes `false`, and then only the browser
+   * is offered — no control, and the target pinned to the one location that
+   * needs nothing behind it. That is what a public page wants: a visitor with
+   * no account cannot reach a local server or a Datalayer runtime, so offering
+   * them is offering three doors of which two are locked.
+   */
+  showAgentVariants?: boolean;
 };
 
-export type CodeSandboxOutput = {
+export type AgentsOutput = {
   sandbox: SwitchableSandboxService;
   /** Rendered by `ReactorSlot`; see `ReactorReactOutput`. */
   components: ReactorSlotComponent[];
 };
 
-export const CodeSandboxPlugin = definePlugin<
-  CodeSandboxConfig,
+export const AgentsPlugin = definePlugin<
+  AgentsConfig,
   unknown,
-  CodeSandboxOutput
+  AgentsOutput
 >({
-  name: CODE_SANDBOX_PLUGIN_NAME,
-  displayName: 'Code sandbox',
+  name: AGENTS_PLUGIN_NAME,
+  displayName: 'Agents',
   description:
-    'Where code runs: this page, a local server, or a Datalayer runtime.',
+    'Where the agent and its code run: this page, a local server, or a Datalayer runtime.',
   octicon: 'container',
   emoji: '\u{1F4E6}',
   config: { serverUrl: '', target: 'local' },
@@ -81,10 +103,15 @@ export const CodeSandboxPlugin = definePlugin<
   // the notebook from the kernel it is showing.
   preserveOutput: true,
   build({ config }) {
+    // Read once: it decides both what is offered and where the sandbox starts,
+    // and those two must not be able to disagree.
+    const showVariants = config.showAgentVariants ?? true;
     return {
       sandbox: createSwitchableSandboxService({
         serverUrl: config.serverUrl,
-        initialTarget: config.target,
+        // Pinned when there is no choice to make: a host that hid the control
+        // must not be started on a target the reader cannot move off.
+        initialTarget: showVariants ? config.target : 'browser',
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
       }),
@@ -97,14 +124,18 @@ export const CodeSandboxPlugin = definePlugin<
           id: 'sandbox-status',
           Component: SandboxStatusBridge as never,
         },
-        {
-          // In the header, where the reader can see where their code is
-          // running and move it — the one control that makes "browser, local
-          // or cloud" a choice rather than a build-time decision.
-          slot: LoopSlots.header,
-          id: 'sandbox-selector',
-          Component: SandboxSelector as never,
-        },
+        // In the header, where the reader can see where their code is running
+        // and move it. Left out entirely rather than disabled when the host
+        // gave no choice: a control with one option is furniture.
+        ...(showVariants
+          ? [
+              {
+                slot: LoopSlots.header,
+                id: 'sandbox-selector',
+                Component: SandboxSelector as never,
+              },
+            ]
+          : []),
       ],
     };
   },
@@ -165,4 +196,4 @@ export const CodeSandboxPlugin = definePlugin<
   ],
 });
 
-export default CodeSandboxPlugin;
+export default AgentsPlugin;

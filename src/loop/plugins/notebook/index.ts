@@ -20,7 +20,7 @@
 import { RowsIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { LoopChatSurface, LoopCommand, LoopNotebookToolbar } from '../../core';
-import { CodeSandboxPlugin } from '../code-sandbox';
+import { AgentsPlugin } from '../agents';
 
 export const NOTEBOOK_PLUGIN_NAME = '@datalayer/loop-plugin-notebook';
 
@@ -30,7 +30,7 @@ export const NotebookPlugin = definePlugin({
   description: 'A notebook beside the chat, on the session\u2019s kernel.',
   octicon: 'rows',
   emoji: '\u{1F4D3}',
-  dependencies: [CodeSandboxPlugin],
+  dependencies: [AgentsPlugin],
   // Declared, not merely used: the registry knows who contributed to a
   // point, it cannot know who opened it. Declaring it is also what makes
   // the notebook toolbar visible on the plugin graph before anything has

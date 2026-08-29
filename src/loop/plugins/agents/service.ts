@@ -16,7 +16,7 @@
  * an extension and not a component — a view can unmount without the sandbox
  * forgetting what it is doing.
  *
- * @module loop/plugins/code-sandbox/service
+ * @module loop/plugins/agents/service
  */
 
 import {

@@ -54,7 +54,7 @@ export {
 
 // The plugins that ship with it.
 export { A2uiPlugin, A2UI_PLUGIN_NAME } from './plugins/a2ui';
-export { AgentsPlugin, AGENTS_PLUGIN_NAME } from './plugins/agents';
+export { AgentspecsPlugin, AGENTSPECS_PLUGIN_NAME } from './plugins/agentspecs';
 export {
   ChatPlugin,
   CHAT_PLUGIN_NAME,
@@ -69,11 +69,10 @@ export {
   PluginsPanelPlugin,
   PLUGINS_PANEL_PLUGIN_NAME,
   PluginsPanel,
-  type PluginsPanelProps,
 } from './plugins/plugins-panel';
 export {
-  CODE_SANDBOX_PLUGIN_NAME,
-  CodeSandboxPlugin,
+  AGENTS_PLUGIN_NAME,
+  AgentsPlugin,
   SandboxSelector,
   browserSource,
   createBrowserSandboxService,
@@ -82,14 +81,14 @@ export {
   suppliedSource,
   useOptionalSandboxService,
   useSandboxService,
-  type CodeSandboxConfig,
-  type CodeSandboxOutput,
+  type AgentsConfig,
+  type AgentsOutput,
   type SandboxExecution,
   type SandboxService,
   type SandboxTarget,
   type ServiceManagerSource,
   type SwitchableSandboxService,
-} from './plugins/code-sandbox';
+} from './plugins/agents';
 export { DocumentPlugin, DOCUMENT_PLUGIN_NAME } from './plugins/document';
 export {
   DocumentToolbarPlugin,

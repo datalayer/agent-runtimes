@@ -4,7 +4,10 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agents` — which agent the session is talking to.
+ * `@datalayer/loop-plugin-agentspecs` — which agentspec the session runs.
+ *
+ * The other half of the question `@datalayer/loop-plugin-agents` answers: that
+ * one says *where* the agent runs, this one says *what* it is.
  *
  * @module loop/plugins/agents
  */
@@ -12,18 +15,18 @@
 import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
 import { LoopCommand, LoopSlots } from '../../core';
-import { AgentPicker } from './AgentPicker';
+import { AgentspecPicker } from './AgentspecPicker';
 
-export const AGENTS_PLUGIN_NAME = '@datalayer/loop-plugin-agents';
+export const AGENTSPECS_PLUGIN_NAME = '@datalayer/loop-plugin-agentspecs';
 
-export const AgentsPlugin = definePlugin<
+export const AgentspecsPlugin = definePlugin<
   Record<string, never>,
   unknown,
   { components: ReactorSlotComponent[] }
 >({
-  name: AGENTS_PLUGIN_NAME,
-  displayName: 'Agents',
-  description: 'Pick the agent this session talks to.',
+  name: AGENTSPECS_PLUGIN_NAME,
+  displayName: 'Agentspecs',
+  description: 'Pick the agentspec this session runs.',
   octicon: 'people',
   emoji: '\u{1F916}',
   build() {
@@ -32,7 +35,7 @@ export const AgentsPlugin = definePlugin<
         {
           slot: LoopSlots.header,
           id: 'agent-picker',
-          Component: AgentPicker as never,
+          Component: AgentspecPicker as never,
         },
       ],
     };
@@ -75,4 +78,4 @@ export const AgentsPlugin = definePlugin<
   ],
 });
 
-export default AgentsPlugin;
+export default AgentspecsPlugin;

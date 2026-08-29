@@ -26,12 +26,12 @@ import {
 } from '@datalayer/reactor';
 import { LoopViewType } from '../core';
 import { LoopWorkspace } from '../shell/LoopWorkspace';
-import { CodeSandboxPlugin } from '../plugins/code-sandbox';
+import { AgentsPlugin } from '../plugins/agents';
 import { NotebookPlugin } from '../plugins/notebook';
 import { DocumentPlugin } from '../plugins/document';
 import { PluginsPanelPlugin } from '../plugins/plugins-panel';
 import { ModelsPlugin } from '../plugins/models';
-import { AgentsPlugin } from '../plugins/agents';
+import { AgentspecsPlugin } from '../plugins/agentspecs';
 import { ChatPlugin } from '../plugins/chat';
 
 async function mount(
@@ -77,7 +77,7 @@ describe('mounting the workspace', () => {
   it('renders with the sandbox header control on', async () => {
     // The sandbox contributes a status readout to the header slot.
     const { container, root, errors } = await mount([
-      configurePlugin(CodeSandboxPlugin, {
+      configurePlugin(AgentsPlugin, {
         serverUrl: '',
         target: 'browser',
       }),
@@ -113,7 +113,7 @@ describe('mounting the workspace', () => {
     // The editors put a picker in the chat; the panel puts a list in the
     // sidebar. Both render for real here.
     const { container, root, errors } = await mount([
-      configurePlugin(CodeSandboxPlugin, {
+      configurePlugin(AgentsPlugin, {
         serverUrl: '',
         target: 'browser',
       }),
@@ -149,13 +149,19 @@ describe('the plugins panel', () => {
       .filter(message => message.includes('disabled'));
     expect(complaints).toEqual([]);
 
-    // And the locked row really is disabled, which is the behaviour the prop
-    // was there for.
-    const boxes = container.querySelectorAll<HTMLInputElement>(
-      'input[type="checkbox"]',
+    // And the protected row really is fixed, which is the behaviour the prop
+    // was there for. A switch rather than a checkbox since the panel became
+    // the generic manager: Primer's `ToggleSwitch` is a `button` carrying
+    // `aria-pressed`, and it marks a disabled one with `aria-disabled` rather
+    // than the native attribute — it stays focusable so a keyboard user can
+    // reach it and be told why it will not move.
+    const switches = container.querySelectorAll<HTMLButtonElement>(
+      'button[aria-pressed]',
     );
-    expect(boxes.length).toBeGreaterThan(0);
-    expect([...boxes].some(box => box.disabled)).toBe(true);
+    expect(switches.length).toBeGreaterThan(0);
+    expect(
+      [...switches].some(box => box.getAttribute('aria-disabled') === 'true'),
+    ).toBe(true);
 
     warn.mockRestore();
     error.mockRestore();
@@ -172,7 +178,7 @@ describe('the header plugins', () => {
     // empty case that used to crash.
     const { container, root, errors } = await mount([
       ModelsPlugin,
-      AgentsPlugin,
+      AgentspecsPlugin,
     ]);
 
     expect(errors).toEqual([]);
@@ -182,7 +188,7 @@ describe('the header plugins', () => {
 
   it('renders the whole workspace with every plugin on', async () => {
     const { container, root, errors } = await mount([
-      configurePlugin(CodeSandboxPlugin, {
+      configurePlugin(AgentsPlugin, {
         serverUrl: '',
         target: 'browser',
       }),
@@ -190,7 +196,7 @@ describe('the header plugins', () => {
       NotebookPlugin,
       DocumentPlugin,
       ModelsPlugin,
-      AgentsPlugin,
+      AgentspecsPlugin,
       PluginsPanelPlugin,
     ]);
 

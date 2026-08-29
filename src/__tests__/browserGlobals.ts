@@ -35,6 +35,36 @@ if (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
+/*
+ * Primer announces state changes — a toggle switching, a menu opening —
+ * through a `live-region` custom element it expects the page to define. jsdom
+ * defines no custom elements, so the lookup finds a plain `HTMLElement` and
+ * calling `announceFromElement` on it throws.
+ *
+ * Registered as a real element rather than stubbed on the instance, because
+ * Primer creates one on demand and any instance it makes has to answer.
+ */
+if (
+  typeof customElements !== 'undefined' &&
+  !customElements.get('live-region')
+) {
+  customElements.define(
+    'live-region',
+    class extends HTMLElement {
+      // Both return a cancellable handle, because Primer keeps what they
+      // return and cancels it when the announcing component unmounts. A
+      // no-op that returns nothing throws there instead — on teardown, which
+      // is a confusing place to find a missing test shim.
+      announce() {
+        return { cancel() {} };
+      }
+      announceFromElement() {
+        return { cancel() {} };
+      }
+    },
+  );
+}
+
 // Primer's theme reads this on mount.
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
