@@ -39,7 +39,7 @@ export {
   type ViewControls,
   type ViewTypeContribution,
 } from './core';
-export { useEditorToolbarItems } from './core/toolbar';
+export { useEditorToolbar } from './core/toolbar';
 
 // The shell.
 export {

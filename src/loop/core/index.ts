@@ -30,6 +30,15 @@ export type SandboxSnapshot = {
   kernelId?: string;
   jupyterUrl?: string;
   /**
+   * The token that server wants, when it wants one.
+   *
+   * Carried beside the URL because the two are useless apart: a notebook
+   * pointed at a tokened Jupyter server without its token is refused at the
+   * first request, and the visible symptom is a cell that runs and produces
+   * nothing rather than an error anybody can act on.
+   */
+  jupyterToken?: string;
+  /**
    * Where it runs, as the sandbox plugin names it.
    *
    * Part of the snapshot rather than read from a signal, because this is the
@@ -339,30 +348,67 @@ export type EditorToolbarContext = {
 };
 
 /**
- * A plugin's addition to an editor's toolbar.
+ * The toolbar of an editor, provided by a plugin.
+ *
+ * A contribution here does not decorate a toolbar — it *is* the toolbar. An
+ * editor with nothing contributed to its toolbar point renders no toolbar at
+ * all, which is the difference between a toolbar plugin and a plugin that adds
+ * a button: switch this off and the bar goes, not just what was on it.
+ *
+ * `items` is what the providing plugin puts on its own toolbar. Everyone else
+ * uses the item point below, so that "who owns the toolbar" and "who is
+ * allowed to add to it" stay separate questions.
+ */
+export type EditorToolbarContribution = {
+  items?: (context: EditorToolbarContext) => ToolbarItem[];
+};
+
+/**
+ * Something a plugin adds to a toolbar another plugin provides.
  *
  * `items` is called during the editor's render and must be pure — build the
  * descriptors, do the work in `onClick` or inside a `render` component. It
  * returns a list rather than a single item so one plugin can contribute a
  * spacer and the thing after it as one indivisible unit.
+ *
+ * Nothing is rendered from here when no plugin provides the toolbar. That is
+ * deliberate: a button with no bar to sit on has nowhere to go, and drawing
+ * one anyway would make the toolbar plugin look optional when it is not.
  */
-export type EditorToolbarContribution = {
+export type EditorToolbarItemContribution = {
   items: (context: EditorToolbarContext) => ToolbarItem[];
 };
 
 /**
  * The notebook editor's toolbar.
  *
- * Offered by the notebook plugin, filled by anyone: the toolbar plugin puts
- * the kernel light there, the chat puts the agent actions there. The notebook
- * names neither of them, and neither of them imports the notebook.
+ * Offered by the notebook plugin and filled by the notebook toolbar plugin.
+ * The notebook names neither the toolbar nor anything on it.
  */
 export const LoopNotebookToolbar =
   defineContributionPoint<EditorToolbarContribution>('loop.notebook.toolbar');
 
+/**
+ * What goes on the notebook's toolbar, once something provides one.
+ *
+ * Offered by the *toolbar* plugin, not by the editor: the bar is what accepts
+ * buttons, so the plugin that owns the bar is the one that opens the point.
+ * The chat puts its agent actions here.
+ */
+export const LoopNotebookToolbarItem =
+  defineContributionPoint<EditorToolbarItemContribution>(
+    'loop.notebook.toolbar.item',
+  );
+
 /** The document editor's toolbar. The same arrangement, for prose. */
 export const LoopDocumentToolbar =
   defineContributionPoint<EditorToolbarContribution>('loop.document.toolbar');
+
+/** What goes on the document's toolbar, once something provides one. */
+export const LoopDocumentToolbarItem =
+  defineContributionPoint<EditorToolbarItemContribution>(
+    'loop.document.toolbar.item',
+  );
 
 /** Slash commands, shared in shape with the CLI. */
 export const LoopCommand =

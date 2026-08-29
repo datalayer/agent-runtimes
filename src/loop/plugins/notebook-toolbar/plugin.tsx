@@ -24,7 +24,7 @@ export const NotebookToolbarPlugin = definePlugin({
     contribution(
       LoopNotebookToolbar,
       { items: ({ editorId }) => notebookToolbarItems(editorId) },
-      { id: 'kernel-indicator', order: 100 },
+      { id: 'toolbar', order: 100 },
     ),
   ],
 });

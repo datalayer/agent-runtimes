@@ -7,6 +7,7 @@ Runtime services for Datalayer.
 Provides runtime management and code execution capabilities in Datalayer environments.
 """
 
+import logging
 import os
 import time
 from pathlib import Path
@@ -28,6 +29,8 @@ from datalayer_core.utils.types import (
 from datalayer_core.utils.urls import DEFAULT_DATALAYER_RUNTIMES_URL, DatalayerURLs
 
 from agent_runtimes.runtimes.client import RuntimesMixin
+
+logger = logging.getLogger(__name__)
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
 from agent_runtimes.models.runtime import RuntimeModel
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
@@ -263,6 +266,15 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             self._start()
             return self
         except Exception as e:
+            # Give back whatever was already reserved before re-raising.
+            #
+            # `_start` books the runtime first and connects to it second, so a
+            # failure to connect leaves a live runtime nobody holds — and
+            # because Python does not call `__exit__` when `__enter__` raises,
+            # `with` is no protection here. Each such failure used to burn a
+            # slot in the environment permanently, so one bad start made the
+            # next start likelier to fail, and the one after that certain to.
+            self._stop()
             print(f"Failed to start runtime: {str(e)}")
             raise
 
@@ -400,6 +412,10 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
                     f"{str(last_error) if last_error else 'unknown error'}"
                 )
 
+    #: Set once this runtime has been handed back, so a second `stop()` — or a
+    #: `__exit__` after `__enter__` already cleaned up — does not ask again.
+    _terminated: bool = False
+
     def _stop(self) -> bool:
         """
         Stop the runtime.
@@ -410,11 +426,38 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             True if runtime was successfully stopped, False otherwise.
         """
         if self.model.sandbox_client:
-            self.model.sandbox_client.stop()
-            self.model.sandbox_client = None
-            self.model.kernel_id = None
-            if self.model.runtime_name:
-                return self.runtimes.stop(self.model.runtime_name)["success"]
+            try:
+                self.model.sandbox_client.stop()
+            except Exception as error:  # noqa: BLE001
+                # A client that will not shut down cleanly is not a reason to
+                # keep paying for the runtime behind it.
+                logger.warning(
+                    "Could not stop the sandbox client for %s: %s",
+                    self.model.runtime_name,
+                    error,
+                )
+            finally:
+                self.model.sandbox_client = None
+                self.model.kernel_id = None
+
+        # Terminate whatever was booked, whether or not anything ever connected
+        # to it. This used to be nested inside the branch above, so a runtime
+        # that was created but never reached — the common failure — was left
+        # running for good.
+        if self.model.runtime_name and not self._terminated:
+            # Flagged rather than clearing `runtime_name`: stopping twice must
+            # not send a second termination, but a caller inspecting which
+            # runtime this was after the fact should still be able to.
+            self._terminated = True
+            response = self.runtimes.stop(self.model.runtime_name)
+            stopped = bool(response.get("success"))
+            if not stopped:
+                logger.warning(
+                    "Could not terminate the runtime %s: %s",
+                    self.model.runtime_name,
+                    response.get("message") or response,
+                )
+            return stopped
         return False
 
     def _check_file(self, path: Union[str, Path]) -> bool:

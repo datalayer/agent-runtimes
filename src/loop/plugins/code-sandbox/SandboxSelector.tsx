@@ -116,12 +116,31 @@ export function SandboxSelector(_props: {
       {/* A status readout, not a control. Primer's `Tooltip` requires its
           child to *be* the interactive element and throws otherwise, so the
           hint rides on the native attribute. */}
-      <Text
-        sx={{ fontSize: 0, color: failure ? 'danger.fg' : 'fg.muted' }}
-        title={failure ?? TARGET_SPECS[SANDBOX_TARGETS[index]].hint}
-      >
-        {failure ? 'switch failed' : (snapshot.variant ?? snapshot.state)}
-      </Text>
+      {failure ? (
+        // The reason, in the header, in full. It used to read "switch failed"
+        // with the cause hidden in a `title` — which is why a switch that
+        // could not reach the server looked like a click that did nothing.
+        // A failure the person has to hover to read is a failure they will
+        // not read.
+        <Text
+          sx={{
+            fontSize: 0,
+            color: 'danger.fg',
+            maxWidth: 460,
+            lineHeight: 1.3,
+          }}
+          title={failure}
+        >
+          {failure}
+        </Text>
+      ) : (
+        <Text
+          sx={{ fontSize: 0, color: 'fg.muted' }}
+          title={TARGET_SPECS[SANDBOX_TARGETS[index]].hint}
+        >
+          {snapshot.variant ?? snapshot.state}
+        </Text>
+      )}
     </Box>
   );
 }

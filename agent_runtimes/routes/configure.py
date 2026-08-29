@@ -51,6 +51,19 @@ class SandboxStatus(BaseModel):
 
     variant: str  # "eval" or "jupyter-server"
     jupyter_url: str | None = None
+    #: The token that Jupyter server wants, when it wants one.
+    #:
+    #: Sent because the browser is meant to drive this sandbox: the notebook
+    #: and document editors connect to it directly, and a URL without its token
+    #: is refused at the first request — a cell that runs and produces nothing
+    #: rather than an error anybody can act on. The sandbox is the caller's own
+    #: and this endpoint already configures and restarts it, so the token is not
+    #: a wider disclosure than the channel it travels on.
+    jupyter_token: str | None = None
+    #: The kernel the agent is using, so an editor joins it rather than
+    #: starting a rival one and diverging from what the agent sees.
+    kernel_id: str | None = None
+    kernel_name: str | None = None
     jupyter_connected: bool = False
     jupyter_error: str | None = None
     sandbox_running: bool = False
@@ -1022,6 +1035,9 @@ def _get_sandbox_status() -> SandboxStatus | None:
         sandbox_status = SandboxStatus(
             variant=status["variant"],
             jupyter_url=status.get("jupyter_url"),
+            jupyter_token=status.get("jupyter_token"),
+            kernel_id=status.get("kernel_id"),
+            kernel_name=status.get("kernel_name"),
             sandbox_running=status.get("sandbox_running", False),
             is_executing=False,
             jupyter_connected=False,
@@ -1197,6 +1213,17 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
         is_executing = False
         variant = status["variant"]
         jupyter_url = status.get("jupyter_url")
+        # Carried with the URL, because a browser is a real client of this
+        # sandbox: the notebook and document editors connect to that Jupyter
+        # server directly. A URL without its token is refused at the first
+        # request, and Jupyter rejects a cross-origin call before attaching
+        # CORS headers — so the browser reports a missing
+        # `Access-Control-Allow-Origin` on a 403 and neither message names the
+        # cause. The kernel id is what lets an editor join the kernel the agent
+        # is using instead of starting a rival one beside it.
+        jupyter_token = status.get("jupyter_token")
+        kernel_id = status.get("kernel_id")
+        kernel_name = status.get("kernel_name")
 
         # If an agent_id is provided, prefer the agent codemode sandbox state.
         # This tracks the sandbox actually used for code execution.
@@ -1234,9 +1261,19 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
                 sandbox_cls = type(agent_sandbox).__name__.lower()
                 if "jupyter" in sandbox_cls:
                     variant = "jupyter-server"
-                agent_url = getattr(agent_sandbox, "_server_url", None)
+                # From the agent's own sandbox, all of it or none of it. This
+                # branch replaces the URL; taking the token and kernel from the
+                # global sandbox instead would describe two different servers
+                # in one message.
+                agent_details = manager.connection_details(agent_sandbox)
+                agent_url = agent_details["jupyter_url"] or getattr(
+                    agent_sandbox, "_server_url", None
+                )
                 if agent_url:
                     jupyter_url = str(agent_url)
+                    jupyter_token = agent_details["jupyter_token"]
+                    kernel_id = agent_details["kernel_id"]
+                    kernel_name = agent_details["kernel_name"]
         else:
             # Global fallback: inspect the existing sandbox instance without
             # triggering sandbox creation on every poll tick.
@@ -1249,6 +1286,9 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
             "sandbox_running": sandbox_running,
             "is_executing": is_executing,
             "jupyter_url": jupyter_url,
+            "jupyter_token": jupyter_token,
+            "kernel_id": kernel_id,
+            "kernel_name": kernel_name,
         }
     except ImportError:
         return {
@@ -1281,8 +1321,15 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
             "variant": "eval" | "jupyter-server" | "unavailable",
             "sandbox_running": true/false,
             "is_executing": true/false,
-            "jupyter_url": "..." | null
+            "jupyter_url": "..." | null,
+            "jupyter_token": "..." | null,
+            "kernel_id": "..." | null,
+            "kernel_name": "..." | null
         }
+
+    The token and kernel travel with the URL because the browser is a real
+    client of this sandbox: the workspace's editors connect to that Jupyter
+    server directly, and a URL on its own is an address they cannot use.
     """
     await websocket.accept()
     logger.debug("Sandbox status WebSocket connected")

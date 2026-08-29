@@ -21,8 +21,8 @@ import {
   LoopAgentGate,
   LoopChatSurface,
   LoopCommand,
-  LoopDocumentToolbar,
-  LoopNotebookToolbar,
+  LoopDocumentToolbarItem,
+  LoopNotebookToolbarItem,
   LoopViewType,
   type EditorToolbarContext,
 } from '../../core';
@@ -111,11 +111,12 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
       },
       { id: 'chat' },
     ),
-    // What the chat puts on the notebook's toolbar. The notebook offers the
-    // point; it does not know who fills it, and this plugin does not import
-    // the notebook.
+    // What the chat puts on the notebook's toolbar. The bar belongs to the
+    // toolbar plugin, which opens this point; the notebook knows about neither.
+    // With the toolbar plugin switched off there is no bar, so these have
+    // nowhere to sit and are not drawn — which is the honest outcome.
     contribution(
-      LoopNotebookToolbar,
+      LoopNotebookToolbarItem,
       {
         items: (context: EditorToolbarContext) => [
           agentAction(context, {
@@ -143,7 +144,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     // And on the document's, which had no agent actions at all before there
     // was a point to put them on.
     contribution(
-      LoopDocumentToolbar,
+      LoopDocumentToolbarItem,
       {
         items: (context: EditorToolbarContext) => [
           agentAction(context, {

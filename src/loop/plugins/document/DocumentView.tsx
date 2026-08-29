@@ -17,8 +17,12 @@ import type { ServiceManager } from '@jupyterlab/services';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
-import { LoopDocumentToolbar, type ChatSurfaceProps } from '../../core';
-import { useEditorToolbarItems } from '../../core/toolbar';
+import {
+  LoopDocumentToolbar,
+  LoopDocumentToolbarItem,
+  type ChatSurfaceProps,
+} from '../../core';
+import { useEditorToolbar } from '../../core/toolbar';
 import { useSandboxService } from '../code-sandbox';
 
 export default function DocumentView({
@@ -29,8 +33,10 @@ export default function DocumentView({
   const documentId = `loop-${workspace.agentId || 'default'}`;
 
   // Read before the early return, not after: the hook count must not depend on
-  // whether a sandbox happens to be running.
-  const toolbarExtraItems = useEditorToolbarItems(LoopDocumentToolbar, {
+  // whether a sandbox happens to be running. As with the notebook, the bar
+  // itself belongs to a plugin — switch that off and the document has no
+  // toolbar rather than an empty one.
+  const toolbar = useEditorToolbar(LoopDocumentToolbar, LoopDocumentToolbarItem, {
     workspace,
     editorId: documentId,
   });
@@ -74,12 +80,19 @@ export default function DocumentView({
         inheritTheme
         documentId={documentId}
         serviceManager={browserManager}
-        toolbarExtraItems={toolbarExtraItems}
+        showToolbar={toolbar.present}
+        toolbarExtraItems={toolbar.items}
         // Join the sandbox's kernel rather than starting a rival one.
         kernelId={browserManager ? snapshot.kernelId : undefined}
         runtimeOverride={
           !browserManager && snapshot.jupyterUrl
-            ? { baseUrl: snapshot.jupyterUrl }
+            ? {
+                baseUrl: snapshot.jupyterUrl,
+                // Without the token the server refuses every request and the
+                // cell runs into silence — no kernel, no output, no error the
+                // reader can act on.
+                token: snapshot.jupyterToken,
+              }
             : undefined
         }
       />

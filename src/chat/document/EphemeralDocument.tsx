@@ -206,6 +206,15 @@ export interface EphemeralDocumentProps {
   inheritTheme?: boolean;
 
   toolbarExtraItems?: ToolbarItem[];
+  /**
+   * Whether to draw a toolbar at all. Defaults to true.
+   *
+   * For a host where the toolbar is somebody's to provide — the LOOP
+   * workspace, where a plugin owns it and can be switched off. `false` draws
+   * no bar rather than an empty one: an empty bar still costs a row and a
+   * border, and reads as broken rather than as absent.
+   */
+  showToolbar?: boolean;
 }
 
 /**
@@ -337,6 +346,7 @@ export function EphemeralDocument({
   onKernelChange,
   collaboration,
   toolbarExtraItems,
+  showToolbar = true,
   inheritTheme = false,
 }: EphemeralDocumentProps) {
   // Real-time collaboration is active only when both a WebSocket endpoint and a
@@ -666,6 +676,26 @@ export function EphemeralDocument({
                 overflow: 'hidden',
                 overscrollBehaviorY: 'contain',
                 padding: 2,
+                backgroundColor: themeBackground,
+                /*
+                 * The variable Lexical's own stylesheets paint from.
+                 *
+                 * `Editor.css`, `Rich.css` and `TableNode.css` all write
+                 * `background: var(--bgColor-default, #fff)` — they are theme-
+                 * aware by design, and go white only where that variable is
+                 * undefined. In the lexical package's own examples it is
+                 * defined, because `LexicalPrimerThemeProvider` wraps them in a
+                 * `DatalayerThemeProvider`; here the host owns the theme and
+                 * this subtree never inherited it.
+                 *
+                 * Defining it here fixes every one of those rules at once,
+                 * including the ones nobody has hit yet. Chasing them class by
+                 * class is what the block below used to do, and it lost: an
+                 * emotion rule and `.editor-shell .editor-container` have the
+                 * same specificity, so which one wins comes down to stylesheet
+                 * order.
+                 */
+                '--bgColor-default': themeBackground,
                 '& .editor-shell': {
                   backgroundColor: themeBackground,
                   borderRadius: 2,
@@ -738,10 +768,12 @@ export function EphemeralDocument({
                   <CommentsProvider>
                     <ToolbarContext>
                       <div className="editor-shell">
-                        <DocumentToolbar
-                          setIsLinkEditMode={setIsLinkEditMode}
-                          extraItems={toolbarExtraItems}
-                        />
+                        {showToolbar ? (
+                          <DocumentToolbar
+                            setIsLinkEditMode={setIsLinkEditMode}
+                            extraItems={toolbarExtraItems}
+                          />
+                        ) : null}
                         <div className="editor-container">
                           <div className="editor-inner">
                             {isCollaborative && collaboration ? (

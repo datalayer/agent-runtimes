@@ -14,8 +14,12 @@ import type { ServiceManager } from '@jupyterlab/services';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
 import { EphemeralNotebook } from '../../../chat/notebook/EphemeralNotebook';
-import { LoopNotebookToolbar, type ChatSurfaceProps } from '../../core';
-import { useEditorToolbarItems } from '../../core/toolbar';
+import {
+  LoopNotebookToolbar,
+  LoopNotebookToolbarItem,
+  type ChatSurfaceProps,
+} from '../../core';
+import { useEditorToolbar } from '../../core/toolbar';
 import { useSandboxService } from '../code-sandbox';
 
 export default function NotebookView({
@@ -27,11 +31,13 @@ export default function NotebookView({
   // toolbar item is handed so it can report on *this* notebook.
   const notebookId = `loop-${workspace.agentId || 'default'}`;
 
-  // The toolbar is nobody's property. This view offers the point and renders
-  // whatever is on it — the toolbar plugin's kernel light, the chat's agent
-  // actions — and names none of them. It used to hardcode two buttons that
-  // submitted prompts, which meant the notebook knew about the chat.
-  const toolbarExtraItems = useEditorToolbarItems(LoopNotebookToolbar, {
+  // The toolbar is not this view's to draw. It offers the point, and a plugin
+  // provides the bar; with that plugin switched off there is no toolbar here
+  // at all, not an empty one. Items come from whoever adds to it — the toolbar
+  // plugin's kernel light, the chat's agent actions — and this view names none
+  // of them. It used to hardcode two buttons that submitted prompts, which
+  // meant the notebook knew about the chat.
+  const toolbar = useEditorToolbar(LoopNotebookToolbar, LoopNotebookToolbarItem, {
     workspace,
     editorId: notebookId,
   });
@@ -78,10 +84,17 @@ export default function NotebookView({
         serviceManager={browserManager}
         // Join the sandbox's kernel rather than starting a rival one.
         kernelId={browserManager ? snapshot.kernelId : undefined}
-        toolbarExtraItems={toolbarExtraItems}
+        showToolbar={toolbar.present}
+        toolbarExtraItems={toolbar.items}
         runtimeOverride={
           !browserManager && snapshot.jupyterUrl
-            ? { baseUrl: snapshot.jupyterUrl }
+            ? {
+                baseUrl: snapshot.jupyterUrl,
+                // Without the token the server refuses every request and the
+                // cell runs into silence — no kernel, no output, no error the
+                // reader can act on.
+                token: snapshot.jupyterToken,
+              }
             : undefined
         }
       />

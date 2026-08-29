@@ -906,6 +906,17 @@ class AgentClient(
             token=api_key or self._get_api_key(),
             ingress=runtime_data["ingress"],
             jupyter_token=runtime_data["token"],
+            # The name the runtimes API knows it by, and the only handle that
+            # can stop it or snapshot it.
+            #
+            # Omitting this was a silent, expensive bug. `RuntimeService` takes
+            # the "already provisioned" path when it is handed an ingress and a
+            # token, so it never learned the name the way it does when it
+            # provisions one itself — which left `stop()` with nothing to stop.
+            # Every runtime created through this method ran until it expired,
+            # whatever the caller did, and `create_snapshot` refused with
+            # "Runtime not started!" on a runtime that was plainly running.
+            runtime_name=runtime_data.get("runtime_name"),
             uid=runtime_data.get("uid"),
             reservation_id=runtime_data.get("reservation_id"),
             burning_rate=runtime_data.get("burning_rate"),

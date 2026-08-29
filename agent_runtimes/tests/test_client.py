@@ -93,7 +93,16 @@ def test_runtime_create_execute_and_list() -> None:
         response = runtime.execute("print('test')")
         assert response.stdout.strip() == "test"
 
-        assert len(client.list_runtimes()) == 1
+        # This runtime is listed — not "this is the only runtime". The account
+        # is shared with every other test, every other developer and anything
+        # left running from earlier work, so asserting a global count made the
+        # test fail for reasons that had nothing to do with what it covers.
+        # It owns the runtime it created, and that is what it may assert.
+        listed = client.list_runtimes()
+        assert runtime.uid in {entry.uid for entry in listed}, (
+            f"the runtime this test created ({runtime.uid}) is missing from "
+            f"{[entry.name for entry in listed]}"
+        )
     time.sleep(10)
 
 

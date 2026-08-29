@@ -483,3 +483,38 @@ describe('the notebook toolbar affordances', () => {
     expect(submitted[1]).toContain('@NotebookReproducer');
   });
 });
+
+describe('a server sandbox summary', () => {
+  it('carries the Jupyter token beside the URL', () => {
+    // The two are useless apart. Dropping the token here was invisible until a
+    // cell ran into silence — the notebook reached a tokened server
+    // unauthenticated, got refused at the first request, and produced no
+    // output and no error anybody could act on.
+    expect(
+      summarize(
+        {
+          variant: 'jupyter-server',
+          jupyter_connected: true,
+          jupyter_url: 'http://localhost:8888',
+          jupyter_token: 'secret',
+          kernel_id: 'k1',
+        },
+        'idle',
+      ),
+    ).toEqual({
+      state: 'running',
+      variant: 'jupyter-server',
+      kernelId: 'k1',
+      jupyterUrl: 'http://localhost:8888',
+      jupyterToken: 'secret',
+    });
+  });
+
+  it('leaves it undefined when the server wants none', () => {
+    const snapshot = summarize(
+      { variant: 'jupyter-server', jupyter_connected: true, jupyter_url: 'u' },
+      'idle',
+    );
+    expect(snapshot.jupyterToken).toBeUndefined();
+  });
+});

@@ -39,7 +39,7 @@ export const DocumentToolbarPlugin = definePlugin({
           },
         ],
       },
-      { id: 'sandbox-status', order: 100 },
+      { id: 'toolbar', order: 100 },
     ),
   ],
 });

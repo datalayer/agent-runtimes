@@ -14,10 +14,18 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { buildReactorFromPlugins, defineExtension } from '@datalayer/reactor';
+import {
+  buildReactorFromPlugins,
+  contribution,
+  defineExtension,
+  definePlugin,
+  onContributionPoint,
+} from '@datalayer/reactor';
 import {
   LoopDocumentToolbar,
+  LoopDocumentToolbarItem,
   LoopNotebookToolbar,
+  LoopNotebookToolbarItem,
   createPromptChannel,
   type EditorToolbarContext,
   type LoopWorkspaceContext,
@@ -62,12 +70,14 @@ describe('the editors', () => {
     ).toContain('loop.document.toolbar');
   });
 
-  it('offer a toolbar nobody has to fill', () => {
-    const reactor = buildReactorFromPlugins([NotebookPlugin]);
+  it('have no toolbar at all when no plugin provides one', () => {
+    const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
-    // An editor with no toolbar contributors is a working editor.
+    // Not an empty bar — no bar. An editor with no toolbar plugin is still a
+    // working editor.
     expect(reactor.getContributions(LoopNotebookToolbar)).toEqual([]);
+    expect(reactor.getContributions(LoopDocumentToolbar)).toEqual([]);
   });
 });
 
@@ -77,7 +87,7 @@ describe('the chat', () => {
     reactor.start();
 
     const items = reactor
-      .getContributions(LoopNotebookToolbar)
+      .getContributions(LoopNotebookToolbarItem)
       .flatMap(entry => entry.value.items(context()));
 
     expect(items.map(item => item.key)).toEqual([
@@ -98,7 +108,7 @@ describe('the chat', () => {
     });
 
     const items = reactor
-      .getContributions(LoopNotebookToolbar)
+      .getContributions(LoopNotebookToolbarItem)
       .flatMap(entry => entry.value.items(ctx));
     const compact = items.find(item => item.key === 'loop-compact');
     (compact as { onClick: () => void }).onClick();
@@ -113,13 +123,13 @@ describe('the chat', () => {
   it('takes its buttons off the toolbar when it is switched off', () => {
     const reactor = buildReactorFromPlugins([ChatPlugin, NotebookPlugin]);
     reactor.start();
-    expect(reactor.getContributions(LoopNotebookToolbar)).toHaveLength(1);
+    expect(reactor.getContributions(LoopNotebookToolbarItem)).toHaveLength(1);
 
     reactor.disable(ChatPlugin.name);
 
     // The whole claim of the split, in one assertion: the notebook keeps
     // working and loses only what the chat was putting there.
-    expect(reactor.getContributions(LoopNotebookToolbar)).toEqual([]);
+    expect(reactor.getContributions(LoopNotebookToolbarItem)).toEqual([]);
     expect(reactor.isEnabled(NotebookPlugin.name)).toBe(true);
   });
 
@@ -128,7 +138,7 @@ describe('the chat', () => {
     reactor.start();
 
     const items = reactor
-      .getContributions(LoopDocumentToolbar)
+      .getContributions(LoopDocumentToolbarItem)
       .flatMap(entry => entry.value.items(context()));
 
     expect(items.map(item => item.key)).toEqual(['loop-summarise']);
@@ -196,5 +206,97 @@ describe('an extension', () => {
     expect(() =>
       defineExtension({ name: '@loop/empty', plugins: [] }),
     ).toThrow(/at least one plugin/);
+  });
+});
+
+describe('switching the toolbar plugin off', () => {
+  /**
+   * The bug this was written for: the toolbar plugin only contributed the
+   * kernel indicator, so unticking it removed the light and left the bar —
+   * which made it look like an "indicator" plugin rather than the plugin that
+   * owns the toolbar. The bar is now its contribution, so it goes too.
+   *
+   * The document toolbar plugin is exercised for real, module and all. The
+   * notebook's cannot be: its module reaches `@datalayer/jupyter-react` for
+   * the kernel light, and that pulls `@jupyter/web-components`, whose
+   * published ESM uses extensionless relative imports that this runner will
+   * not resolve. Its manifest is asserted above, and the mechanism it relies
+   * on is asserted here with a stand-in provider — which is the same code
+   * path, since neither the editor nor `useEditorToolbar` knows which plugin
+   * filled the point.
+   */
+  const StandInToolbar = definePlugin({
+    name: '@test/notebook-toolbar',
+    contributionPoints: [LoopNotebookToolbarItem],
+    contributes: [
+      contribution(
+        LoopNotebookToolbar,
+        { items: () => [{ key: 'stand-in', type: 'spacer' as const }] },
+        { id: 'toolbar' },
+      ),
+    ],
+  });
+
+  it('leaves the notebook with no toolbar to draw', () => {
+    const reactor = buildReactorFromPlugins([
+      ChatPlugin,
+      NotebookPlugin,
+      StandInToolbar,
+    ]);
+    reactor.start();
+    expect(reactor.getContributions(LoopNotebookToolbar)).toHaveLength(1);
+
+    reactor.disable(StandInToolbar.name);
+
+    // Nothing provides the bar, so the view draws none — the assertion the old
+    // arrangement could not make, because the editor drew it unconditionally.
+    expect(reactor.getContributions(LoopNotebookToolbar)).toEqual([]);
+    // And the editor is untouched.
+    expect(reactor.isEnabled(NotebookPlugin.name)).toBe(true);
+  });
+
+  it('brings it back when the plugin is enabled again', () => {
+    const reactor = buildReactorFromPlugins([NotebookPlugin, StandInToolbar]);
+    reactor.start();
+    reactor.disable(StandInToolbar.name);
+    reactor.enable(StandInToolbar.name);
+
+    expect(reactor.getContributions(LoopNotebookToolbar)).toHaveLength(1);
+  });
+
+  it('leaves the document with no toolbar to draw — the real plugin', async () => {
+    const reactor = buildReactorFromPlugins([ChatPlugin, DocumentExtension]);
+    reactor.start();
+    // Lazy, waiting on the editor's toolbar point. In the application a *read*
+    // fires that event — the editor renders, and looking at the point fetches
+    // the plugin that fills it. Fired directly here because a read schedules
+    // the load on a microtask and a dynamic import takes an unknown number of
+    // them; that a read fires it is the reactor's own test.
+    await reactor.fire(onContributionPoint(LoopDocumentToolbar));
+    expect(reactor.getContributions(LoopDocumentToolbar)).toHaveLength(1);
+
+    reactor.disable(DOCUMENT_TOOLBAR_PLUGIN_NAME);
+
+    expect(reactor.getContributions(LoopDocumentToolbar)).toEqual([]);
+    expect(reactor.isEnabled(DocumentPlugin.name)).toBe(true);
+  });
+
+  it('takes the chat\u2019s buttons with it, since they had nowhere to sit', () => {
+    const reactor = buildReactorFromPlugins([
+      ChatPlugin,
+      NotebookPlugin,
+      StandInToolbar,
+    ]);
+    reactor.start();
+    // The chat still contributes — it does not know the bar has gone.
+    expect(reactor.getContributions(LoopNotebookToolbarItem)).toHaveLength(1);
+
+    reactor.disable(StandInToolbar.name);
+
+    // What matters is what the editor draws, and with no provider that is
+    // nothing at all: `useEditorToolbar` returns no items in this state. The
+    // contribution surviving is correct, and invisible.
+    expect(reactor.getContributions(LoopNotebookToolbar)).toEqual([]);
+    expect(reactor.getContributions(LoopNotebookToolbarItem)).toHaveLength(1);
   });
 });

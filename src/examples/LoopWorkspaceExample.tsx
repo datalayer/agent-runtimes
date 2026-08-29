@@ -48,6 +48,7 @@ import { GraphViewPlugin } from '../loop/plugins/graph';
 import { PluginsPanelPlugin } from '../loop/plugins/plugins-panel';
 import { internalQueryClient } from '../utils';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { ThemedProvider } from './utils/themedProvider';
 
 export type LoopWorkspaceExampleProps = {
   /** Server backing the session. Defaults to this page's origin. */
@@ -97,16 +98,33 @@ export function LoopWorkspaceExample({
   // The plugin list is a plugin, so it arrives through the sidebar slot rather
   // than being wrapped around the workspace. Nothing here is above the shell.
   return (
-    <QueryClientProvider client={internalQueryClient}>
-      <Box sx={{ height: '100%', minHeight: 0 }}>
-        <LoopWorkspace
-          serverUrl={serverUrl}
-          agentId={agentId}
-          reactor={reactor}
-          manageReactor={false}
-        />
-      </Box>
-    </QueryClientProvider>
+    // The theme, as every other example provides it.
+    //
+    // Not decoration: it is what defines the Primer CSS custom properties —
+    // `--bgColor-default` among them — on an ancestor of everything below.
+    // The workspace's own chrome reads Primer tokens through `sx` and looked
+    // right without this, which is why its absence went unnoticed; the
+    // document editor reads them as *CSS variables*, because that is how
+    // Lexical's stylesheets are written (`background: var(--bgColor-default,
+    // #fff)`). With no provider the variable was undefined and every one of
+    // those rules took its white fallback, so the document rendered as a white
+    // sheet inside a dark workspace.
+    //
+    // The plugins the views mount pass `inheritTheme`, so this is the one
+    // provider in the tree — nested providers fight over BaseStyles and font
+    // tokens, and the inner one wins for the wrong reasons.
+    <ThemedProvider>
+      <QueryClientProvider client={internalQueryClient}>
+        <Box sx={{ height: '100%', minHeight: 0 }}>
+          <LoopWorkspace
+            serverUrl={serverUrl}
+            agentId={agentId}
+            reactor={reactor}
+            manageReactor={false}
+          />
+        </Box>
+      </QueryClientProvider>
+    </ThemedProvider>
   );
 }
 

@@ -117,6 +117,15 @@ export interface EphemeralNotebookProps {
   /** Optional toolbar component override. */
   toolbarComponent?: EphemeralNotebookToolbarComponent;
   /**
+   * Whether to draw a toolbar at all. Defaults to true.
+   *
+   * For a host where the toolbar is somebody's to provide — the LOOP
+   * workspace, where a plugin owns it and can be switched off. `false` draws
+   * no bar rather than an empty one: an empty bar still costs a row and a
+   * border, and reads as broken rather than as absent.
+   */
+  showToolbar?: boolean;
+  /**
    * Items added to the toolbar of the notebook.
    *
    * The notebook toolbar merges them with its own and orders the whole by the
@@ -218,6 +227,7 @@ export function EphemeralNotebook({
   onNbformatChange,
   toolbarComponent,
   toolbarExtraItems,
+  showToolbar = true,
   themeVariant,
   colorMode,
   collaborationProvider,
@@ -392,6 +402,12 @@ export function EphemeralNotebook({
   // replacing the toolbar altogether receives them as well, as every toolbar
   // built on the notebook one takes `extraItems`.
   const ToolbarComponent = useMemo(() => {
+    if (!showToolbar) {
+      // Undefined, not a component that renders null. `Notebook` guards with
+      // `{Toolbar && <Toolbar/>}`, so this removes it from the tree entirely —
+      // which matters for the sibling selectors below.
+      return undefined;
+    }
     const Base = toolbarComponent || NotebookToolbar;
     if (!toolbarExtraItems?.length) {
       return Base;
@@ -399,7 +415,7 @@ export function EphemeralNotebook({
     return function EphemeralNotebookToolbar(props: any) {
       return <Base {...props} extraItems={toolbarExtraItems} />;
     };
-  }, [toolbarComponent, toolbarExtraItems]);
+  }, [showToolbar, toolbarComponent, toolbarExtraItems]);
 
   const isRuntimeStarting = Boolean(
     (String(runtimeName || '').trim() ||
@@ -549,13 +565,29 @@ export function EphemeralNotebook({
                   display: 'flex',
                   flexDirection: 'column',
                 },
-                '& #dla-Jupyter-Notebook > :first-of-type': {
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 2,
-                  flex: '0 0 auto',
-                  background: 'var(--jp-layout-color0, transparent)',
-                },
+                // Pin the toolbar — but only while there is one. This targets
+                // the first child, and with the toolbar gone that is the
+                // notebook body: it would be made sticky and painted with the
+                // toolbar's own background.
+                ...(showToolbar
+                  ? {
+                      '& #dla-Jupyter-Notebook > :first-of-type': {
+                        position: 'sticky' as const,
+                        top: 0,
+                        zIndex: 2,
+                        flex: '0 0 auto',
+                        background: 'var(--jp-layout-color0, transparent)',
+                      },
+                    }
+                  : {
+                      // `Notebook` gives the panel header `min-height: 50px` to
+                      // reserve room for a toolbar. With no toolbar that room
+                      // is a white band under nothing.
+                      '& .datalayer-NotebookPanel-header': {
+                        display: 'none',
+                        minHeight: 0,
+                      },
+                    }),
                 '& #dla-Jupyter-Notebook > .dla-Box-Notebook': {
                   flex: '1 1 auto',
                   minHeight: 0,

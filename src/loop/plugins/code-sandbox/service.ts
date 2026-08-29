@@ -111,6 +111,7 @@ export function summarize(
     variant: status.variant,
     kernelId: status.kernel_id,
     jupyterUrl: status.jupyter_url,
+    jupyterToken: status.jupyter_token,
   };
 }
 

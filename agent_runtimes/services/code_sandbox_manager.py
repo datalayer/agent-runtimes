@@ -433,7 +433,7 @@ class CodeSandboxManager:
         return None
 
     @staticmethod
-    def _sandbox_connection_details(
+    def connection_details(
         sandbox: "Sandbox | None",
     ) -> dict[str, Any]:
         """Best-effort extraction of a sandbox's live Jupyter/kernel details.
@@ -442,6 +442,11 @@ class CodeSandboxManager:
         ways. ``JupyterSandbox`` keeps its execution backend in ``_client``;
         its ``id`` is the live kernel id, so we probe several
         well-known attributes to remain robust across variants.
+
+        Public because the status WebSocket needs it for a *specific* sandbox
+        rather than the active one: it reports the agent's sandbox when there
+        is one, and a URL taken from that sandbox with a token taken from
+        another is worse than reporting neither.
         """
         details: dict[str, Any] = {
             "kernel_id": None,
@@ -988,7 +993,7 @@ class CodeSandboxManager:
         # to starting their OWN default kernel, diverging from the sandbox
         # kernel used by the agent.
         active_sandbox = self._active_sandbox()
-        details = self._sandbox_connection_details(active_sandbox)
+        details = self.connection_details(active_sandbox)
 
         return {
             "variant": self._config.variant,

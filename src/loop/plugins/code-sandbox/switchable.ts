@@ -180,17 +180,31 @@ export function createSwitchableSandboxService({
     if (!configure) {
       return;
     }
-    const response = await fetch(
-      `${serverUrl}/api/v1/agents/sandbox/configure`,
-      {
+    const label = TARGET_SPECS[next].label;
+    let response: Response;
+    try {
+      response = await fetch(`${serverUrl}/api/v1/agents/sandbox/configure`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(configure),
-      },
-    );
+      });
+    } catch (reason) {
+      // `fetch` rejects rather than answering when nothing is listening, and
+      // the browser's message for that is "Failed to fetch" — which names
+      // neither the address nor the thing that should be at it. Every target
+      // but Browser needs an agent-runtimes server, and the commonest reason
+      // a switch does nothing is that nobody started one.
+      throw new Error(
+        `${label} needs an agent-runtimes server at ${serverUrl}, and nothing answered there. ` +
+          `Start one and try again. (${
+            reason instanceof Error ? reason.message : String(reason)
+          })`,
+      );
+    }
     if (!response.ok) {
       throw new Error(
-        `The server could not switch to ${TARGET_SPECS[next].label} (${response.status}).`,
+        `The server could not switch to ${label} (${response.status} ${response.statusText}). ` +
+          (await detail(response)),
       );
     }
 
@@ -202,8 +216,24 @@ export function createSwitchableSandboxService({
     });
     if (!restart.ok) {
       throw new Error(
-        `The server could not start ${TARGET_SPECS[next].label} (${restart.status}).`,
+        `The server could not start ${label} (${restart.status} ${restart.statusText}). ` +
+          (await detail(restart)),
       );
+    }
+  }
+
+  /**
+   * What the server said went wrong, when it said anything.
+   *
+   * FastAPI puts the reason in `detail`, and a status code on its own sends a
+   * reader to the network tab for something the response already contained.
+   */
+  async function detail(response: Response): Promise<string> {
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      return typeof body.detail === 'string' ? body.detail : '';
+    } catch {
+      return '';
     }
   }
 

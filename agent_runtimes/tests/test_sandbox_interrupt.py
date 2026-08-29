@@ -221,3 +221,118 @@ class TestCodeSandboxManagerSidecarGuard:
 
         with pytest.raises(ImportError):
             manager._create_sandbox(variant="eval")
+
+
+class TestSandboxStatusCarriesConnectionDetails:
+    """What a browser needs to reach the sandbox it is being told about.
+
+    The editors of the LOOP workspace connect to the sandbox's Jupyter server
+    directly. Reporting the URL and withholding the token told them where to go
+    and not how to get in: every request came back 403, and because Jupyter
+    rejects a cross-origin write before attaching CORS headers, the browser
+    reported a missing `Access-Control-Allow-Origin` instead — two messages,
+    neither naming the cause. A cell ran and produced nothing.
+    """
+
+    def test_the_model_carries_the_token_and_kernel(self):
+        from agent_runtimes.routes.configure import SandboxStatus
+
+        status = SandboxStatus(
+            variant="jupyter-server",
+            jupyter_url="http://127.0.0.1:42233",
+            jupyter_token="secret",
+            kernel_id="k-1",
+            kernel_name="python3",
+        )
+
+        assert status.jupyter_token == "secret"
+        assert status.kernel_id == "k-1"
+        assert status.kernel_name == "python3"
+
+    def test_they_are_optional_for_a_sandbox_that_has_none(self):
+        from agent_runtimes.routes.configure import SandboxStatus
+
+        status = SandboxStatus(variant="eval")
+
+        assert status.jupyter_token is None
+        assert status.kernel_id is None
+
+    def test_the_manager_reports_them_for_the_model_to_carry(self):
+        """The two halves have to agree, or the field is plumbed to nothing."""
+        from agent_runtimes.routes.configure import SandboxStatus
+        from agent_runtimes.services.code_sandbox_manager import (
+            get_code_sandbox_manager,
+        )
+
+        reported = set(get_code_sandbox_manager().get_status())
+        carried = set(SandboxStatus.model_fields)
+
+        # Every connection detail the manager knows reaches the model. Named
+        # explicitly rather than comparing whole key sets: the manager also
+        # reports things a browser has no business with.
+        for field in ("jupyter_url", "jupyter_token", "kernel_id", "kernel_name"):
+            assert field in reported, f"{field} is not reported by the manager"
+            assert field in carried, f"{field} is not carried by SandboxStatus"
+
+
+class TestSandboxWebSocketStatus:
+    """The payload the browser actually receives.
+
+    Written because the previous fix went to the wrong place. `SandboxStatus`
+    is the REST model; the workspace reads its sandbox over
+    `/configure/sandbox/ws`, which builds its own dict — so adding a field to
+    the model changed nothing the browser could see, and the editors went on
+    connecting to a tokened server with no token.
+    """
+
+    def test_carries_the_token_and_kernel_beside_the_url(self):
+        from agent_runtimes.routes.configure import _build_sandbox_ws_status
+
+        payload = _build_sandbox_ws_status()
+
+        # Present as keys whatever their values: a sandbox that is not running
+        # reports None, and the browser has to be able to tell "no token" from
+        # "this server never mentions tokens".
+        for field in ("jupyter_url", "jupyter_token", "kernel_id", "kernel_name"):
+            assert field in payload, f"{field} is missing from the WS payload"
+
+    def test_reports_what_the_manager_knows(self, monkeypatch):
+        from agent_runtimes.routes import configure
+        from agent_runtimes.services import code_sandbox_manager
+
+        class _Manager:
+            def get_status(self):
+                return {
+                    "variant": "jupyter-server",
+                    "sandbox_running": True,
+                    "jupyter_url": "http://127.0.0.1:42489",
+                    "jupyter_token": "secret",
+                    "kernel_id": "k-1",
+                    "kernel_name": "python3",
+                }
+
+            _sandbox = None
+
+        monkeypatch.setattr(
+            code_sandbox_manager, "get_code_sandbox_manager", lambda: _Manager()
+        )
+
+        payload = configure._build_sandbox_ws_status()
+
+        assert payload["jupyter_url"] == "http://127.0.0.1:42489"
+        assert payload["jupyter_token"] == "secret"
+        assert payload["kernel_id"] == "k-1"
+
+    def test_the_rest_model_and_the_socket_agree(self):
+        """Two builders, one contract — the split is what caused this bug."""
+        from agent_runtimes.routes.configure import (
+            SandboxStatus,
+            _build_sandbox_ws_status,
+        )
+
+        over_the_socket = set(_build_sandbox_ws_status())
+        over_rest = set(SandboxStatus.model_fields)
+
+        for field in ("jupyter_url", "jupyter_token", "kernel_id", "kernel_name"):
+            assert field in over_the_socket, f"{field} not sent over the socket"
+            assert field in over_rest, f"{field} not served over REST"
