@@ -67,8 +67,8 @@ describe('the in-page protocol config', () => {
       inference: INFERENCE,
     });
 
-    expect(
-      (config.options as { frontendTools?: unknown }).frontendTools,
-    ).toBe(frontendTools);
+    expect((config.options as { frontendTools?: unknown }).frontendTools).toBe(
+      frontendTools,
+    );
   });
 });

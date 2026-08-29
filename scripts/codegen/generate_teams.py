@@ -103,15 +103,45 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     return specs
 
 
+def _generate_team_subagent_py(subagent: Dict[str, Any]) -> str:
+    """Generate Python code for a TeamSubagentspec."""
+    description = (
+        subagent.get("description", "").replace('"', '\\"').replace("\n", " ").strip()
+    )
+    instructions = (
+        subagent.get("instructions", "").replace('"', '\\"').replace("\n", " ").strip()
+    )
+    return (
+        "TeamSubagentspec("
+        f'name="{subagent.get("name", "")}", '
+        f'ref="{subagent.get("ref", "")}", '
+        f'description="{description}", '
+        f'instructions="{instructions}"'
+        ")"
+    )
+
+
 def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
     """Generate Python code for a TeamAgentspec."""
     lines = []
     lines.append("TeamAgentspec(")
     lines.append(f'            id="{agent.get("id", "")}",')
     lines.append(f'            name="{agent.get("name", "")}",')
-    lines.append(f'            role="{agent.get("role", "")}",')
+    # The reference into the agent catalogue. Emitted before the overrides
+    # because it is what the member *is*; the rest says how it differs here.
+    lines.append(f'            ref="{agent.get("ref", "")}",')
+    lines.append(f'            role="{agent.get("role", "contributor")}",')
     goal = agent.get("goal", "").replace('"', '\\"').replace("\n", " ").strip()
     lines.append(f'            goal="{goal}",')
+    lines.append(f"            depends_on={_fmt_list(agent.get('depends_on', []))},")
+    subagents = agent.get("subagents", [])
+    if subagents:
+        rendered = ",\n                ".join(
+            _generate_team_subagent_py(sub) for sub in subagents
+        )
+        lines.append(f"            subagents=[\n                {rendered},\n            ],")
+    else:
+        lines.append("            subagents=[],")
     lines.append(f'            model="{agent.get("model", "")}",')
     lines.append(f'            mcp_server="{agent.get("mcp_server", "")}",')
     tools = agent.get("tools", [])
@@ -123,16 +153,46 @@ def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _generate_team_subagent_ts(subagent: Dict[str, Any]) -> str:
+    """Generate TypeScript code for a TeamSubagentspec."""
+    description = (
+        subagent.get("description", "").replace("`", "\\`").replace("\n", " ").strip()
+    )
+    instructions = (
+        subagent.get("instructions", "").replace("`", "\\`").replace("\n", " ").strip()
+    )
+    return (
+        "{ "
+        f"name: '{subagent.get('name', '')}', "
+        f"ref: '{subagent.get('ref', '')}', "
+        f"description: `{description}`, "
+        f"instructions: `{instructions}`"
+        " }"
+    )
+
+
 def _generate_team_agent_ts(agent: Dict[str, Any]) -> str:
     """Generate TypeScript code for a TeamAgentspec."""
     goal = agent.get("goal", "").replace("`", "\\`").replace("\n", " ").strip()
     tools = json.dumps(agent.get("tools", []))
+    depends_on = json.dumps(agent.get("depends_on", []))
     trigger = agent.get("trigger", "").replace("'", "\\'")
+    subagents = agent.get("subagents", [])
+    rendered = (
+        "[\n        "
+        + ",\n        ".join(_generate_team_subagent_ts(sub) for sub in subagents)
+        + ",\n      ]"
+        if subagents
+        else "[]"
+    )
     return f"""    {{
       id: '{agent.get("id", "")}',
       name: '{agent.get("name", "")}',
-      role: '{agent.get("role", "")}',
+      ref: '{agent.get("ref", "")}',
+      role: '{agent.get("role", "contributor")}',
       goal: `{goal}`,
+      dependsOn: {depends_on},
+      subagents: {rendered},
       model: '{agent.get("model", "")}',
       mcpServer: '{agent.get("mcp_server", "")}',
       tools: {tools},
@@ -157,6 +217,9 @@ from typing import Dict, Optional
 
 from agent_runtimes.types import (
     TeamAgentspec,
+    TeamContextSpec,
+    TeamDelegationSpec,
+    TeamSubagentspec,
     TeamHealthMonitoring,
     TeamOutputSpec,
     TeamReactionRule,
@@ -218,8 +281,25 @@ from agent_runtimes.types import (
             if supervisor and isinstance(supervisor, dict):
                 sup_name = supervisor.get("name", "").replace('"', '\\"')
                 sup_model = supervisor.get("model", "")
+                sup_ref = supervisor.get("ref", "")
+                sup_goal = (
+                    supervisor.get("goal", "")
+                    .replace('"', '\\"')
+                    .replace("\n", " ")
+                    .strip()
+                )
+                sup_instructions = (
+                    supervisor.get("instructions", "")
+                    .replace('"', '\\"')
+                    .replace("\n", " ")
+                    .strip()
+                )
                 supervisor_code = (
-                    f'TeamSupervisorSpec(name="{sup_name}", model="{sup_model}")'
+                    f'TeamSupervisorSpec(name="{sup_name}", ref="{sup_ref}", '
+                    f'model="{sup_model}", goal="{sup_goal}", '
+                    f'instructions="{sup_instructions}", '
+                    f'approval="{supervisor.get("approval", "auto")}", '
+                    f'can_terminate={bool(supervisor.get("can_terminate", True))})'
                 )
             else:
                 supervisor_code = "None"
@@ -326,6 +406,22 @@ from agent_runtimes.types import (
             )
             code += f"    supervisor={supervisor_code},\n"
             code += f'    routing_instructions="{routing}",\n'
+            delegation = spec.get("delegation") or {}
+            code += (
+                "    delegation=TeamDelegationSpec("
+                f"max_depth={delegation.get('max_depth', 2)}, "
+                f"allow_peer_delegation={bool(delegation.get('allow_peer_delegation', False))}, "
+                f"include_general_purpose={bool(delegation.get('include_general_purpose', False))}"
+                "),\n"
+            )
+            # `shared` by default: routing only makes sense if the member
+            # receiving the work can see what was already said.
+            context = spec.get("context") or {}
+            code += (
+                "    context=TeamContextSpec("
+                f'sharing="{context.get("sharing", "shared")}"'
+                "),\n"
+            )
             code += f"    validation={validation_code},\n"
             code += f"    agents={agents_code},\n"
             if reaction_rules_code != "None":
@@ -454,7 +550,23 @@ import type {{ TeamSpec }} from '{types_import_path}';
             if supervisor and isinstance(supervisor, dict):
                 sup_name = supervisor.get("name", "").replace("'", "\\'")
                 sup_model = supervisor.get("model", "")
-                supervisor_ts = f"{{ name: '{sup_name}', model: '{sup_model}' }}"
+                sup_ref = supervisor.get("ref", "")
+                sup_goal = (
+                    supervisor.get("goal", "").replace("`", "\\`").replace("\n", " ").strip()
+                )
+                sup_instructions = (
+                    supervisor.get("instructions", "")
+                    .replace("`", "\\`")
+                    .replace("\n", " ")
+                    .strip()
+                )
+                supervisor_ts = (
+                    f"{{ name: '{sup_name}', ref: '{sup_ref}', "
+                    f"model: '{sup_model}', goal: `{sup_goal}`, "
+                    f"instructions: `{sup_instructions}`, "
+                    f"approval: '{supervisor.get('approval', 'auto')}', "
+                    f"canTerminate: {str(bool(supervisor.get('can_terminate', True))).lower()} }}"
+                )
             else:
                 supervisor_ts = "undefined"
 
@@ -566,6 +678,20 @@ import type {{ TeamSpec }} from '{types_import_path}';
             code += f"  executionMode: '{spec.get('execution_mode', 'sequential')}',\n"
             code += f"  supervisor: {supervisor_ts},\n"
             code += f"  routingInstructions: `{routing}`,\n"
+            delegation = spec.get("delegation") or {}
+            code += (
+                "  delegation: { "
+                f"maxDepth: {delegation.get('max_depth', 2)}, "
+                f"allowPeerDelegation: {str(bool(delegation.get('allow_peer_delegation', False))).lower()}, "
+                f"includeGeneralPurpose: {str(bool(delegation.get('include_general_purpose', False))).lower()}"
+                " },\n"
+            )
+            context = spec.get("context") or {}
+            code += (
+                "  context: { "
+                f"sharing: '{context.get('sharing', 'shared')}'"
+                " },\n"
+            )
             code += f"  validation: {validation_ts},\n"
             code += f"  agents: {agents_ts},\n"
             if rr_ts is not None:

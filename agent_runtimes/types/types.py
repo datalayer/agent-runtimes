@@ -1346,16 +1346,57 @@ class Agentspec(BaseModel):
     )
 
 
+class TeamSubagentspec(BaseModel):
+    """A specialist a team member may hand work to.
+
+    The same shape as a subagent on an agent spec: delegation is one idea, and
+    it should be written the same way wherever it appears.
+    """
+
+    name: str = Field(..., description="How the member addresses it, e.g. `@CellFixer`")
+    ref: str = Field(
+        default="", description="Agent catalogue reference, `id` or `id:version`"
+    )
+    description: str = Field(
+        default="", description="What it is for, and when to reach for it"
+    )
+    instructions: str = Field(
+        default="", description="System prompt, for a subagent defined only here"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class TeamAgentspec(BaseModel):
     """Specification for an agent within a team."""
 
     id: str = Field(..., description="Agent identifier within the team")
-    name: str = Field(..., description="Display name for the team agent")
-    role: str = Field(
+    name: str = Field(default="", description="Display name for the team agent")
+    ref: str = Field(
         default="",
-        description="Role within the team (e.g., 'Primary · Initiator', 'Secondary', 'Final')",
+        description=(
+            "Agent catalogue reference, `id` or `id:version`. A member that "
+            "names one inherits its model, tools, prompt and subagents; the "
+            "fields below then say what is different about it in this team."
+        ),
+    )
+    role: str = Field(
+        default="contributor",
+        description="Structural role: coordinator, initiator, contributor, reviewer or finalizer",
     )
     goal: str = Field(default="", description="Goal or objective for this agent")
+    depends_on: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Member ids that must finish first. What makes the running order "
+            "computable — it replaced a prose `trigger` that read well and "
+            "could not be executed."
+        ),
+        alias="dependsOn",
+    )
+    subagents: list[TeamSubagentspec] = Field(
+        default_factory=list, description="Specialists this member may delegate to"
+    )
     model: str = Field(default="", description="AI model identifier")
     mcp_server: str = Field(
         default="", description="MCP server used by this agent", alias="mcpServer"
@@ -1363,7 +1404,14 @@ class TeamAgentspec(BaseModel):
     tools: list[str] = Field(
         default_factory=list, description="Tools available to this agent"
     )
-    trigger: str = Field(default="", description="Trigger condition for this agent")
+    trigger: str = Field(
+        default="",
+        description=(
+            "What starts this member from outside the team — an event, a "
+            "schedule. Distinct from `depends_on`, which is what it waits for "
+            "inside."
+        ),
+    )
     approval: str = Field(
         default="auto", description="Approval policy: 'auto' or 'manual'"
     )
@@ -1371,11 +1419,100 @@ class TeamAgentspec(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class TeamSupervisorSpec(BaseModel):
-    """Specification for a team supervisor agent."""
+class TeamDelegationSpec(BaseModel):
+    """How far members may hand work to each other, and to subagents."""
 
-    name: str = Field(..., description="Supervisor agent name")
-    model: str = Field(default="", description="AI model used by the supervisor")
+    max_depth: int = Field(
+        default=2, description="Levels of delegation allowed; 0 forbids it", alias="maxDepth"
+    )
+    allow_peer_delegation: bool = Field(
+        default=False,
+        description="Whether a member may hand work to another member",
+        alias="allowPeerDelegation",
+    )
+    include_general_purpose: bool = Field(
+        default=False,
+        description="Whether members also get the general-purpose subagent",
+        alias="includeGeneralPurpose",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamContextSpec(BaseModel):
+    """What each member of a team is told about the conversation so far.
+
+    The two things every multi-agent framework does, named rather than assumed:
+
+    - ``shared`` — one thread, and every member is sent all of it. What a
+      supervisor team wants: routing only makes sense if the member receiving
+      the work can see what was already said. AutoGen group chats, LangGraph
+      supervisors and OpenAI handoffs all work this way.
+    - ``isolated`` — a thread per member, swapped when the person switches.
+      What a delegation model wants: the child runs blind and returns a result,
+      as Claude Code subagents and CrewAI tasks do. Choose it when members
+      would mislead each other more than they would help.
+    - ``own-turns`` — one thread on screen, but each member is sent only the
+      turns it took part in. For a team whose members share a person but not a
+      subject; deliberately makes what the reader sees differ from what the
+      model sees, which is a cost worth naming.
+
+    It is a team's property rather than a runtime's setting because it follows
+    from what the team *is*: the jupyter-notebook team routes between a tutor
+    and a compactor, and a compactor that cannot see what the learner was just
+    told would undo the explanation.
+    """
+
+    sharing: str = Field(
+        default="shared",
+        description=(
+            "How much of the conversation each member is given: 'shared' "
+            "(all of it), 'isolated' (its own thread), or 'own-turns' (one "
+            "thread, but only its own turns are sent)"
+        ),
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamSupervisorSpec(BaseModel):
+    """The agent that routes work within a team.
+
+    Required on a team. A team is not a list of agents — it is a list of agents
+    plus someone deciding what happens next, and a spec that leaves that out
+    describes a set, not a team.
+    """
+
+    name: str = Field(..., description="Display name for the supervisor")
+    ref: str = Field(
+        default="",
+        description="Agent catalogue reference, `id` or `id:version`",
+    )
+    model: str = Field(
+        default="", description="Model id, overriding the referenced agent's"
+    )
+    goal: str = Field(
+        default="",
+        description="What the supervisor is accountable for across the whole run",
+    )
+    instructions: str = Field(
+        default="",
+        description="Supervision prompt, for a supervisor defined only here",
+    )
+    approval: str = Field(
+        default="auto",
+        description="Whether a person signs off the routing decisions",
+    )
+    can_terminate: bool = Field(
+        default=True,
+        description=(
+            "Whether the supervisor may end the run before every member has "
+            "gone. False makes it a router only."
+        ),
+        alias="canTerminate",
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class TeamValidationSpec(BaseModel):
@@ -1500,6 +1637,14 @@ class TeamSpec(BaseModel):
     validation: Optional[TeamValidationSpec] = Field(
         default=None,
         description="Validation settings for the team",
+    )
+    delegation: TeamDelegationSpec = Field(
+        default_factory=TeamDelegationSpec,
+        description="How far members may hand work to each other, and to subagents",
+    )
+    context: TeamContextSpec = Field(
+        default_factory=TeamContextSpec,
+        description="What each member is told about the conversation so far",
     )
     agents: list[TeamAgentspec] = Field(
         default_factory=list,

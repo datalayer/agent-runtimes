@@ -49,9 +49,7 @@ describe('the sandbox service', () => {
     ]);
     reactor.start();
 
-    const output = reactor.getOutput<AgentsOutput>(
-      AGENTS_PLUGIN_NAME,
-    );
+    const output = reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME);
     expect(output?.sandbox.serverUrl).toBe('http://server');
     expect(output?.sandbox.snapshot.peek()).toEqual({ state: 'idle' });
   });
@@ -61,9 +59,8 @@ describe('the sandbox service', () => {
       configurePlugin(AgentsPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
-    const service = reactor.getOutput<AgentsOutput>(
-      AGENTS_PLUGIN_NAME,
-    )!.sandbox;
+    const service =
+      reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox;
 
     service.report({
       variant: 'jupyter-server',
@@ -89,9 +86,7 @@ describe('the sandbox service', () => {
 
     // The sandbox does not stop existing when someone switches tabs, and the
     // control that moves it belongs where its state is shown.
-    const output = reactor.getOutput<AgentsOutput>(
-      AGENTS_PLUGIN_NAME,
-    );
+    const output = reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME);
     expect(output?.components?.map(c => c.slot)).toEqual([
       'loop.status',
       'loop.header',
@@ -272,8 +267,7 @@ describe('moving the sandbox', () => {
       }),
     ]);
     reactor.start();
-    return reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!
-      .sandbox;
+    return reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox;
   }
 
   it('starts where it was told to', () => {
@@ -365,9 +359,8 @@ describe('moving the sandbox', () => {
         }),
       ]);
       reactor.start();
-      const sandbox = reactor.getOutput<AgentsOutput>(
-        AGENTS_PLUGIN_NAME,
-      )!.sandbox;
+      const sandbox =
+        reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox;
       const disconnect = sandbox.connect('loop-workspace');
 
       await sandbox.setTarget('local');
@@ -468,18 +461,16 @@ describe('toggling the sandbox plugin', () => {
       configurePlugin(AgentsPlugin, { serverUrl: 'http://server' }),
     ]);
     reactor.start();
-    const before = reactor.getOutput<AgentsOutput>(
-      AGENTS_PLUGIN_NAME,
-    )!.sandbox;
+    const before = reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox;
 
     reactor.disable(AGENTS_PLUGIN_NAME);
     reactor.enable(AGENTS_PLUGIN_NAME);
 
     // The same service, so the notebook showing its kernel is not detached by
     // someone ticking a checkbox.
-    expect(
-      reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox,
-    ).toBe(before);
+    expect(reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox).toBe(
+      before,
+    );
   });
 
   it('brings its view and its command back with it', () => {

@@ -140,9 +140,7 @@ export function LoopWorkspaceExample({
   //
   // This example is where they meet: the plugin must not know an examples page
   // exists, and the page cannot see inside the reactor.
-  const sandbox = reactor.getOutput<AgentsOutput>(
-    AGENTS_PLUGIN_NAME,
-  )?.sandbox;
+  const sandbox = reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)?.sandbox;
   const sandboxTarget = useSignalValue(sandbox?.target ?? IDLE_TARGET);
   const sandboxSnapshot = useSignalValue(sandbox?.snapshot ?? IDLE_SNAPSHOT);
   const sandboxState = sandboxSnapshot.state;

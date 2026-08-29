@@ -19,3 +19,4 @@ export * from './agent';
 export * from './frontendTools';
 export * from './model';
 export * from './protocol';
+export * from './subagents';

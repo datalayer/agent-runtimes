@@ -85,11 +85,7 @@ export type AgentsOutput = {
   components: ReactorSlotComponent[];
 };
 
-export const AgentsPlugin = definePlugin<
-  AgentsConfig,
-  unknown,
-  AgentsOutput
->({
+export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
   name: AGENTS_PLUGIN_NAME,
   displayName: 'Agents',
   description:

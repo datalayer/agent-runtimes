@@ -104,9 +104,21 @@ export function summarize(
   if (!status) {
     return { state: fallback };
   }
+  /*
+   * Running, by either account.
+   *
+   * `sandbox_running` is the manager's own answer. The second clause is for
+   * the variants reached over a Jupyter server, where the manager can be
+   * between sandboxes while the server itself is perfectly alive — and it has
+   * to name every such variant. It named only `jupyter-server`, so a Datalayer
+   * runtime showed as idle whatever it was doing, which is what left the
+   * notebook and the document with nothing to connect to.
+   */
+  const overJupyter =
+    status.variant === 'jupyter-server' || status.variant === 'datalayer';
   const running =
     Boolean(status.sandbox_running) ||
-    (status.variant === 'jupyter-server' && Boolean(status.jupyter_connected));
+    (overJupyter && Boolean(status.jupyter_connected));
   return {
     state: running ? 'running' : fallback === 'running' ? 'idle' : fallback,
     variant: status.variant,

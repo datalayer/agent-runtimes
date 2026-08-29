@@ -1055,8 +1055,14 @@ def _get_sandbox_status() -> SandboxStatus | None:
         except Exception:
             pass
 
-        # If Jupyter variant, test the connection
-        if status["variant"] == "jupyter-server" and status.get("jupyter_url"):
+        # Both variants are reached over a Jupyter server, so both are worth
+        # testing. Only "jupyter-server" was, which left a Datalayer runtime
+        # reporting `jupyter_connected: False` however healthy it was — and a
+        # browser reading that concludes there is nothing to connect a notebook
+        # to.
+        if status["variant"] in ("jupyter-server", "datalayer") and status.get(
+            "jupyter_url"
+        ):
             jupyter_connected, jupyter_error = _test_jupyter_connection(
                 status["jupyter_url"], status.get("jupyter_token")
             )

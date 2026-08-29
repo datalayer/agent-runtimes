@@ -170,15 +170,8 @@ export function useExampleJupyterAgent(
     autoCreateAgent: false,
     agentConfig,
   });
-  const {
-    agentId,
-    createAgent,
-    hasAgent,
-    chatGate,
-    runtime,
-    status,
-    variant,
-  } = result;
+  const { agentId, createAgent, hasAgent, chatGate, runtime, status, variant } =
+    result;
 
   // The one branch this hook exists to hide. Everything about *reaching* an
   // agent differs between a runtime and this page; nothing else does.

@@ -22,8 +22,7 @@ import type { SwitchableSandboxService } from './switchable';
 export function useOptionalSandboxService():
   SwitchableSandboxService | undefined {
   const reactor = useReactorPlatform();
-  return reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)
-    ?.sandbox;
+  return reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)?.sandbox;
 }
 
 /**

@@ -471,12 +471,23 @@ class CodeSandboxManager:
                 kernel_id = kernel_model.get("id")
         details["kernel_id"] = kernel_id or None
 
-        server_url = getattr(sandbox, "_server_url", None)
+        server_url = getattr(sandbox, "server_url", None) or getattr(
+            sandbox, "_server_url", None
+        )
         if not server_url and client is not None:
             server_url = getattr(client, "server_url", None)
         details["jupyter_url"] = server_url or None
 
-        details["jupyter_token"] = getattr(sandbox, "_token", None) or None
+        # `jupyter_token` first, and it is not fussiness: on a Datalayer
+        # sandbox `_token` is the *API key* that authenticates this process to
+        # the platform. Handing that to a browser as a Jupyter token would fail
+        # the connection and leak a credential in the same breath. A sandbox
+        # that mints a token for its server publishes it under its own name.
+        details["jupyter_token"] = (
+            getattr(sandbox, "jupyter_token", None)
+            or getattr(sandbox, "_token", None)
+            or None
+        )
 
         if client is not None:
             details["username"] = getattr(client, "username", None) or None
@@ -995,7 +1006,11 @@ class CodeSandboxManager:
         # Compute python_path (what gets added to sys.path)
         # For Jupyter/remote sandboxes, it's /tmp
         # For eval, it's the parent of generated_path
-        if self._config.variant in ("jupyter-server", "datalayer-runtime"):
+        # Both are reached over a Jupyter server, so both run code somewhere
+        # this process cannot see. "datalayer-runtime" was written here and is
+        # not a variant name — `SandboxVariant` calls it "datalayer" — so a
+        # Datalayer sandbox has been getting a local path all along.
+        if self._config.variant in ("jupyter-server", "datalayer"):
             python_path = "/tmp"  # nosec B108
         else:
             python_path = str(Path(generated_path).resolve().parent)

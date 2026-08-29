@@ -129,9 +129,7 @@ const AgentRuntimeChatExample: React.FC = () => {
       autoFocus
       height="100vh"
       runtimeId={agentName}
-      historyEndpoint={
-        inBrowser ? undefined : `${baseUrl}/api/v1/history`
-      }
+      historyEndpoint={inBrowser ? undefined : `${baseUrl}/api/v1/history`}
       suggestions={[
         {
           title: 'Hello',

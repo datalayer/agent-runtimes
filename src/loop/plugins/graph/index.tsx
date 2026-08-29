@@ -19,7 +19,11 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { GraphPlugin } from '@datalayer/reactor-graph';
 import { MANAGER_ACTIONS_SLOT } from '@datalayer/reactor-manager';
-import { LoopCommand, LoopViewType, type LoopWorkspaceContext } from '../../core';
+import {
+  LoopCommand,
+  LoopViewType,
+  type LoopWorkspaceContext,
+} from '../../core';
 import GraphToggle from './GraphToggle';
 import { GRAPH_VIEW_TYPE } from './viewType';
 

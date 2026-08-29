@@ -6,13 +6,87 @@
 /**
  * Specification for an agent within a team.
  */
+/**
+ * A specialist a team member may hand work to.
+ *
+ * The same shape as a subagent on an agent spec: delegation is one idea, and
+ * it should be written the same way wherever it appears.
+ */
+export interface TeamSubagentspec {
+  /** How the member addresses it, e.g. `@CellFixer`. */
+  name: string;
+  /** Agent catalogue reference, `id` or `id:version`. */
+  ref?: string;
+  /** What it is for, and when to reach for it. Read by the delegating model. */
+  description?: string;
+  /** System prompt, for a subagent defined only here. */
+  instructions?: string;
+}
+
+/**
+ * What each member of a team is told about the conversation so far.
+ *
+ * The two things every multi-agent framework does, named rather than assumed —
+ * see {@link TeamContextSpec.sharing}.
+ */
+export type TeamContextSharing = 'shared' | 'isolated' | 'own-turns';
+
+/** What each member is told about the conversation so far. */
+export interface TeamContextSpec {
+  /**
+   * How much of the conversation each member is given.
+   *
+   * - `shared` — one thread, and every member is sent all of it. What a
+   *   supervisor team wants: routing only makes sense if the member receiving
+   *   the work can see what was already said. AutoGen group chats, LangGraph
+   *   supervisors and OpenAI handoffs all work this way.
+   * - `isolated` — a thread per member, swapped when the person switches. What
+   *   a delegation model wants: the child runs blind and returns a result, as
+   *   Claude Code subagents and CrewAI tasks do. Choose it when members would
+   *   mislead each other more than they would help.
+   * - `own-turns` — one thread on screen, but each member is sent only the
+   *   turns it took part in. Deliberately makes what the reader sees differ
+   *   from what the model sees, which is a cost worth naming.
+   *
+   * A team's property rather than a runtime's setting, because it follows from
+   * what the team *is*.
+   */
+  sharing: TeamContextSharing;
+}
+
+/** How far members may hand work to each other, and to subagents. */
+export interface TeamDelegationSpec {
+  /** Levels of delegation allowed; 0 forbids it. */
+  maxDepth: number;
+  /** Whether a member may hand work to another member of the same team. */
+  allowPeerDelegation: boolean;
+  /** Whether members also get the general-purpose subagent. */
+  includeGeneralPurpose: boolean;
+}
+
 export interface TeamAgentspec {
   /** Agent identifier within the team */
   id: string;
   /** Display name for the team agent */
   name: string;
-  /** Role within the team (e.g., 'Primary · Initiator', 'Secondary', 'Final') */
+  /**
+   * Agent catalogue reference, `id` or `id:version`.
+   *
+   * A member that names one inherits its model, tools, prompt and subagents;
+   * the fields below then say what is different about it in this team.
+   */
+  ref?: string;
+  /** Structural role: coordinator, initiator, contributor, reviewer, finalizer. */
   role?: string;
+  /**
+   * Member ids that must finish first.
+   *
+   * What makes the running order computable — it replaced a prose `trigger`
+   * that read well and could not be executed.
+   */
+  dependsOn?: string[];
+  /** Specialists this member may delegate to. */
+  subagents?: TeamSubagentspec[];
   /** Goal or objective for this agent */
   goal?: string;
   /** AI model identifier */
@@ -31,10 +105,23 @@ export interface TeamAgentspec {
  * Supervisor agent configuration for a team.
  */
 export interface TeamSupervisorSpec {
-  /** Supervisor agent name */
+  /** Display name for the supervisor. */
   name: string;
-  /** AI model used by the supervisor */
+  /** Agent catalogue reference, `id` or `id:version`. */
+  ref?: string;
+  /** Model id, overriding the referenced agent's. */
   model?: string;
+  /** What the supervisor is accountable for across the whole run. */
+  goal?: string;
+  /** Supervision prompt, for a supervisor defined only here. */
+  instructions?: string;
+  /** Whether a person signs off the routing decisions. */
+  approval?: string;
+  /**
+   * Whether the supervisor may end the run before every member has gone.
+   * False makes it a router only.
+   */
+  canTerminate?: boolean;
 }
 
 /**
@@ -126,9 +213,14 @@ export interface TeamSpec {
   /** Execution mode: 'sequential' or 'parallel' */
   executionMode: string;
   /** Supervisor agent configuration */
-  supervisor?: TeamSupervisorSpec;
+  /** Who decides what happens next. Every team has one. */
+  supervisor: TeamSupervisorSpec;
   /** Instructions for routing tasks between agents */
   routingInstructions?: string;
+  /** How far members may hand work to each other, and to subagents. */
+  delegation?: TeamDelegationSpec;
+  /** What each member is told about the conversation so far. */
+  context?: TeamContextSpec;
   /** Validation settings for the team */
   validation?: TeamValidationSpec;
   /** List of agents in the team */
