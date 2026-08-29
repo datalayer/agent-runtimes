@@ -48,6 +48,15 @@ export type SandboxSnapshot = {
    * fresh answer when the target moves instead of a stale closure.
    */
   target?: string;
+  /**
+   * The agent-runtimes server backing this sandbox, when it is not the host's.
+   *
+   * A Datalayer runtime brings its own: the agent runs on the pod, not on the
+   * server the workspace was opened against, so a chat addressed at
+   * `workspace.serverUrl` would be talking to the wrong machine. Absent for
+   * every other target, where the two are the same thing.
+   */
+  agentBaseUrl?: string;
 };
 
 /**
@@ -100,9 +109,15 @@ export const IDLE_SANDBOX_TARGET_SIGNAL: ReadonlySignal<undefined> = {
  * in-page agent is given to reach them. A tool addressed to a different id than
  * the surface on screen edits nothing and reports success, which is the worst
  * way for this to be wrong.
+ *
+ * Keyed on the *session*, never on the agent. Keying it on the agent meant
+ * every switch renamed the surface, and a renamed surface is a new one: the
+ * notebook remounted empty, so changing who you were talking to silently threw
+ * away the work you were talking about. The notebook belongs to the workspace;
+ * the agent is only a visitor to it.
  */
-export function loopSurfaceId(agentId: string | undefined): string {
-  return `loop-${agentId || 'default'}`;
+export function loopSurfaceId(sessionId: string | undefined): string {
+  return `loop-${sessionId || 'default'}`;
 }
 
 /**
@@ -117,8 +132,26 @@ export type LoopWorkspaceContext = {
   serverUrl: string;
   /** Agent spec bound to the session. */
   agentId: string;
+  /**
+   * Point the session at a different agent.
+   *
+   * For whichever plugin offers the choice. It used to keep the new name in
+   * its own state, which changed the label and nothing else: everything that
+   * matters — the chat's endpoint, the sandbox connection, the notebook's id —
+   * reads `agentId` from here, so a switch that does not reach this context is
+   * a switch that did not happen.
+   */
+  setAgentId: (agentId: string) => void;
   /** Conversation being continued, when there is one. */
   conversationId?: string;
+  /**
+   * The id the notebook and the document on screen are addressed by.
+   *
+   * Fixed for the life of the workspace, so it survives an agent switch — see
+   * `loopSurfaceId`. Read this rather than deriving one, or the tools an agent
+   * is handed will address a surface nobody is looking at.
+   */
+  surfaceId: string;
   /** Active model id, as an agentspecs catalog id. */
   model?: string;
   /** The sandbox, as last reported. */

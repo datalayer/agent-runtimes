@@ -85,11 +85,15 @@ describe('the sandbox service', () => {
     reactor.start();
 
     // The sandbox does not stop existing when someone switches tabs, and the
-    // control that moves it belongs where its state is shown.
+    // control that moves it belongs where its state is shown. Two in the
+    // status slot: the one that reports the sandbox, and the one that
+    // launches the Datalayer target's agent — both keep the workspace
+    // informed and neither draws anything.
     const output = reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME);
-    expect(output?.components?.map(c => c.slot)).toEqual([
-      'loop.status',
-      'loop.header',
+    expect(output?.components?.map(c => c.id)).toEqual([
+      'sandbox-status',
+      'datalayer-agent',
+      'sandbox-selector',
     ]);
   });
 });
@@ -314,18 +318,27 @@ describe('moving the sandbox', () => {
 
     const configured = asked.filter(a => a.url.endsWith('/sandbox/configure'));
     const restarted = asked.filter(a => a.url.endsWith('/sandbox/restart'));
+    /*
+     * Datalayer is not among them, and that is the point.
+     *
+     * It used to tell the *host's* server to put its sandbox on a Datalayer
+     * runtime — a Jupyter server in the cloud with the agent still running
+     * locally. It now allocates a runtime and creates an agent on it from an
+     * agentspec, which `DatalayerAgentBridge` does through the agent hook and
+     * no `configure` call can express.
+     */
     expect(
       configured.map(a => (a.body as { variant: string }).variant),
-    ).toEqual(['datalayer', 'jupyter-server', 'jupyter-server']);
+    ).toEqual(['jupyter-server', 'jupyter-server']);
     // Local and the anonymous server run the same variant and differ by the
     // URL, which is the only thing that tells them apart on the wire.
     expect(
-      (configured[1].body as { jupyter_url?: string }).jupyter_url,
+      (configured[0].body as { jupyter_url?: string }).jupyter_url,
     ).toBeUndefined();
     expect(
-      (configured[2].body as { jupyter_url?: string }).jupyter_url,
+      (configured[1].body as { jupyter_url?: string }).jupyter_url,
     ).toContain('prod1.datalayer.run');
-    expect(restarted).toHaveLength(3);
+    expect(restarted).toHaveLength(2);
   });
 
   it('launches Local as an agent with its own Jupyter sandbox', async () => {
@@ -392,9 +405,9 @@ describe('moving the sandbox', () => {
 
     try {
       const sandbox = build('browser');
-      await expect(sandbox.setTarget('datalayer')).rejects.toThrow(
-        /could not/i,
-      );
+      // A server-backed target, since that is what a server can refuse.
+      // Datalayer no longer asks the host's server for anything.
+      await expect(sandbox.setTarget('jupyter')).rejects.toThrow(/could not/i);
       expect(sandbox.target.peek()).toBe('browser');
     } finally {
       globalThis.fetch = original;

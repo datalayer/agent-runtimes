@@ -116,6 +116,25 @@ export type LoopWorkspaceExampleProps = {
    * one.
    */
   showGraph?: boolean;
+  /**
+   * Whether the plugin manager is mounted.
+   *
+   * True by default: the sidebar is how this example shows that the extension
+   * model is real, and switching plugins on and off is the point of it.
+   *
+   * False leaves the plugin out, which takes the sidebar with it — the column
+   * exists because something contributed to it, so there is no empty gutter
+   * to tidy up afterwards. What a public page wants: a visitor came for a
+   * notebook and an agent, not for a list of the parts they are made of.
+   */
+  showPluginsManager?: boolean;
+  /**
+   * Whether the header offers a choice of view.
+   *
+   * True by default. False opens on `defaultEditor` and stays there, for a
+   * host embedding the workspace to show one thing.
+   */
+  showViewSelector?: boolean;
 };
 
 export function LoopWorkspaceExample({
@@ -128,6 +147,8 @@ export function LoopWorkspaceExample({
   showAgentVariants = true,
   teamId = 'jupyter-notebook',
   showGraph = true,
+  showPluginsManager = true,
+  showViewSelector = true,
   inheritTheme = false,
   defaultEditor = 'notebook',
 }: LoopWorkspaceExampleProps): JSX.Element {
@@ -166,7 +187,10 @@ export function LoopWorkspaceExample({
         // both to show neither would put two plugins in the sidebar list that
         // do nothing.
         ...(showGraph ? [GraphViewPlugin] : []),
-        PluginsPanelPlugin,
+        // Same reasoning as the graph: mounted or absent, never mounted and
+        // hidden. The shell draws the sidebar only when something contributes
+        // to it, so leaving this out is what removes the column.
+        ...(showPluginsManager ? [PluginsPanelPlugin] : []),
       ]),
     [
       serverUrl,
@@ -174,6 +198,7 @@ export function LoopWorkspaceExample({
       showAgentVariants,
       teamId,
       showGraph,
+      showPluginsManager,
       defaultEditor,
     ],
   );
@@ -256,6 +281,7 @@ export function LoopWorkspaceExample({
           agentId={agentId}
           reactor={reactor}
           manageReactor={false}
+          showViewSelector={showViewSelector}
         />
       </Box>
     </QueryClientProvider>

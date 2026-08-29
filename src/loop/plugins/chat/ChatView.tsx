@@ -58,7 +58,6 @@ import {
   LoopAgentGate,
   LoopChatSurface,
   canOpenView,
-  loopSurfaceId,
   type ChatSurfaceContribution,
   type LoopViewProps,
 } from '../../core';
@@ -91,9 +90,27 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * for nothing. What the host configured is true from the first render; what
    * the surface can do about it yet is the surface's business.
    */
-  const [surfaceId, setSurfaceId] = useState<string>(() =>
-    defaultSurface === 'none' ? NO_SURFACE : defaultSurface,
-  );
+  /*
+   * Nothing open yet, whatever the host asked for.
+   *
+   * Opening the default on the first render puts an editor on screen before
+   * its surface exists — plugins arrive as they activate — and before the
+   * sandbox it needs is running. What the reader saw then was not the notebook
+   * but the notebook's "needs a running sandbox" placeholder, which is a worse
+   * answer than an empty chat that fills in a moment later.
+   *
+   * The effect below opens it the moment it can actually be opened.
+   */
+  const [surfaceId, setSurfaceId] = useState<string>(NO_SURFACE);
+
+  /**
+   * Whether the reader has chosen a surface themselves.
+   *
+   * Once they have, the default is spent. Without this it re-applies every
+   * time a new surface lands — so closing the notebook would reopen it as soon
+   * as any other plugin activated, which reads as the close button not working.
+   */
+  const surfaceChosen = useRef(false);
 
   const surfaces = useContributions(LoopChatSurface);
   // Asked, not assumed: the chat cannot know whether anything is listening,
@@ -158,29 +175,48 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   );
 
   /**
-   * Whether the surface on screen has ever been openable.
+   * The reader picking a surface, including picking none.
    *
-   * The effect below closes an editor whose sandbox went away, and that is a
-   * transition: it has to have been openable to stop being so. Without this it
-   * also fires on a surface that is not openable *yet*, which is every default
-   * editor for as long as the sandbox takes to start — the selection would be
-   * cleared a render after it was made.
+   * It records the choice as well as making it: from here on the host's
+   * default is spent, so a surface closed stays closed.
    */
-  const wasOpenable = useRef(false);
+  const chooseSurface = useCallback((next: string) => {
+    surfaceChosen.current = true;
+    setSurfaceId(next);
+  }, []);
+
+  /** The surface the host asked to open, once its plugin has contributed it. */
+  const wanted = useMemo(
+    () =>
+      defaultSurface === NO_SURFACE || defaultSurface === 'none'
+        ? undefined
+        : surfaces.find(entry => entry.value.surfaceId === defaultSurface),
+    [surfaces, defaultSurface],
+  );
+
+  /*
+   * Open the default the moment it can be opened.
+   *
+   * Both conditions are the point. A surface arrives when its plugin
+   * activates, so it may not exist on the first render; and these two need a
+   * running sandbox, which takes as long as a Pyodide kernel takes to start.
+   * Waiting for both is what turns "configured for the notebook" into a
+   * notebook rather than a placeholder.
+   */
+  useEffect(() => {
+    if (surfaceChosen.current || !wanted) {
+      return;
+    }
+    if (canOpenView(wanted.value, workspace)) {
+      setSurfaceId(defaultSurface);
+    }
+  }, [wanted, workspace, defaultSurface]);
 
   // An editor that stops being openable — its sandbox went away — should not
-  // stay on screen claiming otherwise.
+  // stay on screen claiming otherwise. Not a choice by the reader, so the
+  // default may open it again if the sandbox comes back.
   useEffect(() => {
-    if (!active) {
-      wasOpenable.current = false;
-      return;
-    }
-    if (canOpenView(active, workspace)) {
-      wasOpenable.current = true;
-      return;
-    }
-    if (wasOpenable.current) {
-      wasOpenable.current = false;
+    if (active && !canOpenView(active, workspace)) {
       setSurfaceId(NO_SURFACE);
     }
   }, [active, workspace]);
@@ -235,7 +271,18 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Addressed by `loopSurfaceId` so the tools and the surface on screen can
    * never be pointed at different notebooks.
    */
-  const notebookTools = useNotebookTools(loopSurfaceId(workspace.agentId));
+  const notebookTools = useNotebookTools(workspace.surfaceId);
+
+  /*
+   * Where this workspace's agent actually lives.
+   *
+   * A Datalayer runtime brings its own agent-runtimes server: the agent is
+   * created on the pod from an agentspec, not on the server the workspace was
+   * opened against. Addressing the latter would be talking to a machine that
+   * has never heard of it. The same value for every other target, where the
+   * two are the same server.
+   */
+  const agentServerUrl = workspace.sandbox.agentBaseUrl || workspace.serverUrl;
 
   /*
    * Who a single request may be addressed to.
@@ -279,12 +326,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           })
         : {
             type: 'ag-ui',
-            endpoint: `${workspace.serverUrl}/api/v1/ag-ui/${agentId}/`,
+            endpoint: `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
             agentId,
             // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
             // strip one trailing `config`/`configure` segment to find the API
             // base, so the longer form doubles it.
-            configEndpoint: `${workspace.serverUrl}/api/v1/configure`,
+            configEndpoint: `${agentServerUrl}/api/v1/configure`,
             enableConfigQuery: true,
           },
     [
@@ -297,7 +344,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       spec?.model,
       spec?.systemPrompt,
       workspace.model,
-      workspace.serverUrl,
+      agentServerUrl,
     ],
   );
 
@@ -314,7 +361,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         <SurfacePicker
           surfaces={surfaces.map(entry => entry.value)}
           active={surfaceId}
-          onChange={setSurfaceId}
+          onChange={chooseSurface}
           workspace={workspace}
         />
       ) : null}

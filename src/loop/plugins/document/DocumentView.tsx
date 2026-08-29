@@ -20,7 +20,6 @@ import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
 import {
   LoopDocumentToolbar,
   LoopDocumentToolbarItem,
-  loopSurfaceId,
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
@@ -31,7 +30,7 @@ export default function DocumentView({
 }: ChatSurfaceProps): JSX.Element {
   const service = useSandboxService();
   const snapshot = useSignalValue(service.snapshot);
-  const documentId = loopSurfaceId(workspace.agentId);
+  const documentId = workspace.surfaceId;
 
   // Read before the early return, not after: the hook count must not depend on
   // whether a sandbox happens to be running. As with the notebook, the bar

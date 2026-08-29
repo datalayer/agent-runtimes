@@ -25,7 +25,7 @@
  * @module loop/shell/LoopWorkspace
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Box } from '@primer/react';
 import {
@@ -49,6 +49,7 @@ import {
   canOpenView,
   createPromptChannel,
   parseCommand,
+  loopSurfaceId,
   type LoopWorkspaceContext,
   type SandboxSnapshot,
   type ViewControls,
@@ -95,6 +96,15 @@ export type LoopWorkspaceProps = {
    * views are the same views; only the chrome around them gives way.
    */
   layout?: 'page' | 'panel';
+  /**
+   * Whether the header offers a choice of view.
+   *
+   * True by default. False when the host has already decided what the
+   * workspace is for — an embed that exists to show one notebook does not
+   * want a tab strip inviting the reader somewhere else — and the workspace
+   * opens on `initialViewType` and stays there.
+   */
+  showViewSelector?: boolean;
 };
 
 /** Build the platform for a set of plugins. */
@@ -115,6 +125,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     initialViewType,
     onSend,
     layout = 'page',
+    showViewSelector = true,
   } = props;
 
   // Building the platform is a one-time act: rebuilding it on every render
@@ -136,6 +147,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       initialViewType={initialViewType}
       onSend={onSend}
       layout={layout}
+      showViewSelector={showViewSelector}
     />
   );
 }
@@ -154,14 +166,35 @@ type BodyProps = Omit<
  */
 function WorkspaceBody({
   serverUrl,
-  agentId,
+  agentId: initialAgentId,
   conversationId,
   model,
   initialSandbox,
   initialViewType,
   onSend,
   layout = 'page',
+  showViewSelector = true,
 }: BodyProps): JSX.Element {
+  /*
+   * Which agent the session is talking to.
+   *
+   * State rather than the prop straight through, because it can change from
+   * inside: a picker in the header points the session at another agent, and
+   * everything downstream — the chat's endpoint, the sandbox connection, the
+   * notebook's id — reads it from the workspace.
+   */
+  const [agentId, setAgentId] = useState(initialAgentId);
+  /* Minted once per mount, and deliberately not derived from `agentId`: the
+   * surfaces outlive whichever agent is currently attached to them. */
+  const surfaceIdRef = useRef(
+    loopSurfaceId(conversationId ?? `session-${Date.now().toString(36)}`),
+  );
+  // A host that re-mounts the workspace on a different agent wins: its prop is
+  // the session it means to open, and a stale in-page choice must not survive.
+  useEffect(() => {
+    setAgentId(initialAgentId);
+  }, [initialAgentId]);
+
   const [activeViewType, setActiveViewType] = useState(initialViewType ?? '');
   // Seeded by the host (a handoff carries what the terminal knew), then kept
   // current by whichever plugin owns the sandbox.
@@ -233,6 +266,8 @@ function WorkspaceBody({
     () => ({
       serverUrl,
       agentId,
+      surfaceId: surfaceIdRef.current,
+      setAgentId,
       conversationId,
       model,
       sandbox,
@@ -308,7 +343,9 @@ function WorkspaceBody({
           flex: '0 0 auto',
         }}
       >
-        <ViewSwitcher views={views} workspace={workspace} compact={compact} />
+        {showViewSelector ? (
+          <ViewSwitcher views={views} workspace={workspace} compact={compact} />
+        ) : null}
         <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
       </Box>
 

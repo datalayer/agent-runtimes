@@ -22,6 +22,7 @@ import { useState } from 'react';
 import { ActionList, AnchoredOverlay, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
+import { CheckIcon } from '@primer/octicons-react';
 import { useSignalValue } from '@datalayer/reactor/react';
 
 import type { TeamSelection } from './team';
@@ -72,7 +73,12 @@ function TeamMemberMenu({
         />
       )}
     >
-      <ActionList selectionVariant="single">
+      {/* Bounded, and the descriptions wrap inside it.
+          `ActionList.Description` lays a description on one line and lets the
+          overlay grow to hold it, so a sentence about an agent produced a menu
+          wider than the workspace. */}
+      <Box sx={{ width: 320, maxWidth: '100vw' }}>
+        <ActionList selectionVariant="single">
         <ActionList.GroupHeading as="h3">
           {selection.team.name}
         </ActionList.GroupHeading>
@@ -99,12 +105,22 @@ function TeamMemberMenu({
             </Box>
             {member.description ? (
               <ActionList.Description variant="block">
-                {member.description}
+                {/* Wrapped rather than laid on one line, which is what made
+                    the overlay wider than the workspace. */}
+                <Box as="span" sx={{ display: 'block', whiteSpace: 'normal' }}>
+                  {member.description}
+                </Box>
               </ActionList.Description>
             ) : null}
+            {/* The tick, so the menu says which agent is listening rather than
+                leaving it to be inferred from the icon behind it. */}
+            <ActionList.TrailingVisual>
+              {member.id === selectedId ? <CheckIcon /> : null}
+            </ActionList.TrailingVisual>
           </ActionList.Item>
         ))}
-      </ActionList>
+        </ActionList>
+      </Box>
     </AnchoredOverlay>
   );
 }

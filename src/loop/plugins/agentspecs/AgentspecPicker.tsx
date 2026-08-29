@@ -82,13 +82,23 @@ export function AgentspecPicker({
           },
         );
         if (response.ok) {
+          // The workspace, not just this control. Everything that follows the
+          // agent — the chat's endpoint, the sandbox connection, the
+          // notebook's id — reads it from there, so setting only the local
+          // label changed the name in the header and nothing else.
           setActive(agentId);
+          workspace.setAgentId(agentId);
         }
       } finally {
         setSwitching(false);
       }
     },
-    [workspace.agentId, workspace.conversationId, workspace.serverUrl],
+    [
+      workspace.agentId,
+      workspace.conversationId,
+      workspace.serverUrl,
+      workspace.setAgentId,
+    ],
   );
 
   const current = agents.find(agent => agent.id === active);

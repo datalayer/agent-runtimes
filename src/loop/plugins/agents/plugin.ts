@@ -31,6 +31,7 @@ import {
   LoopViewType,
 } from '../../core';
 import { SandboxStatusBridge } from './SandboxStatusBridge';
+import { DatalayerAgentMount } from './DatalayerAgentMount';
 import type { ServiceManagerSource } from './browserService';
 import { SandboxSelector } from './SandboxSelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
@@ -88,6 +89,13 @@ export type AgentsConfig = {
    * teamspec decides what each of them is told about the conversation.
    */
   teamId?: string;
+  /**
+   * The agentspec the Datalayer target runs.
+   *
+   * That target allocates a runtime and creates an agent on it from this spec.
+   * The other targets take their agent from wherever they already run one.
+   */
+  datalayerAgentSpecId?: string;
 };
 
 export type AgentsOutput = {
@@ -142,6 +150,17 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
           slot: LoopSlots.status,
           id: 'sandbox-status',
           Component: SandboxStatusBridge as never,
+        },
+        {
+          // Renders nothing; it launches the Datalayer target's agent and
+          // reports the runtime. In the status slot because that is where the
+          // things that keep the workspace informed live. It reads the spec
+          // from this plugin's config itself, so no closure is needed here,
+          // and it is loaded lazily so the runtime stack it needs stays out
+          // of every host's module graph.
+          slot: LoopSlots.status,
+          id: 'datalayer-agent',
+          Component: DatalayerAgentMount as never,
         },
         // In the header, where the reader can see where their code is running
         // and move it. Left out entirely rather than disabled when the host

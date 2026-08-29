@@ -114,10 +114,20 @@ export const TARGET_SPECS: Record<SandboxTarget, SandboxTargetSpec> = {
   },
   datalayer: {
     label: 'Datalayer',
-    hint: 'A Datalayer runtime, with the agent that comes with it.',
+    hint: 'A Datalayer runtime running the agent this workspace asks for.',
     hasAgent: true,
     noAgentReason: '',
-    configure: { variant: 'datalayer' },
+    /*
+     * No `configure`, and that is the change.
+     *
+     * It used to tell the *host's* agent-runtimes server to put its sandbox on
+     * a Datalayer runtime — a Jupyter server in the cloud with the agent still
+     * running locally, which is not what the target says it is. A person
+     * picked Datalayer and stayed on whatever agent the host had.
+     *
+     * The agent is launched from an agentspec instead, by
+     * `DatalayerAgentBridge`, which reports the runtime it gets back.
+     */
   },
 };
 

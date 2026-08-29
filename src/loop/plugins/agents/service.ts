@@ -38,6 +38,14 @@ export type SandboxStatusPayload = {
   execution_state?: string;
   is_executing?: boolean;
   jupyter_token?: string;
+  /**
+   * The agent-runtimes server backing this sandbox, when it is not the host's.
+   *
+   * Reported by whichever plugin allocated it rather than read from a server's
+   * status: a Datalayer runtime brings its own agent, and the workspace has no
+   * other way to learn where it is.
+   */
+  agent_base_url?: string;
 };
 
 export type SandboxService = {
@@ -125,6 +133,7 @@ export function summarize(
     kernelId: status.kernel_id,
     jupyterUrl: status.jupyter_url,
     jupyterToken: status.jupyter_token,
+    agentBaseUrl: status.agent_base_url,
   };
 }
 
