@@ -7,11 +7,16 @@
  * Where an example's code runs, and whether an agent runs with it.
  *
  * Four positions rather than two, because "local or cloud" hid a second
- * question a person actually has: is there an agent here at all? Two of these
- * targets are a sandbox and nothing else — the browser, and an anonymous
- * Jupyter server — and an example mounted on them can execute code but has
- * nobody to talk to. Saying so in the model means the chat can be shown and
- * switched off with a reason, rather than each example guessing.
+ * question a person actually has: is there an agent here at all? One of these
+ * targets is a sandbox and nothing else — an anonymous Jupyter server — and an
+ * example mounted on it can execute code but has nobody to talk to. Saying so
+ * in the model means the chat can be shown and switched off with a reason,
+ * rather than each example guessing.
+ *
+ * The browser used to be the second such target. It has an agent now: the loop
+ * turns in the page with the Vercel AI SDK, which needs no server behind it.
+ * The spec's own `harness` does not decide that — the location does, because
+ * the browser cannot turn a pydantic-ai loop whatever a spec asks for.
  *
  * The examples shell owns launching and switching. An example reads the target
  * and what it offers; it never creates a runtime itself.
@@ -24,7 +29,7 @@ import { useStore } from 'zustand';
 
 /** Where the code runs. */
 export type ExampleRuntimeTarget =
-  /** Pyodide in this page. Sandbox only — nothing leaves the machine. */
+  /** Pyodide in this page, and the agent loop with it. */
   | 'browser'
   /** A local agent-runtimes server and the Jupyter server beside it. */
   | 'local'
@@ -61,10 +66,12 @@ export const RUNTIME_TARGETS: ReadonlyArray<ExampleRuntimeTarget> = [
 const CAPABILITIES: Record<ExampleRuntimeTarget, RuntimeTargetCapabilities> = {
   browser: {
     label: 'Browser',
-    hint: 'Python in this page (Pyodide). Sandbox only — no agent, and nothing leaves your machine.',
-    hasAgent: false,
-    requiresAuth: false,
-    noAgentReason: 'No agent in the browser',
+    hint: 'Python in this page (Pyodide), with the agent loop running here too — no runtime to allocate. Only the model is asked over the network.',
+    hasAgent: true,
+    // The agent needs none, but the model it asks does: the inference service
+    // holds the provider credentials and admits signed-in members only.
+    requiresAuth: true,
+    noAgentReason: '',
   },
   local: {
     label: 'Local',

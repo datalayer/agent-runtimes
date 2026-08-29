@@ -7435,95 +7435,6 @@ Rules you do not break:
   subagents: undefined,
 };
 
-export const JUPYTER_NOTEBOOK_COMPACTOR_INBROWSER_AGENTSPEC_0_0_1: Agentspec = {
-  id: 'jupyter-notebook-compactor-inbrowser',
-  version: '0.0.1',
-  name: 'Notebook Compactor (in browser)',
-  description: `Rewrite a notebook as short as it can be without changing what it computes, with the agent loop running in your own browser — no runtime to allocate and nothing to install.`,
-  tags: ['notebook', 'refactoring', 'cleanup', 'in-browser'],
-  domain: undefined,
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [],
-  skills: [].filter(Boolean) as SkillSpec[],
-  tools: [],
-  frontendTools: [FRONTEND_TOOL_MAP['jupyter-notebook-edit:0.0.1']],
-  environmentName: 'ai-agents-env',
-  icon: 'fold',
-  emoji: '🗜️',
-  color: '#8250DF',
-  suggestions: [
-    'Compact this notebook without changing any of its results.',
-    'Merge the setup cells and drop the outputs that are no longer reproducible.',
-    'Tighten the markdown so each section says one thing.',
-    'Show me what you would remove before you remove it.',
-  ],
-  welcomeMessage:
-    'Hi! I make notebooks shorter without making them different — and I run right here in your browser, with no runtime to wait for and nothing to install. Point me at the notebook on this page and I will merge what belongs together, remove dead code and stale outputs, and tell you exactly how many cells and lines went.',
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: undefined,
-  harness: 'vercel-ai',
-  systemPrompt: `You are the Notebook Compactor. You shorten a notebook without changing what it computes.
-How to work:
-1. Read the whole notebook first with the notebook tools. Never edit a cell
-   you have not read in full.
-2. Identify what can go without changing results: duplicated imports,
-   re-defined variables, debugging leftovers, cells whose output nothing
-   downstream uses, and prose that repeats the code beneath it.
-3. Merge cells only when they form one step. Two cells that a reader would
-   always run together are one cell; two cells that a reader might run apart
-   are not.
-4. Apply the whole compaction as one batch, so the notebook is never left
-   half-rewritten. It is a single undo for the person who asked.
-5. Report the saving in cells and lines — before and after, and the list of
-   cells you touched. A claim of "much shorter" is not a result; "31 cells to
-   18, 240 lines to 156" is.
-
-Rules you do not break:
-- Never change what the notebook computes. If shortening something would
-  change a result, leave it and say why.
-- Never delete a cell whose output another cell depends on. - Never silently drop a user's prose. Tighten it or leave it. - When you are unsure whether something is dead, say so instead of guessing.
-You are running in the reader's browser, with no runtime behind you. You cannot execute the notebook to check yourself, so where the server-side compactor would verify by running, you reason from what you read — and when reading is not enough to be sure, you say so rather than guessing. Never claim to have run anything.`,
-  systemPromptCodemodeAddons: undefined,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: [
-    {
-      name: 'Outputs Unchanged After Compaction',
-      category: 'coding',
-      task_count: 120,
-    },
-    {
-      name: 'Cells And Lines Actually Reduced',
-      category: 'coding',
-      task_count: 120,
-    },
-    { name: 'No Dependency Broken', category: 'reasoning', task_count: 80 },
-    {
-      name: 'Report Names Every Cell Touched',
-      category: 'reasoning',
-      task_count: 60,
-    },
-  ],
-  codemode: { enabled: false },
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  toolHooks: undefined,
-  parameters: undefined,
-  subagents: undefined,
-};
-
 export const JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1: Agentspec = {
   id: 'jupyter-notebook-compactor',
   version: '0.0.1',
@@ -7572,7 +7483,8 @@ How to work:
 Rules you do not break:
 - Never change what the notebook computes. If shortening something would
   change a result, leave it and say why.
-- Never delete a cell whose output another cell depends on. - Never silently drop a user's prose. Tighten it or leave it. - When you are unsure whether something is dead, say so instead of guessing.`,
+- Never delete a cell whose output another cell depends on. - Never silently drop a user's prose. Tighten it or leave it. - When you are unsure whether something is dead, say so instead of guessing.
+Where you can execute the notebook, verify by running rather than by eye. Where you cannot — running in a reader's browser, there is no runtime behind you — reason from what you read, say so when reading is not enough to be sure, and never claim to have run anything.`,
   systemPromptCodemodeAddons: `Verify your reasoning about dead code by executing the notebook's dependency chain rather than reading it by eye. Prefer evidence over inference when deciding what is unused.`,
   goal: undefined,
   protocol: undefined,
@@ -11172,8 +11084,6 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'gallery-weekly-executive-briefing':
     GALLERY_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1,
   'jupyter-cell-fixer': JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1,
-  'jupyter-notebook-compactor-inbrowser':
-    JUPYTER_NOTEBOOK_COMPACTOR_INBROWSER_AGENTSPEC_0_0_1,
   'jupyter-notebook-compactor': JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1,
   'jupyter-notebook-reproducer': JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1,
   'loop-base': LOOP_BASE_AGENTSPEC_0_0_1,

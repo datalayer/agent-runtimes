@@ -11,11 +11,12 @@
  * written beside the imports runs after the module that needed it has already
  * thrown.
  *
- * None of this says anything about the workspace. It is the environment being
- * smaller than a browser.
+ * None of this says anything about the code under test. It is the environment
+ * being smaller than a browser, so it is shared by every suite that renders
+ * rather than copied into each.
  */
 
-// This file runs in both environments this suite uses — `node` for the plain
+// This file runs in both environments these suites use — `node` for the plain
 // tests, `jsdom` for the ones that render — so every stub is guarded on the
 // thing it builds from actually existing.
 
@@ -27,6 +28,12 @@ if (
 ) {
   (globalThis as { DragEvent?: unknown }).DragEvent = class extends Event {};
 }
+
+// React only allows `act` to flush effects when told it is in a test
+// environment; without this every render warns even though it worked.
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 // Primer's theme reads this on mount.
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

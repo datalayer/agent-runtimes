@@ -39,7 +39,6 @@ import { useThemeBrandColor } from './themedProvider';
 /** Trailing edge of the toolbar: past the last item the notebook contributes. */
 const KERNEL_INDICATOR_ORDER = NOTEBOOK_TOOLBAR_ITEM_ORDERS.cellType + 100;
 
-
 /**
  * The kernel indicator for one notebook.
  *

@@ -18,13 +18,7 @@
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { $getRoot, $createParagraphNode, EditorState } from 'lexical';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
@@ -72,9 +66,7 @@ import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
-import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
-
-import { DEFAULT_MODEL } from '../specs';
+import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import './lexical/lexical-theme.css';
@@ -83,32 +75,6 @@ import './lexical/lexical-theme.css';
 const LEXICAL_ID = 'agui-lexical-example';
 
 const AGENT_ID = 'lexical-agent-runtime-example';
-
-function getJupyterSandboxUrl(
-  serviceManager?: ServiceManager.IManager,
-): string | undefined {
-  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
-  if (!baseUrl) {
-    return undefined;
-  }
-
-  if (baseUrl.includes('token=')) {
-    return baseUrl;
-  }
-
-  const token = serviceManager?.serverSettings?.token;
-  if (!token) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
 
 /**
  * Hook to ensure the example-agent exists on the server.
@@ -369,53 +335,37 @@ function LexicalWithChat({
   content,
   serviceManager,
 }: LexicalWithChatProps): JSX.Element {
-  const [createRequested, setCreateRequested] = useState(false);
-  const jupyterSandboxUrl = useMemo(
-    () => getJupyterSandboxUrl(serviceManager),
-    [serviceManager],
-  );
-  const { agentId, baseUrl, isReady, status, error, createAgent } =
-    useExampleAgentRuntime({
-      exampleId: 'LexicalAgentExample',
-      agentName: AGENT_ID,
-      autoCreateAgent: false,
-      agentConfig: {
-        name: AGENT_ID,
-        description: 'Demo agent for lexical example',
-        protocol: 'vercel-ai',
-        model: DEFAULT_MODEL,
-        systemPrompt:
-          'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
-        enableCodemode: false,
-        sandboxVariant: 'jupyter-server',
-        jupyterSandbox: jupyterSandboxUrl,
-      },
-    });
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${AGENT_ID}`;
+  // Lifted out of the editor below, and declared here so the hook that routes
+  // them is downstream of them.
+  const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
 
-  useEffect(() => {
-    if (!jupyterSandboxUrl || createRequested || agentId) {
-      return;
-    }
-    setCreateRequested(true);
-    void createAgent({
-      name: AGENT_ID,
-      description: 'Demo agent for lexical example',
-      protocol: 'vercel-ai',
-      model: DEFAULT_MODEL,
-      systemPrompt:
-        'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
-      enableCodemode: false,
-      sandboxVariant: 'jupyter-server',
-      jupyterSandbox: jupyterSandboxUrl,
-    }).catch(() => {
-      setCreateRequested(false);
-    });
-  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
-  const effectiveReady = isReady || status === 'ready';
+  const {
+    agentReady,
+    protocol: protocolConfig,
+    chatFrontendTools,
+    error,
+    unavailableReason,
+  } = useExampleJupyterAgent({
+    exampleId: 'LexicalAgentExample',
+    agentName: AGENT_ID,
+    description: 'Demo agent for lexical example',
+    systemPrompt:
+      'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
+    serviceManager,
+    // Lifted out of the editor by `onToolsReady`, so they reach the hook a
+    // render later than in the other examples. The protocol config is rebuilt
+    // when they arrive.
+    frontendTools: tools,
+  });
+  // One failed attempt is reported, not retried — see
+  // `useExampleJupyterAgent`.
+  const chatError = error || unavailableReason;
+
+  // The example's own agent, not merely the runtime: on the cloud target the
+  // runtime is ready before this agent has been registered on it.
+  const effectiveReady = agentReady;
 
   // State to hold tools - populated by LexicalToolsPlugin inside the context
-  const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
 
   // Stable callback for receiving tools from LexicalToolsPlugin
   // NOTE: Do NOT use a key={...} on ChatFloating to force re-render on tool changes.
@@ -442,11 +392,11 @@ function LexicalWithChat({
       <LexicalUI
         content={content}
         serviceManager={serviceManager}
-        endpoint={vercelAiEndpoint}
+        endpoint={protocolConfig.endpoint}
         onToolsReady={handleToolsReady}
       />
 
-      {error && (
+      {chatError && (
         <Box
           sx={{
             position: 'fixed',
@@ -459,21 +409,20 @@ function LexicalWithChat({
             maxWidth: 300,
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>Error:</strong> {chatError}
         </Box>
       )}
 
       {effectiveReady && (
         <ChatFloating
           kernelIndicatorPlacement="right"
-          protocol="vercel-ai"
-          endpoint={vercelAiEndpoint}
+          protocol={protocolConfig}
           title="Lexical AI Agent Runtime"
           description="Hi! I can help you edit documents. Try: 'Insert a heading', 'Add a code block', or 'Create a list'"
           defaultOpen={true}
           defaultViewMode="panel"
           position="bottom-right"
-          frontendTools={tools}
+          frontendTools={chatFrontendTools}
           useStore={false}
           showModelSelector={true}
           showToolsMenu={true}

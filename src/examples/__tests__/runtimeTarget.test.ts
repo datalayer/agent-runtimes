@@ -39,18 +39,24 @@ describe('the runtime targets', () => {
     }
   });
 
-  it('runs an agent on local and datalayer, and nowhere else', () => {
+  it('runs an agent everywhere but the anonymous Jupyter server', () => {
+    // The browser joined this list when the loop learned to turn in the page:
+    // the Vercel AI SDK needs no runtime behind it, so "no server" stopped
+    // meaning "no agent".
     expect(RUNTIME_TARGETS.filter(targetHasAgent)).toEqual([
+      'browser',
       'local',
       'datalayer',
     ]);
   });
 
   it('asks for a sign-in only where one is needed', () => {
+    // The browser agent needs no account for itself, but the model it asks is
+    // reached through the inference service, which admits members only.
     const needsAuth = RUNTIME_TARGETS.filter(
       target => runtimeTargetCapabilities(target).requiresAuth,
     );
-    expect(needsAuth).toEqual(['datalayer']);
+    expect(needsAuth).toEqual(['browser', 'datalayer']);
   });
 });
 

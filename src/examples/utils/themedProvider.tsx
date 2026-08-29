@@ -20,6 +20,7 @@
 
 import React, { useEffect } from 'react';
 import {
+  Box,
   DatalayerThemeProvider,
   type IDatalayerThemeProviderProps,
   themeConfigs,
@@ -83,9 +84,43 @@ export const useThemeBrandColor = (): string => {
   return themeConfigs[themeVariant].brandColor;
 };
 
+/**
+ * Styles that carry a definite height through the providers' own elements.
+ *
+ * `DatalayerThemeProvider` renders Primer's `BaseStyles` and `JupyterReactTheme`
+ * renders a plain `div`, and neither has a height of its own. A `<Notebook
+ * height="100%">` inside them therefore resolves its height against `auto` and
+ * collapses to nothing — no cells, no error, just an empty box.
+ *
+ * It only bites where the sized container is *outside* the providers. An
+ * example that gives its notebook an absolute height (`calc(100vh - 300px)`)
+ * never notices.
+ */
+const FULL_HEIGHT_CHAIN = {
+  height: '100%',
+  minHeight: 0,
+  // `& > div` is Primer's `BaseStyles`; the one inside it is
+  // `JupyterReactTheme`'s. Neither takes a style prop that reaches its own
+  // element, so they are sized from here rather than configured.
+  '& > div': {
+    height: '100%',
+    minHeight: 0,
+    '& > div': { height: '100%', minHeight: 0 },
+  },
+} as const;
+
 export const ThemedJupyterProvider: React.FC<
-  React.PropsWithChildren<{ useJupyterReactTheme?: boolean }>
-> = ({ children, useJupyterReactTheme = true }) => {
+  React.PropsWithChildren<{
+    useJupyterReactTheme?: boolean;
+    /**
+     * Pass the container's height down to the children.
+     *
+     * Needed by any example whose notebook is sized `height="100%"` and whose
+     * sizing container is outside this provider. See {@link FULL_HEIGHT_CHAIN}.
+     */
+    fullHeight?: boolean;
+  }>
+> = ({ children, useJupyterReactTheme = true, fullHeight = false }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const cfg = themeConfigs[themeVariant];
 
@@ -107,7 +142,7 @@ export const ThemedJupyterProvider: React.FC<
     '--bgColor-default'
   ];
 
-  return (
+  const themed = (
     <ThemedProvider>
       {useJupyterReactTheme ? (
         // `ThemedProvider` (DatalayerThemeProvider) already applies Primer
@@ -124,5 +159,11 @@ export const ThemedJupyterProvider: React.FC<
         children
       )}
     </ThemedProvider>
+  );
+
+  return fullHeight ? (
+    <Box sx={FULL_HEIGHT_CHAIN}>{themed}</Box>
+  ) : (
+    themed
   );
 };

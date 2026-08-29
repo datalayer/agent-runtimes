@@ -16,7 +16,7 @@
  * @module examples/NotebookAgentExample
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager, Session } from '@jupyterlab/services';
 import { Notebook, OnSessionConnection } from '@datalayer/jupyter-react';
@@ -26,12 +26,11 @@ import { ThemedJupyterProvider } from './utils/themedProvider';
 // Agent-runtimes imports
 import { ChatFloating } from '../chat';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
-import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 // Import Matplotlib notebook
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 
-import { DEFAULT_MODEL } from '../specs';
 import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
@@ -41,32 +40,6 @@ const NOTEBOOK_ID = 'agui-notebook-example';
 const NOTEBOOK_CONTENT = MatplotlibNotebook;
 
 const AGENT_ID = 'notebook-agent-runtime-example';
-
-function getJupyterSandboxUrl(
-  serviceManager?: ServiceManager.IManager,
-): string | undefined {
-  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
-  if (!baseUrl) {
-    return undefined;
-  }
-
-  if (baseUrl.includes('token=')) {
-    return baseUrl;
-  }
-
-  const token = serviceManager?.serverSettings?.token;
-  if (!token) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
 
 /**
  * Notebook UI component (without tool registration)
@@ -149,53 +122,34 @@ interface NotebookWithChatProps {
 function NotebookWithChat({
   serviceManager,
 }: NotebookWithChatProps): JSX.Element {
-  const jupyterSandboxUrl = useMemo(
-    () => getJupyterSandboxUrl(serviceManager),
-    [serviceManager],
-  );
-  const [createRequested, setCreateRequested] = useState(false);
   const [notebookKernel, setNotebookKernel] =
     useState<IKernelConnection | null>(null);
 
-  const { agentId, baseUrl, isReady, status, error, createAgent } =
-    useExampleAgentRuntime({
-      exampleId: 'NotebookAgentExample',
-      agentName: AGENT_ID,
-      autoCreateAgent: false,
-      agentConfig: {
-        name: AGENT_ID,
-        description: 'Demo agent for notebook example',
-        protocol: 'vercel-ai',
-        model: DEFAULT_MODEL,
-        systemPrompt:
-          'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
-        enableCodemode: false,
-        sandboxVariant: 'jupyter-server',
-        jupyterSandbox: jupyterSandboxUrl,
-      },
-    });
+  // Get notebook tools. Which of the chat and the harness runs them depends on
+  // where the loop turns, and the hook decides that.
+  const frontendTools = useNotebookTools(NOTEBOOK_ID);
 
-  useEffect(() => {
-    if (!jupyterSandboxUrl || createRequested || agentId) {
-      return;
-    }
-    setCreateRequested(true);
-    void createAgent({
-      name: AGENT_ID,
-      description: 'Demo agent for notebook example',
-      protocol: 'vercel-ai',
-      model: DEFAULT_MODEL,
-      systemPrompt:
-        'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
-      enableCodemode: false,
-      sandboxVariant: 'jupyter-server',
-      jupyterSandbox: jupyterSandboxUrl,
-    }).catch(() => {
-      setCreateRequested(false);
-    });
-  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
+  const {
+    agentReady,
+    protocol: protocolConfig,
+    chatFrontendTools,
+    error,
+    unavailableReason,
+  } = useExampleJupyterAgent({
+    exampleId: 'NotebookAgentExample',
+    agentName: AGENT_ID,
+    description: 'Demo agent for notebook example',
+    systemPrompt:
+      'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
+    serviceManager,
+    frontendTools,
+  });
 
-  const effectiveReady = isReady || status === 'ready';
+  // The example's own agent, not merely the runtime: on the cloud target the
+  // runtime is ready before this agent has been registered on it.
+  const effectiveReady = agentReady;
+  // One failed attempt is reported, not retried — see `useExampleJupyterAgent`.
+  const chatError = error || unavailableReason;
 
   const handleSessionConnection = useCallback(
     (session: Session.ISessionConnection | undefined) => {
@@ -203,20 +157,6 @@ function NotebookWithChat({
     },
     [],
   );
-
-  const protocolConfig = useMemo(
-    () => ({
-      type: 'vercel-ai' as const,
-      endpoint: `${baseUrl}/api/v1/vercel-ai/${AGENT_ID}`,
-      agentId: AGENT_ID,
-      enableConfigQuery: true,
-      configEndpoint: `${baseUrl}/api/v1/configure`,
-    }),
-    [baseUrl],
-  );
-
-  // Get notebook tools for ChatFloating
-  const frontendTools = useNotebookTools(NOTEBOOK_ID);
 
   return (
     <Box
@@ -232,7 +172,7 @@ function NotebookWithChat({
         onSessionConnection={handleSessionConnection}
       />
 
-      {error && (
+      {chatError && (
         <Box
           sx={{
             position: 'fixed',
@@ -245,7 +185,7 @@ function NotebookWithChat({
             maxWidth: 300,
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>Error:</strong> {chatError}
         </Box>
       )}
 
@@ -257,7 +197,7 @@ function NotebookWithChat({
           defaultOpen={true}
           defaultViewMode="panel"
           position="bottom-right"
-          frontendTools={frontendTools}
+          frontendTools={chatFrontendTools}
           useStore={false}
           showModelSelector={true}
           showToolsMenu={true}

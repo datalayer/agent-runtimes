@@ -309,11 +309,6 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Notebook orchestration and runtime example.',
   ),
   makeEntry(
-    'NotebookInBrowserAgent',
-    () => import('./NotebookInBrowserAgent'),
-    'A notebook agent whose loop runs in the page — no runtime, vercel-ai harness.',
-  ),
-  makeEntry(
     'NotebookAgentSidebarExample',
     () => import('./NotebookAgentSidebarExample'),
     'Notebook plus sidebar controls example.',

@@ -18,6 +18,6 @@ export default defineConfig({
     environment: 'jsdom',
     // The same browser globals jsdom lacks; these modules reach JupyterLab,
     // which touches them when it loads.
-    setupFiles: ['./src/loop/__tests__/setup.ts'],
+    setupFiles: ['./src/__tests__/browserGlobals.ts'],
   },
 });

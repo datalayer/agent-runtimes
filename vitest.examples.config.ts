@@ -15,7 +15,14 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['src/examples/__tests__/**/*.test.ts'],
+    include: ['src/examples/__tests__/**/*.test.{ts,tsx}'],
     environment: 'node',
+    // Hook tests need a DOM to render into; the rest do not and are faster
+    // without one.
+    environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
+    // Browser globals jsdom lacks, installed before any module is imported —
+    // a stub written inside a test file runs too late.
+    setupFiles: ['./src/__tests__/browserGlobals.ts'],
   },
+  esbuild: { jsx: 'automatic' },
 });

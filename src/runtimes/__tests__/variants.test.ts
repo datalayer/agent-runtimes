@@ -28,6 +28,7 @@ import {
   runsInBrowser,
   specHarnessOf,
   toAgentRuntimeVariant,
+  variantForLocation,
   variantSupportsSpecHarness,
   variantsForSpec,
 } from '../variants';
@@ -106,19 +107,54 @@ describe('matching a spec to a variant', () => {
     expect(variantSupportsSpecHarness('cloud-pydanticai', undefined)).toBe(
       true,
     );
+  });
+
+  it('lets the browser run a spec built for the server', () => {
+    /*
+     * `harness:` is a preference, not a demand, and where it disagrees with a
+     * location the location wins: the browser cannot turn a pydantic-ai loop
+     * whatever a spec asks for, so it turns a Vercel AI one instead.
+     *
+     * The alternative was a second spec per agent — identical but for that one
+     * field — duplicating the prompt, tools and evals that have nothing to do
+     * with where a loop runs. There was briefly such a spec; merging it away
+     * is what this rule replaces.
+     */
+    expect(variantSupportsSpecHarness('browser-vercelai', 'pydantic-ai')).toBe(
+      true,
+    );
     expect(variantSupportsSpecHarness('browser-vercelai', undefined)).toBe(
+      true,
+    );
+  });
+
+  it('does not let a remote runtime run a spec built for the browser', () => {
+    // Not symmetrical, deliberately: a browser spec assumes frontend tools and
+    // no server, so running it on a runtime would be running something else.
+    expect(variantSupportsSpecHarness('cloud-pydanticai', 'vercel-ai')).toBe(
+      false,
+    );
+    expect(variantSupportsSpecHarness('local-pydanticai', 'vercel-ai')).toBe(
       false,
     );
   });
 
-  it('offers only the variants that can turn the spec’s loop', () => {
+  it('offers the browser for anything, and a runtime only for its own', () => {
     expect(variantsForSpec({ harness: 'vercel-ai' })).toEqual([
       'browser-vercelai',
     ]);
     expect(variantsForSpec({ harness: 'pydantic-ai' })).toEqual([
+      'browser-vercelai',
       'local-pydanticai',
       'cloud-pydanticai',
     ]);
+  });
+
+  it('gives each location its one variant', () => {
+    // A location decides its own harness: only one framework can run there.
+    expect(variantForLocation('browser')).toBe('browser-vercelai');
+    expect(variantForLocation('local')).toBe('local-pydanticai');
+    expect(variantForLocation('cloud')).toBe('cloud-pydanticai');
   });
 
   it('lands a spec on a variant that can run it without being told', () => {

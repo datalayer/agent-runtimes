@@ -45,6 +45,5 @@ export { default as Lexical2Example } from './Lexical2Example';
 export { default as LexicalAgentExample } from './LexicalAgentExample';
 export { default as LexicalAgentSidebarExample } from './LexicalAgentSidebarExample';
 export { default as NotebookAgentExample } from './NotebookAgentExample';
-export { default as NotebookInBrowserAgent } from './NotebookInBrowserAgent';
 export { default as NotebookAgentSidebarExample } from './NotebookAgentSidebarExample';
 export { default as NotebookExample } from './NotebookExample';

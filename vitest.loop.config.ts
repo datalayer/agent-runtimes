@@ -22,7 +22,7 @@ export default defineConfig({
     environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
     // Browser globals jsdom lacks, installed before any module is imported —
     // a stub written inside a test file runs too late.
-    setupFiles: ['./src/loop/__tests__/setup.ts'],
+    setupFiles: ['./src/__tests__/browserGlobals.ts'],
   },
   esbuild: { jsx: 'automatic' },
 });

@@ -14,7 +14,11 @@ import {
   useRuntimeTargetStore,
 } from '../utils/runtimeTargetStore';
 import { useExampleAgentRuntimesUrl } from '../utils/useExampleAgentRuntimesUrl';
-import { locationOf, toAgentRuntimeVariant } from '../../runtimes/variants';
+import {
+  locationOf,
+  toAgentRuntimeVariant,
+  variantForLocation,
+} from '../../runtimes/variants';
 
 /**
  * High-level examples hook that applies the shared Local/Cloud runtime target
@@ -33,9 +37,13 @@ export function useExampleAgentRuntimes(
   const variant = toAgentRuntimeVariant(
     options.variant ??
       options.runtimeCreationTarget ??
-      (runtimeTarget === 'datalayer'
-        ? 'backend-services'
-        : 'local-agent-runtimes'),
+      (runtimeTarget === 'browser'
+        ? // The browser turns its own loop, whatever a spec's `harness` says:
+          // there is no server here to run anything else.
+          variantForLocation('browser')
+        : runtimeTarget === 'datalayer'
+          ? 'backend-services'
+          : 'local-agent-runtimes'),
   );
   const isLocal = locationOf(variant) === 'local';
 

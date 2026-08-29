@@ -5,7 +5,13 @@
 
 /// <reference types="vite/client" />
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   loadJupyterConfig,
@@ -63,6 +69,7 @@ import {
 } from './utils/runtimeTargetStore';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { agentSummaryStore } from './utils/agentSummaryStore';
+import { isSandboxOnlyExample } from './utils/exampleSurfaces';
 import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
 import { ExampleWrapper } from './components/ExampleWrapper';
@@ -117,13 +124,6 @@ const getExampleGroup = (id: string): string => {
   if (id.startsWith('Lexical')) return 'Lexical';
   if (id.startsWith('Notebook')) return 'Notebook';
   return 'Cell';
-};
-
-const isNotebookOrCellExample = (exampleId: string): boolean => {
-  return (
-    (exampleId.includes('Notebook') || exampleId.includes('Cell')) &&
-    !exampleId.includes('Agent')
-  );
 };
 
 const wait = (ms: number) =>
@@ -862,6 +862,10 @@ export const ExampleApp: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState<string>(
     getDefaultExampleName(),
   );
+  // The example on screen, readable from closures that were frozen at the
+  // first render — see `createCloudServiceManager`.
+  const selectedExampleRef = useRef(selectedExample);
+  selectedExampleRef.current = selectedExample;
   const [searchQuery, setSearchQuery] = useState(getInitialSearchQuery());
   const [isChangingExample, setIsChangingExample] = useState(false);
   const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
@@ -952,6 +956,12 @@ export const ExampleApp: React.FC = () => {
 
   const createCloudServiceManager =
     async (): Promise<ServiceManager.IManager> => {
+      // Read, not captured: `createServiceManagerForTarget` is a `useCallback`
+      // with no dependencies, so anything this closure takes from render scope
+      // is frozen at the first render. Switching example and then switching
+      // target would otherwise bootstrap a sandbox for whichever example was
+      // on screen when the app started.
+      const exampleId = selectedExampleRef.current;
       const { configuration } = coreStore.getState();
       if (!configuration?.token) {
         throw new Error(
@@ -1014,7 +1024,7 @@ export const ExampleApp: React.FC = () => {
 
       const bootstrapCloudSandbox =
         async (): Promise<CloudSandboxBootstrap> => {
-          const exampleSlug = safeExampleId(selectedExample || 'example');
+          const exampleSlug = safeExampleId(exampleId || 'example');
           const connection = await shellRuntime.launchRuntime({
             environmentName: DEFAULT_CLOUD_RUNTIME_ENVIRONMENT,
             givenName: `${exampleSlug}-sandbox`,
@@ -1024,7 +1034,7 @@ export const ExampleApp: React.FC = () => {
           const agentId = `${exampleSlug}-cloud-agent`;
           const agent = await shellRuntime.createAgent({
             name: agentId,
-            description: `Cloud sandbox agent for ${selectedExample}`,
+            description: `Cloud sandbox agent for ${exampleId}`,
             agentLibrary: 'pydantic-ai',
             protocol: 'ag-ui',
             model: DEFAULT_MODEL,
@@ -1054,10 +1064,10 @@ export const ExampleApp: React.FC = () => {
             agentId: activeSummary.agentId,
             runtimeEnvironment: activeSummary.runtimeEnvironment,
           });
-        } catch (error) {
-          if (!isNotebookOrCellExample(selectedExample)) {
-            throw error;
-          }
+        } catch {
+          // The published sandbox is gone or unreachable. A fresh one is
+          // always allowed: an agent needs a runtime to run on, not a
+          // particular kind of example to run in.
           showTopNotice(
             'Existing cloud sandbox is unavailable. Launching a fresh sandbox...',
             'warning',
@@ -1066,16 +1076,10 @@ export const ExampleApp: React.FC = () => {
         }
       }
 
-      if (!isNotebookOrCellExample(selectedExample)) {
-        throw new Error(
-          'No active cloud agent sandbox found. Open an agent example and launch a cloud agent first.',
-        );
-      }
-
       showTopNotice('Starting a cloud agent sandbox...', 'info', 2600);
       const launched = await bootstrapCloudSandbox();
       agentSummaryStore.getState().setActive({
-        exampleId: selectedExample,
+        exampleId,
         agentName: launched.agentId,
         agentId: launched.agentId,
         location: 'datalayer',
@@ -1086,7 +1090,7 @@ export const ExampleApp: React.FC = () => {
         isReady: true,
       });
       showTopNotice(
-        `Cloud sandbox ready. Connecting ${toSurfaceLabel(selectedExample)} to it...`,
+        `Cloud sandbox ready. Connecting ${toSurfaceLabel(exampleId)} to it...`,
         'success',
         2600,
       );
@@ -1220,6 +1224,39 @@ export const ExampleApp: React.FC = () => {
   ): Promise<void> => {
     if (newTarget === runtimeTarget || !serviceManager) return;
 
+    const previousManager = serviceManager;
+
+    // 1) Unmount the current example FIRST so its cleanup hooks run against the
+    //    still-valid OLD runtime (AG-UI disconnect, abort fetches, sandboxes).
+    setIsChangingExample(true);
+    setExampleComponent(null);
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    // 2) Tear down the agents created on the OLD target, then wipe in-process
+    //    agent state.
+    const activeRuntime = agentSummaryStore.getState().active;
+    const oldAgentBaseUrl =
+      activeRuntime?.location === runtimeTarget && activeRuntime.baseUrl
+        ? activeRuntime.baseUrl
+        : resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const token = useSimpleAuthStore.getState().token;
+    if (targetHasAgent(runtimeTarget)) {
+      await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
+    }
+
+    /*
+     * 3) Only now build the new target's sandbox.
+     *
+     * The order matters and used to be the other way round. Creating the
+     * manager first meant that for the cloud target — where building one
+     * launches a runtime and registers an agent, writing them into the shared
+     * `agentRuntimeStore` — the teardown above then wiped the runtime that had
+     * just been created for the *new* target while cleaning up after the old
+     * one. The example mounted with no runtime connected, could not create its
+     * agent on one, and showed no chat at all.
+     */
     let nextManager: ServiceManager.IManager;
     try {
       nextManager = await createServiceManagerForTarget(newTarget);
@@ -1233,31 +1270,15 @@ export const ExampleApp: React.FC = () => {
         'error',
         6000,
       );
+      // Put the person back where they were. The example is already unmounted
+      // and the old agents are gone, so the old target is re-entered from
+      // scratch rather than left half-torn-down.
+      await loadExample(selectedExample, previousManager);
       return;
     }
 
-    // 1) Unmount the current example FIRST so its cleanup hooks run against the
-    //    still-valid OLD runtime (AG-UI disconnect, abort fetches, sandboxes).
-    setIsChangingExample(true);
-    setExampleComponent(null);
-    await new Promise<void>(resolve => {
-      requestAnimationFrame(() => resolve());
-    });
-
-    // 2) Tear down the agents created on the OLD target, then wipe state so a
-    //    brand-new runtime is launched for the new target.
-    const activeRuntime = agentSummaryStore.getState().active;
-    const oldAgentBaseUrl =
-      activeRuntime?.location === runtimeTarget && activeRuntime.baseUrl
-        ? activeRuntime.baseUrl
-        : resolveExampleAgentRuntimesUrl(runtimeTarget);
-    const token = useSimpleAuthStore.getState().token;
-    if (targetHasAgent(runtimeTarget)) {
-      await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
-    }
-
-    // 3) Switch the target and re-mount the example (its key includes the
-    //    target, so this launches/connects a fresh runtime).
+    // 4) Switch the target and re-mount the example (its key includes the
+    //    target, so this connects to the runtime built above).
     setRuntimeTarget(newTarget);
     setServiceManager(nextManager);
     setError(null);
@@ -1424,10 +1445,7 @@ const ExampleAppThemed: React.FC<{
       serviceManager?.serverSettings.baseUrl,
     );
     const agentApiBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
-    const isSandboxOnlyExample =
-      (selectedExample.includes('Notebook') ||
-        selectedExample.includes('Cell')) &&
-      !selectedExample.includes('Agent');
+    const sandboxOnly = isSandboxOnlyExample(selectedExample);
     // Seed a base summary for the selected example. Do NOT clobber a richer
     // summary that the mounted example already published (spec id, agent id,
     // readiness) for the same example + target — otherwise fast-settling local
@@ -1447,8 +1465,8 @@ const ExampleAppThemed: React.FC<{
       exampleId: selectedExample,
       agentName: selectedExample,
       location: runtimeTarget,
-      baseUrl: isSandboxOnlyExample ? '' : agentApiBaseUrl,
-      sandboxBaseUrl: isSandboxOnlyExample ? jupyterSandboxBaseUrl : undefined,
+      baseUrl: sandboxOnly ? '' : agentApiBaseUrl,
+      sandboxBaseUrl: sandboxOnly ? jupyterSandboxBaseUrl : undefined,
       status: isChangingExample ? 'switching' : 'selected',
     });
   }, [selectedExample, runtimeTarget, isChangingExample, serviceManager]);

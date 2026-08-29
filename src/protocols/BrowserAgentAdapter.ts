@@ -51,8 +51,7 @@ import {
  * take, which is exactly the difference between running a loop and calling one.
  */
 export interface BrowserAgentAdapterConfig
-  extends ProtocolAdapterConfig,
-    FrontendToolsToVercelAIOptions {
+  extends ProtocolAdapterConfig, FrontendToolsToVercelAIOptions {
   /** The agent's instructions. From the spec's `systemPrompt`. */
   instructions?: string;
   /** The tools the agent can call in this page. */
@@ -177,10 +176,7 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
       .filter(entry => entry.content.length > 0);
 
     const latest = messageText(message);
-    if (
-      latest &&
-      history[history.length - 1]?.content !== latest
-    ) {
+    if (latest && history[history.length - 1]?.content !== latest) {
       history.push({ role: 'user', content: latest });
     }
 

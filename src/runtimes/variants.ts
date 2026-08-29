@@ -170,16 +170,49 @@ export function needsRuntimeService(variant: AgentRuntimeVariant): boolean {
 }
 
 /**
+ * The variant for a location.
+ *
+ * A location decides its own harness, because only one framework can run there
+ * — the browser has no server to turn a pydantic-ai loop, and the two remote
+ * locations have no page to turn a Vercel AI one. Naming both halves in a
+ * variant is still worth it: it is what makes `cloud-ax` a value rather than a
+ * rewrite. But given a location, the harness is not a separate choice.
+ */
+export function variantForLocation(
+  location: AgentLocation,
+): AgentRuntimeVariant {
+  return (
+    AGENT_RUNTIME_VARIANTS.find(variant => locationOf(variant) === location) ??
+    DEFAULT_AGENT_RUNTIME_VARIANT
+  );
+}
+
+/**
  * Whether a variant can run an agent that declared this harness in its spec.
  *
- * An agentspec says which framework it needs (`harness: vercel-ai`); a variant
- * says which framework a runtime provides. A host picks a variant, and this is
- * how it checks the two agree before starting something that cannot work.
+ * An agentspec says which framework it *prefers* — `harness:` is where the
+ * agent normally runs, not a demand — and a variant says which framework a
+ * location can actually provide. Where they disagree the location wins, which
+ * is why the browser accepts any spec:
+ *
+ *     harness: pydantic-ai  +  browser  →  runs, with the Vercel AI SDK
+ *
+ * The alternative was a second spec per agent, identical but for one field.
+ * That duplicated the prompt, the tools, the evals and everything else that
+ * has nothing to do with where a loop turns — and it made a spec's author
+ * responsible for a decision the host makes.
+ *
+ * The remote locations are stricter: a spec built for the browser harness
+ * assumes frontend tools and no server, so running it on a runtime would be
+ * running something else.
  */
 export function variantSupportsSpecHarness(
   variant: AgentRuntimeVariant,
   specHarness: string | undefined | null,
 ): boolean {
+  if (runsInBrowser(variant)) {
+    return true;
+  }
   if (!specHarness) {
     // A spec that says nothing wants the framework that has always run it.
     return harnessOf(variant) === 'pydanticai';
@@ -190,9 +223,10 @@ export function variantSupportsSpecHarness(
 /**
  * The variants that could run an agent with this declared harness.
  *
- * What a host offers a person choosing where to run something: an agent built
- * for the browser harness should not be offered a cloud runtime that cannot
- * turn its loop.
+ * What a host offers a person choosing where to run something. The browser is
+ * always among them — it can run anything, because it overrides the harness —
+ * while an agent built for the browser is not offered a remote runtime that
+ * would be running something else.
  */
 export function variantsForSpecHarness(
   specHarness: string | undefined | null,
