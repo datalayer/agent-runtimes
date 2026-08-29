@@ -186,6 +186,109 @@ describe('the browser adapter as a protocol adapter', () => {
     });
   });
 
+  it('keeps what the model says after a tool call in its own message', async () => {
+    /*
+     * A tool-using turn is several text blocks: what the model is about to do,
+     * the tool, then what it found. The chat keys on the message id — the same
+     * id replaces in place, a new one appends — so carrying one id across the
+     * whole turn folded the second half back into the first sentence and
+     * pushed the tool cards to the end of the conversation.
+     */
+    const events = await turn(
+      modelStreaming(
+        [
+          { type: 'text-start', id: 'a' },
+          { type: 'text-delta', id: 'a', delta: 'Let me look.' },
+          { type: 'text-end', id: 'a' },
+          {
+            type: 'tool-call',
+            toolCallId: 'call-1',
+            toolName: 'readAllCells',
+            input: '{}',
+          },
+          { ...FINISH, finishReason: 'tool-calls' },
+        ],
+        [
+          { type: 'text-start', id: 'b' },
+          { type: 'text-delta', id: 'b', delta: 'There are 31 cells.' },
+          { type: 'text-end', id: 'b' },
+          FINISH,
+        ],
+      ),
+      [
+        {
+          name: 'readAllCells',
+          description: 'Read the notebook.',
+          parameters: { type: 'object', properties: {} },
+          handler: async () => ({ cells: 31 }),
+        },
+      ],
+    );
+
+    const messages = events.filter(event => event.type === 'message');
+    const ids = [...new Set(messages.map(event => event.message.id))];
+    expect(ids).toHaveLength(2);
+
+    // Each block holds only its own text — the second does not carry the first.
+    const byId = new Map<string, string>();
+    for (const event of messages) {
+      byId.set(event.message.id, event.message.content);
+    }
+    expect([...byId.values()]).toEqual(['Let me look.', 'There are 31 cells.']);
+
+    // And the tool call sits between them, which is what puts its card there.
+    const order = events
+      .filter(event =>
+        ['message', 'tool-call', 'tool-result'].includes(event.type),
+      )
+      .map(event =>
+        event.type === 'message' ? `message:${event.message.id}` : event.type,
+      );
+    expect(order.indexOf('tool-call')).toBeGreaterThan(
+      order.indexOf(`message:${ids[0]}`),
+    );
+    expect(order.indexOf(`message:${ids[1]}`)).toBeGreaterThan(
+      order.indexOf('tool-call'),
+    );
+  });
+
+  it('gives each turn its own message ids, whatever the provider reuses', async () => {
+    /*
+     * `text-start` carries a block id unique only *within* a response —
+     * commonly "0". Passing it through as the chat's message id meant the
+     * second turn replaced the first turn's message instead of appending, so
+     * the answer appeared above the question that prompted it.
+     */
+    const adapter = new BrowserAgentAdapter({
+      protocol: 'browser-vercel-ai',
+      baseUrl: '',
+      languageModel: modelStreaming([
+        // The same block id every time, as a provider is entitled to send.
+        { type: 'text-start', id: '0' },
+        { type: 'text-delta', id: '0', delta: 'An answer.' },
+        { type: 'text-end', id: '0' },
+        FINISH,
+      ]),
+    });
+    const events: any[] = [];
+    adapter.subscribe(event => events.push(event));
+
+    await adapter.sendMessage(userMessage('first'), {
+      messages: [userMessage('first')],
+    });
+    await adapter.sendMessage(userMessage('second'), {
+      messages: [userMessage('second')],
+    });
+
+    const ids = new Set(
+      events
+        .filter(event => event.type === 'message')
+        .map(event => event.message.id),
+    );
+    expect(ids.size).toBe(2);
+    expect(ids.has('0')).toBe(false);
+  });
+
   it('does not ask to be sent a tool result — the tool already ran', async () => {
     // `sendToolResult` exists because the interface has it. A host that calls
     // it must not break, and must not cause a second execution.
@@ -195,6 +298,37 @@ describe('the browser adapter as a protocol adapter', () => {
       languageModel: modelStreaming([FINISH]),
     });
     await expect(adapter.sendToolResult()).resolves.toBeUndefined();
+  });
+
+  it('names the host when the inference service cannot be reached', async () => {
+    /*
+     * The failure a browser agent is most likely to hit, and the one the SDK
+     * describes worst: a wrong host fails CORS preflight and surfaces as
+     * `TypeError: Failed to fetch` from several libraries deep, naming
+     * nothing. The service runs with the control plane; pointed at the
+     * runtimes plane it 404s the route before CORS is even considered.
+     */
+    const adapter = new BrowserAgentAdapter({
+      protocol: 'browser-vercel-ai',
+      baseUrl: '',
+      inference: {
+        inferenceUrl: 'https://wrong-host.example',
+        token: 'tok',
+        fetch: async () => {
+          throw new TypeError('Failed to fetch');
+        },
+      },
+      model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    });
+    const events: any[] = [];
+    adapter.subscribe(event => events.push(event));
+    await adapter.sendMessage(userMessage('hello'), { messages: [] });
+
+    const error = events.find(event => event.type === 'error');
+    expect(error.error.message).toContain(
+      'https://wrong-host.example/api/ai-inference/v1',
+    );
+    expect(error.error.message).toMatch(/control plane/);
   });
 
   it('says what went wrong instead of throwing at the chat', async () => {

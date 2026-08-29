@@ -256,6 +256,10 @@ export function useExampleJupyterAgent(
             // leaves for an adapter whose configuration is not a URL.
             endpoint: '',
             agentId: agentName,
+            // Nothing to ask: models, tools and skills all come from a runtime
+            // this agent does not have. Said explicitly because the composer
+            // waits on that query before it will accept a keystroke.
+            enableConfigQuery: false,
             options: {
               instructions: systemPrompt,
               model,

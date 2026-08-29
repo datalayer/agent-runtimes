@@ -180,13 +180,35 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
       history.push({ role: 'user', content: latest });
     }
 
-    const messageId = generateMessageId();
+    /*
+     * One message per text block, and an id of our own for each.
+     *
+     * A tool-using turn is several blocks: the model says what it is about to
+     * do, calls a tool, then says what it found. The SDK marks each with
+     * `text-start`, and the chat keys on the message id — same id replaces in
+     * place, a new id appends. Accumulating a whole turn under one id folded
+     * everything said after a tool call back into the sentence before it.
+     *
+     * The id must not be the provider's, either. `text-start` carries a block
+     * id that is unique only *within* a response — commonly "0" — so reusing
+     * it across turns made the second turn's text replace the first turn's
+     * message, which the chat then showed above the question that prompted it.
+     * Ours are unique for the life of the page, which is the scope the chat's
+     * message list actually has.
+     */
+    let messageId: string | null = null;
     let text = '';
+
+    /** Begin a new assistant message. */
+    const startBlock = () => {
+      messageId = generateMessageId();
+      text = '';
+    };
 
     /** Emit the assistant message as it stands, so the chat can stream it. */
     const emitText = () => {
       const assistant = createAssistantMessage(text);
-      assistant.id = messageId;
+      assistant.id = messageId as string;
       this.emit({ type: 'message', message: assistant, timestamp: new Date() });
     };
 
@@ -207,7 +229,18 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
           break;
         }
         switch (part.type) {
+          case 'text-start':
+            // A new block: whatever follows belongs to a message of its own,
+            // after any tool the previous block called.
+            startBlock();
+            break;
+
           case 'text-delta':
+            // Defensively: a provider that streams text without announcing a
+            // block still gets a message rather than losing its words.
+            if (messageId === null) {
+              startBlock();
+            }
             text += part.text;
             emitText();
             break;

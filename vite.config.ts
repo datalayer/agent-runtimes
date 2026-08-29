@@ -285,8 +285,12 @@ export default defineConfig(({ mode, command }) => {
               )
               .replaceAll(
                 '%VITE_DATALAYER_AI_INFERENCE_URL%',
+                // prod1, not r1. r1 hosts the runtimes plane; the inference
+                // service sits with the rest of the control plane on prod1,
+                // and a browser agent pointed at r1 gets a cross-origin
+                // failure from a host that does not serve the route at all.
                 env.VITE_DATALAYER_AI_INFERENCE_URL ||
-                  'https://r1.datalayer.run',
+                  'https://prod1.datalayer.run',
               )
               .replaceAll(
                 '%VITE_DATALAYER_JUPYTER_MCP_SERVER_URL%',

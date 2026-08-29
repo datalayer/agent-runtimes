@@ -3953,9 +3953,22 @@ function ChatBaseInner({
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : undefined;
 
+  /*
+   * Whether the composer may be typed in.
+   *
+   * It waits for the config query because that is the round trip proving the
+   * agent is reachable. The condition has to mirror `configQueriesEnabled`
+   * exactly, though: a protocol that never runs the query has nothing to wait
+   * for, and waiting anyway leaves the input `readOnly` for good — selectable,
+   * focusable, and silently ignoring every keystroke.
+   *
+   * `=== false` was too narrow for that. A config that simply omits the flag —
+   * an in-page agent has no endpoint to ask — is equally never going to
+   * produce data.
+   */
   const connectionConfirmed =
     !protocol ||
-    protocol.enableConfigQuery === false ||
+    !protocol.enableConfigQuery ||
     !!configQuery.data ||
     !!skillsQuery.data;
 

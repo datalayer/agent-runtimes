@@ -96,6 +96,35 @@ export function inferenceApiUrl(inferenceUrl: string): string {
 }
 
 /**
+ * A fetch that says which host it could not reach.
+ *
+ * A browser agent's most likely failure is that it is pointed at the wrong
+ * host — the inference service sits with the control plane, not on the
+ * runtimes plane, and a URL for the latter fails CORS preflight because it
+ * does not serve the route at all. What the SDK surfaces for that is
+ * `TypeError: Failed to fetch`, from a stack several libraries deep, naming
+ * nothing. This says what was being called.
+ */
+function describingFetch(
+  base: typeof globalThis.fetch,
+  apiUrl: string,
+): typeof globalThis.fetch {
+  return async (input, init) => {
+    try {
+      return await base(input, init);
+    } catch (error) {
+      throw new Error(
+        `Could not reach the inference service at ${apiUrl}. ` +
+          'Check that this is the right host — the service runs with the ' +
+          'control plane, not the runtimes plane — and that it allows this ' +
+          `origin. (${error instanceof Error ? error.message : String(error)})`,
+        { cause: error },
+      );
+    }
+  };
+}
+
+/**
  * A language model that answers from the inference service.
  *
  * `.chat()` rather than the provider's default: that is the
@@ -105,9 +134,10 @@ export function inferenceApiUrl(inferenceUrl: string): string {
 export function createBrowserModel(
   options: BrowserModelOptions,
 ): LanguageModel {
+  const apiUrl = inferenceApiUrl(options.inferenceUrl);
   const provider = createOpenAI({
     name: 'datalayer-ai-inference',
-    baseURL: inferenceApiUrl(options.inferenceUrl),
+    baseURL: apiUrl,
     // Sent as `Authorization: Bearer <token>`, which is what the service's
     // bearer scheme reads — so the completion is made as the signed-in person
     // and attributed to them.
@@ -118,7 +148,7 @@ export function createBrowserModel(
     // report, rather than from the SDK as a missing-configuration throw.
     apiKey: options.token?.trim() || 'anonymous',
     headers: options.headers,
-    fetch: options.fetch,
+    fetch: describingFetch(options.fetch ?? globalThis.fetch, apiUrl),
   });
   return provider.chat(options.model || DEFAULT_BROWSER_MODEL);
 }

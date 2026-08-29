@@ -85,27 +85,32 @@ export const useThemeBrandColor = (): string => {
 };
 
 /**
- * Styles that carry a definite height through the providers' own elements.
+ * Give the notebook the container's height, however deep it sits.
  *
  * `DatalayerThemeProvider` renders Primer's `BaseStyles` and `JupyterReactTheme`
- * renders a plain `div`, and neither has a height of its own. A `<Notebook
- * height="100%">` inside them therefore resolves its height against `auto` and
- * collapses to nothing — no cells, no error, just an empty box.
+ * renders a `div`, and neither has a height of its own. A `<Notebook
+ * height="100%">` inside them resolves against `auto` and collapses to nothing
+ * — present in the DOM, zero pixels tall, sitting at the bottom of the column.
  *
- * It only bites where the sized container is *outside* the providers. An
- * example that gives its notebook an absolute height (`calc(100vh - 300px)`)
- * never notices.
+ * Sizing those wrappers by counting levels (`& > div > div`) was the first
+ * attempt and it is the wrong shape: it breaks the moment either provider adds
+ * or removes an element. Taking the notebook out of the flow instead makes the
+ * chain irrelevant — an absolutely positioned box resolves against the nearest
+ * *positioned* ancestor, which is the one wrapper here that is ours.
+ *
+ * `!important` because `Notebook` sets `position` and `height` in an inline
+ * `style`, which no stylesheet rule can otherwise outrank.
  */
-const FULL_HEIGHT_CHAIN = {
+const FILL_CONTAINER = {
+  position: 'relative',
   height: '100%',
   minHeight: 0,
-  // `& > div` is Primer's `BaseStyles`; the one inside it is
-  // `JupyterReactTheme`'s. Neither takes a style prop that reaches its own
-  // element, so they are sized from here rather than configured.
-  '& > div': {
-    height: '100%',
-    minHeight: 0,
-    '& > div': { height: '100%', minHeight: 0 },
+  '& #dla-Jupyter-Notebook': {
+    position: 'absolute !important',
+    top: '0 !important',
+    right: '0 !important',
+    bottom: '0 !important',
+    left: '0 !important',
   },
 } as const;
 
@@ -113,10 +118,10 @@ export const ThemedJupyterProvider: React.FC<
   React.PropsWithChildren<{
     useJupyterReactTheme?: boolean;
     /**
-     * Pass the container's height down to the children.
+     * Make the notebook fill this provider's container.
      *
      * Needed by any example whose notebook is sized `height="100%"` and whose
-     * sizing container is outside this provider. See {@link FULL_HEIGHT_CHAIN}.
+     * sizing container is outside this provider. See {@link FILL_CONTAINER}.
      */
     fullHeight?: boolean;
   }>
@@ -161,9 +166,5 @@ export const ThemedJupyterProvider: React.FC<
     </ThemedProvider>
   );
 
-  return fullHeight ? (
-    <Box sx={FULL_HEIGHT_CHAIN}>{themed}</Box>
-  ) : (
-    themed
-  );
+  return fullHeight ? <Box sx={FILL_CONTAINER}>{themed}</Box> : themed;
 };

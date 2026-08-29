@@ -153,6 +153,7 @@ EXAMPLE_LOCAL_ENV = \
 EXAMPLES_LOCAL_ENV = \
 	VITE_DATALAYER_IAM_URL=https://prod1.datalayer.run \
 	VITE_DATALAYER_RUNTIMES_URL=https://r1.datalayer.run \
+	VITE_DATALAYER_AI_INFERENCE_URL=https://prod1.datalayer.run \
 	DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \
 	VITE_DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \
 	VITE_BASE_URL=http://localhost:8765 \

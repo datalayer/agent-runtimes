@@ -15,7 +15,11 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['src/runtimes/__tests__/**/*.test.ts'],
+    include: [
+      'src/runtimes/__tests__/**/*.test.ts',
+      // The chat's own dependency-free rules, which need no DOM either.
+      'src/chat/base/__tests__/**/*.test.ts',
+    ],
     environment: 'node',
   },
 });
