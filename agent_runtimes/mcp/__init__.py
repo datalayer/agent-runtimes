@@ -54,6 +54,24 @@ from .manager import (
     get_mcp_manager,
     set_mcp_manager,
 )
+from .tasks import (
+    TASKS_EXTENSION,
+    TaskCancelled,
+    TaskFailed,
+    TaskHandle,
+    TaskTimeout,
+    TaskUnsupported,
+    TaskWatcher,
+    await_task,
+    call_tool_and_wait,
+    call_tool_as_task,
+    cancel_task,
+    client_extensions,
+    durable_call_tool,
+    get_task,
+    list_tasks,
+    task_result,
+)
 from .tools import (
     create_mcp_server,
     extract_tool_names,
@@ -78,6 +96,23 @@ from .toolsets import (
 
 __all__ = [
     "MCPClient",
+    # tasks.py exports: a call whose answer outlives the request
+    "TASKS_EXTENSION",
+    "TaskCancelled",
+    "TaskFailed",
+    "TaskHandle",
+    "TaskTimeout",
+    "TaskUnsupported",
+    "TaskWatcher",
+    "await_task",
+    "call_tool_and_wait",
+    "call_tool_as_task",
+    "cancel_task",
+    "client_extensions",
+    "durable_call_tool",
+    "get_task",
+    "list_tasks",
+    "task_result",
     "MCPLifecycleManager",
     "MCPManager",
     "MCPServerInstance",
