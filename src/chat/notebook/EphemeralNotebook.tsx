@@ -595,6 +595,7 @@ export function EphemeralNotebook({
                 overscrollBehaviorY: 'contain',
                 overflowAnchor: 'none',
                 padding: 2,
+                backgroundColor: themeBackground,
                 // Give the notebook a resolved height so cells render. The
                 // Jupyter Notebook component renders its outer container with
                 // id "dla-Jupyter-Notebook"; pin its toolbar and let the cell
@@ -614,7 +615,7 @@ export function EphemeralNotebook({
                         top: 0,
                         zIndex: 2,
                         flex: '0 0 auto',
-                        background: 'var(--jp-layout-color0, transparent)',
+                        backgroundColor: themeBackground,
                       },
                     }
                   : {
@@ -629,6 +630,9 @@ export function EphemeralNotebook({
                 '& #dla-Jupyter-Notebook > .dla-Box-Notebook': {
                   flex: '1 1 auto',
                   minHeight: 0,
+                },
+                '& [role="toolbar"][aria-label="Notebook toolbar"]': {
+                  backgroundColor: themeBackground,
                 },
               }}
             >

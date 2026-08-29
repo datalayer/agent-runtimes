@@ -129,6 +129,14 @@ export type SwitchableConfig = {
   serverUrl: string;
   initialTarget?: SandboxTarget;
   /**
+   * Agent to create when Local is selected.
+   *
+   * A local agent owns its Jupyter sandbox. Supplying this payload makes the
+   * Local transition create/reuse that agent instead of starting the server's
+   * unrelated global sandbox.
+   */
+  localAgent?: { createPayload: Record<string, unknown> };
+  /**
    * Where the in-page kernel comes from.
    *
    * Defaults to JupyterLite. A JupyterLab host supplies the application's own
@@ -142,6 +150,7 @@ export function createSwitchableSandboxService({
   serverUrl,
   initialTarget = 'local',
   kernelSource,
+  localAgent,
 }: SwitchableConfig): SwitchableSandboxService {
   const target: Signal<SandboxTarget> = signal(initialTarget);
 
@@ -176,6 +185,10 @@ export function createSwitchableSandboxService({
    * The error travels back to the caller so the control can stay where it was.
    */
   async function applyVariant(next: SandboxTarget): Promise<void> {
+    if (next === 'local' && localAgent) {
+      await ensureLocalAgent();
+      return;
+    }
     const configure = TARGET_SPECS[next]?.configure;
     if (!configure) {
       return;
@@ -218,6 +231,54 @@ export function createSwitchableSandboxService({
       throw new Error(
         `The server could not start ${label} (${restart.status} ${restart.statusText}). ` +
           (await detail(restart)),
+      );
+    }
+  }
+
+  /** Create the agent whose per-agent Jupyter sandbox backs Local. */
+  async function ensureLocalAgent(): Promise<void> {
+    const id = agentId?.trim();
+    if (!id) {
+      throw new Error('Local needs an agent id before its runtime can start.');
+    }
+
+    let existing: Response;
+    try {
+      existing = await fetch(
+        `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}`,
+      );
+    } catch (reason) {
+      throw new Error(
+        `Local needs an agent-runtimes server at ${serverUrl}, and nothing answered there. ` +
+          `Start one and try again. (${
+            reason instanceof Error ? reason.message : String(reason)
+          })`,
+      );
+    }
+    if (existing.ok) {
+      return;
+    }
+    if (existing.status !== 404) {
+      throw new Error(
+        `The server could not inspect local agent ${id} (${existing.status} ${existing.statusText}). ` +
+          (await detail(existing)),
+      );
+    }
+
+    const created = await fetch(`${serverUrl}/api/v1/agents`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...localAgent.createPayload,
+        name: id,
+        transport: 'ag-ui',
+        sandbox_variant: 'jupyter-server',
+      }),
+    });
+    if (!created.ok && created.status !== 409) {
+      throw new Error(
+        `The server could not launch local agent ${id} (${created.status} ${created.statusText}). ` +
+          (await detail(created)),
       );
     }
   }

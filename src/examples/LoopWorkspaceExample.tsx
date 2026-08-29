@@ -64,7 +64,7 @@ export function LoopWorkspaceExample({
   // origin here sends sandbox switches to port 3000 and produces the exact
   // "clicked, nothing happened" failure this example is meant to expose.
   serverUrl = resolveExampleAgentRuntimesUrl('local'),
-  agentId = 'default',
+  agentId = 'loop-workspace',
   initialTarget = 'browser',
 }: LoopWorkspaceExampleProps): JSX.Element {
   // Built once: rebuilding would restart every plugin on each render.
@@ -75,6 +75,14 @@ export function LoopWorkspaceExample({
         configurePlugin(CodeSandboxPlugin, {
           serverUrl,
           target: initialTarget,
+          localAgent: {
+            createPayload: {
+              description: 'Local agent for the Loop workspace example',
+              agent_library: 'pydantic-ai',
+              agent_spec_id: 'example-simple',
+              enable_codemode: false,
+            },
+          },
         }),
         // Two extensions rather than four plugins: each delivers an editor
         // and the toolbar that reports on it, and the sidebar lists them as

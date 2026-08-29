@@ -353,6 +353,63 @@ describe('moving the sandbox', () => {
     expect(restarted).toHaveLength(3);
   });
 
+  it('launches Local as an agent with its own Jupyter sandbox', async () => {
+    const asked: Array<{ url: string; method: string; body?: unknown }> = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      asked.push({
+        url: String(url),
+        method,
+        body:
+          typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+      });
+      if (method === 'GET') {
+        return { ok: false, status: 404, statusText: 'Not Found' };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    }) as never;
+
+    try {
+      const reactor = buildReactorFromPlugins([
+        configurePlugin(CodeSandboxPlugin, {
+          serverUrl: 'http://server',
+          target: 'browser',
+          localAgent: {
+            createPayload: {
+              agent_library: 'pydantic-ai',
+              agent_spec_id: 'example-simple',
+            },
+          },
+        }),
+      ]);
+      reactor.start();
+      const sandbox = reactor.getOutput<CodeSandboxOutput>(
+        CODE_SANDBOX_PLUGIN_NAME,
+      )!.sandbox;
+      const disconnect = sandbox.connect('loop-workspace');
+
+      await sandbox.setTarget('local');
+      disconnect();
+    } finally {
+      globalThis.fetch = original;
+    }
+
+    expect(asked.map(call => `${call.method} ${call.url}`)).toEqual([
+      'GET http://server/api/v1/agents/loop-workspace',
+      'POST http://server/api/v1/agents',
+    ]);
+    expect(asked[1].body).toMatchObject({
+      name: 'loop-workspace',
+      transport: 'ag-ui',
+      agent_spec_id: 'example-simple',
+      sandbox_variant: 'jupyter-server',
+    });
+    expect(
+      asked.some(call => call.url.endsWith('/agents/sandbox/restart')),
+    ).toBe(false);
+  });
+
   it('puts the sandbox back when the server refuses the switch', async () => {
     // A failed switch should cost the person the switch, not the sandbox they
     // already had — and it must not leave the control claiming otherwise.

@@ -47,6 +47,8 @@ export type CodeSandboxConfig = {
    * things behind it, which is the test of whether it is an interface at all.
    */
   target?: SandboxTarget;
+  /** Agent creation payload used by the Local target. */
+  localAgent?: { createPayload: Record<string, unknown> };
   /**
    * Where the in-page kernel comes from, when the host has one of its own.
    *
@@ -85,6 +87,7 @@ export const CodeSandboxPlugin = definePlugin<
         serverUrl: config.serverUrl,
         initialTarget: config.target,
         kernelSource: config.kernelSource,
+        localAgent: config.localAgent,
       }),
       // In a slot rather than inside the sandbox view: the sandbox does not
       // stop existing when someone switches to the chat tab, and neither
