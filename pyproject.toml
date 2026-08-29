@@ -100,7 +100,7 @@ a2a = [
     "fasta2a",
 ]
 ui = [
-    "a2ui-agent-sdk>=0.4.0",
+    "a2ui-agent-sdk>=0.5.0",
     "ag-ui-protocol>=0.1.19",
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
