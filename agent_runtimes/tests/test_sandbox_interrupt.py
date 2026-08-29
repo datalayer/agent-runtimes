@@ -336,3 +336,33 @@ class TestSandboxWebSocketStatus:
         for field in ("jupyter_url", "jupyter_token", "kernel_id", "kernel_name"):
             assert field in over_the_socket, f"{field} not sent over the socket"
             assert field in over_rest, f"{field} not served over REST"
+
+
+class TestRestartCoversEverySandbox:
+    """Switching where code runs must not leave the old sandbox advertised.
+
+    The status WebSocket reports the *agent's* sandbox when a caller asks about
+    an agent, but `restart()` only replaced the global one. So switching the
+    workspace from Browser to Local built a fresh global sandbox and went on
+    handing the browser the old agent sandbox's address — a port that was dead
+    or about to be. The notebook polled it forever.
+    """
+
+    def test_restart_stops_the_agent_sandboxes_too(self, monkeypatch):
+        from agent_runtimes.services.code_sandbox_manager import CodeSandboxManager
+
+        manager = CodeSandboxManager.__new__(CodeSandboxManager)
+        calls: list[str] = []
+        monkeypatch.setattr(manager, "stop", lambda: calls.append("global"))
+        monkeypatch.setattr(
+            manager, "stop_all_agent_sandboxes", lambda: calls.append("agents")
+        )
+        monkeypatch.setattr(
+            manager, "get_sandbox", lambda: calls.append("create") or "sandbox"
+        )
+
+        assert manager.restart() == "sandbox"
+
+        # Both stopped before anything is built, so the new sandbox is the only
+        # one alive when the next status goes out.
+        assert calls == ["global", "agents", "create"]

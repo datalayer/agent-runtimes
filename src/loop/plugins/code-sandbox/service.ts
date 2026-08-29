@@ -36,6 +36,7 @@ export type SandboxStatusPayload = {
   kernel_id?: string;
   kernel_name?: string;
   execution_state?: string;
+  is_executing?: boolean;
   jupyter_token?: string;
 };
 

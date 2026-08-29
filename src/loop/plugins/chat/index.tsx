@@ -122,7 +122,8 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
           agentAction(context, {
             key: 'loop-compact',
             ariaLabel: 'Compact this notebook',
-            title: 'Ask @NotebookCompactor to shorten it without changing results',
+            title:
+              'Ask @NotebookCompactor to shorten it without changing results',
             icon: FoldIcon,
             order: 200,
             prompt:

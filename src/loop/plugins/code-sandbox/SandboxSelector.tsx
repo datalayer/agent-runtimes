@@ -74,7 +74,17 @@ export function SandboxSelector(_props: {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
       {moving ? <Spinner size="small" /> : null}
       <KernelIndicator
-        state={toKernelIndicatorState(snapshot.state, status?.execution_state)}
+        state={toKernelIndicatorState(
+          snapshot.state,
+          status?.execution_state,
+          status?.is_executing,
+        )}
+        kernelId={snapshot.kernelId ?? status?.kernel_id}
+        kernelName={status?.kernel_name}
+        serverUrl={snapshot.jupyterUrl ?? status?.jupyter_url}
+        websocketUrl={toWebsocketUrl(
+          snapshot.jupyterUrl ?? status?.jupyter_url,
+        )}
         environmentName={snapshot.variant ?? TARGET_SPECS[target].label}
         overlayTitle={`${TARGET_SPECS[target].label} Kernel`}
         position="se"
@@ -148,12 +158,19 @@ export function SandboxSelector(_props: {
 function toKernelIndicatorState(
   state: LoopWorkspaceContext['sandbox']['state'],
   executionState?: string,
+  isExecuting?: boolean,
 ): ExecutionState {
   if (state === 'error') return 'connected-dead';
   if (state === 'starting') return 'connected-starting';
   if (state === 'stopping') return 'disconnecting';
   if (state !== 'running') return 'disconnected';
-  return executionState === 'busy' ? 'connected-busy' : 'connected-idle';
+  return executionState === 'busy' || isExecuting
+    ? 'connected-busy'
+    : 'connected-idle';
+}
+
+function toWebsocketUrl(url?: string): string | undefined {
+  return url?.replace(/^http/, 'ws');
 }
 
 /** Read when the plugin is absent, so the hook order never changes. */

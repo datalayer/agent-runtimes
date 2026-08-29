@@ -950,10 +950,25 @@ class CodeSandboxManager:
         """
         Restart the sandbox with current configuration.
 
+        Every sandbox this manager owns, not only the global one. A per-agent
+        sandbox was created under the *previous* configuration, so after a
+        `configure()` it is stale by definition — and it is the one the status
+        WebSocket reports when a caller asks about an agent. Leaving it running
+        meant switching where code runs replaced the global sandbox while the
+        browser went on being handed the old agent sandbox's address: a port
+        that was either dead or about to be, and an endless run of connection
+        failures against it.
+
+        The per-agent sandboxes are stopped rather than recreated here. They
+        are made on demand for whichever agent needs one, and recreating them
+        eagerly would start Jupyter servers for agents that may never run
+        again.
+
         Returns:
-            The new Sandbox instance.
+            The new global Sandbox instance.
         """
         self.stop()
+        self.stop_all_agent_sandboxes()
         return self.get_sandbox()
 
     def get_status(self) -> dict[str, Any]:

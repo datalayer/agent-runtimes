@@ -341,24 +341,52 @@ export function EphemeralNotebook({
           token,
           appendToken: true,
         });
-        manager = new ServiceManager({ serverSettings });
+        const pending = new ServiceManager({ serverSettings });
+        manager = pending;
         // Central sandbox registry: runtime terminate/pause disposes this
         // manager immediately so its pollers cannot hit the dead pod ingress.
         unregisterManager = registerSandboxServiceManager(
           String(selectedRuntime?.runtime_name || ''),
           manager,
         );
-        await manager.ready;
-        await manager.kernels.refreshRunning();
-        const runningKernel = [...manager.kernels.running()][0];
-
-        if (!cancelled) {
-          setRuntimeServiceManager(manager);
-          setRuntimeKernelId(runningKernel?.id);
-          setRuntimeStartDefaultKernel(!runningKernel);
+        // The cleanup below may already have run: it captured `manager` while
+        // it was still null, because this function is async and assigns it
+        // after the first await the caller does not wait for. Switching
+        // sandboxes quickly is exactly that race, and the manager it orphans
+        // polls the abandoned server for the life of the page.
+        if (cancelled) {
+          release(pending);
+          return;
         }
-      } catch {
+        await pending.ready;
+        await pending.kernels.refreshRunning();
+        const runningKernel = [...pending.kernels.running()][0];
+
+        if (cancelled) {
+          release(pending);
+          return;
+        }
+        setRuntimeServiceManager(pending);
+        setRuntimeKernelId(runningKernel?.id);
+        setRuntimeStartDefaultKernel(!runningKernel);
+      } catch (reason) {
+        // Give up the manager, do not merely stop looking at it.
+        //
+        // A `ServiceManager` starts polling `/api/kernels` and `/api/sessions`
+        // the moment it is constructed, on its own schedule. Abandoning one
+        // whose `ready` rejected left those polls running against a server
+        // that had gone — a switch away from a restarted sandbox produced an
+        // endless run of ERR_CONNECTION_REFUSED, one every few seconds,
+        // forever.
+        if (manager) {
+          release(manager);
+          manager = null;
+        }
         if (!cancelled) {
+          console.warn(
+            `[agent-runtimes] Could not reach the sandbox at ${baseUrl}.`,
+            reason,
+          );
           setRuntimeServiceManager(null);
           setRuntimeKernelId(undefined);
           setRuntimeStartDefaultKernel(false);
@@ -366,13 +394,23 @@ export function EphemeralNotebook({
       }
     };
 
+    /** Unregister and dispose one manager, once. */
+    const release = (target: ServiceManager) => {
+      unregisterManager?.();
+      unregisterManager = null;
+      disposeServiceManager(target);
+    };
+
     connectRuntime();
 
     return () => {
       cancelled = true;
-      unregisterManager?.();
       if (manager) {
-        disposeServiceManager(manager);
+        release(manager);
+        manager = null;
+      } else {
+        unregisterManager?.();
+        unregisterManager = null;
       }
     };
   }, [

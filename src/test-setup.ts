@@ -64,6 +64,20 @@ Object.defineProperty(window, 'matchMedia', {
 import { vi } from 'vitest';
 
 vi.mock('@datalayer/jupyter-react', () => ({
+  createLiteServiceManager: async () => ({
+    sessions: {
+      startNew: async () => ({
+        kernel: {
+          id: 'test-kernel',
+          requestExecute: () => ({ done: Promise.resolve(), onIOPub: null }),
+          shutdown: async () => {},
+        },
+      }),
+    },
+  }),
+  jupyterReactStore: {
+    getState: () => ({ setServiceManager: () => {} }),
+  },
   useJupyter: () => ({
     defaultKernel: null,
     serviceManager: null,

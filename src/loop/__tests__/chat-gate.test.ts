@@ -13,10 +13,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  buildReactorFromPlugins,
-  configurePlugin,
-} from '@datalayer/reactor';
+import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
 import { LoopAgentGate, createPromptChannel } from '../core';
 import type { LoopWorkspaceContext, SandboxSnapshot } from '../core';
 import { CodeSandboxPlugin } from '../plugins/code-sandbox';
