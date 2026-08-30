@@ -33,6 +33,7 @@ import {
 import { SandboxStatusBridge } from './SandboxStatusBridge';
 import { DatalayerAgentMount } from './DatalayerAgentMount';
 import type { ServiceManagerSource } from './browserService';
+import { AgentSummaryPanel } from './AgentSummaryPanel';
 import { SandboxSelector } from './SandboxSelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
 import { createTeamSelection, type TeamSelection } from './team';
@@ -187,6 +188,15 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
               },
             ]
           : []),
+        // What the workspace is talking to. Contributed here rather than drawn
+        // by whichever page embeds the workspace: the agent is chosen inside
+        // it, by this plugin, so this plugin is the only thing that can
+        // describe it without going stale.
+        {
+          slot: LoopSlots.header,
+          id: 'agent-summary',
+          Component: AgentSummaryPanel as never,
+        },
       ],
     };
   },

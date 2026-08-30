@@ -74,8 +74,20 @@ export function SandboxSelector(_props: {
   const index = Math.max(0, SANDBOX_TARGETS.indexOf(target));
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-      {moving ? <Spinner size="small" /> : null}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+      {/* The spinner's room is held whether or not it is spinning: appearing
+          and disappearing mid-switch reflowed the whole header, so the control
+          a person had just clicked moved out from under the pointer. */}
+      <Box
+        sx={{
+          width: 16,
+          flexShrink: 0,
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        {moving ? <Spinner size="small" /> : null}
+      </Box>
       <KernelIndicator
         state={toKernelIndicatorState(
           snapshot.state,
@@ -88,7 +100,16 @@ export function SandboxSelector(_props: {
         websocketUrl={toWebsocketUrl(
           snapshot.jupyterUrl ?? status?.jupyter_url,
         )}
-        environmentName={snapshot.variant ?? TARGET_SPECS[target].label}
+        /*
+          The target that was chosen, not the variant last reported.
+
+          `snapshot.variant` is whatever the sandbox most recently said it
+          was, and it lags a switch — so the indicator sat next to a segmented
+          control reading "Datalayer" and named a Jupyter server, which is two
+          answers to one question. The chosen target is the one the reader
+          just gave; the variant is a detail, and it is in the overlay.
+        */
+        environmentName={TARGET_SPECS[target].label}
         overlayTitle={`${TARGET_SPECS[target].label} Kernel`}
         position="se"
         bordered={false}
@@ -129,7 +150,7 @@ export function SandboxSelector(_props: {
       {/* A status readout, not a control. Primer's `Tooltip` requires its
           child to *be* the interactive element and throws otherwise, so the
           hint rides on the native attribute. */}
-      {failure ? (
+      {failure || snapshot.errorReason ? (
         // The reason, in the header, in full. It used to read "switch failed"
         // with the cause hidden in a `title` — which is why a switch that
         // could not reach the server looked like a click that did nothing.
@@ -139,19 +160,37 @@ export function SandboxSelector(_props: {
           sx={{
             fontSize: 0,
             color: 'danger.fg',
-            maxWidth: 460,
             lineHeight: 1.3,
+            /*
+              Bounded, and allowed to shrink.
+              
+              At 460px with nothing to stop it growing, a failure message was
+              wider than everything else in the header put together — so the
+              row it shares compressed to fit it, and the segmented control
+              the reader had just clicked shifted out from under the pointer.
+              Two lines here cost nothing; a reflowed header costs the click.
+            */
+            maxWidth: 280,
+            minWidth: 0,
           }}
-          title={failure}
+          title={failure ?? snapshot.errorReason}
         >
-          {failure}
+          {/* A switch this control attempted, or a failure the sandbox
+              reported on its own — the Datalayer runtime failing to start is
+              the second kind, and it used to reach the reader as
+              "connected-dead" with every field unknown. */}
+          {failure ?? snapshot.errorReason}
         </Text>
       ) : (
         <Text
           sx={{ fontSize: 0, color: 'fg.muted' }}
           title={TARGET_SPECS[SANDBOX_TARGETS[index]].hint}
         >
-          {snapshot.variant ?? snapshot.state}
+          {/* What the sandbox is doing, not what it last called itself.
+              Which target is selected is said twice already — by the control
+              and by the indicator — and `variant` lags a switch, so a third
+              answer here was only ever a chance to disagree with them. */}
+          {snapshot.state}
         </Text>
       )}
     </Box>

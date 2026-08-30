@@ -217,6 +217,15 @@ export interface TeamSpec {
   supervisor: TeamSupervisorSpec;
   /** Instructions for routing tasks between agents */
   routingInstructions?: string;
+  /**
+   * Openers shown in an empty chat.
+   *
+   * At the team level because they describe the team's front door: the
+   * supervisor answers first, and what is worth asking is a property of the
+   * whole team rather than of any one member. A person who has just opened a
+   * workspace does not yet know there are two agents behind it.
+   */
+  suggestions?: string[];
   /** How far members may hand work to each other, and to subagents. */
   delegation?: TeamDelegationSpec;
   /** What each member is told about the conversation so far. */

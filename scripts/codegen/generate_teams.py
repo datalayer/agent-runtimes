@@ -406,6 +406,10 @@ from agent_runtimes.types import (
             )
             code += f"    supervisor={supervisor_code},\n"
             code += f'    routing_instructions="{routing}",\n'
+            suggestions = spec.get("suggestions") or []
+            if suggestions:
+                rendered = ", ".join(repr(str(item)) for item in suggestions)
+                code += f"    suggestions=[{rendered}],\n"
             delegation = spec.get("delegation") or {}
             code += (
                 "    delegation=TeamDelegationSpec("
@@ -678,6 +682,15 @@ import type {{ TeamSpec }} from '{types_import_path}';
             code += f"  executionMode: '{spec.get('execution_mode', 'sequential')}',\n"
             code += f"  supervisor: {supervisor_ts},\n"
             code += f"  routingInstructions: `{routing}`,\n"
+            # What an empty chat offers. Emitted only when the team names
+            # some: an empty array in every generated team would be four
+            # hundred lines saying nothing.
+            suggestions = spec.get("suggestions") or []
+            if suggestions:
+                rendered = ", ".join(
+                    "`" + str(item).replace("`", "\\`") + "`" for item in suggestions
+                )
+                code += f"  suggestions: [{rendered}],\n"
             delegation = spec.get("delegation") or {}
             code += (
                 "  delegation: { "

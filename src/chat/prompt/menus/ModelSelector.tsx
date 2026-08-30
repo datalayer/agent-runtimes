@@ -46,23 +46,23 @@ export function ModelSelector({
             }
             direction="n"
           >
-          <Button
-            type="button"
-            variant="invisible"
-            size="small"
-            aria-label={`Model — ${active?.name ?? 'none selected'}`}
-            leadingVisual={AiModelIcon}
-            disabled={isA2AProtocol}
-            sx={
-              isA2AProtocol
-                ? { opacity: 0.5, cursor: 'not-allowed' }
-                : undefined
-            }
-          >
-            {/* No name beside the icon. A model id is the longest label on
+            <Button
+              type="button"
+              variant="invisible"
+              size="small"
+              aria-label={`Model — ${active?.name ?? 'none selected'}`}
+              leadingVisual={AiModelIcon}
+              disabled={isA2AProtocol}
+              sx={
+                isA2AProtocol
+                  ? { opacity: 0.5, cursor: 'not-allowed' }
+                  : undefined
+              }
+            >
+              {/* No name beside the icon. A model id is the longest label on
                 the row and it changes width as the model changes, which
                 pushes everything beside it about; the tooltip says which. */}
-          </Button>
+            </Button>
           </Tooltip>
         </ActionMenu.Anchor>
         <ActionMenu.Overlay side="outside-top" align="end">

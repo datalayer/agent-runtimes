@@ -743,6 +743,12 @@ export const JUPYTER_NOTEBOOK_TEAM_SPEC_0_0_1: TeamSpec = {
     canTerminate: false,
   },
   routingInstructions: `Send anything about understanding, learning or explaining — "what does this do", "why did this fail", "teach me", a request for an exercise — to the Tutor. Send anything about the shape of the notebook — shortening it, merging cells, removing dead code or stale outputs — to the Compactor. When a request is both ("clean this up and explain what you did"), the Tutor goes first and explains, then the Compactor acts on what was agreed. Never let the Compactor rewrite a notebook the person is still learning from without saying what changed. When neither fits, answer directly rather than forcing the request onto a specialist.`,
+  suggestions: [
+    `Explain what this notebook does, cell by cell`,
+    `Teach me something about the code in this notebook`,
+    `Add a cell that plots the data as a bar chart`,
+    `Shorten this notebook without changing what it computes`,
+  ],
   delegation: {
     maxDepth: 2,
     allowPeerDelegation: false,

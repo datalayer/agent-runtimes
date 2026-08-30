@@ -51,6 +51,11 @@ function TeamMemberMenu({
 
   return (
     <AnchoredOverlay
+      // 480px. `AnchoredOverlay` sizes through Primer's `Overlay`, which reads
+      // a named width off `data-width-*` — so an `sx` width on the child is
+      // not enough on its own, and the box below states the same number from
+      // the inside for the case where it loses.
+      width="large"
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
@@ -77,7 +82,11 @@ function TeamMemberMenu({
           `ActionList.Description` lays a description on one line and lets the
           overlay grow to hold it, so a sentence about an agent produced a menu
           wider than the workspace. */}
-      <Box sx={{ width: 320, maxWidth: '100vw' }}>
+      {/* Wide enough for a sentence about an agent to wrap two or three times
+          rather than ten. `ActionList.Description` lays one out on a single
+          line and lets the overlay grow to hold it, so the width is set here
+          or by whichever description happens to be longest. */}
+      <Box sx={{ width: 440, maxWidth: 'calc(100vw - 16px)' }}>
         {/*
           `role="listbox"`, stated rather than left to default.
           

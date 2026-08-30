@@ -17,6 +17,7 @@ import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
+import type { ContextSnapshotData } from './context';
 import type { InputPromptVariant } from '../chat/prompt/InputPromptBase';
 import type { MentionableAgent } from '../chat/prompt/plugins/AgentMentionPlugin';
 import type { Icon } from '@primer/octicons-react';
@@ -790,6 +791,16 @@ export interface ChatBaseProps {
    * actually looking.
    */
   onLoadingChange?: (isLoading: boolean) => void;
+  /**
+   * What the context window is holding, as this chat last accounted for it.
+   *
+   * For a host that draws its own prompt and therefore its own usage bar. The
+   * chat is the one thing that sees every source — a snapshot pushed over the
+   * socket by a server-side runtime, and the totals an in-page harness reports
+   * as it finishes a turn — so it hands on the answer rather than making every
+   * host reassemble it.
+   */
+  onContextSnapshot?: (usage: ContextSnapshotData | undefined) => void;
 
   /** Chat title */
   title?: string;

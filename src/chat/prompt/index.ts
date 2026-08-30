@@ -9,10 +9,7 @@
  * @module chat/prompt
  */
 
-export {
-  InputPrompt,
-  type InputPromptProps,
-} from './InputPrompt';
+export { InputPrompt, type InputPromptProps } from './InputPrompt';
 export {
   InputPromptBase,
   type InputPromptBaseProps,

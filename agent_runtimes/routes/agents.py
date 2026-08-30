@@ -28,6 +28,7 @@ from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..capabilities import (
+    LLMContextUsageCapability,
     ToolApprovalConfig,
     ToolsGuardrailCapability,
     apply_model_output_tokens_limit,
@@ -2004,6 +2005,26 @@ async def create_agent(
             if capabilities is None:
                 capabilities = []
             capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+
+            # And always count what the runs cost.
+            #
+            # Everything above is built from a forwarded `agent_spec`, so an
+            # agent created without one — which is most of them; a create call
+            # naming an `agent_spec_id` and a library does not forward the spec
+            # itself — got no capabilities at all. That included the one that
+            # records token usage, so the tracker stayed empty for those agents
+            # and every context figure downstream read zero: the bar beside the
+            # prompt, the session and turn counts, the cost.
+            #
+            # It is added here rather than in `build_capabilities_from_agent_spec`
+            # because it needs no spec to do its job — an agent id is the whole
+            # of its configuration.
+            if not any(
+                isinstance(cap, LLMContextUsageCapability) for cap in capabilities
+            ):
+                capabilities.append(
+                    LLMContextUsageCapability(agent_id=agent_id, enabled=True)
+                )
 
             # Raise the output-token ceiling to the selected model's capability
             # (also enforced across delegated subagent runs).

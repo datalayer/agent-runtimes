@@ -72,7 +72,11 @@ export function AgentsMenu({
             lets the overlay grow, so the width is set here or by the longest
             description there happens to be. */}
         <Box sx={{ width: 440, maxWidth: 'calc(100vw - 16px)' }}>
-          <ActionList selectionVariant="single" role="listbox" aria-label="Agent">
+          <ActionList
+            selectionVariant="single"
+            role="listbox"
+            aria-label="Agent"
+          >
             {agents.map(agent => (
               <ActionList.Item
                 key={agent.id}

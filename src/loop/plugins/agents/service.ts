@@ -66,8 +66,13 @@ export type SandboxService = {
   readonly ready: ReadonlySignal<boolean>;
   /** Feed in a status update (the WebSocket bridge calls this). */
   report: (status: SandboxStatusPayload | null) => void;
-  /** Note that a lifecycle operation is under way. */
-  setState: (state: SandboxState) => void;
+  /**
+   * Note that a lifecycle operation is under way.
+   *
+   * `reason` belongs with `error` and nowhere else: a failure a reader cannot
+   * see the cause of is one they can only guess at.
+   */
+  setState: (state: SandboxState, reason?: string) => void;
   /** Execute code in the sandbox and return what it produced. */
   execute: (code: string) => Promise<SandboxExecution>;
   /** The most recent execution, for whoever wants to render it. */
@@ -144,9 +149,14 @@ const RECONNECT_MAX_MS = 30000;
 export function createServerSandboxService(serverUrl: string): SandboxService {
   const status: Signal<SandboxStatusPayload | null> = signal(null);
   const lifecycle: Signal<SandboxState> = signal<SandboxState>('idle');
+  /* Set beside `lifecycle`, and only meaningful while it says `error`. */
+  const lifecycleReason: Signal<string | undefined> = signal(undefined);
   const lastExecution: Signal<SandboxExecution | null> = signal(null);
 
-  const snapshot = computed(() => summarize(status.value, lifecycle.value));
+  const snapshot = computed(() => ({
+    ...summarize(status.value, lifecycle.value),
+    errorReason: lifecycle.value === 'error' ? lifecycleReason.value : undefined,
+  }));
   const ready = computed(() => snapshot.value.state === 'running');
 
   return {
@@ -212,8 +222,11 @@ export function createServerSandboxService(serverUrl: string): SandboxService {
     report(next) {
       status.value = next;
     },
-    setState(state) {
+    setState(state, reason) {
       lifecycle.value = state;
+      // Cleared on any other state, so a reason cannot outlive the failure it
+      // describes and reappear beside a healthy sandbox.
+      lifecycleReason.value = state === 'error' ? reason : undefined;
     },
     async execute(code: string): Promise<SandboxExecution> {
       const startedAt = Date.now();

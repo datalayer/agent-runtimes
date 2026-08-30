@@ -27,6 +27,15 @@ export type SandboxState =
 /** What the workspace knows about the sandbox behind it. */
 export type SandboxSnapshot = {
   state: SandboxState;
+  /**
+   * Why, when the state is `error`.
+   *
+   * Carried because `error` on its own is the least useful thing a sandbox
+   * can say: the indicator drew "connected-dead" with every field unknown,
+   * which tells a reader that something is wrong and nothing about what.
+   * Whoever sets the state knows the reason; this is where it travels.
+   */
+  errorReason?: string;
   variant?: string;
   kernelId?: string;
   jupyterUrl?: string;

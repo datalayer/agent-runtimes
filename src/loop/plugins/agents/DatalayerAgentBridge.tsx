@@ -25,10 +25,11 @@
  * @module loop/plugins/agents/DatalayerAgentBridge
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useReactorPlatform, useSignalValue } from '@datalayer/reactor/react';
 
 import { useAgentRuntimes } from '../../../hooks/useAgentRuntimes';
+import { AGENTSPECS } from '../../../specs/agents/agents';
 import { IDLE_SANDBOX_TARGET_SIGNAL } from '../../core';
 import { AGENTS_PLUGIN_NAME, type AgentsConfig } from './plugin';
 import { useOptionalSandboxService } from './useSandboxService';
@@ -59,8 +60,33 @@ export function DatalayerAgentBridge(): JSX.Element | null {
    * not allocate a cloud runtime for somebody working in their browser, and a
    * runtime allocated by accident is one somebody pays for.
    */
+  /*
+   * The spec, restated as the config the agent is created from.
+   *
+   * `agentSpecId` as a hook option says which runtime to allocate. Creating
+   * the agent on it reads `agentConfig`, and that is a different object —
+   * which this passed nothing for, so the create refused with "Agent model is
+   * required. Provide config.model from the selected spec/config." The
+   * failure surfaced as `connected-dead` because nothing else about it
+   * reached the page.
+   *
+   * The Notebook Agent example does not hit this: it builds a config with the
+   * spec id in it and hands that over. Same thing, said in the place the
+   * creation actually looks.
+   */
+  const agentConfig = useMemo(
+    () => ({
+      name: agentSpecId,
+      agentSpecId,
+      model: AGENTSPECS[agentSpecId]?.model,
+      description: AGENTSPECS[agentSpecId]?.description,
+    }),
+    [agentSpecId],
+  );
+
   const { runtime, status, error } = useAgentRuntimes({
     agentSpecId,
+    agentConfig,
     variant: 'cloud-pydanticai',
     autoStart: onDatalayer,
     autoCreateAgent: onDatalayer,
@@ -71,7 +97,12 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       return;
     }
     if (error) {
-      service.setState('error');
+      // The reason travels with the state. "connected-dead" and a column of
+      // "unknown" is what a reader saw before, which names the symptom and
+      // hides the cause.
+      // `error` is already a message from the hook; `String()` on it would
+      // only matter if it were not, and would print `[object Object]` if so.
+      service.setState('error', error);
       return;
     }
     if (!runtime?.jupyterBaseUrl) {

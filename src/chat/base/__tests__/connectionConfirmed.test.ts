@@ -94,14 +94,18 @@ describe('the selectors bar', () => {
      */
     expect(PROMPT).toContain('const modelsOffered =');
     expect(PROMPT).toContain('const toolsOffered =');
-    expect(PROMPT).toContain('const skillsOffered = showSkillsMenu && hasSkillsData');
+    expect(PROMPT).toContain(
+      'const skillsOffered = showSkillsMenu && hasSkillsData',
+    );
   });
 
   it('says "loading" only while something is genuinely in flight', () => {
     expect(PROMPT).toContain('const stillLoading =');
     expect(PROMPT).toContain('configLoading');
     // And draws no bar at all when there is nothing to put in it.
-    expect(PROMPT).toContain('const showSelectorsBar = anyOffered || stillLoading');
+    expect(PROMPT).toContain(
+      'const showSelectorsBar = anyOffered || stillLoading',
+    );
   });
 });
 

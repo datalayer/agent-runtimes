@@ -94,6 +94,9 @@ describe('the sandbox service', () => {
       'sandbox-status',
       'datalayer-agent',
       'sandbox-selector',
+      // The workspace describes its own agent. A host drawing that summary
+      // from outside cannot see a switch made in here.
+      'agent-summary',
     ]);
   });
 });
@@ -330,11 +333,18 @@ describe('moving the sandbox', () => {
     expect(
       configured.map(a => (a.body as { variant: string }).variant),
     ).toEqual(['jupyter-server', 'jupyter-server']);
-    // Local and the anonymous server run the same variant and differ by the
-    // URL, which is the only thing that tells them apart on the wire.
-    expect(
-      (configured[0].body as { jupyter_url?: string }).jupyter_url,
-    ).toBeUndefined();
+    /*
+     * Local and the anonymous server run the same variant and differ by the
+     * URL, which is the only thing that tells them apart on the wire.
+     *
+     * Local sends an *empty* URL, not none at all. The manager reads a
+     * missing one as "keep what you have", so arriving here from the Jupyter
+     * target would otherwise leave a local agent driving prod1 — the variant
+     * says colocated, and only an explicit clear says which server that is.
+     */
+    expect((configured[0].body as { jupyter_url?: string }).jupyter_url).toBe(
+      '',
+    );
     expect(
       (configured[1].body as { jupyter_url?: string }).jupyter_url,
     ).toContain('prod1.datalayer.run');
@@ -382,9 +392,21 @@ describe('moving the sandbox', () => {
       globalThis.fetch = original;
     }
 
+    /*
+     * Four calls, and the last two are the fix.
+     *
+     * This used to stop after creating the agent, on the reasoning that a
+     * local agent brings its own sandbox — which is true, and not enough. The
+     * server holds one sandbox configuration and reads a missing
+     * `jupyter_url` as "keep what you have", so coming here from the Jupyter
+     * target left the local agent executing on the anonymous server at prod1.
+     * Saying "colocated" out loud is what makes it so.
+     */
     expect(asked.map(call => `${call.method} ${call.url}`)).toEqual([
       'GET http://server/api/v1/agents/loop-workspace',
       'POST http://server/api/v1/agents',
+      'POST http://server/api/v1/agents/sandbox/configure',
+      'POST http://server/api/v1/agents/sandbox/restart',
     ]);
     expect(asked[1].body).toMatchObject({
       name: 'loop-workspace',
@@ -392,9 +414,12 @@ describe('moving the sandbox', () => {
       agent_spec_id: 'example-simple',
       sandbox_variant: 'jupyter-server',
     });
-    expect(
-      asked.some(call => call.url.endsWith('/agents/sandbox/restart')),
-    ).toBe(false);
+    // Empty, not absent: the one spelling that means "no server named".
+    expect(asked[2].body).toMatchObject({
+      variant: 'jupyter-server',
+      jupyter_url: '',
+      jupyter_token: '',
+    });
   });
 
   it('puts the sandbox back when the server refuses the switch', async () => {

@@ -4,18 +4,19 @@
  */
 
 /**
- * TokenUsageBar — Compact bar showing context-window usage with a
- * tiny pie chart, session totals, and a hover overlay with category
- * breakdown.
+ * What the context window is holding.
  *
- * @module chat/elements/TokenUsageBar
+ * A row under the prompt: a ring of how the window is spent, the totals for
+ * the session and the last turn, and a hover overlay breaking the ring down
+ * by category.
+ *
+ * @module chat/usage/ContextPie
  */
 
 import { useRef, useState } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import ReactECharts from 'echarts-for-react';
-
 import { formatTokenCount } from '../../utils';
 import type { ContextSnapshotData } from '../../types/context';
 
@@ -23,7 +24,7 @@ import type { ContextSnapshotData } from '../../types/context';
 // Props
 // ---------------------------------------------------------------------------
 
-export interface TokenUsageBarProps {
+export interface ContextPieProps {
   /** Agent usage data from the context-snapshot API */
   agentUsage: ContextSnapshotData;
   /** Horizontal padding to match the chat layout */
@@ -43,11 +44,11 @@ export interface TokenUsageBarProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function TokenUsageBar({
+export function ContextPie({
   agentUsage,
   padding,
   showContextRing = false,
-}: TokenUsageBarProps) {
+}: ContextPieProps) {
   // State for context pie chart overlay
   const [contextOverlayOpen, setContextOverlayOpen] = useState(false);
   const contextAnchorRef = useRef<HTMLDivElement>(null);
@@ -202,190 +203,190 @@ export function TokenUsageBar({
     >
       {/* Tiny pie chart with hover overlay */}
       {showContextRing && (
-      <Box
-        sx={{ position: 'relative', flexShrink: 0 }}
-        onMouseEnter={() => {
-          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-          hoverTimeoutRef.current = setTimeout(
-            () => setContextOverlayOpen(true),
-            150,
-          );
-        }}
-        onMouseLeave={() => {
-          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-          hoverTimeoutRef.current = setTimeout(
-            () => setContextOverlayOpen(false),
-            250,
-          );
-        }}
-      >
         <Box
-          ref={contextAnchorRef}
-          sx={{
-            cursor: 'pointer',
-            width: 20,
-            height: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: '50%',
+          sx={{ position: 'relative', flexShrink: 0 }}
+          onMouseEnter={() => {
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+            hoverTimeoutRef.current = setTimeout(
+              () => setContextOverlayOpen(true),
+              150,
+            );
+          }}
+          onMouseLeave={() => {
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+            hoverTimeoutRef.current = setTimeout(
+              () => setContextOverlayOpen(false),
+              250,
+            );
           }}
         >
-          <ReactECharts
-            option={miniPieOption}
-            style={{ width: 18, height: 18 }}
-            opts={{ renderer: 'svg' }}
-          />
-        </Box>
-        {contextOverlayOpen && (
           <Box
+            ref={contextAnchorRef}
             sx={{
-              position: 'absolute',
-              bottom: '100%',
-              left: 0,
-              mb: 1,
-              p: 3,
-              width: 260,
-              bg: 'canvas.overlay',
-              borderRadius: 2,
-              boxShadow: 'shadow.large',
+              cursor: 'pointer',
+              width: 20,
+              height: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               border: '1px solid',
               borderColor: 'border.default',
-              zIndex: 100,
+              borderRadius: '50%',
             }}
           >
-            {/* Header */}
-            <Text
+            <ReactECharts
+              option={miniPieOption}
+              style={{ width: 18, height: 18 }}
+              opts={{ renderer: 'svg' }}
+            />
+          </Box>
+          {contextOverlayOpen && (
+            <Box
               sx={{
-                fontWeight: 'bold',
-                fontSize: 1,
-                color: 'fg.default',
-                display: 'block',
-                mb: 2,
+                position: 'absolute',
+                bottom: '100%',
+                left: 0,
+                mb: 1,
+                p: 3,
+                width: 260,
+                bg: 'canvas.overlay',
+                borderRadius: 2,
+                boxShadow: 'shadow.large',
+                border: '1px solid',
+                borderColor: 'border.default',
+                zIndex: 100,
               }}
             >
-              Context Window
-            </Text>
-            {/* Tokens summary */}
-            <Text
-              sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 1 }}
-            >
-              <Text
-                as="span"
-                sx={{ fontWeight: 'semibold', color: 'fg.default' }}
-              >
-                {formatTokenCount(usedTokens)}
-              </Text>
-              {' / '}
-              {formatTokenCount(windowTokens)}
-              {' tokens'}
-            </Text>
-            {agentUsage.costUsage && (
+              {/* Header */}
               <Text
                 sx={{
-                  fontSize: 0,
-                  color: 'fg.muted',
+                  fontWeight: 'bold',
+                  fontSize: 1,
+                  color: 'fg.default',
                   display: 'block',
                   mb: 2,
                 }}
               >
-                {'cost '}
-                <Text
-                  as="span"
-                  sx={{ fontWeight: 'semibold', color: 'fg.default' }}
-                >
-                  {formatUsd(agentUsage.costUsage.lastTurnCostUsd)}
-                </Text>
-                {' turn · '}
-                <Text
-                  as="span"
-                  sx={{ fontWeight: 'semibold', color: 'fg.default' }}
-                >
-                  {formatUsd(agentUsage.costUsage.cumulativeCostUsd)}
-                </Text>
-                {' total'}
+                Context
               </Text>
-            )}
-            {/* Percentage */}
-            <Text
-              sx={{
-                fontSize: 0,
-                color:
-                  pct > 90
-                    ? 'danger.fg'
-                    : pct > 70
-                      ? 'attention.fg'
-                      : 'fg.muted',
-                fontWeight: 'semibold',
-                display: 'block',
-                mb: 2,
-              }}
-            >
-              {'• '}
-              {pct.toFixed(0)}%
-            </Text>
-            {/* Category donut in overlay */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-              <ReactECharts
-                option={overlayPieOption}
-                style={{ width: 80, height: 80 }}
-                opts={{ renderer: 'svg' }}
-              />
-            </Box>
-            {/* Category breakdown */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {categories.map(cat => {
-                const catPct =
-                  usedTokens > 0 ? (cat.value / usedTokens) * 100 : 0;
-                return (
-                  <Box
-                    key={cat.name}
-                    sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+              {/* Tokens summary */}
+              <Text
+                sx={{ fontSize: 0, color: 'fg.muted', display: 'block', mb: 1 }}
+              >
+                <Text
+                  as="span"
+                  sx={{ fontWeight: 'semibold', color: 'fg.default' }}
+                >
+                  {formatTokenCount(usedTokens)}
+                </Text>
+                {' / '}
+                {formatTokenCount(windowTokens)}
+                {' tokens'}
+              </Text>
+              {agentUsage.costUsage && (
+                <Text
+                  sx={{
+                    fontSize: 0,
+                    color: 'fg.muted',
+                    display: 'block',
+                    mb: 2,
+                  }}
+                >
+                  {'cost '}
+                  <Text
+                    as="span"
+                    sx={{ fontWeight: 'semibold', color: 'fg.default' }}
                   >
-                    <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        bg: cat.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <Text sx={{ fontSize: 0, color: 'fg.muted', flex: 1 }}>
-                      {cat.name}
-                    </Text>
-                    <Text
-                      sx={{
-                        fontSize: 0,
-                        color: 'fg.default',
-                        fontWeight: 'semibold',
-                      }}
-                    >
-                      {catPct.toFixed(1)}%
-                    </Text>
-                  </Box>
-                );
-              })}
-            </Box>
-            {/* Warning */}
-            {pct > 70 && (
+                    {formatUsd(agentUsage.costUsage.lastTurnCostUsd)}
+                  </Text>
+                  {' turn · '}
+                  <Text
+                    as="span"
+                    sx={{ fontWeight: 'semibold', color: 'fg.default' }}
+                  >
+                    {formatUsd(agentUsage.costUsage.cumulativeCostUsd)}
+                  </Text>
+                  {' total'}
+                </Text>
+              )}
+              {/* Percentage */}
               <Text
                 sx={{
                   fontSize: 0,
-                  color: 'attention.fg',
+                  color:
+                    pct > 90
+                      ? 'danger.fg'
+                      : pct > 70
+                        ? 'attention.fg'
+                        : 'fg.muted',
+                  fontWeight: 'semibold',
                   display: 'block',
-                  mt: 2,
-                  fontStyle: 'italic',
+                  mb: 2,
                 }}
               >
-                Quality may decline as limit nears.
+                {'• '}
+                {pct.toFixed(0)}%
               </Text>
-            )}
-          </Box>
-        )}
-      </Box>
+              {/* Category donut in overlay */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <ReactECharts
+                  option={overlayPieOption}
+                  style={{ width: 80, height: 80 }}
+                  opts={{ renderer: 'svg' }}
+                />
+              </Box>
+              {/* Category breakdown */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {categories.map(cat => {
+                  const catPct =
+                    usedTokens > 0 ? (cat.value / usedTokens) * 100 : 0;
+                  return (
+                    <Box
+                      key={cat.name}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                    >
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bg: cat.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Text sx={{ fontSize: 0, color: 'fg.muted', flex: 1 }}>
+                        {cat.name}
+                      </Text>
+                      <Text
+                        sx={{
+                          fontSize: 0,
+                          color: 'fg.default',
+                          fontWeight: 'semibold',
+                        }}
+                      >
+                        {catPct.toFixed(1)}%
+                      </Text>
+                    </Box>
+                  );
+                })}
+              </Box>
+              {/* Warning */}
+              {pct > 70 && (
+                <Text
+                  sx={{
+                    fontSize: 0,
+                    color: 'attention.fg',
+                    display: 'block',
+                    mt: 2,
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Quality may decline as limit nears.
+                </Text>
+              )}
+            </Box>
+          )}
+        </Box>
       )}
       {/* Context window usage */}
       <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
@@ -420,7 +421,9 @@ export function TokenUsageBar({
       {/* Session totals */}
       {hasSession && (
         <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
-          {'· '}
+          {/* Named, like the turn beside it. Two pairs of numbers with only
+              one of them labelled left the first pair to be guessed at. */}
+          {'· session '}
           {formatTokenCount(sessionUsage?.inputTokens ?? 0)}
           <Text as="span" sx={{ color: 'success.fg', fontSize: 0 }}>
             {'▲'}

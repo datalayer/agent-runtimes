@@ -2134,6 +2134,9 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
         last_run = (
             stats.request_usage_history[-1] if stats.request_usage_history else None
         )
+        # A first pass, so `extract_context_snapshot` has a duration to work
+        # from. Both are set again below, once the per-request history the
+        # extraction rebuilds is available — that is the authoritative pass.
         turn_usage = TurnUsage(
             input_tokens=last_run.input_tokens if last_run else 0,
             output_tokens=last_run.output_tokens if last_run else 0,
@@ -2146,22 +2149,12 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                 2,
             ),
         )
-        session_usage = SessionUsage(
-            input_tokens=stats.input_tokens,
-            output_tokens=stats.output_tokens,
-            requests=stats.requests,
-            tool_calls=stats.tool_calls,
-            turns=len(stats.request_usage_history),
-            duration_seconds=round(stats.last_turn_duration_ms / 1000.0, 2),
-        )
         logger.debug(
-            "get_agent_context_snapshot: turn in=%d out=%d — session in=%d "
-            "out=%d over %d turn(s)",
+            "get_agent_context_snapshot: last run in=%d out=%d over %d "
+            "recorded run(s)",
             turn_usage.input_tokens,
             turn_usage.output_tokens,
-            session_usage.input_tokens,
-            session_usage.output_tokens,
-            session_usage.turns,
+            len(stats.request_usage_history),
         )
 
     # Extract snapshot from agent with message history and turn_usage
@@ -2347,15 +2340,25 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
                 snapshot.turn_usage.duration_seconds if snapshot.turn_usage else 0.0
             )
 
+            # The *last* request, not the sum of all of them.
+            #
+            # This used to be built from `sum_response_input_tokens` and the
+            # length of the whole history — which is the session, under the
+            # turn's name. The bar therefore printed the same two numbers
+            # twice, once labelled "session" and once "turn", and no reading
+            # of it could be right.
+            last = (
+                snapshot.per_request_usage[-1]
+                if snapshot.per_request_usage
+                else None
+            )
             snapshot.turn_usage = TurnUsage(
-                input_tokens=snapshot.sum_response_input_tokens,
-                output_tokens=snapshot.sum_response_output_tokens,
-                requests=len(snapshot.per_request_usage),
-                tool_calls=sum(
-                    1 for snap in snapshot.per_request_usage if snap.tool_names
-                ),
-                tool_names=unique_tool_names,
-                duration_seconds=preserved_duration,  # Use preserved duration
+                input_tokens=last.input_tokens if last else 0,
+                output_tokens=last.output_tokens if last else 0,
+                requests=1 if last else 0,
+                tool_calls=len(last.tool_names) if last and last.tool_names else 0,
+                tool_names=list(last.tool_names) if last and last.tool_names else [],
+                duration_seconds=preserved_duration,
             )
 
         # Populate session usage from cumulative stats

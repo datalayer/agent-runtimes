@@ -95,3 +95,24 @@ describe('addressing the agent', () => {
     expect(chat).not.toContain('${workspace.serverUrl}/api/v1/');
   });
 });
+
+describe('picking Datalayer', () => {
+  it('does not subscribe to the host’s sandbox status', () => {
+    /*
+     * Every other server target *is* the host's sandbox, so `connect`
+     * subscribes to its status stream. Datalayer is a runtime allocated from
+     * an agentspec, reported by `DatalayerAgentBridge` — and subscribing
+     * anyway let the host's stream overwrite that report with the variant it
+     * was last configured for, `jupyter-server`. The switch looked like it had
+     * not taken.
+     */
+    const source = readFileSync(
+      join(__dirname, '..', 'plugins', 'agents', 'switchable.ts'),
+      'utf8',
+    );
+    const guard = source.slice(source.indexOf('function connectActive'));
+    expect(guard).toContain("if (target.peek() === 'datalayer')");
+    // And it says so, rather than leaving the surfaces to guess.
+    expect(guard).toContain("server.setState('starting')");
+  });
+});

@@ -96,14 +96,29 @@ export const TARGET_SPECS: Record<SandboxTarget, SandboxTargetSpec> = {
   },
   local: {
     label: 'Local',
-    hint: 'A local agent with a Jupyter server beside it.',
+    hint: 'A local agent, with the Jupyter server it starts beside itself.',
     hasAgent: true,
     noAgentReason: '',
-    configure: { variant: 'jupyter-server' },
+    /*
+     * `jupyter-server` with the URL explicitly cleared.
+     *
+     * The variant names *where the sandbox is relative to the agent*, not
+     * which server it is: colocated, so the agent starts one and the UI drives
+     * that. Sending no URL is not the same as sending an empty one — the
+     * server reads a missing URL as "keep what you have", so coming here from
+     * the Jupyter target left the local agent driving the anonymous server on
+     * prod1, which is the opposite of what this target means.
+     */
+    configure: {
+      variant: 'jupyter-server',
+      jupyter_url: '',
+      jupyter_token: '',
+    },
   },
   jupyter: {
     label: 'Jupyter',
-    hint: 'An anonymous Jupyter server on prod1.datalayer.run.',
+    // Named, unlike Local and Datalayer, whose servers belong to their agent.
+    hint: 'A named Jupyter server: the anonymous one on prod1.datalayer.run.',
     hasAgent: false,
     noAgentReason: 'No agent on an anonymous Jupyter server',
     configure: {
@@ -216,9 +231,20 @@ export function createSwitchableSandboxService({
    * The error travels back to the caller so the control can stay where it was.
    */
   async function applyVariant(next: SandboxTarget): Promise<void> {
+    /*
+     * Local needs both: an agent, and a sandbox told where to be.
+     *
+     * It used to return here, having started the agent — and never sent the
+     * `configure` below. The sandbox therefore kept whatever it was last set
+     * to, so arriving from the Jupyter target left the local agent executing
+     * on the anonymous server at prod1: `!hostname` in a cell answered with
+     * a pod name from the cloud.
+     *
+     * Starting the agent is a precondition for the switch, not the whole of
+     * it. The configure that follows is what makes the sandbox colocated.
+     */
     if (next === 'local' && localAgent) {
       await ensureLocalAgent(localAgent.createPayload);
-      return;
     }
     const configure = TARGET_SPECS[next]?.configure;
     if (!configure) {
@@ -374,6 +400,27 @@ export function createSwitchableSandboxService({
 
   function connectActive(): void {
     disconnect?.();
+    /*
+     * Datalayer connects nothing here, and that is the whole of the fix.
+     *
+     * Every other server target is the host's own sandbox, and `connect`
+     * subscribes to that server's status stream. Datalayer is not: the agent
+     * runs on a runtime allocated from an agentspec, and `DatalayerAgentBridge`
+     * reports it through `report()`.
+     *
+     * Subscribing anyway meant the host's stream kept answering — with the
+     * variant it was last configured for, which is `jupyter-server` — and
+     * overwrote the bridge's report on its next poll. Picking Datalayer moved
+     * the target and left the workspace describing a Jupyter server, which is
+     * exactly what it looked like: a switch that did not take.
+     */
+    if (target.peek() === 'datalayer') {
+      disconnect = null;
+      // Said out loud, so the surfaces show "starting" rather than claiming
+      // there is nothing here while the runtime is allocated.
+      server.setState('starting');
+      return;
+    }
     disconnect = active.peek().connect(agentId);
   }
 

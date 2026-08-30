@@ -14,26 +14,10 @@
  * @module chat/prompt/InputPrompt
  */
 
-
+import type { ReactNode } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
 import type { KernelMessage } from '@jupyterlab/services';
-import {
-  InputPromptBase,
-  type InputPromptVariant,
-} from './InputPromptBase';
-import {
-  AgentsMenu,
-  InlineAgentsMenu,
-  ToolsMenu,
-  SkillsMenu,
-  ModelSelector,
-} from './menus';
-import type { MentionableAgent } from './plugins/AgentMentionPlugin';
-import type { ReactNode } from 'react';
-import { TokenUsageBar } from '../usage/TokenUsageBar';
-import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
-import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
 import type {
   BuiltinTool,
   ContextSnapshotData,
@@ -42,23 +26,35 @@ import type {
   ModelConfig,
   SkillInfo,
 } from '../../types';
+import { InputPromptBase, type InputPromptVariant } from './InputPromptBase';
+import {
+  AgentsMenu,
+  InlineAgentsMenu,
+  ToolsMenu,
+  SkillsMenu,
+  ModelSelector,
+} from './menus';
+import { ContextPie } from '../usage/ContextPie';
+import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
+import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
+import type { MentionableAgent } from './plugins/AgentMentionPlugin';
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 /** One agent the footer may offer. */
+import type { FooterAgent } from '../../types/chat';
+
 /*
  * Re-exported, not defined here.
  *
  * It lived in this module and was imported back by the menus this module
- * renders, and by `types/chat`. Type-only imports are erased, so nothing broke
- * at runtime — but it is a component importing its own children importing the
- * component, which is a shape worth not having. Definition in `types`, where
- * the menus can reach it without reaching upwards.
+ * renders, and by `types/chat` — a component importing its own children
+ * importing the component. Definition moved to `types`; this keeps the name
+ * reachable from where callers already look for it.
  */
-export type { FooterAgent } from '../../types/chat';
-import type { FooterAgent } from '../../types/chat';
+export type { FooterAgent };
 
 /* Shared, so a defaulted prop is the same object on every render: a fresh
    `new Map()` per render is a new dependency for anything memoising on it. */
@@ -116,6 +112,17 @@ export interface InputPromptProps {
   selectedAgentId?: string;
   /** Address somebody else. */
   onSelectAgent?: (agentId: string) => void;
+  /**
+   * Whether the agent chip is also drawn inside the prompt.
+   *
+   * True by default: the chip says who is answering while a person is
+   * writing, which the footer's menu says too but further from the eye.
+   *
+   * False for a host that would rather have one place for every control than
+   * two — the footer keeps the chooser either way, so nothing is lost but the
+   * duplication.
+   */
+  showInlineAgentsMenu?: boolean;
 
   // ---- Token usage ----
   showTokenUsage: boolean;
@@ -220,6 +227,7 @@ export function InputPrompt({
   mentionableAgents,
   headerContent,
   showAgentsMenu = false,
+  showInlineAgentsMenu = true,
   agents = [],
   selectedAgentId,
   onSelectAgent,
@@ -276,7 +284,10 @@ export function InputPrompt({
    * The menu then simply has one row, already selected.
    */
   const agentsOffered = showAgentsMenu && agents.length > 0;
-  const modelsOffered = showModelSelector && models.length > 0 && !!selectedModel;
+  /* The same control, drawn in the prompt as well as under it. */
+  const inlineAgents = agentsOffered && showInlineAgentsMenu;
+  const modelsOffered =
+    showModelSelector && models.length > 0 && !!selectedModel;
   /* Offered on the tools themselves, not on the config request: an in-page
      agent has no config endpoint and its tools are still real. */
   const toolsOffered =
@@ -326,9 +337,9 @@ export function InputPrompt({
           should not lose the one control that says who is being addressed.
         */
         headerContent={
-          agentsOffered || headerContent ? (
+          inlineAgents || headerContent ? (
             <>
-              {agentsOffered ? (
+              {inlineAgents ? (
                 <InlineAgentsMenu
                   agents={agents}
                   selectedAgentId={selectedAgentId}
@@ -369,9 +380,29 @@ export function InputPrompt({
 
       {/* Token usage slot — keep rendered to prevent async layout jumps */}
       {showTokenUsage && (
-        <Box sx={{ minHeight: hasContext && agentUsage ? 28 : 8 }}>
+        <Box
+          // Dimmed with the controls beneath it. The ring and the counts are
+          // as unavailable as the menus when the prompt is disabled, and one
+          // half of the footer at full strength over the other half at half
+          // read as a rendering fault rather than as a state.
+          sx={{
+            /*
+              No band when there is nothing to put in it.
+              
+              The 8px was there to stop the layout jumping when usage arrived
+              late. For an agent that never reports any — an in-page one with
+              no server keeping the account — it is a permanent white stripe
+              between the prompt and its footer, reserved for a thing that is
+              not coming.
+            */
+            minHeight: hasContext && agentUsage ? 28 : 0,
+            ...(disableInputPrompt
+              ? { opacity: 0.5, pointerEvents: 'none' }
+              : null),
+          }}
+        >
           {hasContext && agentUsage ? (
-            <TokenUsageBar
+            <ContextPie
               agentUsage={agentUsage}
               padding={padding}
               showContextRing={showContextRing}
@@ -394,8 +425,18 @@ export function InputPrompt({
             borderColor: 'border.default',
             alignItems: 'center',
             bg: 'canvas.subtle',
+            /*
+              Dimmed and inert, but still the theme's colours.
+
+              `grayscale(1)` was doing the desaturating, and it takes the
+              theme with it: a workspace on the Jupyter variant — where there
+              is no agent, so the bar is disabled from the moment it renders —
+              showed a grey strip under a coloured page, as though the theme
+              had failed rather than the controls being unavailable. Opacity
+              alone says "not now" without saying "not yours".
+            */
             ...(disableInputPrompt
-              ? { opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(1)' }
+              ? { opacity: 0.5, pointerEvents: 'none' }
               : null),
           }}
         >

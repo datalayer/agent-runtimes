@@ -521,6 +521,19 @@ class CodeSandboxManager:
         with self._sandbox_lock:
             old_variant = self._config.variant
 
+            # An empty string means "no server named — use a colocated one".
+            #
+            # `None` means "leave whatever is configured", which is right for a
+            # caller changing only the variant. But it made switching *to* a
+            # colocated sandbox impossible: after any target that named a URL,
+            # asking for `jupyter-server` with no URL kept the old one, so an
+            # agent asked to run beside its own Jupyter server went on driving
+            # somebody else's. The two intentions need two spellings.
+            cleared = jupyter_url == ""
+            if cleared:
+                self._config.jupyter_url = None
+                self._config.jupyter_token = None
+
             # Parse jupyter_url if it contains a token query parameter
             if jupyter_url:
                 parsed = urlparse(jupyter_url)
@@ -558,7 +571,11 @@ class CodeSandboxManager:
             # If variant changed or we're reconfiguring jupyter, stop existing sandbox
             if self._sandbox is not None:
                 config_changed = old_variant != self._config.variant or (
-                    self._config.variant == "jupyter-server" and jupyter_url
+                    self._config.variant == "jupyter-server"
+                    # Cleared counts as changed. Without this the running
+                    # sandbox — pointed at the server just disowned — stayed
+                    # up and kept answering.
+                    and (bool(jupyter_url) or cleared)
                 )
                 if config_changed:
                     logger.info(

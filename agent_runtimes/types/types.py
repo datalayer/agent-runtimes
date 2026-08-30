@@ -1634,6 +1634,16 @@ class TeamSpec(BaseModel):
         description="Instructions for routing tasks between agents",
         alias="routingInstructions",
     )
+    suggestions: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Openers shown in an empty chat, so a person arriving at a team "
+            "sees what it can be asked rather than an empty box. At the team "
+            "level because they describe the team's front door: the "
+            "supervisor answers first, and what it is worth asking is a "
+            "property of the whole team rather than of any one member."
+        ),
+    )
     validation: Optional[TeamValidationSpec] = Field(
         default=None,
         description="Validation settings for the team",

@@ -360,7 +360,16 @@ function WorkspaceBody({
             // In a column there is no room for a row: the header wraps rather
             // than pushing the model chip off the edge.
             justifyContent: compact ? 'flex-start' : 'space-between',
-            flexWrap: compact ? 'wrap' : 'nowrap',
+            /*
+              Allowed to wrap at any width.
+              
+              `nowrap` meant the row absorbed whatever a plugin put in it by
+              squeezing everything else — a sandbox failure message, a long
+              agent name — instead of taking a second line. The controls stayed
+              on one row and got narrower, which is the wrong trade: a header
+              two lines tall is legible, a compressed one is not.
+            */
+            flexWrap: 'wrap',
             gap: 2,
             px: compact ? 2 : 3,
             py: 2,

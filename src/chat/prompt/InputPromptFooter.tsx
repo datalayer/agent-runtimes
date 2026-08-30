@@ -22,7 +22,6 @@ import {
   PauseIcon,
 } from '@primer/octicons-react';
 
-
 export interface InputPromptFooterProps {
   /** Content to render on the left side (dropdowns, indicators, etc.) */
   children?: ReactNode;

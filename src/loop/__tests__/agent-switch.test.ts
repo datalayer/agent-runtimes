@@ -259,3 +259,59 @@ describe('a host that asked for no header', () => {
     expect(header.indexOf('LoopSlots.header')).toBeGreaterThan(0);
   });
 });
+
+describe('the editor beside the chat', () => {
+  it('reopens after the sandbox that closed it comes back', () => {
+    /*
+     * A surface that stops being openable is closed, and the control
+     * correctly reads None. What was wrong is that it stayed there: the
+     * reader's choice had already spent the host's default, so a sandbox
+     * blinking during a target switch emptied the workspace for good — the
+     * control agreeing with an empty view, and neither agreeing with what
+     * anyone had asked for.
+     */
+    const chat = read('plugins', 'chat', 'ChatView.tsx');
+    expect(chat).toContain('setSuspendedId(active.surfaceId)');
+    expect(chat).toContain('setSuspendedId(null)');
+    /*
+     * And the column stays while it is away. Removing it widened the chat to
+     * the whole workspace and narrowed it again a second later, moving the
+     * box the reader was typing in — twice, for an editor that was coming
+     * back either way.
+     */
+    expect(chat).toContain('{active || waiting ? (');
+  });
+});
+
+describe('the Local target', () => {
+  it('asks for a colocated sandbox, not whichever server was last named', () => {
+    /*
+     * `jupyter-server` names where the sandbox is *relative to the agent* —
+     * colocated — not which server it is. The manager reads a missing
+     * `jupyter_url` as "keep what you have", so arriving here from the Jupyter
+     * target left a local agent driving the anonymous server on prod1. An
+     * empty string is the other intention, spelled differently.
+     */
+    const source = read('plugins', 'agents', 'switchable.ts');
+    // Written across lines by the formatter, so matched on the two fields
+    // that carry the meaning rather than on one exact spelling of them.
+    expect(source).toContain("jupyter_url: ''");
+    expect(source).toContain("jupyter_token: ''");
+  });
+});
+
+describe('the editor picker', () => {
+  it('reports the surface on screen, not the one requested', () => {
+    /*
+     * The picker read `surfaceId` — the request — while the column beside it
+     * renders `active`, what that request resolved to. They agree once things
+     * have settled and differ exactly while they have not, which is how the
+     * control came to say None over a notebook. Reading the rendered surface
+     * makes them agree by construction.
+     */
+    const chat = read('plugins', 'chat', 'ChatView.tsx');
+    expect(chat).toContain(
+      'active={active?.surfaceId ?? waiting?.surfaceId ?? NO_SURFACE}',
+    );
+  });
+});

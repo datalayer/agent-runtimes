@@ -1390,6 +1390,8 @@ const ExampleAppThemed: React.FC<{
       ?.tags?.includes('owns-sandbox-control'),
   );
   const isHome = selectedExample === 'HomeExample';
+  // The one example that describes its own agent — see the header below.
+  const isLoopWorkspace = selectedExample === 'LoopWorkspaceExample';
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
@@ -1685,7 +1687,16 @@ const ExampleAppThemed: React.FC<{
                 </SegmentedControl>
               </Box>
             )}
-            {!isHome && !shouldShowAuthScreen && (
+            {/*
+              Not for the Loop workspace, which draws its own.
+
+              This shell keeps one summary for the example on screen, which is
+              right while an example *is* an agent. The workspace is not: the
+              agent it addresses is chosen inside it and can change without
+              this page knowing, so the summary here described a session it
+              could not see — beside a header that described the real one.
+            */}
+            {!isHome && !shouldShowAuthScreen && !isLoopWorkspace && (
               <AgentSummary summary={agentSummary} />
             )}
             {isChangingExample && (

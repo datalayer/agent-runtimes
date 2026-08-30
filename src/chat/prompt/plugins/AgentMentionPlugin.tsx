@@ -314,11 +314,7 @@ export function AgentMentionPlugin({
                     {/* The spec's own icon. An emoji was the same picture
                         for every agent that had not set one, so the column
                         said nothing at all. */}
-                    {agent.icon ? (
-                      <agent.icon />
-                    ) : (
-                      <AiAgentIcon />
-                    )}
+                    {agent.icon ? <agent.icon /> : <AiAgentIcon />}
                   </ActionList.LeadingVisual>
                   {agent.name}
                   {agent.description ? (

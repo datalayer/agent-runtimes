@@ -234,8 +234,8 @@ const LexicalUI = React.memo(function LexicalUI({
       >
         <h1>Lexical Example</h1>
         <p>
-          Platform-agnostic usage with agent-runtimes integration. Use the
-          AI Agent to manipulate the Document.
+          Platform-agnostic usage with agent-runtimes integration. Use the AI
+          Agent to manipulate the Document.
         </p>
       </Box>
 

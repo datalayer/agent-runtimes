@@ -800,6 +800,7 @@ function ChatBaseInner({
   onSendMessage,
   onSendReady,
   onLoadingChange,
+  onContextSnapshot,
   enableStreaming = false,
   // Extended props
   brandIcon,
@@ -2037,8 +2038,54 @@ function ChatBaseInner({
     } as ContextSnapshotData;
   }, [localUsage, protocol?.enableConfigQuery]);
 
+  /*
+   * Nothing carried over from the agent before this one.
+   *
+   * The runtime store keeps one snapshot, not one per agent, so after a
+   * switch it still holds whatever the previous agent last reported — and the
+   * bar went on showing that conversation's numbers under a new agent's name
+   * until the new one answered. `localUsage` had the same problem from the
+   * other direction: it accumulates a session, and a session belongs to an
+   * agent.
+   *
+   * So the local tally is cleared on a switch, and the store's snapshot is
+   * ignored until it is replaced by a different object — which is the only
+   * signal available that it is the new agent's and not the old one's.
+   */
+  const seenAgent = useRef(activeAgentId);
+  const snapshotAtSwitch = useRef<ContextSnapshotData | null>(null);
+  const storeSnapshot = contextSnapshotQuery.data;
+  const storeSnapshotRef = useRef(storeSnapshot);
+  storeSnapshotRef.current = storeSnapshot;
+
+  useEffect(() => {
+    if (seenAgent.current === activeAgentId) {
+      return;
+    }
+    seenAgent.current = activeAgentId;
+    setLocalUsage(null);
+    snapshotAtSwitch.current = storeSnapshotRef.current ?? null;
+  }, [activeAgentId]);
+
+  const freshStoreSnapshot =
+    storeSnapshot && storeSnapshot !== snapshotAtSwitch.current
+      ? storeSnapshot
+      : undefined;
+
   const agentUsage =
-    externalContextSnapshot ?? contextSnapshotQuery.data ?? localSnapshot;
+    externalContextSnapshot ?? freshStoreSnapshot ?? localSnapshot;
+
+  /*
+   * Handed on to a host that draws its own prompt.
+   *
+   * The loop workspace is one: it renders the composer itself, so the usage
+   * bar beside it can only show what this component passes out. Without this
+   * an in-page agent — whose only account of the window is the totals the
+   * harness reports here — left that bar permanently empty.
+   */
+  useEffect(() => {
+    onContextSnapshot?.(agentUsage);
+  }, [agentUsage, onContextSnapshot]);
   const sandboxStatusQuery = useSandbox(
     configQueriesEnabled && showHeader,
     protocol?.configEndpoint,

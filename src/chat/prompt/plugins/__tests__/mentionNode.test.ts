@@ -49,7 +49,9 @@ describe('the node Lexical is asked to register', () => {
     const editor = headlessEditor();
     editor.update(
       () => {
-        const json = $createMentionNode({ name: 'Notebook Compactor' }).exportJSON();
+        const json = $createMentionNode({
+          name: 'Notebook Compactor',
+        }).exportJSON();
         expect(json.name).toBe('Notebook Compactor');
         expect(json.type).toBe('agent-mention');
         expect(MentionNode.importJSON(json).getTextContent()).toBe(
