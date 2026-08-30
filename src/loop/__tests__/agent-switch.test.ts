@@ -315,3 +315,19 @@ describe('the editor picker', () => {
     );
   });
 });
+
+describe('the editor picker on arrival', () => {
+  it('names the configured default before it has opened', () => {
+    /*
+     * The default needs a sandbox, and a sandbox takes as long as a kernel
+     * takes to start — so for the first seconds of every workspace there is a
+     * configured notebook that is not open yet. The control said None and
+     * changed its mind, which reads as the setting not having taken.
+     */
+    const chat = read('plugins', 'chat', 'ChatView.tsx');
+    expect(chat).toContain(
+      'if (!surfaceChosen.current && surfaceId === NO_SURFACE)',
+    );
+    expect(chat).toContain('return wanted?.value;');
+  });
+});

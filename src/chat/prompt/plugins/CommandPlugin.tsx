@@ -4,26 +4,35 @@
  */
 
 /**
- * Addressing an agent from the prompt, by typing `@`.
+ * Running something from the prompt, by typing `/`.
  *
- * The picker in the header says who the *conversation* is with. This says who
- * a single request is for, which is a different question and wants a different
- * answer: a person mid-sentence should not have to leave the sentence.
+ * The sibling of `AgentMentionPlugin`, and deliberately its twin: the same
+ * caret-anchored overlay, the same keyboard ownership while it is open, the
+ * same reset when the word changes. Two menus that behave differently for no
+ * reason a person could name would be worse than either.
  *
- * What it inserts is a plain `@Name`, not a node of its own. The name is read
- * by the model — the agent is reachable because it is one of the parent's
- * tools, and the tool is named after it — so a mention is a *hint in the
- * prompt*, not a control channel. That means a person can type one by hand, or
- * edit one afterwards, and it still works; a bespoke node would have made both
- * of those break in ways nobody could see.
+ * What it inserts is plain text, not a node. A command is read by whoever
+ * handles the prompt, and a person can type one by hand or edit one
+ * afterwards; a bespoke node would break both in ways nobody could see. That
+ * is the one place it differs from the mention plugin, whose chip exists
+ * because an agent's name has spaces in it and a command does not.
  *
- * @module chat/prompt/plugins/AgentMentionPlugin
+ * The commands are hardcoded and every one of them is disabled: the menu is
+ * here to say what is coming, and offering something that does nothing when
+ * chosen would be worse than saying so.
+ *
+ * @module chat/prompt/plugins/CommandPlugin
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Icon } from '@primer/octicons-react';
 import { ActionList, Overlay } from '@primer/react';
-import { AiAgentIcon } from '@datalayer/icons-react';
+import {
+  CommentDiscussionIcon,
+  FoldIcon,
+  BriefcaseIcon,
+  ToolsIcon,
+} from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
@@ -37,58 +46,73 @@ import {
   type LexicalEditor,
 } from 'lexical';
 
-import { $createMentionNode } from './MentionNode';
-
-/** One agent a prompt may address. */
-export type MentionableAgent = {
-  /** The name typed after `@`, and the name of the tool that reaches it. */
+/** One command a prompt may run. */
+export type PromptCommand = {
+  /** The word typed after `/`. */
   name: string;
-  /** One line about what it is for. */
+  /** One line about what it does. */
   description?: string;
-  emoji?: string;
-  /**
-   * The octicon its agentspec asked for.
-   *
-   * Resolved by whoever builds the list — this module has no opinion about
-   * where an icon name comes from — and drawn in place of the emoji, which was
-   * the same picture for every agent that had not set one.
-   */
+  /** The mark shown beside it. */
   icon?: Icon;
-  /**
-   * Shown, but not choosable.
-   *
-   * The member already being addressed is the case this exists for: leaving
-   * it out made the list look arbitrary — a team of two offering one name —
-   * while offering it would let a person address the agent they are already
-   * talking to. It stays visible, greyed, and says why.
-   */
+  /** Shown, but not choosable. */
   disabled?: boolean;
   /** Why it cannot be chosen, when it cannot. */
   disabledReason?: string;
 };
 
 /**
+ * The commands, for now.
+ *
+ * Hardcoded and every one disabled, because none of them is wired to anything
+ * yet. A menu that lists what is coming is honest; one that accepts a choice
+ * and does nothing is not.
+ */
+export const PROMPT_COMMANDS: PromptCommand[] = [
+  {
+    name: 'compact',
+    description:
+      'Shorten the conversation so far, keeping what the agent still needs.',
+    icon: FoldIcon,
+    disabled: true,
+    disabledReason: 'Not wired up yet',
+  },
+  {
+    name: 'mcp',
+    description: 'Show the MCP servers this agent can reach, and their tools.',
+    icon: ToolsIcon,
+    disabled: true,
+    disabledReason: 'Not wired up yet',
+  },
+  {
+    name: 'skills',
+    description: 'Show the skills loaded into this agent, and what they do.',
+    icon: BriefcaseIcon,
+    disabled: true,
+    disabledReason: 'Not wired up yet',
+  },
+];
+
+/**
  * How wide the menu is, and how tall it may grow.
  *
  * Named because the position is computed from them: the menu is lifted its own
  * height to sit above the caret, and held back from the right edge by its own
- * width. A number that only lived in the style would put it off screen the
- * moment either changed.
+ * width.
  */
 const MENU_WIDTH = 440;
 const MENU_MAX_HEIGHT = 240;
 
-/** The `@word` being typed, if the caret is in one. */
-type MentionQuery = { text: string; rect: DOMRect | null };
+/** The `/word` being typed, if the caret is in one. */
+type CommandQuery = { text: string; rect: DOMRect | null };
 
 /**
- * Read the `@word` immediately before the caret.
+ * Read the `/word` immediately before the caret.
  *
- * Anchored to a word boundary so an email address or a decorator does not open
- * a menu: `@` counts only at the start of the text or after whitespace.
+ * Anchored to a word boundary so a path or a fraction does not open a menu:
+ * `/` counts only at the start of the text or after whitespace.
  */
-function readMentionQuery(editor: LexicalEditor): MentionQuery | null {
-  let query: MentionQuery | null = null;
+function readCommandQuery(editor: LexicalEditor): CommandQuery | null {
+  let query: CommandQuery | null = null;
   editor.getEditorState().read(() => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
@@ -96,7 +120,7 @@ function readMentionQuery(editor: LexicalEditor): MentionQuery | null {
     }
     const node = selection.anchor.getNode();
     const before = node.getTextContent().slice(0, selection.anchor.offset);
-    const match = /(?:^|\s)@([\w-]*)$/.exec(before);
+    const match = /(?:^|\s)\/([\w-]*)$/.exec(before);
     if (!match) {
       return;
     }
@@ -110,27 +134,27 @@ function readMentionQuery(editor: LexicalEditor): MentionQuery | null {
   return query;
 }
 
-export type AgentMentionPluginProps = {
-  /** Everyone this prompt may address. No menu when there is nobody. */
-  agents: MentionableAgent[];
+export type CommandPluginProps = {
+  /** Every command this prompt offers. No menu when there are none. */
+  commands: PromptCommand[];
 };
 
 /**
- * Offer the agents while `@` is being typed.
+ * Offer the commands while `/` is being typed.
  */
-export function AgentMentionPlugin({
-  agents,
-}: AgentMentionPluginProps): JSX.Element | null {
+export function CommandPlugin({
+  commands,
+}: CommandPluginProps): JSX.Element | null {
   const [editor] = useLexicalComposerContext();
-  const [query, setQuery] = useState<MentionQuery | null>(null);
+  const [query, setQuery] = useState<CommandQuery | null>(null);
   const [highlighted, setHighlighted] = useState(0);
   const anchorRef = useRef<HTMLDivElement>(null);
-  /* Set while the document change that inserted a mention is being applied. */
+  /* Set while the document change that inserted a command is being applied. */
   const justInserted = useRef(false);
 
   const matches = query
-    ? agents.filter(agent =>
-        agent.name.toLowerCase().startsWith(query.text.toLowerCase()),
+    ? commands.filter(command =>
+        command.name.toLowerCase().startsWith(query.text.toLowerCase()),
       )
     : [];
   const open = matches.length > 0;
@@ -139,7 +163,7 @@ export function AgentMentionPlugin({
    * renders, and out of here so the keyboard never selects it — the two lists
    * exist because "shown" and "choosable" stopped being the same thing.
    */
-  const choosable = matches.filter(agent => !agent.disabled);
+  const choosable = matches.filter(command => !command.disabled);
 
   /*
    * Back to the first choosable row whenever the typing changes.
@@ -159,7 +183,7 @@ export function AgentMentionPlugin({
 
   useEffect(() => {
     return editor.registerUpdateListener(() => {
-      const next = readMentionQuery(editor);
+      const next = readCommandQuery(editor);
       if (justInserted.current) {
         /*
          * Held closed until the caret is somewhere that asks nothing.
@@ -167,7 +191,7 @@ export function AgentMentionPlugin({
          * One edit can raise several updates, so consuming the flag on the
          * first of them let a later one reopen the menu — over the chip just
          * inserted, a line higher, which is what a reader saw. The flag
-         * clears when the document settles into a state with no `mention`
+         * clears when the document settles into a state with no `command`
          * being typed, which the trailing space guarantees on the very next
          * update.
          */
@@ -183,7 +207,7 @@ export function AgentMentionPlugin({
 
   /** Replace the `@partial` with the chosen name. */
   const insert = useCallback(
-    (agent: MentionableAgent) => {
+    (command: PromptCommand) => {
       editor.update(() => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
@@ -192,7 +216,7 @@ export function AgentMentionPlugin({
         const node = selection.anchor.getNode();
         const offset = selection.anchor.offset;
         const before = node.getTextContent().slice(0, offset);
-        const match = /(?:^|\s)@([\w-]*)$/.exec(before);
+        const match = /(?:^|\s)\/([\w-]*)$/.exec(before);
         if (!match) {
           return;
         }
@@ -200,18 +224,9 @@ export function AgentMentionPlugin({
         // including the space that made `@` a mention — survives.
         const start = offset - match[1].length - 1;
         selection.setTextNodeRange(node as never, start, node as never, offset);
-        /*
-         * A node, not `@Name ` as text.
-         *
-         * As text a mention was several words to the editor: backspace took
-         * the last one off and left an address to somebody who does not
-         * exist. The trailing space stays plain, so the caret lands after the
-         * chip ready for the rest of the sentence.
-         */
-        selection.insertNodes([
-          $createMentionNode({ name: agent.name, icon: agent.icon }),
-        ]);
-        selection.insertText(' ');
+        // Plain text. A command is one word with no spaces in it, so the
+        // editing hazard that made a mention a node does not arise here.
+        selection.insertText(`/${command.name} `);
       });
       justInserted.current = true;
       setQuery(null);
@@ -226,7 +241,7 @@ export function AgentMentionPlugin({
    * At `CRITICAL`, above the `HIGH` the submit handler uses. Lexical runs the
    * higher priority first and stops at the first handler that returns true —
    * so registering these `LOW` meant Enter reached submit before the menu ever
-   * saw it, and choosing an agent sent the half-written message instead.
+   * saw it, and choosing an command sent the half-written message instead.
    *
    * Being above submit is safe precisely because this effect only runs while
    * the menu is open, and each handler declines when it has nothing to do.
@@ -242,7 +257,7 @@ export function AgentMentionPlugin({
           /*
             Declined when nothing can be chosen.
 
-            The menu opens for a single agent that is already the one being
+            The menu opens for a single command that is already the one being
             addressed — shown greyed, because a menu that hides its only row
             looks broken — and then `% choosable.length` is `% 0`, which is
             NaN. Handing the key back leaves the caret working as it should.
@@ -271,11 +286,11 @@ export function AgentMentionPlugin({
       editor.registerCommand(
         KEY_ENTER_COMMAND,
         () => {
-          const agent = choosable[highlighted];
-          if (!agent) {
+          const command = choosable[highlighted];
+          if (!command) {
             return false;
           }
-          insert(agent);
+          insert(command);
           return true;
         },
         COMMAND_PRIORITY_CRITICAL,
@@ -367,19 +382,19 @@ export function AgentMentionPlugin({
             child, a long description sets the width of everything above it. */}
         <Box sx={{ width: '100%', maxWidth: MENU_WIDTH, minWidth: 0 }}>
           <ActionList selectionVariant="single">
-            {matches.map(agent => {
-              const index = choosable.indexOf(agent);
+            {matches.map(command => {
+              const index = choosable.indexOf(command);
               return (
                 <ActionList.Item
-                  key={agent.name}
+                  key={command.name}
                   active={index >= 0 && index === highlighted}
                   // Focusable while inert, so the reason is readable rather
                   // than merely implied by the grey.
-                  aria-disabled={agent.disabled}
-                  title={agent.disabledReason}
+                  aria-disabled={command.disabled}
+                  title={command.disabledReason}
                   onSelect={() => {
-                    if (!agent.disabled) {
-                      insert(agent);
+                    if (!command.disabled) {
+                      insert(command);
                     }
                   }}
                   /*
@@ -388,7 +403,7 @@ export function AgentMentionPlugin({
                     `active` is Primer's "the keyboard is here" state and this
                     list renders it faintly; `selected` draws a tick in the
                     leading-visual slot, which these rows already fill with the
-                    agent's own icon — so neither showed. The row Enter would
+                    command's own icon — so neither showed. The row Enter would
                     take looked exactly like the rest, which is the one thing a
                     menu driven by arrow keys must not do.
 
@@ -399,17 +414,21 @@ export function AgentMentionPlugin({
                     ...(index >= 0 && index === highlighted
                       ? { bg: 'accent.subtle' }
                       : null),
-                    ...(agent.disabled ? { opacity: 0.5 } : null),
+                    ...(command.disabled ? { opacity: 0.5 } : null),
                   }}
                 >
                   <ActionList.LeadingVisual>
                     {/* The spec's own icon. An emoji was the same picture
-                        for every agent that had not set one, so the column
+                        for every command that had not set one, so the column
                         said nothing at all. */}
-                    {agent.icon ? <agent.icon /> : <AiAgentIcon />}
+                    {command.icon ? (
+                      <command.icon />
+                    ) : (
+                      <CommentDiscussionIcon />
+                    )}
                   </ActionList.LeadingVisual>
-                  {agent.name}
-                  {agent.description ? (
+                  {command.name}
+                  {command.description ? (
                     <ActionList.Description
                       variant="block"
                       /* Wrapped and breakable. `minWidth: 0` is the load-bearing
@@ -423,7 +442,7 @@ export function AgentMentionPlugin({
                         minWidth: 0,
                       }}
                     >
-                      {agent.description}
+                      {command.description}
                     </ActionList.Description>
                   ) : null}
                 </ActionList.Item>
@@ -436,4 +455,4 @@ export function AgentMentionPlugin({
   );
 }
 
-export default AgentMentionPlugin;
+export default CommandPlugin;

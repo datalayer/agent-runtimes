@@ -128,7 +128,7 @@ export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
 export const ChatPlugin = definePlugin<ChatPluginConfig>({
   name: CHAT_PLUGIN_NAME,
   config: {
-    placeholder: 'Ask anything, or type / for commands',
+    placeholder: 'Ask anything, type / for commands or @ for mention',
     // The notebook: it is what most of these agents work on, and a workspace
     // that opens on an empty chat hides the half of itself that does the work.
     defaultSurface: 'notebook',

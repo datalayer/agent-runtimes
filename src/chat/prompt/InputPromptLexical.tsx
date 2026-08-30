@@ -39,6 +39,7 @@ import {
   AgentMentionPlugin,
   type MentionableAgent,
 } from './plugins/AgentMentionPlugin';
+import { CommandPlugin, PROMPT_COMMANDS } from './plugins/CommandPlugin';
 
 // ---- Lexical config (plain-text only) ------------------------------------
 
@@ -317,6 +318,10 @@ export function InputPromptLexical({
           readOnly={readOnly}
         />
         <AutoFocusPlugin autoFocus={autoFocus} />
+        {/* `/` for commands, beside `@` for agents. Always mounted: the list
+            is fixed, so unlike the mentions there is no host that might have
+            nothing to offer. */}
+        <CommandPlugin commands={PROMPT_COMMANDS} />
         {mentionableAgents?.length ? (
           <AgentMentionPlugin agents={mentionableAgents} />
         ) : null}

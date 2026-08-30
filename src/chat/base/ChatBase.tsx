@@ -64,6 +64,7 @@ import type {
 } from '../../types/chat';
 import { AgentDetails } from '../../agents/AgentDetails';
 import type { BuiltinTool } from '../../types/models';
+import { AI_MODEL_CATALOGUE } from '../../specs/models';
 import type { ContextSnapshotData } from '../../types/context';
 import type { FrontendToolDefinition } from '../../types/tools';
 import {
@@ -1881,15 +1882,48 @@ function ChatBaseInner({
    * of agent whose tools the browser already knows in full.
    */
   const builtinTools = useMemo<BuiltinTool[]>(() => {
-    const fromConfig = configQuery.data?.builtinTools;
-    if (fromConfig?.length) {
-      return fromConfig;
-    }
-    return (frontendTools ?? []).map(tool => ({
-      id: tool.name,
-      name: tool.name,
-    }));
-  }, [configQuery.data?.builtinTools, frontendTools]);
+    /*
+     * Both lists, not one or the other.
+     *
+     * The server's builtin tools and the ones this page handed the agent are
+     * both things it can call, and a menu naming only the first was wrong for
+     * every agent given frontend tools — which is every notebook agent, whose
+     * ability to run a cell lives entirely on this side.
+     *
+     * Server first, because that is the order they were introduced in and a
+     * list that reorders itself as a request lands is one nobody can scan.
+     * De-duplicated by name: a tool implemented on both sides is one tool.
+     */
+    const fromConfig = configQuery.data?.builtinTools ?? [];
+
+    /*
+     * Including the tools this chat does *not* run.
+     *
+     * An in-page agent's tools are handed to the harness rather than to the
+     * chat — the SDK owns the loop and calls them directly, and giving them
+     * to both would run each one twice — so `frontendTools` is empty for
+     * exactly the agent whose tools live entirely in the page. The menu was
+     * therefore emptiest where the tools were most real.
+     *
+     * Executing a tool and listing it are different jobs. The protocol config
+     * names what the agent can call, which is the question this menu asks.
+     */
+    const inProtocol =
+      (protocol?.options as { frontendTools?: { name: string }[] } | undefined)
+        ?.frontendTools ?? [];
+
+    const seen = new Set(fromConfig.map(tool => tool.name));
+    const fromPage = [...(frontendTools ?? []), ...inProtocol]
+      .filter(tool => {
+        if (seen.has(tool.name)) {
+          return false;
+        }
+        seen.add(tool.name);
+        return true;
+      })
+      .map(tool => ({ id: tool.name, name: tool.name }));
+    return [...fromConfig, ...fromPage];
+  }, [configQuery.data?.builtinTools, frontendTools, protocol?.options]);
 
   /*
    * Who is answering, as one row when that is all there is.
@@ -1939,6 +1973,28 @@ function ChatBaseInner({
     const fromConfig = availableModels || configQuery.data?.models;
     if (fromConfig?.length) {
       return fromConfig;
+    }
+    /*
+     * The catalogue, filtered to what is worth offering.
+     *
+     * A server tells the chat which models it can reach and that answer wins.
+     * Without one — an in-page agent, or a server that has not answered yet —
+     * this used to offer the single model the protocol was built with, which
+     * is a menu with nothing to choose.
+     *
+     * `available` is the filter, not the whole catalogue: twenty-six models,
+     * most of them superseded, is a list nobody reads. The specs say which
+     * four are current.
+     */
+    const catalogued = Object.values(AI_MODEL_CATALOGUE)
+      .filter(model => model.available)
+      .map(model => ({
+        id: model.id,
+        name: model.name,
+        provider: model.provider,
+      }));
+    if (catalogued.length > 0) {
+      return catalogued;
     }
     return browserModel
       ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
@@ -2297,8 +2353,17 @@ function ChatBaseInner({
 
   // ---- Initialize model and tools when config is available ----
   useEffect(() => {
-    if ((configQuery.data || availableModels) && !selectedModel) {
-      const modelsList = availableModels || configQuery.data?.models || [];
+    /*
+     * `offeredModels`, not the two sources it is built from.
+     *
+     * It also carries the model an in-page agent was built with, for the case
+     * where there is no config endpoint to ask — and this gate read the raw
+     * sources, so that model was offered by the menu and never selected. The
+     * menu draws nothing without a selection, so a browser agent had a model
+     * list of one and no model control at all.
+     */
+    if (offeredModels.length > 0 && !selectedModel) {
+      const modelsList = offeredModels;
       const preferredModel = initialModel || configQuery.data?.defaultModel;
       if (preferredModel) {
         const modelExists = modelsList.some(m => m.id === preferredModel);
@@ -2347,6 +2412,7 @@ function ChatBaseInner({
     }
   }, [
     configQuery.data,
+    offeredModels,
     selectedModel,
     initialModel,
     availableModels,

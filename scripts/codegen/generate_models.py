@@ -117,6 +117,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f'    description="{spec.get("description", "")}",',
             f'    provider="{spec["provider"]}",',
             f"    default={spec.get('default', False)},",
+            # What is worth offering today, as distinct from what the platform
+            # knows how to talk to.
+            f"    available={spec.get('available', False)},",
             f"    required_env_vars={env_vars_formatted},",
             f"    tokens_limit={tokens_limit_formatted},",
         ]
@@ -315,6 +318,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"  description: '{description}',",
             f"  provider: '{spec['provider']}',",
             f"  default: {str(spec.get('default', False)).lower()},",
+            f"  available: {str(spec.get('available', False)).lower()},",
             f"  requiredEnvVars: {env_vars_formatted},",
         ]
         if tokens_limit is not None:

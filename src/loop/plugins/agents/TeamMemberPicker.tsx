@@ -22,11 +22,17 @@ import { useState } from 'react';
 import { ActionList, AnchoredOverlay, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';
-import { CheckIcon } from '@primer/octicons-react';
 import { useSignalValue } from '@datalayer/reactor/react';
 
 import type { TeamSelection } from './team';
+import { agentIcon } from './agentIcons';
 import { useOptionalTeamSelection } from './useTeamSelection';
+
+/** One member's mark, as its spec names it. */
+function MemberIcon({ icon }: { icon?: string }): JSX.Element {
+  const Icon = agentIcon(icon);
+  return <Icon />;
+}
 
 export function TeamMemberPicker(): JSX.Element | null {
   const selection = useOptionalTeamSelection();
@@ -115,8 +121,23 @@ function TeamMemberMenu({
                 setOpen(false);
               }}
             >
+              {/*
+                The agent's own icon, and nothing beside it.
+
+                `selectionVariant="single"` already draws a tick for the
+                selected row, so the one added here made two — a check in the
+                leading slot and another in the trailing one, for a single
+                fact. Primer's is the one to keep: it is the same mark this
+                list draws in every other menu.
+              */}
               <ActionList.LeadingVisual>
-                <Text aria-hidden>{member.emoji ?? '🤖'}</Text>
+                {/* The octicon its agentspec asked for. An emoji was the same
+                    picture for every agent that had not set one, so the column
+                    said nothing — and the `@` menu and the footer's chooser
+                    both draw the spec's icon, which left this one list
+                    disagreeing with the other two about what an agent looks
+                    like. */}
+                <MemberIcon icon={member.icon} />
               </ActionList.LeadingVisual>
               <Box
                 as="span"
@@ -146,11 +167,6 @@ function TeamMemberMenu({
                   {member.description}
                 </ActionList.Description>
               ) : null}
-              {/* The tick, so the menu says which agent is listening rather than
-                leaving it to be inferred from the icon behind it. */}
-              <ActionList.TrailingVisual>
-                {member.id === selectedId ? <CheckIcon /> : null}
-              </ActionList.TrailingVisual>
             </ActionList.Item>
           ))}
         </ActionList>

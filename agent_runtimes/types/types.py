@@ -237,6 +237,14 @@ class AIModel(BaseModel):
     default: bool = Field(
         default=False, description="Whether this is the default model"
     )
+    available: bool = Field(
+        default=False,
+        description=(
+            "Whether this model is offered to a person choosing one. The "
+            "catalogue is what the platform knows how to talk to; this is "
+            "what is worth offering today."
+        ),
+    )
     required_env_vars: List[str] = Field(
         default_factory=list,
         description="Required environment variable names",

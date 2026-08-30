@@ -21,6 +21,15 @@ export interface AIModel {
   provider: string;
   /** Whether this is the default model */
   default: boolean;
+  /**
+   * Whether this model is offered to a person choosing one.
+   *
+   * The catalogue is what the platform knows how to talk to; this says what
+   * is worth offering today. Without the distinction a picker lists every
+   * model ever added, most of them superseded, and choosing becomes a chore
+   * rather than a help.
+   */
+  available: boolean;
   /** Required environment variable names */
   requiredEnvVars: string[];
   /**

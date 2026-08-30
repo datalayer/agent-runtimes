@@ -155,7 +155,8 @@ export function createServerSandboxService(serverUrl: string): SandboxService {
 
   const snapshot = computed(() => ({
     ...summarize(status.value, lifecycle.value),
-    errorReason: lifecycle.value === 'error' ? lifecycleReason.value : undefined,
+    errorReason:
+      lifecycle.value === 'error' ? lifecycleReason.value : undefined,
   }));
   const ready = computed(() => snapshot.value.state === 'running');
 

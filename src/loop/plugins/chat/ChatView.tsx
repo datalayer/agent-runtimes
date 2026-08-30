@@ -64,6 +64,7 @@ import { useAgentRuntimeContextSnapshot } from '../../../stores';
 import { useConfig } from '../../../hooks/useConfig';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
 import type { ContextSnapshotData, ModelConfig } from '../../../types';
+import { AI_MODEL_CATALOGUE } from '../../../specs/models';
 import {
   LoopAgentGate,
   LoopChatSurface,
@@ -89,7 +90,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const reactor = useReactorPlatform();
   const config = reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME);
   const placeholder =
-    config?.placeholder ?? 'Ask anything, or type / for commands';
+    config?.placeholder ?? 'Ask anything, type / for commands or @ for mention';
   const defaultSurface = config?.defaultSurface ?? 'notebook';
 
   /*
@@ -270,13 +271,28 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Held so the layout can keep its column: what is missing is the editor,
    * not the half of the workspace it lives in.
    */
-  const waiting = useMemo(
-    () =>
-      suspendedId
-        ? surfaces.find(item => item.value.surfaceId === suspendedId)?.value
-        : undefined,
-    [surfaces, suspendedId],
-  );
+  const waiting = useMemo(() => {
+    if (suspendedId) {
+      return surfaces.find(item => item.value.surfaceId === suspendedId)?.value;
+    }
+    /*
+     * The host's default, before it has managed to open.
+     *
+     * It needs a sandbox, and a sandbox takes as long as a kernel takes to
+     * start — so for the first seconds of every workspace there is a
+     * configured notebook that is not open yet. Counting it as "waiting" is
+     * what lets the control say Notebook from the outset and the column hold
+     * its half of the split, instead of both saying None and then changing
+     * their minds.
+     *
+     * Only until somebody chooses for themselves. After that the default is
+     * spent, and a reader who picked None must not be shown Notebook.
+     */
+    if (!surfaceChosen.current && surfaceId === NO_SURFACE) {
+      return wanted?.value;
+    }
+    return undefined;
+  }, [surfaces, suspendedId, surfaceId, wanted]);
 
   // And opened again when it can be. The reader asked for it once; an
   // interruption is not them changing their mind.
@@ -581,6 +597,47 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     };
   }, [agentServerUrl]);
 
+  /*
+   * What to offer when the server has no catalogue of its own.
+   *
+   * `/configure/models` answers for a server-backed agent and is
+   * authoritative. An in-page agent has no server to ask, and a model menu
+   * with nothing in it is a control that opens onto an empty list — so the
+   * agentspecs catalogue stands in, filtered to the models marked available.
+   */
+  const offeredModels = useMemo<ModelConfig[]>(
+    () =>
+      catalogModels.length > 0
+        ? catalogModels
+        : Object.values(AI_MODEL_CATALOGUE)
+            .filter(model => model.available)
+            .map(model => ({
+              id: model.id,
+              name: model.name,
+              provider: model.provider,
+            })),
+    [catalogModels],
+  );
+
+  /*
+   * The tools the agent can call, from both sides.
+   *
+   * The server's builtins, and the notebook tools this workspace hands the
+   * harness — which are the only ones an in-page agent has, and the reason
+   * "run this cell" works at all. Listing a tool and running it are different
+   * jobs, so a tool the chat does not execute still belongs in the menu.
+   */
+  const offeredTools = useMemo(() => {
+    const fromServer = configQuery.data?.builtinTools ?? [];
+    const seen = new Set(fromServer.map(tool => tool.name));
+    return [
+      ...fromServer,
+      ...notebookTools
+        .filter(tool => !seen.has(tool.name))
+        .map(tool => ({ id: tool.name, name: tool.name })),
+    ];
+  }, [configQuery.data?.builtinTools, notebookTools]);
+
   /* Which skills are on, as the runtime last reported them. Derived rather
      than held: the source of truth is the agent, and a local copy would drift
      the moment a skill was enabled from anywhere else. */
@@ -705,21 +762,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         showContextRing
         agentUsage={contextUsage ?? undefined}
         /*
-            Everything the workspace can actually offer.
-            
-            Each menu is switched on only when there is something behind it: a
-            model menu with an empty catalogue, or a tools menu for an in-page
-            agent that has no config endpoint, would be a control that opens
-            onto nothing.
-          */
-        showModelSelector={catalogModels.length > 0}
-        models={catalogModels}
+          All four, whatever they happen to contain.
+
+          Each was switched on only when something was behind it, so the row
+          gained and lost controls as answers arrived and an in-page agent —
+          which has no config endpoint to ask — showed almost none of them.
+          Worse, "no skills" and "skills not reported" both came out as an
+          absent menu, which are not the same answer.
+
+          `InputPrompt` draws a menu that opens onto nothing as exactly that:
+          a count of zero and an empty list. That is a statement; a missing
+          control is not.
+        */
+        showModelSelector
+        models={offeredModels}
         selectedModel={workspace.model ?? ''}
         onModelSelect={model => void selectModel(model)}
-        showToolsMenu={!!configQuery.data}
-        availableTools={configQuery.data?.builtinTools ?? []}
+        showToolsMenu
+        availableTools={offeredTools}
         mcpServers={configQuery.data?.mcpServers ?? []}
-        showSkillsMenu={(skillsQuery.data?.skills.length ?? 0) > 0}
+        showSkillsMenu
         skills={skillsQuery.data?.skills ?? []}
         skillsLoading={skillsQuery.isLoading}
         enabledSkills={enabledSkills}
@@ -839,7 +901,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               */
               title={spec?.name ?? member?.name ?? agentId}
               description={spec?.description}
-              brandIcon={<BrandIcon size={48} />}
+              /*
+                Two sizes, because it is drawn in two places.
+
+                The header wants a mark beside a line of text; the empty state
+                wants the thing a person's eye lands on first. One `brandIcon`
+                served both, so a 48px icon meant for the empty state sat in
+                the header at three times the height of the words next to it.
+              */
+              // Big enough to read as the agent's mark rather than as
+              // punctuation before its name, and still short enough not to
+              // set the header's height.
+              brandIcon={<BrandIcon size={20} />}
+              emptyState={{
+                icon: <BrandIcon size={48} />,
+                // `ChatEmptyState` reads its heading from here and nowhere
+                // else — the `title` above reaches the header only — so
+                // without this the agent introduced itself as "Start a
+                // conversation".
+                title: spec?.name ?? member?.name ?? agentId,
+              }}
               /*
                 And what it can be asked. From the team rather than the
                 member: the supervisor answers first, and somebody who has
@@ -848,6 +929,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               */
               suggestions={suggestions}
               showHeader={!config?.hideHeader}
+              /*
+                The (i), which opens the agent's details over the transcript.
+                
+                Worth having here in particular: this workspace can be moved
+                between four runtimes and several agents, and the details pane
+                is the only place that says which one is actually answering
+                and where it is running.
+              */
+              showInformation
               // This view owns the prompt, below, so the chat does not draw a
               // second one: two input boxes on one screen is one too many.
               showInput={false}

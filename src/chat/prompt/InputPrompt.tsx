@@ -283,16 +283,24 @@ export function InputPrompt({
    * knowing in a chat with exactly one agent and no other place that says so.
    * The menu then simply has one row, already selected.
    */
+  /*
+   * Offered because the host asked for them, not because they have contents.
+   *
+   * Each of these used to require something behind it — a model in the list, a
+   * config request answered, a skill loaded — so a chat that had asked for all
+   * four showed however many happened to be populated, and the row's shape
+   * changed as answers arrived. Worse, "no skills" and "skills not reported"
+   * looked identical: both were an absent menu.
+   *
+   * A menu that opens onto nothing says nothing is there, which is an answer.
+   * An absent menu is not.
+   */
   const agentsOffered = showAgentsMenu && agents.length > 0;
   /* The same control, drawn in the prompt as well as under it. */
   const inlineAgents = agentsOffered && showInlineAgentsMenu;
-  const modelsOffered =
-    showModelSelector && models.length > 0 && !!selectedModel;
-  /* Offered on the tools themselves, not on the config request: an in-page
-     agent has no config endpoint and its tools are still real. */
-  const toolsOffered =
-    showToolsMenu && (hasConfigData || availableTools.length > 0);
-  const skillsOffered = showSkillsMenu && hasSkillsData;
+  const modelsOffered = showModelSelector;
+  const toolsOffered = showToolsMenu;
+  const skillsOffered = showSkillsMenu;
   const anyOffered =
     agentsOffered || modelsOffered || toolsOffered || skillsOffered;
 

@@ -85,18 +85,18 @@ describe('the selectors bar', () => {
     'utf8',
   );
 
-  it('offers each menu on its own data, not on one shared flag', () => {
+  it('offers each menu the host asked for, contents or not', () => {
     /*
-     * It used to ask a single question — has any request come back — for all
-     * four menus. A chat with a ready model list and no config endpoint
-     * therefore showed "Loading controls..." over a menu that was fine, and
-     * went on showing it, because the request it waited for was never coming.
+     * Two rules replaced in turn. It first asked one question for all four
+     * menus — has any request come back — so a ready model list sat behind
+     * "Loading controls..." waiting on a config endpoint that did not exist.
+     * Then each asked after its own data, which still hid a menu with nothing
+     * in it — and "no skills" is not the same answer as "skills not
+     * reported", though an absent menu says both.
      */
-    expect(PROMPT).toContain('const modelsOffered =');
-    expect(PROMPT).toContain('const toolsOffered =');
-    expect(PROMPT).toContain(
-      'const skillsOffered = showSkillsMenu && hasSkillsData',
-    );
+    expect(PROMPT).toContain('const modelsOffered = showModelSelector;');
+    expect(PROMPT).toContain('const toolsOffered = showToolsMenu;');
+    expect(PROMPT).toContain('const skillsOffered = showSkillsMenu;');
   });
 
   it('says "loading" only while something is genuinely in flight', () => {
@@ -124,5 +124,35 @@ describe('the context snapshot', () => {
     );
     expect(source).toContain('useAgentRuntimeContextSnapshot()');
     expect(source).not.toContain('data: undefined');
+  });
+});
+
+describe('the command menu', () => {
+  const SOURCE = readFileSync(
+    join(__dirname, '..', '..', 'prompt', 'plugins', 'CommandPlugin.tsx'),
+    'utf8',
+  );
+
+  it('triggers on `/` at a word boundary', () => {
+    // Not mid-word, so a path or a fraction does not open a menu.
+    expect(SOURCE).toContain('/(?:^|\\s)\\/([\\w-]*)$/');
+  });
+
+  it('owns the keys above the submit handler while it is open', () => {
+    /*
+     * `EnterSubmitPlugin` registers Enter at `HIGH`. A menu registering below
+     * that never sees the key: choosing an entry sends the half-written
+     * message instead, which is what the mention menu did until it was
+     * raised.
+     */
+    expect(SOURCE).toContain('COMMAND_PRIORITY_CRITICAL');
+    expect(SOURCE).not.toContain('COMMAND_PRIORITY_LOW');
+  });
+
+  it('offers every command as not-yet-available', () => {
+    // None is wired to anything, and a menu that accepts a choice and does
+    // nothing is worse than one that says so.
+    const disabled = SOURCE.match(/disabled: true/g) ?? [];
+    expect(disabled).toHaveLength(3);
   });
 });
