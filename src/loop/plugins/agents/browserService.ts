@@ -21,6 +21,7 @@
  */
 
 import { computed, signal, type Signal } from '@datalayer/reactor';
+import { PageConfig } from '@jupyterlab/coreutils';
 import type { ServiceManager } from '@jupyterlab/services';
 import type { SandboxSnapshot, SandboxState } from '../../core';
 import type {
@@ -90,19 +91,56 @@ export type ServiceManagerSource = {
   variant: string;
   /** Produce the services. Called once, on first connect. */
   acquire: () => Promise<ServiceManager.IManager>;
+  /**
+   * Undo whatever `acquire` did to state outside itself.
+   *
+   * Optional, because most sources take nothing: only the in-page one has to
+   * repoint the page's shared Jupyter configuration at this origin, and only
+   * it has anything to give back.
+   */
+  release?: () => void;
   /** Whether this sandbox owns the manager and should dispose it on stop. */
   owned: boolean;
 };
 
 /** A sandbox on a JupyterLite kernel in this page. */
 export function browserSource(): ServiceManagerSource {
+  /** Where the page was pointed before this sandbox repointed it. */
+  let pointedAt: { baseUrl: string; wsUrl: string } | undefined;
+
   return {
     variant: 'pyodide',
     // Dynamic: JupyterLite and the Pyodide kernel are megabytes, and a
     // workspace that never opens a browser sandbox should never pay for them.
     acquire: async () => {
-      const { createLiteServiceManager, jupyterReactStore } =
+      const { createLiteServiceManager, jupyterReactStore, loadJupyterConfig } =
         await import('@datalayer/jupyter-react');
+
+      /*
+       * Point Jupyter at this page before building the kernel that lives in it.
+       *
+       * A JupyterLite service manager takes its `serverSettings` from
+       * `PageConfig` at the moment it is created, and JupyterLab's kernel
+       * connection then opens a socket at `wsUrl`. So whatever set that option
+       * last decides where an *in-page* kernel looks for itself: on a host
+       * configured for a remote Jupyter — which any signed-in Datalayer page
+       * is — the browser sandbox started a WebSocket to that remote host, was
+       * refused, and every cell ran into silence. No error, no output, nothing
+       * to act on; the kernel was fine and nobody was talking to it.
+       *
+       * `loadJupyterConfig({ lite: true })` is jupyter-react's own way of
+       * saying "the page is the server": it points the base and socket URLs at
+       * this origin, where JupyterLite's service worker is listening. It also
+       * initialises the config, which the plain setter refuses to do — and a
+       * workspace can start a sandbox before any Jupyter component has mounted
+       * to load one.
+       */
+      pointedAt = pointedAt ?? {
+        baseUrl: PageConfig.getOption('baseUrl'),
+        wsUrl: PageConfig.getOption('wsUrl'),
+      };
+      loadJupyterConfig({ lite: true });
+
       const manager = await createLiteServiceManager();
       // Publish it to jupyter-react's store, which is what any component
       // reached through `useJupyter()` without a manager of its own falls back
@@ -112,6 +150,23 @@ export function browserSource(): ServiceManagerSource {
       // cell itself ran perfectly on the kernel in this page.
       jupyterReactStore.getState().setServiceManager(manager);
       return manager;
+    },
+    /*
+     * Put the page back the way it was found.
+     *
+     * `PageConfig` is a singleton the whole page shares, and a workspace is a
+     * component on somebody's page rather than the page itself. Leaving it
+     * pointed at this origin after the reader moves the sandbox elsewhere
+     * would break the next thing to read it — which, in the app, is a notebook
+     * that belongs to a runtime somewhere else.
+     */
+    release: () => {
+      if (!pointedAt) {
+        return;
+      }
+      PageConfig.setOption('baseUrl', pointedAt.baseUrl);
+      PageConfig.setOption('wsUrl', pointedAt.wsUrl);
+      pointedAt = undefined;
     },
     owned: true,
   };
@@ -208,6 +263,8 @@ export function createBrowserSandboxService(
         void kernel?.shutdown?.();
         kernel = null;
         serviceManager = source.owned ? null : serviceManager;
+        // And hand back whatever the source borrowed from the page.
+        source.release?.();
         starting = null;
         lifecycle.value = 'idle';
         status.value = null;

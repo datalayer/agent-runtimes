@@ -194,9 +194,28 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       setTransient(null);
       const outcome = await workspace.submit(message);
       if (!outcome.handled) {
+        /*
+         * Nothing took it, so the words stay where they were typed.
+         *
+         * The reason appears under the prompt; emptying the box as well would
+         * make a failed send look like a successful one and cost the person
+         * the sentence they wrote.
+         */
         setTransient(outcome.reason ?? null);
         return;
       }
+      /*
+       * Sent, so the composer is empty again.
+       *
+       * `InputPromptBase` clears itself only when it owns its own text. This
+       * view hands it a controlled value — a page embedding the workspace can
+       * offer a prompt, which needs somewhere outside the editor to put it —
+       * and a controlled value is the owner's to clear. It was not being
+       * cleared at all: the sentence stayed in the box after the agent had
+       * answered it, so the next thing typed was appended to the last thing
+       * asked, and the placeholder that suggests what to ask never came back.
+       */
+      setDraft('');
       if (outcome.result?.content) {
         setTransient(outcome.result.content as ReactNode);
       }
@@ -566,6 +585,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * live somewhere both the suggestion and the composer can reach.
    */
   const [draft, setDraft] = useState('');
+
+  /*
+   * The model this conversation is on.
+   *
+   * Three answers, in order of who asked most recently: what the reader picked
+   * from the menu, what the host mounted the workspace with, and what the
+   * agent's spec says it runs on. The last is the one that is almost always
+   * true and was never being read — the menu compared its rows against
+   * `workspace.model`, which no host sets, so every row was unselected and the
+   * control could not say which model was answering.
+   *
+   * Held here rather than in the workspace because the choice belongs to the
+   * conversation: it is what the next message is sent with.
+   */
+  const [pickedModel, setPickedModel] = useState<string>();
+  const activeModel = pickedModel ?? workspace.model ?? spec?.model ?? '';
   /*
    * The team, in the shape the footer asks for.
    *
@@ -596,6 +631,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     }
     addressedAgent.current = selectedMemberId;
     usageAtSwitch.current = storedUsageRef.current;
+    // And the model goes back to whatever the new agent's spec asks for. A
+    // pick made for one member is not a statement about the next.
+    setPickedModel(undefined);
   }, [selectedMemberId]);
 
   const fromStore =
@@ -652,7 +690,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         ? browserProtocolConfig({
             agentId: member?.specId ?? agentId,
             instructions: spec?.systemPrompt,
-            model: workspace.model || spec?.model,
+            model: activeModel || undefined,
             inference,
             // Who this member may hand work to, and what they are told. Both
             // come from the teamspec: the supervisor routes to the others, a
@@ -685,7 +723,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       team,
       spec?.model,
       spec?.systemPrompt,
-      workspace.model,
+      activeModel,
       agentServerUrl,
     ],
   );
@@ -712,6 +750,18 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const [catalogModels, setCatalogModels] = useState<ModelConfig[]>([]);
 
   useEffect(() => {
+    /*
+     * Only where there is a server to ask.
+     *
+     * An in-page agent has none, and `agentServerUrl` then holds whatever the
+     * host defaulted to — on a public page that was a developer's localhost,
+     * so every visitor's console carried a connection-refused error for a
+     * catalogue that was never going to arrive. The agentspecs catalogue below
+     * is the answer for this case and needs no request at all.
+     */
+    if (inPage) {
+      return undefined;
+    }
     let cancelled = false;
     void fetch(`${agentServerUrl}/api/v1/configure/models`)
       .then(response => (response.ok ? response.json() : { models: [] }))
@@ -726,7 +776,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [agentServerUrl]);
+  }, [agentServerUrl, inPage]);
 
   /*
    * What to offer when the server has no catalogue of its own.
@@ -787,17 +837,29 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     [skillsQuery.data],
   );
 
-  /* Told to the server, and to the workspace. The chip in the header does the
-     same call: whichever control a person used, the other has to agree. */
+  /*
+   * Taken here first, then told to the server.
+   *
+   * Locally, because an in-page agent has no server to tell and its model is
+   * whatever this view hands the harness — without recording the choice, the
+   * menu ticked a row for a moment and the next message went to the old model.
+   * And on the server for the agents that live there, where the chip in its
+   * header makes the same call: whichever control a person used, the other has
+   * to agree.
+   */
   const selectModel = useCallback(
     async (model: string) => {
+      setPickedModel(model);
+      if (inPage) {
+        return;
+      }
       await fetch(`${agentServerUrl}/api/v1/configure/inference/provider`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ model }),
       }).catch(() => undefined);
     },
-    [agentServerUrl],
+    [agentServerUrl, inPage],
   );
 
   /* `bottom-chat` keeps the prompt in the chat column; `bottom`, the default,
@@ -915,7 +977,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         */
         showModelSelector
         models={offeredModels}
-        selectedModel={workspace.model ?? ''}
+        selectedModel={activeModel}
         onModelSelect={model => void selectModel(model)}
         showToolsMenu
         availableTools={offeredTools}

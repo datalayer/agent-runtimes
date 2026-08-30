@@ -18,13 +18,10 @@
 
 import { useCallback, useState } from 'react';
 import { Box, SegmentedControl, Spinner, Text } from '@primer/react';
-import {
-  KernelIndicator,
-  type ExecutionState,
-} from '@datalayer/jupyter-react/kernel-indicator';
+import { KernelIndicator } from '@datalayer/jupyter-react/kernel-indicator';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopWorkspaceContext } from '../../core';
-import { IDLE_SANDBOX_SNAPSHOT_SIGNAL } from '../../core';
+import { IDLE_SANDBOX_SNAPSHOT_SIGNAL, sandboxIndicatorState } from '../../core';
 import { useOptionalSandboxService } from './useSandboxService';
 import {
   SANDBOX_TARGETS,
@@ -89,7 +86,7 @@ export function SandboxSelector(_props: {
         {moving ? <Spinner size="small" /> : null}
       </Box>
       <KernelIndicator
-        state={toKernelIndicatorState(
+        state={sandboxIndicatorState(
           snapshot.state,
           status?.execution_state,
           status?.is_executing,
@@ -195,20 +192,6 @@ export function SandboxSelector(_props: {
       )}
     </Box>
   );
-}
-
-function toKernelIndicatorState(
-  state: LoopWorkspaceContext['sandbox']['state'],
-  executionState?: string,
-  isExecuting?: boolean,
-): ExecutionState {
-  if (state === 'error') return 'connected-dead';
-  if (state === 'starting') return 'connected-starting';
-  if (state === 'stopping') return 'disconnecting';
-  if (state !== 'running') return 'disconnected';
-  return executionState === 'busy' || isExecuting
-    ? 'connected-busy'
-    : 'connected-idle';
 }
 
 function toWebsocketUrl(url?: string): string | undefined {

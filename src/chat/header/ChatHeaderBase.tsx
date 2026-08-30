@@ -184,6 +184,20 @@ export function ChatBaseHeader({
 }: ChatBaseHeaderProps) {
   const effectiveIndicatorState =
     kernelIndicatorState ?? toRuntimeExecutionState(runtimeStatus);
+  /*
+   * No indicator where there is nothing to indicate.
+   *
+   * It used to fall back to `'undefined'` with no kernel and no state, which
+   * draws a full control — dot, label and a details overlay reading
+   * "State: undefined, Kernel: unknown-kernel, Server: unknown-url" down to
+   * the last field. A reader cannot tell that apart from a runtime that has
+   * genuinely gone wrong, so a host that simply never wired the indicator up
+   * was reporting a broken sandbox on every page.
+   *
+   * A host with something to say passes a `kernel`, a state, or a runtime
+   * status. Passing none of the three is not a state; it is silence, and the
+   * honest rendering of silence is nothing at all.
+   */
   const kernelIndicatorElement = kernel ? (
     <KernelIndicator
       kernel={kernel}
@@ -194,9 +208,9 @@ export function ChatBaseHeader({
       position="s"
       bordered={false}
     />
-  ) : (
+  ) : effectiveIndicatorState ? (
     <KernelIndicator
-      state={effectiveIndicatorState ?? 'undefined'}
+      state={effectiveIndicatorState}
       environmentName={kernelEnvironmentName}
       cpu={kernelCpu}
       memory={kernelMemory}
@@ -204,7 +218,7 @@ export function ChatBaseHeader({
       position="s"
       bordered={false}
     />
-  );
+  ) : null;
 
   return (
     <Box

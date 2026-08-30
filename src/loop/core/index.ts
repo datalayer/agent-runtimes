@@ -18,6 +18,9 @@
 import { defineContributionPoint, defineGate } from '@datalayer/reactor';
 import type { ReadonlySignal } from '@datalayer/reactor';
 import type { ComponentType, ReactNode } from 'react';
+/* Type only, so the core carries no runtime dependency on jupyter-react: the
+   indicator's vocabulary is shared, its implementation is not. */
+import type { ExecutionState } from '@datalayer/jupyter-react/kernel-indicator';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
@@ -576,6 +579,33 @@ export const LoopSlots = {
    */
   sidebar: 'loop.sidebar',
 } as const;
+
+/**
+ * The sandbox's lifecycle, in the vocabulary a kernel indicator speaks.
+ *
+ * Here rather than beside either renderer because two of them draw the same
+ * fact — the control in the workspace header, and the chat's own header for a
+ * host that hides the workspace's. Two copies of this mapping would eventually
+ * disagree about what `starting` looks like, and a workspace showing two
+ * indicators that disagree is worse than one showing none.
+ *
+ * The execution state is the finer answer and wins when there is one: a
+ * running sandbox is either working or waiting, and which of the two is the
+ * thing a person actually watches for.
+ */
+export function sandboxIndicatorState(
+  state: SandboxState,
+  executionState?: string,
+  isExecuting?: boolean,
+): ExecutionState {
+  if (state === 'error') return 'connected-dead';
+  if (state === 'starting') return 'connected-starting';
+  if (state === 'stopping') return 'disconnecting';
+  if (state !== 'running') return 'disconnected';
+  return executionState === 'busy' || isExecuting
+    ? 'connected-busy'
+    : 'connected-idle';
+}
 
 /** Whether a view or a chat surface can be opened right now. */
 export function canOpenView(
