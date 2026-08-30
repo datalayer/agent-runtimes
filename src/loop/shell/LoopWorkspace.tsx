@@ -105,6 +105,19 @@ export type LoopWorkspaceProps = {
    * opens on `initialViewType` and stays there.
    */
   showViewSelector?: boolean;
+  /**
+   * Whether the workspace draws its header row.
+   *
+   * True by default. False removes the row entirely — the view switcher and
+   * every control a plugin contributed to it — for a host whose own page
+   * already frames the workspace and does not want a second bar of chrome
+   * inside it.
+   *
+   * The plugins stay switched on: this hides where their controls are
+   * rendered, not what they do. A plugin that contributes a header button and
+   * a service keeps the service, and the button is simply never mounted.
+   */
+  showHeader?: boolean;
 };
 
 /** Build the platform for a set of plugins. */
@@ -126,6 +139,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     onSend,
     layout = 'page',
     showViewSelector = true,
+    showHeader = true,
   } = props;
 
   // Building the platform is a one-time act: rebuilding it on every render
@@ -148,6 +162,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       onSend={onSend}
       layout={layout}
       showViewSelector={showViewSelector}
+      showHeader={showHeader}
     />
   );
 }
@@ -174,6 +189,7 @@ function WorkspaceBody({
   onSend,
   layout = 'page',
   showViewSelector = true,
+  showHeader = true,
 }: BodyProps): JSX.Element {
   /*
    * Which agent the session is talking to.
@@ -326,28 +342,50 @@ function WorkspaceBody({
         color: 'fg.default',
       }}
     >
-      <Box
-        as="header"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          // In a column there is no room for a row: the header wraps rather
-          // than pushing the model chip off the edge.
-          justifyContent: compact ? 'flex-start' : 'space-between',
-          flexWrap: compact ? 'wrap' : 'nowrap',
-          gap: 2,
-          px: compact ? 2 : 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flex: '0 0 auto',
-        }}
-      >
-        {showViewSelector ? (
-          <ViewSwitcher views={views} workspace={workspace} compact={compact} />
-        ) : null}
-        <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
-      </Box>
+      {/*
+        Not rendered at all when the host asked for no header.
+
+        Emptying it would have left a bordered strip of nothing, and — more to
+        the point — leaving the slot mounted would keep every contributed
+        control on screen with only the switcher gone. Not rendering the slot
+        is what takes the plugins' controls with it, while the plugins
+        themselves stay running.
+      */}
+      {showHeader ? (
+        <Box
+          as="header"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            // In a column there is no room for a row: the header wraps rather
+            // than pushing the model chip off the edge.
+            justifyContent: compact ? 'flex-start' : 'space-between',
+            flexWrap: compact ? 'wrap' : 'nowrap',
+            gap: 2,
+            px: compact ? 2 : 3,
+            py: 2,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+            flex: '0 0 auto',
+          }}
+        >
+          {/* The plugins first, the switcher last.
+              
+              `space-between` puts the first child at the leading edge, so with
+              the switcher first it sat on the left and the plugins' controls
+              crowded into it as they were added. The switcher is chrome about
+              *this* workspace rather than about the message being written, and
+              it reads better held to the trailing edge. */}
+          <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
+          {showViewSelector ? (
+            <ViewSwitcher
+              views={views}
+              workspace={workspace}
+              compact={compact}
+            />
+          ) : null}
+        </Box>
+      ) : null}
 
       <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
         <Box

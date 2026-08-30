@@ -60,7 +60,10 @@ import type {
   ToolCallMessage,
   Suggestion,
   EphemeralSurfaceMode,
+  ModelConfig,
 } from '../../types/chat';
+import { AgentDetails } from '../../agents/AgentDetails';
+import type { BuiltinTool } from '../../types/models';
 import type { FrontendToolDefinition } from '../../types/tools';
 import {
   internalQueryClient,
@@ -94,7 +97,7 @@ import {
   ChatMessageList,
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
-import { InputToolbar } from '../prompt/InputFooter';
+import { InputPrompt } from '../prompt/InputPrompt';
 import {
   ToolApprovalBanner,
   ToolApprovalDialog,
@@ -750,6 +753,7 @@ function ChatBaseInner({
   subtitle,
   showHeader = false,
   showTokenUsage = true,
+  showContextRing = false,
   showLoadingIndicator = true,
   showErrors = true,
   showInput = true,
@@ -758,7 +762,11 @@ function ChatBaseInner({
   showSkillsMenu = true,
   disableInputPrompt = false,
   promptVariant,
-  mentionableAgents,
+  mentionableAgents: mentionableAgentsProp,
+  showAgentsMenu = true,
+  agents: agentsProp,
+  selectedAgentId,
+  onSelectAgent,
   disabled: disabledProp,
   disableReason: disableReasonProp,
   overlay,
@@ -1679,6 +1687,9 @@ function ChatBaseInner({
 
   // ---- Component state ----
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
+  /* Whether the (i) has been pressed. Its own state rather than a view mode:
+     it is a detour from the conversation, not a place the chat lives. */
+  const [showDetails, setShowDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [liveKernelStatus, setLiveKernelStatus] =
     useState<KernelMessage.Status>();
@@ -1844,6 +1855,104 @@ function ChatBaseInner({
     });
     return set;
   }, [localSkillApproval, skillsQuery.data]);
+  /*
+   * What the Tools menu lists.
+   *
+   * The server's builtin tools when there are any, and otherwise the tools
+   * this page gave the agent. An in-page agent has no config endpoint to ask
+   * — that is the whole point of it — so the menu was empty for the one kind
+   * of agent whose tools the browser already knows in full.
+   */
+  const builtinTools = useMemo<BuiltinTool[]>(() => {
+    const fromConfig = configQuery.data?.builtinTools;
+    if (fromConfig?.length) {
+      return fromConfig;
+    }
+    return (frontendTools ?? []).map(tool => ({
+      id: tool.name,
+      name: tool.name,
+    }));
+  }, [configQuery.data?.builtinTools, frontendTools]);
+
+  /*
+   * Who is answering, as one row when that is all there is.
+   *
+   * A host with a team passes its own list. Everything else gets the agent
+   * this chat is actually talking to — which the control states rather than
+   * switches, and which nothing else on screen said. It used to be omitted
+   * entirely, so the chip and the footer menu were both simply absent.
+   */
+  const footerAgents = useMemo(
+    () =>
+      agentsProp ??
+      (activeAgentId
+        ? [
+            {
+              id: activeAgentId,
+              name: title || activeAgentId,
+              /*
+                What this agent is for, beside its name.
+                
+                The menu renders a description when there is one and a bare
+                name when there is not, and a single-agent list built from the
+                id alone therefore opened onto one word. `subtitle` is what a
+                host writes to say what its chat does, which is the same
+                sentence a person clicking the agent control is asking for.
+              */
+              description: subtitle || description,
+            },
+          ]
+        : []),
+    [agentsProp, activeAgentId, title, subtitle, description],
+  );
+
+  /*
+   * The models on offer.
+   *
+   * An in-page agent has no config endpoint, and asking one for a catalogue is
+   * asking a page about itself. It does know the model it was built with — the
+   * protocol carries it — so the control names that rather than disappearing.
+   */
+  const browserModel =
+    typeof (protocol?.options as { model?: unknown } | undefined)?.model ===
+    'string'
+      ? ((protocol?.options as { model?: string }).model as string)
+      : undefined;
+  const offeredModels = useMemo<ModelConfig[]>(() => {
+    const fromConfig = availableModels || configQuery.data?.models;
+    if (fromConfig?.length) {
+      return fromConfig;
+    }
+    return browserModel
+      ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
+      : [];
+  }, [availableModels, configQuery.data?.models, browserModel]);
+
+  /*
+   * Who `@` may address.
+   *
+   * The same people the footer offers, unless a host supplies its own list.
+   * It used to be the host's or nothing, so a chat that had not been told
+   * about mentions had no menu at all — and the menu is also how a person
+   * *discovers* that agents can be addressed.
+   *
+   * The one being addressed is listed and disabled rather than dropped: a
+   * menu of one that hides its only row is a menu that looks broken, and
+   * "you are already talking to this one" is a useful thing to be told.
+   */
+  const mentionableAgents = useMemo(
+    () =>
+      mentionableAgentsProp ??
+      footerAgents.map(agent => ({
+        name: agent.name,
+        description: agent.description,
+        icon: agent.icon,
+        disabled: agent.id === (selectedAgentId ?? footerAgents[0]?.id),
+        disabledReason: `You are already talking to ${agent.name}`,
+      })),
+    [mentionableAgentsProp, footerAgents, selectedAgentId],
+  );
+
   const contextSnapshotQuery = useContextSnapshot(
     configQueriesEnabled && showTokenUsage,
     protocol?.configEndpoint,
@@ -3847,7 +3956,7 @@ function ChatBaseInner({
     [onRejectApproval],
   );
 
-  // ---- Compute data for InputToolbar ----
+  // ---- Compute data for the prompt ----
   // Merge real-time WebSocket MCP status into the cached config data so the
   // dropdown reflects live availability even when the config query was cached
   // before the MCP servers finished starting.
@@ -4029,7 +4138,7 @@ function ChatBaseInner({
   );
 
   const inputToolbar = showInput ? (
-    <InputToolbar
+    <InputPrompt
       input={input}
       setInput={setInput}
       isLoading={isLoading}
@@ -4047,6 +4156,7 @@ function ChatBaseInner({
       promptVariant={promptVariant}
       mentionableAgents={mentionableAgents}
       showTokenUsage={showTokenUsage}
+      showContextRing={showContextRing}
       agentUsage={agentUsage}
       showModelSelector={showModelSelector}
       showToolsMenu={showToolsMenu}
@@ -4054,12 +4164,19 @@ function ChatBaseInner({
       codemodeEnabled={codemodeEnabled}
       onToggleCodemode={onToggleCodemode}
       isA2AProtocol={isA2AProtocol}
+      showAgentsMenu={showAgentsMenu}
+      agents={footerAgents}
+      selectedAgentId={selectedAgentId ?? footerAgents[0]?.id}
+      onSelectAgent={onSelectAgent}
       hasConfigData={!!configQuery.data}
       hasSkillsData={!!skillsQuery.data}
-      models={availableModels || configQuery.data?.models || []}
+      // So the bar can tell "not here yet" from "not coming": a chat whose
+      // agent has no config endpoint waits for ever otherwise.
+      configLoading={configQuery.isLoading}
+      models={offeredModels}
       selectedModel={selectedModel}
       onModelSelect={setSelectedModel}
-      availableTools={configQuery.data?.builtinTools || []}
+      availableTools={builtinTools}
       mcpServers={filteredMcpServers}
       enabledMcpTools={enabledMcpTools}
       enabledMcpToolCount={getEnabledMcpToolNames().length}
@@ -4093,7 +4210,15 @@ function ChatBaseInner({
       headerContent={headerContent}
       headerActions={headerActions}
       showInformation={showInformation}
-      onInformationClick={onInformationClick}
+      /*
+        A default, so the button does something.
+
+        `showInformation` drew an (i) and then forwarded a click to whatever
+        the host supplied — and a host that supplied nothing got a button that
+        did nothing at all, which is worse than no button. `Chat` still passes
+        its own handler and keeps its own pane; everything else gets this one.
+      */
+      onInformationClick={onInformationClick ?? (() => setShowDetails(true))}
       padding={padding}
       kernelIndicatorState={kernelIndicatorState}
       kernelIndicatorPlacement={kernelIndicatorPlacement}
@@ -4150,6 +4275,27 @@ function ChatBaseInner({
           inside the chat body column (below) so it follows the chat across
           view modes instead of staying pinned to the top. */}
       {!surfaceVisible && chatHeaderElement}
+
+      {/*
+        The agent, described. Over the transcript rather than beside it: the
+        two answer different questions and a person reading one is not reading
+        the other, and covering it keeps every message exactly where it was
+        when they come back.
+      */}
+      {showDetails && (
+        <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
+          <AgentDetails
+            name={title || 'AI Agent'}
+            icon={brandIcon}
+            protocol={protocol?.type ?? 'unknown'}
+            url={protocol?.endpoint || ''}
+            messageCount={displayItems.length}
+            agentId={activeAgentId}
+            apiBase={protocol?.configEndpoint}
+            onBack={() => setShowDetails(false)}
+          />
+        </Box>
+      )}
 
       {/* Tool approval banner (top-of-chat) */}
       {showToolApprovalBanner &&

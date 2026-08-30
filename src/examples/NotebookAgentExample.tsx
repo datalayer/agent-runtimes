@@ -199,9 +199,27 @@ function NotebookWithChat({
           position="bottom-right"
           frontendTools={chatFrontendTools}
           useStore={false}
+          /*
+            Every control this chat has, which is what an example is for.
+
+            The menus draw themselves only where there is something behind
+            them: on a remote agent the config request answers and all three
+            appear, while an in-page agent has no config endpoint to ask, so
+            tools and skills are simply absent rather than pending. That used
+            to read as "Loading controls..." for ever.
+          */
           showModelSelector={true}
           showToolsMenu={true}
           showSkillsMenu={true}
+          showTokenUsage={true}
+          // The ring, here of all places: an agent working through a notebook
+          // is the case that actually fills a context window, so how it is
+          // being spent is worth a picture rather than two numbers.
+          showContextRing={true}
+          showInformation={true}
+          showHeader={true}
+          // The Lexical editor, which is the one with the `@` menu.
+          promptVariant="lexical"
           panelProps={{
             kernel: notebookKernel,
           }}

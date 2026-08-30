@@ -566,7 +566,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const readyServers = servers
       .filter(s => s.status === 'started')
       .map(s => s.id);
-    // Build enabled_tools_by_server so the InputFooter ToolsMenu can render
+    // Build enabled_tools_by_server so the ToolsMenu can render
     // tools as enabled immediately on first open.
     const enabledToolsByServer = derivedEnabledToolsByServer;
     const approvedToolsByServer = derivedApprovedToolsByServer;

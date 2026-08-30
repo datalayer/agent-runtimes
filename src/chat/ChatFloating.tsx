@@ -165,6 +165,8 @@ export function ChatFloating({
   enableKeyboardShortcuts = true,
   toggleShortcut = '/',
   showPoweredBy = true,
+  promptVariant,
+  mentionableAgents,
   poweredByProps,
   clickOutsideToClose = false,
   escapeToClose = true,
@@ -195,6 +197,7 @@ export function ChatFloating({
   showToolsMenu = false,
   showSkillsMenu = false,
   showTokenUsage = true,
+  showContextRing = false,
   runtimeId,
   historyEndpoint,
   authToken,
@@ -880,6 +883,10 @@ export function ChatFloating({
           chatViewMode={chatViewMode}
           onChatViewModeChange={handleChatViewModeChange}
           showPoweredBy={showPoweredBy}
+          // Forwarded, so a host can ask for the Lexical editor — and with it
+          // the `@` menu — without giving up the floating chat to get one.
+          promptVariant={promptVariant}
+          mentionableAgents={mentionableAgents}
           poweredByProps={{
             brandName: 'Datalayer',
             brandUrl: 'https://datalayer.ai',
@@ -903,6 +910,7 @@ export function ChatFloating({
           showToolsMenu={showToolsMenu}
           showSkillsMenu={showSkillsMenu}
           showTokenUsage={showTokenUsage}
+          showContextRing={showContextRing}
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}

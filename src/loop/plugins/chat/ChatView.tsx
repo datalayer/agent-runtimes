@@ -31,6 +31,8 @@ import {
   useGate,
   useReactorPlatform,
   ReactorLazy,
+  ReactorSlot,
+  useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
 import { browserProtocolConfig } from '../../../runtimes/browser';
@@ -42,6 +44,7 @@ import {
   targetRunsAgentInPage,
   type SandboxTarget,
 } from '../agents/switchable';
+import { agentIcon } from '../agents/agentIcons';
 import { subagentsFor } from '../agents/team';
 import { useOptionalTeamSelection } from '../agents/useTeamSelection';
 
@@ -53,12 +56,20 @@ import { useOptionalTeamSelection } from '../agents/useTeamSelection';
  */
 const EMPTY_SELECTION = signal('');
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
-import { InputPrompt } from '../../../chat/prompt/InputPrompt';
+import {
+  InputPrompt,
+  type FooterAgent,
+} from '../../../chat/prompt/InputPrompt';
+import { useAgentRuntimeContextSnapshot } from '../../../stores';
+import { useConfig } from '../../../hooks/useConfig';
+import { useSkills, useSkillActions } from '../../../hooks/useSkills';
+import type { ModelConfig } from '../../../types';
 import {
   LoopAgentGate,
   LoopChatSurface,
   canOpenView,
   type ChatSurfaceContribution,
+  LoopSlots,
   useLoopPromptStore,
   type LoopViewProps,
 } from '../../core';
@@ -328,6 +339,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       name: entry.name,
       description: entry.description,
       emoji: entry.emoji,
+      icon: agentIcon(entry.icon),
       disabled: entry.id === member.id,
       disabledReason:
         entry.id === member.id
@@ -339,6 +351,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       .map(subagent => ({
         name: subagent.name,
         description: subagent.description,
+        icon: agentIcon(subagent.icon),
       }));
     return [...roster, ...specialists];
   }, [team, member]);
@@ -354,6 +367,32 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * live somewhere both the suggestion and the composer can reach.
    */
   const [draft, setDraft] = useState('');
+  /*
+   * The team, in the shape the footer asks for.
+   *
+   * The footer knows nothing about teamspecs, and should not: it renders a
+   * list of names and reports which one was chosen. Everything that makes a
+   * member a member stays on this side of the boundary.
+   */
+  /* What is left of the context window, as the runtime last reported it. The
+     footer shows nothing at all until there is a real number, so a workspace
+     whose agent has not answered yet simply has no bar. */
+  const contextUsage = useAgentRuntimeContextSnapshot();
+  // Read to decide whether the strip exists at all, not to render it.
+  const inpromptMenu = useSlotComponents(LoopSlots.inpromptMenu);
+
+
+
+  const footerAgents = useMemo<FooterAgent[]>(
+    () =>
+      team?.members.map(entry => ({
+        id: entry.id,
+        name: entry.name,
+        description: entry.description,
+        icon: agentIcon(entry.icon),
+      })) ?? [],
+    [team],
+  );
   const suggestion = useLoopPromptStore(state => state.pending);
 
   useEffect(() => {
@@ -416,6 +455,199 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     ],
   );
 
+  /*
+   * The model catalogue, and the builtin tools and skills the agent reports.
+   *
+   * Read here rather than left to `ChatBase`, because this view draws its own
+   * prompt: the toolbar under it can only offer what this component hands it.
+   *
+   * `useSkills` reads the runtime's codemode status out of the store, so it
+   * needs no endpoint and works for an in-page agent too. `useConfig` does
+   * need one, and a browser agent has none — hence the menus below being
+   * gated on the data rather than switched on unconditionally.
+   */
+  const configQuery = useConfig(
+    !inPage,
+    protocol.type === 'ag-ui' ? protocol.configEndpoint : undefined,
+    undefined,
+    agentId,
+  );
+  const skillsQuery = useSkills(true);
+  const skillActions = useSkillActions(agentId);
+  const [catalogModels, setCatalogModels] = useState<ModelConfig[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(`${agentServerUrl}/api/v1/configure/models`)
+      .then(response => (response.ok ? response.json() : { models: [] }))
+      .then(payload => {
+        if (!cancelled) {
+          setCatalogModels(payload.models ?? []);
+        }
+      })
+      // No catalogue is not an error worth a banner: the menu simply has
+      // nothing to offer, and the agent answers on whatever it was given.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [agentServerUrl]);
+
+  /* Which skills are on, as the runtime last reported them. Derived rather
+     than held: the source of truth is the agent, and a local copy would drift
+     the moment a skill was enabled from anywhere else. */
+  const enabledSkills = useMemo(
+    () =>
+      new Set<string>(
+        (skillsQuery.data?.skills ?? [])
+          // `enabled` and `loaded` both mean the agent has it; `available`
+          // means it could. There is no `disabled` — a skill that is off is
+          // simply one that is merely available.
+          .filter(skill => skill.status === 'enabled' || skill.status === 'loaded')
+          .map(skill => skill.id),
+      ),
+    [skillsQuery.data],
+  );
+
+  /* Told to the server, and to the workspace. The chip in the header does the
+     same call: whichever control a person used, the other has to agree. */
+  const selectModel = useCallback(
+    async (model: string) => {
+      await fetch(`${agentServerUrl}/api/v1/configure/inference/provider`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model }),
+      }).catch(() => undefined);
+    },
+    [agentServerUrl],
+  );
+
+  /* `bottom-chat` keeps the prompt in the chat column; `bottom`, the default,
+     spans the workspace. */
+  const besideChat = config?.promptPlacement === 'bottom-chat';
+
+  /*
+   * The prompt, as a value, because where it goes is configuration.
+   *
+   * `bottom` spans the workspace: the notebook and the conversation share one
+   * composer, which is right when the agent's job is the document beside it.
+   * `bottom-chat` keeps it inside the chat column, where every other example
+   * puts it — the prompt then reads as part of the conversation rather than as
+   * a bar the whole page sits on.
+   */
+  const prompt = (
+      <Box sx={{ flex: '0 0 auto' }}>
+        <InputPrompt
+          onSend={() => void handleSend(draft)}
+          // Controlled, so a suggestion from outside the workspace has
+          // somewhere to land. Uncontrolled the prompt owns its text and
+          // nothing else can write to it.
+          input={draft}
+          setInput={setDraft}
+          // Bumped by each suggestion, which is what puts the caret back in
+          // the box: a person who clicked "Try this" is being handed a
+          // sentence to read and send, not one to go and find.
+          focusTrigger={suggestion?.nonce}
+          // The agent is working: no second request while the first is in
+          // flight. `isLoading` both disables the editor and turns the send
+          // button into a stop — the person keeps a way out, which a flatly
+          // disabled prompt would not give them.
+          isLoading={busy}
+          onStop={() => workspace.viewControls.stop?.()}
+          // The reason where the typing would go, so it is read before the
+          // person types rather than after nothing happens.
+          placeholder={disabledReason ?? placeholder}
+          disableInputPrompt={chatDisabled}
+          connectionConfirmed={!chatDisabled}
+          padding={3}
+          // The `@` menu lives in the Lexical editor, and the default variant
+          // is the plain textarea — so `mentionableAgents` was being handed to
+          // a prompt with nowhere to show them, and typing `@` did nothing at
+          // all. A team is only addressable from a prompt that can offer it.
+          promptVariant="lexical"
+          // Ready to type. This prompt is the reason the workspace is on
+          // screen; making someone click into it first is a step that exists
+          // only because nobody removed it.
+          autoFocus
+          // Everyone this member may hand work to, offered on `@`. The same
+          // list the harness was given, so a name the menu suggests is a name
+          // the model can actually reach.
+          mentionableAgents={mentionable}
+          // Whatever the plugins put above the box: the agent being addressed,
+          /*
+            Whatever a plugin puts inside the prompt — and nothing does today,
+            so nothing is passed.
+
+            `InputPromptHeader` skips itself when it has no children, but a
+            `ReactorSlot` with no contributions is still an element: truthy,
+            padded, and worth a band of empty white above the typing. Asking
+            the platform whether anyone contributed is the difference between
+            "no header" and "an empty one".
+          */
+          headerContent={
+            inpromptMenu.length > 0 ? (
+              <ReactorSlot
+                slot={LoopSlots.inpromptMenu}
+                props={{ workspace }}
+              />
+            ) : undefined
+          }
+          /*
+            The agent, beside the tools, the skills and the model.
+
+            All four decide what the next message does, and three of them were
+            already here — the odd one out was the agent, which lived only in
+            the workspace header and therefore vanished for a host that mounts
+            the workspace without one.
+          */
+          showAgentsMenu
+          agents={footerAgents}
+          selectedAgentId={selectedMemberId}
+          onSelectAgent={id => team?.select(id)}
+          // What is left of the window. Shown here for the same reason it is
+          // shown in the standalone chat: a person about to paste a notebook
+          // into a prompt should be able to see whether it will fit.
+          showTokenUsage
+          agentUsage={contextUsage ?? undefined}
+          /*
+            Everything the workspace can actually offer.
+            
+            Each menu is switched on only when there is something behind it: a
+            model menu with an empty catalogue, or a tools menu for an in-page
+            agent that has no config endpoint, would be a control that opens
+            onto nothing.
+          */
+          showModelSelector={catalogModels.length > 0}
+          models={catalogModels}
+          selectedModel={workspace.model ?? ''}
+          onModelSelect={model => void selectModel(model)}
+          showToolsMenu={!!configQuery.data}
+          availableTools={configQuery.data?.builtinTools ?? []}
+          mcpServers={configQuery.data?.mcpServers ?? []}
+          showSkillsMenu={(skillsQuery.data?.skills.length ?? 0) > 0}
+          skills={skillsQuery.data?.skills ?? []}
+          skillsLoading={skillsQuery.isLoading}
+          enabledSkills={enabledSkills}
+          onToggleSkill={skillId =>
+            enabledSkills.has(skillId)
+              ? skillActions.disableSkill(skillId)
+              : skillActions.enableSkill(skillId)
+          }
+          onToggleAllSkills={(skillIds, enable) =>
+            skillIds.forEach(skillId =>
+              enable
+                ? skillActions.enableSkill(skillId)
+                : skillActions.disableSkill(skillId),
+            )
+          }
+          codemodeEnabled={false}
+          isA2AProtocol={false}
+          hasConfigData={!!configQuery.data}
+          hasSkillsData={!!skillsQuery.data}
+        />
+      </Box>
+  );
+
   return (
     <Box
       sx={{
@@ -459,10 +691,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             flex: '1 1 0',
             minWidth: 0,
             minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
             borderLeft: active ? '1px solid' : undefined,
             borderColor: 'border.default',
           }}
         >
+          <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
           <ChatBase
             // The header says why, beside the title, for the same reason the
             // placeholder does: a dead control with no explanation is worse
@@ -478,6 +713,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             onLoadingChange={handleLoadingChange}
             enableStreaming
           />
+          </Box>
+          {besideChat ? prompt : null}
         </Box>
       </Box>
 
@@ -499,44 +736,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         </Box>
       ) : null}
 
-      <Box sx={{ flex: '0 0 auto' }}>
-        <InputPrompt
-          onSend={message => void handleSend(message)}
-          // Controlled, so a suggestion from outside the workspace has
-          // somewhere to land. Uncontrolled the prompt owns its text and
-          // nothing else can write to it.
-          value={draft}
-          onChange={setDraft}
-          // Bumped by each suggestion, which is what puts the caret back in
-          // the box: a person who clicked "Try this" is being handed a
-          // sentence to read and send, not one to go and find.
-          focusTrigger={suggestion?.nonce}
-          // The agent is working: no second request while the first is in
-          // flight. `isLoading` both disables the editor and turns the send
-          // button into a stop — the person keeps a way out, which a flatly
-          // disabled prompt would not give them.
-          isLoading={busy}
-          onStop={workspace.viewControls.stop}
-          // The reason where the typing would go, so it is read before the
-          // person types rather than after nothing happens.
-          placeholder={disabledReason ?? placeholder}
-          disabled={chatDisabled}
-          // The `@` menu lives in the Lexical editor, and the default variant
-          // is the plain textarea — so `mentionableAgents` was being handed to
-          // a prompt with nowhere to show them, and typing `@` did nothing at
-          // all. A team is only addressable from a prompt that can offer it.
-          variant="lexical"
-          // Ready to type. This prompt is the reason the workspace is on
-          // screen; making someone click into it first is a step that exists
-          // only because nobody removed it.
-          autoFocus
-          // Everyone this member may hand work to, offered on `@`. The same
-          // list the harness was given, so a name the menu suggests is a name
-          // the model can actually reach.
-          mentionableAgents={mentionable}
-          showBorderTop
-        />
-      </Box>
+      {besideChat ? null : prompt}
     </Box>
   );
 }

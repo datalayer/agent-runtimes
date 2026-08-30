@@ -59,7 +59,12 @@ export { ChatMessages, type ChatMessagesProps } from './messages/ChatMessages';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';
-export { InputPrompt, type InputPromptProps } from './prompt';
+export {
+  InputPrompt,
+  type InputPromptProps,
+  InputPromptBase,
+  type InputPromptBaseProps,
+} from './prompt';
 export {
   McpStatusIndicator,
   type McpStatusIndicatorProps,

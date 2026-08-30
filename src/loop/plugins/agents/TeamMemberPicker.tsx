@@ -78,11 +78,22 @@ function TeamMemberMenu({
           overlay grow to hold it, so a sentence about an agent produced a menu
           wider than the workspace. */}
       <Box sx={{ width: 320, maxWidth: '100vw' }}>
-        <ActionList selectionVariant="single">
-          {/* No `as`: inside an ActionMenu the list has `role="menu"`, where a
-            group heading is presentational and rendered as a div. Giving it a
-            heading level makes Primer throw, which took the whole picker down
-            the moment it opened. */}
+        {/*
+          `role="listbox"`, stated rather than left to default.
+          
+          Primer decides what a group heading must be from the list's role, and
+          throws either way round: with no role it is a plain list and the
+          heading *needs* an `as`; with `listbox` or `menu` the heading is
+          presentational and an `as` is refused. This overlay is a chooser with
+          one selected option at a time, which is a listbox — saying so makes
+          the heading below correct instead of correct-by-accident, and stops
+          this crashing the moment it opens.
+        */}
+        <ActionList
+          selectionVariant="single"
+          role="listbox"
+          aria-label={`Agents in ${selection.team.name}`}
+        >
           <ActionList.GroupHeading>
             {selection.team.name}
           </ActionList.GroupHeading>

@@ -12,8 +12,12 @@
 export {
   InputPrompt,
   type InputPromptProps,
-  type InputPromptVariant,
 } from './InputPrompt';
+export {
+  InputPromptBase,
+  type InputPromptBaseProps,
+  type InputPromptVariant,
+} from './InputPromptBase';
 export {
   InputPromptHeader,
   type InputPromptHeaderProps,
@@ -27,4 +31,5 @@ export {
   InputPromptLexical,
   type InputPromptLexicalProps,
 } from './InputPromptLexical';
-export { InputToolbar, type InputToolbarProps } from './InputFooter';
+export * from './menus';
+export * from './plugins/AgentMentionPlugin';

@@ -4,10 +4,11 @@
  */
 
 /**
- * InputPromptFooter — Footer area of the InputPrompt component.
+ * The bar inside the prompt.
  *
- * Renders a horizontal bar below the input area with a left slot
- * for dropdowns / indicators and submit / stop buttons on the right.
+ * A left slot for dropdowns and indicators, and the submit / stop button on the
+ * right. Rendered by the prompt itself — what sits *under* the prompt is
+ * `InputToolbar`, which is a different bar in a different place.
  *
  * @module chat/prompt/InputPromptFooter
  */
@@ -20,6 +21,7 @@ import {
   SquareCircleIcon,
   PauseIcon,
 } from '@primer/octicons-react';
+
 
 export interface InputPromptFooterProps {
   /** Content to render on the left side (dropdowns, indicators, etc.) */

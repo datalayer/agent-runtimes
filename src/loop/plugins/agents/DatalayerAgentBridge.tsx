@@ -45,8 +45,8 @@ const DEFAULT_DATALAYER_AGENTSPEC = 'jupyter-tutor';
 export function DatalayerAgentBridge(): JSX.Element | null {
   const reactor = useReactorPlatform();
   const agentSpecId =
-    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)
-      ?.datalayerAgentSpecId ?? DEFAULT_DATALAYER_AGENTSPEC;
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerAgentSpecId ??
+    DEFAULT_DATALAYER_AGENTSPEC;
 
   const service = useOptionalSandboxService();
   const target = useSignalValue(service?.target ?? IDLE_SANDBOX_TARGET_SIGNAL);

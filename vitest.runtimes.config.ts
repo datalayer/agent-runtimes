@@ -19,6 +19,8 @@ export default defineConfig({
       'src/runtimes/__tests__/**/*.test.ts',
       // The chat's own dependency-free rules, which need no DOM either.
       'src/chat/base/__tests__/**/*.test.ts',
+      // And the prompt's Lexical nodes, which are plain classes.
+      'src/chat/prompt/**/__tests__/**/*.test.ts',
     ],
     environment: 'node',
   },

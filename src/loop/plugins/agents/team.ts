@@ -50,6 +50,8 @@ export type TeamMember = {
   /** One line about what it is for. */
   description?: string;
   emoji?: string;
+  /** The octicon name its agentspec asked for. */
+  icon?: string;
   /** Whether this is the team's front door. */
   isSupervisor: boolean;
 };
@@ -87,9 +89,13 @@ export function teamMembers(team: TeamSpec): TeamMember[] {
 
   const describe = (
     specId: string,
-  ): { description?: string; emoji?: string } => {
+  ): { description?: string; emoji?: string; icon?: string } => {
     const spec = AGENTSPECS[specId];
-    return { description: spec?.description, emoji: spec?.emoji };
+    return {
+      description: spec?.description,
+      emoji: spec?.emoji,
+      icon: spec?.icon,
+    };
   };
 
   const members: TeamMember[] = (team.agents ?? []).map(agent => {
@@ -191,6 +197,7 @@ export function subagentsFor(
       description: description || spec.description || name,
       instructions: spec.systemPrompt,
       model: spec.model,
+      icon: spec.icon,
     };
   };
 

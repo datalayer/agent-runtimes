@@ -618,7 +618,7 @@ describe('the editor beside the chat', () => {
 
   it('opens the configured surface rather than starting empty', () => {
     expect(source).toContain('defaultSurface');
-    expect(source).toContain("setSurfaceId(defaultSurface)");
+    expect(source).toContain('setSurfaceId(defaultSurface)');
   });
 
   it('waits until the surface can actually be opened', () => {

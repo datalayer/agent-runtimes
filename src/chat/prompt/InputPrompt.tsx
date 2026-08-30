@@ -4,238 +4,453 @@
  */
 
 /**
- * InputPrompt — Integrated chat input component.
+ * The prompt, with everything under it.
  *
- * Layout (top → bottom):
- *   1. Header   – slot for dropdowns / indicators
- *   2. Input    – "text" (textarea) or "lexical" (plain-text Lexical editor)
- *   3. Footer   – left slot for controls, submit / stop buttons on the right
- *
- * The component is wrapped in a rounded container with a subtle border,
- * giving it a more integrated visual appearance.
+ * Wraps the editor and adds the row beneath: the agent, tools, skills and
+ * model menus, and the context-window bar. The menus themselves live in
+ * `./menus` — they were private sub-components here, which made one module
+ * carry four unrelated overlays.
  *
  * @module chat/prompt/InputPrompt
  */
 
-import type { ReactNode } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { Box } from '@datalayer/primer-addons';
-import { InputPromptHeader } from './InputPromptHeader';
-import { InputPromptFooter } from './InputPromptFooter';
-import { InputPromptText } from './InputPromptText';
-import { InputPromptLexical } from './InputPromptLexical';
-import type { MentionableAgent } from './AgentMentionPlugin';
+import { Text } from '@primer/react';
+import type { KernelMessage } from '@jupyterlab/services';
+import {
+  InputPromptBase,
+  type InputPromptVariant,
+} from './InputPromptBase';
+import {
+  AgentsMenu,
+  InlineAgentsMenu,
+  ToolsMenu,
+  SkillsMenu,
+  ModelSelector,
+} from './menus';
+import type { MentionableAgent } from './plugins/AgentMentionPlugin';
+import type { ReactNode } from 'react';
+import { TokenUsageBar } from '../usage/TokenUsageBar';
+import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
+import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
+import type {
+  BuiltinTool,
+  ContextSnapshotData,
+  MCPServerConfig,
+  McpToolsetsStatusResponse,
+  ModelConfig,
+  SkillInfo,
+} from '../../types';
 
-/** Input variant type. */
-export type InputPromptVariant = 'text' | 'lexical';
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
-/**
- * Props for the InputPrompt component.
+/** One agent the footer may offer. */
+/*
+ * Re-exported, not defined here.
+ *
+ * It lived in this module and was imported back by the menus this module
+ * renders, and by `types/chat`. Type-only imports are erased, so nothing broke
+ * at runtime — but it is a component importing its own children importing the
+ * component, which is a shape worth not having. Definition in `types`, where
+ * the menus can reach it without reaching upwards.
  */
+export type { FooterAgent } from '../../types/chat';
+import type { FooterAgent } from '../../types/chat';
+
+/* Shared, so a defaulted prop is the same object on every render: a fresh
+   `new Map()` per render is a new dependency for anything memoising on it. */
+const EMPTY_TOOL_MAP: Map<string, Set<string>> = new Map();
+const EMPTY_ID_SET: Set<string> = new Set();
+
 export interface InputPromptProps {
-  /** Input variant — "text" (default) or "lexical" */
-  variant?: InputPromptVariant;
-  /** Placeholder text */
+  // ---- Input ----
+  input: string;
+  setInput: (value: string) => void;
+  isLoading: boolean;
+  kernelStatus?: KernelMessage.Status;
+  connectionConfirmed: boolean;
   placeholder?: string;
-  /** Whether the agent is loading / streaming */
-  isLoading?: boolean;
-  /** Whether the connected kernel is currently busy */
-  isKernelBusy?: boolean;
-  /** Callback when a message is submitted */
-  onSend: (message: string) => void;
-  /** Callback when the stop button is clicked */
-  onStop?: () => void;
-  /** Auto-focus the input on mount */
-  autoFocus?: boolean;
-  /** Trigger value change to refocus input */
+  autoFocus: boolean;
   focusTrigger?: number;
-  /** Whether to show a border on top of the outer wrapper */
-  showBorderTop?: boolean;
-  /** Whether to use a subtle background */
-  showBackground?: boolean;
-  /** Custom outer padding (default: 3) */
-  padding?: number;
-  /** Whether the prompt is disabled */
-  disabled?: boolean;
-  /** Whether the prompt is read-only */
-  readOnly?: boolean;
+  padding: number;
   /**
-   * Agents this prompt may address by typing `@`.
+   * Called with the message when it is sent.
    *
-   * Lexical only: the plain textarea has nowhere to draw a menu, and a
-   * suggestion a person cannot see is worse than none.
+   * The argument is handed straight through from `InputPromptBase`, which has
+   * always passed it — the type here simply said `() => void` and hid that, so
+   * a caller wanting the text had to read the source to learn it was there.
+   * Declaring it costs callers that ignore it nothing.
    */
+  onSend: (message: string) => void;
+  onStop: () => void;
+  disableInputPrompt?: boolean;
+  /**
+   * Which editor the prompt uses.
+   *
+   * Forwarded to `InputPrompt`, which is the one prompt component either way —
+   * this toolbar is chrome around it, not a second implementation. Without the
+   * pass-through the toolbar could only ever be the plain textarea, so a host
+   * wanting the `@` menu had to stop using the toolbar to get it.
+   */
+  promptVariant?: InputPromptVariant;
+  /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
-  /** Additional sx props for the outer container */
-  sx?: Record<string, unknown>;
-  /** Controlled input value (external state) */
-  value?: string;
-  /** Controlled input onChange (external state) */
-  onChange?: (value: string) => void;
-  /** Content rendered in the header slot */
+  /** Rendered inside the prompt, above where the typing goes. */
   headerContent?: ReactNode;
-  /** Content rendered on the left side of the footer */
-  footerContent?: ReactNode;
-  /** Content rendered on the right side of the footer, next to send/stop */
-  footerRightContent?: ReactNode;
+
+  // ---- Agents ----
+  /**
+   * Whether the agent chooser is offered.
+   *
+   * Beside the tools, the skills and the model rather than in a bar at the top
+   * of the workspace: all four decide what the *next message* does, and a
+   * person setting them up is composing, not configuring.
+   */
+  showAgentsMenu?: boolean;
+  /** Everyone this conversation may be addressed to. */
+  agents?: FooterAgent[];
+  /** Who is being addressed now. */
+  selectedAgentId?: string;
+  /** Address somebody else. */
+  onSelectAgent?: (agentId: string) => void;
+
+  // ---- Token usage ----
+  showTokenUsage: boolean;
+  /**
+   * Whether the usage bar draws its context ring.
+   *
+   * False by default — see `TokenUsageBar`. The numbers appear either way;
+   * this is the pie beside them.
+   */
+  showContextRing?: boolean;
+  agentUsage?: ContextSnapshotData;
+
+  // ---- Selectors visibility ----
+  showModelSelector: boolean;
+  showToolsMenu: boolean;
+  showSkillsMenu: boolean;
+  codemodeEnabled: boolean;
+  /**
+   * Optional callback invoked when the user toggles codemode from the Tools
+   * menu. When omitted the toggle renders as read-only.
+   */
+  onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
+  isA2AProtocol: boolean;
+  hasConfigData: boolean;
+  hasSkillsData: boolean;
+  /**
+   * Whether the config request is still in flight.
+   *
+   * Separate from `hasConfigData` because "not here yet" and "not coming" want
+   * different words, and only the caller can tell them apart. Without it the
+   * bar said "Loading controls..." for ever whenever a request failed or the
+   * agent had no config endpoint to ask.
+   */
+  configLoading?: boolean;
+
+  /*
+    Everything below is optional.
+
+    A host that renders this toolbar for one of its features — an agent
+    chooser and a context bar, say — should not have to invent a model list,
+    an MCP toggle handler and a skills query to get there. Each menu is drawn
+    only when it is switched on, so the props it needs are only needed then.
+  */
+  // ---- Model ----
+  models?: ModelConfig[];
+  selectedModel?: string;
+  onModelSelect?: (modelId: string) => void;
+
+  // ---- Tools ----
+  availableTools?: BuiltinTool[];
+  /** MCP servers to render (already filtered by selection) */
+  mcpServers?: MCPServerConfig[];
+  enabledMcpTools?: Map<string, Set<string>>;
+  enabledMcpToolCount?: number;
+  onToggleMcpTool?: (serverId: string, toolName: string) => void;
+  onToggleAllMcpServerTools?: (
+    serverId: string,
+    toolNames: string[],
+    enable: boolean,
+  ) => void;
+  /** Approved MCP tools per server (default: all tools approved) */
+  approvedMcpTools?: Map<string, Set<string>>;
+  onToggleMcpToolApproval?: (serverId: string, toolName: string) => void;
+
+  // ---- Skills ----
+  skills?: SkillInfo[];
+  skillsLoading?: boolean;
+  enabledSkills?: Set<string>;
+  onToggleSkill?: (skillId: string) => void;
+  onToggleAllSkills?: (skillIds: string[], enable: boolean) => void;
+  /** Approved skills set (default: all skills approved) */
+  approvedSkills?: Set<string>;
+  onToggleSkillApproval?: (skillId: string) => void;
+
+  // ---- Indicators ----
+  /** API base URL passed to MCP indicator */
+  apiBase?: string;
+  /** Auth token passed to MCP indicator */
+  authToken?: string;
+  /** Pre-fetched MCP status from WebSocket — bypasses REST polling */
+  mcpStatusData?: McpToolsetsStatusResponse | null;
 }
 
-/**
- * InputPrompt — Integrated chat input with header, input area, and footer.
- */
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function InputPrompt({
-  variant = 'text',
-  placeholder = 'Ask anything…',
-  isLoading = false,
-  isKernelBusy = false,
+  input,
+  setInput,
+  isLoading,
+  kernelStatus,
+  connectionConfirmed,
+  placeholder,
+  autoFocus,
+  focusTrigger,
+  padding,
   onSend,
   onStop,
-  autoFocus = false,
-  focusTrigger,
-  showBorderTop = true,
-  showBackground = true,
-  padding = 3,
-  disabled = false,
-  readOnly = false,
+  disableInputPrompt = false,
+  promptVariant,
   mentionableAgents,
-  sx,
-  value: controlledValue,
-  onChange: controlledOnChange,
   headerContent,
-  footerContent,
-  footerRightContent,
+  showAgentsMenu = false,
+  agents = [],
+  selectedAgentId,
+  onSelectAgent,
+  showTokenUsage,
+  showContextRing = false,
+  agentUsage,
+  showModelSelector,
+  showToolsMenu,
+  showSkillsMenu,
+  codemodeEnabled,
+  onToggleCodemode,
+  isA2AProtocol,
+  hasConfigData,
+  hasSkillsData,
+  configLoading = false,
+  models = [],
+  selectedModel = '',
+  onModelSelect = () => {},
+  availableTools = [],
+  mcpServers = [],
+  enabledMcpTools = EMPTY_TOOL_MAP,
+  enabledMcpToolCount = 0,
+  onToggleMcpTool = () => {},
+  onToggleAllMcpServerTools = () => {},
+  approvedMcpTools = EMPTY_TOOL_MAP,
+  onToggleMcpToolApproval = () => {},
+  skills = [],
+  skillsLoading = false,
+  enabledSkills = EMPTY_ID_SET,
+  onToggleSkill = () => {},
+  onToggleAllSkills = () => {},
+  approvedSkills = EMPTY_ID_SET,
+  onToggleSkillApproval = () => {},
+  apiBase,
+  authToken,
+  mcpStatusData,
 }: InputPromptProps) {
-  // ---- Controlled / uncontrolled state -----------------------------------
-  const [internalInput, setInternalInput] = useState('');
-  const input = controlledValue !== undefined ? controlledValue : internalInput;
-  const setInput =
-    controlledOnChange !== undefined ? controlledOnChange : setInternalInput;
+  const isKernelBusy = kernelStatus === 'busy';
+  /*
+   * Each menu is offered when it is switched on *and* has something behind it.
+   *
+   * The bar used to ask one question — has any request come back — and answer
+   * for all four menus at once. So a chat with a model list and no config
+   * endpoint showed "Loading controls..." over a model menu that was ready,
+   * and went on showing it, because the request it was waiting for was never
+   * going to arrive.
+   */
+  /*
+   * Offered for one agent as much as for several.
+   *
+   * `> 1` treated the control as a *switch* — useless with nothing to switch
+   * to — but it is also a label: it says who is answering, which is worth
+   * knowing in a chat with exactly one agent and no other place that says so.
+   * The menu then simply has one row, already selected.
+   */
+  const agentsOffered = showAgentsMenu && agents.length > 0;
+  const modelsOffered = showModelSelector && models.length > 0 && !!selectedModel;
+  /* Offered on the tools themselves, not on the config request: an in-page
+     agent has no config endpoint and its tools are still real. */
+  const toolsOffered =
+    showToolsMenu && (hasConfigData || availableTools.length > 0);
+  const skillsOffered = showSkillsMenu && hasSkillsData;
+  const anyOffered =
+    agentsOffered || modelsOffered || toolsOffered || skillsOffered;
 
-  // ---- Refs (text variant only) ------------------------------------------
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  /* Still coming, as opposed to never coming. Only a menu that was asked for
+     and is genuinely waiting justifies the word "loading". */
+  const stillLoading =
+    (showToolsMenu && !hasConfigData && configLoading) ||
+    (showSkillsMenu && !hasSkillsData && skillsLoading);
 
-  // ---- Auto-focus --------------------------------------------------------
-  useEffect(() => {
-    if (autoFocus && variant === 'text' && inputRef.current) {
-      const t = setTimeout(() => inputRef.current?.focus(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [autoFocus, variant]);
+  // No bar at all when there is nothing to put in it and nothing on its way:
+  // an empty bordered strip is worse than no strip.
+  const showSelectorsBar = anyOffered || stillLoading;
+  /*
+   * The agents are in hand the moment the bar renders — they come from the
+   * team the workspace was opened with, not from a query — so a bar that
+   * carries them has content whether or not the tool and skill requests have
+   * come back yet. Without this a workspace with only an agent chooser sat on
+   * "Loading controls..." for ever.
+   */
 
-  // ---- Refocus when focusTrigger changes ---------------------------------
-  useEffect(() => {
-    if (
-      focusTrigger !== undefined &&
-      focusTrigger > 0 &&
-      variant === 'text' &&
-      inputRef.current
-    ) {
-      const t = setTimeout(() => inputRef.current?.focus(), 150);
-      return () => clearTimeout(t);
-    }
-  }, [focusTrigger, variant]);
+  // Show token usage when we have valid context data
+  const hasContext = Boolean(
+    agentUsage && !agentUsage.error && agentUsage.totalTokens > 0,
+  );
 
-  // ---- Refocus after loading completes -----------------------------------
-  const wasLoadingRef = useRef(false);
-  useEffect(() => {
-    if (
-      wasLoadingRef.current &&
-      !isLoading &&
-      variant === 'text' &&
-      inputRef.current
-    ) {
-      const t = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(t);
-    }
-    wasLoadingRef.current = isLoading;
-  }, [isLoading, variant]);
-
-  // ---- Send / Stop handlers ----------------------------------------------
-  const handleSend = useCallback(() => {
-    if (!input.trim() || isLoading || disabled || readOnly) return;
-    const message = input.trim();
-    if (controlledValue === undefined) {
-      setInput('');
-    }
-    onSend(message);
-  }, [input, isLoading, disabled, readOnly, onSend, setInput, controlledValue]);
-
-  const handleStop = useCallback(() => {
-    onStop?.();
-  }, [onStop]);
-
-  // ---- Render ------------------------------------------------------------
   return (
-    <Box sx={sx}>
-      <Box
-        sx={{
-          p: padding,
-          ...(showBorderTop && {
+    <Box>
+      {/* Input Area — powered by the standalone InputPrompt component */}
+      <InputPromptBase
+        variant={promptVariant}
+        mentionableAgents={mentionableAgents}
+        /*
+          Whatever the host puts inside the prompt, and the agent chip beside
+          it. Both, rather than either: a host contributing its own controls
+          should not lose the one control that says who is being addressed.
+        */
+        headerContent={
+          agentsOffered || headerContent ? (
+            <>
+              {agentsOffered ? (
+                <InlineAgentsMenu
+                  agents={agents}
+                  selectedAgentId={selectedAgentId}
+                  onSelectAgent={onSelectAgent}
+                />
+              ) : null}
+              {headerContent}
+            </>
+          ) : undefined
+        }
+        placeholder={placeholder || 'Type a message...'}
+        isLoading={isLoading}
+        isKernelBusy={isKernelBusy}
+        disabled={disableInputPrompt}
+        readOnly={!connectionConfirmed}
+        onSend={onSend}
+        onStop={onStop}
+        autoFocus={autoFocus}
+        focusTrigger={focusTrigger}
+        padding={padding}
+        value={input}
+        onChange={setInput}
+        footerRightContent={
+          <>
+            <McpStatusIndicator
+              apiBase={apiBase}
+              authToken={authToken}
+              data={mcpStatusData}
+            />
+            <SkillsStatusIndicator
+              skillsCount={skills.length}
+              enabledCount={enabledSkills.size}
+              loading={skillsLoading}
+            />
+          </>
+        }
+      />
+
+      {/* Token usage slot — keep rendered to prevent async layout jumps */}
+      {showTokenUsage && (
+        <Box sx={{ minHeight: hasContext && agentUsage ? 28 : 8 }}>
+          {hasContext && agentUsage ? (
+            <TokenUsageBar
+              agentUsage={agentUsage}
+              padding={padding}
+              showContextRing={showContextRing}
+            />
+          ) : null}
+        </Box>
+      )}
+
+      {/* Model, Skills, and Tools Footer — Below Input */}
+      {showSelectorsBar && (
+        <Box
+          aria-disabled={disableInputPrompt || undefined}
+          sx={{
+            display: 'flex',
+            gap: 2,
+            px: padding,
+            py: 0.5,
+            minHeight: 36,
             borderTop: '1px solid',
             borderColor: 'border.default',
-          }),
-          ...(showBackground && {
+            alignItems: 'center',
             bg: 'canvas.subtle',
-          }),
-        }}
-      >
-        <Box
-          sx={{
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.default',
-            overflow: 'hidden',
-            transition: 'border-color 0.2s ease',
-            '&:focus-within': {
-              borderColor: 'accent.fg',
-              boxShadow: (t: Record<string, unknown>) =>
-                `0 0 0 1px ${(t as any)?.colors?.accent?.fg ?? '#16A085'}`,
-            },
+            ...(disableInputPrompt
+              ? { opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(1)' }
+              : null),
           }}
         >
-          {/* Header */}
-          <InputPromptHeader>{headerContent}</InputPromptHeader>
+          {anyOffered ? (
+            <>
+              {/* Agents Menu */}
+              {agentsOffered && (
+                <AgentsMenu
+                  agents={agents}
+                  selectedAgentId={selectedAgentId}
+                  onSelectAgent={onSelectAgent}
+                />
+              )}
 
-          {/* Input area */}
-          {variant === 'lexical' ? (
-            <InputPromptLexical
-              value={input}
-              onChange={setInput}
-              placeholder={placeholder}
-              disabled={isLoading || disabled}
-              readOnly={readOnly}
-              onSubmit={handleSend}
-              autoFocus={autoFocus}
-              mentionableAgents={mentionableAgents}
-            />
+              {/* Tools Menu */}
+              {toolsOffered && (
+                <ToolsMenu
+                  codemodeEnabled={codemodeEnabled}
+                  onToggleCodemode={onToggleCodemode}
+                  mcpServers={mcpServers}
+                  enabledMcpTools={enabledMcpTools}
+                  enabledMcpToolCount={enabledMcpToolCount}
+                  onToggleMcpTool={onToggleMcpTool}
+                  onToggleAllMcpServerTools={onToggleAllMcpServerTools}
+                  approvedMcpTools={approvedMcpTools}
+                  onToggleMcpToolApproval={onToggleMcpToolApproval}
+                  availableTools={availableTools}
+                />
+              )}
+
+              {/* Skills Menu */}
+              {skillsOffered && (
+                <SkillsMenu
+                  skills={skills}
+                  skillsLoading={skillsLoading}
+                  enabledSkills={enabledSkills}
+                  onToggleSkill={onToggleSkill}
+                  onToggleAllSkills={onToggleAllSkills}
+                  approvedSkills={approvedSkills}
+                  onToggleSkillApproval={onToggleSkillApproval}
+                />
+              )}
+
+              {/* Model Selector */}
+              {modelsOffered && (
+                <ModelSelector
+                  models={models}
+                  selectedModel={selectedModel}
+                  onModelSelect={onModelSelect}
+                  isA2AProtocol={isA2AProtocol}
+                />
+              )}
+            </>
           ) : (
-            <InputPromptText
-              value={input}
-              onChange={setInput}
-              placeholder={placeholder}
-              disabled={isLoading || disabled}
-              readOnly={readOnly}
-              onSubmit={handleSend}
-              inputRef={inputRef}
-            />
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+              Loading controls...
+            </Text>
           )}
-
-          {/* Footer */}
-          <InputPromptFooter
-            isLoading={isLoading}
-            isKernelBusy={isKernelBusy}
-            sendDisabled={!input.trim() || disabled || readOnly}
-            onSend={handleSend}
-            onStop={handleStop}
-            rightContent={footerRightContent}
-          >
-            {footerContent}
-          </InputPromptFooter>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 }
 
-export default InputPrompt;
+// ---------------------------------------------------------------------------

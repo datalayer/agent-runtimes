@@ -6,7 +6,7 @@
 /**
  * When the composer will accept a keystroke.
  *
- * `InputFooter` passes `readOnly={!connectionConfirmed}` to a Lexical editor,
+ * `InputPrompt` passes `readOnly={!connectionConfirmed}` to a Lexical editor,
  * and a Lexical editor that is not editable still looks and selects like one —
  * it simply ignores typing. So a `connectionConfirmed` that never becomes true
  * is not a visible failure; it is an input that quietly does nothing.
@@ -17,6 +17,8 @@
  * confirmed, or the wait never ends.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /** The condition as `ChatBase` computes it. */
@@ -74,5 +76,31 @@ describe('confirming the connection', () => {
         !willRun,
       );
     }
+  });
+});
+
+describe('the selectors bar', () => {
+  const PROMPT = readFileSync(
+    join(__dirname, '..', '..', 'prompt', 'InputPrompt.tsx'),
+    'utf8',
+  );
+
+  it('offers each menu on its own data, not on one shared flag', () => {
+    /*
+     * It used to ask a single question — has any request come back — for all
+     * four menus. A chat with a ready model list and no config endpoint
+     * therefore showed "Loading controls..." over a menu that was fine, and
+     * went on showing it, because the request it waited for was never coming.
+     */
+    expect(PROMPT).toContain('const modelsOffered =');
+    expect(PROMPT).toContain('const toolsOffered =');
+    expect(PROMPT).toContain('const skillsOffered = showSkillsMenu && hasSkillsData');
+  });
+
+  it('says "loading" only while something is genuinely in flight', () => {
+    expect(PROMPT).toContain('const stillLoading =');
+    expect(PROMPT).toContain('configLoading');
+    // And draws no bar at all when there is nothing to put in it.
+    expect(PROMPT).toContain('const showSelectorsBar = anyOffered || stillLoading');
   });
 });

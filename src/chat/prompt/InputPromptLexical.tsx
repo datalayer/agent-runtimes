@@ -31,12 +31,14 @@ import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+
+import { MentionNode } from './plugins/MentionNode';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { Box } from '@datalayer/primer-addons';
 import {
   AgentMentionPlugin,
   type MentionableAgent,
-} from './AgentMentionPlugin';
+} from './plugins/AgentMentionPlugin';
 
 // ---- Lexical config (plain-text only) ------------------------------------
 
@@ -45,7 +47,9 @@ const EDITOR_CONFIG = {
   theme: {
     paragraph: 'input-prompt-lexical-p',
   },
-  nodes: [],
+  // The `@agent` chip. A node the editor does not know about is dropped on
+  // insert, silently — the mention would simply never appear.
+  nodes: [MentionNode],
   onError(error: Error) {
     console.error('[InputPromptLexical]', error);
   },
@@ -230,8 +234,21 @@ export function InputPromptLexical({
   return (
     <Box
       sx={{
+        /*
+          The placeholder is positioned against this box.
+          
+          It is `position: absolute` and this was `static`, so it resolved
+          against whatever ancestor happened to be positioned — which put
+          "Type a message..." up in the header, nowhere near the box it
+          describes. A containing block is the whole fix.
+        */
+        position: 'relative',
         px: 2,
-        py: 1,
+        // Tighter above than below: the box already has the footer's padding
+        // under it, so an equal pad top and bottom read as a gap over the
+        // first line of typing rather than as breathing room.
+        pt: '2px',
+        pb: 1,
         /*
          * Greyed while it cannot be typed in.
          *
@@ -256,7 +273,7 @@ export function InputPromptLexical({
               aria-label="Message input"
               style={{
                 outline: 'none',
-                minHeight: 40,
+                minHeight: 32,
                 maxHeight: 120,
                 overflowY: 'auto',
                 fontSize: 14,
@@ -269,8 +286,17 @@ export function InputPromptLexical({
             <Box
               sx={{
                 position: 'absolute',
-                top: '11px',
-                left: '15px',
+                /*
+                  Level with the first line of typing.
+
+                  Relative to the box above, which establishes the containing
+                  block. The editor's own `padding: 2px 0` sits inside this
+                  box's `pt: 2px`, so the caret's first line starts 4px down —
+                  matching it here is what stops the placeholder floating
+                  above the text it stands in for.
+                */
+                top: '4px',
+                left: '8px',
                 color: 'fg.subtle',
                 fontSize: 1,
                 pointerEvents: 'none',

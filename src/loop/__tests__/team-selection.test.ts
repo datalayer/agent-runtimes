@@ -147,7 +147,7 @@ describe('who a member may hand work to', () => {
     expect(team.delegation?.allowPeerDelegation).toBe(false);
 
     const names = subagentsFor(team, 'compactor').map(entry => entry.name);
-    expect(names).not.toContain('Jupyter Tutor');
+    expect(names).not.toContain('Code Tutor');
   });
 
   it('gives a member its own specialists', () => {

@@ -65,10 +65,7 @@ export function useBrowserInference(): BrowserInference {
    * in. A member's own token is strictly better, so this only runs when there
    * is not one.
    */
-  const anonymousToken = useAnonymousInferenceToken(
-    inferenceUrl,
-    !memberToken,
-  );
+  const anonymousToken = useAnonymousInferenceToken(inferenceUrl, !memberToken);
   const token = memberToken || anonymousToken;
 
   const inference = useMemo(

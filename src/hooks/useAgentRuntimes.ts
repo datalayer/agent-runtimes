@@ -641,6 +641,13 @@ export function useAgentRuntimes(
   const [lifecycleError, setLifecycleError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const hasAutoStarted = useRef(false);
+  /*
+   * Whether the "is one already running?" question has been answered.
+   *
+   * State rather than a ref: the auto-start effect has to re-run when it
+   * flips, and a ref changing does not re-run anything.
+   */
+  const [lookedForExisting, setLookedForExisting] = useState(false);
   const hasCreatedAgentRef = useRef(false);
   const lastRuntimeRef = useRef<string | null>(null);
   const creatingRef = useRef(false);
@@ -931,7 +938,20 @@ export function useAgentRuntimes(
   // ─── Bootstrap: connect to existing runtime on initial load ─────────
 
   useEffect(() => {
-    if (!hasSpec || runtime || autoStart || lifecycleStatus !== 'idle') {
+    /*
+     * Runs whether or not this host asked for an auto-start.
+     *
+     * `autoStart` used to short-circuit it, which made looking and launching
+     * mutually exclusive when they are meant to be sequential: a host that
+     * wanted a runtime always got a *new* one, and an agent for the same spec
+     * already running in the cloud was ignored and paid for twice. Switching
+     * examples showed it as an error — the launch had not landed yet, and
+     * nothing had thought to reuse the runtime that was right there.
+     *
+     * The auto-start below waits for this to finish, so the order is: look,
+     * then launch if there was nothing to find.
+     */
+    if (!hasSpec || runtime || lifecycleStatus !== 'idle') {
       return;
     }
 
@@ -1003,6 +1023,13 @@ export function useAgentRuntimes(
         }
       } catch (err) {
         console.warn('[useAgents] Failed to find existing runtime:', err);
+      } finally {
+        // Either way. A lookup that failed must not hold the launch back for
+        // ever — the point of looking is to avoid a second runtime, not to
+        // make the first one conditional on the listing endpoint.
+        if (!cancelled) {
+          setLookedForExisting(true);
+        }
       }
     };
 
@@ -1033,13 +1060,24 @@ export function useAgentRuntimes(
     if (
       hasSpec &&
       autoStart &&
+      // Only once the lookup above has reported. Launching in parallel would
+      // race it: two runtimes for one spec, and whichever answered last wins.
+      lookedForExisting &&
+      !runtime &&
       !hasAutoStarted.current &&
       lifecycleStatus === 'idle'
     ) {
       hasAutoStarted.current = true;
       launchRuntime();
     }
-  }, [hasSpec, autoStart, lifecycleStatus, launchRuntime]);
+  }, [
+    hasSpec,
+    autoStart,
+    lookedForExisting,
+    runtime,
+    lifecycleStatus,
+    launchRuntime,
+  ]);
 
   // ─── Sync store errors ─────────────────────────────────────────────
 

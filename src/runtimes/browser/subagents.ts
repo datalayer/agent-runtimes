@@ -62,6 +62,14 @@ export type BrowserSubagent = {
   model?: string;
   /** Tools it may call in this page. Usually a narrower set than the parent's. */
   tools?: ToolSet;
+  /**
+   * The octicon name its spec asked for.
+   *
+   * Carried, not used: the harness has no interface. It is here so a menu
+   * offering this subagent can draw it the same way it draws a team member,
+   * rather than the two disagreeing about what the same agent looks like.
+   */
+  icon?: string;
 };
 
 export type SubagentToolsOptions = {

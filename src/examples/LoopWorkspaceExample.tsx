@@ -142,6 +142,21 @@ export type LoopWorkspaceExampleProps = {
    * where the bar repeats a heading the reader has just read.
    */
   hideChatHeader?: boolean;
+  /**
+   * Whether the workspace draws its header row.
+   *
+   * True by default. False removes the row and every control a plugin put in
+   * it, for a host whose page already frames the workspace. The plugins stay
+   * switched on — this is about where their controls render, not what they do.
+   */
+  showHeader?: boolean;
+  /**
+   * Where the prompt sits.
+   *
+   * `bottom` (the default) spans the workspace; `bottom-chat` keeps it inside
+   * the chat column, under the transcript, as the other examples do.
+   */
+  promptPlacement?: 'bottom' | 'bottom-chat';
 };
 
 export function LoopWorkspaceExample({
@@ -157,6 +172,8 @@ export function LoopWorkspaceExample({
   showPluginsManager = true,
   showViewSelector = true,
   hideChatHeader = false,
+  showHeader = true,
+  promptPlacement = 'bottom',
   inheritTheme = false,
   defaultEditor = 'notebook',
 }: LoopWorkspaceExampleProps): JSX.Element {
@@ -174,6 +191,7 @@ export function LoopWorkspaceExample({
           // and it is the one people actually see.
           showSurfaceSelector: showViewSelector,
           hideHeader: hideChatHeader,
+          promptPlacement,
         }),
         configurePlugin(AgentsPlugin, {
           serverUrl,
@@ -217,6 +235,7 @@ export function LoopWorkspaceExample({
       showPluginsManager,
       showViewSelector,
       hideChatHeader,
+      promptPlacement,
       defaultEditor,
     ],
   );
@@ -300,6 +319,7 @@ export function LoopWorkspaceExample({
           reactor={reactor}
           manageReactor={false}
           showViewSelector={showViewSelector}
+          showHeader={showHeader}
         />
       </Box>
     </QueryClientProvider>

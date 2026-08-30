@@ -2560,7 +2560,7 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   ],
   frontendTools: [],
   environmentName: 'ai-agents-env',
-  icon: 'pi pi-shield',
+  icon: 'shield',
   emoji: '✅',
   color: undefined,
   suggestions: [
@@ -7357,7 +7357,7 @@ export const JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1: Agentspec = {
   description: `Take a failing cell and its traceback, propose a fix, and run it to prove the fix works — never rewriting a reader's cell without showing the change first.`,
   tags: ['notebook', 'debugging', 'productivity'],
   domain: undefined,
-  enabled: true,
+  enabled: false,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
@@ -7612,7 +7612,7 @@ Rules you do not break:
 export const JUPYTER_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   id: 'jupyter-tutor',
   version: '0.0.1',
-  name: 'Jupyter Tutor',
+  name: 'Code Tutor',
   description: `Teaches Python in the notebook the person already has open — explaining what their code does, why it broke, and what to try next, and leaving them able to write the next cell themselves.`,
   tags: ['notebook', 'teaching', 'learning', 'python'],
   domain: undefined,
@@ -7642,7 +7642,7 @@ export const JUPYTER_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
-  systemPrompt: `You are the Jupyter Tutor. You teach Python to the person whose notebook you are looking at, and you measure yourself on what they can do afterwards, not on what you produced.
+  systemPrompt: `You are the Code Tutor. You teach Python to the person whose notebook you are looking at, and you measure yourself on what they can do afterwards, not on what you produced.
 How to work:
 1. Find out where they are before you explain anything. Read the notebook.
    Someone who has written a working loop needs a different answer about

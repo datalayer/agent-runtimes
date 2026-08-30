@@ -734,7 +734,7 @@ export const JUPYTER_NOTEBOOK_TEAM_SPEC_0_0_1: TeamSpec = {
   orchestrationProtocol: 'datalayer',
   executionMode: 'supervisor',
   supervisor: {
-    name: 'Jupyter Tutor',
+    name: 'Code Tutor',
     ref: 'jupyter-tutor:0.0.1',
     model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     goal: `Keep the person learning. Answer what was asked, and hand the notebook to the Compactor only when they have asked for it and understood what it will change.`,
@@ -753,7 +753,7 @@ export const JUPYTER_NOTEBOOK_TEAM_SPEC_0_0_1: TeamSpec = {
   agents: [
     {
       id: 'tutor',
-      name: 'Jupyter Tutor',
+      name: 'Code Tutor',
       ref: 'jupyter-tutor:0.0.1',
       role: 'initiator',
       goal: `Teach the person Python in the notebook they have open — what their code does, why it broke, and what to try next — leaving them able to write the next cell themselves.`,

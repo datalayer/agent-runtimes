@@ -17,8 +17,19 @@ import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
-import type { InputPromptVariant } from '../chat/prompt/InputPrompt';
-import type { MentionableAgent } from '../chat/prompt/AgentMentionPlugin';
+import type { InputPromptVariant } from '../chat/prompt/InputPromptBase';
+import type { MentionableAgent } from '../chat/prompt/plugins/AgentMentionPlugin';
+import type { Icon } from '@primer/octicons-react';
+
+/** One agent a chat may address, as its controls need it. */
+export interface FooterAgent {
+  id: string;
+  name: string;
+  description?: string;
+  emoji?: string;
+  /** The octicon its agentspec asked for, resolved by whoever built the list. */
+  icon?: Icon;
+}
 import type { SandboxWsStatus } from './sandbox';
 import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
@@ -332,6 +343,20 @@ export interface ChatCommonProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
+  /**
+   * Whether the prompt offers a chooser for who answers.
+   *
+   * True by default, and shown for a single agent as much as for several: the
+   * control is a label before it is a switch, and in a chat with one agent
+   * nothing else on screen says which one.
+   */
+  showAgentsMenu?: boolean;
+  /** Who may answer. Defaults to the agent this chat is talking to. */
+  agents?: FooterAgent[];
+  /** Who is answering now. */
+  selectedAgentId?: string;
+  /** Address somebody else. */
+  onSelectAgent?: (agentId: string) => void;
 
   /**
    * Whether the chat can be used at all.
@@ -449,6 +474,13 @@ export interface ChatCommonProps {
    * @default true
    */
   showTokenUsage?: boolean;
+  /**
+   * Whether the usage bar draws its context ring.
+   *
+   * False by default: the ring earns its place where a person is likely to
+   * fill a context window, not in every chat that reports usage.
+   */
+  showContextRing?: boolean;
 
   /** Indicate tools are accessed via Codemode meta-tools */
   codemodeEnabled?: boolean;
@@ -775,6 +807,13 @@ export interface ChatBaseProps {
    * @default true
    */
   showTokenUsage?: boolean;
+  /**
+   * Whether the usage bar draws its context ring.
+   *
+   * False by default: the ring earns its place where a person is likely to
+   * fill a context window, not in every chat that reports usage.
+   */
+  showContextRing?: boolean;
 
   /**
    * External context snapshot data for the token usage bar.
@@ -826,6 +865,20 @@ export interface ChatBaseProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
+  /**
+   * Whether the prompt offers a chooser for who answers.
+   *
+   * True by default, and shown for a single agent as much as for several: the
+   * control is a label before it is a switch, and in a chat with one agent
+   * nothing else on screen says which one.
+   */
+  showAgentsMenu?: boolean;
+  /** Who may answer. Defaults to the agent this chat is talking to. */
+  agents?: FooterAgent[];
+  /** Who is answering now. */
+  selectedAgentId?: string;
+  /** Address somebody else. */
+  onSelectAgent?: (agentId: string) => void;
 
   /**
    * Whether the chat can be used at all — see `ChatCommonProps.disabled`.

@@ -514,6 +514,16 @@ export const LoopSlots = {
   /** Buttons beside the prompt. */
   promptAction: 'loop.promptAction',
   /**
+   * The strip inside the prompt, above where the typing goes.
+   *
+   * Kept and rendered, and nothing contributes to it today: the controls that
+   * decide what the next message does — agent, tools, skills, model — live in
+   * the footer under the prompt, which already had three of the four. This is
+   * for whatever wants to sit *in* the prompt rather than under it, and it
+   * draws nothing while it is empty.
+   */
+  inpromptMenu: 'loop.inpromptMenu',
+  /**
    * Under the view, above the status line.
    *
    * Where the chat plugin puts its prompt. A slot rather than a fixed place in

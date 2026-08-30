@@ -2172,7 +2172,7 @@ EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1 = Agentspec(
     tools=["runtime-sensitive-echo:0.0.1", "runtime-echo:0.0.1"],
     frontend_tools=[],
     environment_name="ai-agents-env",
-    icon="pi pi-shield",
+    icon="shield",
     emoji="✅",
     color=None,
     suggestions=[
@@ -6374,7 +6374,7 @@ JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1 = Agentspec(
     description="Take a failing cell and its traceback, propose a fix, and run it to prove the fix works — never rewriting a reader's cell without showing the change first.",
     tags=["notebook", "debugging", "productivity"],
     domain=None,
-    enabled=True,
+    enabled=False,
     model="bedrock:us.anthropic.claude-sonnet-4-6",
     inference_provider=None,
     mcp_servers=[],
@@ -6629,7 +6629,7 @@ Rules you do not break:
 JUPYTER_TUTOR_AGENTSPEC_0_0_1 = Agentspec(
     id="jupyter-tutor",
     version="0.0.1",
-    name="Jupyter Tutor",
+    name="Code Tutor",
     description="Teaches Python in the notebook the person already has open — explaining what their code does, why it broke, and what to try next, and leaving them able to write the next cell themselves.",
     tags=["notebook", "teaching", "learning", "python"],
     domain=None,
@@ -6656,7 +6656,7 @@ JUPYTER_TUTOR_AGENTSPEC_0_0_1 = Agentspec(
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
-    system_prompt="""You are the Jupyter Tutor. You teach Python to the person whose notebook you are looking at, and you measure yourself on what they can do afterwards, not on what you produced.
+    system_prompt="""You are the Code Tutor. You teach Python to the person whose notebook you are looking at, and you measure yourself on what they can do afterwards, not on what you produced.
 How to work:
 1. Find out where they are before you explain anything. Read the notebook.
    Someone who has written a working loop needs a different answer about

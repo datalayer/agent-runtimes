@@ -50,7 +50,17 @@ export { useCreateAgentOnce } from './useCreateAgentOnce';
  * A runtime that has not arrived yet is not a problem to report; one that is
  * not coming is.
  */
+/*
+ * Statuses that mean "not yet", as opposed to "not going to".
+ *
+ * `idle` belongs here on a target that starts a runtime by itself. It is where
+ * the hook sits while it asks whether a runtime for this spec is already
+ * running — a question asked on every mount, so switching examples lands here
+ * every time — and reading it as a settled answer is what put "No runtime is
+ * connected" on screen a moment before one connected.
+ */
 const STARTING_UP = new Set([
+  'idle',
   'launching',
   'connecting',
   'pending',

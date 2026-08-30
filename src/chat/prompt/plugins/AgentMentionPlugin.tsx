@@ -17,11 +17,13 @@
  * edit one afterwards, and it still works; a bespoke node would have made both
  * of those break in ways nobody could see.
  *
- * @module chat/prompt/AgentMentionPlugin
+ * @module chat/prompt/plugins/AgentMentionPlugin
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActionList, Overlay, Text } from '@primer/react';
+import type { Icon } from '@primer/octicons-react';
+import { ActionList, Overlay } from '@primer/react';
+import { AiAgentIcon } from '@datalayer/icons-react';
 import { Box } from '@datalayer/primer-addons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
@@ -35,6 +37,8 @@ import {
   type LexicalEditor,
 } from 'lexical';
 
+import { $createMentionNode } from './MentionNode';
+
 /** One agent a prompt may address. */
 export type MentionableAgent = {
   /** The name typed after `@`, and the name of the tool that reaches it. */
@@ -42,6 +46,14 @@ export type MentionableAgent = {
   /** One line about what it is for. */
   description?: string;
   emoji?: string;
+  /**
+   * The octicon its agentspec asked for.
+   *
+   * Resolved by whoever builds the list — this module has no opinion about
+   * where an icon name comes from — and drawn in place of the emoji, which was
+   * the same picture for every agent that had not set one.
+   */
+  icon?: Icon;
   /**
    * Shown, but not choosable.
    *
@@ -147,7 +159,18 @@ export function AgentMentionPlugin({
         // including the space that made `@` a mention — survives.
         const start = offset - match[1].length - 1;
         selection.setTextNodeRange(node as never, start, node as never, offset);
-        selection.insertText(`@${agent.name} `);
+        /*
+         * A node, not `@Name ` as text.
+         *
+         * As text a mention was several words to the editor: backspace took
+         * the last one off and left an address to somebody who does not
+         * exist. The trailing space stays plain, so the caret lands after the
+         * chip ready for the rest of the sentence.
+         */
+        selection.insertNodes([
+          $createMentionNode({ name: agent.name, icon: agent.icon }),
+        ]);
+        selection.insertText(' ');
       });
       setQuery(null);
     },
@@ -164,6 +187,17 @@ export function AgentMentionPlugin({
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
         () => {
+          /*
+            Declined when nothing can be chosen.
+
+            The menu opens for a single agent that is already the one being
+            addressed — shown greyed, because a menu that hides its only row
+            looks broken — and then `% choosable.length` is `% 0`, which is
+            NaN. Handing the key back leaves the caret working as it should.
+          */
+          if (choosable.length === 0) {
+            return false;
+          }
           setHighlighted(current => (current + 1) % choosable.length);
           return true;
         },
@@ -172,6 +206,9 @@ export function AgentMentionPlugin({
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
         () => {
+          if (choosable.length === 0) {
+            return false;
+          }
           setHighlighted(
             current => (current - 1 + choosable.length) % choosable.length,
           );
@@ -240,7 +277,7 @@ export function AgentMentionPlugin({
          * the menu stayed as wide as the longest description in it. `medium`
          * is 320px.
          */
-        width="medium"
+        width="large"
         sx={{
           position: 'fixed',
           left: query.rect.left,
@@ -254,7 +291,7 @@ export function AgentMentionPlugin({
         {/* The width again, held from the inside. The overlay is positioned
             `fixed`, so nothing in the layout constrains it; without a bounded
             child, a long description sets the width of everything above it. */}
-        <Box sx={{ width: '100%', maxWidth: 320, minWidth: 0 }}>
+        <Box sx={{ width: '100%', maxWidth: 440, minWidth: 0 }}>
           <ActionList selectionVariant="single">
             {matches.map(agent => {
               const index = choosable.indexOf(agent);
@@ -274,7 +311,14 @@ export function AgentMentionPlugin({
                   sx={agent.disabled ? { opacity: 0.5 } : undefined}
                 >
                   <ActionList.LeadingVisual>
-                    <Text aria-hidden>{agent.emoji ?? '🤖'}</Text>
+                    {/* The spec's own icon. An emoji was the same picture
+                        for every agent that had not set one, so the column
+                        said nothing at all. */}
+                    {agent.icon ? (
+                      <agent.icon />
+                    ) : (
+                      <AiAgentIcon />
+                    )}
                   </ActionList.LeadingVisual>
                   {agent.name}
                   {agent.description ? (

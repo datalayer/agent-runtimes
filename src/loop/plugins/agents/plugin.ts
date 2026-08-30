@@ -166,7 +166,9 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         // and move it. Left out entirely rather than disabled when the host
         // gave no choice: a control with one option is furniture.
         // Beside the sandbox control: one says where the agent runs, the
-        // other which agent it is, and a person reads them together.
+        // other which agent it is, and a person reads them together. The
+        // footer under the prompt offers the same choice for a workspace
+        // mounted without a header.
         ...(team
           ? [
               {

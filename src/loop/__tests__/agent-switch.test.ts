@@ -94,7 +94,9 @@ describe('the Datalayer bridge', () => {
      * no notebook, no chat, and a kernel indicator saying `connected-dead`.
      */
     const bridge = read('plugins', 'agents', 'DatalayerAgentBridge.tsx');
-    expect(bridge).toContain('sandbox_running: Boolean(runtime.serviceManager)');
+    expect(bridge).toContain(
+      'sandbox_running: Boolean(runtime.serviceManager)',
+    );
     expect(bridge).not.toContain('sandbox_running: Boolean(runtime.isReady)');
   });
 });
@@ -107,9 +109,20 @@ describe('the prompt', () => {
      * `InputPrompt` defaults to a plain textarea. Handing it
      * `mentionableAgents` compiles and renders and does nothing: the menu
      * lives in `InputPromptLexical`, so typing `@` produced no overlay.
+     *
+     * `promptVariant` rather than `variant`: the loop renders the footer
+     * toolbar, which is chrome around the same prompt and forwards the choice
+     * under that name.
      */
-    expect(chat()).toContain('variant="lexical"');
+    expect(chat()).toContain('promptVariant="lexical"');
     expect(chat()).toContain('mentionableAgents={mentionable}');
+  });
+
+  it('carries the agent chooser and the context bar in its footer', () => {
+    // Three of the four controls that decide what the next message does were
+    // already there; the agent was the one that lived only in the header.
+    expect(chat()).toContain('showAgentsMenu');
+    expect(chat()).toContain('showTokenUsage');
   });
 
   it('takes focus, so the workspace opens ready to type', () => {
@@ -128,7 +141,15 @@ describe('the `@` menu', () => {
 
   it('greys the member already being addressed rather than dropping it', () => {
     const plugin = readFileSync(
-      join(__dirname, '..', '..', 'chat', 'prompt', 'AgentMentionPlugin.tsx'),
+      join(
+        __dirname,
+        '..',
+        '..',
+        'chat',
+        'prompt',
+        'plugins',
+        'AgentMentionPlugin.tsx',
+      ),
       'utf8',
     );
     // Shown but not choosable: the keyboard walks `choosable`, the list
@@ -174,14 +195,34 @@ describe('the prompt while the agent is working', () => {
 describe('the prompt component', () => {
   it('is one component, with the editor chosen by a prop', () => {
     const dir = join(__dirname, '..', '..', 'chat', 'prompt');
-    // The toolbar is chrome around the same prompt, not a second one.
-    const footer = readFileSync(join(dir, 'InputFooter.tsx'), 'utf8');
-    expect(footer).toContain("import { InputPrompt");
-    expect(footer).toContain('variant={promptVariant}');
-    // And the one component dispatches on the prop rather than the caller
-    // picking an editor directly.
+    /*
+     * `InputPrompt` is the composed one — editor plus the menus under it —
+     * and it renders `InputPromptBase`, which is where the choice between the
+     * Lexical editor and the plain textarea is actually made. Two files, one
+     * prompt: a caller never picks an editor directly.
+     */
     const prompt = readFileSync(join(dir, 'InputPrompt.tsx'), 'utf8');
-    expect(prompt).toContain("variant === 'lexical'");
+    expect(prompt).toContain('InputPromptBase');
+    expect(prompt).toContain('variant={promptVariant}');
+
+    const base = readFileSync(join(dir, 'InputPromptBase.tsx'), 'utf8');
+    expect(base).toContain("variant === 'lexical'");
+  });
+
+  it('keeps each menu in its own module', () => {
+    // They were private sub-components of one 1100-line file, which made the
+    // file hard to read and each menu hard to find.
+    const menus = join(__dirname, '..', '..', 'chat', 'prompt', 'menus');
+    for (const name of [
+      'AgentsMenu',
+      'ToolsMenu',
+      'SkillsMenu',
+      'ModelSelector',
+    ]) {
+      expect(readFileSync(join(menus, `${name}.tsx`), 'utf8')).toContain(
+        `export function ${name}(`,
+      );
+    }
   });
 });
 
@@ -195,5 +236,26 @@ describe('group headings inside a menu', () => {
     const picker = read('plugins', 'agents', 'TeamMemberPicker.tsx');
     expect(picker).toContain('<ActionList.GroupHeading>');
     expect(picker).not.toContain('GroupHeading as=');
+    /*
+     * And the role it depends on, stated. Primer throws *both* ways: a list
+     * with no role needs an `as` on its heading, a listbox or menu refuses
+     * one. Dropping the `as` without saying what the list is swapped one
+     * crash for the other.
+     */
+    expect(picker).toContain('role="listbox"');
+  });
+});
+
+describe('a host that asked for no header', () => {
+  it('gets no header row, and none of the plugins’ controls in it', () => {
+    /*
+     * The slot has to go unrendered, not be emptied: an emptied header is a
+     * bordered strip of nothing, and a mounted slot keeps every contributed
+     * control on screen with only the switcher missing.
+     */
+    const shell = read('shell', 'LoopWorkspace.tsx');
+    expect(shell).toContain('{showHeader ? (');
+    const header = shell.slice(shell.indexOf('{showHeader ? ('));
+    expect(header.indexOf('LoopSlots.header')).toBeGreaterThan(0);
   });
 });

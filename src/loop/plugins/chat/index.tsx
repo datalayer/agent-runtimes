@@ -107,6 +107,20 @@ export type ChatPluginConfig = {
    * directly beneath repeats the point in a smaller font.
    */
   hideHeader: boolean;
+  /**
+   * Where the prompt sits.
+   *
+   * `bottom` (the default) spans the workspace: the notebook and the
+   * conversation share one composer, which is right when what the agent is
+   * doing is the document beside it.
+   *
+   * `bottom-chat` keeps it inside the chat column, under the transcript, where
+   * every other example in this package puts it. The prompt then reads as part
+   * of the conversation rather than as a bar the whole page rests on — better
+   * for a host that embeds the workspace as a chat that happens to have a
+   * notebook attached.
+   */
+  promptPlacement: 'bottom' | 'bottom-chat';
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
@@ -120,6 +134,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     defaultSurface: 'notebook',
     showSurfaceSelector: true,
     hideHeader: false,
+    promptPlacement: 'bottom',
   },
   displayName: 'Chat',
   description: 'The conversation, the prompt, and the point editors plug into.',

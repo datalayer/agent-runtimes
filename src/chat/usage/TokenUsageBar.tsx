@@ -28,13 +28,26 @@ export interface TokenUsageBarProps {
   agentUsage: ContextSnapshotData;
   /** Horizontal padding to match the chat layout */
   padding: number;
+  /**
+   * Whether to draw the context ring.
+   *
+   * False by default. It is a small pie of how the window is spent, and it
+   * earns its place only where a person is likely to fill one — an agent
+   * working through a notebook — rather than in every chat that happens to
+   * report usage. The numbers beside it are shown either way.
+   */
+  showContextRing?: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
+export function TokenUsageBar({
+  agentUsage,
+  padding,
+  showContextRing = false,
+}: TokenUsageBarProps) {
   // State for context pie chart overlay
   const [contextOverlayOpen, setContextOverlayOpen] = useState(false);
   const contextAnchorRef = useRef<HTMLDivElement>(null);
@@ -186,6 +199,7 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
       }}
     >
       {/* Tiny pie chart with hover overlay */}
+      {showContextRing && (
       <Box
         sx={{ position: 'relative', flexShrink: 0 }}
         onMouseEnter={() => {
@@ -370,6 +384,7 @@ export function TokenUsageBar({ agentUsage, padding }: TokenUsageBarProps) {
           </Box>
         )}
       </Box>
+      )}
       {/* Context window usage */}
       <Text sx={{ fontSize: 0, color: 'fg.muted', flexShrink: 0 }}>
         <Text
