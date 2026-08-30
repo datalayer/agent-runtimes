@@ -555,3 +555,10 @@ export function parseCommand(
   }
   return { name: head.toLowerCase(), argv: rest.join(' ').trim() };
 }
+
+export {
+  useLoopPromptStore,
+  suggestLoopPrompt,
+  type LoopPromptState,
+  type SuggestedPrompt,
+} from './promptStore';

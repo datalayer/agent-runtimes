@@ -79,54 +79,60 @@ function TeamMemberMenu({
           wider than the workspace. */}
       <Box sx={{ width: 320, maxWidth: '100vw' }}>
         <ActionList selectionVariant="single">
-        <ActionList.GroupHeading as="h3">
-          {selection.team.name}
-        </ActionList.GroupHeading>
-        {selection.members.map(member => (
-          <ActionList.Item
-            key={member.id}
-            selected={member.id === selectedId}
-            onSelect={() => {
-              selection.select(member.id);
-              setOpen(false);
-            }}
-          >
-            <ActionList.LeadingVisual>
-              <Text aria-hidden>{member.emoji ?? '🤖'}</Text>
-            </ActionList.LeadingVisual>
-            <Box
-              as="span"
-              sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+          {/* No `as`: inside an ActionMenu the list has `role="menu"`, where a
+            group heading is presentational and rendered as a div. Giving it a
+            heading level makes Primer throw, which took the whole picker down
+            the moment it opened. */}
+          <ActionList.GroupHeading>
+            {selection.team.name}
+          </ActionList.GroupHeading>
+          {selection.members.map(member => (
+            <ActionList.Item
+              key={member.id}
+              selected={member.id === selectedId}
+              onSelect={() => {
+                selection.select(member.id);
+                setOpen(false);
+              }}
             >
-              {member.name}
-              {member.isSupervisor ? (
-                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>supervisor</Text>
-              ) : null}
-            </Box>
-            {member.description ? (
-              <ActionList.Description
-                variant="block"
-                /* Wrapped and breakable. `minWidth: 0` is the load-bearing
+              <ActionList.LeadingVisual>
+                <Text aria-hidden>{member.emoji ?? '🤖'}</Text>
+              </ActionList.LeadingVisual>
+              <Box
+                as="span"
+                sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+              >
+                {member.name}
+                {member.isSupervisor ? (
+                  <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                    supervisor
+                  </Text>
+                ) : null}
+              </Box>
+              {member.description ? (
+                <ActionList.Description
+                  variant="block"
+                  /* Wrapped and breakable. `minWidth: 0` is the load-bearing
                    one: a grid item defaults to `min-content`, so without it
                    the description refuses to be narrower than its longest
                    unbroken run and pushes the row wide. */
-                sx={{
-                  display: 'block',
-                  whiteSpace: 'normal',
-                  overflowWrap: 'anywhere',
-                  minWidth: 0,
-                }}
-              >
-                {member.description}
-              </ActionList.Description>
-            ) : null}
-            {/* The tick, so the menu says which agent is listening rather than
+                  sx={{
+                    display: 'block',
+                    whiteSpace: 'normal',
+                    overflowWrap: 'anywhere',
+                    minWidth: 0,
+                  }}
+                >
+                  {member.description}
+                </ActionList.Description>
+              ) : null}
+              {/* The tick, so the menu says which agent is listening rather than
                 leaving it to be inferred from the icon behind it. */}
-            <ActionList.TrailingVisual>
-              {member.id === selectedId ? <CheckIcon /> : null}
-            </ActionList.TrailingVisual>
-          </ActionList.Item>
-        ))}
+              <ActionList.TrailingVisual>
+                {member.id === selectedId ? <CheckIcon /> : null}
+              </ActionList.TrailingVisual>
+            </ActionList.Item>
+          ))}
         </ActionList>
       </Box>
     </AnchoredOverlay>

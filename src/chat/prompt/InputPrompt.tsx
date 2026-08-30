@@ -20,7 +20,6 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
-
 import { InputPromptHeader } from './InputPromptHeader';
 import { InputPromptFooter } from './InputPromptFooter';
 import { InputPromptText } from './InputPromptText';

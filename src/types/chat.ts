@@ -17,6 +17,8 @@ import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
+import type { InputPromptVariant } from '../chat/prompt/InputPrompt';
+import type { MentionableAgent } from '../chat/prompt/AgentMentionPlugin';
 import type { SandboxWsStatus } from './sandbox';
 import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
@@ -320,6 +322,16 @@ export interface ChatCommonProps {
 
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
+  /**
+   * Which editor the prompt uses — `'text'` (default) or `'lexical'`.
+   *
+   * There is one prompt component; this picks the editor inside it. Lexical
+   * is the one with the `@` menu, so a chat offering agents to address needs
+   * it.
+   */
+  promptVariant?: InputPromptVariant;
+  /** Agents the prompt may address by typing `@`. Lexical only. */
+  mentionableAgents?: MentionableAgent[];
 
   /**
    * Whether the chat can be used at all.
@@ -804,6 +816,16 @@ export interface ChatBaseProps {
 
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
+  /**
+   * Which editor the prompt uses — `'text'` (default) or `'lexical'`.
+   *
+   * There is one prompt component; this picks the editor inside it. Lexical
+   * is the one with the `@` menu, so a chat offering agents to address needs
+   * it.
+   */
+  promptVariant?: InputPromptVariant;
+  /** Agents the prompt may address by typing `@`. Lexical only. */
+  mentionableAgents?: MentionableAgent[];
 
   /**
    * Whether the chat can be used at all — see `ChatCommonProps.disabled`.

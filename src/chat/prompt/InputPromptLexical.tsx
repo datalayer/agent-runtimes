@@ -232,6 +232,17 @@ export function InputPromptLexical({
       sx={{
         px: 2,
         py: 1,
+        /*
+         * Greyed while it cannot be typed in.
+         *
+         * `contenteditable=false` stops the caret and nothing else — the text
+         * kept the same weight and colour as a live prompt, so a person had to
+         * try typing to discover the box was inert. The colour is set on the
+         * container and inherited, because the editable element deliberately
+         * declares no colour of its own.
+         */
+        color: disabled || readOnly ? 'fg.subtle' : undefined,
+        cursor: disabled || readOnly ? 'not-allowed' : undefined,
         '& .input-prompt-lexical-p': {
           margin: 0,
         },

@@ -757,6 +757,8 @@ function ChatBaseInner({
   showToolsMenu = true,
   showSkillsMenu = true,
   disableInputPrompt = false,
+  promptVariant,
+  mentionableAgents,
   disabled: disabledProp,
   disableReason: disableReasonProp,
   overlay,
@@ -4042,6 +4044,8 @@ function ChatBaseInner({
       disableInputPrompt={
         disableInputPrompt || disabled || !!overlay || launching
       }
+      promptVariant={promptVariant}
+      mentionableAgents={mentionableAgents}
       showTokenUsage={showTokenUsage}
       agentUsage={agentUsage}
       showModelSelector={showModelSelector}

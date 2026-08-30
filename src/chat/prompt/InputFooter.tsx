@@ -22,7 +22,8 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { ToolsIcon, BriefcaseIcon, AiModelIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
-import { InputPrompt } from './InputPrompt';
+import { InputPrompt, type InputPromptVariant } from './InputPrompt';
+import type { MentionableAgent } from './AgentMentionPlugin';
 import { TokenUsageBar } from '../usage/TokenUsageBar';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
 import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
@@ -53,6 +54,17 @@ export interface InputToolbarProps {
   onSend: () => void;
   onStop: () => void;
   disableInputPrompt?: boolean;
+  /**
+   * Which editor the prompt uses.
+   *
+   * Forwarded to `InputPrompt`, which is the one prompt component either way —
+   * this toolbar is chrome around it, not a second implementation. Without the
+   * pass-through the toolbar could only ever be the plain textarea, so a host
+   * wanting the `@` menu had to stop using the toolbar to get it.
+   */
+  promptVariant?: InputPromptVariant;
+  /** Agents the prompt may address by typing `@`. Lexical only. */
+  mentionableAgents?: MentionableAgent[];
 
   // ---- Token usage ----
   showTokenUsage: boolean;
@@ -129,6 +141,8 @@ export function InputToolbar({
   onSend,
   onStop,
   disableInputPrompt = false,
+  promptVariant,
+  mentionableAgents,
   showTokenUsage,
   agentUsage,
   showModelSelector,
@@ -174,6 +188,8 @@ export function InputToolbar({
     <Box>
       {/* Input Area — powered by the standalone InputPrompt component */}
       <InputPrompt
+        variant={promptVariant}
+        mentionableAgents={mentionableAgents}
         placeholder={placeholder || 'Type a message...'}
         isLoading={isLoading}
         isKernelBusy={isKernelBusy}

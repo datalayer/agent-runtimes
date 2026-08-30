@@ -16,6 +16,7 @@
  */
 
 export * from './agent';
+export * from './anonymousToken';
 export * from './frontendTools';
 export * from './model';
 export * from './protocol';

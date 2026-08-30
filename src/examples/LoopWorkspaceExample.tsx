@@ -135,6 +135,13 @@ export type LoopWorkspaceExampleProps = {
    * host embedding the workspace to show one thing.
    */
   showViewSelector?: boolean;
+  /**
+   * Whether to hide the chat's own title bar.
+   *
+   * False by default. True for a host whose page already names the workspace,
+   * where the bar repeats a heading the reader has just read.
+   */
+  hideChatHeader?: boolean;
 };
 
 export function LoopWorkspaceExample({
@@ -149,6 +156,7 @@ export function LoopWorkspaceExample({
   showGraph = true,
   showPluginsManager = true,
   showViewSelector = true,
+  hideChatHeader = false,
   inheritTheme = false,
   defaultEditor = 'notebook',
 }: LoopWorkspaceExampleProps): JSX.Element {
@@ -165,6 +173,7 @@ export function LoopWorkspaceExample({
           // view after being told not to. The chat contributes its own strip,
           // and it is the one people actually see.
           showSurfaceSelector: showViewSelector,
+          hideHeader: hideChatHeader,
         }),
         configurePlugin(AgentsPlugin, {
           serverUrl,
@@ -207,6 +216,7 @@ export function LoopWorkspaceExample({
       showGraph,
       showPluginsManager,
       showViewSelector,
+      hideChatHeader,
       defaultEditor,
     ],
   );

@@ -96,6 +96,17 @@ export type ChatPluginConfig = {
    * to swap it for a document or for nothing at all.
    */
   showSurfaceSelector: boolean;
+  /**
+   * Whether the chat draws its own title bar.
+   *
+   * False by default — the header carries the agent's name and the reason a
+   * disabled chat is disabled, and both are worth having.
+   *
+   * True for a host that has already said what this is. On a landing page the
+   * workspace sits under a heading that names it, and a second title bar
+   * directly beneath repeats the point in a smaller font.
+   */
+  hideHeader: boolean;
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
@@ -108,6 +119,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     // that opens on an empty chat hides the half of itself that does the work.
     defaultSurface: 'notebook',
     showSurfaceSelector: true,
+    hideHeader: false,
   },
   displayName: 'Chat',
   description: 'The conversation, the prompt, and the point editors plug into.',

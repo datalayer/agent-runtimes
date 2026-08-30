@@ -38,6 +38,10 @@ export {
   type SandboxState,
   type ViewControls,
   type ViewTypeContribution,
+  useLoopPromptStore,
+  suggestLoopPrompt,
+  type LoopPromptState,
+  type SuggestedPrompt,
 } from './core';
 export { useEditorToolbar } from './core/toolbar';
 

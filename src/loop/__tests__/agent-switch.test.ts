@@ -155,3 +155,45 @@ describe('a host that asked for no view chooser', () => {
     expect(example).toContain('showViewSelector={showViewSelector}');
   });
 });
+
+describe('the prompt while the agent is working', () => {
+  it('reads a busy flag it owns, not one round-tripped through the shell', () => {
+    /*
+     * `onSendReady` fires again during a send — ChatBase rebuilds `handleSend`
+     * when the send starts — and it used to write `{ stop }` with no `busy`,
+     * erasing the flag one tick after the agent began. The prompt came back to
+     * life at exactly the moment it must not.
+     */
+    const chat = read('plugins', 'chat', 'ChatView.tsx');
+    expect(chat).toContain('const [busy, setBusy] = useState(false)');
+    expect(chat).toContain('isLoading={busy}');
+    expect(chat).not.toContain('isLoading={workspace.viewControls.busy}');
+  });
+});
+
+describe('the prompt component', () => {
+  it('is one component, with the editor chosen by a prop', () => {
+    const dir = join(__dirname, '..', '..', 'chat', 'prompt');
+    // The toolbar is chrome around the same prompt, not a second one.
+    const footer = readFileSync(join(dir, 'InputFooter.tsx'), 'utf8');
+    expect(footer).toContain("import { InputPrompt");
+    expect(footer).toContain('variant={promptVariant}');
+    // And the one component dispatches on the prop rather than the caller
+    // picking an editor directly.
+    const prompt = readFileSync(join(dir, 'InputPrompt.tsx'), 'utf8');
+    expect(prompt).toContain("variant === 'lexical'");
+  });
+});
+
+describe('group headings inside a menu', () => {
+  it('carry no heading level, which Primer refuses', () => {
+    /*
+     * An ActionList inside an ActionMenu has `role="menu"`, where a group
+     * heading is presentational. `as="h3"` there is not a warning — Primer
+     * throws an invariant, and the overlay takes the page down with it.
+     */
+    const picker = read('plugins', 'agents', 'TeamMemberPicker.tsx');
+    expect(picker).toContain('<ActionList.GroupHeading>');
+    expect(picker).not.toContain('GroupHeading as=');
+  });
+});

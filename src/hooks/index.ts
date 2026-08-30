@@ -61,11 +61,18 @@ export {
  * ChatBase infrastructure hooks.
  */
 export { useConfig } from './useConfig';
-export {
-  useSkills,
-  useSkillActions,
-  useAgentRuntimeLoadedSkills as useAgentLoadedSkills,
-} from './useSkills';
+export { useSkills, useSkillActions } from './useSkills';
+/*
+ * Straight from the store it lives in, not forwarded through `useSkills`.
+ *
+ * `useSkills` only re-exported it, so this barrel was the third hop of a
+ * chain — hooks → useSkills → stores → agentRuntimeStore. Webpack resolves a
+ * re-exported binding by following that chain through the built files, and it
+ * gave up here: "`useAgentRuntimeLoadedSkills` was not found in
+ * `./useSkills`", which is true of the source it reads even though every file
+ * in the chain is correct. One hop cannot be misread.
+ */
+export { useAgentRuntimeLoadedSkills as useAgentLoadedSkills } from '../stores';
 export { useContextSnapshot } from './useContextSnapshot';
 export { useSandbox } from './useSandbox';
 

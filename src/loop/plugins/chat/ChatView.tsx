@@ -59,6 +59,7 @@ import {
   LoopChatSurface,
   canOpenView,
   type ChatSurfaceContribution,
+  useLoopPromptStore,
   type LoopViewProps,
 } from '../../core';
 
@@ -124,20 +125,37 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
 
   // Stable: ChatBase calls these in effects, and a new identity every render
   // would make it re-publish on every render.
-  const handleSendReady = useCallback(
-    (controls: ChatControls | null) => {
-      controlsRef.current = controls;
-      setViewControls(controls ? { stop: controls.stop } : null);
-    },
-    [setViewControls],
-  );
+  /*
+   * Whether the agent is working, held here rather than read back from the
+   * shell.
+   *
+   * It used to live only in `workspace.viewControls`, written by two
+   * callbacks that each replaced the whole object — and `onSendReady` fires
+   * again during a send, because ChatBase rebuilds its `handleSend` when the
+   * send starts. So the sequence was: loading true, then a fresh
+   * `{ stop }` with no `busy` at all. The prompt went live again one tick
+   * after the agent started, which is exactly when it must not be.
+   *
+   * Local state, and the shell is told from one place below.
+   */
+  const [busy, setBusy] = useState(false);
+  const [sendReady, setSendReady] = useState(false);
 
-  const handleLoadingChange = useCallback(
-    (busy: boolean) => {
-      setViewControls({ busy, stop: controlsRef.current?.stop });
-    },
-    [setViewControls],
-  );
+  const handleSendReady = useCallback((controls: ChatControls | null) => {
+    controlsRef.current = controls;
+    setSendReady(!!controls);
+  }, []);
+
+  const handleLoadingChange = useCallback((next: boolean) => {
+    setBusy(next);
+  }, []);
+
+  // One writer, so neither fact can erase the other.
+  useEffect(() => {
+    setViewControls(
+      sendReady ? { busy, stop: controlsRef.current?.stop } : null,
+    );
+  }, [busy, sendReady, setViewControls]);
 
   // Stop reporting when the view goes away, or the shell would keep a stop
   // button for something that is no longer there.
@@ -326,6 +344,34 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   }, [team, member]);
   const { inference } = useBrowserInference();
 
+  /*
+   * The prompt's text, held here rather than inside `InputPrompt`.
+   *
+   * A page embedding the workspace can offer a request — "try asking it
+   * this" — and the only honest place to put such an offer is the box the
+   * visitor would have typed it into, where they can read it, change their
+   * mind, or send it. That needs a controlled prompt, which needs the text to
+   * live somewhere both the suggestion and the composer can reach.
+   */
+  const [draft, setDraft] = useState('');
+  const suggestion = useLoopPromptStore(state => state.pending);
+
+  useEffect(() => {
+    if (!suggestion) {
+      return;
+    }
+    setDraft(suggestion.text);
+    // Taken, so a second click on the same button offers it again rather than
+    // finding the store already holding it.
+    useLoopPromptStore.getState().consume();
+    if (suggestion.submit) {
+      void handleSend(suggestion.text);
+    }
+    // `handleSend` is stable for the life of a connection; re-running this on
+    // a new identity would resend the last suggestion.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestion]);
+
   const protocol = useMemo<ProtocolConfig>(
     () =>
       inPage
@@ -424,7 +470,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             disabled={chatDisabled}
             disableReason={disabledReason}
             protocol={protocol}
-            showHeader
+            showHeader={!config?.hideHeader}
             // This view owns the prompt, below, so the chat does not draw a
             // second one: two input boxes on one screen is one too many.
             showInput={false}
@@ -456,7 +502,20 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       <Box sx={{ flex: '0 0 auto' }}>
         <InputPrompt
           onSend={message => void handleSend(message)}
-          isLoading={workspace.viewControls.busy}
+          // Controlled, so a suggestion from outside the workspace has
+          // somewhere to land. Uncontrolled the prompt owns its text and
+          // nothing else can write to it.
+          value={draft}
+          onChange={setDraft}
+          // Bumped by each suggestion, which is what puts the caret back in
+          // the box: a person who clicked "Try this" is being handed a
+          // sentence to read and send, not one to go and find.
+          focusTrigger={suggestion?.nonce}
+          // The agent is working: no second request while the first is in
+          // flight. `isLoading` both disables the editor and turns the send
+          // button into a stop — the person keeps a way out, which a flatly
+          // disabled prompt would not give them.
+          isLoading={busy}
           onStop={workspace.viewControls.stop}
           // The reason where the typing would go, so it is read before the
           // person types rather than after nothing happens.

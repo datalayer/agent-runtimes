@@ -29,6 +29,7 @@ import { useMemo } from 'react';
 import { useCoreStore, useIAMStore } from '../state';
 import {
   browserModelRequiresSignIn,
+  useAnonymousInferenceToken,
   type BrowserModelOptions,
 } from '../runtimes/browser';
 
@@ -51,16 +52,33 @@ export type BrowserInference = {
 /** The inference endpoint for an in-page agent. */
 export function useBrowserInference(): BrowserInference {
   const { configuration } = useCoreStore();
-  const token = useIAMStore(state => state.token);
+  const memberToken = useIAMStore(state => state.token);
+  const inferenceUrl = configuration?.aiInferenceUrl || DEFAULT_INFERENCE_URL;
+
+  /*
+   * A visitor with no account still gets to try the thing.
+   *
+   * The service admits members only, so an anonymous page was refused with a
+   * flat 401 and the agent looked broken rather than gated. It now mints the
+   * short-lived token the service offers for exactly this — worth a minute of
+   * inference and nothing else — and keeps it current while nobody is signed
+   * in. A member's own token is strictly better, so this only runs when there
+   * is not one.
+   */
+  const anonymousToken = useAnonymousInferenceToken(
+    inferenceUrl,
+    !memberToken,
+  );
+  const token = memberToken || anonymousToken;
 
   const inference = useMemo(
     () => ({
-      inferenceUrl: configuration?.aiInferenceUrl || DEFAULT_INFERENCE_URL,
+      inferenceUrl,
       // The signed-in person's token, forwarded so the completion is made as
-      // them and metered to them.
+      // them and metered to them — or the anonymous one, which names nobody.
       token: token || undefined,
     }),
-    [configuration?.aiInferenceUrl, token],
+    [inferenceUrl, token],
   );
 
   return {
