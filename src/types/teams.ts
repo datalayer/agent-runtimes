@@ -12,6 +12,8 @@
  * The same shape as a subagent on an agent spec: delegation is one idea, and
  * it should be written the same way wherever it appears.
  */
+import type { AgentSuggestion } from './agentspecs';
+
 export interface TeamSubagentspec {
   /** How the member addresses it, e.g. `@CellFixer`. */
   name: string;
@@ -225,7 +227,7 @@ export interface TeamSpec {
    * whole team rather than of any one member. A person who has just opened a
    * workspace does not yet know there are two agents behind it.
    */
-  suggestions?: string[];
+  suggestions?: AgentSuggestion[];
   /** How far members may hand work to each other, and to subagents. */
   delegation?: TeamDelegationSpec;
   /** What each member is told about the conversation so far. */

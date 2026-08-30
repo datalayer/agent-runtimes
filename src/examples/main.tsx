@@ -72,9 +72,7 @@ import { agentSummaryStore } from './utils/agentSummaryStore';
 import { isSandboxOnlyExample } from './utils/exampleSurfaces';
 import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
-import HomeExample, {
-  type HomeExampleCardEntry,
-} from './HomeExample';
+import HomeExample, { type HomeExampleCardEntry } from './HomeExample';
 import { ExampleWrapper } from './components/ExampleWrapper';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
@@ -119,7 +117,6 @@ const EXAMPLE_GROUP_ORDER = [
  * another is adding an id.
  */
 const ANONYMOUS_EXAMPLES = new Set(['LoopWorkspaceExample']);
-
 
 const getExampleGroup = (id: string): string => {
   if (

@@ -4307,7 +4307,18 @@ function ChatBaseInner({
       ? suggestions
       : Array.isArray(serverSuggestions) && serverSuggestions.length > 0
         ? serverSuggestions
-            .map(item => String(item || '').trim())
+            /*
+              Either shape. A running agent may be older than the catalogue it
+              was built from, where a suggestion was a bare string —
+              `String(item)` on the mapping form yields "[object Object]",
+              which is a chip that sends nonsense rather than one that is
+              absent.
+            */
+            .map(item =>
+              typeof item === 'string'
+                ? item.trim()
+                : (item?.text ?? '').trim(),
+            )
             .filter(Boolean)
             .map(item => ({ title: item, message: item }))
         : undefined;

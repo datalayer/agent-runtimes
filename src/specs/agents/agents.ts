@@ -171,7 +171,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 };
 
 // ============================================================================
-// Agentspecs
+// Agent Specs
 // ============================================================================
 
 export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
@@ -195,10 +195,18 @@ export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
   emoji: '🎛️',
   color: '#6366F1',
   suggestions: [
-    'Build a support ticket intake form with category, priority and a description.',
-    'Create a trip booking form with destination, dates, travelers and budget.',
-    'Generate a customer feedback survey with a rating slider and comments.',
-    'Make a product configurator for a laptop with CPU, RAM and add-ons.',
+    {
+      text: 'Build a support ticket intake form with category, priority and a description.',
+    },
+    {
+      text: 'Create a trip booking form with destination, dates, travelers and budget.',
+    },
+    {
+      text: 'Generate a customer feedback survey with a rating slider and comments.',
+    },
+    {
+      text: 'Make a product configurator for a laptop with CPU, RAM and add-ons.',
+    },
   ],
   welcomeMessage:
     "Hi! I turn requests into interactive A2UI surfaces. Ask me to build a form, survey, configurator or booking flow and I'll render it live for you.\n",
@@ -264,7 +272,10 @@ export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
   icon: 'clock',
   emoji: '🕒',
   color: '#6366F1',
-  suggestions: ['What is the current time?', "What's the current date?"],
+  suggestions: [
+    { text: 'What is the current time?' },
+    { text: "What's the current date?" },
+  ],
   welcomeMessage: 'Hi! Ask me for the current time in any timezone.\n',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
@@ -315,8 +326,8 @@ export const EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📋',
   color: '#6366F1',
   suggestions: [
-    'Create a project plan for building a mobile app.',
-    'Generate a marketing strategy for a new product launch.',
+    { text: 'Create a project plan for building a mobile app.' },
+    { text: 'Generate a marketing strategy for a new product launch.' },
   ],
   welcomeMessage:
     "Hi! Give me a goal and I'll create a plan, then work through the steps.\n",
@@ -380,8 +391,8 @@ export const EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🌤️',
   color: '#6366F1',
   suggestions: [
-    "What's the weather like in Paris?",
-    'Show me the weather forecast for Tokyo.',
+    { text: "What's the weather like in Paris?" },
+    { text: 'Show me the weather forecast for Tokyo.' },
   ],
   welcomeMessage: 'Hi! Ask me about the weather in any city.\n',
   welcomeNotebook: undefined,
@@ -446,9 +457,9 @@ export const EXAMPLE_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '⚙️',
   color: '#8250DF',
   suggestions: [
-    'Search and extract key points about Datalayer in one step',
-    'Research AI agent best practices and return a concise report',
-    'Compare two web sources and summarize differences',
+    { text: 'Search and extract key points about Datalayer in one step' },
+    { text: 'Research AI agent best practices and return a concise report' },
+    { text: 'Compare two web sources and summarize differences' },
   ],
   welcomeMessage:
     'Tavily MCP codemode agent ready. I can compose MCP-powered workflows.',
@@ -505,9 +516,11 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧪',
   color: '#0284C7',
   suggestions: [
-    'Run the selected evaluation experiment on the configured dataset',
-    'Validate experiment configuration and report missing fields',
-    'Summarize run results with pass rate and latency highlights',
+    {
+      text: 'Run the selected evaluation experiment on the configured dataset',
+    },
+    { text: 'Validate experiment configuration and report missing fields' },
+    { text: 'Summarize run results with pass rate and latency highlights' },
   ],
   welcomeMessage:
     'Ready to run eval experiments without codemode enabled. Configure your benchmark and evaluator setup, then launch a run.',
@@ -564,9 +577,15 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧪',
   color: '#0EA5E9',
   suggestions: [
-    'Run the selected evaluation experiment on the configured dataset using at most 3 sandbox calls total',
-    'Validate experiment configuration and report missing fields, batching checks to stay within 3 sandbox calls',
-    'Summarize run results with pass rate and latency highlights without exceeding 3 sandbox calls overall',
+    {
+      text: 'Run the selected evaluation experiment on the configured dataset using at most 3 sandbox calls total',
+    },
+    {
+      text: 'Validate experiment configuration and report missing fields, batching checks to stay within 3 sandbox calls',
+    },
+    {
+      text: 'Summarize run results with pass rate and latency highlights without exceeding 3 sandbox calls overall',
+    },
   ],
   welcomeMessage:
     'Ready to run eval experiments. Configure your benchmark and evaluator setup, then launch a run.',
@@ -643,14 +662,22 @@ export const EXAMPLE_FULL_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🛡️',
   color: '#6366F1',
   suggestions: [
-    'list your tools',
-    'Search the web for the latest news on AI agents using Tavily.',
-    'List my public GitHub repositories and summarize the most active ones.',
-    "Echo with text 'hello' and reason 'audit', then share the result.",
-    "Echo 'hello world' and share the result in a short sentence.",
-    "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
-    "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
-    'Tell me a joke using your skills.',
+    { text: 'list your tools' },
+    { text: 'Search the web for the latest news on AI agents using Tavily.' },
+    {
+      text: 'List my public GitHub repositories and summarize the most active ones.',
+    },
+    {
+      text: "Echo with text 'hello' and reason 'audit', then share the result.",
+    },
+    { text: "Echo 'hello world' and share the result in a short sentence." },
+    {
+      text: "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then reply with the tool result.",
+    },
+    {
+      text: "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
+    },
+    { text: 'Tell me a joke using your skills.' },
   ],
   welcomeMessage:
     "Hi! I'm the Tool Approval Demo agent. I have two echo tools — one runs immediately, the other requires your approval before executing. I can also search the web with Tavily and tell jokes using my skills.\n",
@@ -710,12 +737,18 @@ export const EXAMPLE_GUARDRAILS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🛡️',
   color: '#EF4444',
   suggestions: [
-    'Use runtime_echo to confirm basic tool execution',
-    'Call runtime_sensitive_echo and approve/reject the request',
-    'Summarize current cost usage vs configured run budget',
-    'Trigger before_tool_execute by calling runtime_sensitive_echo with reason audit',
-    'Trigger local deny policy with reason delete and explain the block',
-    'Explain how deferred_tool_calls and approval queue interact for this run',
+    { text: 'Use runtime_echo to confirm basic tool execution' },
+    { text: 'Call runtime_sensitive_echo and approve/reject the request' },
+    { text: 'Summarize current cost usage vs configured run budget' },
+    {
+      text: 'Trigger before_tool_execute by calling runtime_sensitive_echo with reason audit',
+    },
+    {
+      text: 'Trigger local deny policy with reason delete and explain the block',
+    },
+    {
+      text: 'Explain how deferred_tool_calls and approval queue interact for this run',
+    },
   ],
   welcomeMessage:
     'Guardrails example agent ready. Try a sensitive tool call to exercise approvals, and monitor run-cost budget consumption in real time.',
@@ -802,9 +835,9 @@ export const EXAMPLE_HAIKU_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🖋️',
   color: '#6366F1',
   suggestions: [
-    'Write me a haiku about cherry blossoms in spring.',
-    'Create a haiku about coding late at night.',
-    'Generate a haiku about hiking a mountain trail.',
+    { text: 'Write me a haiku about cherry blossoms in spring.' },
+    { text: 'Create a haiku about coding late at night.' },
+    { text: 'Generate a haiku about hiking a mountain trail.' },
   ],
   welcomeMessage: "Hi! Give me a theme and I'll craft a haiku for you.\n",
   welcomeNotebook: undefined,
@@ -872,12 +905,24 @@ export const EXAMPLE_HOOKS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🪝',
   color: '#0E7490',
   suggestions: [
-    'Read the pre-hook marker file at /tmp/agent_runtimes_pre_hook_demo.txt using execute_code.',
-    'Print the hook_ran_at and hook_name variables that the pre-hook set in the sandbox.',
-    "Run execute_code to verify that the 'rich' package was installed by the pre-hook.",
-    'Show me all variables that the pre-hook defined in the sandbox namespace.',
-    "Call runtime_sensitive_echo with reason 'audit' to trigger per-tool authorization hooks.",
-    'Use execute_code to read /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize the latest authorization + execution entries.',
+    {
+      text: 'Read the pre-hook marker file at /tmp/agent_runtimes_pre_hook_demo.txt using execute_code.',
+    },
+    {
+      text: 'Print the hook_ran_at and hook_name variables that the pre-hook set in the sandbox.',
+    },
+    {
+      text: "Run execute_code to verify that the 'rich' package was installed by the pre-hook.",
+    },
+    {
+      text: 'Show me all variables that the pre-hook defined in the sandbox namespace.',
+    },
+    {
+      text: "Call runtime_sensitive_echo with reason 'audit' to trigger per-tool authorization hooks.",
+    },
+    {
+      text: 'Use execute_code to read /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize the latest authorization + execution entries.',
+    },
   ],
   welcomeMessage:
     "I ran a pre-hook before starting up. It installed the 'rich' package, wrote a marker file, and set several sandbox variables (hook_name, hook_ran_at, hook_env). Ask me to read the file or inspect those variables.\n",
@@ -980,8 +1025,8 @@ export const EXAMPLE_HUMAN_IN_THE_LOOP_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧑‍⚖️',
   color: '#6366F1',
   suggestions: [
-    'Plan a weekend trip to Paris.',
-    'Plan a birthday party for next Saturday.',
+    { text: 'Plan a weekend trip to Paris.' },
+    { text: 'Plan a birthday party for next Saturday.' },
   ],
   welcomeMessage:
     "Hi! Describe a task and I'll draft a step-by-step plan for you to review.\n",
@@ -1054,9 +1099,13 @@ export const EXAMPLE_INFERENCE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧠',
   color: '#2563EB',
   suggestions: [
-    'Compare local and datalayer inference providers for latency and routing.',
-    'Explain where model responses are generated for this current provider.',
-    'Summarize the tradeoffs of switching providers for this agent.',
+    {
+      text: 'Compare local and datalayer inference providers for latency and routing.',
+    },
+    {
+      text: 'Explain where model responses are generated for this current provider.',
+    },
+    { text: 'Summarize the tradeoffs of switching providers for this agent.' },
   ],
   welcomeMessage:
     'Inference provider demo ready. Switch between local and datalayer providers, then ask me the same prompt to compare behavior.',
@@ -1115,10 +1164,10 @@ export const EXAMPLE_MCP_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🌐',
   color: '#0EA5E9',
   suggestions: [
-    'Search the web for recent news about AI agents',
-    'Find trending open-source Python projects on GitHub',
-    'Research best practices for building RAG applications',
-    'Compare popular JavaScript frameworks in 2024',
+    { text: 'Search the web for recent news about AI agents' },
+    { text: 'Find trending open-source Python projects on GitHub' },
+    { text: 'Research best practices for building RAG applications' },
+    { text: 'Compare popular JavaScript frameworks in 2024' },
   ],
   welcomeMessage:
     'MCP example agent ready. Ask me to search, extract, crawl, and research via Tavily MCP tools.',
@@ -1174,9 +1223,9 @@ export const EXAMPLE_MEMORY_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧠',
   color: '#0D9488',
   suggestions: [
-    'Remember a user preference and confirm it was stored',
-    'Recall previously stored preferences from memory',
-    'Search memory for key facts from earlier turns',
+    { text: 'Remember a user preference and confirm it was stored' },
+    { text: 'Recall previously stored preferences from memory' },
+    { text: 'Search memory for key facts from earlier turns' },
   ],
   welcomeMessage:
     'Ready to demonstrate durable memory. I persist stable facts and preferences (name, preferences, constraints), and can recall them across turns/restarts. I do not persist every transient sentence.',
@@ -1232,9 +1281,9 @@ export const EXAMPLE_MONITORING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#0EA5E9',
   suggestions: [
-    'Show my current monitoring context summary',
-    'Explain the last turn cost and total token usage',
-    'Summarize recent activity and potential anomalies',
+    { text: 'Show my current monitoring context summary' },
+    { text: 'Explain the last turn cost and total token usage' },
+    { text: 'Summarize recent activity and potential anomalies' },
   ],
   welcomeMessage:
     'Monitoring example agent ready. Ask for runtime activity, cost trends, and token usage summaries.',
@@ -1290,9 +1339,9 @@ export const EXAMPLE_NO_CODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🌐',
   color: '#0969DA',
   suggestions: [
-    'Search for the latest updates about Datalayer',
-    'Extract key points from the top result',
-    'Summarize recent AI agent tooling trends',
+    { text: 'Search for the latest updates about Datalayer' },
+    { text: 'Extract key points from the top result' },
+    { text: 'Summarize recent AI agent tooling trends' },
   ],
   welcomeMessage:
     'Tavily MCP no-codemode agent ready. I use MCP tools directly.',
@@ -1348,9 +1397,9 @@ export const EXAMPLE_NOTIFICATIONS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🔔',
   color: '#F59E0B',
   suggestions: [
-    'Configure notification channels for in-app, email, and Slack',
-    'Trigger a test notification and verify delivery status',
-    'Summarize unread notifications and recent alert activity',
+    { text: 'Configure notification channels for in-app, email, and Slack' },
+    { text: 'Trigger a test notification and verify delivery status' },
+    { text: 'Summarize unread notifications and recent alert activity' },
   ],
   welcomeMessage:
     'Ready to demonstrate notifications. Configure your channels and send a test alert to validate delivery.',
@@ -1515,10 +1564,10 @@ export const EXAMPLE_OTEL_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🔭',
   color: '#7C3AED',
   suggestions: [
-    'What do the most recent traces show?',
-    'Are there any errors or anomalies in the telemetry?',
-    'Give me a summary of the current metrics.',
-    'Help me find the root cause of slow requests.',
+    { text: 'What do the most recent traces show?' },
+    { text: 'Are there any errors or anomalies in the telemetry?' },
+    { text: 'Give me a summary of the current metrics.' },
+    { text: 'Help me find the root cause of slow requests.' },
   ],
   welcomeMessage:
     'OTEL example agent ready. Ask me about your traces, logs, and metrics — I can help summarize activity, spot anomalies, and investigate root causes.',
@@ -1574,10 +1623,10 @@ export const EXAMPLE_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📦',
   color: '#7C3AED',
   suggestions: [
-    'Return a TABLE of quarterly revenue by region',
-    'Return JSON for a KPI summary object',
-    'Return a CHART payload for monthly conversions',
-    'Return a FILE named report.md with highlights',
+    { text: 'Return a TABLE of quarterly revenue by region' },
+    { text: 'Return JSON for a KPI summary object' },
+    { text: 'Return a CHART payload for monthly conversions' },
+    { text: 'Return a FILE named report.md with highlights' },
   ],
   welcomeMessage:
     'Example output agent ready. Ask for TABLE, JSON, CHART, or FILE formats and I will respond with exactly one structured output block.',
@@ -1633,8 +1682,10 @@ export const EXAMPLE_PARAMETERS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🎛️',
   color: '#0F766E',
   suggestions: [
-    'Use execute_code to print(demo_params) from the sandbox, then explain the value.',
-    "Use execute_code to print('demo_params =', demo_params).",
+    {
+      text: 'Use execute_code to print(demo_params) from the sandbox, then explain the value.',
+    },
+    { text: "Use execute_code to print('demo_params =', demo_params)." },
   ],
   welcomeMessage:
     'This runtime was launched for project {{project}} and role {{role}}.\n',
@@ -1714,9 +1765,9 @@ export const EXAMPLE_SANDBOX_COLAB_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'E',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: google-colab')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: google-colab')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the google-colab sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -1772,9 +1823,9 @@ export const EXAMPLE_SANDBOX_DATALAYER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'D',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: datalayer')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: datalayer')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the datalayer sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -1830,9 +1881,9 @@ export const EXAMPLE_SANDBOX_DOCKER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'C',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: docker')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: docker')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the docker sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -1888,9 +1939,9 @@ export const EXAMPLE_SANDBOX_EVAL_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'A',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: eval')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: eval')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the eval sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -1946,9 +1997,9 @@ export const EXAMPLE_SANDBOX_GOOGLE_COLAB_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'A',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: google-colab')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: google-colab')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the google-colab sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -2004,9 +2055,9 @@ export const EXAMPLE_SANDBOX_JUPYTER_SERVER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'A',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: jupyter-server')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: jupyter-server')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the jupyter-server sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -2062,9 +2113,9 @@ export const EXAMPLE_SANDBOX_JUPYTER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'B',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: jupyter')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: jupyter')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the jupyter sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -2120,9 +2171,9 @@ export const EXAMPLE_SANDBOX_KAGGLE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'H',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: kaggle')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: kaggle')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the kaggle sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -2178,9 +2229,9 @@ export const EXAMPLE_SANDBOX_MODAL_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'G',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: modal')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: modal')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the modal sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -2236,9 +2287,9 @@ export const EXAMPLE_SANDBOX_MONTY_AGENTSPEC_0_0_1: Agentspec = {
   emoji: 'F',
   color: '#1F6FEB',
   suggestions: [
-    "Use execute_code to print('sandbox variant: monty')",
-    'Use execute_code to compute sum(i*i for i in range(20))',
-    'Use execute_code to load pandas and build a small DataFrame',
+    { text: "Use execute_code to print('sandbox variant: monty')" },
+    { text: 'Use execute_code to compute sum(i*i for i in range(20))' },
+    { text: 'Use execute_code to load pandas and build a small DataFrame' },
   ],
   welcomeMessage:
     "You're connected to the monty sandbox variant demo. Ask me to run Python code and I will use execute_code in codemode.",
@@ -2287,8 +2338,8 @@ export const EXAMPLE_SHARED_STATE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🍳',
   color: '#6366F1',
   suggestions: [
-    'Help me create a simple pasta recipe.',
-    'Add tomatoes to the recipe.',
+    { text: 'Help me create a simple pasta recipe.' },
+    { text: 'Add tomatoes to the recipe.' },
   ],
   welcomeMessage:
     "Hi! Tell me what you'd like to cook and I'll build a recipe with you.\n",
@@ -2355,10 +2406,10 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🤖',
   color: '#6366F1',
   suggestions: [
-    'Tell me a joke',
-    'Explain quantum computing in simple terms',
-    'Help me brainstorm ideas for a weekend project',
-    'Summarize the key points of a topic I describe',
+    { text: 'Tell me a joke' },
+    { text: 'Explain quantum computing in simple terms' },
+    { text: 'Help me brainstorm ideas for a weekend project' },
+    { text: 'Summarize the key points of a topic I describe' },
   ],
   welcomeMessage:
     "Hi! I'm a simple assistant. I don't have any special tools, but I'm happy to chat, answer questions, and help you think through ideas.\n",
@@ -2433,10 +2484,10 @@ export const EXAMPLE_SKILLS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧰',
   color: '#0D9488',
   suggestions: [
-    'List all your available skills and group them by source type',
-    'Use datalayer-whoami to return my user identity context',
-    'Use crawl to summarize https://datalayer.ai',
-    'Use github to list public repositories for an account',
+    { text: 'List all your available skills and group them by source type' },
+    { text: 'Use datalayer-whoami to return my user identity context' },
+    { text: 'Use crawl to summarize https://datalayer.ai' },
+    { text: 'Use github to list public repositories for an account' },
   ],
   welcomeMessage:
     'Hi! I am the Skills Demo Agent. I can use built-in file skills and package-registered skills such as datalayer-whoami.',
@@ -2492,9 +2543,9 @@ export const EXAMPLE_SUBAGENTS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '👥',
   color: '#2563EB',
   suggestions: [
-    'Research a topic and provide source-backed notes',
-    'Write a concise summary from the research findings',
-    'Split work between researcher and writer, then merge output',
+    { text: 'Research a topic and provide source-backed notes' },
+    { text: 'Write a concise summary from the research findings' },
+    { text: 'Split work between researcher and writer, then merge output' },
   ],
   welcomeMessage:
     'Subagents example agent ready. Ask me to delegate research and writing tasks across specialist subagents.',
@@ -2564,11 +2615,21 @@ export const EXAMPLE_TOOL_APPROVALS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '✅',
   color: undefined,
   suggestions: [
-    "Call runtime_sensitive_echo with reason 'read logs' and message 'hello approvals'.",
-    "Call runtime_sensitive_echo with reason 'delete project' and observe deny behavior from Python policy hook.",
-    'Call runtime_echo with any message to compare a non-sensitive tool path.',
-    'Use execute_code to print the latest lines from /tmp/agent_runtimes_tool_approvals_audit.jsonl.',
-    'Explain how deferred_tool_calls resolves approval-required tool calls inline when decisions already exist.',
+    {
+      text: "Call runtime_sensitive_echo with reason 'read logs' and message 'hello approvals'.",
+    },
+    {
+      text: "Call runtime_sensitive_echo with reason 'delete project' and observe deny behavior from Python policy hook.",
+    },
+    {
+      text: 'Call runtime_echo with any message to compare a non-sensitive tool path.',
+    },
+    {
+      text: 'Use execute_code to print the latest lines from /tmp/agent_runtimes_tool_approvals_audit.jsonl.',
+    },
+    {
+      text: 'Explain how deferred_tool_calls resolves approval-required tool calls inline when decisions already exist.',
+    },
   ],
   welcomeMessage:
     'Welcome to the Tool Approvals example.\n\nThis agent demonstrates authorization hooks where each\nsensitive tool call is evaluated against policy and logged for audit.\n',
@@ -2654,8 +2715,8 @@ export const EXAMPLE_TOOL_BASED_GENERATIVE_UI_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🎨',
   color: '#6366F1',
   suggestions: [
-    'Create a project plan for building a mobile app.',
-    'Generate a marketing strategy for a new product launch.',
+    { text: 'Create a project plan for building a mobile app.' },
+    { text: 'Generate a marketing strategy for a new product launch.' },
   ],
   welcomeMessage:
     "Hi! Ask me to show something and I'll render it using the available UI tools.\n",
@@ -2712,9 +2773,15 @@ export const GALLERY_ACCOUNTANT_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧮',
   color: '#1F883D',
   suggestions: [
-    'Connect to Odoo and list unpaid customer invoices older than 30 days, grouped by customer with totals and top delinquencies.',
-    'Compare posted payments against open invoices for this month and flag likely reconciliation mismatches with proposed next checks.',
-    'Build a close summary with journal balance deltas versus last month and highlight unusual movements.',
+    {
+      text: 'Connect to Odoo and list unpaid customer invoices older than 30 days, grouped by customer with totals and top delinquencies.',
+    },
+    {
+      text: 'Compare posted payments against open invoices for this month and flag likely reconciliation mismatches with proposed next checks.',
+    },
+    {
+      text: 'Build a close summary with journal balance deltas versus last month and highlight unusual movements.',
+    },
   ],
   welcomeMessage:
     'Hi! I am your Accountant agent for Odoo workflows. I can help reconcile invoices and payments, analyze journals, and prepare close-ready summaries.',
@@ -2771,7 +2838,9 @@ export const GALLERY_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec =
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/finance/transactions_q1.csv and run a critic loop: first produce a reconciliation analysis, then critique it for gaps and publish a corrected final report.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/finance/transactions_q1.csv and run a critic loop: first produce a reconciliation analysis, then critique it for gaps and publish a corrected final report.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with agent critic loop for analysis. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -2827,7 +2896,9 @@ export const GALLERY_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql and perform a structured SQL review with lint findings, risk notes, and an improved query draft.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql and perform a structured SQL review with lint findings, risk notes, and an improved query draft.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with agent reviews sql. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -2883,7 +2954,9 @@ export const GALLERY_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a dashboard-style notebook with funnel metrics, regional split, and one executive summary cell.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a dashboard-style notebook with funnel metrics, regional split, and one executive summary cell.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with ai creates dashboards. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -2939,7 +3012,9 @@ export const GALLERY_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv to build and run a notebook, then explain each output cell in plain language.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv to build and run a notebook, then explain each output cell in plain language.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with ai explains notebook output. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -2995,7 +3070,9 @@ export const GALLERY_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv and write pandas code that cleans, aggregates by month and region, and highlights growth trends.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv and write pandas code that cleans, aggregates by month and region, and highlights growth trends.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with ai writes pandas code. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -3060,11 +3137,11 @@ export const GALLERY_ANALYZE_CAMPAIGN_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📢',
   color: '#8250df',
   suggestions: [
-    'Show cross-channel campaign performance for this week',
-    'Which campaigns have abnormal CPA trends?',
-    'Generate a budget reallocation recommendation',
-    'Compare ROAS across Google Ads vs Meta this month',
-    "What's the projected impact of shifting 20% budget to TikTok?",
+    { text: 'Show cross-channel campaign performance for this week' },
+    { text: 'Which campaigns have abnormal CPA trends?' },
+    { text: 'Generate a budget reallocation recommendation' },
+    { text: 'Compare ROAS across Google Ads vs Meta this month' },
+    { text: "What's the projected impact of shifting 20% budget to TikTok?" },
   ],
   welcomeMessage:
     "Hello! I'm the Campaign Performance Analytics team. We unify data from all your ad platforms, normalise metrics, detect anomalies in real time, and recommend budget reallocations to maximise your ROAS across channels.\n",
@@ -3181,7 +3258,9 @@ export const GALLERY_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then produce a 3-cell notebook: schema+missing values, survival breakdown, and one chart with a concise summary.',
+    {
+      text: 'Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then produce a 3-cell notebook: schema+missing values, survival breakdown, and one chart with a concise summary.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with analyze an excel spreadsheet. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -3246,10 +3325,10 @@ export const GALLERY_ANALYZE_SUPPORT_TICKETS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🎫',
   color: '#bf8700',
   suggestions: [
-    'Show me the latest ticket triage summary',
-    'What are the top recurring issues this week?',
-    'List all P1 tickets from today',
-    'Generate a pattern analysis report',
+    { text: 'Show me the latest ticket triage summary' },
+    { text: 'What are the top recurring issues this week?' },
+    { text: 'List all P1 tickets from today' },
+    { text: 'Generate a pattern analysis report' },
   ],
   welcomeMessage:
     "Hello! I'm the Support Ticket Analyzer team. We triage incoming tickets, categorize them by urgency and topic, identify recurring patterns, and generate resolution recommendations to help your support team work faster.\n",
@@ -3348,10 +3427,10 @@ export const GALLERY_AUDIT_INVENTORY_LEVELS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📦',
   color: '#0969da',
   suggestions: [
-    'Run a full inventory audit now',
-    'Show current stock levels across all warehouses',
-    'What SKUs are below reorder point?',
-    'Generate a demand forecast for next month',
+    { text: 'Run a full inventory audit now' },
+    { text: 'Show current stock levels across all warehouses' },
+    { text: 'What SKUs are below reorder point?' },
+    { text: 'Generate a demand forecast for next month' },
   ],
   welcomeMessage:
     "Hello! I'm the Inventory Audit team orchestrator. I coordinate five specialised agents — Scanner, Auditor, Forecaster, Reorder Planner, and Reporter — to keep your inventory accurate, well-stocked, and optimally managed across all warehouses.\n",
@@ -3448,11 +3527,11 @@ export const GALLERY_AUTOMATE_REGULATORY_REPORTING_AGENTSPEC_0_0_1: Agentspec =
     emoji: '🏦',
     color: '#0969da',
     suggestions: [
-      'Generate the monthly Basel III capital adequacy report',
-      'Show current risk-weighted asset breakdown',
-      'Run a reconciliation check on trading positions',
-      'Validate latest figures against MiFID II rules',
-      'What capital ratios are at risk of breaching thresholds?',
+      { text: 'Generate the monthly Basel III capital adequacy report' },
+      { text: 'Show current risk-weighted asset breakdown' },
+      { text: 'Run a reconciliation check on trading positions' },
+      { text: 'Validate latest figures against MiFID II rules' },
+      { text: 'What capital ratios are at risk of breaching thresholds?' },
     ],
     welcomeMessage:
       "Hello! I'm the Regulatory Reporting team orchestrator. I coordinate five agents — Data Ingestion, Risk Calculator, Reconciliation, Validation, and Report Generator — to produce submission-ready regulatory reports with full audit trails and compliance validation.\n",
@@ -3566,7 +3645,9 @@ export const GALLERY_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1: Agentspec =
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and generate a complete analysis notebook from one prompt, including conclusions.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and generate a complete analysis notebook from one prompt, including conclusions.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with build a notebook with one prompt. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -3725,7 +3806,9 @@ export const GALLERY_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Compare /home/jovyan/datasets/datalayer-nfs/titanic/titanic_baseline.csv and /home/jovyan/datasets/datalayer-nfs/titanic/titanic_candidate.csv, then summarize schema and value-level differences.',
+    {
+      text: 'Compare /home/jovyan/datasets/datalayer-nfs/titanic/titanic_baseline.csv and /home/jovyan/datasets/datalayer-nfs/titanic/titanic_candidate.csv, then summarize schema and value-level differences.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with compare two spreadsheets. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -3781,7 +3864,9 @@ export const GALLERY_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/compliance/audit_findings.csv to draft a compliance report with top risks, control gaps, and remediation priorities.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/compliance/audit_findings.csv to draft a compliance report with top risks, control gaps, and remediation priorities.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with compliance report draft. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -3933,7 +4018,9 @@ export const GALLERY_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/cost/cloud_costs.csv to produce a month-over-month cost comparison report with major cost drivers.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/cost/cloud_costs.csv to produce a month-over-month cost comparison report with major cost drivers.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with cost comparison report. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -3992,10 +4079,10 @@ export const GALLERY_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🌐',
   color: '#10B981',
   suggestions: [
-    'Search the web for recent news about AI agents',
-    'Find trending open-source Python projects on GitHub',
-    'Research best practices for building RAG applications',
-    'Compare popular JavaScript frameworks in 2024',
+    { text: 'Search the web for recent news about AI agents' },
+    { text: 'Find trending open-source Python projects on GitHub' },
+    { text: 'Research best practices for building RAG applications' },
+    { text: 'Compare popular JavaScript frameworks in 2024' },
   ],
   welcomeMessage:
     "Hi! I'm the Crawler Agent. I can search the web using Tavily, explore GitHub repositories, and help you research topics across the internet.\n",
@@ -4070,7 +4157,9 @@ export const GALLERY_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv to identify churn signals, rank at-risk customers, and propose retention actions.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv to identify churn signals, rank at-risk customers, and propose retention actions.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with customer churn analysis. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -4133,10 +4222,10 @@ export const GALLERY_DATA_ACQUISITION_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#3B82F6',
   suggestions: [
-    'Find popular machine learning datasets on Kaggle',
-    'Download and explore a dataset for sentiment analysis',
-    'List available files in my workspace',
-    'Search Kaggle for time series forecasting competitions',
+    { text: 'Find popular machine learning datasets on Kaggle' },
+    { text: 'Download and explore a dataset for sentiment analysis' },
+    { text: 'List available files in my workspace' },
+    { text: 'Search Kaggle for time series forecasting competitions' },
   ],
   welcomeMessage:
     "Hello! I'm the Data Acquisition Agent. I can help you find and download datasets from Kaggle, manage files in your workspace, and explore data sources for your projects.\n",
@@ -4211,7 +4300,9 @@ export const GALLERY_DOCUMENT_QA_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Load PDFs from /home/jovyan/datasets/datalayer-nfs/placeholder, answer three cross-document questions, and cite which file supports each answer.',
+    {
+      text: 'Load PDFs from /home/jovyan/datasets/datalayer-nfs/placeholder, answer three cross-document questions, and cite which file supports each answer.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with document q&a. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -4270,14 +4361,14 @@ export const GALLERY_END_OF_MONTH_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1f883d',
   suggestions: [
-    'Generate the latest end-of-month sales performance report',
-    'Show revenue vs target by region',
-    'Show top and bottom performing SKUs this month',
-    'Explain the top drivers of variance this month',
-    'Detect unusual discounting patterns by SKU',
-    "Compare this month's performance vs last month",
-    'Show aggregated performance by sales segment',
-    'Break down revenue by SKU category',
+    { text: 'Generate the latest end-of-month sales performance report' },
+    { text: 'Show revenue vs target by region' },
+    { text: 'Show top and bottom performing SKUs this month' },
+    { text: 'Explain the top drivers of variance this month' },
+    { text: 'Detect unusual discounting patterns by SKU' },
+    { text: "Compare this month's performance vs last month" },
+    { text: 'Show aggregated performance by sales segment' },
+    { text: 'Break down revenue by SKU category' },
   ],
   welcomeMessage:
     "Hello! I'm the End of Month Sales Performance agent. I analyze Salesforce retail data at month-end, compute KPIs down to the SKU level, detect anomalies, explain performance variances, and generate executive-ready sales reports — with strict data governance and traceability.\n",
@@ -4469,7 +4560,9 @@ export const GALLERY_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql as a starting workload, profile query intent, and propose executable SQL exploration steps.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql as a starting workload, profile query intent, and propose executable SQL exploration steps.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with explore a sql database. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -4633,7 +4726,9 @@ export const GALLERY_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1: Agentspec 
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use the PDF set in /home/jovyan/datasets/datalayer-nfs/placeholder to extract quarterly KPI candidates and return them in a structured table.',
+      {
+        text: 'Use the PDF set in /home/jovyan/datasets/datalayer-nfs/placeholder to extract quarterly KPI candidates and return them in a structured table.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with extract kpis from quarterly pdf. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -4689,7 +4784,9 @@ export const GALLERY_FINANCIAL_RECONCILIATION_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/finance/transactions_q1.csv to reconcile duplicate or inconsistent ledger entries and summarize unresolved items.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/finance/transactions_q1.csv to reconcile duplicate or inconsistent ledger entries and summarize unresolved items.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with financial reconciliation. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -4748,10 +4845,10 @@ export const GALLERY_FINANCIAL_VIZ_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📈',
   color: '#F59E0B',
   suggestions: [
-    'Show me the stock price history for AAPL',
-    'Create a chart comparing MSFT and GOOGL over the last year',
-    'Analyze the trading volume trends for Tesla',
-    'Get the latest market news for tech stocks',
+    { text: 'Show me the stock price history for AAPL' },
+    { text: 'Create a chart comparing MSFT and GOOGL over the last year' },
+    { text: 'Analyze the trading volume trends for Tesla' },
+    { text: 'Get the latest market news for tech stocks' },
   ],
   welcomeMessage:
     "Welcome! I'm the Financial Visualization Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends.\n",
@@ -4826,10 +4923,10 @@ export const GALLERY_FINANCIAL_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📈',
   color: '#F59E0B',
   suggestions: [
-    'Show me the stock price history for AAPL',
-    'Create a chart comparing MSFT and GOOGL over the last year',
-    'Analyze the trading volume trends for Tesla',
-    'Get the latest market news for tech stocks',
+    { text: 'Show me the stock price history for AAPL' },
+    { text: 'Create a chart comparing MSFT and GOOGL over the last year' },
+    { text: 'Analyze the trading volume trends for Tesla' },
+    { text: 'Get the latest market news for tech stocks' },
   ],
   welcomeMessage:
     "Welcome! I'm the Financial Data Analysis Agent. I can help you analyze stock market data, track financial instruments, and create charts to visualize market trends.\n",
@@ -4904,7 +5001,9 @@ export const GALLERY_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv and split the analysis across five agents, then merge their findings into one final brief.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv and split the analysis across five agents, then merge their findings into one final brief.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with five ai agents analyze a csv. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -4960,7 +5059,9 @@ export const GALLERY_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/notebooks/parallel_tasks.csv to plan and execute five notebook tasks in parallel with a combined status summary.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/notebooks/parallel_tasks.csv to plan and execute five notebook tasks in parallel with a combined status summary.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with five notebooks in parallel. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5022,10 +5123,10 @@ export const GALLERY_GENERATE_WEEKLY_REPORTS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📝',
   color: '#cf222e',
   suggestions: [
-    "Generate this week's executive report",
-    'Show marketing KPIs for the last 7 days',
-    "Compare this week's sales to last week",
-    'What were the top operational issues this week?',
+    { text: "Generate this week's executive report" },
+    { text: 'Show marketing KPIs for the last 7 days' },
+    { text: "Compare this week's sales to last week" },
+    { text: 'What were the top operational issues this week?' },
   ],
   welcomeMessage:
     "Hello! I'm the Weekly Report Generator. Every Monday I aggregate data from marketing, sales, and operations to produce a structured executive report with charts, KPI summaries, and actionable takeaways.\n",
@@ -5137,10 +5238,10 @@ export const GALLERY_GITHUB_AGENT_SPEC_0_0_1: Agentspec = {
   emoji: '🐙',
   color: '#6366F1',
   suggestions: [
-    'List my open pull requests across all repositories',
-    'Create an issue for a bug I found in datalayer/ui',
-    'Show recent commits on the main branch',
-    'Search for repositories related to Jupyter notebooks',
+    { text: 'List my open pull requests across all repositories' },
+    { text: 'Create an issue for a bug I found in datalayer/ui' },
+    { text: 'Show recent commits on the main branch' },
+    { text: 'Search for repositories related to Jupyter notebooks' },
   ],
   welcomeMessage:
     "Hello! I'm the GitHub Agent. I can help you manage repositories, create and  review issues and pull requests, search code, and send email notifications  about your GitHub activity.\n",
@@ -5215,7 +5316,9 @@ export const GALLERY_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv and orchestrate a two-agent collaboration where one analyzes and one critiques.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv and orchestrate a two-agent collaboration where one analyzes and one critiques.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with gpt and claude collaborate. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5271,7 +5374,9 @@ export const GALLERY_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with human-approved automation. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5330,10 +5435,10 @@ export const GALLERY_INFORMATION_ROUTING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🔀',
   color: '#EC4899',
   suggestions: [
-    'Find documents shared with me in Google Drive',
-    'List recent files in my Drive folder',
-    'Summarize the contents of a document in my Drive',
-    'Search for documents by keyword in Google Drive',
+    { text: 'Find documents shared with me in Google Drive' },
+    { text: 'List recent files in my Drive folder' },
+    { text: 'Summarize the contents of a document in my Drive' },
+    { text: 'Search for documents by keyword in Google Drive' },
   ],
   welcomeMessage:
     "Hi there! I'm the Information Routing Agent. I can help you manage documents in Google Drive and route information where it needs to go.\n",
@@ -5408,7 +5513,9 @@ export const GALLERY_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/insurance/claims.csv to detect suspicious claim patterns and draft a prioritized review queue.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/insurance/claims.csv to detect suspicious claim patterns and draft a prioritized review queue.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with insurance claims review. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5464,7 +5571,9 @@ export const GALLERY_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/inventory/inventory_demand.csv to forecast near-term stock risk and recommend reorder priorities.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/inventory/inventory_demand.csv to forecast near-term stock risk and recommend reorder priorities.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with inventory demand planning. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5520,7 +5629,9 @@ export const GALLERY_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/etl/daily_events.csv to run an overnight-style batch analysis and provide a completion summary with checkpoints.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/etl/daily_events.csv to run an overnight-style batch analysis and provide a completion summary with checkpoints.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with long-running agent overnight. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5576,7 +5687,9 @@ export const GALLERY_MARKETING_ANALYTICS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv to analyze ROAS, conversion efficiency, and channel-level recommendations.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv to analyze ROAS, conversion efficiency, and channel-level recommendations.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with marketing analytics. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5632,7 +5745,9 @@ export const GALLERY_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/medical/clinical_trials.csv to summarize trial outcomes, safety trade-offs, and key evidence caveats.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/medical/clinical_trials.csv to summarize trial outcomes, safety trade-offs, and key evidence caveats.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with medical research review. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5698,10 +5813,10 @@ export const GALLERY_MONITOR_SALES_KPIS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#2da44e',
   suggestions: [
-    "Show me today's sales KPI dashboard",
-    'What are the current revenue trends?',
-    'Flag any KPIs that deviate more than 10% from targets',
-    'Generate a weekly summary report',
+    { text: "Show me today's sales KPI dashboard" },
+    { text: 'What are the current revenue trends?' },
+    { text: 'Flag any KPIs that deviate more than 10% from targets' },
+    { text: 'Generate a weekly summary report' },
   ],
   welcomeMessage:
     "Hello! I'm the Sales KPI Monitor. I continuously track your CRM data, generate daily reports on key performance metrics, and alert you when KPIs deviate significantly from targets.\n",
@@ -5813,7 +5928,9 @@ export const GALLERY_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/quality/dirty_customers.csv and coordinate multiple agents to deduplicate and clean the dataset.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/quality/dirty_customers.csv and coordinate multiple agents to deduplicate and clean the dataset.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with multi-agent data cleaning. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5870,7 +5987,9 @@ export const GALLERY_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1: Agentspec 
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/ops/incidents.csv to run multi-agent root-cause analysis and produce a ranked remediation plan.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/ops/incidents.csv to run multi-agent root-cause analysis and produce a ranked remediation plan.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with multi-agent root cause analysis. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -5932,11 +6051,11 @@ export const GALLERY_OPTIMIZE_DYNAMIC_PRICING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🏷️',
   color: '#bf8700',
   suggestions: [
-    'Show competitor price movements in the last 24 hours',
-    'Which SKUs have the highest price elasticity?',
-    'Generate pricing recommendations for the electronics category',
-    'Forecast demand for top 100 SKUs next week',
-    "What's the projected revenue impact of current recommendations?",
+    { text: 'Show competitor price movements in the last 24 hours' },
+    { text: 'Which SKUs have the highest price elasticity?' },
+    { text: 'Generate pricing recommendations for the electronics category' },
+    { text: 'Forecast demand for top 100 SKUs next week' },
+    { text: "What's the projected revenue impact of current recommendations?" },
   ],
   welcomeMessage:
     "Hello! I'm the Dynamic Pricing agent. I monitor competitor prices across 50K+ SKUs hourly, forecast demand using historical and seasonal patterns, and generate margin-optimised pricing recommendations to keep you competitive while maximising profitability.\n",
@@ -6060,11 +6179,11 @@ export const GALLERY_OPTIMIZE_GRID_OPERATIONS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '⚡',
   color: '#1a7f37',
   suggestions: [
-    'Show current grid health across all substations',
-    'Which assets have anomaly alerts right now?',
-    'Predict failures for the next 4 weeks',
-    "Optimise load balancing for tomorrow's forecast",
-    'Generate a maintenance schedule for flagged assets',
+    { text: 'Show current grid health across all substations' },
+    { text: 'Which assets have anomaly alerts right now?' },
+    { text: 'Predict failures for the next 4 weeks' },
+    { text: "Optimise load balancing for tomorrow's forecast" },
+    { text: 'Generate a maintenance schedule for flagged assets' },
   ],
   welcomeMessage:
     "Hello! I'm the Grid Operations team orchestrator. I coordinate four agents — Sensor Ingestion, Anomaly Detector, Failure Predictor, and Grid Balancer — to keep your grid running efficiently with predictive maintenance and intelligent load optimisation.\n",
@@ -6175,7 +6294,9 @@ export const GALLERY_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1: Agentspec =
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql to identify query bottlenecks and propose optimized SQL with rationale.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql to identify query bottlenecks and propose optimized SQL with rationale.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with optimize sql query performance. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6234,11 +6355,11 @@ export const GALLERY_PROCESS_CITIZEN_REQUESTS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🏛️',
   color: '#0550ae',
   suggestions: [
-    "Show today's citizen request intake summary",
-    "What's the current processing backlog by type?",
-    'Run a policy impact simulation for the proposed zoning change',
-    'Generate a transparency report for this quarter',
-    'Which requests are overdue for response?',
+    { text: "Show today's citizen request intake summary" },
+    { text: "What's the current processing backlog by type?" },
+    { text: 'Run a policy impact simulation for the proposed zoning change' },
+    { text: 'Generate a transparency report for this quarter' },
+    { text: 'Which requests are overdue for response?' },
   ],
   welcomeMessage:
     "Hello! I'm the Citizen Services team orchestrator. I coordinate four agents — Intake, Case Processor, Policy Analyst, and Transparency Agent — to process citizen requests 5× faster while ensuring every decision is explainable, auditable, and compliant with transparency mandates.\n",
@@ -6360,11 +6481,11 @@ export const GALLERY_PROCESS_CLINICAL_TRIAL_DATA_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🏥',
   color: '#cf222e',
   suggestions: [
-    'Process the latest data batch from Site 014',
-    'Show adverse event summary for this trial',
-    'Run SDTM validation on the current dataset',
-    'Generate a safety signal report',
-    'What sites have data quality issues?',
+    { text: 'Process the latest data batch from Site 014' },
+    { text: 'Show adverse event summary for this trial' },
+    { text: 'Run SDTM validation on the current dataset' },
+    { text: 'Generate a safety signal report' },
+    { text: 'What sites have data quality issues?' },
   ],
   welcomeMessage:
     "Hello! I'm the Clinical Trial Data team orchestrator. I coordinate four specialised agents — Ingestion, Harmonisation, Safety Monitor, and Submission Preparer — to process multi-site clinical trial data with full HIPAA compliance and regulatory-grade quality.\n",
@@ -6489,10 +6610,10 @@ export const GALLERY_PROCESS_FINANCIAL_TRANSACTIONS_AGENTSPEC_0_0_1: Agentspec =
     emoji: '💳',
     color: '#8250df',
     suggestions: [
-      'Process the latest batch of transactions',
-      'Show reconciliation status for today',
-      'Flag any suspicious transactions from this week',
-      'Generate an AML compliance report',
+      { text: 'Process the latest batch of transactions' },
+      { text: 'Show reconciliation status for today' },
+      { text: 'Flag any suspicious transactions from this week' },
+      { text: 'Generate an AML compliance report' },
     ],
     welcomeMessage:
       "Hello! I'm the Financial Transaction Processor. I validate and reconcile financial transactions, enforce compliance rules, detect suspicious activity, and generate audit-ready reports.\n",
@@ -6598,7 +6719,9 @@ export const GALLERY_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then replace a manual pivot-table workflow in one notebook by producing: schema+missing values, survival breakdown, and one chart with a concise summary.',
+    {
+      text: 'Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then replace a manual pivot-table workflow in one notebook by producing: schema+missing values, survival breakdown, and one chart with a concise summary.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with replace excel pivot work. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6655,7 +6778,9 @@ export const GALLERY_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1: Agentspec =
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/etl/source_orders.csv to build a resumable ETL flow with explicit checkpoint states.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/etl/source_orders.csv to build a resumable ETL flow with explicit checkpoint states.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with resumable etl with checkpoints. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6712,7 +6837,9 @@ export const GALLERY_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1: Agentspec =
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with run python safely in the cloud. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6768,7 +6895,9 @@ export const GALLERY_SALES_FORECASTING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv to produce a short-term sales forecast with assumptions and confidence notes.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv to produce a short-term sales forecast with assumptions and confidence notes.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with sales forecasting. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6824,7 +6953,9 @@ export const GALLERY_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with sales pipeline board report. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6881,7 +7012,9 @@ export const GALLERY_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1: Agen
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/quality/data_quality_checks.csv to define nightly quality checks and return a failure triage summary.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/quality/data_quality_checks.csv to define nightly quality checks and return a failure triage summary.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with scheduled nightly data quality checks. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6938,7 +7071,9 @@ export const GALLERY_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1: Agentspec =
     emoji: '📊',
     color: '#1F883D',
     suggestions: [
-      'Use /home/jovyan/datasets/datalayer-nfs/notebooks/scientific_measurements.csv to run exploratory analysis and produce publication-ready notebook notes.',
+      {
+        text: 'Use /home/jovyan/datasets/datalayer-nfs/notebooks/scientific_measurements.csv to run exploratory analysis and produce publication-ready notebook notes.',
+      },
     ],
     welcomeMessage:
       'Hi! I can help with scientific notebook assistant. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -6998,10 +7133,14 @@ export const GALLERY_SPATIAL_DATA_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🛰️',
   color: '#0EA5E9',
   suggestions: [
-    'Find precipitation datasets for West Africa from the last 10 years',
-    'Build a monthly anomaly map for ERA5 temperature',
-    'Compare two regions for drought indicators and summarize differences',
-    'Generate an event log for each processing step',
+    {
+      text: 'Find precipitation datasets for West Africa from the last 10 years',
+    },
+    { text: 'Build a monthly anomaly map for ERA5 temperature' },
+    {
+      text: 'Compare two regions for drought indicators and summarize differences',
+    },
+    { text: 'Generate an event log for each processing step' },
   ],
   welcomeMessage:
     'Hello, I am the Spatial Data Analysis Agent. I can discover Earthdata datasets, run Eurus-powered spatial analyses, and generate reproducible outputs for geospatial investigations.\n',
@@ -7061,7 +7200,9 @@ export const GALLERY_SUMMARIZE_10_PDFS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Load the 10 PDFs in /home/jovyan/datasets/datalayer-nfs/placeholder and produce a concise synthesis with a per-document key takeaway table.',
+    {
+      text: 'Load the 10 PDFs in /home/jovyan/datasets/datalayer-nfs/placeholder and produce a concise synthesis with a per-document key takeaway table.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with summarize 10 pdfs. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -7225,10 +7366,10 @@ export const GALLERY_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🔄',
   color: '#0969da',
   suggestions: [
-    'Run a full CRM contact sync now',
-    'Show the latest sync report',
-    'How many duplicates were found in the last run?',
-    'List contacts that failed to sync',
+    { text: 'Run a full CRM contact sync now' },
+    { text: 'Show the latest sync report' },
+    { text: 'How many duplicates were found in the last run?' },
+    { text: 'List contacts that failed to sync' },
   ],
   welcomeMessage:
     "Hello! I'm the CRM Contact Sync team orchestrator. I coordinate four specialised agents — Data Collector, Analyzer, Sync Writer, and Report Generator — to keep your CRM contacts clean, deduplicated, and in sync across all platforms.\n",
@@ -7319,7 +7460,9 @@ export const GALLERY_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📊',
   color: '#1F883D',
   suggestions: [
-    'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to produce a weekly executive briefing with trends, risks, and actions.',
+    {
+      text: 'Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to produce a weekly executive briefing with trends, risks, and actions.',
+    },
   ],
   welcomeMessage:
     'Hi! I can help with weekly executive briefing. Share data, files, or context and I will run the workflow end-to-end, explain what matters, and suggest practical next steps.',
@@ -7368,10 +7511,8 @@ export const JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🩹',
   color: '#CF222E',
   suggestions: [
-    'Fix the cell that just failed.',
-    'This cell raises a KeyError — what is actually wrong?',
-    'Fix the import error without pinning a new dependency.',
-    'Explain the traceback before you change anything.',
+    { text: 'Fix the cell that just failed.' },
+    { text: 'This cell raises a KeyError — what is actually wrong?' },
   ],
   welcomeMessage:
     'Hi! I fix failing cells. Show me the cell and its traceback and I will explain what went wrong, propose a change you can read before accepting, and run it to prove it works.',
@@ -7453,10 +7594,7 @@ export const JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🗜️',
   color: '#8250DF',
   suggestions: [
-    'Compact this notebook without changing any of its results.',
-    'Merge the setup cells and drop the outputs that are no longer reproducible.',
-    'Tighten the markdown so each section says one thing.',
-    'Show me what you would remove before you remove it.',
+    { text: 'Compact this notebook without changing any of its results.' },
   ],
   welcomeMessage:
     'Hi! I make notebooks shorter without making them different. Point me at the notebook you have open and I will merge what belongs together, remove dead code and stale outputs, and tell you exactly how many cells and lines went.',
@@ -7542,10 +7680,9 @@ export const JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🔁',
   color: '#0969DA',
   suggestions: [
-    'Run this notebook on a clean kernel and tell me what breaks.',
-    'Does this notebook still reproduce from top to bottom?',
-    'Find the cells that only work because something ran earlier.',
-    'What would someone else need to run this notebook tomorrow?',
+    { text: 'Run this notebook on a clean kernel and tell me what breaks.' },
+    { text: 'Does this notebook still reproduce from top to bottom?' },
+    { text: 'What would someone else need to run this notebook tomorrow?' },
   ],
   welcomeMessage:
     'Hi! I check whether a notebook still works for someone who is not you. I run it top to bottom on a fresh sandbox and report what fails, what depends on state you happen to have, and what a new reader would be missing.',
@@ -7630,11 +7767,46 @@ export const JUPYTER_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🎓',
   color: '#0969DA',
   suggestions: [
-    'Explain what this cell does, line by line.',
-    'Why did this raise a KeyError?',
-    'I want to learn list comprehensions — start from the loop I just wrote.',
-    'Give me an exercise on pandas groupby, using the data already in this notebook.',
-    'Review my code and tell me what a Python developer would write differently.',
+    {
+      text: 'Show me how to write a loop in Python, in a new cell in this notebook.',
+      icon: 'rocket',
+      emoji: '🚀',
+    },
+    {
+      text: 'Explain what this notebook does, cell by cell, as if I am new to Python.',
+      icon: 'book',
+      emoji: '📖',
+    },
+    {
+      text: 'Why did this cell raise an error? Walk me through what went wrong.',
+      icon: 'bug',
+      emoji: '🐛',
+    },
+    {
+      text: 'Give me an exercise on pandas groupby, using the data already in this notebook.',
+      icon: 'mortar-board',
+      emoji: '🎓',
+    },
+    {
+      text: 'I want to learn list comprehensions — start from the loop I just wrote.',
+      icon: 'light-bulb',
+      emoji: '💡',
+    },
+    {
+      text: 'Review this notebook and tell me what an experienced Python developer would write differently.',
+      icon: 'code-review',
+      emoji: '🔍',
+    },
+    {
+      text: 'Show me a faster, more idiomatic way to write the slowest cell in this notebook.',
+      icon: 'zap',
+      emoji: '⚡',
+    },
+    {
+      text: 'What would break if this notebook ran on ten times the data? Point at the cells.',
+      icon: 'graph',
+      emoji: '📈',
+    },
   ],
   welcomeMessage:
     'Hi! I am here to help you learn Python, using the notebook you already have open. Ask me what a cell does, why something broke, or for an exercise on whatever you are trying to understand. I will explain and suggest — you keep the keyboard.',
@@ -7744,10 +7916,7 @@ export const LOOP_BASE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🔁',
   color: '#1F883D',
   suggestions: [
-    'Compact this notebook without changing its results.',
-    'Run this notebook on a clean kernel and tell me what breaks.',
-    'Fix the cell that just failed.',
-    'Plot the data and let me filter it.',
+    { text: 'Compact this notebook without changing its results.' },
   ],
   welcomeMessage:
     'Hi! I drive the notebook and the document beside this conversation, and I run code in the sandbox. Ask for something, or hand work to a specialist with @NotebookCompactor, @CellFixer or @NotebookReproducer.',
@@ -8808,10 +8977,10 @@ export const WORKERS_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🎙️',
   color: '#0EA5E9',
   suggestions: [
-    'Start an interview about why I chose this product',
-    'Interview me about my onboarding experience',
-    'Ask follow-up questions to understand my decision process',
-    'Summarize this interview into structured insights',
+    { text: 'Start an interview about why I chose this product' },
+    { text: 'Interview me about my onboarding experience' },
+    { text: 'Ask follow-up questions to understand my decision process' },
+    { text: 'Summarize this interview into structured insights' },
   ],
   welcomeMessage:
     "Hi! I'm your Customer Interviewer. I'll ask a few open questions and adapt as we go — following up on what you share to understand your motivations and decisions. At the end, I'll turn our conversation into structured, actionable insights.",
@@ -9820,10 +9989,12 @@ export const WORKERS_NEWS_AGGREGATOR_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📰',
   color: '#EF4444',
   suggestions: [
-    'Build my daily briefing for AI and cloud computing',
-    'Summarize the most important developments about my tracked companies',
-    'What changed in my industries since yesterday?',
-    'Give me a concise briefing and cite the sources',
+    { text: 'Build my daily briefing for AI and cloud computing' },
+    {
+      text: 'Summarize the most important developments about my tracked companies',
+    },
+    { text: 'What changed in my industries since yesterday?' },
+    { text: 'Give me a concise briefing and cite the sources' },
   ],
   welcomeMessage:
     "Hi! I'm your News Aggregator. Tell me the topics, sources, companies, and industries you care about, and I'll deliver a concise daily briefing of what matters most — with the noise filtered out.",
@@ -10721,10 +10892,10 @@ export const WORKERS_SOCIAL_MARKETER_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '📣',
   color: '#8B5CF6',
   suggestions: [
-    'What conversations should I engage with today?',
-    'Recommend 5 people worth connecting with this week',
-    'Draft a LinkedIn post about our latest launch',
-    'Turn this announcement into an X thread and a Bluesky post',
+    { text: 'What conversations should I engage with today?' },
+    { text: 'Recommend 5 people worth connecting with this week' },
+    { text: 'Draft a LinkedIn post about our latest launch' },
+    { text: 'Turn this announcement into an X thread and a Bluesky post' },
   ],
   welcomeMessage:
     "Hi! I'm your Business Marketer. I watch trends and conversations across LinkedIn, X, and Bluesky, flag the best engagement opportunities, suggest who to connect with, and draft platform-ready content. I'll always ask before publishing.",
@@ -11044,7 +11215,7 @@ export const WORKERS_VARIANT_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
 };
 
 // ============================================================================
-// Agentspecs Registry
+// Agent Specs Registry
 // ============================================================================
 
 export const AGENTSPECS: Record<string, Agentspec> = {

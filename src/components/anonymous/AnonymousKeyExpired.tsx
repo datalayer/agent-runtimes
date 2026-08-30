@@ -102,7 +102,9 @@ export function AnonymousKeyExpired({
           }}
         >
           <KeyIcon size={20} />
-          <Text sx={{ fontSize: 2, fontWeight: 'semibold', color: 'fg.default' }}>
+          <Text
+            sx={{ fontSize: 2, fontWeight: 'semibold', color: 'fg.default' }}
+          >
             Your temporary key has expired
           </Text>
         </Box>
@@ -115,12 +117,18 @@ export function AnonymousKeyExpired({
             mb: 3,
           }}
         >
-          {agentName ? `${agentName} was answering` : 'The agent was answering'}{' '}
-          on a temporary key — a short trial, issued to nobody in particular.
-          It has run out.
+          {/*
+            Two facts, and neither is the one in the heading above.
+
+            That the key expired is already said, in larger type, an inch up —
+            so this says who stopped and what did not. The second half is the
+            one worth the words: a reader watching the agent go quiet has every
+            reason to assume the page broke, and the notebook beside them is
+            still perfectly alive.
+          */}
+          {agentName ?? 'The agent'} was answering on a trial key.
           {sandboxStillRuns
-            ? ' Your notebook and its kernel are untouched — they run in this' +
-              ' page and owe the inference service nothing.'
+            ? ' Your notebook keeps running — it lives in this page.'
             : ''}
         </Text>
 
@@ -130,7 +138,9 @@ export function AnonymousKeyExpired({
           hideHero
           fillHeight={false}
           calloutTitle="Sign in to keep going"
-          calloutDescription="A Datalayer account gets you your own key, your own runtimes, and a conversation that does not run out."
+          // What an account is, in the terms the last minute made vivid: the
+          // three things they just ran out of.
+          calloutDescription="Your agents with hosted MCP, and no clock."
           /*
             The social providers, which is how most people will do this.
 

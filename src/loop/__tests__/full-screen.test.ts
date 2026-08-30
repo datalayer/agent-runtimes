@@ -46,7 +46,11 @@ describe('entering full screen', () => {
   it('promotes the workspace, so its controls come too', () => {
     // Promoting the chat view alone would leave the agent picker and the
     // "where does the code run" control on the page underneath.
-    expect(CHAT_VIEW).toContain("closest('[data-loop-workspace]')");
+    // Two facts, not one line: a formatter is free to break the call across
+    // lines and did, which failed an assertion that had pinned the whitespace
+    // rather than the behaviour.
+    expect(CHAT_VIEW).toContain('.closest(');
+    expect(CHAT_VIEW).toContain("'[data-loop-workspace]'");
     expect(SHELL).toContain('data-loop-workspace');
   });
 
@@ -73,7 +77,9 @@ describe('what is on screen while it lasts', () => {
   it('paints its own background once it is promoted', () => {
     // Out of the top layer there is nothing behind it: a workspace that
     // inherited its canvas from an ancestor would arrive transparent on black.
-    expect(CHAT_VIEW).toContain("...(fullScreen ? { bg: 'canvas.default' } : null)");
+    expect(CHAT_VIEW).toContain(
+      "...(fullScreen ? { bg: 'canvas.default' } : null)",
+    );
   });
 });
 
@@ -82,7 +88,9 @@ describe('leaving', () => {
     // The API exits on Escape by itself and tells us through the event. A
     // second listener bound at the same time would only fight it, so the
     // keyboard fallback is for the overlay path alone.
-    expect(CHAT_VIEW).toContain('if (!fullScreen || usingFullscreenApi.current)');
+    expect(CHAT_VIEW).toContain(
+      'if (!fullScreen || usingFullscreenApi.current)',
+    );
     // And a menu closing on Escape must not also drop the reader out.
     expect(CHAT_VIEW).toContain('!event.defaultPrevented');
   });

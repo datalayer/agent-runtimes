@@ -35,9 +35,7 @@ function run(
   steps: number,
 ): { text: string; delayMs: number; state: TypingState }[] {
   let state = TYPING_START;
-  const frames = [
-    { text: typedText(state, phrases), delayMs: 0, state },
-  ];
+  const frames = [{ text: typedText(state, phrases), delayMs: 0, state }];
   for (let index = 0; index < steps; index += 1) {
     const step = nextTypingStep(state, phrases);
     state = step.state;
@@ -130,7 +128,10 @@ describe('rewinding', () => {
 describe('looping', () => {
   it('comes back to the first phrase rather than stopping on the last', () => {
     const cycle = (phrase: string) => phrase.length * 2 + 1;
-    const frames = run(PHRASES, PHRASES.reduce((n, p) => n + cycle(p), 0));
+    const frames = run(
+      PHRASES,
+      PHRASES.reduce((n, p) => n + cycle(p), 0),
+    );
     // Back where it started, having shown both.
     expect(frames[frames.length - 1].state.index).toBe(0);
     expect(frames.some(frame => frame.text === 'Explain this')).toBe(true);
@@ -142,8 +143,9 @@ describe('looping', () => {
     // must land back on it rather than on an index nothing answers.
     const frames = run(['Hello'], 'Hello'.length * 2 + 1);
     expect(frames[frames.length - 1].state.index).toBe(0);
-    expect(frames.every(frame => frame.text === typedText(frame.state, ['Hello'])))
-      .toBe(true);
+    expect(
+      frames.every(frame => frame.text === typedText(frame.state, ['Hello'])),
+    ).toBe(true);
   });
 });
 

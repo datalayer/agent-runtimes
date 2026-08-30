@@ -25,6 +25,7 @@ import {
   BriefcaseIcon,
   BrowserIcon,
   BugIcon,
+  CodeReviewIcon,
   ClockIcon,
   CodeIcon,
   CommentDiscussionIcon,
@@ -63,6 +64,7 @@ import {
   TasklistIcon,
   TelescopeIcon,
   ToolsIcon,
+  RocketIcon,
   ZapIcon,
   type Icon,
 } from '@primer/octicons-react';
@@ -84,6 +86,7 @@ const AGENT_ICONS: Record<string, Icon> = {
   'credit-card': CreditCardIcon,
   database: DatabaseIcon,
   file: FileIcon,
+  'code-review': CodeReviewIcon,
   fold: FoldIcon,
   'git-branch': GitBranchIcon,
   globe: GlobeIcon,
@@ -91,6 +94,9 @@ const AGENT_ICONS: Record<string, Icon> = {
   heart: HeartIcon,
   'issue-opened': IssueOpenedIcon,
   lightbulb: LightBulbIcon,
+  // The name octicons actually use; `lightbulb` above is kept for the specs
+  // that were already written against it.
+  'light-bulb': LightBulbIcon,
   'list-unordered': ListUnorderedIcon,
   mail: MailIcon,
   megaphone: MegaphoneIcon,
@@ -118,6 +124,7 @@ const AGENT_ICONS: Record<string, Icon> = {
   // Octicons has no trending icon; the landing's registry makes the same
   // substitution, so the two agree on what this name draws.
   'trending-up': GraphIcon,
+  rocket: RocketIcon,
   zap: ZapIcon,
 };
 

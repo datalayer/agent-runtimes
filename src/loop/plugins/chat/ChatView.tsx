@@ -342,8 +342,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      * this view, which is what a workspace mounted without a shell would get.
      */
     const node =
-      (viewRef.current?.closest('[data-loop-workspace]') as HTMLElement | null) ??
-      viewRef.current;
+      (viewRef.current?.closest(
+        '[data-loop-workspace]',
+      ) as HTMLElement | null) ?? viewRef.current;
     if (fullScreen) {
       if (usingFullscreenApi.current && document.fullscreenElement) {
         void document.exitFullscreen();
@@ -477,11 +478,23 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /* The team's openers, or the selected agent's own when it has no team. */
   const suggestions = useMemo(
     () =>
-      (team?.team.suggestions?.length
+      team?.team.suggestions?.length
         ? team.team.suggestions
-        : (spec?.suggestions ?? [])
-      ).map(message => ({ title: message, message })),
+        : (spec?.suggestions ?? []),
     [team, spec],
+  );
+
+  /*
+   * The same openers in the shape the chat's empty state asks for.
+   *
+   * Only the text survives the crossing. `Suggestion` is a title and a message
+   * — what a chip shows and what it sends — and these are the same sentence
+   * for a spec's openers, which offer the whole request rather than a label
+   * for one.
+   */
+  const chatSuggestions = useMemo(
+    () => suggestions.map(item => ({ title: item.text, message: item.text })),
+    [suggestions],
   );
 
   /* The icon its spec asked for, at the size the empty state draws. */
@@ -904,7 +917,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           — and the empty state's chips vanish with the first message while
           the prompt stays. It stops the moment the prompt has focus.
         */
-        typingSuggestions={suggestions.map(item => item.message)}
+        typingSuggestions={suggestions.map(item => item.text)}
         disableInputPrompt={chatDisabled}
         connectionConfirmed={!chatDisabled}
         padding={3}
@@ -1145,7 +1158,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 just opened the workspace does not yet know there are two
                 agents behind it.
               */
-              suggestions={suggestions}
+              suggestions={chatSuggestions}
               showHeader={!config?.hideHeader}
               /*
                 The (i), which opens the agent's details over the transcript.

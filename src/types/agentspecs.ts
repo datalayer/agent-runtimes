@@ -24,6 +24,25 @@ import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
  * Defines the configuration for a reusable agent template that can be
  * instantiated as an Agent Runtime.
  */
+/**
+ * An opener offered to somebody arriving at an empty chat.
+ *
+ * Text and, optionally, a mark to show beside it. It was a bare string, which
+ * is enough for a chip in an empty state and not enough for anywhere else a
+ * suggestion is offered — a menu, a launcher, a list of what an agent is for —
+ * where an unmarked row of sentences is hard to scan. Both marks are optional
+ * and independent: an octicon suits chrome already drawn in line art, an emoji
+ * suits a place that has colour.
+ */
+export interface AgentSuggestion {
+  /** What is sent when the suggestion is taken. */
+  text: string;
+  /** Octicon name to show beside it. */
+  icon?: string;
+  /** Unicode emoji to show beside it. */
+  emoji?: string;
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -68,7 +87,7 @@ export interface Agentspec {
   /** Theme color for the agent (hex code) */
   color?: string;
   /** Chat suggestions to show users what this agent can do */
-  suggestions?: string[];
+  suggestions?: AgentSuggestion[];
   /** Welcome message shown when agent starts */
   welcomeMessage?: string;
   /** Path to Jupyter notebook to show on agent creation */

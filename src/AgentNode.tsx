@@ -755,8 +755,25 @@ export function AgentNode() {
               : typeof spec.welcome_message === 'string'
                 ? spec.welcome_message
                 : undefined,
+          /*
+           * Either shape, because this reads a spec off a running node.
+           *
+           * A node may have been launched from an older catalogue, where a
+           * suggestion was a bare string. Filtering to strings — which is what
+           * this did — silently emptied the list the moment the catalogue
+           * started sending the mapping form, and an empty state with no
+           * openers looks like an agent with nothing to offer.
+           */
           suggestions: Array.isArray(spec.suggestions)
-            ? spec.suggestions.filter((s: unknown) => typeof s === 'string')
+            ? (spec.suggestions as unknown[])
+                .map(item =>
+                  typeof item === 'string'
+                    ? item
+                    : ((item as { text?: unknown })?.text ?? ''),
+                )
+                .filter(
+                  (text): text is string => typeof text === 'string' && !!text,
+                )
             : undefined,
         });
       } catch {

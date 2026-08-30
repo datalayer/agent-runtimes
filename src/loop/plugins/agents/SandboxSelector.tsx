@@ -21,7 +21,10 @@ import { Box, SegmentedControl, Spinner, Text } from '@primer/react';
 import { KernelIndicator } from '@datalayer/jupyter-react/kernel-indicator';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopWorkspaceContext } from '../../core';
-import { IDLE_SANDBOX_SNAPSHOT_SIGNAL, sandboxIndicatorState } from '../../core';
+import {
+  IDLE_SANDBOX_SNAPSHOT_SIGNAL,
+  sandboxIndicatorState,
+} from '../../core';
 import { useOptionalSandboxService } from './useSandboxService';
 import {
   SANDBOX_TARGETS,

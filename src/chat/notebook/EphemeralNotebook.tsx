@@ -126,6 +126,15 @@ export interface EphemeralNotebookProps {
    */
   showToolbar?: boolean;
   /**
+   * Whether the toolbar offers Save.
+   *
+   * False by default. This notebook is held in memory and written back by
+   * whoever mounted it, so the button commits nothing a reader can point at —
+   * and in a browser sandbox there is no file behind it at all. A host that
+   * does persist the notebook, and wants an explicit save, sets this.
+   */
+  showSaveItem?: boolean;
+  /**
    * Items added to the toolbar of the notebook.
    *
    * The notebook toolbar merges them with its own and orders the whole by the
@@ -228,6 +237,7 @@ export function EphemeralNotebook({
   toolbarComponent,
   toolbarExtraItems,
   showToolbar = true,
+  showSaveItem = false,
   themeVariant,
   colorMode,
   collaborationProvider,
@@ -450,13 +460,34 @@ export function EphemeralNotebook({
       return undefined;
     }
     const Base = toolbarComponent || NotebookToolbar;
-    if (!toolbarExtraItems?.length) {
+    /*
+     * No save button, unless a host asks for one.
+     *
+     * This notebook is ephemeral — that is its name. It is held in memory,
+     * written back by the host that mounted it, and in a browser sandbox there
+     * is no file on the other side of the button at all. A control that looks
+     * like it commits work and does not is worse than no control, and it is
+     * the first thing in the toolbar, where it reads as the primary action.
+     *
+     * The divider goes with it. Hiding the item alone leaves the toolbar
+     * opening on a rule with nothing before it.
+     */
+    const hiddenItems = showSaveItem
+      ? undefined
+      : ['notebook-save', 'notebook-divider-file'];
+    if (!toolbarExtraItems?.length && !hiddenItems) {
       return Base;
     }
     return function EphemeralNotebookToolbar(props: any) {
-      return <Base {...props} extraItems={toolbarExtraItems} />;
+      return (
+        <Base
+          {...props}
+          extraItems={toolbarExtraItems}
+          hiddenItems={hiddenItems}
+        />
+      );
     };
-  }, [showToolbar, toolbarComponent, toolbarExtraItems]);
+  }, [showToolbar, showSaveItem, toolbarComponent, toolbarExtraItems]);
 
   const isRuntimeStarting = Boolean(
     (String(runtimeName || '').trim() ||

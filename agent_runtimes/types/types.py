@@ -906,6 +906,32 @@ class MCPServerTool(BaseModel):
     )
 
 
+class AgentSuggestion(BaseModel):
+    """An opener offered to somebody arriving at an empty chat.
+
+    Text and, optionally, a mark to show beside it. It was a bare string, which
+    is enough for a chip in an empty state and not enough for anywhere else a
+    suggestion is offered — a menu, a launcher, a list of what an agent is for
+    — where an unmarked row of sentences is hard to scan. Both marks are
+    optional and independent: an octicon suits chrome already drawn in line
+    art, an emoji suits a place that has colour, and a spec is free to give
+    one, both or neither.
+    """
+
+    text: str = Field(
+        ...,
+        description="What is sent when the suggestion is taken",
+    )
+    icon: Optional[str] = Field(
+        default=None,
+        description="Octicon name to show beside it",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji to show beside it",
+    )
+
+
 class MCPServer(BaseModel):
     """
     Configuration for an MCP server.
@@ -1001,7 +1027,7 @@ class FrontendConfig(BaseModel):
         description="Whether tool approvals are disabled for new agent launches",
         alias="disableToolApprovals",
     )
-    suggestions: List[str] = Field(
+    suggestions: List[AgentSuggestion] = Field(
         default_factory=list,
         description="Chat suggestions to show users what this agent can do",
     )
@@ -1191,7 +1217,7 @@ class Agentspec(BaseModel):
         default=None,
         description="Theme color for the agent (hex code)",
     )
-    suggestions: List[str] = Field(
+    suggestions: List[AgentSuggestion] = Field(
         default_factory=list,
         description="Chat suggestions to show users what this agent can do",
     )
@@ -1606,6 +1632,24 @@ class TeamOutputSpec(BaseModel):
     storage: str = Field(default="", description="Storage location (e.g., S3 path)")
 
 
+class TeamSuggestionSpec(BaseModel):
+    """An opener offered at a team's front door.
+
+    The same shape as an agent's — see `AgentSuggestion`. Two classes rather
+    than one because the runtime's team types are generated from a catalogue
+    that the agent types are not, and a shared base would tie the two
+    generators together for the sake of three fields.
+    """
+
+    text: str = Field(..., description="What is sent when the suggestion is taken")
+    icon: Optional[str] = Field(
+        default=None, description="Octicon name to show beside it"
+    )
+    emoji: Optional[str] = Field(
+        default=None, description="Unicode emoji to show beside it"
+    )
+
+
 class TeamSpec(BaseModel):
     """Specification for a multi-agent team."""
 
@@ -1642,7 +1686,7 @@ class TeamSpec(BaseModel):
         description="Instructions for routing tasks between agents",
         alias="routingInstructions",
     )
-    suggestions: list[str] = Field(
+    suggestions: list[TeamSuggestionSpec] = Field(
         default_factory=list,
         description=(
             "Openers shown in an empty chat, so a person arriving at a team "

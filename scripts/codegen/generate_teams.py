@@ -22,6 +22,21 @@ import yaml
 from versioning import ensure_spec_version, version_suffix
 
 
+def _suggestion_fields(item: Any) -> Dict[str, Any]:
+    """A suggestion's fields, from either shape it may be written in.
+
+    A bare string is still read as a suggestion with no marks — see the same
+    helper in `generate_agents.py`.
+    """
+    if isinstance(item, str):
+        return {"text": item}
+    return {
+        "text": item.get("text", ""),
+        "icon": item.get("icon"),
+        "emoji": item.get("emoji"),
+    }
+
+
 def _make_const_name(team_id: str) -> str:
     """Convert a team ID to a constant name (e.g., 'analyze-campaign-performance' -> 'ANALYZE_CAMPAIGN_PERFORMANCE_TEAM_SPEC')."""
     return f"{team_id.upper().replace('-', '_')}_TEAM_SPEC"
@@ -224,6 +239,7 @@ from agent_runtimes.types import (
     TeamOutputSpec,
     TeamReactionRule,
     TeamSpec,
+    TeamSuggestionSpec,
     TeamSupervisorSpec,
     TeamValidationSpec,
 )
@@ -408,7 +424,16 @@ from agent_runtimes.types import (
             code += f'    routing_instructions="{routing}",\n'
             suggestions = spec.get("suggestions") or []
             if suggestions:
-                rendered = ", ".join(repr(str(item)) for item in suggestions)
+                rendered = ", ".join(
+                    "TeamSuggestionSpec("
+                    + ", ".join(
+                        f"{key}={value!r}"
+                        for key, value in _suggestion_fields(item).items()
+                        if value
+                    )
+                    + ")"
+                    for item in suggestions
+                )
                 code += f"    suggestions=[{rendered}],\n"
             delegation = spec.get("delegation") or {}
             code += (
@@ -688,7 +713,14 @@ import type {{ TeamSpec }} from '{types_import_path}';
             suggestions = spec.get("suggestions") or []
             if suggestions:
                 rendered = ", ".join(
-                    "`" + str(item).replace("`", "\\`") + "`" for item in suggestions
+                    "{ "
+                    + ", ".join(
+                        f"{key}: " + json.dumps(value, ensure_ascii=False)
+                        for key, value in _suggestion_fields(item).items()
+                        if value
+                    )
+                    + " }"
+                    for item in suggestions
                 )
                 code += f"  suggestions: [{rendered}],\n"
             delegation = spec.get("delegation") or {}

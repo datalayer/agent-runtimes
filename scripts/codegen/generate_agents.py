@@ -47,6 +47,53 @@ def _fmt_ts_literal(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _suggestion_fields(item: Any) -> dict[str, Any]:
+    """A suggestion's fields, from either shape it may be written in.
+
+    A bare string is still read as a suggestion with no marks. Specs were all
+    migrated to the mapping form, so nothing in the catalogue takes this path —
+    it is here so a hand-written spec, or one restored from an older branch,
+    generates rather than crashing the build with an attribute error.
+    """
+    if isinstance(item, str):
+        return {"text": item}
+    return {
+        "text": item.get("text", ""),
+        "icon": item.get("icon"),
+        "emoji": item.get("emoji"),
+    }
+
+
+def _fmt_py_suggestions(items: list[Any]) -> str:
+    """`AgentSuggestion(...)` calls, one per line, or an empty list."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _suggestion_fields(item)
+        parts = [f"text={_fmt_py_literal(fields['text'])}"]
+        for key in ("icon", "emoji"):
+            if fields.get(key):
+                parts.append(f"{key}={_fmt_py_literal(fields[key])}")
+        rendered.append(f"AgentSuggestion({', '.join(parts)})")
+    return "[\n        " + ",\n        ".join(rendered) + ",\n    ]"
+
+
+def _fmt_ts_suggestions(items: list[Any]) -> str:
+    """Object literals, one per line, or an empty array."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _suggestion_fields(item)
+        parts = [f"text: {_fmt_ts_literal(fields['text'])}"]
+        for key in ("icon", "emoji"):
+            if fields.get(key):
+                parts.append(f"{key}: {_fmt_ts_literal(fields[key])}")
+        rendered.append("{ " + ", ".join(parts) + " }")
+    return "[\n    " + ",\n    ".join(rendered) + ",\n  ]"
+
+
 def _normalize_subagents_for_typescript(value: Any) -> Any:
     """Convert subagents config keys from YAML snake_case to TS camelCase."""
     if not isinstance(value, dict):
@@ -191,7 +238,12 @@ Generated from YAML specifications in specs/agents/
 from typing import Dict
 
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
-from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
+from agent_runtimes.types import (
+    Agentspec,
+    AgentSuggestion,
+    SubAgentspecConfig,
+    SubAgentsConfig,
+)
 
 # ============================================================================
 # Agent Specs
@@ -271,13 +323,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
             color = f'"{spec.get("color")}"' if spec.get("color") else "None"
             suggestions = spec.get("suggestions", [])
-            suggestions_str = (
-                "[\n        "
-                + ",\n        ".join(_fmt_py_literal(s) for s in suggestions)
-                + ",\n    ]"
-                if suggestions
-                else "[]"
-            )
+            suggestions_str = _fmt_py_suggestions(suggestions)
             # Escape multi-line strings properly
             welcome = (
                 spec.get("welcome_message", "").replace('"', '\\"').replace("\n", " ")
@@ -902,15 +948,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             domain_ts = f"'{domain_val}'" if domain_val else "undefined"
 
             suggestions = spec.get("suggestions", [])
-            # Escape single quotes in suggestions for TypeScript
-            escaped_suggestions = [s.replace("'", "\\'") for s in suggestions]
-            suggestions_str = (
-                "[\n    "
-                + ",\n    ".join(f"'{s}'" for s in escaped_suggestions)
-                + ",\n  ]"
-                if suggestions
-                else "[]"
-            )
+            suggestions_str = _fmt_ts_suggestions(suggestions)
 
             # Format optional fields
             icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"

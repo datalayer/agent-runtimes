@@ -176,7 +176,9 @@ export function readJwtClaims(token: string): JwtClaims | undefined {
       '=',
     );
     const claims = JSON.parse(atob(padded)) as unknown;
-    return claims && typeof claims === 'object' ? (claims as JwtClaims) : undefined;
+    return claims && typeof claims === 'object'
+      ? (claims as JwtClaims)
+      : undefined;
   } catch {
     return undefined;
   }
