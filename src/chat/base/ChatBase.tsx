@@ -64,6 +64,7 @@ import type {
 } from '../../types/chat';
 import { AgentDetails } from '../../agents/AgentDetails';
 import type { BuiltinTool } from '../../types/models';
+import type { ContextSnapshotData } from '../../types/context';
 import type { FrontendToolDefinition } from '../../types/tools';
 import {
   internalQueryClient,
@@ -1687,6 +1688,21 @@ function ChatBaseInner({
 
   // ---- Component state ----
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
+  /*
+   * What the harness itself reported, for an agent with no server behind it.
+   *
+   * The last turn *and* the running session. Both, because the bar shows both
+   * — "· 12k ▲ 900 ▼" is the conversation so far and "· turn 800 ▲ 120 ▼" is
+   * what the last exchange cost — and a snapshot carrying only a total leaves
+   * those two lines out entirely.
+   */
+  const [localUsage, setLocalUsage] = useState<{
+    turnInput: number;
+    turnOutput: number;
+    sessionInput: number;
+    sessionOutput: number;
+    totalTokens: number;
+  } | null>(null);
   /* Whether the (i) has been pressed. Its own state rather than a view mode:
      it is a detour from the conversation, not a place the chat lives. */
   const [showDetails, setShowDetails] = useState(false);
@@ -1959,7 +1975,70 @@ function ChatBaseInner({
     protocol?.agentId,
     protocol?.authToken,
   );
-  const agentUsage = externalContextSnapshot ?? contextSnapshotQuery.data;
+  /*
+   * The window, from whoever can account for it.
+   *
+   * A host's own snapshot first, then the server's, then what the harness
+   * reported as it finished. The last is a partial picture — it knows the
+   * turn's tokens and the model's window, not how they divide between the
+   * system prompt, the tools and the history — so the fields it cannot
+   * honestly fill are left at zero rather than guessed at.
+   */
+  const localSnapshot = useMemo<ContextSnapshotData | undefined>(() => {
+    /*
+     * Only for a harness that has no server keeping the account.
+     *
+     * `enableConfigQuery` is what says a runtime is reporting its own context
+     * over the socket; where one is, this must not shadow it with a partial
+     * picture assembled from turn totals.
+     */
+    if (protocol?.enableConfigQuery) {
+      return undefined;
+    }
+    /* A conservative window. The harness reports what a turn cost, not what
+       the model can hold, and 200k is the smaller of the sizes the models
+       this reaches actually offer — so the bar reads as fuller than the truth
+       rather than emptier, which is the safer way to be wrong about a
+       limit. */
+    const contextWindow = 200_000;
+    return {
+      totalTokens: localUsage?.totalTokens ?? 0,
+      contextWindow,
+      sumResponseInputTokens: localUsage?.sessionInput ?? 0,
+      sumResponseOutputTokens: localUsage?.sessionOutput ?? 0,
+      systemPromptTokens: 0,
+      userMessageTokens: 0,
+      assistantMessageTokens: 0,
+      toolTokens: 0,
+      toolCallTokens: 0,
+      toolReturnTokens: 0,
+      historyToolCallTokens: 0,
+      historyToolReturnTokens: 0,
+      currentToolCallTokens: 0,
+      currentToolReturnTokens: 0,
+      turnUsage: {
+        inputTokens: localUsage?.turnInput ?? 0,
+        outputTokens: localUsage?.turnOutput ?? 0,
+        // Not counted by the harness, and left at zero rather than invented:
+        // the bar reads these only for the numbers it prints beside the ring.
+        requests: 0,
+        toolCalls: 0,
+        toolNames: [],
+        durationSeconds: 0,
+      },
+      sessionUsage: {
+        inputTokens: localUsage?.sessionInput ?? 0,
+        outputTokens: localUsage?.sessionOutput ?? 0,
+        requests: 0,
+        toolCalls: 0,
+        turns: 0,
+        durationSeconds: 0,
+      },
+    } as ContextSnapshotData;
+  }, [localUsage, protocol?.enableConfigQuery]);
+
+  const agentUsage =
+    externalContextSnapshot ?? contextSnapshotQuery.data ?? localSnapshot;
   const sandboxStatusQuery = useSandbox(
     configQueriesEnabled && showHeader,
     protocol?.configEndpoint,
@@ -3192,6 +3271,29 @@ function ChatBaseInner({
           break;
 
         case 'done':
+          /*
+           * What the turn cost, when nobody else is counting.
+           *
+           * A server-side agent reports its context through
+           * `/configure/context`, and that answer wins. An in-page agent has
+           * no server to ask — so the usage the harness reports here was the
+           * only account of the window there was, and it was being dropped.
+           * The bar and its ring simply never appeared for a browser agent.
+           */
+          if (event.usage?.totalTokens) {
+            const turnInput = event.usage.promptTokens ?? 0;
+            const turnOutput = event.usage.completionTokens ?? 0;
+            const total = event.usage.totalTokens ?? 0;
+            setLocalUsage(previous => ({
+              turnInput,
+              turnOutput,
+              // Added up, not replaced: the session is every turn so far, and
+              // the harness reports one turn at a time.
+              sessionInput: (previous?.sessionInput ?? 0) + turnInput,
+              sessionOutput: (previous?.sessionOutput ?? 0) + turnOutput,
+              totalTokens: total,
+            }));
+          }
           // The adapter signals the entire multi-turn conversation
           // (including all continuations) has finished.
           if (

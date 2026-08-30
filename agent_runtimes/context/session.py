@@ -679,16 +679,24 @@ class ContextSnapshot:
                 for r in self.per_request_usage
             ],
             "contextWindow": self.context_window,
-            # Turn and session usage
+            # Turn and session usage.
+            #
+            # Always present, and zero before anything has been sent. They used
+            # to be `None` until the tracker had something to report, and a
+            # client cannot tell that apart from "this runtime does not count
+            # tokens" — so the counts beside the context ring were simply
+            # absent, and appeared out of nowhere after the first answer.
+            # A zero is an answer.
             "turnUsage": {
                 "inputTokens": self.turn_usage.input_tokens if self.turn_usage else 0,
                 "outputTokens": self.turn_usage.output_tokens if self.turn_usage else 0,
                 "requests": self.turn_usage.requests if self.turn_usage else 0,
                 "toolCalls": self.turn_usage.tool_calls if self.turn_usage else 0,
                 "toolNames": self.turn_usage.tool_names if self.turn_usage else [],
-            }
-            if self.turn_usage
-            else None,
+                "durationSeconds": self.turn_usage.duration_seconds
+                if self.turn_usage
+                else 0,
+            },
             "sessionUsage": {
                 "inputTokens": self.session_usage.input_tokens
                 if self.session_usage
@@ -702,9 +710,7 @@ class ContextSnapshot:
                 "durationSeconds": self.session_usage.duration_seconds
                 if self.session_usage
                 else 0,
-            }
-            if self.session_usage
-            else None,
+            },
             # Distribution data for treemap
             "distribution": self._build_distribution(),
         }
@@ -2110,23 +2116,52 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
     context_window = tracker.get_context_window(agent_id)
     stats = tracker.get_agent_stats(agent_id)
 
-    # Build TurnUsage from stats for duration calculation
+    # The turn, and the session.
+    #
+    # These were one thing wearing the other's name: `turn_usage` was built
+    # from `stats`, which accumulates across the whole conversation, and
+    # `session_usage` was never built at all. So the bar showed the running
+    # total labelled "turn", and nothing for the session — and where the
+    # capability had not yet recorded anything, both read zero with no way to
+    # tell that apart from a runtime that does not count.
+    #
+    # `stats.request_usage_history` holds one entry per run, appended by
+    # `LLMContextUsageCapability.after_run` from pydantic-ai's own `ctx.usage`.
+    # The last entry is the turn; the accumulated fields are the session.
     turn_usage = None
+    session_usage = None
     if stats:
+        last_run = (
+            stats.request_usage_history[-1] if stats.request_usage_history else None
+        )
         turn_usage = TurnUsage(
+            input_tokens=last_run.input_tokens if last_run else 0,
+            output_tokens=last_run.output_tokens if last_run else 0,
+            requests=1 if last_run else 0,
+            tool_calls=last_run.tool_calls if last_run else 0,
+            tool_names=list(last_run.tool_names) if last_run else [],
+            duration_seconds=round(
+                (last_run.duration_ms if last_run else stats.last_turn_duration_ms)
+                / 1000.0,
+                2,
+            ),
+        )
+        session_usage = SessionUsage(
             input_tokens=stats.input_tokens,
             output_tokens=stats.output_tokens,
-            requests=len(stats.request_usage_history),
+            requests=stats.requests,
             tool_calls=stats.tool_calls,
-            tool_names=[],
-            duration_seconds=stats.last_turn_duration_ms
-            / 1000.0,  # Use stored turn duration
+            turns=len(stats.request_usage_history),
+            duration_seconds=round(stats.last_turn_duration_ms / 1000.0, 2),
         )
         logger.debug(
-            f"get_agent_context_snapshot: Built turn_usage - "
-            f"last_turn_duration_ms={stats.last_turn_duration_ms}, "
-            f"duration_seconds={turn_usage.duration_seconds}, "
-            f"requests={len(stats.request_usage_history)}"
+            "get_agent_context_snapshot: turn in=%d out=%d — session in=%d "
+            "out=%d over %d turn(s)",
+            turn_usage.input_tokens,
+            turn_usage.output_tokens,
+            session_usage.input_tokens,
+            session_usage.output_tokens,
+            session_usage.turns,
         )
 
     # Extract snapshot from agent with message history and turn_usage
@@ -2137,6 +2172,7 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
         context_window,
         message_history=stats.message_history if stats else None,
         turn_usage=turn_usage,
+        session_usage=session_usage,
     )
     logger.debug(
         f"get_agent_context_snapshot: After extract - tool_tokens={snapshot.tool_tokens}, tools={len(snapshot.tools)}, system_prompt_tokens={snapshot.system_prompt_tokens}, per_request_usage={len(snapshot.per_request_usage)}"

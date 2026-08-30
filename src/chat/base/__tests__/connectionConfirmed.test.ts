@@ -104,3 +104,21 @@ describe('the selectors bar', () => {
     expect(PROMPT).toContain('const showSelectorsBar = anyOffered || stillLoading');
   });
 });
+
+describe('the context snapshot', () => {
+  it('reads the socket rather than returning nothing', () => {
+    /*
+     * It was a stub. The REST endpoint it polled had been removed and the
+     * WebSocket replacement was never wired in, so it returned `undefined`
+     * for every agent on every target — and the token-usage bar, which only
+     * renders when `totalTokens > 0`, was therefore invisible everywhere no
+     * matter how a host configured it. The store had the data all along.
+     */
+    const source = readFileSync(
+      join(__dirname, '..', '..', '..', 'hooks', 'useContextSnapshot.ts'),
+      'utf8',
+    );
+    expect(source).toContain('useAgentRuntimeContextSnapshot()');
+    expect(source).not.toContain('data: undefined');
+  });
+});

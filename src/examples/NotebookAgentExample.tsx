@@ -75,8 +75,8 @@ const NotebookUI = React.memo(function NotebookUI({
           Notebook Agent Example
         </Box>
         <p>
-          Platform-agnostic tool usage with agent-runtimes integration. Use the
-          AI copilot to manipulate the notebook.
+          Platform-agnostic usage with agent-runtimes integration. Use the
+          AI Agent to manipulate the Notebook.
         </p>
       </Box>
 

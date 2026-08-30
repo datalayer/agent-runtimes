@@ -302,10 +302,17 @@ export function InputPrompt({
    * "Loading controls..." for ever.
    */
 
-  // Show token usage when we have valid context data
-  const hasContext = Boolean(
-    agentUsage && !agentUsage.error && agentUsage.totalTokens > 0,
-  );
+  /*
+   * Shown as soon as the agent accounts for itself, not once it has spent
+   * something.
+   *
+   * `totalTokens > 0` kept the bar hidden until after the first answer, so it
+   * arrived mid-conversation and pushed the prompt down with it — and the
+   * counts beside the ring could never read zero, which is the one state that
+   * says "connected, nothing sent yet". Both harnesses now report a snapshot
+   * from the start; this shows it.
+   */
+  const hasContext = Boolean(agentUsage && !agentUsage.error);
 
   return (
     <Box>

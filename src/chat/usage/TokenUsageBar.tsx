@@ -53,14 +53,16 @@ export function TokenUsageBar({
   const contextAnchorRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasTurn =
-    agentUsage.turnUsage &&
-    (agentUsage.turnUsage.inputTokens > 0 ||
-      agentUsage.turnUsage.outputTokens > 0);
-  const hasSession =
-    agentUsage.sessionUsage &&
-    (agentUsage.sessionUsage.inputTokens > 0 ||
-      agentUsage.sessionUsage.outputTokens > 0);
+  /*
+   * Shown whenever the agent reports them, zero included.
+   *
+   * They were hidden until one of the two counts went above zero, which meant
+   * the bar changed shape after the first answer — and, worse, that a reader
+   * could not tell "nothing sent yet" from "this agent does not report it".
+   * A zero is an answer; a missing row is not.
+   */
+  const hasTurn = !!agentUsage.turnUsage;
+  const hasSession = !!agentUsage.sessionUsage;
   const hasCostUsage =
     !!agentUsage.costUsage &&
     (agentUsage.costUsage.cumulativeCostUsd > 0 ||
