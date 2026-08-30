@@ -14,7 +14,8 @@
  *
  * Every number it draws comes from the key: when it dies and how long it was
  * given are both read out of the JWT by whoever minted it, so this assumes no
- * particular generosity from the service.
+ * particular generosity from the service. The points at which it changes
+ * colour are shares of that, for the same reason — see `warnAt`.
  *
  * Purely a display: it is handed a moment in the future and counts to it. What
  * to do when it arrives is the caller's business — the ring reports it once,
@@ -44,6 +45,27 @@ export type AnonymousKeyTimerProps = {
   grantedMs?: number;
   /** What the clock is counting, said beside it. */
   label?: string;
+  /**
+   * The share of the key still left when the clock starts warning, 0–1.
+   *
+   * A proportion rather than a number of seconds, because the service decides
+   * how long it signs a key for and this component must not have an opinion
+   * about that. A sixty-second key and a ten-minute one both turn amber with a
+   * quarter of themselves to go, and both are saying the same thing: you have
+   * about as long again as you have already used.
+   */
+  warnAt?: number;
+  /** The share left when it turns to danger, 0–1. */
+  dangerAt?: number;
+  /**
+   * The share left when it starts fading in and out, 0–1.
+   *
+   * The last resort of a control that has already changed colour twice and is
+   * still being ignored. Movement is what the eye catches in peripheral
+   * vision, which is where a header sits while somebody is typing — so this is
+   * the only point at which the clock is allowed to move.
+   */
+  pulseAt?: number;
   /** Called once, when the clock reaches zero. */
   onExpire?: () => void;
 };
@@ -55,21 +77,20 @@ const RADIUS = (RING - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
- * When the ring stops being a detail.
+ * The three points at which the clock changes its mind, as shares of the key.
  *
- * A minute out is when finishing the sentence you are typing is still
- * possible; twenty seconds is when it is not. Those are the numbers that
- * matter to a reader mid-question — but they are also capped by a share of
- * the key's own life, because the service decides how long it signs one for:
- * a sixty-second key that warned from the first tick would be shouting for
- * its whole existence, which is the same as saying nothing.
+ * Proportions rather than seconds. The service decides how long it signs a key
+ * for — a minute today, five after a deployment changes one line — and a
+ * component with absolute thresholds either shouts for the whole life of a
+ * short key or says nothing until the last moment of a long one. A quarter
+ * left means the same thing at every length.
  */
-function thresholds(spanMs: number): { warn: number; alarm: number } {
-  return {
-    warn: Math.min(60_000, spanMs * 0.33),
-    alarm: Math.min(20_000, spanMs * 0.12),
-  };
-}
+const DEFAULT_WARN_AT = 0.25;
+const DEFAULT_DANGER_AT = 0.1;
+const DEFAULT_PULSE_AT = 0.05;
+
+/** How long one breath of the fade takes. Slow enough to read through. */
+const PULSE_MS = 1200;
 
 /** `m:ss`, or `0:07` — short enough to read at a glance in a header. */
 function format(ms: number): string {
@@ -83,6 +104,9 @@ export function AnonymousKeyTimer({
   expiresAt,
   grantedMs,
   label = 'Trial key',
+  warnAt = DEFAULT_WARN_AT,
+  dangerAt = DEFAULT_DANGER_AT,
+  pulseAt = DEFAULT_PULSE_AT,
   onExpire,
 }: AnonymousKeyTimerProps): JSX.Element {
   const [now, setNow] = useState(() => Date.now());
@@ -125,9 +149,22 @@ export function AnonymousKeyTimer({
   }, [left, onExpire]);
 
   const fraction = Math.min(1, Math.max(0, left / spanRef.current));
-  const { warn, alarm } = thresholds(spanRef.current);
+  /*
+   * Three steps, each louder than the last, and the loudest one moves.
+   *
+   * Colour, then a stronger colour, then a fade — because a reader mid-sentence
+   * is not looking at the header, and the header has to get louder without
+   * getting in the way. Movement is last on purpose: it is the only one of the
+   * three that costs the reader anything, so it is spent only when the other
+   * two have plainly not worked.
+   */
+  const pulsing = fraction <= pulseAt;
   const tone =
-    left <= alarm ? 'danger.fg' : left <= warn ? 'attention.fg' : 'fg.muted';
+    fraction <= dangerAt
+      ? 'danger.fg'
+      : fraction <= warnAt
+        ? 'attention.fg'
+        : 'fg.muted';
 
   return (
     <Box
@@ -145,6 +182,31 @@ export function AnonymousKeyTimer({
         // The clock is the point; the row it sits in must not resize as the
         // digits change width.
         fontVariantNumeric: 'tabular-nums',
+        /*
+          The last few percent, breathing.
+
+          Opacity only: nothing moves, nothing resizes, and the row it sits in
+          is unaffected — a pill that grew and shrank would push the controls
+          beside it about at exactly the moment somebody is reaching for one.
+          It never fades to nothing, because a clock that disappears is a clock
+          that has stopped rather than one that is running out.
+
+          Off for a reader who asked the machine to hold still. They have the
+          colour and the number, which is the information; the movement is
+          only how hard it knocks.
+        */
+        ...(pulsing
+          ? {
+              '@keyframes dla-key-pulse': {
+                '0%, 100%': { opacity: 1 },
+                '50%': { opacity: 0.45 },
+              },
+              animation: `dla-key-pulse ${PULSE_MS}ms ease-in-out infinite`,
+              '@media (prefers-reduced-motion: reduce)': {
+                animation: 'none',
+              },
+            }
+          : null),
       }}
       /*
         The whole story, for anyone who wonders what the ring is counting.

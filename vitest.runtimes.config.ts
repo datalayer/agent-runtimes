@@ -22,6 +22,8 @@ export default defineConfig({
       'src/runtimes/browser/__tests__/**/*.test.ts',
       // The chat's own dependency-free rules, which need no DOM either.
       'src/chat/base/__tests__/**/*.test.ts',
+      // The trial clock's thresholds, which are arithmetic and need no DOM.
+      'src/components/anonymous/__tests__/**/*.test.ts',
       // And the prompt's Lexical nodes, which are plain classes.
       'src/chat/prompt/**/__tests__/**/*.test.ts',
     ],

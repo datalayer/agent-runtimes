@@ -7768,6 +7768,11 @@ export const JUPYTER_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   color: '#0969DA',
   suggestions: [
     {
+      text: 'Explore this notebook and tell me what you find.',
+      icon: 'telescope',
+      emoji: '🔭',
+    },
+    {
       text: 'Show me how to write a loop in Python, in a new cell in this notebook.',
       icon: 'rocket',
       emoji: '🚀',
