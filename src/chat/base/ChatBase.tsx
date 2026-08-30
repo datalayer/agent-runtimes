@@ -4360,6 +4360,17 @@ function ChatBaseInner({
       kernelStatus={liveKernelStatus}
       connectionConfirmed={connectionConfirmed}
       placeholder={placeholder}
+      /*
+        The same openers the empty state offers, typed into the box they would
+        be typed into.
+
+        `message` rather than `title`: the animation is meant to look like
+        somebody typing, and what they would have typed is the message the
+        chip sends, not the label on it.
+      */
+      typingSuggestions={resolvedSuggestions?.map(
+        item => item.message || item.title,
+      )}
       autoFocus={autoFocus}
       focusTrigger={focusTrigger}
       padding={padding}

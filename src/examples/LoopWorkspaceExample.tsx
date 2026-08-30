@@ -29,7 +29,7 @@
  * @module examples/LoopWorkspaceExample
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { Box } from '@primer/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { configurePlugin } from '@datalayer/reactor';
@@ -157,6 +157,15 @@ export type LoopWorkspaceExampleProps = {
    * the chat column, under the transcript, as the other examples do.
    */
   promptPlacement?: 'bottom' | 'bottom-chat';
+  /**
+   * Extra controls for the chat's own title bar.
+   *
+   * For a host with something to add beside the agent's name without writing
+   * a plugin to add it. Plugins reach the same row through
+   * `LoopSlots.chatHeader`, which is where anything belonging to a capability
+   * belongs — the trial-key countdown arrives that way.
+   */
+  chatHeaderActions?: ReactNode;
 };
 
 export function LoopWorkspaceExample({
@@ -176,6 +185,7 @@ export function LoopWorkspaceExample({
   promptPlacement = 'bottom',
   inheritTheme = false,
   defaultEditor = 'notebook',
+  chatHeaderActions,
 }: LoopWorkspaceExampleProps): JSX.Element {
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
@@ -320,6 +330,7 @@ export function LoopWorkspaceExample({
           manageReactor={false}
           showViewSelector={showViewSelector}
           showHeader={showHeader}
+          chatHeaderActions={chatHeaderActions}
         />
       </Box>
     </QueryClientProvider>

@@ -35,7 +35,7 @@ export const AGENT_ENDED_EVENT_SPEC_0_0_1: EventSpec = {
     },
     {
       name: 'agent_spec_id',
-      label: 'Agent Spec ID',
+      label: 'Agentspec ID',
       type: 'string',
       required: true,
       description: 'Identifier of the agent specification that was executed.',
@@ -102,7 +102,7 @@ export const AGENT_STARTED_EVENT_SPEC_0_0_1: EventSpec = {
     },
     {
       name: 'agent_spec_id',
-      label: 'Agent Spec ID',
+      label: 'Agentspec ID',
       type: 'string',
       required: true,
       description: 'Identifier of the agent specification being executed.',
@@ -149,7 +149,7 @@ export const TOOL_APPROVAL_REQUESTED_EVENT_SPEC_0_0_1: EventSpec = {
     },
     {
       name: 'agent_spec_id',
-      label: 'Agent Spec ID',
+      label: 'Agentspec ID',
       type: 'string',
       required: false,
       description: 'Identifier of the agent specification requesting approval.',

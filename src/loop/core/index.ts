@@ -17,7 +17,7 @@
 
 import { defineContributionPoint, defineGate } from '@datalayer/reactor';
 import type { ReadonlySignal } from '@datalayer/reactor';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
@@ -193,6 +193,19 @@ export type LoopWorkspaceContext = {
   viewControls: ViewControls;
   /** For a view to report itself. Pass `null` on unmount. */
   setViewControls: (controls: ViewControls | null) => void;
+  /**
+   * Whatever the host wants in the chat's title bar.
+   *
+   * The plugin road to the same place is `LoopSlots.chatHeader`, and it is the
+   * better one for anything that belongs to a capability. This is for the host
+   * that is embedding the workspace and has one button to add — a page that
+   * mounts `LoopWorkspace` should not have to write a plugin to put an icon
+   * next to the agent's name.
+   *
+   * Rendered before the chat's own controls, so the host's additions read as
+   * part of the page and the chat's stay together at the trailing edge.
+   */
+  chatHeaderActions?: ReactNode;
 };
 
 /**
@@ -520,6 +533,18 @@ export const LoopMention =
 export const LoopSlots = {
   /** Agent picker, model chip, status indicators. */
   header: 'loop.header',
+  /**
+   * The chat's own title bar, beside the agent's name.
+   *
+   * Distinct from `header`, which is the workspace's row above every view: a
+   * host can hide one and keep the other, and what belongs here is what is
+   * true of the *conversation* rather than of the workspace — how long the
+   * visitor's trial key has left, say.
+   *
+   * Empty for most workspaces, and the chat asks whether anyone contributed
+   * before it draws anything, so an unfilled slot costs nothing.
+   */
+  chatHeader: 'loop.chatHeader',
   /** Buttons beside the prompt. */
   promptAction: 'loop.promptAction',
   /**

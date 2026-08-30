@@ -69,6 +69,15 @@ export interface InputPromptProps {
   kernelStatus?: KernelMessage.Status;
   connectionConfirmed: boolean;
   placeholder?: string;
+  /**
+   * Openers to type out in the placeholder, one after another, on a loop.
+   *
+   * Forwarded to the prompt itself — see `InputPromptBase`. The chat's own
+   * suggestions, usually: the empty state offers them until the first message
+   * and then stops, while the box they would be typed into is there the whole
+   * time.
+   */
+  typingSuggestions?: string[];
   autoFocus: boolean;
   focusTrigger?: number;
   padding: number;
@@ -217,6 +226,7 @@ export function InputPrompt({
   kernelStatus,
   connectionConfirmed,
   placeholder,
+  typingSuggestions,
   autoFocus,
   focusTrigger,
   padding,
@@ -359,6 +369,7 @@ export function InputPrompt({
           ) : undefined
         }
         placeholder={placeholder || 'Type a message...'}
+        typingSuggestions={typingSuggestions}
         isLoading={isLoading}
         isKernelBusy={isKernelBusy}
         disabled={disableInputPrompt}

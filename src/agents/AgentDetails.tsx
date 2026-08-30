@@ -567,7 +567,7 @@ export function AgentDetails({
           </Box>
         </Box>
 
-        {/* Agent Spec Section */}
+        {/* Agentspec Section */}
         <Box>
           <Heading
             as="h4"
@@ -578,7 +578,7 @@ export function AgentDetails({
               color: 'fg.muted',
             }}
           >
-            Agent Spec
+            Agentspec
           </Heading>
           <Box
             sx={{

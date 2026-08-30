@@ -20,6 +20,7 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
+import { useTypingPlaceholder } from './useTypingPlaceholder';
 import { InputPromptHeader } from './InputPromptHeader';
 import { InputPromptFooter } from './InputPromptFooter';
 import { InputPromptText } from './InputPromptText';
@@ -44,6 +45,18 @@ export interface InputPromptBaseProps {
   variant?: InputPromptVariant;
   /** Placeholder text */
   placeholder?: string;
+  /**
+   * Suggestions to type out in the placeholder, one after another, on a loop.
+   *
+   * The chat's own openers, usually. An empty composer asks "what can I ask
+   * this thing?" and the empty state answers it only until the first message
+   * is sent; typing the answers into the box keeps answering it afterwards.
+   *
+   * The placeholder only — never the value. It stops while the prompt has
+   * focus and for a reader who has asked for reduced motion. Absent or empty
+   * leaves `placeholder` standing still.
+   */
+  typingSuggestions?: string[];
   /** Whether the agent is loading / streaming */
   isLoading?: boolean;
   /** Whether the connected kernel is currently busy */
@@ -93,6 +106,7 @@ export interface InputPromptBaseProps {
 export function InputPromptBase({
   variant = 'lexical',
   placeholder = 'Ask anything…',
+  typingSuggestions,
   isLoading = false,
   isKernelBusy = false,
   onSend,
@@ -120,6 +134,35 @@ export function InputPromptBase({
 
   // ---- Refs (text variant only) ------------------------------------------
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // ---- Typed placeholder --------------------------------------------------
+  /*
+   * Focus for the whole prompt, not for the editor alone.
+   *
+   * React's focus events bubble, so one pair of handlers on the container
+   * covers both variants and the controls in the footer — and somebody
+   * choosing a model from a menu is interacting with this prompt just as
+   * surely as somebody typing in it. `relatedTarget` is what distinguishes
+   * leaving the prompt from moving around inside it; without that check,
+   * every step between the editor and a button would restart the animation.
+   */
+  const [focused, setFocused] = useState(false);
+  /*
+   * The focus this prompt gave itself does not count as somebody arriving.
+   *
+   * `autoFocus` puts the caret in the box on mount — which is right, it is why
+   * the workspace exists — and it would otherwise stop the animation before
+   * its first character, on exactly the pages that most need the invitation. A
+   * click, a tab-in, or any later focus is a person; the first one is us.
+   */
+  const selfFocused = useRef(autoFocus);
+  const animatedPlaceholder = useTypingPlaceholder({
+    phrases: typingSuggestions ?? [],
+    // Nothing to stand in for once there is something typed, and nothing to
+    // invite while the agent is answering or the box is inert.
+    enabled: !focused && !input && !isLoading && !disabled && !readOnly,
+    idle: placeholder,
+  });
 
   // ---- Auto-focus --------------------------------------------------------
   useEffect(() => {
@@ -187,6 +230,25 @@ export function InputPromptBase({
         }}
       >
         <Box
+          onFocusCapture={() => {
+            if (selfFocused.current) {
+              selfFocused.current = false;
+              return;
+            }
+            setFocused(true);
+          }}
+          // Typing is arriving too, whoever moved the caret. Without this an
+          // auto-focused prompt would keep animating under a person's first
+          // keystroke, until the character they typed made it stop.
+          onKeyDownCapture={() => {
+            selfFocused.current = false;
+            setFocused(true);
+          }}
+          onBlurCapture={event => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+              setFocused(false);
+            }
+          }}
           sx={{
             border: '1px solid',
             borderColor: 'border.default',
@@ -209,7 +271,7 @@ export function InputPromptBase({
             <InputPromptLexical
               value={input}
               onChange={setInput}
-              placeholder={placeholder}
+              placeholder={animatedPlaceholder}
               disabled={isLoading || disabled}
               readOnly={readOnly}
               onSubmit={handleSend}
@@ -220,7 +282,7 @@ export function InputPromptBase({
             <InputPromptText
               value={input}
               onChange={setInput}
-              placeholder={placeholder}
+              placeholder={animatedPlaceholder}
               disabled={isLoading || disabled}
               readOnly={readOnly}
               onSubmit={handleSend}

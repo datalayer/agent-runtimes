@@ -171,7 +171,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 };
 
 // ============================================================================
-// Agent Specs
+// Agentspecs
 // ============================================================================
 
 export const EXAMPLE_A2UI_AGENT_SPEC_0_0_1: Agentspec = {
@@ -11044,7 +11044,7 @@ export const WORKERS_VARIANT_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
 };
 
 // ============================================================================
-// Agent Specs Registry
+// Agentspecs Registry
 // ============================================================================
 
 export const AGENTSPECS: Record<string, Agentspec> = {

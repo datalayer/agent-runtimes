@@ -22,7 +22,7 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],
   [/\bOtel\b/g, 'OTEL'],
-  [/\bAgent Specs\b/g, 'Agent Specifications'],
+  [/\bAgentspecs\b/g, 'Agent Specifications'],
 ];
 
 function humanizeExampleName(name: string): string {

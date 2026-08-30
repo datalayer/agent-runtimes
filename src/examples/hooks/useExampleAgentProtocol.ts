@@ -75,7 +75,10 @@ export function useExampleAgentProtocol(
     remoteBaseUrl,
   } = options;
 
-  const { inference, needsSignIn } = useBrowserInference();
+  /* Only an in-page agent spends the visitor's trial key. A server-backed one
+     authenticates itself, and starting a clock against a conversation that
+     will never use it is a countdown on nothing. */
+  const { inference, needsSignIn } = useBrowserInference(inBrowser);
 
   const protocol = useMemo<ProtocolConfig>(
     () =>

@@ -29,7 +29,8 @@ import { useMemo } from 'react';
 import { useCoreStore, useIAMStore } from '../state';
 import {
   browserModelRequiresSignIn,
-  useAnonymousInferenceToken,
+  useAnonymousInferenceSession,
+  type AnonymousSession,
   type BrowserModelOptions,
 } from '../runtimes/browser';
 
@@ -47,10 +48,27 @@ export type BrowserInference = {
   inference: Omit<BrowserModelOptions, 'model'>;
   /** Whether the agent would be refused for want of a sign-in. */
   needsSignIn: boolean;
+  /**
+   * The visitor's trial key, when they are on one.
+   *
+   * `status: 'idle'` for a signed-in member, which is the answer a caller
+   * wants for "is this person on a clock?" — nobody is. Passed on so the
+   * workspace can draw the time left and say what happens when it runs out.
+   */
+  anonymous: AnonymousSession;
+  /** Where the inference service is, for whoever needs to name it. */
+  inferenceUrl: string;
 };
 
-/** The inference endpoint for an in-page agent. */
-export function useBrowserInference(): BrowserInference {
+/**
+ * The inference endpoint for an in-page agent.
+ *
+ * @param enabled Whether an in-page agent is actually going to ask for
+ *   inference. False for a workspace on a server-backed agent, which
+ *   authenticates itself: minting a visitor's one trial key for an agent that
+ *   will never spend it starts a clock nobody is watching.
+ */
+export function useBrowserInference(enabled = true): BrowserInference {
   const { configuration } = useCoreStore();
   const memberToken = useIAMStore(state => state.token);
   const inferenceUrl = configuration?.aiInferenceUrl || DEFAULT_INFERENCE_URL;
@@ -59,14 +77,18 @@ export function useBrowserInference(): BrowserInference {
    * A visitor with no account still gets to try the thing.
    *
    * The service admits members only, so an anonymous page was refused with a
-   * flat 401 and the agent looked broken rather than gated. It now mints the
+   * flat 401 and the agent looked broken rather than gated. It mints the
    * short-lived token the service offers for exactly this — worth a minute of
-   * inference and nothing else — and keeps it current while nobody is signed
-   * in. A member's own token is strictly better, so this only runs when there
-   * is not one.
+   * inference and nothing else. One of them, not a rolling supply: the trial
+   * ends, and the workspace says so rather than quietly renewing it. A
+   * member's own token is strictly better, so this only runs when there is
+   * not one.
    */
-  const anonymousToken = useAnonymousInferenceToken(inferenceUrl, !memberToken);
-  const token = memberToken || anonymousToken;
+  const anonymous = useAnonymousInferenceSession(
+    inferenceUrl,
+    enabled && !memberToken,
+  );
+  const token = memberToken || anonymous.token;
 
   const inference = useMemo(
     () => ({
@@ -81,6 +103,8 @@ export function useBrowserInference(): BrowserInference {
   return {
     inference,
     needsSignIn: browserModelRequiresSignIn(inference),
+    anonymous,
+    inferenceUrl,
   };
 }
 

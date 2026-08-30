@@ -34,6 +34,7 @@ import { SandboxStatusBridge } from './SandboxStatusBridge';
 import { DatalayerAgentMount } from './DatalayerAgentMount';
 import type { ServiceManagerSource } from './browserService';
 import { AgentSummaryPanel } from './AgentSummaryPanel';
+import { AnonymousKeyBadge } from './AnonymousKeyBadge';
 import { SandboxSelector } from './SandboxSelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
 import { createTeamSelection, type TeamSelection } from './team';
@@ -196,6 +197,16 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
           slot: LoopSlots.header,
           id: 'agent-summary',
           Component: AgentSummaryPanel as never,
+        },
+        // How long a visitor with no account has left. In the *chat's* header
+        // rather than the workspace's: it is a fact about the conversation —
+        // the agent is the only thing that stops when the key does — and a
+        // host that hides the workspace header, as a landing page does, must
+        // still see the clock it is running against.
+        {
+          slot: LoopSlots.chatHeader,
+          id: 'anonymous-key',
+          Component: AnonymousKeyBadge as never,
         },
       ],
     };

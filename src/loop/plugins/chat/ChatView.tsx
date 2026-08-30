@@ -23,7 +23,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Box, SegmentedControl, Text } from '@primer/react';
+import { Box, IconButton, SegmentedControl, Text } from '@primer/react';
+import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { signal } from '@datalayer/reactor';
 import {
   useContributions,
@@ -35,6 +36,7 @@ import {
   useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
+import { AnonymousKeyExpired } from '../../../components/anonymous/AnonymousKeyExpired';
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
 import { AGENTSPECS } from '../../../specs/agents/agents';
@@ -130,8 +132,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   // and whichever plugin does answers the gate. Re-asked on every render with
   // the live workspace, so switching the sandbox switches the prompt.
   const usable = useGate(LoopAgentGate, workspace);
-  const chatDisabled = !usable.allowed;
-  const disabledReason = chatDisabled
+  /* The sandbox's answer. It is not the only thing that can close the chat —
+     an anonymous visitor's trial key runs out too — so the two are combined
+     further down, once the key is known. */
+  const gateBlocked = !usable.allowed;
+  const gateReason = gateBlocked
     ? (usable.reason ?? 'Chat is unavailable for this sandbox')
     : undefined;
 
@@ -257,6 +262,114 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /* State, not a ref: the layout below keeps this surface's column while it
      is away, and a ref changing re-renders nothing. */
   const [suspendedId, setSuspendedId] = useState<string | null>(null);
+
+  /*
+   * Full screen: the whole view, on the whole screen.
+   *
+   * Everything the workspace is showing goes — the editor as well as the
+   * conversation. An earlier version hid the editor, on the theory that a long
+   * transcript wants the room; but somebody working on a notebook who asks for
+   * more room is asking for more room *for the work*, and taking the notebook
+   * away to give it is answering a question they did not ask.
+   *
+   * Done with the Fullscreen API rather than by drawing a big box, because a
+   * component cannot know what it is inside of. `position: fixed` escapes only
+   * as far as the nearest ancestor with a transform, and a page that animates
+   * its sections in — the landing does — leaves one behind permanently: the
+   * "full screen" chat then filled the card it was already in. The API
+   * promotes the element to the browser's top layer, where no ancestor can
+   * hold it, and unlike a portal it does not move in the DOM — so every
+   * inherited theme variable the editors read still resolves.
+   *
+   * The CSS overlay is kept as the fallback for where the API is refused: an
+   * iframe without `allow="fullscreen"`, mostly. Confined to a card is a worse
+   * answer than full screen and a better one than nothing.
+   */
+  const viewRef = useRef<HTMLDivElement>(null);
+  const [fullScreen, setFullScreen] = useState(false);
+  /* Which of the two is in play, so leaving uses the door it came in by. */
+  const usingFullscreenApi = useRef(false);
+
+  useEffect(() => {
+    /* The browser can leave without asking us — Escape does exactly that — so
+       the flag follows the document rather than the click. */
+    const sync = () => {
+      if (!usingFullscreenApi.current) {
+        return;
+      }
+      // Whatever was promoted — the workspace, or this view where there is no
+      // workspace around it — as long as it still contains us.
+      const active =
+        !!document.fullscreenElement &&
+        !!viewRef.current &&
+        document.fullscreenElement.contains(viewRef.current);
+      setFullScreen(active);
+      if (!active) {
+        usingFullscreenApi.current = false;
+      }
+    };
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+
+  const toggleFullScreen = useCallback(() => {
+    /*
+     * The whole workspace, not this view alone.
+     *
+     * Promoting the chat view would leave the workspace's header on the page
+     * underneath — the agent picker and the control saying where the code runs
+     * — so at full screen a reader would lose the two controls most worth
+     * having room for. The shell marks itself; anything else falls back to
+     * this view, which is what a workspace mounted without a shell would get.
+     */
+    const node =
+      (viewRef.current?.closest('[data-loop-workspace]') as HTMLElement | null) ??
+      viewRef.current;
+    if (fullScreen) {
+      if (usingFullscreenApi.current && document.fullscreenElement) {
+        void document.exitFullscreen();
+      } else {
+        setFullScreen(false);
+      }
+      return;
+    }
+    if (!node?.requestFullscreen) {
+      setFullScreen(true);
+      return;
+    }
+    usingFullscreenApi.current = true;
+    node.requestFullscreen().then(
+      () => setFullScreen(true),
+      () => {
+        // Refused. Cover what can be covered instead.
+        usingFullscreenApi.current = false;
+        setFullScreen(true);
+      },
+    );
+  }, [fullScreen]);
+
+  /*
+   * Escape leaves the fallback overlay, as it does from anything covering the
+   * window. Not bound for the real thing: the browser handles Escape itself
+   * there, and a second listener would only race it.
+   *
+   * `defaultPrevented` is the guard that matters: a menu open inside the chat
+   * closes on Escape too, and says so by consuming the event. Without the
+   * check, dismissing the model list would drop the reader out of full screen
+   * as well.
+   */
+  useEffect(() => {
+    if (!fullScreen || usingFullscreenApi.current) {
+      return undefined;
+    }
+    const leave = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        setFullScreen(false);
+      }
+    };
+    window.addEventListener('keydown', leave);
+    return () => window.removeEventListener('keydown', leave);
+  }, [fullScreen]);
 
   useEffect(() => {
     if (active && !canOpenView(active, workspace)) {
@@ -425,7 +538,23 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       }));
     return [...roster, ...specialists];
   }, [team, member]);
-  const { inference } = useBrowserInference();
+  /*
+   * Where the model is reached, and on whose key.
+   *
+   * Told whether an in-page agent is going to ask at all: a workspace on a
+   * server-backed agent authenticates itself, and minting a visitor's one
+   * trial key for it would start a clock against a conversation that never
+   * spends it.
+   */
+  const { inference, anonymous } = useBrowserInference(inPage);
+  /* The trial is over, and this chat is the thing that stops working. Only
+     for an in-page agent: everywhere else the runtime holds its own
+     credentials and never saw the visitor's key. */
+  const keyExpired = inPage && anonymous.status === 'expired';
+  const chatDisabled = gateBlocked || keyExpired;
+  const disabledReason = keyExpired
+    ? 'Your temporary key has expired. Sign in to keep going.'
+    : gateReason;
 
   /*
    * The prompt's text, held here rather than inside `InputPrompt`.
@@ -486,6 +615,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const contextUsage = fromStore ?? chatUsage ?? null;
   // Read to decide whether the strip exists at all, not to render it.
   const inpromptMenu = useSlotComponents(LoopSlots.inpromptMenu);
+  // Same question for the chat's own title bar, which plugins may add to.
+  const chatHeaderItems = useSlotComponents(LoopSlots.chatHeader);
 
   const footerAgents = useMemo<FooterAgent[]>(
     () =>
@@ -704,6 +835,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         // The reason where the typing would go, so it is read before the
         // person types rather than after nothing happens.
         placeholder={disabledReason ?? placeholder}
+        /*
+          The agent's openers, typed out in the box on a loop.
+
+          This view draws its own prompt, so `ChatBase` cannot hand them over
+          — and the empty state's chips vanish with the first message while
+          the prompt stays. It stops the moment the prompt has focus.
+        */
+        typingSuggestions={suggestions.map(item => item.message)}
         disableInputPrompt={chatDisabled}
         connectionConfirmed={!chatDisabled}
         padding={3}
@@ -807,11 +946,25 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
 
   return (
     <Box
+      ref={viewRef}
       sx={{
         height: '100%',
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
+        /*
+          A background of its own once it is full screen, in both modes.
+
+          The element is promoted out of whatever was painting behind it — the
+          browser's top layer, or the page — and a workspace that inherited its
+          canvas from an ancestor would arrive transparent over black.
+        */
+        ...(fullScreen ? { bg: 'canvas.default' } : null),
+        // The fallback, for a host where the API was refused. Covers as much
+        // as the nearest transformed ancestor allows; see the note above.
+        ...(fullScreen && !usingFullscreenApi.current
+          ? { position: 'fixed', inset: 0, zIndex: 1000 }
+          : null),
       }}
     >
       {surfaces.length > 0 && config?.showSurfaceSelector !== false ? (
@@ -881,6 +1034,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             flexDirection: 'column',
             borderLeft: active ? '1px solid' : undefined,
             borderColor: 'border.default',
+            // So the expired-key panel below can cover exactly this column and
+            // nothing else: the notebook beside it still works.
+            position: 'relative',
           }}
         >
           <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
@@ -938,6 +1094,41 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 and where it is running.
               */
               showInformation
+              /*
+                Full screen: this view, on the whole screen, editor and all.
+                See `toggleFullScreen` for why it is the browser's API rather
+                than a big box.
+              */
+              headerActions={
+                <Box
+                  sx={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
+                >
+                  {/* The host's own additions first, then the plugins', then
+                      the chat's — so what belongs to the page reads as part of
+                      the page and the chat's controls stay together at the
+                      trailing edge, where a reader looks for them.
+
+                      The slot is asked whether anyone filled it before it is
+                      drawn: an empty `ReactorSlot` is still an element, and
+                      three of them would space a header out around nothing. */}
+                  {workspace.chatHeaderActions}
+                  {chatHeaderItems.length > 0 ? (
+                    <ReactorSlot
+                      slot={LoopSlots.chatHeader}
+                      props={{ workspace }}
+                    />
+                  ) : null}
+                  <IconButton
+                    icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
+                    aria-label={
+                      fullScreen ? 'Exit full screen' : 'Enter full screen'
+                    }
+                    variant="invisible"
+                    size="small"
+                    onClick={toggleFullScreen}
+                  />
+                </Box>
+              }
               // This view owns the prompt, below, so the chat does not draw a
               // second one: two input boxes on one screen is one too many.
               showInput={false}
@@ -948,6 +1139,32 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             />
           </Box>
           {besideChat ? prompt : null}
+          {/*
+            Over the conversation, not instead of it.
+
+            Absolutely positioned so `ChatBase` stays mounted underneath: a
+            visitor who signs in here gets the transcript they were reading
+            back, with the same messages in it, rather than a fresh chat that
+            has forgotten the question they just asked.
+          */}
+          {keyExpired ? (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 1,
+                bg: 'canvas.default',
+              }}
+            >
+              <AnonymousKeyExpired
+                agentName={spec?.name ?? member?.name}
+                // On the browser target the kernel is in this page and owes
+                // the inference service nothing, so the notebook is genuinely
+                // unaffected and the panel may say so.
+                sandboxStillRuns={inPage}
+              />
+            </Box>
+          ) : null}
         </Box>
       </Box>
 

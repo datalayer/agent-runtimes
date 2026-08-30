@@ -118,6 +118,15 @@ export type LoopWorkspaceProps = {
    * a service keeps the service, and the button is simply never mounted.
    */
   showHeader?: boolean;
+  /**
+   * Extra controls for the chat's own title bar.
+   *
+   * For a host with something to add beside the agent's name — a link back to
+   * its page, a close button — without writing a plugin to add it. Anything
+   * that belongs to a capability rather than to this embed should contribute
+   * to `LoopSlots.chatHeader` instead, and both end up in the same row.
+   */
+  chatHeaderActions?: ReactNode;
 };
 
 /** Build the platform for a set of plugins. */
@@ -140,6 +149,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     layout = 'page',
     showViewSelector = true,
     showHeader = true,
+    chatHeaderActions,
   } = props;
 
   // Building the platform is a one-time act: rebuilding it on every render
@@ -163,6 +173,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       layout={layout}
       showViewSelector={showViewSelector}
       showHeader={showHeader}
+      chatHeaderActions={chatHeaderActions}
     />
   );
 }
@@ -190,6 +201,7 @@ function WorkspaceBody({
   layout = 'page',
   showViewSelector = true,
   showHeader = true,
+  chatHeaderActions,
 }: BodyProps): JSX.Element {
   /*
    * Which agent the session is talking to.
@@ -294,6 +306,7 @@ function WorkspaceBody({
       submit,
       viewControls,
       setViewControls,
+      chatHeaderActions,
     }),
     [
       serverUrl,
@@ -306,6 +319,7 @@ function WorkspaceBody({
       submit,
       viewControls,
       setViewControls,
+      chatHeaderActions,
     ],
   );
 
@@ -333,6 +347,17 @@ function WorkspaceBody({
 
   return (
     <Box
+      /*
+        Marked so a plugin inside can find the workspace it is part of.
+
+        The chat's full-screen button promotes *this* element rather than its
+        own view, which is what keeps the header's controls — the agent picker,
+        where the code runs — reachable at full screen instead of leaving them
+        behind on the page underneath. A data attribute rather than a ref
+        through the context: the plugin needs a DOM node and nothing else, and
+        the shell should not have to publish one to be found.
+      */
+      data-loop-workspace=""
       sx={{
         display: 'flex',
         flexDirection: 'column',

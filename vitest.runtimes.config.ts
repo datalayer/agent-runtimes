@@ -17,6 +17,9 @@ export default defineConfig({
   test: {
     include: [
       'src/runtimes/__tests__/**/*.test.ts',
+      // The browser harness's own rules — the anonymous trial among them,
+      // which is a store and two timers and needs no DOM.
+      'src/runtimes/browser/__tests__/**/*.test.ts',
       // The chat's own dependency-free rules, which need no DOM either.
       'src/chat/base/__tests__/**/*.test.ts',
       // And the prompt's Lexical nodes, which are plain classes.

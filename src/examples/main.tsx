@@ -1425,7 +1425,17 @@ const ExampleAppThemed: React.FC<{
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const [showSignIn, setShowSignIn] = useState(false);
   const [exampleSearch, setExampleSearch] = useState('');
-  const shouldShowAuthScreen = showSignIn && !token;
+  /*
+   * The sign-in screen stands aside for an example that needs no account.
+   *
+   * Without this the screen offered the Loop workspace as a card and then
+   * stayed put when it was chosen: the example *was* selected, and nothing
+   * rendered it, because `showSignIn` knows only that nobody is signed in.
+   * Offering a way through and then not taking it is worse than not offering
+   * it.
+   */
+  const shouldShowAuthScreen =
+    showSignIn && !token && !ANONYMOUS_EXAMPLES.has(selectedExample);
 
   const selectedExampleEntry = availableExamples.find(
     example => example.id === selectedExample,
@@ -1842,6 +1852,10 @@ const ExampleAppThemed: React.FC<{
                   title="Agent Runtimes Examples"
                   description="Sign in to run authenticated examples and tools."
                   leadingIcon={<HomeIcon size={24} />}
+                  // Level with the cards beside it. Left to itself the form
+                  // centres in `100vh`, which put it half a screen below the
+                  // column it shares a row with.
+                  fillHeight={false}
                 />
                 {/* The home page's own card grid, given a shorter list. Reused
                     rather than reimplemented so an example added here looks
