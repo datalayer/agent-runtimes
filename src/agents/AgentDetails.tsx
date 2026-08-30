@@ -6,7 +6,7 @@
  * including name, protocol, URL, message count, and context details.
  */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ArrowLeftIcon,
   CheckCircleIcon,
@@ -14,6 +14,7 @@ import {
   CodeIcon,
   BriefcaseIcon,
   DownloadIcon,
+  FileCodeIcon,
   NoteIcon,
   ServerIcon,
 } from '@primer/octicons-react';
@@ -36,6 +37,7 @@ import {
 } from '../context/ContextInspector';
 import type { ContextSnapshotResponse } from '../context/ContextPanel';
 import { AgentIdentity } from '../identity/AgentIdentity';
+import { SpecPayloadPreview } from '../components/specs/SpecPayloadPreview';
 import type { OAuthProvider, OAuthProviderConfig, Identity } from '../identity';
 import {
   useAgentRuntimeCodemodeStatus,
@@ -166,7 +168,21 @@ interface AgentspecResponse {
  */
 function getApiBase(apiBase?: string): string {
   if (apiBase) {
-    return apiBase;
+    /*
+     * The server's root, whatever the caller handed over.
+     *
+     * `apiBase` is a base and every request below appends its own path to it —
+     * but the commonest thing to have on hand is the protocol's
+     * `configEndpoint`, which already ends in `/api/v1/configure`. Passing
+     * that produced
+     * `/api/v1/configure/api/v1/configure/agents/.../spec`, a 404 that reached
+     * the reader as "Loading agent spec" for ever.
+     *
+     * Trimmed here rather than at each call site: this function exists to
+     * answer "where is the server", and a caller that knows an endpoint knows
+     * the server too.
+     */
+    return apiBase.replace(/\/+$/, '').replace(/\/api\/v1\/configure$/, '');
   }
   if (typeof window === 'undefined') {
     return '';
@@ -406,6 +422,10 @@ export function AgentDetails({
   });
 
   // Fetch agent spec (original creation request with separated system prompts)
+  /* Whether the full spec is on screen. Its own state: it is a detour from
+     the summary, not a mode the pane lives in. */
+  const [showSpecPayload, setShowSpecPayload] = useState(false);
+
   const { data: agentSpec, isLoading: specLoading } =
     useQuery<AgentspecResponse>({
       queryKey: ['agent-spec', agentId, apiBase],
@@ -578,6 +598,19 @@ export function AgentDetails({
               </Box>
             ) : agentSpec ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* The whole spec, for a reader who wants more than the six
+                    fields summarised below. The same panel the agentspecs
+                    example shows before launching one, so what was configured
+                    and what is running are read in the same form. */}
+                <Box>
+                  <Button
+                    size="small"
+                    leadingVisual={FileCodeIcon}
+                    onClick={() => setShowSpecPayload(true)}
+                  >
+                    View spec payload
+                  </Button>
+                </Box>
                 {/* Key Attributes */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1651,6 +1684,13 @@ export function AgentDetails({
           </Box>
         )}
       </Box>
+
+      {showSpecPayload && agentSpec ? (
+        <SpecPayloadPreview
+          spec={agentSpec}
+          onClose={() => setShowSpecPayload(false)}
+        />
+      ) : null}
     </Box>
   );
 }

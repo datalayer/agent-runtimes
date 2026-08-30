@@ -72,6 +72,9 @@ import { agentSummaryStore } from './utils/agentSummaryStore';
 import { isSandboxOnlyExample } from './utils/exampleSurfaces';
 import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
+import HomeExample, {
+  type HomeExampleCardEntry,
+} from './HomeExample';
 import { ExampleWrapper } from './components/ExampleWrapper';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
 import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
@@ -107,6 +110,16 @@ const EXAMPLE_GROUP_ORDER = [
   'Cell',
   'CopilotKit',
 ] as const;
+
+/**
+ * The examples that open without an account.
+ *
+ * A list, not a rule: most examples here allocate a runtime somebody pays
+ * for, and this one happens to run entirely in the visitor's browser. Adding
+ * another is adding an id.
+ */
+const ANONYMOUS_EXAMPLES = new Set(['LoopWorkspaceExample']);
+
 
 const getExampleGroup = (id: string): string => {
   if (
@@ -444,6 +457,17 @@ const loadConfigurations = () => {
 };
 
 const getExampleEntriesList = () => getExampleEntries();
+/**
+ * Those examples, as cards.
+ *
+ * Module scope, not a `useMemo`: the list is a constant, and computing it in
+ * the component put a hook after three early returns — so a render that took
+ * one of them called fewer hooks than the render before it, which React
+ * refuses outright. A value that never changes has no business being a hook.
+ */
+const ANONYMOUS_EXAMPLE_ENTRIES = getExampleEntriesList().filter(entry =>
+  ANONYMOUS_EXAMPLES.has(entry.id),
+);
 
 const getInitialSearchQuery = (): string => {
   const params = new URLSearchParams(window.location.search);
@@ -1341,6 +1365,7 @@ export const ExampleApp: React.FC = () => {
       exampleProps={exampleProps}
       serviceManager={serviceManager}
       onExampleChange={handleExampleChange}
+      anonymousExampleEntries={ANONYMOUS_EXAMPLE_ENTRIES}
       onRuntimeTargetChange={handleRuntimeTargetChange}
       availableExamples={getExampleEntriesList()}
       topNotice={topNotice}
@@ -1361,6 +1386,8 @@ const ExampleAppThemed: React.FC<{
   exampleProps: Record<string, unknown>;
   serviceManager: ServiceManager.IManager | null;
   onExampleChange: (name: string) => Promise<void>;
+  /** What the sign-in screen offers beside the form. */
+  anonymousExampleEntries: HomeExampleCardEntry[];
   onRuntimeTargetChange: (target: ExampleRuntimeTarget) => Promise<void>;
   availableExamples: ExampleEntry[];
   topNotice: TopNotice | null;
@@ -1373,6 +1400,7 @@ const ExampleAppThemed: React.FC<{
   exampleProps,
   serviceManager,
   onExampleChange,
+  anonymousExampleEntries,
   onRuntimeTargetChange,
   availableExamples,
   topNotice,
@@ -1398,6 +1426,7 @@ const ExampleAppThemed: React.FC<{
   const [showSignIn, setShowSignIn] = useState(false);
   const [exampleSearch, setExampleSearch] = useState('');
   const shouldShowAuthScreen = showSignIn && !token;
+
   const selectedExampleEntry = availableExamples.find(
     example => example.id === selectedExample,
   );
@@ -1774,6 +1803,15 @@ const ExampleAppThemed: React.FC<{
           }}
         >
           {shouldShowAuthScreen ? (
+            /*
+              Signing in, beside what can be seen without it.
+              
+              A sign-in screen on its own says only "not yet". Most of these
+              examples do need an account — they allocate runtimes somebody
+              pays for — but the Loop workspace runs entirely in the page, so
+              putting it here turns a closed door into a choice: sign in for
+              the rest, or try this one now.
+            */
             <Box
               sx={{
                 width: '100%',
@@ -1783,7 +1821,19 @@ const ExampleAppThemed: React.FC<{
                 overflow: 'auto',
               }}
             >
-              <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  // Stacked on a narrow window, sign-in first: it is what the
+                  // reader came here for, and a column of cards above the form
+                  // would bury it.
+                  gridTemplateColumns: ['1fr', '1fr', '440px minmax(0, 1fr)'],
+                  gap: 4,
+                  maxWidth: 1400,
+                  mx: 'auto',
+                  alignItems: 'start',
+                }}
+              >
                 <SignInSimple
                   onSignIn={handleHeaderSignIn}
                   onApiKeySignIn={apiKey =>
@@ -1793,6 +1843,24 @@ const ExampleAppThemed: React.FC<{
                   description="Sign in to run authenticated examples and tools."
                   leadingIcon={<HomeIcon size={24} />}
                 />
+                {/* The home page's own card grid, given a shorter list. Reused
+                    rather than reimplemented so an example added here looks
+                    the same on both sides of the sign-in. */}
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'border.default',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    bg: 'canvas.default',
+                  }}
+                >
+                  <HomeExample
+                    examples={anonymousExampleEntries}
+                    searchQuery=""
+                    onSelectExample={name => void onExampleChange(name)}
+                  />
+                </Box>
               </Box>
             </Box>
           ) : isChangingExample ? (

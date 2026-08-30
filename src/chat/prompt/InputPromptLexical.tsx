@@ -245,10 +245,10 @@ export function InputPromptLexical({
         */
         position: 'relative',
         px: 2,
-        // Tighter above than below: the box already has the footer's padding
-        // under it, so an equal pad top and bottom read as a gap over the
-        // first line of typing rather than as breathing room.
-        pt: '2px',
+        // A little more above than the 2px it had: the text sat hard against
+        // the edge of the box, which reads as clipped rather than as tight.
+        // Still less than below, where the footer's own padding follows.
+        pt: '6px',
         pb: 1,
         /*
          * Greyed while it cannot be typed in.
@@ -296,7 +296,7 @@ export function InputPromptLexical({
                   matching it here is what stops the placeholder floating
                   above the text it stands in for.
                 */
-                top: '4px',
+                top: '8px',
                 left: '8px',
                 color: 'fg.subtle',
                 fontSize: 1,

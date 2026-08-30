@@ -162,18 +162,20 @@ export function AgentMentionPlugin({
       const next = readMentionQuery(editor);
       if (justInserted.current) {
         /*
-         * Held closed until the caret is somewhere that asks nothing.
+         * Every update belonging to the insertion, not just the first.
          *
-         * One edit can raise several updates, so consuming the flag on the
-         * first of them let a later one reopen the menu — over the chip just
-         * inserted, a line higher, which is what a reader saw. The flag
-         * clears when the document settles into a state with no `mention`
-         * being typed, which the trailing space guarantees on the very next
-         * update.
+         * One `editor.update()` raises several of them — the range emptied,
+         * the node placed, the trailing space — and they all run
+         * synchronously. Clearing the flag on the first let a later one
+         * reopen the menu against the chip just written, a line higher, which
+         * is what a reader saw. Clearing it on "the caret asks nothing" was
+         * the same bet in a different disguise: it assumed one of those
+         * intermediate states would read as settled, and one did not.
+         *
+         * The flag is lifted on the next macrotask instead, which is after
+         * every synchronous update from this edit and before anything a
+         * person can type.
          */
-        if (!next) {
-          justInserted.current = false;
-        }
         setQuery(null);
         return;
       }
@@ -200,6 +202,18 @@ export function AgentMentionPlugin({
         // including the space that made `@` a mention — survives.
         const start = offset - match[1].length - 1;
         selection.setTextNodeRange(node as never, start, node as never, offset);
+
+        /*
+         * Deleted first, then inserted into the collapsed caret.
+         *
+         * `insertNodes` over a *range* decides for itself how to reconcile
+         * what it is replacing, and for a decorator it reconciled by splitting
+         * the paragraph — so the chip landed and the caret went to a new line.
+         * Emptying the range first leaves a collapsed selection inside a text
+         * node, which is the one state an inline insert has no choice about.
+         */
+        selection.insertText('');
+
         /*
          * A node, not `@Name ` as text.
          *
@@ -208,13 +222,21 @@ export function AgentMentionPlugin({
          * exist. The trailing space stays plain, so the caret lands after the
          * chip ready for the rest of the sentence.
          */
-        selection.insertNodes([
-          $createMentionNode({ name: agent.name, icon: agent.icon }),
-        ]);
-        selection.insertText(' ');
+        const chip = $createMentionNode({ name: agent.name, icon: agent.icon });
+        selection.insertNodes([chip]);
+        // Explicitly after the chip. `insertNodes` leaves the selection where
+        // it sees fit, and typing must continue on this line, beside it.
+        chip.selectNext();
+        const after = $getSelection();
+        if ($isRangeSelection(after)) {
+          after.insertText(' ');
+        }
       });
       justInserted.current = true;
       setQuery(null);
+      window.setTimeout(() => {
+        justInserted.current = false;
+      }, 0);
     },
     [editor],
   );
@@ -270,11 +292,21 @@ export function AgentMentionPlugin({
       ),
       editor.registerCommand(
         KEY_ENTER_COMMAND,
-        () => {
+        (event: KeyboardEvent | null) => {
           const agent = choosable[highlighted];
           if (!agent) {
             return false;
           }
+          /*
+           * The browser's default, as well as Lexical's.
+           *
+           * Returning `true` stops the command reaching the plain-text
+           * plugin, but the keypress is still a keypress in a
+           * `contenteditable` — so the browser inserted its own line break
+           * after the chip. Choosing with the mouse never did, which is
+           * exactly the shape of a missing `preventDefault`.
+           */
+          event?.preventDefault();
           insert(agent);
           return true;
         },
@@ -340,10 +372,10 @@ export function AgentMentionPlugin({
          * rendered wherever the default left it: pinned to the left edge of
          * the window, a long way from the `@` it belongs to.
          *
-         * Anchored bottom-left to the caret: `left` at the character, `top` at
-         * its line, and lifted its own height so it sits *above* the word
-         * being typed rather than over the rest of the sentence. Clamped so a
-         * caret near the right edge does not push it off screen.
+         * Anchored to the caret: `left` at the character, and its bottom edge
+         * just above the line, so it sits over what came before rather than
+         * over the word being typed. Clamped so a caret near the right edge
+         * does not push it off screen.
          */
         style={{
           position: 'fixed',
@@ -351,10 +383,28 @@ export function AgentMentionPlugin({
             8,
             Math.min(query.rect.left, window.innerWidth - MENU_WIDTH - 8),
           ),
-          top: Math.max(MENU_MAX_HEIGHT, query.rect.top - 6),
+          /*
+            The bottom edge, pinned above the caret — not the top edge pulled
+            up by a transform.
+
+            `top` plus `translateY(-100%)` is a position that depends on the
+            element's own height, and the height is only known once its rows
+            have been laid out. So it painted once at the caret's line and
+            again where it belonged, which reads as the menu falling into
+            place.
+
+            `bottom` needs no such measurement: the browser resolves it
+            against the viewport, and the first paint is the final one.
+          */
+          ...(query.rect.top >= MENU_MAX_HEIGHT + 16
+            ? { bottom: window.innerHeight - query.rect.top + 6, top: 'auto' }
+            : // No room above — a caret near the top of the window — so it
+              // hangs below the line instead of being pushed off screen.
+              {
+                top: query.rect.top + (query.rect.height || 16) + 6,
+                bottom: 'auto',
+              }),
           right: 'auto',
-          bottom: 'auto',
-          transform: 'translateY(-100%)',
         }}
         sx={{
           maxHeight: MENU_MAX_HEIGHT,
