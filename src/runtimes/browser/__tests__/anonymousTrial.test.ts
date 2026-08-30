@@ -30,7 +30,7 @@ import {
 const URL = 'https://inference.example';
 
 /** The TTL the service is configured with, as it actually answers today. */
-const KEY_TTL_S = 60;
+const KEY_TTL_S = 300;
 
 let minted = 0;
 
@@ -115,7 +115,7 @@ describe('reading the token', () => {
   });
 
   it('falls back again when nothing says anything', () => {
-    expect(tokenLifetimeMs('not-a-jwt')).toBe(60_000);
+    expect(tokenLifetimeMs('not-a-jwt')).toBe(300_000);
     // Claims that make no sense are not claims: an `exp` at or before `iat`
     // would otherwise produce a key that is born expired.
     expect(tokenLifetimeMs(jwt({ iat: 100, exp: 100 }), 30)).toBe(30_000);

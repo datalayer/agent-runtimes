@@ -124,11 +124,12 @@ type AnonymousSessionStore = AnonymousSession & {
 /**
  * What to assume when a token says nothing about its own life.
  *
- * Matches the service's default. Only reached for a token that is neither a
- * JWT with the claims to read nor accompanied by an `expires_in` — which the
- * service has never sent, so this is a floor under a bug rather than a policy.
+ * Matches the service's default, and is kept in step with it. Only reached for
+ * a token that is neither a JWT with the claims to read nor accompanied by an
+ * `expires_in` — which the service has never sent, so this is a floor under a
+ * bug rather than a policy.
  */
-const DEFAULT_TTL_MS = 60_000;
+const DEFAULT_TTL_MS = 300_000;
 
 /** How long to wait before trying again when the service refuses. */
 const RETRY_MS = 3_000;
