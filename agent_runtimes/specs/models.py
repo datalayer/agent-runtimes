@@ -176,7 +176,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
     description="Claude Fable 5 via AWS Bedrock",
     provider="bedrock",
     default=False,
-    available=True,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
@@ -192,7 +192,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
     description="Claude Opus 4.6 via AWS Bedrock",
     provider="bedrock",
     default=False,
-    available=True,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
@@ -208,7 +208,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
     description="Claude Opus 4.8 via AWS Bedrock",
     provider="bedrock",
     default=False,
-    available=True,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
@@ -240,7 +240,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
     description="Claude Opus 5 via AWS Bedrock - the current frontier model",
     provider="bedrock",
     default=False,
-    available=True,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",

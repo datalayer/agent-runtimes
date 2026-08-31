@@ -3020,6 +3020,33 @@ function ChatBaseInner({
     setAdapterReady(true);
 
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
+      /*
+       * Nothing more from a turn the reader has stopped.
+       *
+       * Stopping aborts the request and asks the backend to cancel, and
+       * neither is instant: an SSE stream already in flight keeps delivering,
+       * and a model mid-sentence keeps being paid for tokens that are on the
+       * wire. Until this guard, every one of those still ran through the
+       * handler below — so the transcript went on typing itself for as long
+       * as the turn had left, which is the whole of the "I pressed stop and
+       * it kept going" report. `stoppedRef` was already set here and only two
+       * places downstream ever read it.
+       *
+       * `state-update` and `error` are still let through: they carry the
+       * connection's own condition rather than the turn's output, and a chat
+       * that stops listening to those after a stop is a chat that cannot tell
+       * you it has since disconnected. `done` too — it is what closes the
+       * turn out; suppressing it would leave the session believing a stopped
+       * turn is still running.
+       */
+      if (
+        stoppedRef.current &&
+        event.type !== 'state-update' &&
+        event.type !== 'error' &&
+        event.type !== 'done'
+      ) {
+        return;
+      }
       switch (event.type) {
         case 'message':
           if (event.usage) {

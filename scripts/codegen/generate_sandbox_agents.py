@@ -62,7 +62,7 @@ tags:
   - {variant}
 
 enabled: true
-model: "bedrock:us.anthropic.claude-opus-4-8"
+model: "bedrock:us.anthropic.claude-sonnet-4-6"
 harness: pydantic-ai
 
 sandbox_variant: {variant}

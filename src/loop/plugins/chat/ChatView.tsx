@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Box, IconButton, SegmentedControl, Text } from '@primer/react';
+import { useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { signal } from '@datalayer/reactor';
 import {
@@ -82,7 +83,19 @@ type ChatControls = { send: (message: string) => void; stop: () => void };
 /** No editor: the conversation on its own. */
 const NO_SURFACE = '';
 
+/**
+ * How fast the full-screen control breathes once it starts asking.
+ *
+ * Slow enough to read as breathing rather than blinking — a fast pulse on a
+ * small control reads as an error state, and this one is an invitation.
+ */
+const FULLSCREEN_HINT_PERIOD_MS = 1400;
+
 export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
+  /* The active theme's own colours. Read from the store rather than a
+     provider, so a workspace mounted without the addons theme still gets the
+     default palette instead of throwing. */
+  const palette = useColorPalette();
   const controlsRef = useRef<ChatControls | null>(null);
   const { setViewControls } = workspace;
   const [transient, setTransient] = useState<ReactNode>(null);
@@ -330,6 +343,44 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     document.addEventListener('fullscreenchange', sync);
     return () => document.removeEventListener('fullscreenchange', sync);
   }, []);
+
+  /*
+   * The full-screen control, pointed at from the first run onwards.
+   *
+   * This view is usually a panel inside somebody else's page — a few hundred
+   * pixels of a landing page or an example. The moment it becomes worth more
+   * room is the moment it starts answering, and that is also the moment a
+   * reader's attention is on the transcript rather than on a small grey icon
+   * in a corner. So from the first answer the icon takes the theme's own
+   * colour and breathes.
+   *
+   * It does not stop on a timer. A reader who is deep in the first answer has
+   * not yet had the thought "this is too small", and a hint that has already
+   * expired by the time they have it is a hint that was never given. What ends
+   * it is the reader: taking the offer, or reaching the thing it was offering.
+   *
+   * `hinted` is a ref because it must not itself cause a render, and because
+   * it has to survive `busy` going true again for the second message — this
+   * starts once, on the first run, not on every turn.
+   */
+  const [hintFullScreen, setHintFullScreen] = useState(false);
+  const hinted = useRef(false);
+  useEffect(() => {
+    if (!busy || hinted.current || fullScreen) {
+      return;
+    }
+    hinted.current = true;
+    setHintFullScreen(true);
+  }, [busy, fullScreen]);
+
+  // Arriving is the end of it, however they got there — the button, a
+  // keyboard shortcut, the host promoting the workspace. There is nothing
+  // left to point at, and it never comes back.
+  useEffect(() => {
+    if (fullScreen) {
+      setHintFullScreen(false);
+    }
+  }, [fullScreen]);
 
   const toggleFullScreen = useCallback(() => {
     /*
@@ -1216,7 +1267,86 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                     }
                     variant="invisible"
                     size="small"
-                    onClick={toggleFullScreen}
+                    onClick={() => {
+                      // Whether or not it takes, the hint has been answered:
+                      // they found the control, which is all it was for.
+                      setHintFullScreen(false);
+                      toggleFullScreen();
+                    }}
+                    sx={
+                      hintFullScreen
+                        ? {
+                            /*
+                              Colour and opacity, never geometry.
+
+                              The colour is the theme's own `primary` — the
+                              same brand the page around this workspace is
+                              already using — because a grey icon in a row of
+                              grey icons cannot be picked out however hard it
+                              fades. Colour is what makes it findable; the
+                              fade is what makes it look like it is asking.
+
+                              It never fades to nothing: a control that
+                              vanishes and returns reads as a rendering fault,
+                              not an invitation. And nothing here moves or
+                              resizes, so the header does not reflow and the
+                              controls beside it stay where a reader last saw
+                              them.
+                            */
+                            '@keyframes dla-fullscreen-hint': {
+                              '0%, 100%': { opacity: 1 },
+                              '50%': { opacity: 0.4 },
+                            },
+                            /* `&&` doubles the specificity, because Primer
+                               ships Button as a CSS module and
+                               `prc-Button-*` outranks a single generated
+                               class — without it the keyframes register and
+                               the button sits there at `animation: none`.
+                               The colour needs the same treatment: an
+                               invisible IconButton sets `color` itself.
+
+                               And no `:focus` or `:hover` clause to stop it:
+                               anything that matches the button while it is
+                               being pointed at would cancel the pointing —
+                               which is exactly how the first version of this
+                               silently did nothing. It ends when the reader
+                               takes the offer, or arrives without it. */
+                            '&&': {
+                              /*
+                                The brand on the box, not on the glyph.
+
+                                Painting the icon `palette.primary` was the
+                                obvious reading and it is measurably
+                                backwards: in the theme this workspace ships
+                                on, `primary` is #FFC107, which sits at 1.55
+                                contrast against the header — where the
+                                icon's ordinary olive sits at 5.07. Recolouring
+                                the stroke made the control roughly three
+                                times harder to see, and at the bottom of the
+                                fade it was 1.2 and simply gone.
+
+                                A ring and a wash carry the same colour on a
+                                far larger area, and they do it without asking
+                                the glyph to be legible in a brand colour that
+                                changes with every theme — this palette has
+                                six, from a dark teal to this amber, and a
+                                rule that works for one fails for another. The
+                                glyph keeps the colour it can be read in.
+                              */
+                              bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
+                              boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
+                              animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
+                            },
+                            // A reader who asked the machine to hold still
+                            // keeps the colour and loses the knocking: the
+                            // control is still the findable one, it just
+                            // holds still.
+                            '@media (prefers-reduced-motion: reduce)': {
+                              '&&': { animation: 'none' },
+                            },
+                          }
+                        : undefined
+                    }
                   />
                 </Box>
               }

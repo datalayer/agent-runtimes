@@ -39,6 +39,7 @@ import {
   JupyterReactTheme,
   notebookStore,
   disposeServiceManager,
+  useJupyterLabCssLoaded,
 } from '@datalayer/jupyter-react';
 import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
@@ -441,6 +442,36 @@ export function EphemeralNotebook({
   // it in. Binding to *that* manager is what puts the agent's executions and
   // the reader's cells in the same kernel.
   const activeServiceManager = externalServiceManager ?? runtimeServiceManager;
+
+  /*
+   * Wait for the JupyterLab stylesheets before the first paint.
+   *
+   * They arrive as their own webpack chunks, fetched when the first notebook
+   * on the page asks for them, and a notebook drawn before they land has no
+   * rules at all — the cells stack, the toolbar unwraps, and the panel looks
+   * broken until something makes it render again. On a reload the chunks come
+   * from cache fast enough that nobody sees it, which is why this only ever
+   * showed up on the first visit to an agent page.
+   *
+   * Holding here rather than in `JupyterReactTheme` because the theme wraps
+   * the whole page: blanking the conversation while a notebook's stylesheet
+   * loads would trade a small ugly moment for a large empty one. This is the
+   * one component that cannot be read without them.
+   *
+   * The hook resolves even if a chunk fails, so a missing stylesheet still
+   * gets a notebook — the old, ugly one — and never an empty box forever.
+   *
+   * It waits for as long as that takes — measured at about 3s warm and 6.5s
+   * cold — rather than drawing after a grace period, and the reason is in the
+   * bug report: a refresh was needed. Stylesheets that arrive late apply
+   * themselves, so a notebook that were merely racing them would repair itself
+   * the moment they landed and nobody would ever reach for reload. It does not
+   * repair, because Lumino measures this panel when it attaches and never
+   * measures again — attach it against no rules and it keeps those numbers for
+   * as long as it lives. Drawing early on a timer would reproduce exactly the
+   * state being fixed, on precisely the slow connections that hit it most.
+   */
+  const notebookReady = useJupyterLabCssLoaded();
   const activeKernelId = externalKernelId ?? runtimeKernelId;
   // Join the host's kernel when there is one; only start a kernel of our own
   // when the host handed us a manager without one. Starting a second kernel
@@ -609,7 +640,7 @@ export function EphemeralNotebook({
         bg: 'canvas.default',
       }}
     >
-      {activeServiceManager ? (
+      {activeServiceManager && notebookReady ? (
         <ThemeRoot
           inherit={inheritTheme}
           colorMode={effectiveColorMode}

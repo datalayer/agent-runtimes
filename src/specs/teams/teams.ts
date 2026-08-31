@@ -603,7 +603,7 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
   supervisor: {
     name: 'Sales Analytics Supervisor',
     ref: '',
-    model: 'anthropic-claude-opus-4',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     goal: ``,
     instructions: ``,
     approval: 'auto',
@@ -736,7 +736,7 @@ export const JUPYTER_NOTEBOOK_TEAM_SPEC_0_0_1: TeamSpec = {
   supervisor: {
     name: 'Code Tutor',
     ref: 'jupyter-tutor:0.0.1',
-    model: 'bedrock:us.anthropic.claude-opus-4-8',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     goal: `Keep the person learning. Answer what was asked, and hand the notebook to the Compactor only when they have asked for it and understood what it will change.`,
     instructions: ``,
     approval: 'auto',
@@ -1335,7 +1335,7 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
   supervisor: {
     name: 'CRM Orchestrator Agent',
     ref: '',
-    model: 'anthropic-claude-opus-4',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     goal: ``,
     instructions: ``,
     approval: 'auto',
@@ -1372,7 +1372,7 @@ export const SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1: TeamSpec = {
       goal: `Analyze collected data and identify patterns and duplicates`,
       dependsOn: [],
       subagents: [],
-      model: 'anthropic-claude-opus-4',
+      model: 'bedrock:us.anthropic.claude-sonnet-4-6',
       mcpServer: 'Analytics MCP',
       tools: ['Statistical Analysis', 'ML Predictor', 'Deduplicator'],
       trigger: 'On completion of Data Collector',
