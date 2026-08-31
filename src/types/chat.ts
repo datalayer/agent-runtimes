@@ -252,6 +252,15 @@ export interface ModelConfig {
   name: string;
   builtinTools?: string[];
   isAvailable?: boolean;
+  /**
+   * Why this model cannot be picked, when it cannot.
+   *
+   * The menu used to say "Missing API key" under every unavailable row, which
+   * is right for a provider whose key is not set and wrong for a model this
+   * deployment is not entitled to — that one sends the reader off to find a
+   * key that would change nothing.
+   */
+  unavailableReason?: string;
 }
 
 /**

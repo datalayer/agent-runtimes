@@ -224,6 +224,7 @@ def _bedrock_models_from_agentspecs() -> list[str]:
             _normalize(spec.id)
             for spec in list_models()
             if getattr(spec, "provider", None) == "bedrock"
+            and getattr(spec, "available", False)
         ]
     except Exception:  # noqa: BLE001
         pass
@@ -249,8 +250,13 @@ def _bedrock_models_from_agentspecs() -> list[str]:
                     data = yaml_module.safe_load(fh) or {}
             except Exception:  # noqa: BLE001
                 data = {}
-            if data.get("provider") == "bedrock" and isinstance(data.get("id"), str):
-                ids.append(_normalize(data["id"]))
+            if (
+                data.get("provider") != "bedrock"
+                or not data.get("available", False)
+                or not isinstance(data.get("id"), str)
+            ):
+                continue
+            ids.append(_normalize(data["id"]))
         return ids
     except Exception:  # noqa: BLE001
         return []
@@ -428,7 +434,16 @@ async def list_catalog_models() -> dict[str, Any]:
         else:
             entry["reachable"] = None
             entry["warning"] = None
-            entry["available"] = not missing
+            # Two questions wear the same word here. The registry's `available`
+            # is entitlement — may this deployment call the model at all — and
+            # this key is readiness, whether the credentials are in place. Only
+            # readiness was being computed, and every Bedrock model shares one
+            # set of AWS credentials, so the whole family read as available and
+            # Bedrock answered `AccessDeniedException` when one was picked.
+            entitled = getattr(model, "available", True)
+            entry["available"] = bool(not missing and entitled)
+            if not entitled:
+                entry["reason"] = "Not enabled for this deployment"
 
         models.append(entry)
 

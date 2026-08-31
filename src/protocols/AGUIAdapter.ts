@@ -33,6 +33,21 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
   private aguiConfig: AGUIAdapterConfig;
   private abortController: AbortController | null = null;
+
+  /**
+   * Every in-flight request's abort controller, not just the newest.
+   *
+   * A turn is rarely one request. Each tool result starts a continuation
+   * through `sendMessage`, and that overwrites `abortController` — so the
+   * moment two streams overlap, the earlier one's controller is no longer
+   * reachable and `stopGeneration` cannot abort it. It aborted whichever
+   * request happened to be last and left the others pouring tokens into a
+   * transcript the reader had already asked to stop, which is worst in
+   * exactly the tool-heavy sessions where stopping matters most.
+   *
+   * A set, because the fix has to hold however many are open.
+   */
+  private inFlight = new Set<AbortController>();
   private currentThreadId: string | null = null;
 
   // Track in-progress tool calls to accumulate args and emit results
@@ -109,11 +124,8 @@ export class AGUIAdapter extends BaseProtocolAdapter {
    * Disconnect and terminate any ongoing agent execution
    */
   disconnect(): void {
-    // Abort any ongoing fetch request
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+    // Abort every ongoing fetch request, not merely the newest.
+    this.stopGeneration();
 
     // Send terminate request to backend if we have a thread ID
     if (this.currentThreadId) {
@@ -182,7 +194,12 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       }>;
     },
   ): Promise<void> {
-    this.abortController = new AbortController();
+    // Held in a local as well as the field: by the time the `finally` below
+    // runs, a continuation may already have replaced the field, and this
+    // request must only ever retire its own controller.
+    const controller = new AbortController();
+    this.abortController = controller;
+    this.inFlight.add(controller);
 
     const threadId =
       options?.threadId || this.currentThreadId || generateMessageId();
@@ -297,7 +314,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
           Accept: 'text/event-stream',
         }),
         body: JSON.stringify(runAgentInput),
-        signal: this.abortController.signal,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -319,7 +336,13 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       });
       throw error;
     } finally {
-      this.abortController = null;
+      // This request's own controller, captured before any continuation could
+      // have replaced the field — clearing the field itself would drop a
+      // newer, still-running request's handle on the floor.
+      this.inFlight.delete(controller);
+      if (this.abortController === controller) {
+        this.abortController = null;
+      }
     }
   }
 
@@ -491,7 +514,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
    * the adapter connection.
    */
   stopGeneration(): void {
-    this.abortController?.abort();
+    for (const controller of this.inFlight) {
+      controller.abort();
+    }
+    this.inFlight.clear();
     this.abortController = null;
   }
 

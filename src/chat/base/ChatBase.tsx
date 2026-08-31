@@ -3903,9 +3903,19 @@ function ChatBaseInner({
     // Also interrupt any code running in the sandbox (best-effort).
     sandboxStatusQuery.interrupt();
 
-    // Interrupt the connected notebook kernel as well (best-effort),
-    // matching the toolbar's stop/interrupt behavior.
-    if (kernel && kernel.status === 'busy') {
+    /*
+     * Interrupt the connected notebook kernel too, whatever it claims to be
+     * doing.
+     *
+     * This used to fire only when `kernel.status === 'busy'`, and that status
+     * is a value pushed from the server: a cell submitted a moment ago is
+     * running while the client still reads `idle`, which is precisely the
+     * window somebody hits Stop in. The check therefore skipped the interrupt
+     * exactly when it was wanted. Interrupting an idle kernel costs nothing —
+     * there is no execution to raise `KeyboardInterrupt` in — so the test was
+     * only ever able to do harm.
+     */
+    if (kernel) {
       void kernel.interrupt().catch(() => {});
     }
   }, [

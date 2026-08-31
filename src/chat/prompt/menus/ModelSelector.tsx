@@ -82,7 +82,11 @@ export function ModelSelector({
                 {modelItem.name}
                 {modelItem.isAvailable === false && (
                   <ActionList.Description variant="block">
-                    Missing API key
+                    {/* The server's reason when it gave one. A missing key is
+                        something the reader can go and fix; a model we are not
+                        entitled to is not, and saying the second is the first
+                        sends them off to do something pointless. */}
+                    {modelItem.unavailableReason ?? 'Missing API key'}
                   </ActionList.Description>
                 )}
               </ActionList.Item>

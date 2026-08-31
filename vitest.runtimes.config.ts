@@ -26,6 +26,11 @@ export default defineConfig({
       'src/components/anonymous/__tests__/**/*.test.ts',
       // And the prompt's Lexical nodes, which are plain classes.
       'src/chat/prompt/**/__tests__/**/*.test.ts',
+      // The protocol adapters' cancellation rules, which are a mocked `fetch`
+      // and an AbortSignal and need no DOM either.
+      'src/protocols/__tests__/**/*.test.ts',
+      // The adapters' cancellation, which is fetch and an AbortController.
+      'src/protocols/__tests__/**/*.test.ts',
     ],
     environment: 'node',
   },

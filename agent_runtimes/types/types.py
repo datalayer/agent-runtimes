@@ -873,8 +873,21 @@ class AIModelRuntime(BaseModel):
     )
     is_available: bool = Field(
         default=True,
-        description="Whether the model is available (based on env vars)",
+        description=(
+            "Whether this model can be picked: both entitled by the registry "
+            "and ready in this environment"
+        ),
         alias="isAvailable",
+    )
+    unavailable_reason: Optional[str] = Field(
+        default=None,
+        description=(
+            "Why the model cannot be picked, when it cannot. Carried because "
+            "the two reasons are not interchangeable: a missing API key is "
+            "something the reader can go and fix, and a model this deployment "
+            "is not entitled to is not."
+        ),
+        alias="unavailableReason",
     )
 
 
