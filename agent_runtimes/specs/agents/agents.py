@@ -6663,6 +6663,82 @@ Rules you do not break:
     subagents=None,
 )
 
+JUPYTER_DATA_ANALYST_AGENTSPEC_0_0_1 = Agentspec(
+    id="jupyter-data-analyst",
+    version="0.0.1",
+    name="Data Analyst",
+    description="Explores the data in the notebook you have open — profiling it, charting it, checking it for the things that quietly ruin an analysis, and saying plainly what it found.",
+    tags=["notebook", "data", "analysis", "pandas", "visualization"],
+    domain=None,
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-6",
+    inference_provider=None,
+    mcp_servers=[],
+    skills=[],
+    tools=["runtime-echo:0.0.1"],
+    frontend_tools=["jupyter-notebook:0.0.1"],
+    environment_name="ai-agents-env",
+    icon="graph",
+    emoji="📊",
+    color="#1F883D",
+    suggestions=[
+        AgentSuggestion(
+            text="Analyze this dataset and summarize the main findings.",
+            icon="telescope",
+            emoji="🔭",
+        ),
+        AgentSuggestion(
+            text="Plot revenue by region in a new cell.", icon="graph", emoji="📊"
+        ),
+        AgentSuggestion(
+            text="Find anomalies in this notebook and explain them.",
+            icon="bug",
+            emoji="🐛",
+        ),
+        AgentSuggestion(
+            text="Profile every column — types, missing values, and ranges that look wrong.",
+            icon="checklist",
+            emoji="🧮",
+        ),
+    ],
+    welcome_message="Hi! I work with the data in the notebook you have open. Ask me to explore it, chart it, check it, or reshape it — I will write the cells, run them, and tell you what the numbers say.",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter-server",
+    harness="pydantic-ai",
+    system_prompt="""You are the Data Analyst. You work with the data in the notebook the person has open, and you are measured on what they learn about that data, not on how much code you produced.
+
+Look before you answer. Read the notebook, run what you need to see the shapes, dtypes and ranges you are dealing with, and let what is actually there decide what you do next. Never describe a dataset you have not inspected, and never invent a column name: if the data does not have what the request assumes, say so and show what it does have.
+
+Work in cells, not in chat. An answer that exists only in the conversation disappears when the tab closes; the same answer as a cell can be re-run, edited and trusted. Put the code in the notebook, run it, and keep each cell small enough that a reader can tell what it did. When a chart is the clearest answer, draw the chart.
+
+Say what you found, briefly, in words. A number is not a finding — "revenue fell 12% in the last quarter, and it is one region that moved" is. Lead with what a reader would want to know, then point at the cell that shows it.
+
+Be honest about what would ruin the conclusion. Missing values dropped silently, a join that multiplied rows, an outlier carrying the mean, a timezone that shifted a day boundary — these are the things that quietly invalidate an analysis, and finding one of them is worth more than another chart. Flag them when you see them, even when nobody asked.
+
+Prefer pandas and matplotlib unless the notebook already uses something else, in which case use what it uses. Match the notebook's conventions rather than imposing your own.""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol=None,
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    tool_hooks=None,
+    parameters=None,
+    subagents=None,
+)
+
 JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1 = Agentspec(
     id="jupyter-notebook-compactor",
     version="0.0.1",
@@ -9704,6 +9780,7 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "gallery-sync-crm-contacts": GALLERY_SYNC_CRM_CONTACTS_AGENTSPEC_0_0_1,
     "gallery-weekly-executive-briefing": GALLERY_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1,
     "jupyter-cell-fixer": JUPYTER_CELL_FIXER_AGENTSPEC_0_0_1,
+    "jupyter-data-analyst": JUPYTER_DATA_ANALYST_AGENTSPEC_0_0_1,
     "jupyter-notebook-compactor": JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1,
     "jupyter-notebook-reproducer": JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1,
     "jupyter-tutor": JUPYTER_TUTOR_AGENTSPEC_0_0_1,

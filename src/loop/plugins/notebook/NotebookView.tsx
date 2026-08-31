@@ -10,6 +10,7 @@
  * @module loop/plugins/notebook/NotebookView
  */
 
+import { useMemo } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
@@ -20,6 +21,7 @@ import {
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
+import { openingNotebook } from './openingNotebook';
 import { useSandboxService } from '../agents';
 
 export default function NotebookView({
@@ -45,6 +47,17 @@ export default function NotebookView({
       editorId: notebookId,
     },
   );
+
+  /*
+   * One document per mount, built before anything can return.
+   *
+   * `EphemeralNotebook` holds on to the object it is first handed and edits it
+   * in place, so a shared literal would be a shared notebook — hence the memo.
+   * It sits up here with the other hooks because the guard below returns
+   * early, and a hook after an early return runs on some renders and not
+   * others, which is the one thing React cannot tolerate.
+   */
+  const opening = useMemo(() => openingNotebook(), []);
 
   // The switcher's `canOpen` gate should have kept this view shut, but a
   // sandbox can go away while it is on screen — say so rather than rendering a
@@ -79,8 +92,60 @@ export default function NotebookView({
     undefined;
 
   return (
-    <Box sx={{ height: '100%', minHeight: 0 }}>
+    <Box
+      sx={{
+        height: '100%',
+        minHeight: 0,
+        /*
+          A height for the Lumino widgets, forced.
+
+          WORKAROUND, and knowingly a blunt one. The notebook renders inside a
+          chain of Lumino widgets — `.jp-NotebookPanel` holds `.jp-Notebook`,
+          which is absolutely positioned and therefore sized entirely by its
+          parent. Lumino sets those sizes itself, from a resize it expects to
+          be told about; when that message does not arrive, or arrives before
+          the panel has a box of its own, the parent measures zero and the
+          absolutely positioned notebook inside it has nothing to fill. The
+          cells are in the DOM the whole time. Nothing is on screen.
+
+          It is intermittent, which is what makes it worth a hack: measured
+          side by side on a good load, every element here — panel, notebook,
+          cell, editor — has exactly the geometry it has locally, so there is
+          no wrong number to correct, only a number that sometimes never
+          arrives. Declaring it in CSS means the browser resolves it on layout
+          whether or not Lumino ever says anything.
+
+          `!important` because Lumino writes its own inline sizes and would
+          otherwise win. Scoped to this view, so it is the LOOP workspace's
+          notebook that is pinned and not every notebook in the package — the
+          real fix belongs in the widget layer, and this must not make that
+          harder to find.
+        */
+        '& .jp-NotebookPanel': {
+          height: '100% !important',
+          minHeight: 0,
+        },
+        /* The panel is the only thing between the flex column above and the
+           absolutely positioned notebook below, so it has to be a box that
+           fills rather than one that wraps its content. */
+        '& .dla-Box-Notebook': {
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+        },
+      }}
+    >
       <EphemeralNotebook
+        /*
+          Opened on a small analysis that has already run, not on a blank cell.
+
+          Every opener this agent offers refers to "this notebook" — analyze
+          this dataset, find the anomalies, plot revenue by region — and
+          against an empty document those are questions with no answer. Built
+          once per mount: the notebook component keeps the object it is given
+          and edits it in place.
+        */
+        nbformat={opening}
         // The entry point owns the theme; a second provider here would fight
         // it over BaseStyles and font tokens (§3.5, §3.6).
         inheritTheme
