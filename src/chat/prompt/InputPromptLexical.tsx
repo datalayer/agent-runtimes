@@ -129,11 +129,26 @@ function SyncPlugin({
 
 // ---- Auto-focus plugin --------------------------------------------------
 
-function AutoFocusPlugin({ autoFocus }: { autoFocus?: boolean }) {
+function AutoFocusPlugin({
+  autoFocus,
+  focusSignal,
+}: {
+  autoFocus?: boolean;
+  /*
+   * Bumped to ask for the caret back — when a turn ends, say.
+   *
+   * A number rather than a callback, because what is worth repeating is the
+   * whole routine below and not just the `editor.focus()` at the centre of
+   * it: the same retries, and the same refusal to take focus from somebody
+   * who is typing elsewhere, apply whether the prompt is claiming the caret
+   * on mount or reclaiming it once the agent has finished.
+   */
+  focusSignal?: number;
+}) {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    if (!autoFocus) {
+    if (!autoFocus && !focusSignal) {
       return undefined;
     }
     /*
@@ -181,7 +196,7 @@ function AutoFocusPlugin({ autoFocus }: { autoFocus?: boolean }) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [editor, autoFocus]);
+  }, [editor, autoFocus, focusSignal]);
 
   return null;
 }
@@ -213,6 +228,8 @@ export interface InputPromptLexicalProps {
   onSubmit?: () => void;
   /** Auto-focus the editor on mount */
   autoFocus?: boolean;
+  /** Bumped by the parent to ask for the caret back — see `AutoFocusPlugin`. */
+  focusSignal?: number;
   /**
    * Agents this prompt may address by typing `@`.
    *
@@ -230,6 +247,7 @@ export function InputPromptLexical({
   readOnly = false,
   onSubmit,
   autoFocus = false,
+  focusSignal,
   mentionableAgents,
 }: InputPromptLexicalProps) {
   return (
@@ -317,7 +335,7 @@ export function InputPromptLexical({
           disabled={disabled}
           readOnly={readOnly}
         />
-        <AutoFocusPlugin autoFocus={autoFocus} />
+        <AutoFocusPlugin autoFocus={autoFocus} focusSignal={focusSignal} />
         {/* `/` for commands, beside `@` for agents. Always mounted: the list
             is fixed, so unlike the mentions there is no host that might have
             nothing to offer. */}

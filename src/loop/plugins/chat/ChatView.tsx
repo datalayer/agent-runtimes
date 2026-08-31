@@ -64,6 +64,7 @@ import {
   type FooterAgent,
 } from '../../../chat/prompt/InputPrompt';
 import { useAgentRuntimeContextSnapshot } from '../../../stores';
+import { useIAMStore } from '../../../state';
 import { useConfig } from '../../../hooks/useConfig';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
 import type { ContextSnapshotData, ModelConfig } from '../../../types';
@@ -640,13 +641,29 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * spends it.
    */
   const { inference, anonymous } = useBrowserInference(inPage);
+  /* Read from the store rather than passed in: the sign-in form inside the
+     expiry panel writes here, so the same render that gains a member gains
+     the wording that goes with one. */
+  const signedInUser = useIAMStore(state => state.user);
   /* The trial is over, and this chat is the thing that stops working. Only
      for an in-page agent: everywhere else the runtime holds its own
      credentials and never saw the visitor's key. */
   const keyExpired = inPage && anonymous.status === 'expired';
+  /*
+   * Whose key ran out, which decides what the chat is allowed to call it.
+   *
+   * The anonymous store only ever holds the trial key, so reaching this
+   * through `anonymous.status` means the reader never signed in. A member
+   * whose own session expires arrives by a different route and must not be
+   * told a temporary key ran out — they never had one, and would go looking
+   * for something that was never theirs.
+   */
+  const expiredKeyIsTemporary = !signedInUser;
   const chatDisabled = gateBlocked || keyExpired;
   const disabledReason = keyExpired
-    ? 'Your temporary key has expired. Sign in to keep going.'
+    ? expiredKeyIsTemporary
+      ? 'Your temporary key has expired. Sign in to keep going.'
+      : 'Your key has expired. Sign in to keep going.'
     : gateReason;
 
   /*
@@ -1383,6 +1400,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 // the inference service nothing, so the notebook is genuinely
                 // unaffected and the panel may say so.
                 sandboxStillRuns={inPage}
+                temporary={expiredKeyIsTemporary}
               />
             </Box>
           ) : null}

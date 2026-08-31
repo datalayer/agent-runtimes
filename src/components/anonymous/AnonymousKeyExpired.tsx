@@ -48,6 +48,19 @@ export type AnonymousKeyExpiredProps = {
    * broke".
    */
   sandboxStillRuns?: boolean;
+  /**
+   * Whether the credential that ran out was the anonymous trial key.
+   *
+   * It decides the wording, and the difference is not cosmetic. "Your
+   * temporary key has expired" is true of a visitor who never signed in and
+   * simply wrong for a member whose own session ran out — that reader would
+   * go looking for a temporary key they never had, and conclude the page had
+   * confused them with somebody else.
+   *
+   * Defaults to the trial, because that is the only credential this panel
+   * could describe when it was written and every existing caller means it.
+   */
+  temporary?: boolean;
   /** Called after a successful sign-in, once the token is stored. */
   onSignedIn?: () => void;
 };
@@ -55,6 +68,7 @@ export type AnonymousKeyExpiredProps = {
 export function AnonymousKeyExpired({
   agentName,
   sandboxStillRuns = false,
+  temporary = true,
   onSignedIn,
 }: AnonymousKeyExpiredProps): JSX.Element {
   const { configuration } = useCoreStore();
@@ -105,7 +119,9 @@ export function AnonymousKeyExpired({
           <Text
             sx={{ fontSize: 2, fontWeight: 'semibold', color: 'fg.default' }}
           >
-            Your temporary key has expired
+            {temporary
+              ? 'Your temporary key has expired'
+              : 'Your key has expired'}
           </Text>
         </Box>
         <Text
@@ -126,7 +142,10 @@ export function AnonymousKeyExpired({
             reason to assume the page broke, and the notebook beside them is
             still perfectly alive.
           */}
-          {agentName ?? 'The agent'} was answering on a trial key.
+          {agentName ?? 'The agent'}{' '}
+          {temporary
+            ? 'was answering on a trial key.'
+            : 'stopped because your session ran out.'}
           {sandboxStillRuns
             ? ' Your notebook keeps running — it lives in this page.'
             : ''}

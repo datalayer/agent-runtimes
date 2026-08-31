@@ -156,6 +156,16 @@ export function InputPromptBase({
    * click, a tab-in, or any later focus is a person; the first one is us.
    */
   const selfFocused = useRef(autoFocus);
+  /** The whole prompt — editor, footer controls and all. */
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  /**
+   * Bumped to ask the Lexical editor for the caret.
+   *
+   * That editor is not focused by calling a method on a ref: it needs the
+   * retry loop in `AutoFocusPlugin`, which gives up if somebody is typing
+   * elsewhere. A counter re-runs the whole of it.
+   */
+  const [lexicalFocusSignal, setLexicalFocusSignal] = useState(0);
   const animatedPlaceholder = useTypingPlaceholder({
     phrases: typingSuggestions ?? [],
     // Nothing to stand in for once there is something typed, and nothing to
@@ -173,32 +183,66 @@ export function InputPromptBase({
   }, [autoFocus, variant]);
 
   // ---- Refocus when focusTrigger changes ---------------------------------
+  // Both variants, for the same reason as the turn-end refocus below: the
+  // default variant is `lexical`, so a caller bumping this got nothing.
   useEffect(() => {
-    if (
-      focusTrigger !== undefined &&
-      focusTrigger > 0 &&
-      variant === 'text' &&
-      inputRef.current
-    ) {
-      const t = setTimeout(() => inputRef.current?.focus(), 150);
-      return () => clearTimeout(t);
+    if (focusTrigger === undefined || focusTrigger <= 0) {
+      return;
     }
+    if (variant === 'lexical') {
+      setLexicalFocusSignal(signal => signal + 1);
+      return;
+    }
+    if (!inputRef.current) {
+      return;
+    }
+    const t = setTimeout(() => inputRef.current?.focus(), 150);
+    return () => clearTimeout(t);
   }, [focusTrigger, variant]);
 
-  // ---- Refocus after loading completes -----------------------------------
+  /*
+   * The caret comes back when the turn ends.
+   *
+   * A turn finishing is an invitation to say the next thing, and having to
+   * click into the box first is a small tax charged on every single exchange.
+   *
+   * It used to be `variant === 'text'` only — and the default variant is
+   * `lexical`, so on every surface that ships the real prompt this did
+   * nothing at all. Both are handled now: the textarea takes focus directly,
+   * and the Lexical editor is asked through a signal, because focusing that
+   * one is a retry loop rather than a method call and it already lives in
+   * `AutoFocusPlugin`.
+   *
+   * Not if the reader has gone somewhere else in the meantime. Waiting out a
+   * turn is exactly when somebody edits a cell or scrolls the notebook, and
+   * snatching the caret out of that would be a far worse bug than the one
+   * being fixed. `document.body` means nobody is anywhere; anything inside
+   * this prompt is already us.
+   */
   const wasLoadingRef = useRef(false);
   useEffect(() => {
-    if (
-      wasLoadingRef.current &&
-      !isLoading &&
-      variant === 'text' &&
-      inputRef.current
-    ) {
-      const t = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(t);
-    }
+    const justFinished = wasLoadingRef.current && !isLoading;
+    // Recorded before any early return: leaving it below one is how this kind
+    // of edge-trigger quietly stops firing.
     wasLoadingRef.current = isLoading;
-  }, [isLoading, variant]);
+    if (!justFinished || disabled || readOnly) {
+      return;
+    }
+    const active = document.activeElement;
+    const elsewhere =
+      active &&
+      active !== document.body &&
+      !containerRef.current?.contains(active);
+    if (elsewhere) {
+      return;
+    }
+    if (variant === 'lexical') {
+      setLexicalFocusSignal(signal => signal + 1);
+      return;
+    }
+    const t = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, [isLoading, variant, disabled, readOnly]);
 
   // ---- Send / Stop handlers ----------------------------------------------
   const handleSend = useCallback(() => {
@@ -230,6 +274,9 @@ export function InputPromptBase({
         }}
       >
         <Box
+          // Named so the turn-end refocus can ask whether the caret is already
+          // somewhere inside this prompt before it reaches for it.
+          ref={containerRef}
           onFocusCapture={() => {
             if (selfFocused.current) {
               selfFocused.current = false;
@@ -276,6 +323,7 @@ export function InputPromptBase({
               readOnly={readOnly}
               onSubmit={handleSend}
               autoFocus={autoFocus}
+              focusSignal={lexicalFocusSignal}
               mentionableAgents={mentionableAgents}
             />
           ) : (
