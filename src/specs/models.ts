@@ -34,6 +34,7 @@ export const AIModels = {
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8: 'bedrock:us.anthropic.claude-opus-4-8',
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5: 'bedrock:us.anthropic.claude-opus-5',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6:
@@ -222,6 +223,22 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
   provider: 'bedrock',
   default: false,
   available: false,
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
+  tokensLimit: 32000,
+};
+
+export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1: AIModel = {
+  id: 'bedrock:us.anthropic.claude-opus-5',
+  version: '0.0.1',
+  name: 'Bedrock Claude Opus 5',
+  description: 'Claude Opus 5 via AWS Bedrock - the current frontier model',
+  provider: 'bedrock',
+  default: false,
+  available: true,
   requiredEnvVars: [
     'AWS_ACCESS_KEY_ID',
     'AWS_SECRET_ACCESS_KEY',
@@ -422,6 +439,8 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1,
   'bedrock:us.anthropic.claude-opus-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-opus-5':
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-6':

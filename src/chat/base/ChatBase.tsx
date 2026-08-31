@@ -4520,7 +4520,28 @@ function ChatBaseInner({
         when they come back.
       */}
       {showDetails && (
-        <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
+        /*
+          A column, not a row.
+       
+          This is a flex container holding one child, and `AgentDetails` sets a
+          height but no width — so in a row it was a flex item with `flex-basis:
+          auto` and no grow, which is to say it was as wide as its longest line
+          of text and no wider. On the LOOP workspace, where the chat column is
+          already narrow, that read as the panel occupying half the space it was
+          given, with the rest of the surface blank beside it.
+       
+          Turning the axis makes width the *cross* axis, and a flex item
+          stretches across that by default. `Chat.tsx` mounts the same component
+          the same way and has always looked right for exactly this reason.
+        */
+        <Box
+          sx={{
+            flex: '1 1 auto',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           <AgentDetails
             name={title || 'AI Agent'}
             icon={brandIcon}

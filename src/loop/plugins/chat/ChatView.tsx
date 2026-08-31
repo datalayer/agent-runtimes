@@ -39,7 +39,7 @@ import { ChatBase } from '../../../chat/base/ChatBase';
 import { AnonymousKeyExpired } from '../../../components/anonymous/AnonymousKeyExpired';
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
-import { AGENTSPECS } from '../../../specs/agents/agents';
+import { getAgentspecs } from '../../../specs/agents';
 import { useNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
 import type { ProtocolConfig } from '../../../types/protocol';
 import {
@@ -473,7 +473,17 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const selectedMemberId = useSignalValue(team?.selected ?? EMPTY_SELECTION);
   const member = team?.members.find(entry => entry.id === selectedMemberId);
 
-  const spec = AGENTSPECS[member?.specId ?? agentId];
+  /*
+   * Looked up through `getAgentspecs`, not by subscripting the record.
+   *
+   * Agent ids reach this component versioned as often as not —
+   * `jupyter-data-analyst:0.0.1` — and the record is keyed on the bare id, so
+   * a raw subscript on a versioned id silently misses. What follows from a
+   * miss is not an error but a quiet wrong answer: no model, no openers, no
+   * name. `getAgentspecs` strips the version and retries, which is the whole
+   * reason the specs package exports it.
+   */
+  const spec = getAgentspecs(member?.specId ?? agentId);
 
   /* The team's openers, or the selected agent's own when it has no team. */
   const suggestions = useMemo(
@@ -602,18 +612,24 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /*
    * The model this conversation is on.
    *
-   * Three answers, in order of who asked most recently: what the reader picked
-   * from the menu, what the host mounted the workspace with, and what the
-   * agent's spec says it runs on. The last is the one that is almost always
-   * true and was never being read — the menu compared its rows against
-   * `workspace.model`, which no host sets, so every row was unselected and the
-   * control could not say which model was answering.
+   * Three answers, and the order matters more than it looks. The reader's own
+   * pick wins, then the *agent's spec*, then whatever the host mounted the
+   * workspace with.
+   *
+   * The spec used to come last, behind `workspace.model` — which is a
+   * workspace-wide default, set once for whichever agent happens to be
+   * addressed. So launching an agent whose spec names one model showed a
+   * different one ticked in the menu, and the footer disagreed with the thing
+   * actually answering. An agent's spec is the definition of that agent; a
+   * host default is a fallback for when there is no definition, and a fallback
+   * that overrides the definition is not a fallback.
    *
    * Held here rather than in the workspace because the choice belongs to the
-   * conversation: it is what the next message is sent with.
+   * conversation: it is what the next message is sent with, and it resets when
+   * the member being addressed changes.
    */
   const [pickedModel, setPickedModel] = useState<string>();
-  const activeModel = pickedModel ?? workspace.model ?? spec?.model ?? '';
+  const activeModel = pickedModel ?? spec?.model ?? workspace.model ?? '';
   /*
    * The team, in the shape the footer asks for.
    *

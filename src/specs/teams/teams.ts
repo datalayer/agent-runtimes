@@ -736,7 +736,7 @@ export const JUPYTER_NOTEBOOK_TEAM_SPEC_0_0_1: TeamSpec = {
   supervisor: {
     name: 'Code Tutor',
     ref: 'jupyter-tutor:0.0.1',
-    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    model: 'bedrock:us.anthropic.claude-opus-4-8',
     goal: `Keep the person learning. Answer what was asked, and hand the notebook to the Compactor only when they have asked for it and understood what it will change.`,
     instructions: ``,
     approval: 'auto',

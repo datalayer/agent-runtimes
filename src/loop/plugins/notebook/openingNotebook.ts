@@ -60,6 +60,38 @@ const FRAME_REPR = `  region quarter  revenue
 5   West      Q2   211480`;
 
 /**
+ * The code of the opening cell, as nbformat wants it: one string per line.
+ *
+ * Exported because two things need it and they must not drift. The notebook
+ * below shows it as a cell that has already run — execution count `1`, output
+ * present — and the workspace runs the same text on the sandbox as soon as one
+ * is ready, so that the claim the cell makes is true of the kernel behind it.
+ *
+ * Without the second half the notebook is a picture of a session rather than
+ * one: `sales` is on screen and undefined, and the first thing the agent does
+ * with it raises `NameError` in front of the visitor.
+ */
+export const OPENING_SOURCE = [
+  'import pandas as pd\n',
+  '\n',
+  '# Quarterly revenue by region.\n',
+  'sales = pd.DataFrame(\n',
+  '    {\n',
+  '        "region": ["North", "North", "South", "South", "West", "West"],\n',
+  '        "quarter": ["Q1", "Q2", "Q1", "Q2", "Q1", "Q2"],\n',
+  '        "revenue": [182400, 196750, 141200, 18900, 203100, 211480],\n',
+  '    }\n',
+  ')\n',
+  '\n',
+  'sales',
+];
+
+/** The same code as one string, for a sandbox that takes source rather than cells. */
+export function openingCode(): string {
+  return OPENING_SOURCE.join('');
+}
+
+/**
  * The notebook a LOOP workspace opens on.
  *
  * Exported as a factory rather than a constant: `EphemeralNotebook` keeps the
@@ -74,20 +106,7 @@ export function openingNotebook(): INotebookContent {
         id: 'opening-analysis',
         metadata: {},
         execution_count: 1,
-        source: [
-          'import pandas as pd\n',
-          '\n',
-          '# Quarterly revenue by region.\n',
-          'sales = pd.DataFrame(\n',
-          '    {\n',
-          '        "region": ["North", "North", "South", "South", "West", "West"],\n',
-          '        "quarter": ["Q1", "Q2", "Q1", "Q2", "Q1", "Q2"],\n',
-          '        "revenue": [182400, 196750, 141200, 18900, 203100, 211480],\n',
-          '    }\n',
-          ')\n',
-          '\n',
-          'sales',
-        ],
+        source: OPENING_SOURCE,
         outputs: [
           {
             output_type: 'execute_result',

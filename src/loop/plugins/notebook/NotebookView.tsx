@@ -10,7 +10,7 @@
  * @module loop/plugins/notebook/NotebookView
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
@@ -21,7 +21,7 @@ import {
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
-import { openingNotebook } from './openingNotebook';
+import { openingCode, openingNotebook } from './openingNotebook';
 import { useSandboxService } from '../agents';
 
 export default function NotebookView({
@@ -58,6 +58,43 @@ export default function NotebookView({
    * others, which is the one thing React cannot tolerate.
    */
   const opening = useMemo(() => openingNotebook(), []);
+
+  /*
+   * Run the opening cell on the sandbox, once it has one.
+   *
+   * The notebook opens showing that cell as already executed — `[1]`, with its
+   * frame printed underneath — and until this runs, that is a picture of a
+   * session rather than one: `sales` is on screen and undefined, so the first
+   * thing the agent or the reader does with it raises `NameError`. Executing
+   * the same source the cell displays makes the kernel agree with the page.
+   *
+   * Through the sandbox service rather than the notebook's own run command,
+   * because the two share a kernel and only one of them exists this early: the
+   * service is ready the moment the sandbox is, while the notebook is still
+   * mounting its editor. The output goes to the service's own execution log,
+   * so the cell keeps the result it was born with rather than gaining a second
+   * copy.
+   *
+   * Keyed on the kernel, so a target switch — which is a new kernel — primes
+   * the new one, and a re-render does not run it again.
+   */
+  const primed = useRef<string | null>(null);
+  useEffect(() => {
+    const kernelId = snapshot.kernelId;
+    if (snapshot.state !== 'running' || !kernelId) {
+      return;
+    }
+    if (primed.current === kernelId) {
+      return;
+    }
+    primed.current = kernelId;
+    void service.execute(openingCode()).catch((error: unknown) => {
+      // Not worth a banner. The notebook still shows what it showed; what a
+      // reader loses is the variable, and the agent will say so plainly the
+      // first time it looks.
+      console.warn('[loop] could not prime the opening cell', error);
+    });
+  }, [service, snapshot.state, snapshot.kernelId]);
 
   // The switcher's `canOpen` gate should have kept this view shut, but a
   // sandbox can go away while it is on screen — say so rather than rendering a

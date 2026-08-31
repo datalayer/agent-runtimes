@@ -38,6 +38,7 @@ class AIModels(str, Enum):
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = (
         "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
     )
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5 = "bedrock:us.anthropic.claude-opus-5"
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = (
         "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     )
@@ -232,6 +233,22 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
     tokens_limit=32000,
 )
 
+BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
+    id="bedrock:us.anthropic.claude-opus-5",
+    version="0.0.1",
+    name="Bedrock Claude Opus 5",
+    description="Claude Opus 5 via AWS Bedrock - the current frontier model",
+    provider="bedrock",
+    default=False,
+    available=True,
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
+    tokens_limit=32000,
+)
+
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
     id="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
     version="0.0.1",
@@ -412,6 +429,7 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "bedrock:us.anthropic.claude-opus-4-6-v1": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-8": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
+    "bedrock:us.anthropic.claude-opus-5": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-6": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
