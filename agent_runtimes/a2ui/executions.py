@@ -86,6 +86,27 @@ def _text(
     return component
 
 
+def _fenced(text: str, language: str = "") -> str:
+    """Wrap text in a Markdown code fence.
+
+    An A2UI ``Text`` renders Markdown — the catalogue says so — which means
+    anything handed to it raw is reinterpreted: a leading ``#`` becomes a
+    heading, underscores italicise, and single newlines vanish. For source
+    code and tracebacks that is not a formatting quibble, it is the difference
+    between reading the thing and reading a mangled paraphrase of it.
+
+    The fence is widened past any run of backticks already inside the text, so
+    output that itself contains a fence cannot close ours early.
+    """
+    longest = 0
+    run = 0
+    for character in text:
+        run = run + 1 if character == "`" else 0
+        longest = max(longest, run)
+    fence = "`" * max(3, longest + 1)
+    return f"{fence}{language}\n{text}\n{fence}"
+
+
 def _mime_bundle(output: dict[str, Any]) -> dict[str, Any]:
     """The data of a Jupyter output, whichever spelling it uses."""
     data = output.get("data")
@@ -156,7 +177,13 @@ def execution_to_a2ui(
         code_text, cut = _truncate(result.code)
         card_children = [
             add(_text("code-label", "Code", "caption")),
-            add(_text("code", code_text + ("\n…" if cut else ""))),
+            # Fenced, because an A2UI `Text` renders Markdown. Handed the
+            # source raw, a Python comment became a Markdown heading — the
+            # first line of the interactive demo, `# a2ui_action is bound by
+            # the server…`, was drawn as an H1 across the surface — and every
+            # newline collapsed, so the code read as one wrapped paragraph.
+            # A fence is what tells that renderer this is not prose.
+            add(_text("code", _fenced(code_text + ("\n…" if cut else ""), "python"))),
         ]
         add({"id": "code-column", "component": "Column", "children": card_children})
         root_children.append(
@@ -173,7 +200,13 @@ def execution_to_a2ui(
                 "component": "Column",
                 "children": [
                     add(_text("error-label", "Error", "caption")),
-                    add(_text("error", failure_text)),
+                    # Fenced for the same reason, and for one more: a
+                    # traceback is monospaced everywhere a reader has ever
+                    # seen one, and its alignment is load-bearing. The
+                    # catalogue offers no error variant — `variant` is only
+                    # h1–h5, caption and body — so the fence is the whole of
+                    # what can be said here about this being machine output.
+                    add(_text("error", _fenced(failure_text))),
                 ],
             }
         )

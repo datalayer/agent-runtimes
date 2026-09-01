@@ -11,6 +11,7 @@ that can be used by both Jupyter and FastAPI servers.
 from .catalog_mcp_servers import (
     ALPHAVANTAGE_MCP_SERVER_0_0_1,
     CHART_MCP_SERVER_0_0_1,
+    DATALAYER_MCP_SERVER_0_0_1,
     EARTHDATA_MCP_SERVER_0_0_1,
     EURUS_MCP_SERVER_0_0_1,
     FILESYSTEM_MCP_SERVER_0_0_1,
@@ -153,6 +154,7 @@ __all__ = [
     "list_catalog_servers",
     "ALPHAVANTAGE_MCP_SERVER_0_0_1",
     "CHART_MCP_SERVER_0_0_1",
+    "DATALAYER_MCP_SERVER_0_0_1",
     "EARTHDATA_MCP_SERVER_0_0_1",
     "EURUS_MCP_SERVER_0_0_1",
     "FILESYSTEM_MCP_SERVER_0_0_1",

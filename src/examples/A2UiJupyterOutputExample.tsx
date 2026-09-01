@@ -38,9 +38,13 @@ import type { IOutput } from '@jupyterlab/nbformat';
 import { Output, OutputIPyWidgets } from '@datalayer/jupyter-react';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import type { FrontendToolDefinition } from '../types/tools';
+import type { ToolCallRenderContext } from '../types/chat';
 import { Chat } from '../chat';
 import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
-import { ThemedProvider } from './utils/themedProvider';
+import {
+  ThemedJupyterProvider,
+  ThemedProvider,
+} from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useA2uiProcessor } from './utils/a2ui';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
@@ -51,8 +55,31 @@ const EXAMPLE_ID = 'A2UiJupyterOutputExample';
 const AGENT_NAME = 'a2ui-jupyter-output';
 const AGENTSPEC_ID = 'example-a2ui-jupyter-output';
 
-type DemoKind =
-  'stream' | 'figure' | 'table' | 'error' | 'ipywidgets' | 'interactive';
+/*
+ * The six kinds, as a value as well as a type.
+ *
+ * The list was written twice — once here and once in the tool's JSON schema
+ * `enum` — which is two places to forget one. Deriving both from this array
+ * keeps the schema the model is given and the check the handler performs
+ * describing the same six things.
+ */
+const DEMO_KINDS = [
+  'stream',
+  'figure',
+  'table',
+  'error',
+  'ipywidgets',
+  'interactive',
+] as const;
+
+type DemoKind = (typeof DEMO_KINDS)[number];
+
+/** Whether a value the model sent is one of the kinds we know how to run. */
+function isDemoKind(value: unknown): value is DemoKind {
+  return (
+    typeof value === 'string' && (DEMO_KINDS as readonly string[]).includes(value)
+  );
+}
 type SurfaceAction = { name: string; label: string };
 
 /** One kind of Jupyter output, and the code that produces it. */
@@ -198,36 +225,44 @@ else:
   },
 ];
 
+/*
+ * What to ask for, in the words somebody would actually use.
+ *
+ * These used to read 'Call run_jupyter_output_demo with kind "figure"' — a
+ * person reciting a function signature to a machine that already knows it,
+ * and a demonstration of the plumbing rather than of the product. Which tool
+ * answers a request is the agent's problem, and the agentspec's system prompt
+ * now tells it how to read each of these; a suggestion is for the reader.
+ *
+ * They name the code sandbox, because that is the thing being demonstrated
+ * and the reader can see it running.
+ */
 const CHAT_SUGGESTIONS = [
   {
     title: 'Stream output',
-    message:
-      'Call run_jupyter_output_demo with kind "stream" to demonstrate stdout and an execution result.',
+    message: 'Run something in the code sandbox that prints as it goes.',
   },
   {
     title: 'Figure output',
-    message:
-      'Call run_jupyter_output_demo with kind "figure" to render a Matplotlib image.',
+    message: 'Plot a chart in the code sandbox and show me the image.',
   },
   {
     title: 'Table output',
     message:
-      'Call run_jupyter_output_demo with kind "table" to render a pandas DataFrame.',
+      'Build a small DataFrame in the code sandbox and show it as a table.',
   },
   {
     title: 'Error output',
     message:
-      'Call run_jupyter_output_demo with kind "error" to demonstrate a Jupyter traceback.',
+      'Run something in the code sandbox that fails, so I can see the traceback.',
   },
   {
     title: 'IPyWidgets output',
-    message:
-      'Call run_jupyter_output_demo with kind "ipywidgets" to render an interactive IntSlider.',
+    message: 'Show me an interactive slider from the code sandbox.',
   },
   {
     title: 'Interactive output',
-    message:
-      'Call run_jupyter_output_demo with kind "interactive" to show an actionable A2UI surface.',
+    message: 'Give me a surface with buttons I can press.',
   },
 ];
 
@@ -302,10 +337,68 @@ function JupyterOutputs({
   const widgetStateMime = 'application/vnd.jupyter.widget-state+json';
 
   return (
+    /*
+      `ThemedJupyterProvider`, which is both halves of what this panel needs.
+
+      It had neither. The example's `ThemedProvider` supplies Primer and the
+      Datalayer theme and nothing Jupyter, so the JupyterLab stylesheets were
+      never loaded and no `--jp-*` variable existed on the page. `Output`
+      still rendered — its structure is React, and `OutputRenderer` colours an
+      error with an inline style needing no stylesheet — but everything that
+      makes it *look* like a notebook did not: `.jp-RenderedText`, an error's
+      background and padding, the mono stack, and the ipywidgets control CSS,
+      which is why a slider could arrive looking like text.
+
+      A bare `JupyterReactTheme` fixes that and brings its own problem: it
+      applies JupyterLab's palette, so the outputs stop matching the page
+      around them. This wrapper is the pairing that already exists for it —
+      the Datalayer theme outside, carrying the reader's chosen variant and
+      colormode, and a `JupyterReactTheme` inside it that loads the
+      stylesheets while taking its colormode and canvas from that theme, with
+      `useBaseStyles` off so the branded font survives.
+    */
+    <ThemedJupyterProvider>
     <Box
       sx={{
         bg: 'canvas.default',
         color: 'fg.default',
+        /*
+          The JupyterLab palette, pointed at the Datalayer one.
+
+          `JupyterLabCss` injects the `--jp-*` variables onto `document.body`,
+          for the whole page — so a wrapper's `backgroundColor` cannot reach
+          them, and the outputs kept JupyterLab's own white while the page
+          around them was the reader's theme. That is why an ipywidget arrived
+          sitting on a white band.
+
+          Redefining them here rather than fighting for specificity: custom
+          properties inherit, and the nearest definition wins for the subtree
+          below it. Everything Jupyter draws inside this panel — output areas,
+          rendered text, widget controls, which all resolve their colours
+          through these — therefore follows the theme the reader picked.
+        */
+        '--jp-layout-color0': 'var(--bgColor-default)',
+        '--jp-layout-color1': 'var(--bgColor-default)',
+        '--jp-layout-color2': 'var(--bgColor-muted)',
+        '--jp-layout-color3': 'var(--bgColor-muted)',
+        '--jp-content-font-color0': 'var(--fgColor-default)',
+        '--jp-content-font-color1': 'var(--fgColor-default)',
+        '--jp-content-font-color2': 'var(--fgColor-muted)',
+        '--jp-ui-font-color0': 'var(--fgColor-default)',
+        '--jp-ui-font-color1': 'var(--fgColor-default)',
+        '--jp-ui-font-color2': 'var(--fgColor-muted)',
+        '--jp-border-color1': 'var(--borderColor-default)',
+        '--jp-border-color2': 'var(--borderColor-muted)',
+        '--jp-border-color3': 'var(--borderColor-muted)',
+        // ipywidgets keeps its own names, and a control left on the defaults
+        // is the one thing in the panel still wearing JupyterLab's palette.
+        '--jp-widgets-color': 'var(--fgColor-default)',
+        '--jp-widgets-label-color': 'var(--fgColor-default)',
+        '--jp-widgets-readout-color': 'var(--fgColor-default)',
+        '--jp-widgets-input-color': 'var(--fgColor-default)',
+        '--jp-widgets-input-background-color': 'var(--bgColor-default)',
+        '--jp-widgets-input-border-color': 'var(--borderColor-default)',
+        '--jp-widgets-border-color': 'var(--borderColor-default)',
         '& .jp-OutputArea, & .jp-OutputArea-output': {
           bg: 'canvas.default',
           color: 'fg.default',
@@ -352,6 +445,7 @@ function JupyterOutputs({
         );
       })}
     </Box>
+    </ThemedJupyterProvider>
   );
 }
 
@@ -495,6 +589,11 @@ const A2UiJupyterOutputExample: React.FC = () => {
               surface_id: SURFACE_ID,
               agent_id: agentId,
               actions,
+              // A2UI is a streaming protocol and its specification names the
+              // single POST as the one transport that cannot carry that. The
+              // stream demonstration prints a line at a time and was invisible
+              // until it had finished.
+              stream: true,
             }),
           },
         );
@@ -504,14 +603,103 @@ const A2UiJupyterOutputExample: React.FC = () => {
           );
           return null;
         }
-        const payload = await response.json();
-        const nextExecution = (payload.execution ??
-          null) as ExecutionPayload | null;
-        setExecution(nextExecution);
+
         // Replace rather than stack: a re-run is the same surface with new
-        // data, not a second one below the first.
+        // data, not a second one below the first. Done before the first
+        // message arrives, so the old surface is not on screen underneath the
+        // new one while it builds.
         resetSurfaces();
-        processMessages((payload.messages ?? []) as A2uiMessage[]);
+
+        /*
+         * Branch on what the server actually sent, not on what was asked for.
+         *
+         * A server that does not know the `stream` flag ignores it and answers
+         * with the whole surface as JSON — and a reader loop turned loose on
+         * that finds no `data:` lines, processes no messages, and renders an
+         * empty surface. Which is worse than not streaming: the feature would
+         * appear to have broken the example rather than simply not being
+         * there. The same branch covers an environment that gives no readable
+         * body at all.
+         */
+        const streamed = (response.headers.get('content-type') ?? '').includes(
+          'text/event-stream',
+        );
+        const reader = streamed ? response.body?.getReader() : undefined;
+        if (!reader) {
+          const payload = await response.json();
+          const whole = (payload.execution ?? null) as ExecutionPayload | null;
+          setExecution(whole);
+          processMessages((payload.messages ?? []) as A2uiMessage[]);
+          return whole;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let nextExecution: ExecutionPayload | null = null;
+        /*
+         * Surfaces already created, so a redelivered `createSurface` is not
+         * processed twice.
+         *
+         * The reference A2UI client keeps the same set for the same reason:
+         * the processor treats a second create for one id as an error, and a
+         * stream that re-announces its surface would otherwise fail partway
+         * through for a reason that looks nothing like its cause.
+         */
+        const created = new Set<string>();
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          buffer += decoder.decode(value, { stream: true });
+          // Events are separated by a blank line; the last piece may be a
+          // partial event, so it stays in the buffer for the next read.
+          const chunks = buffer.split(/\r?\n\r?\n/);
+          buffer = chunks.pop() ?? '';
+          for (const chunk of chunks) {
+            for (const line of chunk.split(/\r?\n/)) {
+              if (!line.startsWith('data: ')) {
+                continue;
+              }
+              let event: Record<string, unknown>;
+              try {
+                event = JSON.parse(line.slice(6));
+              } catch {
+                // A malformed event is not worth abandoning the run for.
+                continue;
+              }
+              /*
+                An execution snapshot, whether or not the run has finished.
+
+                The Jupyter Output panel renders from this rather than from
+                the A2UI surface, so applying it only on the final event left
+                one half of the comparison streaming and the other half
+                frozen until the end — which is the least useful place for the
+                difference to be.
+              */
+              if (event.execution) {
+                nextExecution = event.execution as ExecutionPayload;
+                setExecution(nextExecution);
+                continue;
+              }
+              if (event.done) {
+                continue;
+              }
+              const create = event.createSurface as
+                | { surfaceId?: string }
+                | undefined;
+              if (create?.surfaceId) {
+                if (created.has(create.surfaceId)) {
+                  continue;
+                }
+                created.add(create.surfaceId);
+              }
+              processMessages([event as unknown as A2uiMessage]);
+            }
+          }
+        }
         return nextExecution;
       } catch (error) {
         setFailure(error instanceof Error ? error.message : String(error));
@@ -540,12 +728,97 @@ const A2UiJupyterOutputExample: React.FC = () => {
     [resetSurfaces],
   );
 
-  const runDemoTool = useMemo<
-    FrontendToolDefinition<
-      { kind: DemoKind },
-      { kind: DemoKind; displayed: boolean; executionSucceeded?: boolean }
-    >
-  >(
+  /*
+   * Arguments typed as they actually arrive: unvalidated.
+   *
+   * This was declared `FrontendToolDefinition<{ kind: DemoKind }, …>`, and
+   * TypeScript was right to refuse it. Parameters are contravariant, so a
+   * handler that demands `{ kind: DemoKind }` cannot stand in for one the
+   * runner will call with an arbitrary `Record<string, unknown>` — and an
+   * arbitrary record is exactly what it gets, because these arguments are
+   * whatever the model emitted against the JSON schema below. Nothing between
+   * the model and here checks them.
+   *
+   * So the narrowing happens where the values are, at runtime. `isDemoKind`
+   * is the same check the lookup was doing implicitly, made explicit and made
+   * to say something useful when it fails.
+   *
+   * The result is left at the default `unknown` for a related reason: the
+   * optional `render` on this interface *consumes* the result, so the type is
+   * invariant in it, and a narrower result type cannot stand in for the wider
+   * one the tool list holds — whether or not this tool supplies a `render`.
+   * TypeScript checks the shape either way.
+   */
+  /*
+   * Each kind's most recent execution, for the chat to draw.
+   *
+   * A ref rather than state: it is read during a render the tool's own status
+   * change already causes, so storing it does not need to cause another.
+   */
+  const executionsByKindRef = useRef(new Map<DemoKind, ExecutionPayload>());
+
+  /*
+   * The output, drawn under the tool message in the conversation.
+   *
+   * Running a demonstration updated the two panels and left the chat saying
+   * only that a tool had been called — so a reader following the conversation
+   * was told something happened and shown none of it, and had to look away to
+   * find out what.
+   *
+   * This is `renderToolResult` on `Chat` rather than the `render` field on the
+   * tool definition. That field exists on `FrontendToolDefinition` and nothing
+   * in the chat ever calls it; the first version of this was written there and
+   * was simply dead code, which is only visible by grepping for the call site
+   * rather than by reading the type.
+   *
+   * The execution comes from a ref rather than from the tool's result, because
+   * a handler's return value is sent back to the model: putting a base64
+   * figure or a widget's manager state in there would spend the context window
+   * on bytes no model needs to read.
+   */
+  const renderToolResult = useCallback(
+    ({ name, args, status, error }: ToolCallRenderContext) => {
+      if (name !== 'run_jupyter_output_demo') {
+        return null;
+      }
+      const kind = args.kind;
+      if (!isDemoKind(kind)) {
+        return null;
+      }
+      if (status === 'error') {
+        return (
+          <Text sx={{ color: 'danger.fg', fontSize: 1 }}>
+            {error || 'The demonstration could not run.'}
+          </Text>
+        );
+      }
+      if (status !== 'complete') {
+        return (
+          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+            Running the {kind} demonstration…
+          </Text>
+        );
+      }
+      const executed = executionsByKindRef.current.get(kind);
+      if (!executed) {
+        return null;
+      }
+      return (
+        <Box sx={{ mt: 2 }}>
+          <Text
+            sx={{ display: 'block', mb: 1, fontSize: 0, color: 'fg.muted' }}
+          >
+            Jupyter output
+          </Text>
+          <JupyterOutputs execution={executed} />
+        </Box>
+      );
+    },
+    [],
+  );
+
+
+  const runDemoTool = useMemo<FrontendToolDefinition>(
     () => ({
       name: 'run_jupyter_output_demo',
       description:
@@ -555,21 +828,21 @@ const A2UiJupyterOutputExample: React.FC = () => {
         properties: {
           kind: {
             type: 'string',
-            enum: [
-              'stream',
-              'figure',
-              'table',
-              'error',
-              'ipywidgets',
-              'interactive',
-            ],
+            enum: [...DEMO_KINDS],
             description: 'The Jupyter output demonstration to run.',
           },
         },
         required: ['kind'],
         additionalProperties: false,
       },
-      handler: async ({ kind }) => {
+      handler: async args => {
+        const kind = args.kind;
+        if (!isDemoKind(kind)) {
+          throw new Error(
+            `Unknown Jupyter output demonstration: ${String(kind)}. ` +
+              `Expected one of ${DEMO_KINDS.join(', ')}.`,
+          );
+        }
         const demo = SNIPPETS.find(
           (entry): entry is Snippet & { id: DemoKind } =>
             entry.id === kind && !entry.chat,
@@ -581,6 +854,9 @@ const A2UiJupyterOutputExample: React.FC = () => {
         if (!result) {
           throw new Error('The Jupyter output demonstration could not run.');
         }
+        // Kept for `render` above, and deliberately not returned: the value a
+        // handler returns goes to the model.
+        executionsByKindRef.current.set(kind, result);
         return {
           kind,
           displayed: true,
@@ -760,6 +1036,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
                         runtimeId={agentId}
                         historyEndpoint={`${serverUrl}/api/v1/history`}
                         frontendTools={[runDemoTool]}
+                        renderToolResult={renderToolResult}
                         suggestions={CHAT_SUGGESTIONS}
                         submitOnSuggestionClick
                         showHeader

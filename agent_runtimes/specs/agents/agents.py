@@ -122,39 +122,60 @@ EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
     color="#0969DA",
     suggestions=[
         AgentSuggestion(
-            text='Call run_jupyter_output_demo with kind "stream" to demonstrate stdout and an execution result.'
+            text="Run something in the code sandbox that prints as it goes.", emoji="📜"
         ),
         AgentSuggestion(
-            text='Call run_jupyter_output_demo with kind "figure" to render a Matplotlib image.'
+            text="Plot a chart in the code sandbox and show me the image.", emoji="📈"
         ),
         AgentSuggestion(
-            text='Call run_jupyter_output_demo with kind "table" to render a pandas DataFrame.'
+            text="Build a small DataFrame in the code sandbox and show it as a table.",
+            emoji="🧮",
         ),
         AgentSuggestion(
-            text='Call run_jupyter_output_demo with kind "error" to demonstrate a Jupyter traceback.'
+            text="Run something in the code sandbox that fails, so I can see the traceback.",
+            emoji="🐛",
         ),
         AgentSuggestion(
-            text='Call run_jupyter_output_demo with kind "ipywidgets" to render an interactive IntSlider.'
+            text="Show me an interactive slider from the code sandbox.", emoji="🎛️"
         ),
-        AgentSuggestion(
-            text='Call run_jupyter_output_demo with kind "interactive" to show an actionable A2UI surface.'
-        ),
+        AgentSuggestion(text="Give me a surface with buttons I can press.", emoji="🖲️"),
     ],
     welcome_message="Choose a suggestion to execute a Jupyter output demonstration and compare the kernel output with its A2UI surface.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
-    system_prompt="""You operate the A2UI Jupyter Output example. The frontend provides one tool:
-`run_jupyter_output_demo`, whose `kind` is one of `stream`, `figure`, `table`,
-`error`, `ipywidgets`, or `interactive`.
+    system_prompt="""You operate the A2UI Jupyter Output example. It exists to show one code
+sandbox execution twice over: what the kernel itself returned, and the A2UI
+surface the server converter made of the same outputs.
 
-For every request to demonstrate an output, ALWAYS call
-`run_jupyter_output_demo` exactly once with the matching kind. Do not write or
-execute replacement Python yourself. After the tool returns, briefly tell the
-user that the demonstration is visible in the A2UI Surface and Jupyter Output
-panels. An intentional `error` demonstration is successful when the tool has
-displayed its traceback.
+Showing that comparison is done with one tool and nothing else:
+`run_jupyter_output_demo`, whose `kind` is one of `stream`, `figure`,
+`table`, `error`, `ipywidgets`, or `interactive`.
+
+So: whenever somebody asks you to run something in the code sandbox, or to
+show what some kind of output looks like, call `run_jupyter_output_demo`
+exactly once with the kind that matches what they asked for. They will ask
+in ordinary words rather than by naming the tool or the kind, and reading
+the request is your job:
+
+- printing, stdout, output arriving as it goes, a returned value -> `stream`
+- a plot, a chart, a figure, an image -> `figure`
+- a DataFrame, a table, tabular data -> `table`
+- a failure, an exception, a traceback, something that breaks -> `error`
+- a slider, a widget, an interactive control -> `ipywidgets`
+- a surface with buttons, something to press or click -> `interactive`
+
+Never write or execute Python of your own instead. The six demonstrations
+are fixed on purpose: the two panels are only worth comparing when both are
+showing the same execution, and substituted code breaks the comparison the
+example exists to make.
+
+After the tool returns, say in a sentence what was run and that it is now
+visible in both the A2UI Surface and the Jupyter Output panels, with a word
+on what differs between them where it is interesting. An `error`
+demonstration is deliberate and has succeeded when its traceback is on
+screen — do not apologise for it or offer to fix the code.
 """,
     system_prompt_codemode_addons=None,
     goal=None,

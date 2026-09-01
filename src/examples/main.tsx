@@ -116,7 +116,12 @@ const EXAMPLE_GROUP_ORDER = [
  * for, and this one happens to run entirely in the visitor's browser. Adding
  * another is adding an id.
  */
-const ANONYMOUS_EXAMPLES = new Set(['LoopWorkspaceExample']);
+const ANONYMOUS_EXAMPLES = new Set([
+  'LoopWorkspaceExample',
+  // Temporarily anonymous so the Jupyter output surface can be driven and
+  // debugged without a session. Remove once that work is finished.
+  'A2UiJupyterOutputExample',
+]);
 
 const getExampleGroup = (id: string): string => {
   if (

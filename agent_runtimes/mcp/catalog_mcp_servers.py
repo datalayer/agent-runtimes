@@ -59,6 +59,27 @@ CHART_MCP_SERVER_0_0_1 = MCPServer(
     required_env_vars=[],
 )
 
+DATALAYER_MCP_SERVER_0_0_1 = MCPServer(
+    id="datalayer",
+    version="0.0.1",
+    name="Datalayer",
+    description="Read, edit and run Jupyter notebooks on Datalayer, with sandboxes and data",
+    icon="notebook",
+    emoji="🚀",
+    command="npx",
+    args=[
+        "-y",
+        "mcp-remote",
+        "https://mcp.datalayer.run/mcp",
+        "--header",
+        "Authorization: Bearer ${DATALAYER_API_KEY}",
+    ],
+    transport="stdio",
+    enabled=False,
+    tools=[],
+    required_env_vars=["DATALAYER_API_KEY:0.0.1"],
+)
+
 EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
     id="earthdata",
     version="0.0.1",
@@ -107,7 +128,7 @@ FILESYSTEM_MCP_SERVER_0_0_1 = MCPServer(
     args=[
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        tempfile.gettempdir(),
+        "${TMPDIR}",
     ],
     transport="stdio",
     enabled=True,
@@ -121,7 +142,7 @@ GITHUB_MCP_SERVER_0_0_1 = MCPServer(
     name="GitHub",
     description="GitHub repository operations (issues, PRs, code search)",
     icon="mark-github",
-    emoji="🐙 - git - collaboration",
+    emoji="🐙",
     command="docker",
     args=[
         "run",
@@ -163,35 +184,6 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
         "GOOGLE_OAUTH_CLIENT_ID:0.0.1",
         "GOOGLE_OAUTH_CLIENT_SECRET:0.0.1",
     ],
-)
-
-DATALAYER_MCP_SERVER_0_0_1 = MCPServer(
-    id="datalayer",
-    version="0.0.1",
-    name="Datalayer",
-    description=(
-        "Read, edit and run Jupyter notebooks on Datalayer, with sandboxes "
-        "and data"
-    ),
-    icon="notebook",
-    emoji="🚀",
-    command="npx",
-    args=[
-        "-y",
-        "mcp-remote",
-        "https://mcp.datalayer.run/mcp",
-        "--header",
-        "Authorization: Bearer ${DATALAYER_API_KEY}",
-    ],
-    transport="stdio",
-    # Not on by default. Every other server here reaches something outside
-    # Datalayer; this one reaches *this* platform, and an agent running in a
-    # Datalayer sandbox already has the notebook it was given. Enabling it
-    # says "this agent should also act on my other notebooks", which is a
-    # choice somebody makes rather than a default they discover.
-    enabled=False,
-    tools=[],
-    required_env_vars=["DATALAYER_API_KEY:0.0.1"],
 )
 
 HUGGINGFACE_MCP_SERVER_0_0_1 = MCPServer(

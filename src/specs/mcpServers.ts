@@ -52,6 +52,30 @@ export const CHART_MCP_SERVER_0_0_1: MCPServer = {
   requiredEnvVars: [],
 };
 
+export const DATALAYER_MCP_SERVER_0_0_1: MCPServer = {
+  id: 'datalayer',
+  version: '0.0.1',
+  name: 'Datalayer',
+  description:
+    'Read, edit and run Jupyter notebooks on Datalayer, with sandboxes and data',
+  icon: 'notebook',
+  emoji: '🚀',
+  url: '',
+  command: 'npx',
+  args: [
+    '-y',
+    'mcp-remote',
+    'https://mcp.datalayer.run/mcp',
+    '--header',
+    'Authorization: Bearer ${DATALAYER_API_KEY}',
+  ],
+  transport: 'stdio',
+  enabled: false,
+  isAvailable: false,
+  tools: [],
+  requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
+};
+
 export const EARTHDATA_MCP_SERVER_0_0_1: MCPServer = {
   id: 'earthdata',
   version: '0.0.1',
@@ -95,7 +119,7 @@ export const FILESYSTEM_MCP_SERVER_0_0_1: MCPServer = {
   emoji: '📁',
   url: '',
   command: 'npx',
-  args: ['-y', '@modelcontextprotocol/server-filesystem', '$TMPDIR'],
+  args: ['-y', '@modelcontextprotocol/server-filesystem', '${TMPDIR}'],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
@@ -109,7 +133,7 @@ export const GITHUB_MCP_SERVER_0_0_1: MCPServer = {
   name: 'GitHub',
   description: 'GitHub repository operations (issues, PRs, code search)',
   icon: 'mark-github',
-  emoji: '🐙 - git - collaboration',
+  emoji: '🐙',
   url: '',
   command: 'docker',
   args: [
@@ -276,6 +300,7 @@ export const TAVILY_MCP_SERVER_0_0_1: MCPServer = {
 export const MCP_SERVER_LIBRARY: Record<string, MCPServer> = {
   alphavantage: ALPHAVANTAGE_MCP_SERVER_0_0_1,
   chart: CHART_MCP_SERVER_0_0_1,
+  datalayer: DATALAYER_MCP_SERVER_0_0_1,
   earthdata: EARTHDATA_MCP_SERVER_0_0_1,
   eurus: EURUS_MCP_SERVER_0_0_1,
   filesystem: FILESYSTEM_MCP_SERVER_0_0_1,

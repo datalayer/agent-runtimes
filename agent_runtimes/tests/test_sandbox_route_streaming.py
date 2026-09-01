@@ -169,3 +169,99 @@ def test_a2ui_action_binding_exposes_the_event_name() -> None:
     )
 
     assert namespace["selected"] == "warnings"
+
+
+def _sse_payloads(body: str) -> list[dict]:
+    """The JSON objects carried by an SSE body, in order."""
+    import json
+
+    return [
+        json.loads(line[len("data: ") :])
+        for chunk in body.split("\n\n")
+        for line in chunk.splitlines()
+        if line.startswith("data: ")
+    ]
+
+
+def test_a2ui_surface_streams_as_the_code_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The surface arrives in pieces, not once at the end.
+
+    A2UI is a streaming protocol — the renderer builds the UI incrementally
+    from a sequence of messages — and a single POST is the one transport its
+    specification calls out as unable to carry that. The demonstration that
+    prints a line at a time was therefore invisible until it finished.
+    """
+    monkeypatch.setattr(
+        "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
+        lambda: _FakeManager(),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "code_sandboxes",
+        SimpleNamespace(CodeSandboxClient=_FakeStreamingClient),
+    )
+
+    response = _build_client().post(
+        "/api/v1/sandbox/execute/a2ui",
+        json={"code": "print('hello')", "surface_id": "s", "stream": True},
+    )
+
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+
+    payloads = _sse_payloads(response.text)
+
+    # The surface is created once, before anything has run: the reader sees
+    # their code immediately rather than after the last sleep.
+    creates = [p for p in payloads if "createSurface" in p]
+    assert len(creates) == 1
+
+    # And then updated repeatedly. One update would mean it still arrived in
+    # a single lump, which is the bug.
+    updates = [p for p in payloads if "updateComponents" in p]
+    assert len(updates) > 2
+
+    # The last event says the run is over, so a client is not left inferring
+    # it from a closed socket.
+    assert payloads[-1].get("done") is True
+    assert payloads[-1]["execution"]["stdout"].endswith("hello")
+
+    # Execution snapshots arrive as the run goes, not only at the end.
+    #
+    # The A2UI surface and the kernel's own outputs are two renderings of one
+    # execution, and they read from different parts of this stream. Sending
+    # `updateComponents` live and the execution only once left the surface
+    # streaming while the Jupyter output sat frozen until the run finished.
+    snapshots = [p for p in payloads if "execution" in p and not p.get("done")]
+    assert len(snapshots) > 1, "the execution was only sent at the end"
+    assert [len(s["execution"]["stdout"]) for s in snapshots] == sorted(
+        len(s["execution"]["stdout"]) for s in snapshots
+    ), "the snapshots should grow"
+
+
+def test_the_surface_still_arrives_whole_when_streaming_is_not_asked_for(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The existing callers are untouched."""
+    monkeypatch.setattr(
+        "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
+        lambda: _FakeManager(),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "code_sandboxes",
+        SimpleNamespace(CodeSandboxClient=_FakeSyncClient),
+    )
+
+    response = _build_client().post(
+        "/api/v1/sandbox/execute/a2ui",
+        json={"code": "print('hello')", "surface_id": "s"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    body = response.json()
+    assert body["execution"]["stdout"] == "hello"
+    assert any("createSurface" in message for message in body["messages"])
