@@ -568,6 +568,10 @@ const A2UiJupyterOutputExample: React.FC = () => {
       source: string,
       action?: A2uiClientAction,
       actions: SurfaceAction[] = [],
+      // Which demonstration this is, when it is one. The chat draws its output
+      // under the matching tool message, and needs the snapshots as they
+      // arrive rather than the result at the end.
+      kind?: DemoKind,
     ): Promise<ExecutionPayload | null> => {
       if (!agentId) {
         setFailure('The Jupyter agent is not ready yet.');
@@ -629,6 +633,9 @@ const A2UiJupyterOutputExample: React.FC = () => {
           const payload = await response.json();
           const whole = (payload.execution ?? null) as ExecutionPayload | null;
           setExecution(whole);
+          if (kind && whole) {
+            setExecutionsByKind(previous => ({ ...previous, [kind]: whole }));
+          }
           processMessages((payload.messages ?? []) as A2uiMessage[]);
           return whole;
         }
@@ -682,6 +689,13 @@ const A2UiJupyterOutputExample: React.FC = () => {
               if (event.execution) {
                 nextExecution = event.execution as ExecutionPayload;
                 setExecution(nextExecution);
+                if (kind) {
+                  const snapshot = nextExecution;
+                  setExecutionsByKind(previous => ({
+                    ...previous,
+                    [kind]: snapshot,
+                  }));
+                }
                 continue;
               }
               if (event.done) {
@@ -750,12 +764,20 @@ const A2UiJupyterOutputExample: React.FC = () => {
    * TypeScript checks the shape either way.
    */
   /*
-   * Each kind's most recent execution, for the chat to draw.
+   * Each kind's execution *as it arrives*, in state.
    *
-   * A ref rather than state: it is read during a render the tool's own status
-   * change already causes, so storing it does not need to cause another.
+   * This was a ref written once, after `run` resolved — two reasons the chat
+   * could not stream while the panels beside it did. A ref mutation does not
+   * re-render, so React had no reason to redraw the message; and there was
+   * nothing to draw until the run had finished anyway.
+   *
+   * The panels stream because they read `execution`, which `run` sets from
+   * every snapshot the server sends. This is the same thing, kept per kind so
+   * a second demonstration does not overwrite the first one's message.
    */
-  const executionsByKindRef = useRef(new Map<DemoKind, ExecutionPayload>());
+  const [executionsByKind, setExecutionsByKind] = useState<
+    Partial<Record<DemoKind, ExecutionPayload>>
+  >({});
 
   /*
    * The output, drawn under the tool message in the conversation.
@@ -777,46 +799,42 @@ const A2UiJupyterOutputExample: React.FC = () => {
    * on bytes no model needs to read.
    */
   const renderToolResult = useCallback(
-    ({ name, args, status, error }: ToolCallRenderContext) => {
-      if (name !== 'run_jupyter_output_demo') {
-        return null;
-      }
+    ({ name, args, status, defaultUI }: ToolCallRenderContext) => {
+      /*
+        The chat's own tool row, and the output underneath it.
+
+        Returning only the output replaced the row — so "Run Jupyter Output
+        Demo", its status and its arguments all disappeared, and any other
+        tool called in this chat would have rendered nothing at all, since
+        returning null here draws nothing rather than falling back.
+      */
       const kind = args.kind;
-      if (!isDemoKind(kind)) {
-        return null;
+      if (name !== 'run_jupyter_output_demo' || !isDemoKind(kind)) {
+        return defaultUI;
       }
-      if (status === 'error') {
-        return (
-          <Text sx={{ color: 'danger.fg', fontSize: 1 }}>
-            {error || 'The demonstration could not run.'}
-          </Text>
-        );
-      }
-      if (status !== 'complete') {
-        return (
-          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-            Running the {kind} demonstration…
-          </Text>
-        );
-      }
-      const executed = executionsByKindRef.current.get(kind);
+      // Whatever has arrived so far, mid-run included: the row above says it
+      // is executing, and the output below should be filling in while it
+      // does, which is the whole point of streaming it.
+      const executed = executionsByKind[kind];
       if (!executed) {
-        return null;
+        return defaultUI;
       }
       return (
-        <Box sx={{ mt: 2 }}>
-          <Text
-            sx={{ display: 'block', mb: 1, fontSize: 0, color: 'fg.muted' }}
-          >
-            Jupyter output
-          </Text>
-          <JupyterOutputs execution={executed} />
-        </Box>
+        <>
+          {defaultUI}
+          <Box sx={{ mt: 2 }}>
+            <Text
+              sx={{ display: 'block', mb: 1, fontSize: 0, color: 'fg.muted' }}
+            >
+              Jupyter output
+            </Text>
+            <JupyterOutputs execution={executed} />
+          </Box>
+        </>
       );
     },
-    [],
+    [executionsByKind],
   );
-
 
   const runDemoTool = useMemo<FrontendToolDefinition>(
     () => ({
@@ -850,13 +868,10 @@ const A2UiJupyterOutputExample: React.FC = () => {
         if (!demo) {
           throw new Error(`Unknown Jupyter output demonstration: ${kind}`);
         }
-        const result = await run(demo.code, undefined, demo.actions ?? []);
+        const result = await run(demo.code, undefined, demo.actions ?? [], kind);
         if (!result) {
           throw new Error('The Jupyter output demonstration could not run.');
         }
-        // Kept for `render` above, and deliberately not returned: the value a
-        // handler returns goes to the model.
-        executionsByKindRef.current.set(kind, result);
         return {
           kind,
           displayed: true,

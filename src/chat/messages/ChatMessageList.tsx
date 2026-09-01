@@ -662,6 +662,8 @@ export function ChatMessageList({
           result: item.result,
           status: item.status,
           error: item.error,
+          // Only tested for null-ness here, so the node itself is not built.
+          defaultUI: null,
         });
         if (rendered !== null && rendered !== undefined) {
           renderedToolCallIds.add(item.toolCallId);
@@ -684,24 +686,37 @@ export function ChatMessageList({
               ? createRespondCallback(item.toolCallId)
               : undefined;
 
-          const toolUI = renderToolResult ? (
-            renderToolResult({
-              toolCallId: item.toolCallId,
-              toolName: item.toolName,
-              name: item.toolName,
-              args: item.args,
-              result: item.result,
-              status: item.status,
-              error: item.error,
-              respond,
-            })
-          ) : (
+          /*
+            The row the chat would draw by itself, handed to the caller.
+
+            `renderToolResult` replaces this outright, which is right for a
+            caller substituting a custom card and wrong for one that only
+            wants to add something beneath the row — that caller previously
+            had to reimplement it, and returning nothing for the tools it did
+            not care about hid those tools entirely. Offering the default as a
+            node lets it compose instead of choosing.
+          */
+          const defaultUI = (
             <DefaultToolCallRenderer
               item={item}
               approvalConfig={approvalConfig}
               onRespond={createRespondCallback(item.toolCallId)}
             />
           );
+
+          const toolUI = renderToolResult
+            ? renderToolResult({
+                toolCallId: item.toolCallId,
+                toolName: item.toolName,
+                name: item.toolName,
+                args: item.args,
+                result: item.result,
+                status: item.status,
+                error: item.error,
+                respond,
+                defaultUI,
+              })
+            : defaultUI;
 
           if (toolUI === null || toolUI === undefined) return null;
 

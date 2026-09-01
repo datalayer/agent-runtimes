@@ -129,6 +129,23 @@ export interface ToolCallRenderContext {
   /** Error message if status is 'error' */
   error?: string;
   /**
+   * What the chat would have drawn for this tool call by itself.
+   *
+   * Supplying `renderToolResult` replaces the default row outright, and
+   * returning nothing from it draws nothing at all — so a caller who only
+   * wanted to *add* something under one tool had to either reimplement the
+   * row or lose it, and lose every other tool's row along with it.
+   *
+   * Render it to compose:
+   *
+   * ```tsx
+   * renderToolResult={({ name, defaultUI }) =>
+   *   name === 'my_tool' ? <>{defaultUI}<MyPanel /></> : defaultUI
+   * }
+   * ```
+   */
+  defaultUI?: ReactNode;
+  /**
    * Callback to send response back to the agent (human-in-the-loop).
    * Only available when status is 'executing'.
    * Calling this resolves the tool call with the provided result.
