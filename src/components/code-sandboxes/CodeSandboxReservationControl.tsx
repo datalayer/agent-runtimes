@@ -138,7 +138,7 @@ export function CodeSandboxReservationControl(
             */}
             <Text>
               {max < requestedMax
-                ? `out of ${max} minutes per reservation`
+                ? `out of ${max} minutes`
                 : `out of ${max} available minutes`}
             </Text>
             {addCredits && (
