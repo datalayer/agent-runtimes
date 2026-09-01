@@ -255,6 +255,82 @@ How to respond:
   subagents: undefined,
 };
 
+export const EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-a2ui-jupyter-output',
+  version: '0.0.1',
+  name: 'A2UI Jupyter Output Agent',
+  description: `Drives the A2UI Jupyter Output example by selecting a kernel-output demonstration and asking the frontend to execute it in the connected sandbox.`,
+  tags: ['a2ui', 'jupyter', 'output'],
+  domain: undefined,
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'notebook',
+  emoji: '📓',
+  color: '#0969DA',
+  suggestions: [
+    {
+      text: 'Call run_jupyter_output_demo with kind "stream" to demonstrate stdout and an execution result.',
+    },
+    {
+      text: 'Call run_jupyter_output_demo with kind "figure" to render a Matplotlib image.',
+    },
+    {
+      text: 'Call run_jupyter_output_demo with kind "table" to render a pandas DataFrame.',
+    },
+    {
+      text: 'Call run_jupyter_output_demo with kind "error" to demonstrate a Jupyter traceback.',
+    },
+    {
+      text: 'Call run_jupyter_output_demo with kind "ipywidgets" to render an interactive IntSlider.',
+    },
+    {
+      text: 'Call run_jupyter_output_demo with kind "interactive" to show an actionable A2UI surface.',
+    },
+  ],
+  welcomeMessage:
+    'Choose a suggestion to execute a Jupyter output demonstration and compare the kernel output with its A2UI surface.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  systemPrompt: `You operate the A2UI Jupyter Output example. The frontend provides one tool:
+\`run_jupyter_output_demo\`, whose \`kind\` is one of \`stream\`, \`figure\`, \`table\`,
+\`error\`, \`ipywidgets\`, or \`interactive\`.
+
+For every request to demonstrate an output, ALWAYS call
+\`run_jupyter_output_demo\` exactly once with the matching kind. Do not write or
+execute replacement Python yourself. After the tool returns, briefly tell the
+user that the demonstration is visible in the A2UI Surface and Jupyter Output
+panels. An intentional \`error\` demonstration is successful when the tool has
+displayed its traceback.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'vercel-ai',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-agentic-chat',
   version: '0.0.1',
@@ -11303,6 +11379,7 @@ export const WORKERS_VARIANT_ANALYSIS_AGENTSPEC_0_0_1: Agentspec = {
 
 export const AGENTSPECS: Record<string, Agentspec> = {
   'example-a2ui-agent': EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
+  'example-a2ui-jupyter-output': EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1,
   'example-agentic-chat': EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
   'example-agentic-generative-ui':
     EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1,

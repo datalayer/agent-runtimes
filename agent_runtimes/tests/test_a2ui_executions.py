@@ -5,15 +5,15 @@
 
 from __future__ import annotations
 
+from a2ui.basic_catalog.provider import BasicCatalog
+from a2ui.schema.constants import VERSION_0_9
+
 from agent_runtimes.a2ui import A2UI_VERSION, ExecutionResult, execution_to_a2ui
-from agent_runtimes.a2ui.executions import MAX_TEXT_CHARS
+from agent_runtimes.a2ui.executions import A2UI_BASIC_CATALOG_ID, MAX_TEXT_CHARS
 
 
 def _components(messages: list[dict]) -> dict[str, dict]:
-    return {
-        c["id"]: c
-        for c in messages[1]["updateComponents"]["components"]
-    }
+    return {c["id"]: c for c in messages[1]["updateComponents"]["components"]}
 
 
 def _text_of(messages: list[dict], component_id: str) -> str:
@@ -21,6 +21,12 @@ def _text_of(messages: list[dict], component_id: str) -> str:
 
 
 class TestShape:
+    def test_uses_the_registered_v09_basic_catalog(self) -> None:
+        messages = execution_to_a2ui(ExecutionResult(code="1"))
+
+        assert A2UI_BASIC_CATALOG_ID == BasicCatalog.get_catalog_id(VERSION_0_9)
+        assert messages[0]["createSurface"]["catalogId"] == A2UI_BASIC_CATALOG_ID
+
     def test_emits_the_three_v09_messages_in_order(self) -> None:
         messages = execution_to_a2ui(ExecutionResult(code="1"))
 
@@ -47,16 +53,16 @@ class TestShape:
     def test_the_surface_id_is_carried_by_every_message(self) -> None:
         messages = execution_to_a2ui(ExecutionResult(code="1"), surface_id="run-7")
 
-        ids = {
-            m[next(k for k in m if k != "version")]["surfaceId"] for m in messages
-        }
+        ids = {m[next(k for k in m if k != "version")]["surfaceId"] for m in messages}
         assert ids == {"run-7"}
 
 
 class TestContent:
     def test_an_error_is_shown_above_the_output(self) -> None:
         messages = execution_to_a2ui(
-            ExecutionResult(code="1/0", success=False, error="ZeroDivisionError", stdout="before")
+            ExecutionResult(
+                code="1/0", success=False, error="ZeroDivisionError", stdout="before"
+            )
         )
         root = _components(messages)["root"]["children"]
 
@@ -83,7 +89,9 @@ class TestContent:
         messages = execution_to_a2ui(
             ExecutionResult(
                 code="plot()",
-                outputs=[{"output_type": "display_data", "data": {"image/png": "AAAA"}}],
+                outputs=[
+                    {"output_type": "display_data", "data": {"image/png": "AAAA"}}
+                ],
             )
         )
         image = _components(messages)["image-0"]
@@ -150,6 +158,23 @@ class TestContent:
             "images": 1,
             "hasOutput": False,
         }
+
+    def test_named_actions_become_clickable_surface_controls(self) -> None:
+        messages = execution_to_a2ui(
+            ExecutionResult(code="print('choose')", stdout="choose"),
+            actions=[
+                {"name": "errors", "label": "Errors"},
+                {"name": "warnings", "label": "Warnings"},
+            ],
+        )
+        components = _components(messages)
+
+        assert components["actions"]["children"] == ["action-0", "action-1"]
+        assert components["action-0"]["component"] == "Button"
+        assert components["action-0"]["action"] == {
+            "event": {"name": "errors", "context": {}}
+        }
+        assert components["action-label-0"]["text"] == "Errors"
 
 
 class TestFromPayload:

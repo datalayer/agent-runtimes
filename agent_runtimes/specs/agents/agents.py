@@ -102,6 +102,82 @@ How to respond:
     subagents=None,
 )
 
+EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
+    id="example-a2ui-jupyter-output",
+    version="0.0.1",
+    name="A2UI Jupyter Output Agent",
+    description="Drives the A2UI Jupyter Output example by selecting a kernel-output demonstration and asking the frontend to execute it in the connected sandbox.",
+    tags=["a2ui", "jupyter", "output"],
+    domain=None,
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-6",
+    inference_provider=None,
+    mcp_servers=[],
+    skills=[],
+    tools=[],
+    frontend_tools=[],
+    environment_name="ai-agents-env",
+    icon="notebook",
+    emoji="📓",
+    color="#0969DA",
+    suggestions=[
+        AgentSuggestion(
+            text='Call run_jupyter_output_demo with kind "stream" to demonstrate stdout and an execution result.'
+        ),
+        AgentSuggestion(
+            text='Call run_jupyter_output_demo with kind "figure" to render a Matplotlib image.'
+        ),
+        AgentSuggestion(
+            text='Call run_jupyter_output_demo with kind "table" to render a pandas DataFrame.'
+        ),
+        AgentSuggestion(
+            text='Call run_jupyter_output_demo with kind "error" to demonstrate a Jupyter traceback.'
+        ),
+        AgentSuggestion(
+            text='Call run_jupyter_output_demo with kind "ipywidgets" to render an interactive IntSlider.'
+        ),
+        AgentSuggestion(
+            text='Call run_jupyter_output_demo with kind "interactive" to show an actionable A2UI surface.'
+        ),
+    ],
+    welcome_message="Choose a suggestion to execute a Jupyter output demonstration and compare the kernel output with its A2UI surface.",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="jupyter-server",
+    harness="pydantic-ai",
+    system_prompt="""You operate the A2UI Jupyter Output example. The frontend provides one tool:
+`run_jupyter_output_demo`, whose `kind` is one of `stream`, `figure`, `table`,
+`error`, `ipywidgets`, or `interactive`.
+
+For every request to demonstrate an output, ALWAYS call
+`run_jupyter_output_demo` exactly once with the matching kind. Do not write or
+execute replacement Python yourself. After the tool returns, briefly tell the
+user that the demonstration is visible in the A2UI Surface and Jupyter Output
+panels. An intentional `error` demonstration is successful when the tool has
+displayed its traceback.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol="vercel-ai",
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    tool_hooks=None,
+    parameters=None,
+    subagents=None,
+)
+
 EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1 = Agentspec(
     id="example-agentic-chat",
     version="0.0.1",
@@ -9680,6 +9756,7 @@ WORKERS_VARIANT_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
 
 AGENTSPECS: Dict[str, Agentspec] = {
     "example-a2ui-agent": EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
+    "example-a2ui-jupyter-output": EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1,
     "example-agentic-chat": EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
     "example-agentic-generative-ui": EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1,
     "example-backend-tool-rendering": EXAMPLE_BACKEND_TOOL_RENDERING_AGENTSPEC_0_0_1,

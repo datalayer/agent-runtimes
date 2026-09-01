@@ -22,11 +22,14 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from a2ui.basic_catalog.provider import BasicCatalog
+from a2ui.schema.constants import VERSION_0_9
+
 #: A2UI protocol version these messages speak.
 A2UI_VERSION = "v0.9"
 
-#: Catalog the basic components come from.
-A2UI_BASIC_CATALOG_ID = "a2ui/basic"
+#: Authoritative catalog id registered by the v0.9 client renderer.
+A2UI_BASIC_CATALOG_ID = BasicCatalog.get_catalog_id(VERSION_0_9)
 
 #: Longest text block rendered before it is cut. A surface is a summary; the
 #: raw stream stays available where it always was.
@@ -70,7 +73,9 @@ def _truncate(text: str, limit: int = MAX_TEXT_CHARS) -> tuple[str, bool]:
     return text[:limit], True
 
 
-def _text(component_id: str, text: str, variant: Optional[str] = None) -> dict[str, Any]:
+def _text(
+    component_id: str, text: str, variant: Optional[str] = None
+) -> dict[str, Any]:
     component: dict[str, Any] = {
         "id": component_id,
         "component": "Text",
@@ -126,6 +131,7 @@ def execution_to_a2ui(
     surface_id: str = "sandbox-execution",
     *,
     title: str = "Execution",
+    actions: Optional[list[dict[str, Any]]] = None,
 ) -> list[dict[str, Any]]:
     """Render one execution as an A2UI surface.
 
@@ -153,17 +159,27 @@ def execution_to_a2ui(
             add(_text("code", code_text + ("\n…" if cut else ""))),
         ]
         add({"id": "code-column", "component": "Column", "children": card_children})
-        root_children.append(add({"id": "code-card", "component": "Card", "child": "code-column"}))
+        root_children.append(
+            add({"id": "code-card", "component": "Card", "child": "code-column"})
+        )
 
     # An error is the thing the reader needs first, so it goes above output.
     failure = result.error or (result.stderr if not result.success else "")
     if failure:
         failure_text, _ = _truncate(_strip_ansi(failure))
-        add({"id": "error-column", "component": "Column", "children": [
-            add(_text("error-label", "Error", "caption")),
-            add(_text("error", failure_text)),
-        ]})
-        root_children.append(add({"id": "error-card", "component": "Card", "child": "error-column"}))
+        add(
+            {
+                "id": "error-column",
+                "component": "Column",
+                "children": [
+                    add(_text("error-label", "Error", "caption")),
+                    add(_text("error", failure_text)),
+                ],
+            }
+        )
+        root_children.append(
+            add({"id": "error-card", "component": "Card", "child": "error-column"})
+        )
 
     images = 0
     text_blocks: list[str] = []
@@ -199,14 +215,62 @@ def execution_to_a2ui(
 
     if text_blocks:
         joined, cut = _truncate("\n".join(text_blocks))
-        add({"id": "output-column", "component": "Column", "children": [
-            add(_text("output-label", "Output", "caption")),
-            add(_text("output", joined + ("\n… truncated" if cut else ""))),
-        ]})
-        root_children.append(add({"id": "output-card", "component": "Card", "child": "output-column"}))
+        add(
+            {
+                "id": "output-column",
+                "component": "Column",
+                "children": [
+                    add(_text("output-label", "Output", "caption")),
+                    add(_text("output", joined + ("\n… truncated" if cut else ""))),
+                ],
+            }
+        )
+        root_children.append(
+            add({"id": "output-card", "component": "Card", "child": "output-column"})
+        )
 
     if not text_blocks and not images and not failure:
-        root_children.append(add(_text("empty", "The code ran and produced no output.")))
+        root_children.append(
+            add(_text("empty", "The code ran and produced no output."))
+        )
+
+    action_children: list[str] = []
+    for index, action in enumerate(actions or []):
+        if not isinstance(action, dict):
+            continue
+        name = str(action.get("name") or "").strip()
+        label = str(action.get("label") or name).strip()
+        if not name or not label:
+            continue
+        label_id = add(_text(f"action-label-{index}", label))
+        context = action.get("context")
+        action_children.append(
+            add(
+                {
+                    "id": f"action-{index}",
+                    "component": "Button",
+                    "variant": "primary" if index == 0 else "default",
+                    "child": label_id,
+                    "action": {
+                        "event": {
+                            "name": name,
+                            "context": context if isinstance(context, dict) else {},
+                        }
+                    },
+                }
+            )
+        )
+    if action_children:
+        root_children.append(add(_text("actions-label", "Choose an action", "caption")))
+        root_children.append(
+            add(
+                {
+                    "id": "actions",
+                    "component": "Row",
+                    "children": action_children,
+                }
+            )
+        )
 
     components.insert(
         0,

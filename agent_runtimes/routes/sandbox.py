@@ -69,6 +69,10 @@ class SurfaceExecuteRequest(BaseModel):
     """Code to run, and optionally what the reader just did to a surface."""
 
     code: str = Field(description="Code to execute")
+    agent_id: Optional[str] = Field(
+        default=None,
+        description="Agent whose Jupyter sandbox should execute the code.",
+    )
     action: Optional[dict[str, Any]] = Field(
         default=None,
         description=(
@@ -76,6 +80,13 @@ class SurfaceExecuteRequest(BaseModel):
             "selection. Bound into the run as `a2ui_action` so the code can "
             "answer it, which is the difference between a surface you can use "
             "and a screenshot."
+        ),
+    )
+    actions: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Optional named controls to append to the converted surface. Each "
+            "control has a name, label, and optional event context."
         ),
     )
     surface_id: str = Field(
@@ -95,11 +106,7 @@ def _bind_action(code: str, action: Optional[dict[str, Any]]) -> str:
     import json
 
     literal = json.dumps(action)
-    return (
-        "import json as _json\n"
-        f"a2ui_action = _json.loads({literal!r})\n"
-        f"{code}"
-    )
+    return f"import json as _json\na2ui_action = _json.loads({literal!r})\n{code}"
 
 
 @router.post("/execute/a2ui")
@@ -120,7 +127,10 @@ async def execute_as_surface(
     from agent_runtimes.a2ui import ExecutionResult, execution_to_a2ui
 
     result = await execute_sandbox_code(
-        SandboxExecuteRequest(code=_bind_action(request.code, request.action))
+        SandboxExecuteRequest(
+            code=_bind_action(request.code, request.action),
+            agent_id=request.agent_id,
+        )
     )
     payload = result.model_dump() if hasattr(result, "model_dump") else dict(result)
     # The reader's code, not the bound version: the surface should show what
@@ -130,7 +140,9 @@ async def execute_as_surface(
     return {
         "execution": payload,
         "messages": execution_to_a2ui(
-            ExecutionResult.from_payload(payload), surface_id=request.surface_id
+            ExecutionResult.from_payload(payload),
+            surface_id=request.surface_id,
+            actions=request.actions,
         ),
     }
 

@@ -118,3 +118,54 @@ def test_execute_route_non_streaming_path(monkeypatch: pytest.MonkeyPatch) -> No
     assert payload["success"] is True
     assert payload["stdout"] == "hello"
     assert payload["results"] == ["42"]
+
+
+def test_a2ui_execution_uses_the_agents_sandbox(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The surface and Output must come from the agent's Jupyter kernel."""
+
+    class SelectingManager(_FakeManager):
+        requested_agent_id: str | None = None
+
+        def get_agent_sandbox(self, agent_id: str) -> object:
+            self.requested_agent_id = agent_id
+            return object()
+
+    manager = SelectingManager()
+    monkeypatch.setattr(
+        "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
+        lambda: manager,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "code_sandboxes",
+        SimpleNamespace(CodeSandboxClient=_FakeSyncClient),
+    )
+
+    response = _build_client().post(
+        "/api/v1/sandbox/execute/a2ui",
+        json={
+            "code": "display(image)",
+            "agent_id": "figure-agent",
+            "actions": [{"name": "inspect", "label": "Inspect"}],
+        },
+    )
+
+    assert response.status_code == 200
+    assert manager.requested_agent_id == "figure-agent"
+    components = response.json()["messages"][1]["updateComponents"]["components"]
+    assert any(component.get("component") == "Button" for component in components)
+
+
+def test_a2ui_action_binding_exposes_the_event_name() -> None:
+    namespace: dict[str, object] = {}
+
+    exec(
+        sandbox_route._bind_action(
+            "selected = a2ui_action['name']", {"name": "warnings"}
+        ),
+        namespace,
+    )
+
+    assert namespace["selected"] == "warnings"
