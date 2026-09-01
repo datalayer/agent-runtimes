@@ -165,6 +165,35 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
     ],
 )
 
+DATALAYER_MCP_SERVER_0_0_1 = MCPServer(
+    id="datalayer",
+    version="0.0.1",
+    name="Datalayer",
+    description=(
+        "Read, edit and run Jupyter notebooks on Datalayer, with sandboxes "
+        "and data"
+    ),
+    icon="notebook",
+    emoji="🚀",
+    command="npx",
+    args=[
+        "-y",
+        "mcp-remote",
+        "https://mcp.datalayer.run/mcp",
+        "--header",
+        "Authorization: Bearer ${DATALAYER_API_KEY}",
+    ],
+    transport="stdio",
+    # Not on by default. Every other server here reaches something outside
+    # Datalayer; this one reaches *this* platform, and an agent running in a
+    # Datalayer sandbox already has the notebook it was given. Enabling it
+    # says "this agent should also act on my other notebooks", which is a
+    # choice somebody makes rather than a default they discover.
+    enabled=False,
+    tools=[],
+    required_env_vars=["DATALAYER_API_KEY:0.0.1"],
+)
+
 HUGGINGFACE_MCP_SERVER_0_0_1 = MCPServer(
     id="huggingface",
     version="0.0.1",
@@ -310,6 +339,7 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
 MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "alphavantage": ALPHAVANTAGE_MCP_SERVER_0_0_1,
     "chart": CHART_MCP_SERVER_0_0_1,
+    "datalayer": DATALAYER_MCP_SERVER_0_0_1,
     "earthdata": EARTHDATA_MCP_SERVER_0_0_1,
     "eurus": EURUS_MCP_SERVER_0_0_1,
     "filesystem": FILESYSTEM_MCP_SERVER_0_0_1,
