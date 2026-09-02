@@ -118,6 +118,8 @@ const EXAMPLE_GROUP_ORDER = [
  */
 const ANONYMOUS_EXAMPLES = new Set([
   'LoopWorkspaceExample',
+  // Runs on the browser sandbox: nothing to allocate, nothing to sign into.
+  'LoopShellExample',
   // Temporarily anonymous so the Jupyter output surface can be driven and
   // debugged without a session. Remove once that work is finished.
   'A2UiJupyterOutputExample',
@@ -127,7 +129,8 @@ const getExampleGroup = (id: string): string => {
   if (
     id === 'AgentspecsExample' ||
     id === 'AgentLoopExample' ||
-    id === 'LoopWorkspaceExample'
+    id === 'LoopWorkspaceExample' ||
+    id === 'LoopShellExample'
   ) {
     return 'Personas';
   }

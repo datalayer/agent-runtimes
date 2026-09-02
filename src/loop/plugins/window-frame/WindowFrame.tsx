@@ -24,8 +24,10 @@
 
 import type { ReactNode } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { ReactorSlot } from '@datalayer/reactor/react';
-import { useSlotComponents } from '@datalayer/reactor/react';
+import {
+  ReactorSlot,
+  useOptionalSlotComponents,
+} from '@datalayer/reactor/react';
 import { WINDOW_ACTIONS_SLOT, WINDOW_CONTROLS_SLOT } from './slots';
 
 export type WindowFrameProps = {
@@ -62,9 +64,16 @@ export function WindowFrame({
   height,
   slotProps = {},
 }: WindowFrameProps): React.JSX.Element {
-  // Asked rather than assumed, so the trailing group is not an empty flex box
-  // taking a gap's worth of space in a bar that is mostly title.
-  const actions = useSlotComponents(WINDOW_ACTIONS_SLOT);
+  /*
+   * Asked rather than assumed, so the trailing group is not an empty flex box
+   * taking a gap's worth of space in a bar that is mostly title.
+   *
+   * The tolerant read, because the frame is *outside* the workspace it frames:
+   * a host composes `<WindowFrame>` around whatever builds the reactor, so on
+   * the first render there is no platform at all. The bar draws without its
+   * actions and fills them in when the workspace registers one.
+   */
+  const actions = useOptionalSlotComponents(WINDOW_ACTIONS_SLOT);
 
   return (
     <Box

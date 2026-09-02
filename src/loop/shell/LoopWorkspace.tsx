@@ -364,6 +364,11 @@ function WorkspaceBody({
         flexDirection: 'column',
         height: '100%',
         minHeight: 0,
+        // The containing block for anything in the root slot that positions
+        // itself absolutely — the floating prompt does. Without this it would
+        // resolve against whatever ancestor happens to be positioned, and
+        // float over the host's page instead of over the workspace.
+        position: 'relative',
         bg: 'canvas.default',
         color: 'fg.default',
       }}

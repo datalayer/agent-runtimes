@@ -536,6 +536,13 @@ export const LoopDocumentToolbarItem =
     'loop.document.toolbar.item',
   );
 
+// Asking the chat to open a surface, from a command that runs outside it.
+export {
+  onSurfaceRequest,
+  requestSurface,
+  type SurfaceRequestListener,
+} from './surfaceRequests';
+
 /** Slash commands, shared in shape with the CLI. */
 export const LoopCommand =
   defineContributionPoint<CommandContribution>('loop.command');

@@ -78,6 +78,7 @@ import {
   LoopSlots,
   useLoopPromptStore,
   type LoopViewProps,
+  onSurfaceRequest,
 } from '../../core';
 
 type ChatControls = { send: (message: string) => void; stop: () => void };
@@ -253,6 +254,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     surfaceChosen.current = true;
     setSurfaceId(next);
   }, []);
+
+  /*
+   * A command asking for a surface — `/notebook`, `/document`, or their
+   * shortcuts. Treated exactly like a reader picking one from the strip, so
+   * the choice sticks the same way and the host's default is spent.
+   */
+  useEffect(() => onSurfaceRequest(chooseSurface), [chooseSurface]);
 
   /** The surface the host asked to open, once its plugin has contributed it. */
   const wanted = useMemo(
@@ -963,6 +971,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /* `bottom-chat` keeps the prompt in the chat column; `bottom`, the default,
      spans the workspace. */
   const besideChat = config?.promptPlacement === 'bottom-chat';
+  /* No prompt at all, for a workspace where something else owns the typing —
+     the floating prompt plugin submits through the same `workspace.submit`,
+     and two composers for one conversation is one too many. */
+  const promptHidden = config?.hidePrompt === true;
 
   /*
    * The prompt, as a value, because where it goes is configuration.
@@ -1377,7 +1389,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               enableStreaming
             />
           </Box>
-          {besideChat ? prompt : null}
+          {besideChat && !promptHidden ? prompt : null}
           {/*
             Over the conversation, not instead of it.
 
@@ -1426,7 +1438,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         </Box>
       ) : null}
 
-      {besideChat ? null : prompt}
+      {besideChat || promptHidden ? null : prompt}
     </Box>
   );
 }

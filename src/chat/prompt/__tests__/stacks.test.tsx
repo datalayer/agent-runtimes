@@ -134,3 +134,40 @@ describe('prompt regions', () => {
     await act(async () => single.root.unmount());
   });
 });
+
+describe('how a band lays out', () => {
+  it('is a flex row of controls by default', async () => {
+    const { container, root } = await render(
+      <BelowPromptFooter
+        stacks={[{ id: 'controls', content: <span>menus</span> }]}
+      />,
+    );
+
+    const band = container.querySelector<HTMLElement>(
+      '[data-prompt-stack="controls"]',
+    )!;
+    expect(window.getComputedStyle(band).display).toBe('flex');
+
+    await act(async () => root.unmount());
+  });
+
+  it('leaves a block band alone', async () => {
+    const { container, root } = await render(
+      <BelowPromptHeader
+        stacks={[
+          { id: 'usage', layout: 'block', content: <span>0 / 200K ctx</span> },
+        ]}
+      />,
+    );
+
+    // The context ring draws its own full-width band, background included. As
+    // a flex item it shrank to its content and left the page showing beside
+    // it — a pale stripe down the right of the prompt.
+    const band = container.querySelector<HTMLElement>(
+      '[data-prompt-stack="usage"]',
+    )!;
+    expect(window.getComputedStyle(band).display).not.toBe('flex');
+
+    await act(async () => root.unmount());
+  });
+});

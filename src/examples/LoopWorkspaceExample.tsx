@@ -207,14 +207,7 @@ export function LoopWorkspaceExample({
           promptPlacement,
           showAgentVariants,
           teamId,
-          localAgent: {
-            createPayload: {
-              description: 'Local agent for the Loop workspace example',
-              agent_library: 'pydantic-ai',
-              agent_spec_id: 'example-simple',
-              enable_codemode: false,
-            },
-          },
+          localAgentSpec: 'example-simple',
           // The demonstration's switches. Each is left out rather than
           // mounted-and-hidden: the sidebar is drawn only when something
           // contributes to it, so leaving these out is what removes the column.

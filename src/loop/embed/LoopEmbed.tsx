@@ -26,10 +26,12 @@
 import { useMemo, type ReactNode } from 'react';
 import type { PluginRef } from '@datalayer/reactor';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useReactor } from '@datalayer/reactor/react';
 import { Box } from '@datalayer/primer-addons';
 import { internalQueryClient } from '../../utils';
 import { buildLoopReactor, LoopWorkspace } from '../shell';
 import { loopPlugins, type LoopPresetOptions } from '../presets';
+import { WindowFrame } from '../plugins/window-frame';
 
 export type LoopEmbedProps = LoopPresetOptions & {
   /** Which agent the conversation is with. */
@@ -38,6 +40,20 @@ export type LoopEmbedProps = LoopPresetOptions & {
   showHeader?: boolean;
   /** Extra controls for the chat's own header, beside the agent's name. */
   chatHeaderActions?: ReactNode;
+  /**
+   * Draw the workspace inside a window frame with this title bar.
+   *
+   * The composition every embedding page was writing for itself: the frame
+   * around the shell, the title in its bar. Giving a title is what asks for
+   * the frame; it also switches the `windowFrame` plugin on, since a frame
+   * whose title-bar slots are closed to plugins is only half the point.
+   */
+  frameTitle?: ReactNode;
+  /**
+   * How tall the frame stands. Left unset it fills whatever wraps this,
+   * which is what a full-page host wants.
+   */
+  frameHeight?: number | string;
   /**
    * The host's own plugins, mounted alongside the preset's.
    *
@@ -53,12 +69,23 @@ export function LoopEmbed({
   agentId = '',
   showHeader = false,
   chatHeaderActions,
+  frameTitle,
+  frameHeight,
   plugins = [],
   ...preset
 }: LoopEmbedProps): React.JSX.Element {
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
-    () => buildLoopReactor([...loopPlugins(preset), ...plugins]),
+    () =>
+      buildLoopReactor([
+        ...loopPlugins({
+          ...preset,
+          // A framed embed wants the title bar's slots open; a host that
+          // asked for a frame should not also have to remember the plugin.
+          windowFrame: preset.windowFrame || frameTitle !== undefined,
+        }),
+        ...plugins,
+      ]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       preset.serverUrl,
@@ -69,10 +96,14 @@ export function LoopEmbed({
       preset.promptPlacement,
       preset.showAgentVariants,
       preset.teamId,
+      preset.localAgentSpec,
+      preset.floatingPrompt,
+      preset.editorSelector,
       preset.graph,
       preset.commandPalette,
       preset.pluginsPanel,
       preset.windowFrame,
+      frameTitle !== undefined,
       plugins,
     ],
   );
@@ -91,19 +122,38 @@ export function LoopEmbed({
    * A host provides `DatalayerThemeProvider` (or `ThemedProvider`) once, which
    * every Datalayer application already does.
    */
+  /*
+   * Started here, because this is what built it.
+   *
+   * `LoopWorkspace` starts the platform only when it is managing it, and it is
+   * told not to below — the reactor is this component's, and a shell that
+   * stopped it on unmount would be stopping somebody else's. Registering
+   * without starting leaves every plugin inactive, so nothing contributes a
+   * view and the workspace draws "No view is available yet".
+   */
+  useReactor(reactor);
+
+  const shell = (
+    <LoopWorkspace
+      serverUrl={preset.serverUrl ?? ''}
+      agentId={agentId}
+      reactor={reactor}
+      manageReactor={false}
+      showViewSelector={preset.showViewSelector}
+      showHeader={showHeader}
+      chatHeaderActions={chatHeaderActions}
+    />
+  );
+
   return (
     <QueryClientProvider client={internalQueryClient}>
-      <Box sx={{ height: '100%', minHeight: 0 }}>
-        <LoopWorkspace
-          serverUrl={preset.serverUrl ?? ''}
-          agentId={agentId}
-          reactor={reactor}
-          manageReactor={false}
-          showViewSelector={preset.showViewSelector}
-          showHeader={showHeader}
-          chatHeaderActions={chatHeaderActions}
-        />
-      </Box>
+      {frameTitle !== undefined ? (
+        <WindowFrame title={frameTitle} height={frameHeight}>
+          {shell}
+        </WindowFrame>
+      ) : (
+        <Box sx={{ height: '100%', minHeight: 0 }}>{shell}</Box>
+      )}
     </QueryClientProvider>
   );
 }

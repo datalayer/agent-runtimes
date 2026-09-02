@@ -195,3 +195,26 @@ describe('where the palette renders', () => {
     await act(async () => root.unmount());
   });
 });
+
+describe('the graph command', () => {
+  it('is offered once, by the plugin that can actually open it', async () => {
+    const { reactor, root } = await mount([
+      configurePlugin(AgentsPlugin, { target: 'browser' }),
+      ChatPlugin,
+      GraphViewPlugin,
+      LoopCommandsPlugin,
+    ]);
+
+    const graphCommands = reactor
+      .listCommands()
+      .filter(command => /graph/i.test(command.id));
+
+    // The generic plugin's own command asks the host to route by dispatching
+    // an event, and nothing in this workspace listens for it — so it did
+    // nothing when chosen, beside an entry that worked. The adapter turns it
+    // off and keeps its own.
+    expect(graphCommands.map(command => command.id)).toEqual(['loop.graph']);
+
+    await act(async () => root.unmount());
+  });
+});

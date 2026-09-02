@@ -108,6 +108,16 @@ export type ChatPluginConfig = {
    */
   hideHeader: boolean;
   /**
+   * Whether the chat renders a prompt at all.
+   *
+   * False by default: the prompt is most of what a chat is. True is for a
+   * workspace where something else owns the typing — the floating prompt
+   * plugin renders its own input and submits through the same
+   * `workspace.submit`, and a second box under the transcript would be two
+   * composers for one conversation.
+   */
+  hidePrompt: boolean;
+  /**
    * Where the prompt sits.
    *
    * `bottom` (the default) spans the workspace: the notebook and the
@@ -134,6 +144,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     defaultSurface: 'notebook',
     showSurfaceSelector: true,
     hideHeader: false,
+    hidePrompt: false,
     promptPlacement: 'bottom',
   },
   displayName: 'Chat',

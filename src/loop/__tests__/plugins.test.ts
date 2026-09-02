@@ -13,6 +13,7 @@ import {
   LoopViewType,
   canOpenView,
   createPromptChannel,
+  onSurfaceRequest,
 } from '../core';
 import type { LoopWorkspaceContext } from '../core';
 import {
@@ -195,7 +196,7 @@ describe('the editor plugins', () => {
     );
   });
 
-  it('each contribute a command that brings the chat forward', async () => {
+  it('each contribute a command that opens its editor beside the chat', async () => {
     const reactor = buildReactorFromPlugins([NotebookPlugin, DocumentPlugin]);
     reactor.start();
 
@@ -205,13 +206,22 @@ describe('the editor plugins', () => {
       setActiveViewType: (v: string) => opened.push(v),
     };
 
+    // A mounted chat is what answers a surface request; without one the
+    // commands refuse rather than appearing to work.
+    const surfaces: string[] = [];
+    const stop = onSurfaceRequest(id => surfaces.push(id));
+
     for (const entry of reactor.getContributions(LoopCommand)) {
       await entry.value.run({ workspace, argv: '' });
     }
+    stop();
 
     // The editors live in the chat now, so their commands open the chat; the
     // sandbox still has a view of its own.
     expect(opened.sort()).toEqual(['chat', 'chat', 'sandbox']);
+    // And the surface itself — switching the view alone leaves whichever
+    // editor was already open, which is what made these do nothing.
+    expect(surfaces.sort()).toEqual(['document', 'notebook']);
   });
 
   it('takes its editor away when a plugin is disabled', () => {

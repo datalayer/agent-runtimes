@@ -25,7 +25,11 @@ export {
  */
 export * from './header';
 export * from './footer';
-export { PromptStacks, type PromptStack, type PromptStacksProps } from './stack';
+export {
+  PromptStacks,
+  type PromptStack,
+  type PromptStacksProps,
+} from './stack';
 export { InputPromptText, type InputPromptTextProps } from './InputPromptText';
 export {
   InputPromptLexical,

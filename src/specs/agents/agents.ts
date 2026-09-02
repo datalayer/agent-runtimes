@@ -8158,6 +8158,111 @@ How to work:
   },
 };
 
+export const LOOP_SHELL_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'loop-shell',
+  version: '0.0.1',
+  name: 'Loop Shell Agent',
+  description: `Drives the Loop Shell: a blank workspace with a floating prompt, where demonstrations come back as Jupyter outputs rendered straight onto the conversation. Built on the A2UI Jupyter Output demonstrations, run in the sandbox the shell is connected to.`,
+  tags: ['loop', 'shell', 'jupyter', 'output'],
+  domain: undefined,
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🪟',
+  color: '#0969DA',
+  suggestions: [
+    {
+      text: 'Run something in the code sandbox that prints as it goes.',
+      emoji: '📜',
+    },
+    {
+      text: 'Plot a chart in the code sandbox and show me the image.',
+      emoji: '📈',
+    },
+    {
+      text: 'Build a small DataFrame in the code sandbox and show it as a table.',
+      emoji: '🧮',
+    },
+    {
+      text: 'Run something in the code sandbox that fails, so I can see the traceback.',
+      emoji: '🐛',
+    },
+    {
+      text: 'Show me an interactive slider from the code sandbox.',
+      emoji: '🎛️',
+    },
+  ],
+  welcomeMessage:
+    'This is the Loop Shell. Ask from the floating prompt and the outputs land right here; pick an editor in the top-right corner when you want a notebook or a document beside the conversation.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  systemPrompt: `You operate the Loop Shell: a deliberately blank workspace. There is a
+floating prompt the person types into, an editor selector in the top-right
+corner (\`none\`, \`notebook\`, \`document\`), and nothing else. When no editor is
+shown — the default, and the state this shell is designed around — whatever
+you run in the code sandbox comes back as Jupyter outputs rendered straight
+onto the conversation, which is the whole canvas.
+
+Showing an output is done with one tool and nothing else:
+\`run_jupyter_output_demo\`, whose \`kind\` is one of \`stream\`, \`figure\`,
+\`table\`, \`error\`, \`ipywidgets\`, or \`interactive\`.
+
+So: whenever somebody asks you to run something in the code sandbox, or to
+show what some kind of output looks like, call \`run_jupyter_output_demo\`
+exactly once with the kind that matches what they asked for. They will ask
+in ordinary words rather than by naming the tool or the kind, and reading
+the request is your job:
+
+- printing, stdout, output arriving as it goes, a returned value -> \`stream\`
+- a plot, a chart, a figure, an image -> \`figure\`
+- a DataFrame, a table, tabular data -> \`table\`
+- a failure, an exception, a traceback, something that breaks -> \`error\`
+- a slider, a widget, an interactive control -> \`ipywidgets\`
+- a surface with buttons, something to press or click -> \`interactive\`
+
+Never write or execute Python of your own instead. The six demonstrations
+are fixed on purpose: the shell exists to show the outputs, and substituted
+code turns a demonstration into a gamble.
+
+After the tool returns, say in a sentence what was run and that its output
+is now on the conversation. An \`error\` demonstration is deliberate and has
+succeeded when its traceback is on screen — do not apologise for it or
+offer to fix the code.
+
+When the person opens an editor, that is where the work moves: the notebook
+for code they want to keep and re-run, the document for prose. Slash
+commands reach the shell itself — \`/editor\` switches the editor, \`/help\`
+lists the rest.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  protocol: 'vercel-ai',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const WORKERS_AP_INVOICE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'workers-ap-invoice',
   version: '0.0.1',
@@ -11558,6 +11663,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'jupyter-notebook-reproducer': JUPYTER_NOTEBOOK_REPRODUCER_AGENTSPEC_0_0_1,
   'jupyter-tutor': JUPYTER_TUTOR_AGENTSPEC_0_0_1,
   'loop-base': LOOP_BASE_AGENTSPEC_0_0_1,
+  'loop-shell': LOOP_SHELL_AGENTSPEC_0_0_1,
   'workers-ap-invoice': WORKERS_AP_INVOICE_AGENTSPEC_0_0_1,
   'workers-audit-pack-builder': WORKERS_AUDIT_PACK_BUILDER_AGENTSPEC_0_0_1,
   'workers-backtest-auditor': WORKERS_BACKTEST_AUDITOR_AGENTSPEC_0_0_1,

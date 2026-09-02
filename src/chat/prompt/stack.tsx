@@ -65,6 +65,18 @@ export type PromptStack = {
   pb?: number;
   /** Space between the items in the band. */
   gap?: number;
+  /**
+   * How the band lays its content out.
+   *
+   * `'row'` — the default — is a flex row of controls: menus, indicators,
+   * buttons, laid out with `gap`.
+   *
+   * `'block'` is for content that *is* the band and draws its own full width.
+   * The context ring is one: it brings its own padding and background, and in
+   * a flex row it shrinks to its content and leaves the rest of the row
+   * showing the page behind it — a pale stripe down the right-hand side.
+   */
+  layout?: 'row' | 'block';
 };
 
 export type PromptStacksProps = {
@@ -104,9 +116,13 @@ export function PromptStacks({
             data-prompt-stack={stack.id}
             aria-disabled={isDisabled || undefined}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: stack.gap ?? 2,
+              ...(stack.layout === 'block'
+                ? null
+                : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: stack.gap ?? 2,
+                  }),
               px: stack.px ?? 2,
               py: stack.py ?? 1,
               ...(stack.pt === undefined ? null : { pt: stack.pt }),
@@ -116,9 +132,7 @@ export function PromptStacks({
                 ? { borderTop: '1px solid', borderColor: 'border.default' }
                 : null),
               ...(stack.subtle ? { bg: 'canvas.subtle' } : null),
-              ...(isDisabled
-                ? { opacity: 0.5, pointerEvents: 'none' }
-                : null),
+              ...(isDisabled ? { opacity: 0.5, pointerEvents: 'none' } : null),
             }}
           >
             {stack.content}

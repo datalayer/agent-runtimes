@@ -411,6 +411,10 @@ export function InputPrompt({
             ? [
                 {
                   id: 'context-usage',
+                  // `ContextPie` is the band: it brings its own padding and
+                  // background and expects the full width. As a flex item it
+                  // shrank to its content and left a pale stripe beside it.
+                  layout: 'block',
                   /*
                     No band when there is nothing to put in it.
 
@@ -456,61 +460,63 @@ export function InputPrompt({
                   subtle: true,
                   content: (
                     <>
-      {anyOffered ? (
-        <>
-          {/* Agents Menu */}
-          {agentsOffered && (
-            <AgentsMenu
-              agents={agents}
-              selectedAgentId={selectedAgentId}
-              onSelectAgent={onSelectAgent}
-            />
-          )}
+                      {anyOffered ? (
+                        <>
+                          {/* Agents Menu */}
+                          {agentsOffered && (
+                            <AgentsMenu
+                              agents={agents}
+                              selectedAgentId={selectedAgentId}
+                              onSelectAgent={onSelectAgent}
+                            />
+                          )}
 
-          {/* Tools Menu */}
-          {toolsOffered && (
-            <ToolsMenu
-              codemodeEnabled={codemodeEnabled}
-              onToggleCodemode={onToggleCodemode}
-              mcpServers={mcpServers}
-              enabledMcpTools={enabledMcpTools}
-              enabledMcpToolCount={enabledMcpToolCount}
-              onToggleMcpTool={onToggleMcpTool}
-              onToggleAllMcpServerTools={onToggleAllMcpServerTools}
-              approvedMcpTools={approvedMcpTools}
-              onToggleMcpToolApproval={onToggleMcpToolApproval}
-              availableTools={availableTools}
-            />
-          )}
+                          {/* Tools Menu */}
+                          {toolsOffered && (
+                            <ToolsMenu
+                              codemodeEnabled={codemodeEnabled}
+                              onToggleCodemode={onToggleCodemode}
+                              mcpServers={mcpServers}
+                              enabledMcpTools={enabledMcpTools}
+                              enabledMcpToolCount={enabledMcpToolCount}
+                              onToggleMcpTool={onToggleMcpTool}
+                              onToggleAllMcpServerTools={
+                                onToggleAllMcpServerTools
+                              }
+                              approvedMcpTools={approvedMcpTools}
+                              onToggleMcpToolApproval={onToggleMcpToolApproval}
+                              availableTools={availableTools}
+                            />
+                          )}
 
-          {/* Skills Menu */}
-          {skillsOffered && (
-            <SkillsMenu
-              skills={skills}
-              skillsLoading={skillsLoading}
-              enabledSkills={enabledSkills}
-              onToggleSkill={onToggleSkill}
-              onToggleAllSkills={onToggleAllSkills}
-              approvedSkills={approvedSkills}
-              onToggleSkillApproval={onToggleSkillApproval}
-            />
-          )}
+                          {/* Skills Menu */}
+                          {skillsOffered && (
+                            <SkillsMenu
+                              skills={skills}
+                              skillsLoading={skillsLoading}
+                              enabledSkills={enabledSkills}
+                              onToggleSkill={onToggleSkill}
+                              onToggleAllSkills={onToggleAllSkills}
+                              approvedSkills={approvedSkills}
+                              onToggleSkillApproval={onToggleSkillApproval}
+                            />
+                          )}
 
-          {/* Model Selector */}
-          {modelsOffered && (
-            <ModelSelector
-              models={models}
-              selectedModel={selectedModel}
-              onModelSelect={onModelSelect}
-              isA2AProtocol={isA2AProtocol}
-            />
-          )}
-        </>
-      ) : (
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-          Loading controls...
-        </Text>
-      )}
+                          {/* Model Selector */}
+                          {modelsOffered && (
+                            <ModelSelector
+                              models={models}
+                              selectedModel={selectedModel}
+                              onModelSelect={onModelSelect}
+                              isA2AProtocol={isA2AProtocol}
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                          Loading controls...
+                        </Text>
+                      )}
                     </>
                   ),
                 },

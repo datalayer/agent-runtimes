@@ -9,6 +9,7 @@ export { default as A2UiContactCardExample } from './A2UiContactCardExample';
 export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
 export { default as A2UiAgentExample } from './A2UiAgentExample';
 export { default as A2UiViewerExample } from './A2UiViewerExample';
+export { default as LoopShellExample } from './LoopShellExample';
 export { default as LoopWorkspaceExample } from './LoopWorkspaceExample';
 // The same workspace with the lazy loading, the preload and the error
 // boundary a host would otherwise write for itself.

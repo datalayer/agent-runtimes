@@ -27,6 +27,8 @@
 
 import { configurePlugin, type PluginRef } from '@datalayer/reactor';
 import { A2uiPlugin } from './plugins/a2ui';
+import { EditorsPlugin } from './plugins/editors';
+import { PromptPlugin } from './plugins/prompt';
 import { AgentspecsPlugin } from './plugins/agentspecs';
 import {
   AgentsPlugin,
@@ -67,6 +69,29 @@ export type LoopPresetOptions = {
   /** What a local agent is created from, when one is. */
   localAgent?: AgentsConfig['localAgent'];
   /**
+   * The agentspec the local agent is created from, by id.
+   *
+   * Shorthand for the `localAgent` payload every host was writing out by
+   * hand; `localAgent`, when both are given, wins — it is the longhand.
+   */
+  localAgentSpec?: string;
+  /**
+   * A floating, draggable prompt instead of the chat's docked one.
+   *
+   * Mounts `PromptPlugin` and tells the chat to render no composer of its
+   * own — the two halves of one decision, taken together so a host cannot end
+   * up with two input boxes for one conversation, or none at all.
+   */
+  floatingPrompt?: boolean;
+  /**
+   * The editor choice in the workspace header rather than above the chat.
+   *
+   * Mounts `EditorsPlugin` and switches the chat's own surface strip off —
+   * again both halves of one decision: two controls offering the same choice
+   * would eventually disagree about what is open.
+   */
+  editorSelector?: boolean;
+  /**
    * The plugin graph, reachable from the sidebar.
    *
    * Left out rather than mounted-and-hidden: it pulls the generic
@@ -105,6 +130,9 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     showAgentVariants = false,
     teamId,
     localAgent,
+    localAgentSpec,
+    floatingPrompt = false,
+    editorSelector = false,
     graph = false,
     commandPalette = false,
     pluginsPanel = false,
@@ -116,8 +144,11 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // configuration rather than the workspace's.
     configurePlugin(ChatPlugin, {
       defaultSurface: defaultEditor,
-      showSurfaceSelector: showViewSelector,
+      // The chat's strip stands down when the header selector offers the
+      // same choice; see `editorSelector`.
+      showSurfaceSelector: showViewSelector && !editorSelector,
       hideHeader: hideChatHeader,
+      hidePrompt: floatingPrompt,
       promptPlacement,
     }),
     configurePlugin(AgentsPlugin, {
@@ -125,7 +156,18 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       target,
       showAgentVariants,
       teamId,
-      localAgent,
+      localAgent:
+        localAgent ??
+        (localAgentSpec
+          ? {
+              createPayload: {
+                description: `Local agent from the ${localAgentSpec} spec`,
+                agent_library: 'pydantic-ai',
+                agent_spec_id: localAgentSpec,
+                enable_codemode: false,
+              },
+            }
+          : undefined),
     }),
     // Two extensions rather than four plugins: each delivers an editor and the
     // toolbar that reports on it. Every member is still switched individually.
@@ -134,6 +176,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     A2uiPlugin,
     AgentspecsPlugin,
     ModelsPlugin,
+    ...(floatingPrompt ? [PromptPlugin] : []),
+    ...(editorSelector
+      ? [configurePlugin(EditorsPlugin, { defaultEditor })]
+      : []),
     ...(graph ? [GraphViewPlugin] : []),
     ...(commandPalette ? [LoopCommandsPlugin] : []),
     ...(pluginsPanel ? [PluginsPanelPlugin] : []),

@@ -14,7 +14,12 @@
 
 import { FileIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopChatSurface, LoopCommand, LoopDocumentToolbar } from '../../core';
+import {
+  LoopChatSurface,
+  LoopCommand,
+  requestSurface,
+  LoopDocumentToolbar,
+} from '../../core';
 import { AgentsPlugin } from '../agents';
 
 export const DOCUMENT_PLUGIN_NAME = '@datalayer/loop-plugin-document';
@@ -56,7 +61,16 @@ export const DocumentPlugin = definePlugin({
         group: 'Open',
         keybinding: 'Mod+Alt+O',
         run: async ({ workspace }) => {
+          // The chat first, because the surface lives beside it; then the
+          // surface itself. Switching the view alone leaves whichever surface
+          // was already open, so on the chat view — where a reader usually is
+          // — this used to do nothing at all.
           workspace.setActiveViewType('chat');
+          if (!requestSurface('document')) {
+            throw new Error(
+              'No chat is on screen to open the document beside.',
+            );
+          }
         },
       },
       { id: 'document' },

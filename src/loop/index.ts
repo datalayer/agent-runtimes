@@ -98,6 +98,14 @@ export {
   DocumentToolbarPlugin,
   DOCUMENT_TOOLBAR_PLUGIN_NAME,
 } from './plugins/document-toolbar';
+export {
+  EditorsPlugin,
+  EditorSelector,
+  EDITORS_PLUGIN_NAME,
+  NONE_EDITOR,
+  chooseEditor,
+  type EditorsPluginConfig,
+} from './plugins/editors';
 export { ModelsPlugin, MODELS_PLUGIN_NAME } from './plugins/models';
 export { NotebookPlugin, NOTEBOOK_PLUGIN_NAME } from './plugins/notebook';
 export {
@@ -115,10 +123,14 @@ export {
   WINDOW_FRAME_PLUGIN_NAME,
   type WindowFrameProps,
 } from './plugins/window-frame';
+export { LoopCommandsPlugin, COMMANDS_PLUGIN_NAME } from './plugins/commands';
 export {
-  LoopCommandsPlugin,
-  COMMANDS_PLUGIN_NAME,
-} from './plugins/commands';
+  PromptPlugin,
+  FloatingPrompt,
+  PROMPT_PLUGIN_NAME,
+  focusPrompt,
+  type PromptPluginConfig,
+} from './plugins/prompt';
 // Loop, ready to drop into somebody else's page.
 export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
 

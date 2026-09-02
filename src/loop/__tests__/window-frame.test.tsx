@@ -137,3 +137,21 @@ describe('how tall the frame stands', () => {
     await act(async () => root.unmount());
   });
 });
+
+describe('a frame drawn outside the workspace', () => {
+  it('renders before any reactor exists', async () => {
+    // How a host actually composes it: the frame wraps whatever builds the
+    // reactor, so on the first render there is no platform at all. Reading the
+    // actions slot used to throw here, and took the page with it.
+    const { container, root } = await mount(
+      <WindowFrame title={<span>Loop</span>} height={200}>
+        <div>the workspace, still starting</div>
+      </WindowFrame>,
+    );
+
+    expect(container.textContent).toContain('Loop');
+    expect(container.textContent).toContain('the workspace, still starting');
+
+    await act(async () => root.unmount());
+  });
+});

@@ -228,6 +228,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'loop', 'workspace', 'sandbox', 'owns-sandbox-control'],
   ),
   makeEntry(
+    'LoopShellExample',
+    () => import('./LoopShellExample'),
+    'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
+    ['example', 'loop', 'shell', 'prompt', 'editors'],
+  ),
+  makeEntry(
     'AgentLoopExample',
     () => import('./AgentLoopExample'),
     'Define and launch an agent execution loop (observe/think/act/evaluate) over a live notebook, driven by generic loop specs.',
