@@ -64,6 +64,11 @@ export type LoopPresetOptions = {
   promptPlacement?: ChatPluginConfig['promptPlacement'];
   /** Whether a person may choose between agent variants. */
   showAgentVariants?: boolean;
+  /**
+   * The agent summary badge in the workspace header. On by default; a host
+   * whose page already introduces the agent switches it off.
+   */
+  agentSummary?: boolean;
   /** The team whose agents are offered. */
   teamId?: string;
   /** What a local agent is created from, when one is. */
@@ -76,11 +81,12 @@ export type LoopPresetOptions = {
    */
   localAgentSpec?: string;
   /**
-   * A floating, draggable prompt instead of the chat's docked one.
+   * The chat's composer in a floating, draggable card.
    *
-   * Mounts `PromptPlugin` and tells the chat to render no composer of its
-   * own — the two halves of one decision, taken together so a host cannot end
-   * up with two input boxes for one conversation, or none at all.
+   * Sets the chat's `promptPlacement` to `'floating'` — it is the same
+   * composer, card included — and mounts `PromptPlugin` for the `/prompt`
+   * command that focuses it: the two halves of one decision, taken together.
+   * Wins over `promptPlacement` when both are given.
    */
   floatingPrompt?: boolean;
   /**
@@ -128,6 +134,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     hideChatHeader = false,
     promptPlacement,
     showAgentVariants = false,
+    agentSummary = true,
     teamId,
     localAgent,
     localAgentSpec,
@@ -148,13 +155,13 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       // same choice; see `editorSelector`.
       showSurfaceSelector: showViewSelector && !editorSelector,
       hideHeader: hideChatHeader,
-      hidePrompt: floatingPrompt,
-      promptPlacement,
+      promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
     }),
     configurePlugin(AgentsPlugin, {
       serverUrl,
       target,
       showAgentVariants,
+      showAgentSummary: agentSummary,
       teamId,
       localAgent:
         localAgent ??

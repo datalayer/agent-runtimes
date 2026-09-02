@@ -69,6 +69,9 @@ const toSandboxStatusUrl = (value?: string): string | undefined => {
   }
 };
 
+/** How wide the details card is; the side it opens on is chosen to fit it. */
+const OVERLAY_WIDTH = 360;
+
 /**
  * Compact agent summary badge with a hover overlay for details.
  */
@@ -77,6 +80,17 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
   title = 'Active Agent',
 }) => {
   const [isHovering, setIsHovering] = useState(false);
+  /*
+   * Which way the details card opens.
+   *
+   * It used to be pinned `right: 0` — growing leftward from the badge — which
+   * was right for a badge at the trailing edge of a header and wrong for this
+   * one, which sits in the leading cluster: 360px of card left the viewport
+   * entirely. Measured when the hover opens, because the badge does not know
+   * which header it is in.
+   */
+  const [opensLeftward, setOpensLeftward] = useState(false);
+  const badgeRef = useRef<HTMLDivElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
 
   const clearCloseTimer = () => {
@@ -88,6 +102,12 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
 
   const handleMouseEnter = () => {
     clearCloseTimer();
+    const badge = badgeRef.current?.getBoundingClientRect();
+    // Grow rightward while there is room for the card, leftward only when
+    // the right edge would cut it off instead.
+    setOpensLeftward(
+      Boolean(badge && badge.left + OVERLAY_WIDTH > window.innerWidth),
+    );
     setIsHovering(true);
   };
 
@@ -138,6 +158,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
 
   return (
     <Box
+      ref={badgeRef}
       sx={{ position: 'relative' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -184,8 +205,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           sx={{
             position: 'absolute',
             top: 'calc(100% + 8px)',
-            right: 0,
-            width: 360,
+            ...(opensLeftward ? { right: 0 } : { left: 0 }),
+            width: OVERLAY_WIDTH,
             p: 2,
             border: '1px solid',
             borderColor: 'border.default',

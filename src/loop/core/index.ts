@@ -543,6 +543,9 @@ export {
   type SurfaceRequestListener,
 } from './surfaceRequests';
 
+// Asking whatever renders the prompt to focus it, the same way.
+export { focusPrompt, onPromptFocusRequest } from './focusRequests';
+
 /** Slash commands, shared in shape with the CLI. */
 export const LoopCommand =
   defineContributionPoint<CommandContribution>('loop.command');

@@ -27,6 +27,7 @@ import type {
   SkillInfo,
 } from '../../types';
 import { InputPromptBase, type InputPromptVariant } from './InputPromptBase';
+import { FloatingCard } from './FloatingCard';
 import { BelowPromptHeader } from './header';
 import { BelowPromptFooter } from './footer';
 import {
@@ -83,6 +84,16 @@ export interface InputPromptProps {
   autoFocus: boolean;
   focusTrigger?: number;
   padding: number;
+  /**
+   * Float the whole prompt in a draggable card instead of docking it.
+   *
+   * The same prompt — editor, header, usage band, the tools/skills/model
+   * footer — wrapped in `FloatingCard`: absolutely positioned against the
+   * nearest positioned ancestor, bottom-centre until picked up by its
+   * handle. For a host whose page is mostly canvas, where a docked composer
+   * would claim a permanent strip of it.
+   */
+  draggable?: boolean;
   /**
    * Called with the message when it is sent.
    *
@@ -232,6 +243,7 @@ export function InputPrompt({
   autoFocus,
   focusTrigger,
   padding,
+  draggable = false,
   onSend,
   onStop,
   disableInputPrompt = false,
@@ -345,7 +357,7 @@ export function InputPrompt({
    */
   const hasContext = Boolean(agentUsage && !agentUsage.error);
 
-  return (
+  const body = (
     <Box>
       {/* Input Area — powered by the standalone InputPrompt component */}
       <InputPromptBase
@@ -526,6 +538,9 @@ export function InputPrompt({
       />
     </Box>
   );
+
+  // The same prompt either way: the card only decides where it stands.
+  return draggable ? <FloatingCard>{body}</FloatingCard> : body;
 }
 
 // ---------------------------------------------------------------------------

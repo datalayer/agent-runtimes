@@ -129,8 +129,14 @@ export type ChatPluginConfig = {
    * of the conversation rather than as a bar the whole page rests on — better
    * for a host that embeds the workspace as a chat that happens to have a
    * notebook attached.
+   *
+   * `floating` takes it out of the layout entirely: the same composer — the
+   * lexical editor, the tools/skills/model footer, all of it — in a draggable
+   * card over the workspace, bottom-centre until somebody moves it. For a
+   * shell that is mostly canvas. `loopPlugins({ floatingPrompt: true })` asks
+   * for it together with the `/prompt` command that focuses it.
    */
-  promptPlacement: 'bottom' | 'bottom-chat';
+  promptPlacement: 'bottom' | 'bottom-chat' | 'floating';
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';

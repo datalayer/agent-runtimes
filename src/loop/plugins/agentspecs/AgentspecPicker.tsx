@@ -15,7 +15,7 @@
 
 import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { ActionList, ActionMenu, Box, Spinner, Text } from '@primer/react';
+import { ActionList, ActionMenu, Box, Spinner } from '@primer/react';
 import type { LoopWorkspaceContext } from '../../core';
 
 type AgentSummary = {
@@ -106,7 +106,15 @@ export function AgentspecPicker({
   const label = current?.name || active || 'Agent';
 
   if (agents.length === 0) {
-    return <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{label}</Text>;
+    /*
+     * Nothing, rather than the raw id.
+
+     * With no catalogue to choose from — an in-page agent has no server to
+     * ask — this used to print the bare agent id ("loop-shell") beside the
+     * agent summary, which already names the agent properly. A picker with
+     * nothing to pick is furniture, and a spec id is not a label.
+     */
+    return null;
   }
 
   return (

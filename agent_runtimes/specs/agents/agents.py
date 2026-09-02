@@ -7244,7 +7244,7 @@ LOOP_SHELL_AGENTSPEC_0_0_1 = Agentspec(
     id="loop-shell",
     version="0.0.1",
     name="Loop Shell Agent",
-    description="Drives the Loop Shell: a blank workspace with a floating prompt, where demonstrations come back as Jupyter outputs rendered straight onto the conversation. Built on the A2UI Jupyter Output demonstrations, run in the sandbox the shell is connected to.",
+    description="Drives the Loop Shell: ask from the floating prompt, and the answer lands as Jupyter outputs on the blank canvas.",
     tags=["loop", "shell", "jupyter", "output"],
     domain=None,
     enabled=True,
@@ -7280,8 +7280,8 @@ LOOP_SHELL_AGENTSPEC_0_0_1 = Agentspec(
     welcome_message="This is the Loop Shell. Ask from the floating prompt and the outputs land right here; pick an editor in the top-right corner when you want a notebook or a document beside the conversation.",
     welcome_notebook=None,
     welcome_document=None,
-    sandbox_variant="jupyter-server",
-    harness="pydantic-ai",
+    sandbox_variant="browser",
+    harness="vercel-ai",
     system_prompt="""You operate the Loop Shell: a deliberately blank workspace. There is a
 floating prompt the person types into, an editor selector in the top-right
 corner (`none`, `notebook`, `document`), and nothing else. When no editor is

@@ -98,7 +98,7 @@ const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
 const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
 
 const EXAMPLE_GROUP_ORDER = [
-  'Personas',
+  'Loop',
   'A2UI',
   'AG-UI',
   'Agent',
@@ -132,7 +132,7 @@ const getExampleGroup = (id: string): string => {
     id === 'LoopWorkspaceExample' ||
     id === 'LoopShellExample'
   ) {
-    return 'Personas';
+    return 'Loop';
   }
   if (id.startsWith('A2Ui')) return 'A2UI';
   if (id.startsWith('AgUi')) return 'AG-UI';
@@ -1456,10 +1456,20 @@ const ExampleAppThemed: React.FC<{
     }
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
-        if (groupName === 'Personas') {
-          const personaOrder = (id: string) =>
-            id === 'AgentspecsExample' ? 0 : id === 'AgentLoopExample' ? 1 : 2;
-          const order = personaOrder(left.id) - personaOrder(right.id);
+        if (groupName === 'Loop') {
+          // The shells first, most naked first; then the loop that drives a
+          // notebook; then the library of specs behind them all.
+          const LOOP_ORDER = [
+            'LoopShellExample',
+            'LoopWorkspaceExample',
+            'AgentLoopExample',
+            'AgentspecsExample',
+          ];
+          const loopOrder = (id: string) => {
+            const index = LOOP_ORDER.indexOf(id);
+            return index === -1 ? LOOP_ORDER.length : index;
+          };
+          const order = loopOrder(left.id) - loopOrder(right.id);
           if (order !== 0) return order;
         }
         return left.title.localeCompare(right.title);

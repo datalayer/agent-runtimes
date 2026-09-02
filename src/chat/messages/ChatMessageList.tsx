@@ -805,6 +805,20 @@ export function ChatMessageList({
                 gap: 2,
                 flexDirection: isUser ? 'row-reverse' : 'row',
                 alignItems: 'flex-start',
+                /*
+                  Full width, always.
+
+                  This row used to shrink to its content under the column's
+                  alignment, so the bubble's `maxWidth: '85%'` resolved
+                  against a parent whose width was itself the content's —
+                  circular geometry that re-settled with every streamed
+                  chunk, and the person's own message drifted leftward while
+                  the agent was answering. A full-width row is fixed ground:
+                  `row-reverse` pins the person's bubble to the right edge,
+                  `row` pins the agent's to the left, and 85% means 85% of
+                  the column whatever is being generated below.
+                */
+                width: '100%',
               }}
             >
               {/* Avatar */}

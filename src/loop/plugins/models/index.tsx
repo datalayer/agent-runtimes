@@ -10,33 +10,25 @@
  */
 
 import { contribution, definePlugin } from '@datalayer/reactor';
-import type { ReactorSlotComponent } from '@datalayer/reactor/react';
-import { LoopCommand, LoopSlots } from '../../core';
-import { ModelChip } from './ModelChip';
+import { LoopCommand } from '../../core';
 
 export const MODELS_PLUGIN_NAME = '@datalayer/loop-plugin-models';
 
-export const ModelsPlugin = definePlugin<
-  Record<string, never>,
-  unknown,
-  { components: ReactorSlotComponent[] }
->({
+/*
+ * No header chip any more.
+ *
+ * The plugin used to put a model dropdown in the workspace header, and the
+ * prompt's footer grew one of its own — two controls choosing one model,
+ * which would eventually disagree. The footer's is the one that survives: it
+ * sits with the tools and skills that decide what the next message does, and
+ * it is on screen in every placement of the prompt, floating included.
+ */
+export const ModelsPlugin = definePlugin({
   name: MODELS_PLUGIN_NAME,
   displayName: 'Models',
   description: 'Which model answers, from the agentspecs catalog.',
   octicon: 'cpu',
   emoji: '\u{1F9E0}',
-  build() {
-    return {
-      components: [
-        {
-          slot: LoopSlots.header,
-          id: 'model-chip',
-          Component: ModelChip as never,
-        },
-      ],
-    };
-  },
   contributes: [
     contribution(
       LoopCommand,
@@ -58,7 +50,7 @@ export const ModelsPlugin = definePlugin<
             (model: { available?: boolean }) => model.available !== false,
           ).length;
           return {
-            content: `${reachable} of ${(payload.models ?? []).length} models are ready. Pick one from the header.`,
+            content: `${reachable} of ${(payload.models ?? []).length} models are ready. Pick one under the prompt.`,
           };
         },
       },

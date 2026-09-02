@@ -231,7 +231,9 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'LoopShellExample',
     () => import('./LoopShellExample'),
     'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
-    ['example', 'loop', 'shell', 'prompt', 'editors'],
+    // `owns-sandbox-control`: the shell is pinned to the browser sandbox, so
+    // the page's selector would offer three targets it cannot move to.
+    ['example', 'loop', 'shell', 'prompt', 'editors', 'owns-sandbox-control'],
   ),
   makeEntry(
     'AgentLoopExample',

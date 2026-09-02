@@ -40,6 +40,8 @@ export {
   type ViewTypeContribution,
   useLoopPromptStore,
   suggestLoopPrompt,
+  focusPrompt,
+  onPromptFocusRequest,
   type LoopPromptState,
   type SuggestedPrompt,
 } from './core';
@@ -124,13 +126,7 @@ export {
   type WindowFrameProps,
 } from './plugins/window-frame';
 export { LoopCommandsPlugin, COMMANDS_PLUGIN_NAME } from './plugins/commands';
-export {
-  PromptPlugin,
-  FloatingPrompt,
-  PROMPT_PLUGIN_NAME,
-  focusPrompt,
-  type PromptPluginConfig,
-} from './plugins/prompt';
+export { PromptPlugin, PROMPT_PLUGIN_NAME } from './plugins/prompt';
 // Loop, ready to drop into somebody else's page.
 export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
 

@@ -79,6 +79,7 @@ import {
   useLoopPromptStore,
   type LoopViewProps,
   onSurfaceRequest,
+  onPromptFocusRequest,
 } from '../../core';
 
 type ChatControls = { send: (message: string) => void; stop: () => void };
@@ -773,6 +774,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     [team],
   );
   const suggestion = useLoopPromptStore(state => state.pending);
+  /*
+   * `/prompt`, or its keystroke, asking for the caret.
+   *
+   * A command runs outside the component tree, so the ask arrives on the
+   * focus channel; each one bumps a nonce that joins the suggestion's in
+   * `focusTrigger` below. The chat answers wherever its composer is —
+   * docked, in-column, or floating.
+   */
+  const [focusAsked, setFocusAsked] = useState(0);
+  useEffect(
+    () => onPromptFocusRequest(() => setFocusAsked(nonce => nonce + 1)),
+    [],
+  );
 
   useEffect(() => {
     if (!suggestion) {
@@ -971,9 +985,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /* `bottom-chat` keeps the prompt in the chat column; `bottom`, the default,
      spans the workspace. */
   const besideChat = config?.promptPlacement === 'bottom-chat';
-  /* No prompt at all, for a workspace where something else owns the typing —
-     the floating prompt plugin submits through the same `workspace.submit`,
-     and two composers for one conversation is one too many. */
+  /* `floating` renders the same composer in a draggable card over the
+     workspace — the prompt below simply gains `draggable`, and the card takes
+     itself out of the layout. */
+  const floatingPrompt = config?.promptPlacement === 'floating';
+  /* No prompt at all, for a workspace where something else owns the typing. */
   const promptHidden = config?.hidePrompt === true;
 
   /*
@@ -994,10 +1010,18 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         // nothing else can write to it.
         input={draft}
         setInput={setDraft}
-        // Bumped by each suggestion, which is what puts the caret back in
+        // Bumped by each suggestion — which is what puts the caret back in
         // the box: a person who clicked "Try this" is being handed a
-        // sentence to read and send, not one to go and find.
-        focusTrigger={suggestion?.nonce}
+        // sentence to read and send, not one to go and find — and by each
+        // focus request from the `/prompt` command.
+        focusTrigger={
+          suggestion || focusAsked
+            ? (suggestion?.nonce ?? 0) + focusAsked
+            : undefined
+        }
+        // In a draggable card over the workspace when the host asked for the
+        // floating placement; the composer itself is the same either way.
+        draggable={floatingPrompt}
         // The agent is working: no second request while the first is in
         // flight. `isLoading` both disables the editor and turns the send
         // button into a stop — the person keeps a way out, which a flatly

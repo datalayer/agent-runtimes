@@ -95,6 +95,7 @@ export function LoopEmbed({
       preset.hideChatHeader,
       preset.promptPlacement,
       preset.showAgentVariants,
+      preset.agentSummary,
       preset.teamId,
       preset.localAgentSpec,
       preset.floatingPrompt,

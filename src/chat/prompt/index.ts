@@ -10,6 +10,7 @@
  */
 
 export { InputPrompt, type InputPromptProps } from './InputPrompt';
+export { FloatingCard, type FloatingCardProps } from './FloatingCard';
 export {
   InputPromptBase,
   type InputPromptBaseProps,

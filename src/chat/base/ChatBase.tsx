@@ -4368,6 +4368,17 @@ function ChatBaseInner({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
+        /*
+          A reading column, not a full-bleed sheet.
+
+          The transcript keeps a book-page width and centres itself; on a
+          narrow chat column the cap never binds and nothing changes. The
+          rows inside carry their own horizontal padding, which becomes the
+          margin once the cap does bind.
+        */
+        width: '100%',
+        maxWidth: 920,
+        mx: 'auto',
         bg: 'canvas.default',
       }}
     >

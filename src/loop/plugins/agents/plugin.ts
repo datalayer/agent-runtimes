@@ -63,6 +63,15 @@ export type AgentsConfig = {
   /** Agent creation payload used by the Local target. */
   localAgent?: { createPayload: Record<string, unknown> };
   /**
+   * Whether the workspace header carries the agent summary badge.
+   *
+   * True by default: the badge is how the workspace says what it is talking
+   * to. False for a host whose page already introduces the agent — a landing
+   * page names it in the copy around the embed, and a second summary inside
+   * is the introduction made twice.
+   */
+  showAgentSummary?: boolean;
+  /**
    * Where the in-page kernel comes from, when the host has one of its own.
    *
    * JupyterLab supplies `suppliedSource(app.serviceManager)`, so the agent runs
@@ -192,12 +201,17 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         // What the workspace is talking to. Contributed here rather than drawn
         // by whichever page embeds the workspace: the agent is chosen inside
         // it, by this plugin, so this plugin is the only thing that can
-        // describe it without going stale.
-        {
-          slot: LoopSlots.header,
-          id: 'agent-summary',
-          Component: AgentSummaryPanel as never,
-        },
+        // describe it without going stale. Left out entirely when the host
+        // has said no — an unmounted component costs nothing.
+        ...(config.showAgentSummary === false
+          ? []
+          : [
+              {
+                slot: LoopSlots.header,
+                id: 'agent-summary',
+                Component: AgentSummaryPanel as never,
+              },
+            ]),
         // How long a visitor with no account has left. In the *chat's* header
         // rather than the workspace's: it is a fact about the conversation —
         // the agent is the only thing that stops when the key does — and a

@@ -78,9 +78,11 @@ export function ChatEmptyState({
         sx={{
           display: 'flex',
           flexDirection: 'column',
+          // Centred across the column, anchored to its top: the introduction
+          // is where a conversation starts, and the first message should
+          // appear under it rather than push it around the canvas.
           alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
+          justifyContent: 'flex-start',
           p: 4,
           color: 'fg.muted',
           textAlign: 'center',
