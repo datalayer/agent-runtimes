@@ -212,14 +212,20 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
                 Component: AgentSummaryPanel as never,
               },
             ]),
-        // How long a visitor with no account has left. In the *chat's* header
-        // rather than the workspace's: it is a fact about the conversation —
-        // the agent is the only thing that stops when the key does — and a
-        // host that hides the workspace header, as a landing page does, must
-        // still see the clock it is running against.
+        // How long a visitor with no account has left. In both headers,
+        // because a host shows at most one of them and the clock must survive
+        // either choice: the landing page used to hide the workspace header
+        // and keep the chat's, and now does the opposite. The badge renders
+        // nothing without an anonymous key, so the workspace that shows both
+        // rows costs a duplicate only in the one anonymous case.
         {
           slot: LoopSlots.chatHeader,
           id: 'anonymous-key',
+          Component: AnonymousKeyBadge as never,
+        },
+        {
+          slot: LoopSlots.header,
+          id: 'anonymous-key-header',
           Component: AnonymousKeyBadge as never,
         },
       ],

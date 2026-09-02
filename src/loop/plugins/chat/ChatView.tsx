@@ -59,6 +59,7 @@ import { useOptionalTeamSelection } from '../agents/useTeamSelection';
  * skipped for the ordinary single-agent case.
  */
 const EMPTY_SELECTION = signal('');
+import { useWorkspaceFullScreen } from '../../shell/useWorkspaceFullScreen';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
 import {
   InputPrompt,
@@ -82,7 +83,11 @@ import {
   onPromptFocusRequest,
 } from '../../core';
 
-type ChatControls = { send: (message: string) => void; stop: () => void };
+type ChatControls = {
+  send: (message: string) => void;
+  stop: () => void;
+  newChat: () => void;
+};
 
 /** No editor: the conversation on its own. */
 const NO_SURFACE = '';
@@ -145,6 +150,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const surfaceChosen = useRef(false);
 
   const surfaces = useContributions(LoopChatSurface);
+  /* Which editors have ever been mounted; they are never unmounted after —
+     see the render below. A ref, not state: adding to it during render is
+     idempotent and must not schedule another one. */
+  const everMounted = useRef<Set<string>>(new Set());
   // Asked, not assumed: the chat cannot know whether anything is listening,
   // and whichever plugin does answers the gate. Re-asked on every render with
   // the live workspace, so switching the sandbox switches the prompt.
@@ -187,7 +196,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   // One writer, so neither fact can erase the other.
   useEffect(() => {
     setViewControls(
-      sendReady ? { busy, stop: controlsRef.current?.stop } : null,
+      sendReady
+        ? {
+            busy,
+            stop: controlsRef.current?.stop,
+            newChat: controlsRef.current?.newChat,
+          }
+        : null,
     );
   }, [busy, sendReady, setViewControls]);
 
@@ -329,31 +344,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * answer than full screen and a better one than nothing.
    */
   const viewRef = useRef<HTMLDivElement>(null);
-  const [fullScreen, setFullScreen] = useState(false);
-  /* Which of the two is in play, so leaving uses the door it came in by. */
-  const usingFullscreenApi = useRef(false);
-
-  useEffect(() => {
-    /* The browser can leave without asking us — Escape does exactly that — so
-       the flag follows the document rather than the click. */
-    const sync = () => {
-      if (!usingFullscreenApi.current) {
-        return;
-      }
-      // Whatever was promoted — the workspace, or this view where there is no
-      // workspace around it — as long as it still contains us.
-      const active =
-        !!document.fullscreenElement &&
-        !!viewRef.current &&
-        document.fullscreenElement.contains(viewRef.current);
-      setFullScreen(active);
-      if (!active) {
-        usingFullscreenApi.current = false;
-      }
-    };
-    document.addEventListener('fullscreenchange', sync);
-    return () => document.removeEventListener('fullscreenchange', sync);
-  }, []);
+  /* Shared with the workspace header's icon — same machinery, two doors in.
+     See `useWorkspaceFullScreen` for why it is the browser's API rather than
+     a big box, and for the CSS fallback the styling below paints. */
+  const {
+    fullScreen,
+    usingApi: usingFullscreenApi,
+    toggle: toggleFullScreen,
+  } = useWorkspaceFullScreen(viewRef);
 
   /*
    * The full-screen control, pointed at from the first run onwards.
@@ -391,66 +389,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     if (fullScreen) {
       setHintFullScreen(false);
     }
-  }, [fullScreen]);
-
-  const toggleFullScreen = useCallback(() => {
-    /*
-     * The whole workspace, not this view alone.
-     *
-     * Promoting the chat view would leave the workspace's header on the page
-     * underneath — the agent picker and the control saying where the code runs
-     * — so at full screen a reader would lose the two controls most worth
-     * having room for. The shell marks itself; anything else falls back to
-     * this view, which is what a workspace mounted without a shell would get.
-     */
-    const node =
-      (viewRef.current?.closest(
-        '[data-loop-workspace]',
-      ) as HTMLElement | null) ?? viewRef.current;
-    if (fullScreen) {
-      if (usingFullscreenApi.current && document.fullscreenElement) {
-        void document.exitFullscreen();
-      } else {
-        setFullScreen(false);
-      }
-      return;
-    }
-    if (!node?.requestFullscreen) {
-      setFullScreen(true);
-      return;
-    }
-    usingFullscreenApi.current = true;
-    node.requestFullscreen().then(
-      () => setFullScreen(true),
-      () => {
-        // Refused. Cover what can be covered instead.
-        usingFullscreenApi.current = false;
-        setFullScreen(true);
-      },
-    );
-  }, [fullScreen]);
-
-  /*
-   * Escape leaves the fallback overlay, as it does from anything covering the
-   * window. Not bound for the real thing: the browser handles Escape itself
-   * there, and a second listener would only race it.
-   *
-   * `defaultPrevented` is the guard that matters: a menu open inside the chat
-   * closes on Escape too, and says so by consuming the event. Without the
-   * check, dismissing the model list would drop the reader out of full screen
-   * as well.
-   */
-  useEffect(() => {
-    if (!fullScreen || usingFullscreenApi.current) {
-      return undefined;
-    }
-    const leave = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !event.defaultPrevented) {
-        setFullScreen(false);
-      }
-    };
-    window.addEventListener('keydown', leave);
-    return () => window.removeEventListener('keydown', leave);
   }, [fullScreen]);
 
   useEffect(() => {
@@ -760,6 +698,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const contextUsage = fromStore ?? chatUsage ?? null;
   // Read to decide whether the strip exists at all, not to render it.
   const inpromptMenu = useSlotComponents(LoopSlots.inpromptMenu);
+  // Buttons for the prompt's footer bar, beside the session menus. Asked
+  // whether anyone contributed before anything is drawn, for the same reason
+  // as the in-prompt menu: an empty slot is still an element.
+  const promptActions = useSlotComponents(LoopSlots.promptAction);
   // Same question for the chat's own title bar, which plugins may add to.
   const chatHeaderItems = useSlotComponents(LoopSlots.chatHeader);
 
@@ -1071,6 +1013,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
           ) : undefined
         }
+        // The footer bar's opening for plugins: the prompt plugin's + lands
+        // here, and a host can add its own the same way.
+        footerExtras={
+          promptActions.length > 0 ? (
+            <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
+          ) : undefined
+        }
         /*
             The agent, beside the tools, the skills and the model.
 
@@ -1184,36 +1133,77 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         />
       ) : null}
 
-      <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
+      <Box
+        sx={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          display: 'flex',
+          // The hidden editors below position themselves against this row.
+          position: 'relative',
+        }}
+      >
         {/*
-          The column stays while its editor is away.
+          Every editor that can run is mounted; choosing one only reveals it.
 
-          A surface that cannot open — its sandbox is being replaced, which is
-          what every agent switch does — used to take its column with it, so
-          the chat widened to the whole workspace and narrowed again a second
-          later. The reader was mid-sentence and the box they were typing in
-          moved twice.
+          The agent's tools live in the editors — the notebook registers the
+          cell tools, the document its lexical ones — so an editor that is
+          not mounted is an editor the agent cannot touch. On the Loop Shell,
+          which opens with no editor shown, that meant an agent with a
+          notebook in its toolset and no notebook to use it on.
 
-          So the split is held whenever an editor is open *or* waiting to come
-          back, and the waiting is said inside the column rather than by
-          removing it.
+          A surface that is not on screen is therefore hidden, not gone:
+          parked absolute over the row with `visibility: hidden`, which keeps
+          real dimensions for the Lumino layout to measure, rather than
+          `display: none`, which would zero them. Once mounted it stays
+          mounted — `everMounted` — so a sandbox hiccup cannot throw away the
+          work the agent has already put into it.
+
+          This also keeps the column stable: a surface that cannot open while
+          its sandbox is replaced keeps its place, and the reader's chat does
+          not widen and narrow around the interruption.
         */}
-        {active || waiting ? (
-          <Box sx={{ flex: '1 1 0', minWidth: 0, minHeight: 0 }}>
-            {active ? (
+        {surfaces.map(entry => {
+          const surface = entry.value;
+          const shown = active?.surfaceId === surface.surfaceId;
+          const mount =
+            shown ||
+            everMounted.current.has(surface.surfaceId) ||
+            canOpenView(surface, workspace);
+          if (!mount) {
+            return null;
+          }
+          everMounted.current.add(surface.surfaceId);
+          return (
+            <Box
+              key={surface.surfaceId}
+              sx={
+                shown
+                  ? { flex: '1 1 0', minWidth: 0, minHeight: 0 }
+                  : {
+                      position: 'absolute',
+                      inset: 0,
+                      visibility: 'hidden',
+                      pointerEvents: 'none',
+                      zIndex: -1,
+                    }
+              }
+            >
               <ReactorLazy
-                load={active.load}
-                props={{ surfaceId: active.surfaceId, workspace }}
-                fallback={<Centered>Loading {active.title}…</Centered>}
+                load={surface.load}
+                props={{ surfaceId: surface.surfaceId, workspace }}
+                fallback={<Centered>Loading {surface.title}…</Centered>}
                 errorFallback={error => (
                   <Centered>
-                    {active.title} failed to load: {error.message}
+                    {surface.title} failed to load: {error.message}
                   </Centered>
                 )}
               />
-            ) : (
-              <Centered>Starting {waiting?.title ?? 'the editor'}…</Centered>
-            )}
+            </Box>
+          );
+        })}
+        {!active && waiting ? (
+          <Box sx={{ flex: '1 1 0', minWidth: 0, minHeight: 0 }}>
+            <Centered>Starting {waiting.title}…</Centered>
           </Box>
         ) : null}
 

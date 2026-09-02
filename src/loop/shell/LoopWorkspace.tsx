@@ -128,6 +128,16 @@ export type LoopWorkspaceProps = {
    * to `LoopSlots.chatHeader` instead, and both end up in the same row.
    */
   chatHeaderActions?: ReactNode;
+  /**
+   * The host's own controls for the workspace header row.
+   *
+   * The same bargain as `chatHeaderActions`, for the other header: a page
+   * embedding the workspace should not have to write a plugin to put its two
+   * menus in the row. Rendered before the plugins' contributions, so the
+   * host's additions read as part of the page; plugins reach the same row
+   * through `LoopSlots.header`.
+   */
+  headerActions?: ReactNode;
 };
 
 /** Build the platform for a set of plugins. */
@@ -151,6 +161,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     showViewSelector = true,
     showHeader = true,
     chatHeaderActions,
+    headerActions,
   } = props;
 
   // Building the platform is a one-time act: rebuilding it on every render
@@ -175,6 +186,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       showViewSelector={showViewSelector}
       showHeader={showHeader}
       chatHeaderActions={chatHeaderActions}
+      headerActions={headerActions}
     />
   );
 }
@@ -203,6 +215,7 @@ function WorkspaceBody({
   showViewSelector = true,
   showHeader = true,
   chatHeaderActions,
+  headerActions,
 }: BodyProps): JSX.Element {
   /*
    * Which agent the session is talking to.
@@ -416,6 +429,10 @@ function WorkspaceBody({
               crowded into it as they were added. The switcher is chrome about
               *this* workspace rather than about the message being written, and
               it reads better held to the trailing edge. */}
+          {/* The host's controls first — see `headerActions`. A plugin that
+              must lead anyway (the landing page's links) sets `order` on its
+              own component. */}
+          {headerActions}
           <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
           {showViewSelector ? (
             <ViewSwitcher

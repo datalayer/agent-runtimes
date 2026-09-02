@@ -14,23 +14,26 @@
  * second input box: two composers for one conversation is one too many, and a
  * reimplementation would be a composer that drifts.
  *
- * What it adds is the command: `/prompt` (Mod+Alt+P) puts the caret in the
- * composer from anywhere, through the same ask-and-answer channel the editor
- * commands use. `loopPlugins({ floatingPrompt: true })` mounts this plugin
- * and asks the chat for the floating placement together.
+ * What it adds is around the composer: `/prompt` (Mod+Alt+P) puts the caret
+ * in it from anywhere, through the same ask-and-answer channel the editor
+ * commands use; `/new` (Mod+Alt+R) starts the conversation over, and the +
+ * this plugin puts in the prompt's footer bar presses exactly that command.
+ * `loopPlugins({ floatingPrompt: true })` mounts this plugin and asks the
+ * chat for the floating placement together.
  *
  * @module loop/plugins/prompt
  */
 
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopCommand, focusPrompt } from '../../core';
+import { LoopCommand, LoopSlots, focusPrompt } from '../../core';
+import { NewChatAction } from './NewChatAction';
 
 export const PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-prompt';
 
 export const PromptPlugin = definePlugin({
   name: PROMPT_PLUGIN_NAME,
   displayName: 'Prompt',
-  description: 'The /prompt command: put the caret in the composer.',
+  description: 'Prompt commands: focus the composer, start over, and the +.',
   octicon: 'paper-airplane',
   emoji: '\u{1FAB6}',
   contributes: [
@@ -49,7 +52,34 @@ export const PromptPlugin = definePlugin({
       },
       { id: 'prompt' },
     ),
+    contribution(
+      LoopCommand,
+      {
+        name: 'new',
+        aliases: ['reset'],
+        description: 'Start the conversation over',
+        group: 'Session',
+        keybinding: 'Mod+Alt+R',
+        run: async ({ workspace }) => {
+          const reset = workspace.viewControls.newChat;
+          if (!reset) {
+            throw new Error('No conversation is on screen to start over.');
+          }
+          reset();
+        },
+      },
+      { id: 'new' },
+    ),
   ],
+  build: () => ({
+    components: [
+      {
+        id: 'new-chat',
+        slot: LoopSlots.promptAction,
+        Component: NewChatAction,
+      },
+    ],
+  }),
 });
 
 export { focusPrompt, onPromptFocusRequest } from '../../core';

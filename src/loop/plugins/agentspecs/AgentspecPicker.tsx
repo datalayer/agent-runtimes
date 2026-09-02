@@ -17,6 +17,7 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { ActionList, ActionMenu, Box, Spinner } from '@primer/react';
 import type { LoopWorkspaceContext } from '../../core';
+import { getAgentspecs } from '../../../specs/agents';
 
 type AgentSummary = {
   id: string;
@@ -103,7 +104,17 @@ export function AgentspecPicker({
   );
 
   const current = agents.find(agent => agent.id === active);
-  const label = current?.name || active || 'Agent';
+  /*
+   * Named, never the raw id.
+   *
+   * The active agent is not always in the server's catalogue — the Loop
+   * Shell runs `loop-shell`, created locally from a spec the server never
+   * listed — and the fallback used to be the bare id, printed beside an
+   * agent summary that had just named the same agent properly. The local
+   * spec catalogue knows the name; the id is the last resort, not the first.
+   */
+  const label =
+    current?.name || getAgentspecs(active)?.name || active || 'Agent';
 
   if (agents.length === 0) {
     /*

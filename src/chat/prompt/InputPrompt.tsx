@@ -85,6 +85,16 @@ export interface InputPromptProps {
   focusTrigger?: number;
   padding: number;
   /**
+   * The host's own controls, at the trailing edge of the footer bar.
+   *
+   * The bar under the input carries the session's menus — agent, tools,
+   * skills, model — and this is the opening for whatever the host wants
+   * beside them: an icon with an action, a badge, a shortcut. The menus stay
+   * at the leading edge; extras hold the trailing one, so additions read as
+   * additions rather than reshuffling the controls people know.
+   */
+  footerExtras?: ReactNode;
+  /**
    * Float the whole prompt in a draggable card instead of docking it.
    *
    * The same prompt — editor, header, usage band, the tools/skills/model
@@ -244,6 +254,7 @@ export function InputPrompt({
   focusTrigger,
   padding,
   draggable = false,
+  footerExtras,
   onSend,
   onStop,
   disableInputPrompt = false,
@@ -327,6 +338,7 @@ export function InputPrompt({
   const skillsOffered = showSkillsMenu;
   const anyOffered =
     agentsOffered || modelsOffered || toolsOffered || skillsOffered;
+  const extrasOffered = Boolean(footerExtras);
 
   /* Still coming, as opposed to never coming. Only a menu that was asked for
      and is genuinely waiting justifies the word "loading". */
@@ -336,7 +348,7 @@ export function InputPrompt({
 
   // No bar at all when there is nothing to put in it and nothing on its way:
   // an empty bordered strip is worse than no strip.
-  const showSelectorsBar = anyOffered || stillLoading;
+  const showSelectorsBar = anyOffered || stillLoading || extrasOffered;
   /*
    * The agents are in hand the moment the bar renders — they come from the
    * team the workspace was opened with, not from a query — so a bar that
@@ -472,7 +484,7 @@ export function InputPrompt({
                   subtle: true,
                   content: (
                     <>
-                      {anyOffered ? (
+                      {anyOffered || extrasOffered ? (
                         <>
                           {/* Agents Menu */}
                           {agentsOffered && (
@@ -522,6 +534,20 @@ export function InputPrompt({
                               onModelSelect={onModelSelect}
                               isA2AProtocol={isA2AProtocol}
                             />
+                          )}
+
+                          {/* Whatever the host brought; see `footerExtras`. */}
+                          {extrasOffered && (
+                            <Box
+                              sx={{
+                                marginLeft: 'auto',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 1,
+                              }}
+                            >
+                              {footerExtras}
+                            </Box>
                           )}
                         </>
                       ) : (

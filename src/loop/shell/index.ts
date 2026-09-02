@@ -16,3 +16,8 @@ export {
 } from './LoopWorkspace';
 export { ViewSwitcher, type ViewSwitcherProps } from './ViewSwitcher';
 export { PluginToggles, type PluginTogglesProps } from './PluginToggles';
+export {
+  useWorkspaceFullScreen,
+  type WorkspaceFullScreen,
+} from './useWorkspaceFullScreen';
+export { WorkspaceFullScreenAction } from './WorkspaceFullScreenAction';

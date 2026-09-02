@@ -35,6 +35,8 @@
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { Box } from '@datalayer/primer-addons';
+import { LoopSlots } from '../../core';
+import { WorkspaceFullScreenAction } from '../../shell/WorkspaceFullScreenAction';
 import { WINDOW_CONTROLS_SLOT } from './slots';
 
 export { WindowFrame, type WindowFrameProps } from './WindowFrame';
@@ -82,6 +84,16 @@ export const WindowFramePlugin = definePlugin<
         id: 'window-controls',
         slot: WINDOW_CONTROLS_SLOT,
         Component: WindowControls,
+      },
+      // Full screen is window chrome, so the window plugin is where it comes
+      // from: the workspace header gains the same control the chat header
+      // carries, which is what keeps it reachable for a shell that hides the
+      // chat's chrome. Registered after the editor selector, so it sits on
+      // the far trailing edge of the row.
+      {
+        id: 'full-screen',
+        slot: LoopSlots.header,
+        Component: WorkspaceFullScreenAction,
       },
     ],
   }),

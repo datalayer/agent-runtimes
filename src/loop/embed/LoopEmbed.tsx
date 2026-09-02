@@ -40,6 +40,8 @@ export type LoopEmbedProps = LoopPresetOptions & {
   showHeader?: boolean;
   /** Extra controls for the chat's own header, beside the agent's name. */
   chatHeaderActions?: ReactNode;
+  /** The host's own controls for the workspace header row. */
+  headerActions?: ReactNode;
   /**
    * Draw the workspace inside a window frame with this title bar.
    *
@@ -69,6 +71,7 @@ export function LoopEmbed({
   agentId = '',
   showHeader = false,
   chatHeaderActions,
+  headerActions,
   frameTitle,
   frameHeight,
   plugins = [],
@@ -143,6 +146,7 @@ export function LoopEmbed({
       showViewSelector={preset.showViewSelector}
       showHeader={showHeader}
       chatHeaderActions={chatHeaderActions}
+      headerActions={headerActions}
     />
   );
 

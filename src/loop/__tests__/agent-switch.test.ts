@@ -279,12 +279,13 @@ describe('the editor beside the chat', () => {
     expect(chat).toContain('setSuspendedId(active.surfaceId)');
     expect(chat).toContain('setSuspendedId(null)');
     /*
-     * And the column stays while it is away. Removing it widened the chat to
-     * the whole workspace and narrowed it again a second later, moving the
-     * box the reader was typing in — twice, for an editor that was coming
-     * back either way.
+     * And the editor itself stays while it is away — stronger than the column
+     * holding its place, which is how this used to work. Once a surface has
+     * mounted it is never unmounted, only hidden: the agent's work in it
+     * survives the interruption, and so do the tools it registered.
      */
-    expect(chat).toContain('{active || waiting ? (');
+    expect(chat).toContain('everMounted.current.has(surface.surfaceId)');
+    expect(chat).toContain('everMounted = useRef<Set<string>>(new Set())');
   });
 });
 

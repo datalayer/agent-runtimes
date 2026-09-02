@@ -808,7 +808,12 @@ export interface ChatBaseProps {
    * Called again with `null` when the chat can no longer send.
    */
   onSendReady?: (
-    controls: { send: (message: string) => void; stop: () => void } | null,
+    controls: {
+      send: (message: string) => void;
+      stop: () => void;
+      /** Start the conversation over — what the header's + does. */
+      newChat: () => void;
+    } | null,
   ) => void;
 
   /**

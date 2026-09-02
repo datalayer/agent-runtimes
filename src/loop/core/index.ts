@@ -261,6 +261,8 @@ export type ViewControls = {
   busy?: boolean;
   /** How to stop it, when it can be stopped. */
   stop?: () => void;
+  /** Start the view's work over — the chat resets its conversation. */
+  newChat?: () => void;
 };
 
 /** Props every view receives. */

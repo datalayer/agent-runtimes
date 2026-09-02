@@ -21,6 +21,15 @@
  * @module chat/document/EphemeralDocument
  */
 
+/*
+ * First, before anything lexical: `@lexical/code` pulls Prism *language
+ * components*, plain scripts that read the bare global `Prism` the moment
+ * they evaluate — and this module is what defines it. Imported lower down,
+ * the languages ran first and the whole editor died on "Prism is not
+ * defined" before it could draw anything.
+ */
+import '@datalayer/jupyter-react/lib/css/PrismCss';
+
 import type { JSX } from 'react';
 import {
   useCallback,
@@ -105,7 +114,6 @@ import { useProgressTask } from '../../hooks/useProgressTask';
 import type { FrontendToolDefinition } from '../../types/tools';
 import type { EphemeralRuntimeOverride } from '../notebook/EphemeralNotebook';
 
-import '@datalayer/jupyter-react/lib/css/PrismCss';
 import '@datalayer/jupyter-lexical/style/index.css';
 
 /**

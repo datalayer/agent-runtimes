@@ -34,13 +34,21 @@ const SHELL = readFileSync(
   join(__dirname, '..', 'shell', 'LoopWorkspace.tsx'),
   'utf8',
 );
+/* The machinery itself, extracted so the workspace header's icon and the
+   chat's control share one implementation. */
+const HOOK = readFileSync(
+  join(__dirname, '..', 'shell', 'useWorkspaceFullScreen.ts'),
+  'utf8',
+);
 
 describe('entering full screen', () => {
   it('asks the browser rather than drawing a big box', () => {
     // The whole point: a component cannot know what it is inside of, and
     // `position: fixed` is at the mercy of whatever transformed it.
-    expect(CHAT_VIEW).toContain('requestFullscreen()');
-    expect(CHAT_VIEW).toContain("document.addEventListener('fullscreenchange'");
+    expect(HOOK).toContain('requestFullscreen()');
+    expect(HOOK).toContain("document.addEventListener('fullscreenchange'");
+    // And the chat actually uses that machinery rather than its own copy.
+    expect(CHAT_VIEW).toContain('useWorkspaceFullScreen(viewRef)');
   });
 
   it('promotes the workspace, so its controls come too', () => {
@@ -49,8 +57,8 @@ describe('entering full screen', () => {
     // Two facts, not one line: a formatter is free to break the call across
     // lines and did, which failed an assertion that had pinned the whitespace
     // rather than the behaviour.
-    expect(CHAT_VIEW).toContain('.closest(');
-    expect(CHAT_VIEW).toContain("'[data-loop-workspace]'");
+    expect(HOOK).toContain('.closest(');
+    expect(HOOK).toContain("'[data-loop-workspace]'");
     expect(SHELL).toContain('data-loop-workspace');
   });
 
@@ -68,9 +76,12 @@ describe('what is on screen while it lasts', () => {
      * The regression this file exists for. The column was gated on the
      * full-screen flag, so asking for more room took the notebook away — and
      * somebody working on a notebook who asks for more room is asking for more
-     * room for the notebook.
+     * room for the notebook. The reveal is decided by which surface is
+     * chosen, and by nothing else.
      */
-    expect(CHAT_VIEW).toContain('{active || waiting ? (');
+    expect(CHAT_VIEW).toContain(
+      'const shown = active?.surfaceId === surface.surfaceId;',
+    );
     expect(CHAT_VIEW).not.toContain('&& !chatFullScreen');
   });
 
@@ -88,10 +99,8 @@ describe('leaving', () => {
     // The API exits on Escape by itself and tells us through the event. A
     // second listener bound at the same time would only fight it, so the
     // keyboard fallback is for the overlay path alone.
-    expect(CHAT_VIEW).toContain(
-      'if (!fullScreen || usingFullscreenApi.current)',
-    );
+    expect(HOOK).toContain('if (!fullScreen || usingApi.current)');
     // And a menu closing on Escape must not also drop the reader out.
-    expect(CHAT_VIEW).toContain('!event.defaultPrevented');
+    expect(HOOK).toContain('!event.defaultPrevented');
   });
 });

@@ -98,11 +98,11 @@ describe('the sandbox service', () => {
       // The workspace describes its own agent. A host drawing that summary
       // from outside cannot see a switch made in here.
       'agent-summary',
-      // And how long a visitor with no account has left. In the chat's header
-      // rather than the workspace's, so a host that hides the workspace
-      // header — a landing page does — still shows the clock it is running
-      // against.
+      // And how long a visitor with no account has left — in both headers,
+      // because a host shows at most one of them and the clock must survive
+      // either choice.
       'anonymous-key',
+      'anonymous-key-header',
     ]);
   });
 });

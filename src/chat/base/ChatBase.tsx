@@ -3954,11 +3954,21 @@ function ChatBaseInner({
         void handleSend(message);
       },
       stop: handleStop,
+      // The same reset the header's + performs, for a host whose controls
+      // live outside this component — the LOOP prompt's + reaches it here.
+      newChat: handleNewChat,
     });
     return () => {
       onSendReady(null);
     };
-  }, [onSendReady, adapterReady, onSendMessage, handleSend, handleStop]);
+  }, [
+    onSendReady,
+    adapterReady,
+    onSendMessage,
+    handleSend,
+    handleStop,
+    handleNewChat,
+  ]);
 
   // Streaming state, for a host that draws the prompt.
   useEffect(() => {
@@ -4548,6 +4558,20 @@ function ChatBaseInner({
         height: '100%',
         maxHeight: '100%',
         minHeight: 0,
+        /*
+          As wide as the host, always.
+
+          The root set its height and said nothing about width, so mounted in
+          a flex row — which is how the LOOP chat mounts it — it was a
+          shrink-to-fit item: as wide as its widest line and no wider,
+          anchored to the left of a row it should have filled, and re-sizing
+          with every streamed chunk. That is what made the person's own
+          bubble drift while the agent answered. A chat fills the column it
+          is given; the column decides the width, not the transcript.
+        */
+        flex: '1 1 auto',
+        width: '100%',
+        minWidth: 0,
         bg: backgroundColor || 'canvas.default',
         borderRadius,
         border,
