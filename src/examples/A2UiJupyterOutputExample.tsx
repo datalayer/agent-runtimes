@@ -41,10 +41,7 @@ import type { FrontendToolDefinition } from '../types/tools';
 import type { ToolCallRenderContext } from '../types/chat';
 import { Chat } from '../chat';
 import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
-import {
-  ThemedJupyterProvider,
-  ThemedProvider,
-} from './utils/themedProvider';
+import { ThemedJupyterProvider, ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useA2uiProcessor } from './utils/a2ui';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
@@ -77,7 +74,8 @@ type DemoKind = (typeof DEMO_KINDS)[number];
 /** Whether a value the model sent is one of the kinds we know how to run. */
 function isDemoKind(value: unknown): value is DemoKind {
   return (
-    typeof value === 'string' && (DEMO_KINDS as readonly string[]).includes(value)
+    typeof value === 'string' &&
+    (DEMO_KINDS as readonly string[]).includes(value)
   );
 }
 type SurfaceAction = { name: string; label: string };
@@ -358,11 +356,11 @@ function JupyterOutputs({
       `useBaseStyles` off so the branded font survives.
     */
     <ThemedJupyterProvider>
-    <Box
-      sx={{
-        bg: 'canvas.default',
-        color: 'fg.default',
-        /*
+      <Box
+        sx={{
+          bg: 'canvas.default',
+          color: 'fg.default',
+          /*
           The JupyterLab palette, pointed at the Datalayer one.
 
           `JupyterLabCss` injects the `--jp-*` variables onto `document.body`,
@@ -377,74 +375,74 @@ function JupyterOutputs({
           rendered text, widget controls, which all resolve their colours
           through these — therefore follows the theme the reader picked.
         */
-        '--jp-layout-color0': 'var(--bgColor-default)',
-        '--jp-layout-color1': 'var(--bgColor-default)',
-        '--jp-layout-color2': 'var(--bgColor-muted)',
-        '--jp-layout-color3': 'var(--bgColor-muted)',
-        '--jp-content-font-color0': 'var(--fgColor-default)',
-        '--jp-content-font-color1': 'var(--fgColor-default)',
-        '--jp-content-font-color2': 'var(--fgColor-muted)',
-        '--jp-ui-font-color0': 'var(--fgColor-default)',
-        '--jp-ui-font-color1': 'var(--fgColor-default)',
-        '--jp-ui-font-color2': 'var(--fgColor-muted)',
-        '--jp-border-color1': 'var(--borderColor-default)',
-        '--jp-border-color2': 'var(--borderColor-muted)',
-        '--jp-border-color3': 'var(--borderColor-muted)',
-        // ipywidgets keeps its own names, and a control left on the defaults
-        // is the one thing in the panel still wearing JupyterLab's palette.
-        '--jp-widgets-color': 'var(--fgColor-default)',
-        '--jp-widgets-label-color': 'var(--fgColor-default)',
-        '--jp-widgets-readout-color': 'var(--fgColor-default)',
-        '--jp-widgets-input-color': 'var(--fgColor-default)',
-        '--jp-widgets-input-background-color': 'var(--bgColor-default)',
-        '--jp-widgets-input-border-color': 'var(--borderColor-default)',
-        '--jp-widgets-border-color': 'var(--borderColor-default)',
-        '& .jp-OutputArea, & .jp-OutputArea-output': {
-          bg: 'canvas.default',
-          color: 'fg.default',
-        },
-        '& table, & th, & td': {
-          backgroundColor: 'canvas.default',
-          color: 'fg.default',
-          borderColor: 'border.default',
-        },
-      }}
-    >
-      {outputs.map((output, index) => {
-        const data =
-          'data' in output && output.data
-            ? (output.data as Record<string, unknown>)
-            : undefined;
-        const view = data?.[widgetViewMime];
-        const state = data?.[widgetStateMime];
+          '--jp-layout-color0': 'var(--bgColor-default)',
+          '--jp-layout-color1': 'var(--bgColor-default)',
+          '--jp-layout-color2': 'var(--bgColor-muted)',
+          '--jp-layout-color3': 'var(--bgColor-muted)',
+          '--jp-content-font-color0': 'var(--fgColor-default)',
+          '--jp-content-font-color1': 'var(--fgColor-default)',
+          '--jp-content-font-color2': 'var(--fgColor-muted)',
+          '--jp-ui-font-color0': 'var(--fgColor-default)',
+          '--jp-ui-font-color1': 'var(--fgColor-default)',
+          '--jp-ui-font-color2': 'var(--fgColor-muted)',
+          '--jp-border-color1': 'var(--borderColor-default)',
+          '--jp-border-color2': 'var(--borderColor-muted)',
+          '--jp-border-color3': 'var(--borderColor-muted)',
+          // ipywidgets keeps its own names, and a control left on the defaults
+          // is the one thing in the panel still wearing JupyterLab's palette.
+          '--jp-widgets-color': 'var(--fgColor-default)',
+          '--jp-widgets-label-color': 'var(--fgColor-default)',
+          '--jp-widgets-readout-color': 'var(--fgColor-default)',
+          '--jp-widgets-input-color': 'var(--fgColor-default)',
+          '--jp-widgets-input-background-color': 'var(--bgColor-default)',
+          '--jp-widgets-input-border-color': 'var(--borderColor-default)',
+          '--jp-widgets-border-color': 'var(--borderColor-default)',
+          '& .jp-OutputArea, & .jp-OutputArea-output': {
+            bg: 'canvas.default',
+            color: 'fg.default',
+          },
+          '& table, & th, & td': {
+            backgroundColor: 'canvas.default',
+            color: 'fg.default',
+            borderColor: 'border.default',
+          },
+        }}
+      >
+        {outputs.map((output, index) => {
+          const data =
+            'data' in output && output.data
+              ? (output.data as Record<string, unknown>)
+              : undefined;
+          const view = data?.[widgetViewMime];
+          const state = data?.[widgetStateMime];
 
-        if (view && state) {
+          if (view && state) {
+            return (
+              <OutputIPyWidgets
+                key={`${SURFACE_ID}-widget-${index}`}
+                view={view}
+                state={state}
+              />
+            );
+          }
+
+          const isError =
+            output.output_type === 'error' ||
+            (output.output_type === 'stream' && output.name === 'stderr');
           return (
-            <OutputIPyWidgets
-              key={`${SURFACE_ID}-widget-${index}`}
-              view={view}
-              state={state}
+            <Output
+              key={`${SURFACE_ID}-output-${index}`}
+              id={`${SURFACE_ID}-output-${index}`}
+              outputs={[output]}
+              autoRun={false}
+              lumino={!isError}
+              showControl={false}
+              showEditor={false}
+              showKernelProgressBar={false}
             />
           );
-        }
-
-        const isError =
-          output.output_type === 'error' ||
-          (output.output_type === 'stream' && output.name === 'stderr');
-        return (
-          <Output
-            key={`${SURFACE_ID}-output-${index}`}
-            id={`${SURFACE_ID}-output-${index}`}
-            outputs={[output]}
-            autoRun={false}
-            lumino={!isError}
-            showControl={false}
-            showEditor={false}
-            showKernelProgressBar={false}
-          />
-        );
-      })}
-    </Box>
+        })}
+      </Box>
     </ThemedJupyterProvider>
   );
 }
@@ -547,17 +545,28 @@ const A2UiJupyterOutputExample: React.FC = () => {
   // than whatever happens to be in the editor by the time the click lands.
   const sourceRef = useRef(SNIPPETS[0].code);
   const actionsRef = useRef<SurfaceAction[]>([]);
+  /* Which demonstration drew the surface, for the same reason `sourceRef` and
+     `actionsRef` exist: a click has to re-run the thing it was a click on.
+     Without it, pressing a button updated both panels and left the chat's copy
+     of that demonstration's output at whatever it was before the press. */
+  const kindRef = useRef<DemoKind | undefined>(undefined);
   const runRef = useRef<
     | ((
         source: string,
         action?: A2uiClientAction,
         actions?: SurfaceAction[],
+        kind?: DemoKind,
       ) => Promise<ExecutionPayload | null>)
     | null
   >(null);
 
   const handleAction = useCallback((action: A2uiClientAction) => {
-    void runRef.current?.(sourceRef.current, action, actionsRef.current);
+    void runRef.current?.(
+      sourceRef.current,
+      action,
+      actionsRef.current,
+      kindRef.current,
+    );
   }, []);
 
   const { surfaces, processMessages, resetSurfaces, themeStyle } =
@@ -581,6 +590,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
       setFailure(null);
       sourceRef.current = source;
       actionsRef.current = actions;
+      kindRef.current = kind;
       try {
         const response = await fetch(
           `${serverUrl.replace(/\/$/, '')}/api/v1/sandbox/execute/a2ui`,
@@ -654,7 +664,6 @@ const A2UiJupyterOutputExample: React.FC = () => {
          */
         const created = new Set<string>();
 
-        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
@@ -702,8 +711,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
                 continue;
               }
               const create = event.createSurface as
-                | { surfaceId?: string }
-                | undefined;
+                { surfaceId?: string } | undefined;
               if (create?.surfaceId) {
                 if (created.has(create.surfaceId)) {
                   continue;
@@ -780,6 +788,21 @@ const A2UiJupyterOutputExample: React.FC = () => {
   >({});
 
   /*
+   * Which surfaces the reader has opened, kept out of the DOM.
+   *
+   * A native `details` remembers being open only for as long as the element
+   * exists — and pressing a button in the surface calls `resetSurfaces`, which
+   * empties the list for a moment, unmounts the whole disclosure and mounts a
+   * new one for the replacement surface. So the fold shut itself on exactly
+   * the interaction it was open for, and had to be reopened to see the answer
+   * to the click.
+   *
+   * Keyed by tool call, so two demonstrations in one conversation stay
+   * independent of each other.
+   */
+  const [openSurfaces, setOpenSurfaces] = useState<Record<string, boolean>>({});
+
+  /*
    * The output, drawn under the tool message in the conversation.
    *
    * Running a demonstration updated the two panels and left the chat saying
@@ -799,7 +822,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
    * on bytes no model needs to read.
    */
   const renderToolResult = useCallback(
-    ({ name, args, status, defaultUI }: ToolCallRenderContext) => {
+    ({ name, args, status, defaultUI, toolCallId }: ToolCallRenderContext) => {
       /*
         The chat's own tool row, and the output underneath it.
 
@@ -819,9 +842,124 @@ const A2UiJupyterOutputExample: React.FC = () => {
       if (!executed) {
         return defaultUI;
       }
+      const demoActions =
+        SNIPPETS.find(entry => entry.id === kind)?.actions ?? [];
       return (
         <>
           {defaultUI}
+          {/*
+            Both halves of the comparison, in the conversation.
+
+            The chat showed the kernel's own outputs and not the surface the
+            converter made of them — which is the example's entire subject, and
+            for the interactive demonstration it is the whole of the result:
+            its outputs are two lines of text, and the thing worth seeing is
+            the row of buttons.
+
+            The same surface objects the panel renders, so this is not a copy
+            of it. Pressing a button here round-trips exactly as pressing one
+            there does — `handleAction` re-runs the demonstration and the new
+            surface replaces the old one in both places at once.
+          */}
+          {/*
+            The controls, above the fold; the execution detail, inside it.
+
+            Folding the whole surface away hid the buttons, and leaving it open
+            put a second copy of the code, the status and the output into the
+            conversation directly under the first. Neither is what the reader
+            wants from this in a chat: the surface is worth having here for the
+            things it lets them press, and worth folding for everything else.
+
+            The demonstration declares its own actions, so they can be offered
+            without waiting for the surface to arrive — and they go back
+            through exactly the path the surface's own buttons use, so a press
+            here and a press there are the same event.
+          */}
+          {demoActions.length > 0 ? (
+            <Box sx={{ mt: 2 }}>
+              <Text
+                sx={{ display: 'block', mb: 1, fontSize: 0, color: 'fg.muted' }}
+              >
+                Choose an action
+              </Text>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                {demoActions.map((action, index) => (
+                  <Button
+                    key={action.name}
+                    size="small"
+                    variant={index === 0 ? 'primary' : 'default'}
+                    onClick={() =>
+                      // A real client action, not a cast: the same shape the
+                      // surface's own buttons emit, so the round-trip cannot
+                      // tell the two apart. `sourceComponentId` says which
+                      // button it was, which is the only field that differs.
+                      handleAction({
+                        name: action.name,
+                        context: {},
+                        surfaceId: SURFACE_ID,
+                        sourceComponentId: `chat-action-${action.name}`,
+                        timestamp: new Date().toISOString(),
+                      })
+                    }
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </Box>
+            </Box>
+          ) : null}
+          {surfaces.length > 0 ? (
+            /*
+              Folded away, and shut to begin with.
+
+              The surface repeats the code, the status and the outputs, and in
+              a conversation that is a screenful of things the reader has just
+              read pushing the next message off the bottom. Open it when the
+              surface is the point — the interactive demonstration's buttons
+              live in here — and leave it out of the way when it is not.
+
+              A native `details`, so the disclosure keeps its keyboard
+              behaviour and its semantics for nothing, and so the surface
+              inside it stays mounted: the buttons remain live whether or not
+              anybody has opened it.
+            */
+            <Box
+              as="details"
+              // Shut to begin with, for every kind. What the interactive
+              // demonstration needed from being open — its buttons — is now
+              // above the fold, and what is left inside is the execution
+              // detail the reader has already been shown once.
+              open={openSurfaces[toolCallId] ?? false}
+              onToggle={(event: React.SyntheticEvent<HTMLDetailsElement>) => {
+                const isOpen = event.currentTarget.open;
+                setOpenSurfaces(previous => ({
+                  ...previous,
+                  [toolCallId]: isOpen,
+                }));
+              }}
+              sx={{ mt: 2 }}
+            >
+              <Box
+                as="summary"
+                sx={{
+                  cursor: 'pointer',
+                  fontSize: 0,
+                  color: 'fg.muted',
+                  // The marker is the affordance; without a list-style the
+                  // triangle disappears in some browsers.
+                  listStyle: 'revert',
+                  '&:hover': { color: 'fg.default' },
+                }}
+              >
+                A2UI surface
+              </Box>
+              <Box sx={{ mt: 2, ...A2UI_RENDER_SCOPE_SX }} style={themeStyle}>
+                {surfaces.map(surface => (
+                  <A2uiSurfaceComposed key={surface.id} surface={surface} />
+                ))}
+              </Box>
+            </Box>
+          ) : null}
           <Box sx={{ mt: 2 }}>
             <Text
               sx={{ display: 'block', mb: 1, fontSize: 0, color: 'fg.muted' }}
@@ -833,7 +971,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
         </>
       );
     },
-    [executionsByKind],
+    [executionsByKind, handleAction, openSurfaces, surfaces, themeStyle],
   );
 
   const runDemoTool = useMemo<FrontendToolDefinition>(
@@ -868,7 +1006,12 @@ const A2UiJupyterOutputExample: React.FC = () => {
         if (!demo) {
           throw new Error(`Unknown Jupyter output demonstration: ${kind}`);
         }
-        const result = await run(demo.code, undefined, demo.actions ?? [], kind);
+        const result = await run(
+          demo.code,
+          undefined,
+          demo.actions ?? [],
+          kind,
+        );
         if (!result) {
           throw new Error('The Jupyter output demonstration could not run.');
         }
@@ -906,7 +1049,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
     >
       <Panel
         title="A2UI Surface"
-        caption="The same outputs, read by the server-side converter."
+        caption="The outputs read by the server-side converter."
         style={themeStyle}
         sx={A2UI_RENDER_SCOPE_SX}
       >
@@ -956,7 +1099,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
             }}
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
-              📓 Jupyter Output as a Surface
+              📓 Jupyter Output as a A2UI Surface
             </Text>
             <Text sx={{ color: 'fg.muted' }}>
               One execution, twice: what the kernel said, and what the A2UI

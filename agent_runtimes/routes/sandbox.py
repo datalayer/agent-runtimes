@@ -113,13 +113,47 @@ def _bind_action(code: str, action: Optional[dict[str, Any]]) -> str:
 
     A literal rather than a template: the reader's selections reach the code as
     data, and nothing they typed is ever spliced into the source.
+
+    A run with no action *unbinds* it rather than leaving it alone. The kernel
+    outlives the request — that is the point of it — so code left the name
+    behind, and the next plain run read the button somebody had pressed
+    minutes earlier. The interactive demonstration answered "errors: 3" to a
+    reader who had pressed nothing, which is worse than answering nothing: it
+    looks like a considered reply.
     """
-    if not action:
-        return code
     import json
+
+    if not action:
+        return f"a2ui_action = None\n{code}"
 
     literal = json.dumps(action)
     return f"import json as _json\na2ui_action = _json.loads({literal!r})\n{code}"
+
+
+def _append_chunk(sink: list[str], event: Any) -> None:
+    """Add one streamed output chunk, keeping the kernel's own line breaks.
+
+    The events carry a `terminated` flag saying whether the chunk they came
+    from ended with a newline. Appending every chunk as a "line" and joining
+    with newlines ignores it, which turns a row of dots printed with `end=""`
+    into one dot per line — output the kernel never produced.
+
+    Chunks that continue the current line are concatenated onto it; chunks
+    that end one start the next.
+    """
+    line = getattr(event, "line", "") or ""
+    if sink and not sink[-1].endswith("\n"):
+        sink[-1] += line
+    else:
+        sink.append(line)
+    if getattr(event, "terminated", True):
+        sink[-1] += "\n"
+
+
+def _text(lines: list[str]) -> str:
+    """The collected chunks as one string, without inventing a final newline."""
+    text = "".join(lines)
+    return text[:-1] if text.endswith("\n") else text
 
 
 def _sse(payload: Any) -> str:
@@ -192,11 +226,10 @@ async def _stream_surface(request: "SurfaceExecuteRequest"):
 
     async for event in streaming(code):
         if hasattr(event, "line"):
-            line = getattr(event, "line", "") or ""
             if bool(getattr(event, "error", False)):
-                stderr_lines.append(line)
+                _append_chunk(stderr_lines, event)
             else:
-                stdout_lines.append(line)
+                _append_chunk(stdout_lines, event)
         elif hasattr(event, "data"):
             data = getattr(event, "data", {}) or {}
             text = data.get("text/plain")
@@ -225,8 +258,8 @@ async def _stream_surface(request: "SurfaceExecuteRequest"):
         snapshot = {
             "code": request.code,
             "success": error is None,
-            "stdout": "\n".join(stdout_lines),
-            "stderr": "\n".join(stderr_lines),
+            "stdout": _text(stdout_lines),
+            "stderr": _text(stderr_lines),
             "results": results,
             "outputs": outputs,
             "error": error,
@@ -253,8 +286,8 @@ async def _stream_surface(request: "SurfaceExecuteRequest"):
     final_payload = {
         "code": request.code,
         "success": error is None,
-        "stdout": "\n".join(stdout_lines),
-        "stderr": "\n".join(stderr_lines),
+        "stdout": _text(stdout_lines),
+        "stderr": _text(stderr_lines),
         "results": results,
         "outputs": outputs,
         "error": error,

@@ -265,3 +265,68 @@ def test_the_surface_still_arrives_whole_when_streaming_is_not_asked_for(
     body = response.json()
     assert body["execution"]["stdout"] == "hello"
     assert any("createSurface" in message for message in body["messages"])
+
+
+def test_a_run_without_an_action_clears_the_previous_one() -> None:
+    """The kernel outlives the request, so the name has to be reset.
+
+    Leaving `a2ui_action` alone meant a plain run read whatever button had been
+    pressed before it. The interactive demonstration answered "errors: 3" to a
+    reader who had pressed nothing — worse than answering nothing, because it
+    looks like a considered reply.
+    """
+    namespace: dict[str, object] = {"a2ui_action": {"name": "errors"}}
+    exec(sandbox_route._bind_action("value = a2ui_action", None), namespace)
+    assert namespace["value"] is None
+
+
+def test_an_action_still_arrives_as_data() -> None:
+    namespace: dict[str, object] = {}
+    exec(
+        sandbox_route._bind_action("value = a2ui_action", {"name": "warnings"}),
+        namespace,
+    )
+    assert namespace["value"] == {"name": "warnings"}
+
+
+class _DottingClient(_FakeStreamingClient):
+    """A kernel printing dots side by side, then ending the line."""
+
+    async def execute_code_streaming_async(
+        self, code: str, language: str = "python", timeout: int | None = None
+    ):
+        _ = (code, language, timeout)
+        yield SimpleNamespace(line="Mars", error=False, terminated=True)
+        for _ in range(6):
+            yield SimpleNamespace(line=".", error=False, terminated=False)
+        yield SimpleNamespace(line="", error=False, terminated=True)
+        yield SimpleNamespace(line="Jupiter", error=False, terminated=True)
+
+
+def test_dots_printed_side_by_side_stay_on_one_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`print(".", end="")` is not a line, and must not become one.
+
+    Output was collected as "lines" and rejoined with newlines, which throws
+    away the one fact that distinguishes a finished line from a chunk written
+    with `end=""` — and then invents it back. Six dots printed beside each
+    other came out as six lines of one dot, which is output no kernel produced.
+    """
+    monkeypatch.setattr(
+        "agent_runtimes.services.code_sandbox_manager.get_code_sandbox_manager",
+        lambda: _FakeManager(),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "code_sandboxes",
+        SimpleNamespace(CodeSandboxClient=_DottingClient),
+    )
+
+    response = _build_client().post(
+        "/api/v1/sandbox/execute/a2ui",
+        json={"code": "irrelevant", "surface_id": "s", "stream": True},
+    )
+
+    stdout = _sse_payloads(response.text)[-1]["execution"]["stdout"]
+    assert stdout == "Mars\n......\nJupiter"

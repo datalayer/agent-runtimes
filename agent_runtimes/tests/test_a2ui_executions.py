@@ -277,11 +277,23 @@ class TestTerminalRendering:
 class TestInteractionRoundTrip:
     """What the reader did goes back to the code that drew the surface."""
 
-    def test_no_action_leaves_the_code_alone(self) -> None:
+    def test_no_action_clears_the_previous_one(self) -> None:
+        """It used to leave the code alone, and that was the bug.
+
+        The kernel outlives the request, so `a2ui_action` survived from one run
+        to the next: a plain run read whatever button had been pressed before
+        it, and the interactive demonstration answered "errors: 3" to a reader
+        who had pressed nothing. Prepending the reset is the whole fix.
+        """
         from agent_runtimes.routes.sandbox import _bind_action
 
-        assert _bind_action("print(1)", None) == "print(1)"
-        assert _bind_action("print(1)", {}) == "print(1)"
+        for empty in (None, {}):
+            namespace: dict[str, object] = {"a2ui_action": {"name": "errors"}}
+            exec(_bind_action("value = a2ui_action", empty), namespace)
+            assert namespace["value"] is None
+
+        # And the reader's code is still their code, with one line in front.
+        assert _bind_action("print(1)", None).endswith("print(1)")
 
     def test_an_action_arrives_as_data_not_as_source(self) -> None:
         from agent_runtimes.routes.sandbox import _bind_action
