@@ -351,6 +351,18 @@ export type CommandContribution = {
   description: string;
   /** Grouping in `/help`. */
   group?: string;
+  /**
+   * A keystroke that runs it, written once for every platform.
+   *
+   * `'Mod+Alt+G'` is ⌘⌥G on a Mac and Ctrl+Alt+G elsewhere. Optional, and most
+   * commands have none: a slash command is reached by typing its name, and a
+   * shortcut is worth spending only on the few things somebody does often.
+   *
+   * Bound by whichever surface owns the keyboard — the command palette, when
+   * it is mounted. The Python side has no equivalent because a terminal has no
+   * keystrokes to give away.
+   */
+  keybinding?: string;
   args?: readonly CommandArgSpec[];
   run: (ctx: LoopCommandContext) => Promise<CommandResult | void>;
 };
@@ -570,6 +582,16 @@ export const LoopSlots = {
   footer: 'loop.footer',
   /** Small status items under the prompt. */
   status: 'loop.status',
+  /**
+   * A mount point for plugins that position themselves.
+   *
+   * Rendered once, with no layout of its own. What goes here paints over the
+   * workspace from a portal — the command palette does — so the slot only has
+   * to exist somewhere the reactor is running. It is `root` rather than
+   * `loop.root` because it is the reactor's convention rather than the loop's:
+   * the music and CMS applications render the same name for the same plugins.
+   */
+  root: 'root',
   /**
    * The trailing edge, beside the view: the plugin list, and anything else
    * that belongs next to the work rather than in front of it.

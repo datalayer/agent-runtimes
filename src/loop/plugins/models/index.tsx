@@ -45,6 +45,7 @@ export const ModelsPlugin = definePlugin<
         aliases: ['model'],
         description: 'Show the models available to this session',
         group: 'Agents',
+        keybinding: 'Mod+Alt+M',
         run: async ({ workspace }) => {
           const response = await fetch(
             `${workspace.serverUrl}/api/v1/configure/models`,

@@ -56,6 +56,7 @@ export const NotebookPlugin = definePlugin({
         name: 'notebook',
         description: 'Open the notebook beside the chat',
         group: 'Open',
+        keybinding: 'Mod+Alt+N',
         run: async ({ workspace }) => {
           workspace.setActiveViewType('chat');
         },

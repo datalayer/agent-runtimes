@@ -32,6 +32,7 @@ import type { Contribution } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { useContributions } from '@datalayer/reactor/react';
 import { CommandsPlugin } from '@datalayer/reactor-commands';
+import { setupPrimerPortals } from '@datalayer/primer-addons';
 import {
   LoopCommand,
   LoopSlots,
@@ -100,6 +101,30 @@ export const LoopCommandsPlugin = definePlugin<
   // enough, whether or not the host remembered the other.
   dependencies: [CommandsPlugin],
   build: ctx => {
+    /*
+     * Make sure the themed portal root exists before the palette looks for it.
+     *
+     * The palette renders into `__primerPortalRoot__` when there is one, and
+     * into `document.body` when there is not — and body is themed by nobody, so
+     * a palette that lands there shows light chrome over a dark workspace.
+     *
+     * A Primer host creates that root by calling `setupPrimerPortals`, but from
+     * an effect, which runs *after* the first render. Calling it here, while the
+     * plugin is building, means the root is in the document before anything can
+     * portal into it. It is idempotent and reuses the existing element, so a
+     * host that already called it loses nothing — and `DatalayerThemeProvider`
+     * keeps calling it on every colormode change, which is what keeps the root's
+     * `data-color-mode` in step with the application.
+     *
+     * It lives here rather than in `@datalayer/reactor-commands` because that
+     * plugin deliberately owes Primer nothing: the CMS example draws it with
+     * Tailwind, and a palette that dragged a second design system into a host
+     * would break the application it was added to.
+     */
+    if (typeof document !== 'undefined') {
+      setupPrimerPortals();
+    }
+
     /** What each contribution's registration undoes, by command name. */
     const registered = new Map<string, Dispose>();
 
@@ -157,6 +182,9 @@ export const LoopCommandsPlugin = definePlugin<
             description: `/${command.name}`,
             emoji: GROUP_EMOJI[group] ?? '\u{1F4A0}',
             category: group,
+            // Carried through rather than invented here: a shortcut belongs to
+            // the plugin that knows what the command does.
+            keybinding: command.keybinding,
             // Slash commands take their arguments as text after the name; the
             // palette has no argument to give, so they run with none. A command
             // that needs one says so when it runs.

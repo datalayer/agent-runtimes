@@ -162,6 +162,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
         name: 'chat',
         description: 'Show the conversation',
         group: 'Session',
+        keybinding: 'Mod+Alt+K',
         run: async ({ workspace }) => {
           workspace.setActiveViewType('chat');
         },

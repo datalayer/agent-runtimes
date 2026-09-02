@@ -476,6 +476,12 @@ function WorkspaceBody({
         <ReactorSlot slot={LoopSlots.footer} props={{ workspace }} />
         <ReactorSlot slot={LoopSlots.status} props={{ workspace }} />
       </Box>
+
+      {/* Plugins that paint their own position, from a portal. Without this
+          the command palette is contributed to a slot nobody renders, never
+          mounts, and binds no keys — which looks exactly like a shortcut that
+          does not work. */}
+      <ReactorSlot slot={LoopSlots.root} props={{ workspace }} />
     </Box>
   );
 }

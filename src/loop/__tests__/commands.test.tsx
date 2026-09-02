@@ -22,7 +22,9 @@ import { GraphViewPlugin } from '../plugins/graph';
 import { ChatPlugin } from '../plugins/chat';
 import { AgentsPlugin } from '../plugins/agents';
 
-async function mount(extensions: Parameters<typeof buildReactorFromPlugins>[0]) {
+async function mount(
+  extensions: Parameters<typeof buildReactorFromPlugins>[0],
+) {
   const reactor = buildReactorFromPlugins(extensions);
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -99,6 +101,96 @@ describe('the command palette bridge', () => {
     // Only the palette's own entry, which belongs to the generic plugin.
     const ids = reactor.listCommands().map(command => command.id);
     expect(ids.filter(id => id.startsWith('loop.'))).toEqual([]);
+
+    await act(async () => root.unmount());
+  });
+});
+
+describe('the palette in the workspace', () => {
+  it('mounts, so its shortcut is actually bound', async () => {
+    const { root } = await mount([
+      configurePlugin(AgentsPlugin, { target: 'browser' }),
+      ChatPlugin,
+      GraphViewPlugin,
+      LoopCommandsPlugin,
+    ]);
+
+    // The palette is contributed to the `root` slot. The shell did not render
+    // that slot, so the component never mounted and bound no keys — which is
+    // indistinguishable from a shortcut the browser stole.
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'k',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    expect(
+      document.querySelector('[role="dialog"][aria-label="Command palette"]'),
+    ).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it('carries a command’s shortcut into the registry', async () => {
+    const { reactor, root } = await mount([
+      configurePlugin(AgentsPlugin, { target: 'browser' }),
+      ChatPlugin,
+      GraphViewPlugin,
+      LoopCommandsPlugin,
+    ]);
+
+    // Declared on the loop plugin's contribution, carried through the bridge.
+    expect(reactor.getCommand('loop.graph')?.keybinding).toBe('Mod+Alt+G');
+
+    await act(async () => root.unmount());
+  });
+});
+
+describe('where the palette renders', () => {
+  it('lands in the themed portal root, not on body', async () => {
+    const { root } = await mount([
+      configurePlugin(AgentsPlugin, { target: 'browser' }),
+      ChatPlugin,
+      LoopCommandsPlugin,
+    ]);
+
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'k',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    const dialog = document.querySelector(
+      '[role="dialog"][aria-label="Command palette"]',
+    );
+    expect(dialog).not.toBeNull();
+
+    // `body` is themed by nobody: a palette that lands there shows light
+    // chrome over a dark workspace, whatever the application's colormode.
+    const portalRoot = document.getElementById('__primerPortalRoot__');
+    expect(portalRoot).not.toBeNull();
+    expect(portalRoot!.contains(dialog!)).toBe(true);
+
+    await act(async () => root.unmount());
+  });
+
+  it('gives the root a colormode for the palette to inherit', async () => {
+    const { root } = await mount([LoopCommandsPlugin]);
+
+    // The palette's dark rules key off this attribute on an ancestor; the
+    // theme provider keeps it in step from here on.
+    const portalRoot = document.getElementById('__primerPortalRoot__');
+    expect(portalRoot?.dataset.colorMode).toMatch(/^(light|dark)$/);
 
     await act(async () => root.unmount());
   });

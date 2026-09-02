@@ -44,6 +44,12 @@ export type WindowFrameProps = {
    *
    * The host's call rather than the frame's: how much of the page Loop should
    * take is a question about the page.
+   *
+   * Omitted, the frame fills whatever it was given and the body takes what the
+   * title bar leaves. That is the right answer for a full-page host, and it
+   * avoids the alternative — subtracting the bar's height in a `calc` on the
+   * host's side, which is a number that silently goes wrong the first time the
+   * bar gains a row.
    */
   height?: string | number;
   /** Anything the slots' components should receive. */
@@ -64,6 +70,11 @@ export function WindowFrame({
     <Box
       sx={{
         position: 'relative',
+        // Filling is the default: with no height given the frame takes the
+        // space it was handed and the body gets the remainder.
+        ...(height === undefined
+          ? { height: '100%', display: 'flex', flexDirection: 'column' }
+          : null),
         borderRadius: '14px',
         overflow: 'hidden',
         border: '1px solid',
@@ -89,9 +100,19 @@ export function WindowFrame({
           // shedding its actions off the edge.
           flexWrap: 'wrap',
           rowGap: 2,
+          // Never squeezed by the body beside it.
+          flex: '0 0 auto',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', mr: 1, flexShrink: 0 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            mr: 1,
+            flexShrink: 0,
+          }}
+        >
           <ReactorSlot slot={WINDOW_CONTROLS_SLOT} props={slotProps} />
         </Box>
 
@@ -115,7 +136,15 @@ export function WindowFrame({
         ) : null}
       </Box>
 
-      <Box sx={{ height, minHeight: 0 }}>{children}</Box>
+      <Box
+        sx={
+          height === undefined
+            ? { flex: '1 1 auto', minHeight: 0 }
+            : { height, minHeight: 0 }
+        }
+      >
+        {children}
+      </Box>
     </Box>
   );
 }

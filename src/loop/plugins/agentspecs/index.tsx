@@ -48,6 +48,7 @@ export const AgentspecsPlugin = definePlugin<
         aliases: ['agent'],
         description: 'Switch the agent this session is using',
         group: 'Agents',
+        keybinding: 'Mod+Alt+A',
         args: [{ name: 'agent-id', description: 'Agent to switch to' }],
         run: async ({ workspace, argv }) => {
           const agentId = argv.trim();

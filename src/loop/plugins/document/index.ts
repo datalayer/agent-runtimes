@@ -54,6 +54,7 @@ export const DocumentPlugin = definePlugin({
         name: 'document',
         description: 'Open the document beside the chat',
         group: 'Open',
+        keybinding: 'Mod+Alt+O',
         run: async ({ workspace }) => {
           workspace.setActiveViewType('chat');
         },

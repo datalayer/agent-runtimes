@@ -36,6 +36,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor, useSignalValue } from '@datalayer/reactor/react';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
 import { loopPlugins } from '../loop/presets';
+import { WindowFrame } from '../loop/plugins/window-frame';
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
@@ -112,6 +113,15 @@ export type LoopWorkspaceExampleProps = {
   /** Whether Ctrl-K opens the command palette. */
   showCommandPalette?: boolean;
   /**
+   * Whether the workspace is drawn inside a window.
+   *
+   * The frame is how a page embeds Loop — the landing page does exactly this —
+   * so the example shows it rather than describing it. Off gives the bare
+   * workspace filling whatever it was given, which is what a full-page host
+   * wants.
+   */
+  showWindowFrame?: boolean;
+  /**
    * Whether the plugin manager is mounted.
    *
    * True by default: the sidebar is how this example shows that the extension
@@ -174,6 +184,7 @@ export function LoopWorkspaceExample({
   teamId = 'jupyter-notebook',
   showGraph = true,
   showCommandPalette = true,
+  showWindowFrame = true,
   showPluginsManager = true,
   showViewSelector = true,
   hideChatHeader = false,
@@ -209,6 +220,9 @@ export function LoopWorkspaceExample({
           // contributes to it, so leaving these out is what removes the column.
           graph: showGraph,
           commandPalette: showCommandPalette,
+          // Opens the title bar's two slots; the frame itself is composed below,
+          // because a plugin cannot wrap the shell.
+          windowFrame: showWindowFrame,
           pluginsPanel: showPluginsManager,
         }),
       ),
@@ -219,6 +233,7 @@ export function LoopWorkspaceExample({
       teamId,
       showGraph,
       showCommandPalette,
+      showWindowFrame,
       showPluginsManager,
       showViewSelector,
       hideChatHeader,
@@ -297,19 +312,46 @@ export function LoopWorkspaceExample({
     });
   }, [agentId, sandboxTarget, sandboxState, sandboxJupyterUrl, serverUrl]);
 
+  const shell = (
+    <LoopWorkspace
+      serverUrl={serverUrl}
+      agentId={agentId}
+      reactor={reactor}
+      manageReactor={false}
+      showViewSelector={showViewSelector}
+      showHeader={showHeader}
+      chatHeaderActions={chatHeaderActions}
+    />
+  );
+
   const workspace = (
     <QueryClientProvider client={internalQueryClient}>
-      <Box sx={{ height: '100%', minHeight: 0 }}>
-        <LoopWorkspace
-          serverUrl={serverUrl}
-          agentId={agentId}
-          reactor={reactor}
-          manageReactor={false}
-          showViewSelector={showViewSelector}
-          showHeader={showHeader}
-          chatHeaderActions={chatHeaderActions}
-        />
-      </Box>
+      {showWindowFrame ? (
+        /*
+         * The window, composed rather than injected: a plugin cannot wrap the
+         * shell, so the host puts the frame around it. That is the one thing
+         * the host still does, and the one thing only it knows — how much of
+         * its page to give away.
+         *
+         * The room around it is what makes the frame read as a window sitting
+         * on a page rather than as a border drawn at the edges of the screen.
+         */
+        <Box
+          sx={{ height: '100%', minHeight: 0, p: 3, boxSizing: 'border-box' }}
+        >
+          <WindowFrame
+            title={
+              <Box as="span" sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+                Loop
+              </Box>
+            }
+          >
+            {shell}
+          </WindowFrame>
+        </Box>
+      ) : (
+        <Box sx={{ height: '100%', minHeight: 0 }}>{shell}</Box>
+      )}
     </QueryClientProvider>
   );
 

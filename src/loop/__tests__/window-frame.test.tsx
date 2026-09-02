@@ -40,9 +40,11 @@ const HostActionPlugin = definePlugin({
 function Harness({
   plugins,
   title,
+  height,
 }: {
   plugins: Parameters<typeof buildReactorFromPlugins>[0];
   title?: React.ReactNode;
+  height?: string | number;
 }) {
   const reactor = React.useMemo(
     () => buildReactorFromPlugins(plugins),
@@ -50,7 +52,7 @@ function Harness({
   );
   useReactor(reactor);
   return (
-    <WindowFrame title={title} height={200}>
+    <WindowFrame title={title} height={height}>
       <div data-testid="body">the workspace</div>
     </WindowFrame>
   );
@@ -69,7 +71,7 @@ async function mount(element: React.ReactElement) {
 describe('the window frame', () => {
   it('draws its own window controls', async () => {
     const { container, root } = await mount(
-      <Harness plugins={[WindowFramePlugin]} />,
+      <Harness plugins={[WindowFramePlugin]} height={200} />,
     );
 
     // Three dots, contributed by the plugin rather than drawn into the frame,
@@ -83,7 +85,7 @@ describe('the window frame', () => {
 
   it('renders what a host contributes to the trailing edge', async () => {
     const { container, root } = await mount(
-      <Harness plugins={[WindowFramePlugin, HostActionPlugin]} />,
+      <Harness plugins={[WindowFramePlugin, HostActionPlugin]} height={200} />,
     );
 
     // The frame never saw this button: the page mounted a plugin, and the slot
@@ -95,7 +97,7 @@ describe('the window frame', () => {
 
   it('takes the button away with the plugin that ships it', async () => {
     const { container, root } = await mount(
-      <Harness plugins={[WindowFramePlugin]} />,
+      <Harness plugins={[WindowFramePlugin]} height={200} />,
     );
 
     expect(container.textContent).not.toContain('Bring your own Agent');
@@ -105,10 +107,32 @@ describe('the window frame', () => {
 
   it('shows the title it is given', async () => {
     const { container, root } = await mount(
-      <Harness plugins={[WindowFramePlugin]} title={<span>Loop</span>} />,
+      <Harness
+        plugins={[WindowFramePlugin]}
+        title={<span>Loop</span>}
+        height={200}
+      />,
     );
 
     expect(container.textContent).toContain('Loop');
+
+    await act(async () => root.unmount());
+  });
+});
+
+describe('how tall the frame stands', () => {
+  it('fills what it was given when no height is set', async () => {
+    const { container, root } = await mount(
+      <Harness plugins={[WindowFramePlugin]} />,
+    );
+
+    // A full-page host sets the height on whatever wraps the frame; the body
+    // then takes what the title bar leaves, rather than the host subtracting
+    // the bar's height in a `calc` that goes wrong when the bar gains a row.
+    const frame = container.firstElementChild as HTMLElement;
+    const style = window.getComputedStyle(frame);
+    expect(style.display).toBe('flex');
+    expect(style.flexDirection).toBe('column');
 
     await act(async () => root.unmount());
   });

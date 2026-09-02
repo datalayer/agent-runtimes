@@ -15,7 +15,11 @@
  */
 
 import { WorkflowIcon } from '@primer/octicons-react';
-import { contribution, definePlugin } from '@datalayer/reactor';
+import {
+  configurePlugin,
+  contribution,
+  definePlugin,
+} from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
 import { GraphPlugin } from '@datalayer/reactor-graph';
 import { MANAGER_ACTIONS_SLOT } from '@datalayer/reactor-manager';
@@ -41,9 +45,18 @@ export const GraphViewPlugin = definePlugin<
     'Draws the plugins, their dependencies and their extension points.',
   octicon: 'workflow',
   emoji: '\u{1F578}',
-  // The generic graph plugin is pulled in rather than assumed: mounting this
-  // one is enough, whether or not the host remembered the other.
-  dependencies: [GraphPlugin],
+  /*
+   * The generic graph plugin is pulled in rather than assumed: mounting this
+   * one is enough, whether or not the host remembered the other.
+   *
+   * Its own "View the plugin graph" command is turned off, because this plugin
+   * already contributes one that works here. The generic command asks the host
+   * to route by dispatching an event; this workspace answers by setting the
+   * active view directly, and two palette entries for one action — one of them
+   * a hopeful event dispatch nothing in the loop listened for — is how the
+   * palette came to have an entry that did nothing.
+   */
+  dependencies: [configurePlugin(GraphPlugin, { registerCommand: false })],
   /*
    * The way in, contributed beside the view it opens.
    *
@@ -82,6 +95,7 @@ export const GraphViewPlugin = definePlugin<
         name: 'graph',
         description: 'Show the plugin graph',
         group: 'Session',
+        keybinding: 'Mod+Alt+G',
         run: async ({ workspace }) => {
           workspace.setActiveViewType(GRAPH_VIEW_TYPE);
         },

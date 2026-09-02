@@ -52,6 +52,7 @@ export const A2uiPlugin = definePlugin({
         aliases: ['surface'],
         description: 'Show the last execution as a rendered surface',
         group: 'Open',
+        keybinding: 'Mod+Alt+U',
         run: async ({ workspace }) => {
           workspace.setActiveViewType('a2ui');
         },
