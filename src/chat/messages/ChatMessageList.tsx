@@ -727,7 +727,16 @@ export function ChatMessageList({
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-start',
-                maxWidth: '95%',
+                /*
+                  The full column. `maxWidth: '95%'` with content-driven
+                  width left every tool card as wide as its longest line, so
+                  a transcript of executions was a ragged stack of
+                  differently-sized boxes. The default row still hugs its
+                  content under `alignItems`; anything that declares
+                  `width: '100%'` — the cell and output surfaces do — gets
+                  the whole measure.
+                */
+                width: '100%',
                 px: padding,
                 py: 1,
               }}

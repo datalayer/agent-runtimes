@@ -34,7 +34,10 @@ import { SandboxStatusBridge } from './SandboxStatusBridge';
 import { DatalayerAgentMount } from './DatalayerAgentMount';
 import type { ServiceManagerSource } from './browserService';
 import { AgentSummaryPanel } from './AgentSummaryPanel';
-import { AnonymousKeyBadge } from './AnonymousKeyBadge';
+import {
+  AnonymousKeyBadge,
+  AnonymousKeyHeaderBadge,
+} from './AnonymousKeyBadge';
 import { SandboxSelector } from './SandboxSelector';
 import { TeamMemberPicker } from './TeamMemberPicker';
 import { createTeamSelection, type TeamSelection } from './team';
@@ -226,7 +229,9 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         {
           slot: LoopSlots.header,
           id: 'anonymous-key-header',
-          Component: AnonymousKeyBadge as never,
+          // The ordered variant: in the trailing cluster, just before the
+          // full-screen icon — see `AnonymousKeyHeaderBadge`.
+          Component: AnonymousKeyHeaderBadge as never,
         },
       ],
     };

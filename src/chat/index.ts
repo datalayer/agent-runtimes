@@ -56,6 +56,10 @@
 
 // Components - Chat elements
 export { ChatMessages, type ChatMessagesProps } from './messages/ChatMessages';
+export {
+  NotebookToolSurfaces,
+  notebookToolSurfacesRenderer,
+} from './messages/NotebookToolSurfaces';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';

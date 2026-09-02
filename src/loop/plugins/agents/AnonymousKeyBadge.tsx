@@ -21,7 +21,7 @@
  */
 
 import type { JSX } from 'react';
-import { Text } from '@primer/react';
+import { Box, Text } from '@primer/react';
 
 /* Both by file rather than through their barrels. The barrels reach the
    sign-in form and the whole in-page harness, and a plugin that only draws a
@@ -34,6 +34,28 @@ import {
 } from '../../../runtimes/browser/anonymousToken';
 import type { LoopWorkspaceContext } from '../../core';
 import { targetRunsAgentInPage, type SandboxTarget } from './switchable';
+
+/**
+ * The same badge, dressed for the workspace header's trailing cluster.
+ *
+ * Flex `order` rather than registration order: the agents plugin registers
+ * before the editor selector, so in document order the badge sat on the
+ * *leading* side of the selector's `marginLeft: 'auto'`. `1` puts it past
+ * that margin, right beside the full-screen icon (which says `2`) — the
+ * clock reads as chrome about the session, and the trailing corner is where
+ * that lives.
+ */
+export function AnonymousKeyHeaderBadge({
+  workspace,
+}: {
+  workspace: LoopWorkspaceContext;
+}): JSX.Element {
+  return (
+    <Box sx={{ order: 1, display: 'inline-flex', alignItems: 'center' }}>
+      <AnonymousKeyBadge workspace={workspace} />
+    </Box>
+  );
+}
 
 export function AnonymousKeyBadge({
   workspace,

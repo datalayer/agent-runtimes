@@ -1127,6 +1127,17 @@ export interface ChatBaseProps {
 
   /** Tool result renderer for tool calls */
   renderToolResult?: RenderToolResult;
+  /**
+   * Show notebook tool results as read-only surfaces in the transcript,
+   * addressed to this notebook document id.
+   *
+   * For a chat whose agent works a notebook the reader cannot see. A cell
+   * that was inserted, updated or run appears under its tool row — source
+   * first, then its outputs streaming from the live model; `executeCode`
+   * shows only what came back. Ignored when `renderToolResult` is given:
+   * a host that writes its own renderer owns the whole surface.
+   */
+  notebookToolSurfacesId?: string;
 
   /** Custom footer content (rendered above input) */
   footerContent?: ReactNode;

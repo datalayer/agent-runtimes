@@ -1398,6 +1398,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // second one: two input boxes on one screen is one too many.
               showInput={false}
               onSendReady={handleSendReady}
+              /*
+                The notebook tools' results, drawn into the transcript — the
+                chat's own machinery, switched on only while no editor is on
+                screen: the hidden notebook is where the agent works, and the
+                transcript is then the one place the reader can see what a
+                tool did. With an editor open the change is visible where it
+                happened, and the default tool row is enough.
+              */
+              notebookToolSurfacesId={active ? undefined : workspace.surfaceId}
               onContextSnapshot={setChatUsage}
               onLoadingChange={handleLoadingChange}
               enableStreaming

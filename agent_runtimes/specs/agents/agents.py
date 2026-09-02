@@ -7260,7 +7260,7 @@ LOOP_SHELL_AGENTSPEC_0_0_1 = Agentspec(
     color="#0969DA",
     suggestions=[
         AgentSuggestion(
-            text="Run something in the code sandbox that prints as it goes.", emoji="📜"
+            text="Run code that prints one dot per second for 60 seconds.", emoji="📜"
         ),
         AgentSuggestion(
             text="Plot a chart in the code sandbox and show me the image.", emoji="📈"

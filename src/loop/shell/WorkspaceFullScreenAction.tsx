@@ -38,6 +38,9 @@ export function WorkspaceFullScreenAction(): JSX.Element {
       aria-label={fullScreen ? 'Exit full screen' : 'Enter full screen'}
       variant="invisible"
       size="small"
+      // The far end of the trailing cluster: past the editor selector's auto
+      // margin, after the trial clock's `order: 1`.
+      sx={{ order: 2 }}
       onClick={toggle}
     />
   );

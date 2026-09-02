@@ -8177,7 +8177,7 @@ export const LOOP_SHELL_AGENTSPEC_0_0_1: Agentspec = {
   color: '#0969DA',
   suggestions: [
     {
-      text: 'Run something in the code sandbox that prints as it goes.',
+      text: 'Run code that prints one dot per second for 60 seconds.',
       emoji: '📜',
     },
     {
