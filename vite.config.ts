@@ -679,6 +679,13 @@ export default defineConfig(({ mode, command }) => {
       },
       projects: [
         {
+          // `@primer/live-region-element` publishes a `node` export condition
+          // for SSR whose build defines no custom element. Vitest picks it
+          // because it runs under Node, so Primer finds a plain `<live-region>`
+          // with no `announceFromElement` and every announcement throws — which
+          // any test asserting a clean console then fails on, far from the
+          // cause. jsdom is a browser, so ask for the browser build.
+          resolve: { conditions: ['browser', 'import', 'module', 'default'] },
           test: {
             name: 'unit',
             include: ['src/**/*.unit.{test,spec}.{js,ts,tsx}'],
@@ -700,6 +707,9 @@ export default defineConfig(({ mode, command }) => {
           },
         },
         {
+          // See the `unit` project: jsdom needs the browser build of
+          // `@primer/live-region-element`.
+          resolve: { conditions: ['browser', 'import', 'module', 'default'] },
           test: {
             name: 'general',
             include: [

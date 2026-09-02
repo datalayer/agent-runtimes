@@ -98,6 +98,10 @@ vi.mock('@datalayer/jupyter-react', () => ({
     CONNECTED: 'connected',
     DISCONNECTED: 'disconnected',
   },
+  // Reads JupyterLab's page config off the document. `AgentNotebook` and
+  // `AgentDocument` call it at module scope, so the mock has to answer even
+  // for a test that never renders either.
+  loadJupyterConfig: () => ({}),
 }));
 
 vi.mock('@jupyter/web-components', () => ({}));
