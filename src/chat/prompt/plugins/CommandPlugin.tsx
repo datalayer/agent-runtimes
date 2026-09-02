@@ -342,7 +342,7 @@ export function CommandPlugin({
         }}
       />
       <Overlay
-        returnFocusRef={anchorRef}
+        returnFocusRef={anchorRef as React.RefObject<HTMLElement>}
         onEscape={() => setQuery(null)}
         onClickOutside={() => setQuery(null)}
         anchorSide="outside-top"

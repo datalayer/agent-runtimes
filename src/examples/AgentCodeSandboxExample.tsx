@@ -139,7 +139,9 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
   );
   const [wsLog, setWsLog] = useState<WsLogEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const addLog = useCallback((direction: 'recv' | 'sent', raw: string) => {
     setWsLog(prev => {
