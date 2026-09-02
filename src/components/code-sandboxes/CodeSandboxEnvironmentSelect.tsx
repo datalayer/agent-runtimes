@@ -20,6 +20,7 @@
  * @module components/code-sandboxes/CodeSandboxEnvironmentSelect
  */
 
+import type { JSX } from 'react';
 import { ActionList, ActionMenu, Box, Label, Text } from '@primer/react';
 
 /** One choice of the dropdown. */

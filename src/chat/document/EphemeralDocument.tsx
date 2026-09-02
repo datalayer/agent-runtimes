@@ -21,6 +21,7 @@
  * @module chat/document/EphemeralDocument
  */
 
+import type { JSX } from 'react';
 import {
   useCallback,
   useEffect,

@@ -17,6 +17,7 @@
  * @module loop/plugins/document-toolbar/SandboxStatusItem
  */
 
+import type { JSX } from 'react';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
 import { useOptionalSandboxService } from '../agents';

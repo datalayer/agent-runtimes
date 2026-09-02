@@ -18,6 +18,7 @@
  * @module chat/prompt/menus/InlineAgentsMenu
  */
 
+import type { JSX } from 'react';
 import { Text, Button, ActionMenu, ActionList, Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AiAgentIcon } from '@datalayer/icons-react';

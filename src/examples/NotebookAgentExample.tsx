@@ -16,6 +16,7 @@
  * @module examples/NotebookAgentExample
  */
 
+import type { JSX } from 'react';
 import React, { useCallback, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager, Session } from '@jupyterlab/services';

@@ -23,6 +23,7 @@
  * @module examples/A2UiJupyterOutputExample
  */
 
+import type { JSX } from 'react';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import {

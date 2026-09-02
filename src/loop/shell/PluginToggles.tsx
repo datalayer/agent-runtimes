@@ -17,6 +17,7 @@
  * @module loop/shell/PluginToggles
  */
 
+import type { JSX } from 'react';
 import { useCallback, useSyncExternalStore } from 'react';
 import { Box, Text } from '@primer/react';
 import { useReactorPlatform } from '@datalayer/reactor/react';

@@ -19,6 +19,7 @@
  * @module loop/plugins/agents/DatalayerAgentMount
  */
 
+import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 
 const DatalayerAgentBridge = lazy(async () => {

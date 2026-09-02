@@ -168,11 +168,16 @@ describe('a host that asked for no view chooser', () => {
      * Hiding the shell's and leaving the chat's is why the selector was still
      * on screen after being switched off.
      */
+    // The wiring moved to the preset when the landing page stopped importing
+    // the example to get its plugins: the chat's selector is configured where
+    // the plugin list is built, and the shell's is still a prop of the example.
+    const preset = readFileSync(join(__dirname, '..', 'presets.ts'), 'utf8');
+    expect(preset).toContain('showSurfaceSelector: showViewSelector');
+
     const example = readFileSync(
       join(__dirname, '..', '..', 'examples', 'LoopWorkspaceExample.tsx'),
       'utf8',
     );
-    expect(example).toContain('showSurfaceSelector: showViewSelector');
     expect(example).toContain('showViewSelector={showViewSelector}');
   });
 });

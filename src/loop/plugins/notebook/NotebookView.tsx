@@ -10,6 +10,7 @@
  * @module loop/plugins/notebook/NotebookView
  */
 
+import type { JSX } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import { useSignalValue } from '@datalayer/reactor/react';

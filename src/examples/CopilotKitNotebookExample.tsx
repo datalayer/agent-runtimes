@@ -13,6 +13,7 @@
  * You also will need to connect copilotkit to some sort of LLM Add LLM Provider API Key
  */
 
+import type { JSX } from 'react';
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';

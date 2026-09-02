@@ -18,6 +18,7 @@
  * @module loop/plugins/graph/GraphView
  */
 
+import type { JSX } from 'react';
 import { Box } from '@primer/react';
 import { ReactorSlot } from '@datalayer/reactor/react';
 

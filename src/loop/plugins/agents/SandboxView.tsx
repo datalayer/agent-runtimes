@@ -12,6 +12,7 @@
  * @module loop/plugins/agents/SandboxView
  */
 
+import type { JSX } from 'react';
 import { Box, Label, Text } from '@primer/react';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopViewProps } from '../../core';

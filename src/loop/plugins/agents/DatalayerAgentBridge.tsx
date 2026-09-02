@@ -25,6 +25,7 @@
  * @module loop/plugins/agents/DatalayerAgentBridge
  */
 
+import type { JSX } from 'react';
 import { useEffect, useMemo } from 'react';
 import { useReactorPlatform, useSignalValue } from '@datalayer/reactor/react';
 

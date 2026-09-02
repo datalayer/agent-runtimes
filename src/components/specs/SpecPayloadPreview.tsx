@@ -18,6 +18,7 @@
  * @module components/specs/SpecPayloadPreview
  */
 
+import type { JSX } from 'react';
 import { useEffect } from 'react';
 import { IconButton, Text } from '@primer/react';
 import { XIcon } from '@primer/octicons-react';

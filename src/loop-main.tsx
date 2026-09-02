@@ -30,6 +30,7 @@ if (globals['__webpack_public_path__'] === undefined) {
   globals['__webpack_public_path__'] = '';
 }
 
+import type { JSX } from 'react';
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';

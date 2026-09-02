@@ -21,6 +21,7 @@
  * @module chat/prompt/plugins/MentionNode
  */
 
+import type { JSX } from 'react';
 import {
   DecoratorNode,
   type LexicalNode,

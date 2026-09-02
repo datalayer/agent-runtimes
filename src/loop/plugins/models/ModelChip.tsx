@@ -14,6 +14,7 @@
  * @module loop/plugins/models/ModelChip
  */
 
+import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { ActionList, ActionMenu, Box } from '@primer/react';
 import { useGate } from '@datalayer/reactor/react';

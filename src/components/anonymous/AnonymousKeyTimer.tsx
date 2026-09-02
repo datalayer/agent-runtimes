@@ -24,6 +24,7 @@
  * @module components/anonymous/AnonymousKeyTimer
  */
 
+import type { JSX } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';

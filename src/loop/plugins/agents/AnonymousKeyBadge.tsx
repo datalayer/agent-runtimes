@@ -20,6 +20,7 @@
  * @module loop/plugins/agents/AnonymousKeyBadge
  */
 
+import type { JSX } from 'react';
 import { Text } from '@primer/react';
 
 /* Both by file rather than through their barrels. The barrels reach the

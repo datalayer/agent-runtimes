@@ -17,6 +17,7 @@
  * @module loop/plugins/notebook-toolbar/items
  */
 
+import type { JSX } from 'react';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
   KernelIndicator,

@@ -24,6 +24,7 @@
  * @module components/anonymous/AnonymousKeyExpired
  */
 
+import type { JSX } from 'react';
 import { useCallback } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';

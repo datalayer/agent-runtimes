@@ -33,6 +33,7 @@ import { PluginsPanelPlugin } from '../plugins/plugins-panel';
 import { ModelsPlugin } from '../plugins/models';
 import { AgentspecsPlugin } from '../plugins/agentspecs';
 import { ChatPlugin } from '../plugins/chat';
+import { GraphViewPlugin } from '../plugins/graph';
 
 async function mount(
   extensions: Parameters<typeof buildReactorFromPlugins>[0],
@@ -265,5 +266,38 @@ describe('the open view', () => {
 
     root.unmount();
     container.remove();
+  });
+});
+
+describe('the graph button in the sidebar', () => {
+  it('renders beside the plugin list, like the music example', async () => {
+    const { container, root, errors } = await mount([
+      PluginsPanelPlugin,
+      GraphViewPlugin,
+    ]);
+
+    expect(errors).toEqual([]);
+    // Contributed to the manager's action slot by the graph plugin, and drawn
+    // by the panel — neither knows about the other.
+    const buttons = [...container.querySelectorAll('button')].map(
+      button => button.textContent,
+    );
+    expect(buttons).toContain('View plugin graph');
+
+    await act(async () => root.unmount());
+  });
+
+  it('goes when the graph plugin does', async () => {
+    const { container, root, errors } = await mount([PluginsPanelPlugin]);
+
+    expect(errors).toEqual([]);
+    const buttons = [...container.querySelectorAll('button')].map(
+      button => button.textContent,
+    );
+    // The button belongs to the graph, not to the sidebar: without the plugin
+    // there is nothing to open and so nothing to press.
+    expect(buttons).not.toContain('View plugin graph');
+
+    await act(async () => root.unmount());
   });
 });

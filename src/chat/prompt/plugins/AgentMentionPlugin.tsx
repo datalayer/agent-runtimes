@@ -20,6 +20,7 @@
  * @module chat/prompt/plugins/AgentMentionPlugin
  */
 
+import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Icon } from '@primer/octicons-react';
 import { ActionList, Overlay } from '@primer/react';

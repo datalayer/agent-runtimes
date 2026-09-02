@@ -18,6 +18,7 @@
  * @module loop/plugins/agents/AgentSummaryPanel
  */
 
+import type { JSX } from 'react';
 import type { ReadonlySignal } from '@datalayer/reactor';
 import { useSignalValue } from '@datalayer/reactor/react';
 

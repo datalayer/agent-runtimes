@@ -20,6 +20,7 @@
  * @module chat/notebook/EphemeralNotebook
  */
 
+import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';

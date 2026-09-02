@@ -15,14 +15,17 @@ export {
   type InputPromptBaseProps,
   type InputPromptVariant,
 } from './InputPromptBase';
-export {
-  InputPromptHeader,
-  type InputPromptHeaderProps,
-} from './InputPromptHeader';
-export {
-  InputPromptFooter,
-  type InputPromptFooterProps,
-} from './InputPromptFooter';
+/*
+ * The four regions around the input, and the band they are all made of.
+ *
+ * | | above the input | below the input |
+ * | --- | --- | --- |
+ * | inside the box | `InPromptHeader` | `InPromptFooter` |
+ * | under the box | `BelowPromptHeader` | `BelowPromptFooter` |
+ */
+export * from './header';
+export * from './footer';
+export { PromptStacks, type PromptStack, type PromptStacksProps } from './stack';
 export { InputPromptText, type InputPromptTextProps } from './InputPromptText';
 export {
   InputPromptLexical,

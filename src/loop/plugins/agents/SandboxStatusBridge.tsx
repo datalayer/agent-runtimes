@@ -18,6 +18,7 @@
  * @module loop/plugins/agents/SandboxStatusBridge
  */
 
+import type { JSX } from 'react';
 import { useEffect } from 'react';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopWorkspaceContext } from '../../core';

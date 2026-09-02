@@ -18,6 +18,7 @@
  * @module chat/base/ChatAvailability
  */
 
+import type { JSX } from 'react';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 /** What the host knows about whether a chat can be used. */

@@ -25,6 +25,7 @@
  * @module loop/shell/LoopWorkspace
  */
 
+import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Box } from '@primer/react';

@@ -3,6 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import type { JSX } from 'react';
 import { FormControl, IconButton, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CreditCardIcon } from '@primer/octicons-react';

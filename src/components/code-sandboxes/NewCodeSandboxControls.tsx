@@ -16,6 +16,7 @@
  * @module components/code-sandboxes/NewCodeSandboxControls
  */
 
+import type { JSX } from 'react';
 import {
   FormControl,
   IconButton,

@@ -17,6 +17,7 @@
  * @module examples/CopilotKitLexicalExample
  */
 
+import type { JSX } from 'react';
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';

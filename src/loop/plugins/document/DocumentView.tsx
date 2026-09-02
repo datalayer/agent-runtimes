@@ -13,6 +13,7 @@
  * @module loop/plugins/document/DocumentView
  */
 
+import type { JSX } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';

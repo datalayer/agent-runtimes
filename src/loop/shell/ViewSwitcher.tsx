@@ -13,6 +13,7 @@
  * @module loop/shell/ViewSwitcher
  */
 
+import type { JSX } from 'react';
 import { Box, Tooltip } from '@primer/react';
 import type { Contribution } from '@datalayer/reactor';
 import {

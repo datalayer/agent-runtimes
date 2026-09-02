@@ -21,8 +21,9 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { useTypingPlaceholder } from './useTypingPlaceholder';
-import { InputPromptHeader } from './InputPromptHeader';
-import { InputPromptFooter } from './InputPromptFooter';
+import { InPromptHeader } from './header';
+import { InPromptFooter } from './footer';
+import type { PromptStack } from './stack';
 import { InputPromptText } from './InputPromptText';
 import { InputPromptLexical } from './InputPromptLexical';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
@@ -94,8 +95,17 @@ export interface InputPromptBaseProps {
   onChange?: (value: string) => void;
   /** Content rendered in the header slot */
   headerContent?: ReactNode;
+  /**
+   * Extra bands above the input, inside the box.
+   *
+   * `headerContent` is the single-band shorthand; this is how a host adds a
+   * second without the prompt knowing what is in it.
+   */
+  headerStacks?: readonly PromptStack[];
   /** Content rendered on the left side of the footer */
   footerContent?: ReactNode;
+  /** Extra bands between the input and the control band. */
+  footerStacks?: readonly PromptStack[];
   /** Content rendered on the right side of the footer, next to send/stop */
   footerRightContent?: ReactNode;
 }
@@ -123,7 +133,9 @@ export function InputPromptBase({
   value: controlledValue,
   onChange: controlledOnChange,
   headerContent,
+  headerStacks,
   footerContent,
+  footerStacks,
   footerRightContent,
 }: InputPromptBaseProps) {
   // ---- Controlled / uncontrolled state -----------------------------------
@@ -310,8 +322,8 @@ export function InputPromptBase({
             },
           }}
         >
-          {/* Header */}
-          <InputPromptHeader>{headerContent}</InputPromptHeader>
+          {/* Above the input, inside the box */}
+          <InPromptHeader stacks={headerStacks}>{headerContent}</InPromptHeader>
 
           {/* Input area */}
           {variant === 'lexical' ? (
@@ -338,8 +350,9 @@ export function InputPromptBase({
             />
           )}
 
-          {/* Footer */}
-          <InputPromptFooter
+          {/* Below the input, inside the box */}
+          <InPromptFooter
+            stacks={footerStacks}
             isLoading={isLoading}
             isKernelBusy={isKernelBusy}
             sendDisabled={!input.trim() || disabled || readOnly}
@@ -348,7 +361,7 @@ export function InputPromptBase({
             rightContent={footerRightContent}
           >
             {footerContent}
-          </InputPromptFooter>
+          </InPromptFooter>
         </Box>
       </Box>
     </Box>

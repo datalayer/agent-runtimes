@@ -105,6 +105,27 @@ export {
   NOTEBOOK_TOOLBAR_PLUGIN_NAME,
 } from './plugins/notebook-toolbar';
 
+// The window a page puts around Loop, and the slots that make its title bar
+// extensible.
+export {
+  WindowFrame,
+  WindowFramePlugin,
+  WINDOW_ACTIONS_SLOT,
+  WINDOW_CONTROLS_SLOT,
+  WINDOW_FRAME_PLUGIN_NAME,
+  type WindowFrameProps,
+} from './plugins/window-frame';
+export {
+  LoopCommandsPlugin,
+  COMMANDS_PLUGIN_NAME,
+} from './plugins/commands';
+// Loop, ready to drop into somebody else's page.
+export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
+
+// The set a workspace normally has, so a host starts from a working Loop
+// rather than assembling one — and never from the example.
+export { loopPlugins, type LoopPresetOptions } from './presets';
+
 // The extensions that group them, for hosts that would rather install a
 // capability than assemble one.
 export { DocumentExtension, NotebookExtension } from './extensions';

@@ -29,29 +29,22 @@
  * @module examples/LoopWorkspaceExample
  */
 
+import type { JSX } from 'react';
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { Box } from '@primer/react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { configurePlugin } from '@datalayer/reactor';
 import { useReactor, useSignalValue } from '@datalayer/reactor/react';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
+import { loopPlugins } from '../loop/presets';
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
 } from '../loop/core';
-import { A2uiPlugin } from '../loop/plugins/a2ui';
-import { AgentspecsPlugin } from '../loop/plugins/agentspecs';
-import { ChatPlugin } from '../loop/plugins/chat';
 import {
   AGENTS_PLUGIN_NAME,
-  AgentsPlugin,
   type AgentsOutput,
   type SandboxTarget,
 } from '../loop/plugins/agents';
-import { DocumentExtension, NotebookExtension } from '../loop/extensions';
-import { ModelsPlugin } from '../loop/plugins/models';
-import { GraphViewPlugin } from '../loop/plugins/graph';
-import { PluginsPanelPlugin } from '../loop/plugins/plugins-panel';
 import { internalQueryClient } from '../utils';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ThemedProvider } from './utils/themedProvider';
@@ -116,6 +109,8 @@ export type LoopWorkspaceExampleProps = {
    * one.
    */
   showGraph?: boolean;
+  /** Whether Ctrl-K opens the command palette. */
+  showCommandPalette?: boolean;
   /**
    * Whether the plugin manager is mounted.
    *
@@ -178,6 +173,7 @@ export function LoopWorkspaceExample({
   showAgentVariants = true,
   teamId = 'jupyter-notebook',
   showGraph = true,
+  showCommandPalette = true,
   showPluginsManager = true,
   showViewSelector = true,
   hideChatHeader = false,
@@ -190,22 +186,14 @@ export function LoopWorkspaceExample({
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
     () =>
-      buildLoopReactor([
-        // The chat owns the editor beside it, so which one opens is its
-        // configuration rather than the workspace's.
-        configurePlugin(ChatPlugin, {
-          defaultSurface: defaultEditor,
-          // The same answer as the shell's switcher: hiding one chooser and
-          // leaving the other is how the workspace kept offering a choice of
-          // view after being told not to. The chat contributes its own strip,
-          // and it is the one people actually see.
-          showSurfaceSelector: showViewSelector,
-          hideHeader: hideChatHeader,
-          promptPlacement,
-        }),
-        configurePlugin(AgentsPlugin, {
+      buildLoopReactor(
+        loopPlugins({
           serverUrl,
           target: initialTarget,
+          defaultEditor,
+          showViewSelector,
+          hideChatHeader,
+          promptPlacement,
           showAgentVariants,
           teamId,
           localAgent: {
@@ -216,32 +204,21 @@ export function LoopWorkspaceExample({
               enable_codemode: false,
             },
           },
+          // The demonstration's switches. Each is left out rather than
+          // mounted-and-hidden: the sidebar is drawn only when something
+          // contributes to it, so leaving these out is what removes the column.
+          graph: showGraph,
+          commandPalette: showCommandPalette,
+          pluginsPanel: showPluginsManager,
         }),
-        // Two extensions rather than four plugins: each delivers an editor
-        // and the toolbar that reports on it, and the sidebar lists them as
-        // capabilities rather than as peers. Every member is still switched
-        // on and off individually.
-        NotebookExtension,
-        DocumentExtension,
-        A2uiPlugin,
-        AgentspecsPlugin,
-        ModelsPlugin,
-        // Left out rather than mounted-and-hidden: the graph plugin pulls the
-        // generic `@datalayer/reactor-graph` in as a dependency, and mounting
-        // both to show neither would put two plugins in the sidebar list that
-        // do nothing.
-        ...(showGraph ? [GraphViewPlugin] : []),
-        // Same reasoning as the graph: mounted or absent, never mounted and
-        // hidden. The shell draws the sidebar only when something contributes
-        // to it, so leaving this out is what removes the column.
-        ...(showPluginsManager ? [PluginsPanelPlugin] : []),
-      ]),
+      ),
     [
       serverUrl,
       initialTarget,
       showAgentVariants,
       teamId,
       showGraph,
+      showCommandPalette,
       showPluginsManager,
       showViewSelector,
       hideChatHeader,

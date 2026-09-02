@@ -25,6 +25,7 @@
  * @module examples/utils/notebookToolbarItems
  */
 
+import type { JSX } from 'react';
 import { useEffect, useMemo } from 'react';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {

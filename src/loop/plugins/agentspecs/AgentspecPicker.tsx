@@ -13,6 +13,7 @@
  * @module loop/plugins/agents/AgentspecPicker
  */
 
+import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { ActionList, ActionMenu, Box, Spinner, Text } from '@primer/react';
 import type { LoopWorkspaceContext } from '../../core';

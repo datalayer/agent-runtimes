@@ -21,6 +21,7 @@
  * @module loop/plugins/chat/ChatView
  */
 
+import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Box, IconButton, SegmentedControl, Text } from '@primer/react';

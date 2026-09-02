@@ -27,6 +27,8 @@ import type {
   SkillInfo,
 } from '../../types';
 import { InputPromptBase, type InputPromptVariant } from './InputPromptBase';
+import { BelowPromptHeader } from './header';
+import { BelowPromptFooter } from './footer';
 import {
   AgentsMenu,
   InlineAgentsMenu,
@@ -397,125 +399,125 @@ export function InputPrompt({
         }
       />
 
-      {/* Token usage slot — keep rendered to prevent async layout jumps */}
-      {showTokenUsage && (
-        <Box
-          // Dimmed with the controls beneath it. The ring and the counts are
-          // as unavailable as the menus when the prompt is disabled, and one
-          // half of the footer at full strength over the other half at half
-          // read as a rendering fault rather than as a state.
-          sx={{
-            /*
-              No band when there is nothing to put in it.
-              
-              The 8px was there to stop the layout jumping when usage arrived
-              late. For an agent that never reports any — an in-page one with
-              no server keeping the account — it is a permanent white stripe
-              between the prompt and its footer, reserved for a thing that is
-              not coming.
-            */
-            minHeight: hasContext && agentUsage ? 28 : 0,
-            ...(disableInputPrompt
-              ? { opacity: 0.5, pointerEvents: 'none' }
-              : null),
-          }}
-        >
-          {hasContext && agentUsage ? (
-            <ContextPie
-              agentUsage={agentUsage}
-              padding={padding}
-              showContextRing={showContextRing}
+      {/*
+        Under the box, before its controls: what *describes* the prompt rather
+        than acts on it. Declared as a band so the region can grow a second one
+        without this file changing shape — see `chat/prompt/stack`.
+      */}
+      <BelowPromptHeader
+        disabled={disableInputPrompt}
+        stacks={
+          showTokenUsage
+            ? [
+                {
+                  id: 'context-usage',
+                  /*
+                    No band when there is nothing to put in it.
+
+                    The 8px was there to stop the layout jumping when usage
+                    arrived late. For an agent that never reports any — an
+                    in-page one with no server keeping the account — it is a
+                    permanent white stripe between the prompt and its footer,
+                    reserved for a thing that is not coming.
+                  */
+                  minHeight: hasContext && agentUsage ? 28 : 0,
+                  px: 0,
+                  py: 0,
+                  content:
+                    hasContext && agentUsage ? (
+                      <ContextPie
+                        agentUsage={agentUsage}
+                        padding={padding}
+                        showContextRing={showContextRing}
+                      />
+                    ) : null,
+                },
+              ]
+            : []
+        }
+      />
+
+      {/*
+        Under the box, last: what chooses how the *session* behaves rather than
+        what the sentence says. One band today; the region is a list because it
+        has already had two — see `chat/prompt/stack`.
+      */}
+      <BelowPromptFooter
+        disabled={disableInputPrompt}
+        stacks={
+          showSelectorsBar
+            ? [
+                {
+                  id: 'session-controls',
+                  px: padding,
+                  py: 0.5,
+                  minHeight: 36,
+                  bordered: true,
+                  subtle: true,
+                  content: (
+                    <>
+      {anyOffered ? (
+        <>
+          {/* Agents Menu */}
+          {agentsOffered && (
+            <AgentsMenu
+              agents={agents}
+              selectedAgentId={selectedAgentId}
+              onSelectAgent={onSelectAgent}
             />
-          ) : null}
-        </Box>
-      )}
-
-      {/* Model, Skills, and Tools Footer — Below Input */}
-      {showSelectorsBar && (
-        <Box
-          aria-disabled={disableInputPrompt || undefined}
-          sx={{
-            display: 'flex',
-            gap: 2,
-            px: padding,
-            py: 0.5,
-            minHeight: 36,
-            borderTop: '1px solid',
-            borderColor: 'border.default',
-            alignItems: 'center',
-            bg: 'canvas.subtle',
-            /*
-              Dimmed and inert, but still the theme's colours.
-
-              `grayscale(1)` was doing the desaturating, and it takes the
-              theme with it: a workspace on the Jupyter variant — where there
-              is no agent, so the bar is disabled from the moment it renders —
-              showed a grey strip under a coloured page, as though the theme
-              had failed rather than the controls being unavailable. Opacity
-              alone says "not now" without saying "not yours".
-            */
-            ...(disableInputPrompt
-              ? { opacity: 0.5, pointerEvents: 'none' }
-              : null),
-          }}
-        >
-          {anyOffered ? (
-            <>
-              {/* Agents Menu */}
-              {agentsOffered && (
-                <AgentsMenu
-                  agents={agents}
-                  selectedAgentId={selectedAgentId}
-                  onSelectAgent={onSelectAgent}
-                />
-              )}
-
-              {/* Tools Menu */}
-              {toolsOffered && (
-                <ToolsMenu
-                  codemodeEnabled={codemodeEnabled}
-                  onToggleCodemode={onToggleCodemode}
-                  mcpServers={mcpServers}
-                  enabledMcpTools={enabledMcpTools}
-                  enabledMcpToolCount={enabledMcpToolCount}
-                  onToggleMcpTool={onToggleMcpTool}
-                  onToggleAllMcpServerTools={onToggleAllMcpServerTools}
-                  approvedMcpTools={approvedMcpTools}
-                  onToggleMcpToolApproval={onToggleMcpToolApproval}
-                  availableTools={availableTools}
-                />
-              )}
-
-              {/* Skills Menu */}
-              {skillsOffered && (
-                <SkillsMenu
-                  skills={skills}
-                  skillsLoading={skillsLoading}
-                  enabledSkills={enabledSkills}
-                  onToggleSkill={onToggleSkill}
-                  onToggleAllSkills={onToggleAllSkills}
-                  approvedSkills={approvedSkills}
-                  onToggleSkillApproval={onToggleSkillApproval}
-                />
-              )}
-
-              {/* Model Selector */}
-              {modelsOffered && (
-                <ModelSelector
-                  models={models}
-                  selectedModel={selectedModel}
-                  onModelSelect={onModelSelect}
-                  isA2AProtocol={isA2AProtocol}
-                />
-              )}
-            </>
-          ) : (
-            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-              Loading controls...
-            </Text>
           )}
-        </Box>
+
+          {/* Tools Menu */}
+          {toolsOffered && (
+            <ToolsMenu
+              codemodeEnabled={codemodeEnabled}
+              onToggleCodemode={onToggleCodemode}
+              mcpServers={mcpServers}
+              enabledMcpTools={enabledMcpTools}
+              enabledMcpToolCount={enabledMcpToolCount}
+              onToggleMcpTool={onToggleMcpTool}
+              onToggleAllMcpServerTools={onToggleAllMcpServerTools}
+              approvedMcpTools={approvedMcpTools}
+              onToggleMcpToolApproval={onToggleMcpToolApproval}
+              availableTools={availableTools}
+            />
+          )}
+
+          {/* Skills Menu */}
+          {skillsOffered && (
+            <SkillsMenu
+              skills={skills}
+              skillsLoading={skillsLoading}
+              enabledSkills={enabledSkills}
+              onToggleSkill={onToggleSkill}
+              onToggleAllSkills={onToggleAllSkills}
+              approvedSkills={approvedSkills}
+              onToggleSkillApproval={onToggleSkillApproval}
+            />
+          )}
+
+          {/* Model Selector */}
+          {modelsOffered && (
+            <ModelSelector
+              models={models}
+              selectedModel={selectedModel}
+              onModelSelect={onModelSelect}
+              isA2AProtocol={isA2AProtocol}
+            />
+          )}
+        </>
+      ) : (
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+          Loading controls...
+        </Text>
       )}
+                    </>
+                  ),
+                },
+              ]
+            : []
+        }
+      />
     </Box>
   );
 }

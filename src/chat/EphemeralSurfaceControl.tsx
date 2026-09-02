@@ -14,6 +14,7 @@
  * the switch is the same thing wherever it is found.
  */
 
+import type { JSX } from 'react';
 import { Box, Tooltip } from '@primer/react';
 import { CircleSlashIcon, FileIcon, RowsIcon } from '@primer/octicons-react';
 import type { EphemeralSurfaceMode } from '../types';

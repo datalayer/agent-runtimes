@@ -14,6 +14,7 @@
  * @module loop/plugins/graph/GraphToggle
  */
 
+import type { JSX } from 'react';
 import { useRef } from 'react';
 import { Button } from '@primer/react';
 

@@ -3,6 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import type { JSX } from 'react';
 import { useState, useEffect } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ConsumptionBar } from '@datalayer/core/lib/components/progress/ConsumptionBar';

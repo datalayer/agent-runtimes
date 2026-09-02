@@ -16,6 +16,7 @@
  * @module loop/plugins/agents/SandboxSelector
  */
 
+import type { JSX } from 'react';
 import { useCallback, useState } from 'react';
 import { Box, SegmentedControl, Spinner, Text } from '@primer/react';
 import { KernelIndicator } from '@datalayer/jupyter-react/kernel-indicator';

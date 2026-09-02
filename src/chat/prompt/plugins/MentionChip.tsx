@@ -12,6 +12,7 @@
  * @module chat/prompt/plugins/MentionChip
  */
 
+import type { JSX } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import type { Icon } from '@primer/octicons-react';
 

@@ -29,6 +29,7 @@
  * @module examples/LoopWorkspaceEmbed
  */
 
+import type { JSX } from 'react';
 import { Component, Suspense, type ReactNode } from 'react';
 import { Spinner, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';

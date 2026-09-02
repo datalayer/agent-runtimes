@@ -13,6 +13,7 @@
  * @module loop/plugins/a2ui/A2uiView
  */
 
+import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Box, Text } from '@primer/react';

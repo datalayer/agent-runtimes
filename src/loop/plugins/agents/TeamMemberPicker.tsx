@@ -18,6 +18,7 @@
  * @module loop/plugins/agents/TeamMemberPicker
  */
 
+import type { JSX } from 'react';
 import { useState } from 'react';
 import { ActionList, AnchoredOverlay, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
