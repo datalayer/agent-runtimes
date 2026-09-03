@@ -1,0 +1,303 @@
+---
+sidebar_position: 7
+title: Loop Web
+---
+
+# Loop Web
+
+**Loop** is the Agent Runtimes workspace for the browser: a conversation, the
+editors the agent works in, and the sandbox the code runs on — assembled
+entirely from plugins. The base shell is deliberately blank: it renders one
+view host and some slots, and everything a person actually sees — the chat,
+the notebook, the prompt, the command palette — arrives as a plugin
+contribution. A workspace mounted with no plugins shows an empty frame, which
+is the honest picture of what the shell is.
+
+Loop runs on the [Datalayer reactor](https://github.com/datalayer/reactor)
+plugin platform: plugins declare **contribution points**, contribute values
+into points other plugins declared, render into **slots**, and register
+**commands** with cross-platform keybindings.
+
+## Quick start
+
+The supported way to put Loop in a page is `LoopEmbed`, with the standard
+plugin set from `loopPlugins`:
+
+```tsx
+import { LoopEmbed } from '@datalayer/agent-runtimes/lib/loop';
+
+<LoopEmbed
+  agentId="loop-shell"
+  target="browser"          // code runs in the page — no server, no account
+  defaultEditor="none"      // conversation is the canvas
+  floatingPrompt            // draggable composer over the workspace
+  editorSelector            // None / Notebook / Document, in the header
+  commandPalette            // Ctrl-K / ⌘K over every contributed command
+  showHeader
+/>
+```
+
+A host that assembles its own reactor uses the pieces directly:
+
+```tsx
+import {
+  buildLoopReactor,
+  LoopWorkspace,
+  loopPlugins,
+} from '@datalayer/agent-runtimes/lib/loop';
+
+const reactor = buildLoopReactor(loopPlugins({ target: 'browser' }));
+<LoopWorkspace reactor={reactor} serverUrl={serverUrl} agentId={agentId} />;
+```
+
+## Architecture
+
+### The shell
+
+`LoopWorkspace` — the shell component — keeps only what no plugin could do
+for it:
+
+- host the active **view** (`LoopViewType` contributions) and the header,
+  sidebar, footer, status and root **slots**;
+- mint the workspace context (`serverUrl`, `agentId`, `surfaceId`, the
+  sandbox snapshot, the prompt channel);
+- dispatch typed messages — `workspace.submit()` runs a slash command when the
+  text is one, and publishes to the prompt channel otherwise. Dispatch stays
+  in the shell because only the shell sees every command every plugin
+  contributed.
+
+It mounts no providers of its own (no theme, no router, no query client): the
+entry point owns those, which is what lets the same component run as a page,
+inside the Datalayer app, and inside a JupyterLab panel.
+
+### Extension points
+
+| Point | Declared by | Filled by |
+|---|---|---|
+| `LoopViewType` | shell plugin | chat (`chat` view), graph, a2ui |
+| `LoopEditorView` | shell plugin | notebook, document — each entry appears in the segmented editor control and renders in the editor column |
+| `LoopFrontendTool` | chat plugin | notebook (cell tools), document (lexical tools) — the tools the chat hands its agent |
+| `LoopCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |
+| `LoopAgentGate` | chat plugin | agents plugin — whether there is anything to talk to, and why not |
+| `LoopNotebookToolbar` / `LoopDocumentToolbar` items | toolbar plugins | the chat contributes its agent actions onto the editors' toolbars |
+| Slots (`LoopSlots.header`, `chatHeader`, `promptAction`, `inpromptMenu`, `footer`, `status`, `sidebar`, `root`) | shell | anything with chrome to add — the floating prompt uses `root`, the + uses `promptAction` |
+
+The segmented editor control shows **nothing at all** until a plugin
+contributes an editor: an empty workspace is an empty control, not a fake one.
+
+The shell plugin is itself a thin wrapper over the generic
+`@datalayer/reactor-shell` plugin from the reactor repository: the choice
+store, the selector and the cycle command live there, and the loop supplies
+what makes them the loop's — the editor point, the gating against the live
+workspace, and an announcer wired to the chat's surface-request channel.
+
+### The plugin graph
+
+```
+LoopWorkspace (shell component — renders the view host, slots, header)
+│
+├── @datalayer/loop-plugin-shell            owns: LoopViewType, LoopEditorView
+│     │                                     segmented editor control, /editor ⌥⌘E
+│     └──wraps──▶ @datalayer/reactor-shell  the generic view point + selector + choice store
+│
+├── @datalayer/loop-plugin-chat             ──extends shell──▶ view 'chat' → LoopViewType
+│     owns: LoopFrontendTool, LoopAgentGate, the input prompt
+│     renders the chosen LoopEditorView beside the transcript
+│
+├── @datalayer/loop-plugin-notebook         ──depends on──▶ loop-plugin-agents
+│     ├─ extends shell ▶ editor 'notebook' → LoopEditorView
+│     └─ extends chat  ▶ cell tools        → LoopFrontendTool
+│
+├── @datalayer/loop-plugin-document         ──depends on──▶ loop-plugin-agents
+│     ├─ extends shell ▶ editor 'document' → LoopEditorView
+│     └─ extends chat  ▶ lexical tools     → LoopFrontendTool   (contributed lazily)
+│
+├── @datalayer/loop-plugin-agents           sandbox targets, answers LoopAgentGate
+├── @datalayer/loop-plugin-prompt           extends chat ▶ footer + (/prompt ⌥⌘P, /new ⌥⌘R)
+├── @datalayer/loop-plugin-commands         ──depends on──▶ reactor-commands, @datalayer/primer-theme
+├── @datalayer/primer-theme                 portal root + color-mode toggle (⌥⌘T)
+├── @datalayer/loop-plugin-a2ui             view 'a2ui' (server-rendered surfaces)
+├── @datalayer/loop-plugin-agentspecs       agent picker, /agents ⌥⌘A
+├── @datalayer/loop-plugin-models           /models ⌥⌘M
+├── @datalayer/loop-plugin-graph            the plugin graph as a view, /graph ⌥⌘G
+├── @datalayer/loop-plugin-plugins-panel    the sidebar of on/off switches
+└── @datalayer/loop-plugin-window-frame     browser-window chrome, full-screen icon
+```
+
+`──depends on──▶` is a hard reactor dependency: it auto-mounts and cascades
+on disable. `extends ▶` is a contribution into a declared point: inert when
+the owner is absent, and it survives the owner being disabled. The editors
+deliberately *extend* the chat rather than depending on it — switching the
+chat off must leave the notebook standing.
+
+### Fail-loud conventions
+
+Controls that look wired but quietly do nothing are the workspace's worst
+failure mode, so Loop's cross-plugin channels all report whether anyone was
+listening:
+
+- `workspace.submit()` returns whether anything handled the message, with a
+  reason to show;
+- `requestSurface(id)` (a command asking for an editor) returns `false` when
+  no chat is mounted, and the command throws with words a palette can show;
+- `focusPrompt()` behaves the same for `/prompt`.
+
+## Features
+
+### Commands, everywhere at once
+
+Every `LoopCommand` contribution is at once a slash command (`/notebook`), a
+palette entry (Ctrl-K / ⌘K), and — when it declares a `keybinding` — a live
+keystroke. Bindings are written once, platform-agnostically (`Mod` is ⌘ on a
+Mac, Ctrl elsewhere) and displayed per-OS in the palette. The palette binds
+chords on the document capture phase, so they win over the editors' own
+handlers and the browser's defaults.
+
+| Command | Keybinding | Plugin |
+|---|---|---|
+| Command palette | `Mod+K` | commands |
+| `/chat` | `Mod+Alt+K` | chat |
+| `/notebook` | `Mod+Alt+N` | notebook |
+| `/document` | `Mod+Alt+O` | document |
+| `/editor` (cycle) | `Mod+Alt+E` | shell |
+| `/prompt` (focus) | `Mod+Alt+P` | prompt |
+| `/new` (reset) | `Mod+Alt+R` | prompt |
+| `/graph` | `Mod+Alt+G` | graph |
+| `/models` | `Mod+Alt+M` | models |
+| `/agents` | `Mod+Alt+A` | agentspecs |
+| `/surface` (a2ui) | `Mod+Alt+U` | a2ui |
+| Toggle color mode | `Mod+Alt+T` | primer-theme |
+
+### The composer, in three placements
+
+The chat owns one composer — the full `InputPrompt`, with the lexical editor
+(`/` opens the command menu, `@` mentions agents) and the session-controls
+footer (tools, skills, model). `promptPlacement` decides where it stands:
+`bottom` spans the workspace, `bottom-chat` sits under the transcript, and
+`floating` wraps the same composer in a draggable card over the canvas
+(`loopPlugins({ floatingPrompt: true })`). The footer bar is extensible
+through `LoopSlots.promptAction` — the prompt plugin's **+** (start the
+conversation over) arrives that way.
+
+### Editors that work unseen
+
+Every editor that can run is mounted as soon as its sandbox allows — hidden,
+not gone. The agent's tools live in the editors (the notebook registers the
+cell tools, the document its lexical ones), so an unmounted editor would be
+an editor the agent cannot touch. Choosing an editor in the segmented control
+only reveals it; once mounted, an editor is never unmounted, so a sandbox
+hiccup cannot discard the agent's work.
+
+### Tool results in the transcript
+
+When no editor is on screen, the chat renders what the tools did — a cell
+that was inserted, updated or run appears under its tool row as a captioned
+surface: the change first (the cell source, read-only), then its outputs,
+bound to the live model's own output area so a run that prints as it goes
+**streams into the transcript**. `executeCode` shows only its outputs. This
+is chat machinery (`ChatBase`'s `notebookToolSurfacesId` prop), not Loop
+magic — any `ChatBase` host can turn it on.
+
+### Sandbox targets
+
+The agents plugin makes "where the code runs" an interface: `browser`
+(Pyodide in the page — nothing to install or sign into), `local` (a server
+alongside), and Datalayer runtimes. The notebook binds to whichever kernel is
+there and does not know the difference.
+
+### The rest of the chrome
+
+- **Theme** — `@datalayer/primer-theme` (from `@datalayer/primer-addons/lib/reactor`)
+  creates the Primer portal root, keeps its color mode following the theme
+  store and the OS scheme, and contributes the toggle command.
+- **Full screen** — `useWorkspaceFullScreen` promotes the whole workspace via
+  the Fullscreen API; the chat header and the workspace header (via the
+  window-frame plugin) share one implementation.
+- **Window frame** — browser-window chrome a page composes around the shell;
+  its title bar is a slot.
+- **Agent summary** — the badge saying what the workspace talks to;
+  `agentSummary: false` for a page that already introduces its agent.
+- **Trial clock** — the anonymous-key countdown, contributed to both headers
+  so it survives either being hidden.
+
+## Preset options
+
+`loopPlugins(options)` — every option is an off-by-default demonstration
+switch except where noted:
+
+| Option | Default | What it does |
+|---|---|---|
+| `serverUrl` | — | Where the agent-runtimes service is |
+| `target` | `'browser'` | Where code runs |
+| `defaultEditor` | `'notebook'` | Which editor opens (`'none'` for the bare conversation) |
+| `showViewSelector` | `true` | The chat's own editor strip |
+| `editorSelector` | `false` | The header segmented control instead (turns the chat strip off) |
+| `floatingPrompt` | `false` | The composer as a draggable card (sets `promptPlacement: 'floating'`) |
+| `promptPlacement` | `'bottom'` | `bottom` / `bottom-chat` / `floating` |
+| `hideChatHeader` | `false` | No chat title bar |
+| `agentSummary` | `true` | The badge in the workspace header |
+| `showAgentVariants` | `false` | The browser/local/cloud control |
+| `teamId`, `localAgent`, `localAgentSpec` | — | Which agent answers, and what a Local target creates |
+| `commandPalette` | `false` | Ctrl-K over the contributed commands |
+| `graph`, `pluginsPanel`, `windowFrame` | `false` | The demonstration chrome |
+
+## Try it
+
+The examples app ships two Loop demonstrations, both running on the browser
+sandbox with no account:
+
+- **Loop Workspace** — everything on: the sidebar of plugin switches, the
+  graph, the browser/local/cloud control. The proof that the extension model
+  is real: untick the chat and the prompt goes with it; untick the notebook
+  and it leaves the editor control.
+- **Loop Shell** — the opposite pole: a blank canvas, a floating draggable
+  prompt, the editor selector on `None`, and an agent (`loop-shell`
+  agentspec) whose demonstrations land as Jupyter outputs straight on the
+  conversation.
+
+## Extending Loop
+
+A host plugin is ordinary reactor code. One that adds an editor, its tools,
+and a command:
+
+```tsx
+import { contribution, definePlugin } from '@datalayer/reactor';
+import {
+  LoopCommand,
+  LoopEditorView,
+  LoopFrontendTool,
+  requestSurface,
+} from '@datalayer/agent-runtimes/lib/loop';
+
+export const MyEditorPlugin = definePlugin({
+  name: '@me/loop-plugin-spreadsheet',
+  contributes: [
+    contribution(LoopEditorView, {
+      surfaceId: 'spreadsheet',
+      title: 'Spreadsheet',
+      order: 30,
+      load: () => import('./SpreadsheetView'),
+    }, { id: 'spreadsheet' }),
+    contribution(LoopFrontendTool, {
+      id: 'spreadsheet-tools',
+      tools: workspace => createSpreadsheetTools(workspace.surfaceId),
+    }, { id: 'spreadsheet-tools' }),
+    contribution(LoopCommand, {
+      name: 'spreadsheet',
+      description: 'Open the spreadsheet beside the chat',
+      group: 'Open',
+      keybinding: 'Mod+Alt+S',
+      run: async ({ workspace }) => {
+        workspace.setActiveViewType('chat');
+        if (!requestSurface('spreadsheet')) {
+          throw new Error('No chat is on screen to open the spreadsheet beside.');
+        }
+      },
+    }, { id: 'spreadsheet' }),
+  ],
+});
+```
+
+Mount it beside the preset: `LoopEmbed` takes `plugins={[MyEditorPlugin]}`,
+and `buildLoopReactor([...loopPlugins(options), MyEditorPlugin])` does the
+same without the embed.

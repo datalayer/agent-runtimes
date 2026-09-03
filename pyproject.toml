@@ -184,6 +184,11 @@ l = "agent_runtimes.main:main"
 [project.entry-points."datalayer.cli"]
 agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 
+# And through the reactor's own CLI group: `reactor sandboxes` works wherever
+# both are installed, with the same plugin doing the extending.
+[project.entry-points."datalayer.reactor.cli"]
+agent-runtimes = "agent_runtimes.reactor_extension:plugin"
+
 [tool.hatch.metadata]
 allow-direct-references = true
 

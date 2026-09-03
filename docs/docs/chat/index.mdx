@@ -1,204 +1,79 @@
 ---
+sidebar_position: 3
 title: Chat
 ---
 
 # Chat
 
-## Chat CLI
-
-The `agent-runtimes` package provides an interactive assistant workflow via:
-
-```bash
-agent-runtimes chat
-```
-
-<img src="https://images.datalayer.io/products/codeai/codeai_short_cut.gif"/>
-
-## Interactive Assistant
-
-The interactive assistant experience is part of Agent Runtimes and runs through `agent-runtimes chat`.
-
-### Quick Start
-
-```bash
-pip install "agent-runtimes[chat]"
-agent-runtimes chat
-```
-
-This starts an interactive session with a background agent-runtimes server and the default valid agent spec.
-
-### Interactive Mode
-
-Launch without arguments to start a session with the terminal UX (TUX):
-
-```bash
-agent-runtimes chat
-```
-
-When started without `--agentspec-id`, the CLI lists available agent specs and lets you choose one interactively.
-
-```bash
-# Pick interactively
-agent-runtimes chat
-
-# Specify an agent spec
-agent-runtimes chat --agentspec-id data-acquisition
-
-# Disable codemode
-agent-runtimes chat --agentspec-id data-acquisition --no-codemode
-```
-
-### Single-Query Mode
-
-Pass a query to run one request and exit:
-
-```bash
-agent-runtimes chat "What is Python?"
-agent-runtimes chat -a crawler "Search for AI trends"
-```
-
-### Connect to a Remote Server
-
-Use the `connect` subcommand to attach to an existing server:
-
-```bash
-# AG-UI (HTTP/SSE) - default
-agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/chat/
-
-# ACP (WebSocket)
-agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/chat -t acp
-```
-
-### List Remote Agents
-
-```bash
-agent-runtimes chat agents
-agent-runtimes chat agents --server https://agents.datalayer.ai
-```
-
-### Slash Commands
-
-| Command | Shortcut | Description |
-|---------|----------|-------------|
-| `/help` | `Esc H` | Show available commands |
-| `/status` | `Esc S` | Model, tokens, and connectivity |
-| `/context` | `Esc X` | Visualize context usage grid |
-| `/clear` | `Esc C` | Clear conversation history |
-| `/tools` | `Esc T` | List available tools |
-| `/mcp-servers` | `Esc M` | List MCP servers |
-| `/skills` | `Esc K` | List available skills |
-| `/codemode-toggle` | `Esc O` | Toggle codemode on/off |
-| `/agents` | `Esc A` | List agents on the server |
-| `/tools-last` | `Esc L` | Show tool calls from last response |
-| `/context-export` | `Esc E` | Export context to CSV |
-| `/exit` | `Esc Q` | Exit the interactive session |
-
-### Banner and Animations
-
-```bash
-agent-runtimes chat --banner
-agent-runtimes chat --banner-all
-agent-runtimes chat --eggs
-```
-
-### Options Reference
-
-| Option | Short | Default | Description |
-|--------|-------|---------|-------------|
-| `--agentspec-id` | `-a` | interactive picker | Agent spec ID to start |
-| `--port` | `-p` | `0` | Runtime port (`0` means random free port) |
-| `--banner` | `-b` | off | Show Matrix rain animation |
-| `--banner-all` | `-B` | off | Show Matrix rain + black hole animations |
-| `--debug` | `-d` | off | Verbose logging |
-| `--no-codemode` | | off | Disable codemode |
-| `--eggs` | | off | Enable Easter egg slash commands |
-| `--version` | `-v` | | Show version info |
-
-### Programmatic Usage
-
-Import and customize the embedded assistant agent directly:
-
-```python
-from agent_runtimes.chat.cli import agent
-
-@agent.tool()
-def my_custom_tool(data: str) -> str:
-	return f"Processed: {data}"
-
-agent.to_cli_sync(prog_name="agent-runtimes chat")
-```
-
-## Interactive Implementation
-
-The interactive CLI is built on Pydantic AI and Agent Runtimes.
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────┐
-│            Agent Runtimes Interactive CLI           │
-│                                                     │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐ │
-│  │  Typer   │  │  Banner  │  │   Animations      │ │
-│  │  (cli.py)│  │  & Colors│  │   (rain, about,   │ │
-│  │          │  │          │  │    gif)            │ │
-│  └────┬─────┘  └──────────┘  └───────────────────┘ │
-│       │                                             │
-│  ┌────▼──────────────────────────────────────────┐  │
-│  │           Terminal UX (tux.py)               │  │
-│  │  • Rich console rendering                    │  │
-│  │  • Slash commands + keyboard shortcuts       │  │
-│  │  • Context and token visualization           │  │
-│  └────┬──────────────────────────────────────────┘  │
-│       │                                             │
-│  ┌────▼──────────────────────────────────────────┐  │
-│  │             AG-UI / ACP Clients              │  │
-│  └────┬──────────────────────────────────────────┘  │
-└───────┼─────────────────────────────────────────────┘
-		│  HTTP/SSE or WebSocket
-┌───────▼─────────────────────────────────────────────┐
-│              Agent Runtimes Server                 │
-│  • Pydantic AI agent with tools                    │
-│  • MCP server integration                          │
-│  • Codemode (programmatic tool execution)          │
-│  • Model routing (Bedrock, OpenAI, etc.)           │
-└─────────────────────────────────────────────────────┘
-```
-
-### Key Components
-
-- `agent_runtimes/chat/cli.py`: Typer commands, runtime process management, and transport wiring
-- `agent_runtimes/chat/tux.py`: Rich terminal UX, slash command handling, and streaming rendering
-- `agent_runtimes/chat/commands/`: slash command modules and registry
-- `agent_runtimes/chat/banner.py`: brand output and animation helpers
-
-### Runtime Flow
-
-1. `agent-runtimes chat` resolves an agent spec (provided or interactive picker).
-2. It starts an embedded `agent-runtimes serve` process.
-3. It waits for `/health` then fetches `/health/startup`.
-4. Interactive mode launches TUX and streams responses over AG-UI.
-5. On exit or signal, child processes are terminated cleanly.
-
-### Transport Support
-
-- AG-UI (`HTTP/SSE`) is the default for local and remote interactive chat.
-- ACP (`WebSocket`) is supported via `agent-runtimes chat connect -t acp`.
-
-### Slash Command Registry
-
-Slash commands are modularized in `agent_runtimes/chat/commands/` and assembled via `build_commands(...)`. This keeps command behavior isolated and easy to evolve.
-
-### Packaging
-
-CLI-specific dependencies are defined in `agent-runtimes[chat]`:
-
-```bash
-pip install "agent-runtimes[chat]"
-```
-
-The primary user entry point is the `agent-runtimes chat` subcommand from the main `agent-runtimes` CLI.
-
-## Chat UI
+The React chat components in `@datalayer/agent-runtimes` — the conversation,
+the composer, and everything around them. The [Loop Web](/loop) workspace
+assembles these into a full workspace; this page is the components
+themselves, for a host embedding a chat of its own.
 
 ![Agent Runtimes](https://images.datalayer.io/product/agent-runtimes/agent-runtimes-example-1.gif)
+
+## ChatBase
+
+The transcript-and-composer core. It owns the conversation: streaming
+responses, tool-call rows with approval flows, the message list as a centred
+reading column, and the empty state that introduces the agent with its
+spec's own suggestions. Around it:
+
+- **`ChatSidebar`** and **`ChatFloating`** wrap the same core for a side
+  panel or a floating window.
+- **`notebookToolSurfacesId`** — name a notebook document and notebook tool
+  results render inline in the transcript: a cell that was inserted, updated
+  or run appears under its tool row as a captioned surface — the change
+  first (the cell source, read-only), then its outputs bound to the live
+  model's output area, so a run that prints as it goes streams into the
+  transcript. `executeCode` shows only its outputs. A host passing its own
+  `renderToolResult` overrides this outright.
+- **`onSendReady`** hands the host imperative controls — `send`, `stop`,
+  `newChat` — for a page whose input lives outside the component (the Loop
+  workspace's prompt does).
+
+## InputPrompt
+
+The composer, one component in every placement. It wraps the editor and adds
+the rows around it:
+
+- **The editor** (`InputPromptBase`): a plain textarea variant, or the
+  **lexical** variant where `/` opens the command menu and `@` mentions
+  agents, with typing suggestions cycling in the placeholder.
+- **The session-controls footer**: the agents, tools, skills and model
+  menus — each drawn when asked for, opening onto an honest count of zero
+  rather than disappearing when empty — plus `footerExtras`, a trailing-edge
+  opening for the host's own controls (the Loop's **+** — start the
+  conversation over — arrives that way).
+- **The context band**: `ContextPie` and the token counts, shown as soon as
+  the agent accounts for itself.
+- **`draggable`** wraps the whole prompt in `FloatingCard`: an absolutely
+  positioned, draggable card — the same composer, floating over a canvas
+  instead of docked under it.
+
+### Prompt regions
+
+Four regions surround the input, each a *list* of bands rather than a single
+slot — see `chat/prompt/stack`:
+
+| | above the input | below the input |
+| --- | --- | --- |
+| inside the box | `InPromptHeader` | `InPromptFooter` |
+| under the box | `BelowPromptHeader` | `BelowPromptFooter` |
+
+A band can reserve height for late-arriving content, draw as a flex row of
+controls or as a self-painting block, and disappear entirely when empty.
+
+## The empty state
+
+`ChatEmptyState` introduces the agent — icon, name, description, and its
+spec's suggestions as clickable chips — centred at the top of the canvas,
+where the first message will appear beneath it.
+
+## Where the pieces meet Loop
+
+In the Loop workspace, all of this is assembled by the chat *plugin*: the
+composer's placement (`bottom`, `bottom-chat`, `floating`) is plugin
+configuration, the agent's tools arrive through the `LoopFrontendTool`
+extension point, and the editors beside the conversation are contributions
+the shell hosts. See [Loop Web](/loop).

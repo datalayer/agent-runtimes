@@ -23,13 +23,13 @@ import {
 } from '@datalayer/reactor';
 import { LoopWorkspace } from '../shell/LoopWorkspace';
 import {
-  EditorsPlugin,
-  EDITORS_PLUGIN_NAME,
+  ShellPlugin,
+  SHELL_PLUGIN_NAME,
   NONE_EDITOR,
   getEditorChoice,
   seedEditorChoice,
   setEditorOptions,
-} from '../plugins/editors';
+} from '../plugins/shell';
 import { PROMPT_PLUGIN_NAME } from '../plugins/prompt';
 import { LoopChatSurface, LoopCommand, onSurfaceRequest } from '../core';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from '../plugins/chat';
@@ -98,7 +98,7 @@ beforeEach(() => {
 
 describe('the selector in the header', () => {
   it('offers none plus every contributed surface, gated', async () => {
-    const { container, root } = await mount([EditorsPlugin, SurfacesPlugin]);
+    const { container, root } = await mount([ShellPlugin, SurfacesPlugin]);
 
     expect(buttonByText(container, 'None')).toBeDefined();
     expect(buttonByText(container, 'Notebook')).toBeDefined();
@@ -114,7 +114,7 @@ describe('the selector in the header', () => {
   it('asks the chat for what is clicked, and remembers asking', async () => {
     const asked: string[] = [];
     const stop = onSurfaceRequest(id => asked.push(id));
-    const { container, root } = await mount([EditorsPlugin, SurfacesPlugin]);
+    const { container, root } = await mount([ShellPlugin, SurfacesPlugin]);
 
     await act(async () => {
       buttonByText(container, 'Notebook')!.click();
@@ -145,7 +145,7 @@ describe('the /editor command', () => {
     const asked: string[] = [];
     const stop = onSurfaceRequest(id => asked.push(id));
 
-    const command = commandOf(EditorsPlugin, 'editor')!;
+    const command = commandOf(ShellPlugin, 'editor')!;
     await command.run({ workspace: {} as never, argv: '' });
     expect(getEditorChoice().editorId).toBe('notebook');
     await command.run({ workspace: {} as never, argv: '' });
@@ -162,7 +162,7 @@ describe('the /editor command', () => {
     setEditorOptions(['notebook']);
     const stop = onSurfaceRequest(() => {});
 
-    const command = commandOf(EditorsPlugin, 'editor')!;
+    const command = commandOf(ShellPlugin, 'editor')!;
     await command.run({ workspace: {} as never, argv: 'notebook' });
     expect(getEditorChoice().editorId).toBe('notebook');
 
@@ -174,14 +174,14 @@ describe('the /editor command', () => {
   });
 
   it('says so when no chat is listening', async () => {
-    const command = commandOf(EditorsPlugin, 'editor')!;
+    const command = commandOf(ShellPlugin, 'editor')!;
     await expect(
       command.run({ workspace: {} as never, argv: '' }),
     ).rejects.toThrow(/No chat is on screen/);
   });
 
   it('spends a keystroke on switching', () => {
-    expect(commandOf(EditorsPlugin, 'editor')!.keybinding).toBe('Mod+Alt+E');
+    expect(commandOf(ShellPlugin, 'editor')!.keybinding).toBe('Mod+Alt+E');
   });
 });
 
@@ -190,7 +190,7 @@ describe('the preset switch', () => {
     const reactor = buildReactorFromPlugins(
       loopPlugins({ editorSelector: true, defaultEditor: 'none' }),
     );
-    expect(reactor.hasPlugin(EDITORS_PLUGIN_NAME)).toBe(true);
+    expect(reactor.hasPlugin(SHELL_PLUGIN_NAME)).toBe(true);
     // Two controls offering the same choice would eventually disagree.
     expect(
       reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME)
@@ -201,7 +201,7 @@ describe('the preset switch', () => {
 
   it('starts the selector where the chat starts', async () => {
     const { root } = await mount([
-      configurePlugin(EditorsPlugin, { defaultEditor: 'notebook' }),
+      configurePlugin(ShellPlugin, { defaultEditor: 'notebook' }),
       SurfacesPlugin,
     ]);
     // Seeded, not requested: the chat's own default opens the editor, this

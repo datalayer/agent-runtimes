@@ -138,7 +138,7 @@ class TestDiscovery:
             name="acme", load=lambda: (object(), Plugin())
         )
         monkeypatch.setattr(
-            "agent_runtimes.loop.discovery._iter_entry_points",
+            "reactor.repl._entry_points",
             lambda group: (entry_point,),
         )
 
@@ -162,7 +162,7 @@ class TestDiscovery:
         )
         broken = SimpleNamespace(name="broken", load=explode)
         monkeypatch.setattr(
-            "agent_runtimes.loop.discovery._iter_entry_points",
+            "reactor.repl._entry_points",
             lambda group: (broken, working),
         )
 
@@ -178,7 +178,7 @@ class TestDiscovery:
     ) -> None:
         entry_point = SimpleNamespace(name="cli-only", load=lambda: object())
         monkeypatch.setattr(
-            "agent_runtimes.loop.discovery._iter_entry_points",
+            "reactor.repl._entry_points",
             lambda group: (entry_point,),
         )
 

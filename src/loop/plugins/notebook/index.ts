@@ -20,11 +20,13 @@
 import { RowsIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import {
-  LoopChatSurface,
   LoopCommand,
+  LoopEditorView,
+  LoopFrontendTool,
   requestSurface,
   LoopNotebookToolbar,
 } from '../../core';
+import { createNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
 import { AgentsPlugin } from '../agents';
 
 export const NOTEBOOK_PLUGIN_NAME = '@datalayer/loop-plugin-notebook';
@@ -35,6 +37,10 @@ export const NotebookPlugin = definePlugin({
   description: 'A notebook beside the chat, on the session\u2019s kernel.',
   octicon: 'rows',
   emoji: '\u{1F4D3}',
+  // The sandbox is a hard dependency: a notebook with no kernel is a text
+  // file. The shell and the chat are extended through their points instead —
+  // a dependency would take this plugin down with them, and unticking the
+  // chat must leave the notebook standing.
   dependencies: [AgentsPlugin],
   // Declared, not merely used: the registry knows who contributed to a
   // point, it cannot know who opened it. Declaring it is also what makes
@@ -42,8 +48,10 @@ export const NotebookPlugin = definePlugin({
   // filled it — which is exactly when knowing it exists is most useful.
   contributionPoints: [LoopNotebookToolbar],
   contributes: [
+    // The editor: one entry in the shell's segmented control, one view in
+    // the editor column.
     contribution(
-      LoopChatSurface,
+      LoopEditorView,
       {
         surfaceId: 'notebook',
         title: 'Notebook',
@@ -54,6 +62,17 @@ export const NotebookPlugin = definePlugin({
         load: () => import('./NotebookView'),
       },
       { id: 'notebook', order: 10 },
+    ),
+    // The tools: what lets the agent create, edit and run cells — handed to
+    // the chat through its own point, so a chat without this plugin simply
+    // has no notebook tools rather than a hard-wired import of them.
+    contribution(
+      LoopFrontendTool,
+      {
+        id: 'notebook-tools',
+        tools: workspace => createNotebookTools(workspace.surfaceId),
+      },
+      { id: 'notebook-tools' },
     ),
     contribution(
       LoopCommand,

@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 16
 title: Agentspecs
 ---
 
@@ -37,16 +37,18 @@ If you already have agentspecs checked out elsewhere, copy or symlink it to
 
 ## Where Specs Are Used
 
-The generated catalogs are written to:
+The generated catalogs are written under `agent_runtimes/specs/` (Python) and
+`src/specs/` (TypeScript):
 
-- agent_runtimes/config/agents.py
-- agent_runtimes/config/skills.py
-- agent_runtimes/config/envvars.py
-- agent_runtimes/mcp/catalog_mcp_servers.py
-- src/config/agents.ts
-- src/config/skills.ts
-- src/config/envvars.ts
-- src/config/mcpServers.ts
+- agent_runtimes/specs/agents/ · src/specs/agents/ (agents, subfoldered)
+- agent_runtimes/specs/teams · src/specs/teams
+- agent_runtimes/specs/skills.py · src/specs/skills.ts
+- agent_runtimes/specs/tools.py · src/specs/tools.ts
+- agent_runtimes/specs/frontend_tools.py · src/specs/frontendTools.ts
+- agent_runtimes/specs/envvars.py · src/specs/envvars.ts
+- agent_runtimes/mcp/catalog_mcp_servers.py · src/specs/mcpServers.ts
+- plus models, memory, guardrails, evals, events, notifications, outputs,
+  personas, loops, triggers, benchmarks — one catalog each, same pattern
 
 ## What You Can Define in an Agent Spec
 

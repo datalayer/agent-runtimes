@@ -26,8 +26,9 @@
  */
 
 import { configurePlugin, type PluginRef } from '@datalayer/reactor';
+import { ThemePlugin } from '@datalayer/primer-addons/lib/reactor';
 import { A2uiPlugin } from './plugins/a2ui';
-import { EditorsPlugin } from './plugins/editors';
+import { ShellPlugin } from './plugins/shell';
 import { PromptPlugin } from './plugins/prompt';
 import { AgentspecsPlugin } from './plugins/agentspecs';
 import {
@@ -183,10 +184,20 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     A2uiPlugin,
     AgentspecsPlugin,
     ModelsPlugin,
+    // The Primer portal root, kept in the application's color mode, and the
+    // command that toggles it. Unconditional: every workspace portals
+    // something, and the palette's dependency alone would tie the theme to
+    // whether Ctrl-K happens to be mounted.
+    ThemePlugin,
+    // The shell plugin is unconditional: it declares the points the others
+    // extend, and a workspace where extending works only if a selector
+    // happens to be on is a workspace with a trap in it. The selector itself
+    // stays behind the old switch.
+    configurePlugin(ShellPlugin, {
+      defaultEditor,
+      showSelector: editorSelector,
+    }),
     ...(floatingPrompt ? [PromptPlugin] : []),
-    ...(editorSelector
-      ? [configurePlugin(EditorsPlugin, { defaultEditor })]
-      : []),
     ...(graph ? [GraphViewPlugin] : []),
     ...(commandPalette ? [LoopCommandsPlugin] : []),
     ...(pluginsPanel ? [PluginsPanelPlugin] : []),

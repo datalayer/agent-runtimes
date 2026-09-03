@@ -22,6 +22,7 @@ import type { ComponentType, ReactNode } from 'react';
    indicator's vocabulary is shared, its implementation is not. */
 import type { ExecutionState } from '@datalayer/jupyter-react/kernel-indicator';
 import type { ToolbarItem } from '@datalayer/primer-addons';
+import type { FrontendToolDefinition } from '../../types/tools';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
@@ -437,8 +438,43 @@ export const LoopViewType =
   defineContributionPoint<ViewTypeContribution>('loop.viewType');
 
 /** Editors the chat hosts beside the conversation. */
-export const LoopChatSurface =
+/**
+ * Editors the shell hosts beside the conversation.
+ *
+ * Owned by the shell plugin, not the chat: which editors exist is a fact
+ * about the workspace, and the segmented control that offers them shows
+ * nothing at all until a plugin contributes one. The chat renders the chosen
+ * editor's column, but the choice is the shell's.
+ *
+ * `LoopChatSurface` is the same point under its historical name, kept so
+ * nothing that contributed to it has to move in the same commit.
+ */
+export const LoopEditorView =
   defineContributionPoint<ChatSurfaceContribution>('loop.chat.surface');
+
+/** @deprecated Use {@link LoopEditorView}: the shell owns the point now. */
+export const LoopChatSurface = LoopEditorView;
+
+/** The shape an editor contributes — one view in the shell's editor point. */
+export type EditorViewContribution = ChatSurfaceContribution;
+
+/**
+ * Frontend tools the chat hands its agent.
+ *
+ * Opened by the chat plugin, filled by whoever owns a capability: the
+ * notebook contributes its cell tools, the document its lexical ones, and a
+ * host plugin can add its own. The factory runs against the live workspace,
+ * so a tool addressed by `surfaceId` binds to the session on screen.
+ */
+export type FrontendToolContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** Build the tools for this workspace. Called on mount and agent switch. */
+  tools: (workspace: LoopWorkspaceContext) => FrontendToolDefinition[];
+};
+
+export const LoopFrontendTool =
+  defineContributionPoint<FrontendToolContribution>('loop.frontendTool');
 
 /**
  * Whether there is anything to chat with.

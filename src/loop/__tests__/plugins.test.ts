@@ -14,6 +14,8 @@ import {
   canOpenView,
   createPromptChannel,
   onSurfaceRequest,
+  LoopFrontendTool,
+  LoopEditorView,
 } from '../core';
 import type { LoopWorkspaceContext } from '../core';
 import {
@@ -25,6 +27,7 @@ import {
 import { NotebookPlugin } from '../plugins/notebook';
 import { DocumentPlugin } from '../plugins/document';
 import { A2uiPlugin } from '../plugins/a2ui';
+import { ShellPlugin } from '../plugins/shell';
 import { ChatPlugin } from '../plugins/chat';
 
 function workspaceWith(
@@ -237,14 +240,23 @@ describe('the editor plugins', () => {
 });
 
 describe('the chat plugin', () => {
-  it('opens the point the editors arrive through', () => {
+  it('opens the point the tools arrive through', () => {
     const reactor = buildReactorFromPlugins([ChatPlugin]);
     reactor.start();
 
     // Declared rather than merely used: a host can draw the relationship
-    // before anything has contributed to it.
+    // before anything has contributed to it. The editor point moved to the
+    // shell plugin — the chat's own opening is the agent's toolset.
     expect(reactor.getManifest(ChatPlugin.name)?.contributionPoints).toContain(
-      LoopChatSurface.id,
+      LoopFrontendTool.id,
+    );
+  });
+
+  it('no longer owns the editor point — the shell does', () => {
+    const reactor = buildReactorFromPlugins([ShellPlugin]);
+    reactor.start();
+    expect(reactor.getManifest(ShellPlugin.name)?.contributionPoints).toContain(
+      LoopEditorView.id,
     );
   });
 

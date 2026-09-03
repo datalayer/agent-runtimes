@@ -15,8 +15,9 @@
 import { FileIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import {
-  LoopChatSurface,
   LoopCommand,
+  LoopEditorView,
+  LoopFrontendTool,
   requestSurface,
   LoopDocumentToolbar,
 } from '../../core';
@@ -30,6 +31,8 @@ export const DocumentPlugin = definePlugin({
   description: 'A rich-text document beside the chat, driven by the agent.',
   octicon: 'file',
   emoji: '\u{1F4C4}',
+  // The sandbox is a hard dependency; the shell and the chat are extended
+  // through their points instead — see the notebook plugin for why.
   dependencies: [AgentsPlugin],
   // Declared, not merely used: the registry knows who contributed to a
   // point, it cannot know who opened it. Declaring it is also what makes
@@ -37,8 +40,10 @@ export const DocumentPlugin = definePlugin({
   // filled it — which is exactly when knowing it exists is most useful.
   contributionPoints: [LoopDocumentToolbar],
   contributes: [
+    // The editor: one entry in the shell's segmented control, one view in
+    // the editor column.
     contribution(
-      LoopChatSurface,
+      LoopEditorView,
       {
         surfaceId: 'document',
         title: 'Document',
@@ -76,6 +81,31 @@ export const DocumentPlugin = definePlugin({
       { id: 'document' },
     ),
   ],
+  build: ctx => {
+    /*
+     * The document's tools, contributed when their module arrives.
+     *
+     * `lexicalHooks` imports `@datalayer/jupyter-lexical` at module load —
+     * the exact import this plugin keeps out of its own entry so a workspace
+     * only pays for lexical when a document exists. A static contribution
+     * would smuggle it back in. The reactor takes contributions at any time
+     * and bumps its revision, so the chat re-reads its tools point the
+     * moment these land.
+     */
+    void import('../../../tools/adapters/agent-runtimes/lexicalHooks').then(
+      ({ createLexicalTools }) => {
+        ctx.contribute(
+          LoopFrontendTool,
+          {
+            id: 'document-tools',
+            tools: workspace => createLexicalTools(workspace.surfaceId),
+          },
+          { id: 'document-tools' },
+        );
+      },
+    );
+    return {};
+  },
 });
 
 export default DocumentPlugin;

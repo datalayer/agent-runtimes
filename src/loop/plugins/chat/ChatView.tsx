@@ -42,7 +42,6 @@ import { AnonymousKeyExpired } from '../../../components/anonymous/AnonymousKeyE
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
 import { getAgentspecs } from '../../../specs/agents';
-import { useNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
 import type { ProtocolConfig } from '../../../types/protocol';
 import {
   targetRunsAgentInPage,
@@ -74,6 +73,7 @@ import { AI_MODEL_CATALOGUE } from '../../../specs/models';
 import {
   LoopAgentGate,
   LoopChatSurface,
+  LoopFrontendTool,
   canOpenView,
   type ChatSurfaceContribution,
   LoopSlots,
@@ -522,10 +522,33 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Without these the browser agent could hold a conversation and do nothing,
    * which is exactly how it behaved — it answered, and the cell never ran.
    *
-   * Addressed by `loopSurfaceId` so the tools and the surface on screen can
-   * never be pointed at different notebooks.
+   * From the chat's own extension point rather than a hard-wired notebook
+   * import: the notebook plugin contributes its cell tools, the document its
+   * lexical ones, and a chat mounted without either simply has fewer tools.
+   * Each factory runs against the live workspace, so tools addressed by
+   * `surfaceId` can never point at a different notebook than the one on
+   * screen.
    */
-  const notebookTools = useNotebookTools(workspace.surfaceId);
+  const toolContributions = useContributions(LoopFrontendTool);
+  const notebookTools = useMemo(
+    () =>
+      toolContributions.flatMap(entry => {
+        try {
+          return entry.value.tools(workspace);
+        } catch (error) {
+          // One broken contributor must not cost the agent every tool.
+          console.warn(
+            `[loop] frontend tools from '${entry.plugin}' failed:`,
+            error,
+          );
+          return [];
+        }
+      }),
+    // The workspace object is rebuilt when its facts change; surfaceId is
+    // the one the factories address by.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [toolContributions, workspace.surfaceId, workspace.agentId],
+  );
 
   /*
    * Where this workspace's agent actually lives.

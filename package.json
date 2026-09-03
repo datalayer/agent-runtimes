@@ -149,6 +149,7 @@
     "@datalayer/primer-rjsf": "^1.0.3",
     "@datalayer/reactor": "^1.0.0",
     "@datalayer/reactor-commands": "^1.0.0",
+    "@datalayer/reactor-shell": "^1.0.0",
     "@datalayer/reactor-manager": "^1.0.0",
     "@excalidraw/excalidraw": "^0.18.0",
     "@jupyter-widgets/base-manager": "^1.0.12",

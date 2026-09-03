@@ -57,9 +57,13 @@ describe('what an in-page agent can reach', () => {
      * server: without frontend tools the agent answers and the cell never
      * runs, which is exactly how it behaved.
      */
-    const source = readFileSync(join(PLUGINS, 'chat/ChatView.tsx'), 'utf8');
-    expect(source).toContain('useNotebookTools(');
-    expect(source).toContain('frontendTools: notebookTools');
+    // The chat reads its tools from its own extension point now; the
+    // notebook's contribution is what carries the surface id in.
+    const chat = readFileSync(join(PLUGINS, 'chat/ChatView.tsx'), 'utf8');
+    expect(chat).toContain('useContributions(LoopFrontendTool)');
+    const notebook = readFileSync(join(PLUGINS, 'notebook/index.ts'), 'utf8');
+    expect(notebook).toContain('createNotebookTools(workspace.surfaceId)');
+    expect(chat).toContain('frontendTools: notebookTools');
   });
 
   it('does not also hand them to the chat', () => {

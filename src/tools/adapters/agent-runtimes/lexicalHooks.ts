@@ -10,6 +10,17 @@
  * @module tools/adapters/agent-runtimes/lexicalHooks
  */
 
+/*
+ * First, before anything lexical: `@datalayer/jupyter-lexical` pulls
+ * `@lexical/code`, whose Prism language components read the bare global
+ * `Prism` the moment they evaluate — and PrismCss is what defines it. This
+ * module is now loaded *eagerly by the document plugin's build* (to
+ * contribute the document tools), so it can be the first lexical import in
+ * the page; without this line the whole document chunk died on "Prism is
+ * not defined".
+ */
+import '@datalayer/jupyter-react/lib/css/PrismCss';
+
 import { useMemo } from 'react';
 import type { ToolExecutionContext } from '@datalayer/jupyter-react';
 import {
@@ -51,6 +62,35 @@ import type { FrontendToolDefinition } from '../../../types/tools';
  * />
  * ```
  */
+/**
+ * The document's frontend tools, built without React.
+ *
+ * The plain twin of `useLexicalTools`, for the document plugin contributing
+ * to the chat's `LoopFrontendTool` point. The executor reads the lexical
+ * store's live state through its methods; no reactivity needed.
+ */
+export function createLexicalTools(
+  documentId: string,
+  contextOverrides?: Partial<
+    Omit<ToolExecutionContext, 'executor' | 'documentId'>
+  >,
+): FrontendToolDefinition[] {
+  const executor = new LexicalDefaultExecutor(
+    documentId,
+    lexicalStore.getState(),
+  );
+  return createAllAgentRuntimesTools(
+    lexicalToolDefinitions,
+    lexicalToolOperations,
+    {
+      documentId,
+      executor,
+      format: 'toon',
+      ...contextOverrides,
+    },
+  );
+}
+
 export function useLexicalTools(
   documentId: string,
   contextOverrides?: Partial<

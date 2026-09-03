@@ -12,10 +12,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.cursor_shapes import CursorShape
 from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.key_binding import KeyBindings
+from reactor.repl import build_completer, build_key_bindings
 from prompt_toolkit.styles import Style as PTStyle
 from rich.box import ROUNDED
 from rich.columns import Columns
@@ -56,83 +55,6 @@ SYMBOL_TOOLS = "⛀"
 SYMBOL_MESSAGES = "⛁"
 SYMBOL_FREE = "⛶"
 SYMBOL_BUFFER = "⛝"
-
-
-class SlashCommandCompleter(Completer):
-    """Completer for slash commands with menu-style display."""
-
-    def __init__(self, commands: dict[str, "SlashCommand"]):
-        self.commands = commands
-
-    def _argument_completions(self, text: str) -> Any:
-        """Complete a command's arguments once its name has been typed.
-
-        Arguments are declared on the command (``ARGS``), and their choices may
-        be a callable, so a command completes against live state — the servers
-        actually configured, the models actually reachable.
-        """
-        head, _, partial_arg = text[1:].partition(" ")
-        command = self.commands.get(head.strip().lower())
-        if command is None or not getattr(command, "args", ()):  # unknown command
-            return
-
-        # Complete the argument the cursor is on: everything before it is settled.
-        typed = partial_arg.split(" ")
-        index = max(0, len(typed) - 1)
-        current = typed[index].lower()
-        if index >= len(command.args):
-            return
-
-        argument = command.args[index]
-        for choice in argument.resolve_choices():
-            if not choice.lower().startswith(current):
-                continue
-            yield Completion(
-                text=choice,
-                start_position=-len(typed[index]),
-                display=HTML(f"<ansicyan>{choice}</ansicyan>"),
-                display_meta=HTML(f"<ansibrightblack>{argument.name}</ansibrightblack>"),
-            )
-
-    def get_completions(self, document: Any, complete_event: Any) -> Any:
-        """Yield completions for slash commands."""
-        text = document.text_before_cursor
-
-        # Only show completions when input starts with /
-        if not text.startswith("/"):
-            return
-
-        # Past the first space the command is settled: complete its arguments.
-        if " " in text:
-            yield from self._argument_completions(text)
-            return
-
-        # Get the partial command (without the leading /)
-        partial = text[1:].lower()
-
-        # Track which commands we've shown (to avoid duplicates from aliases)
-        shown = set()
-
-        for name, cmd in sorted(self.commands.items()):
-            # Only show primary command names, not aliases
-            if cmd.name in shown:
-                continue
-
-            # Match if partial matches start of command name or is empty
-            if name.startswith(partial) and cmd.name == name:
-                shown.add(cmd.name)
-
-                # Truncate description to fit in menu
-                desc = cmd.description
-                if len(desc) > 70:
-                    desc = desc[:67] + "..."
-
-                yield Completion(
-                    text=f"/{cmd.name}",
-                    start_position=-len(text),
-                    display=HTML(f"<ansicyan>/{cmd.name}</ansicyan>"),
-                    display_meta=HTML(f"<ansibrightblack>{desc}</ansibrightblack>"),
-                )
 
 
 @dataclass
@@ -606,37 +528,6 @@ class CliTux:
         self.console.print(f" {path_line}", style=STYLE_MUTED)
         self.console.print()
 
-    def _create_key_bindings(self) -> KeyBindings:
-        """Create keyboard shortcuts for slash commands.
-
-        Uses Meta/Alt key combinations (e.g., 'escape', 'x' for Alt+X).
-        """
-        kb = KeyBindings()
-
-        # Map shortcuts to command names
-        # Shortcuts are stored as tuples for multi-key sequences
-        shortcut_map: dict[tuple[str, ...], str] = {}
-        for cmd in self.commands.values():
-            if cmd.shortcut and cmd.name not in shortcut_map.values():
-                # Parse shortcut string into tuple (e.g., "escape x" -> ("escape", "x"))
-                keys = tuple(cmd.shortcut.split())
-                shortcut_map[keys] = cmd.name
-
-        # Create a handler that returns the command string
-        def make_handler(cmd_name: str) -> Any:
-            async def handler(event: Any) -> None:
-                # Set the buffer to the command and accept it
-                event.current_buffer.text = f"/{cmd_name}"
-                event.current_buffer.validate_and_handle()
-
-            return handler
-
-        # Register each shortcut - unpack tuple as separate arguments
-        for keys, cmd_name in shortcut_map.items():
-            kb.add(*keys)(make_handler(cmd_name))
-
-        return kb
-
     async def _show_foreign_turns(self) -> None:
         """Print anything the browser did since we last looked.
 
@@ -663,8 +554,10 @@ class CliTux:
         """Display the prompt and get user input with slash command completion."""
         # Initialize prompt session lazily (after commands are registered)
         if self.prompt_session is None:
-            completer = SlashCommandCompleter(self.commands)
-            key_bindings = self._create_key_bindings()
+            # The reactor's REPL machinery, over the same registry: the slash
+            # menu, per-argument completion, and one binding per shortcut.
+            completer = build_completer(self.command_registry)
+            key_bindings = build_key_bindings(self.command_registry)
             self.prompt_session = PromptSession(
                 completer=completer,
                 style=self.prompt_style,

@@ -103,13 +103,16 @@ export {
   DOCUMENT_TOOLBAR_PLUGIN_NAME,
 } from './plugins/document-toolbar';
 export {
-  EditorsPlugin,
+  ShellPlugin,
   EditorSelector,
-  EDITORS_PLUGIN_NAME,
+  SHELL_PLUGIN_NAME,
   NONE_EDITOR,
   chooseEditor,
-  type EditorsPluginConfig,
-} from './plugins/editors';
+  // The names this plugin outgrew, kept so nothing breaks in the same step.
+  EditorsPlugin,
+  EDITORS_PLUGIN_NAME,
+  type ShellPluginConfig,
+} from './plugins/shell';
 export { ModelsPlugin, MODELS_PLUGIN_NAME } from './plugins/models';
 export { NotebookPlugin, NOTEBOOK_PLUGIN_NAME } from './plugins/notebook';
 export {

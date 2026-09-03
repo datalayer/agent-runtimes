@@ -19,8 +19,8 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
   LoopAgentGate,
-  LoopChatSurface,
   LoopCommand,
+  LoopFrontendTool,
   LoopDocumentToolbarItem,
   LoopNotebookToolbarItem,
   LoopViewType,
@@ -159,8 +159,10 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
   emoji: '\u{1F4AC}',
   // Declared, not merely used: the registry knows who contributed to a point,
   // it cannot know who opened it, and a point nobody has filled yet is exactly
-  // when knowing it exists is most useful.
-  contributionPoints: [LoopAgentGate, LoopChatSurface],
+  // when knowing it exists is most useful. `LoopFrontendTool` is the chat's
+  // own opening: the tools its agent is handed, filled by the notebook, the
+  // document, and whoever else owns a capability.
+  contributionPoints: [LoopAgentGate, LoopFrontendTool],
   contributes: [
     contribution(
       LoopViewType,
