@@ -47,13 +47,27 @@ setViewAnnouncer(requestSurface);
 /** The choice that means "just the conversation". */
 export const NONE_EDITOR = NONE_VIEW;
 
+/*
+ * Cached per underlying state: `useSyncExternalStore` re-renders whenever
+ * the snapshot's identity changes, so a getter that builds a fresh object on
+ * every call is an infinite render loop waiting for its first subscriber —
+ * the view-switch icons found it. The store replaces its state object only
+ * on actual change, which makes it the perfect cache key.
+ */
+let mappedFor: unknown = null;
+let mapped: { editorId: string; options: readonly string[] } | null = null;
+
 /** The current request and options, in loop names. */
 export function getEditorChoice(): {
   editorId: string;
   options: readonly string[];
 } {
-  const { viewId, options } = getViewChoice();
-  return { editorId: viewId, options };
+  const state = getViewChoice();
+  if (state !== mappedFor || !mapped) {
+    mappedFor = state;
+    mapped = { editorId: state.viewId, options: state.options };
+  }
+  return mapped;
 }
 
 export const subscribeEditorChoice = subscribeViewChoice;

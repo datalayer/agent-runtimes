@@ -25,6 +25,7 @@ import { ServerIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
 import {
+  LoopAgentBlueprint,
   LoopAgentGate,
   LoopCommand,
   LoopSlots,
@@ -134,12 +135,14 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
   octicon: 'container',
   emoji: '\u{1F4E6}',
   config: { serverUrl: '', target: 'local' },
+  // The capacity plugins' opening: what the Local agent is created from.
+  contributionPoints: [LoopAgentBlueprint],
   // This plugin owns a sandbox — a kernel, a WebSocket, an execution history.
   // Rebuilding it on enable would hand every view a fresh service while the
   // old one kept the connection: toggling the checkbox would silently detach
   // the notebook from the kernel it is showing.
   preserveOutput: true,
-  build({ config }) {
+  build({ config, reactor }) {
     // Read once: it decides both what is offered and where the sandbox starts,
     // and those two must not be able to disagree.
     const showVariants = config.showAgentVariants ?? true;
@@ -155,6 +158,19 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         initialTarget: showVariants ? config.target : 'browser',
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
+        // The capacity plugins' say, read at switch time — lazily, because a
+        // blueprint is a contribution and its plugin may register after this
+        // build runs.
+        blueprint: () => {
+          const entry = reactor.getContributions(LoopAgentBlueprint)[0]?.value;
+          if (!entry) {
+            return undefined;
+          }
+          return {
+            ...(entry.specId ? { agent_spec_id: entry.specId } : null),
+            ...entry.createPayload,
+          };
+        },
       }),
       // In a slot rather than inside the sandbox view: the sandbox does not
       // stop existing when someone switches to the chat tab, and neither

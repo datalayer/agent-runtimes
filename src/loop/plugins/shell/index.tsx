@@ -114,7 +114,10 @@ function EditorSelectorComponent(
       point={LoopEditorView}
       describe={describe}
       context={slotProps}
-      noneLabel="None"
+      // "Chat", not "None": with no editor beside it the conversation IS the
+      // view, and a control that names the common case after what it lacks
+      // reads as an error state.
+      noneLabel="Chat"
       ariaLabel="Editor"
     />
   );

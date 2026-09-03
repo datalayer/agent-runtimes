@@ -15,6 +15,7 @@
  */
 
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -59,6 +60,9 @@ import type { FooterAgent } from '../../types/chat';
  */
 export type { FooterAgent };
 
+/** Where the prompt stands: in the flow, or in a draggable card over it. */
+export type InputPromptPlacement = 'docked' | 'floating';
+
 /* Shared, so a defaulted prop is the same object on every render: a fresh
    `new Map()` per render is a new dependency for anything memoising on it. */
 const EMPTY_TOOL_MAP: Map<string, Set<string>> = new Map();
@@ -95,15 +99,30 @@ export interface InputPromptProps {
    */
   footerExtras?: ReactNode;
   /**
-   * Float the whole prompt in a draggable card instead of docking it.
+   * Where the prompt stands.
    *
-   * The same prompt — editor, header, usage band, the tools/skills/model
-   * footer — wrapped in `FloatingCard`: absolutely positioned against the
-   * nearest positioned ancestor, bottom-centre until picked up by its
-   * handle. For a host whose page is mostly canvas, where a docked composer
-   * would claim a permanent strip of it.
+   * `'docked'` (the default) renders it in the flow, claiming its strip of
+   * the layout. `'floating'` wraps the same prompt — editor, header, usage
+   * band, the tools/skills/model footer — in a draggable `FloatingCard`:
+   * absolutely positioned against the nearest positioned ancestor,
+   * bottom-centre until picked up by its handle. For a host whose page is
+   * mostly canvas, where a docked composer would claim a permanent strip
+   * of it. Dragging is the floating placement's own feature; nothing else
+   * need be wired for it.
    */
+  placement?: InputPromptPlacement;
+  /** @deprecated Use `placement="floating"`; `true` maps to exactly that. */
   draggable?: boolean;
+  /**
+   * Where to mount the prompt, docked or floating.
+   *
+   * When given, the prompt renders into this element through a portal
+   * instead of in place — for a host that composes the prompt in one part
+   * of its tree but wants it standing in another (a workspace overlay, a
+   * header-owned dock). The floating card measures its drag bounds against
+   * the nearest *positioned* ancestor of this element, so give it one.
+   */
+  container?: Element | null;
   /**
    * Called with the message when it is sent.
    *
@@ -253,7 +272,9 @@ export function InputPrompt({
   autoFocus,
   focusTrigger,
   padding,
+  placement,
   draggable = false,
+  container,
   footerExtras,
   onSend,
   onStop,
@@ -565,8 +586,13 @@ export function InputPrompt({
     </Box>
   );
 
-  // The same prompt either way: the card only decides where it stands.
-  return draggable ? <FloatingCard>{body}</FloatingCard> : body;
+  // The same prompt either way: the placement only decides where it stands
+  // (`draggable` is the old spelling of `'floating'`), and the container
+  // only decides which subtree it stands in.
+  const floating =
+    (placement ?? (draggable ? 'floating' : 'docked')) === 'floating';
+  const framed = floating ? <FloatingCard>{body}</FloatingCard> : body;
+  return container ? createPortal(framed, container) : framed;
 }
 
 // ---------------------------------------------------------------------------

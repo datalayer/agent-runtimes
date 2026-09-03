@@ -37,6 +37,11 @@ import {
   type SandboxTarget,
 } from './plugins/agents';
 import { ChatPlugin, type ChatPluginConfig } from './plugins/chat';
+import { ChatHeaderPlugin } from './plugins/chat-header';
+import { ChatViewPlugin } from './plugins/chat-view';
+import { DocumentViewPlugin } from './plugins/document-view';
+import { InputPromptPlugin } from './plugins/input-prompt';
+import { NotebookViewPlugin } from './plugins/notebook-view';
 import { LoopCommandsPlugin } from './plugins/commands';
 import { GraphViewPlugin } from './plugins/graph';
 import { ModelsPlugin } from './plugins/models';
@@ -158,6 +163,19 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       hideHeader: hideChatHeader,
       promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
     }),
+    // The composer and the title bar are plugins of their own: the chat
+    // assembles their props, these render them. In the preset by default —
+    // a chat without a composer is a demonstration, not a chat — and each is
+    // still switched individually in the plugins panel.
+    InputPromptPlugin,
+    ChatHeaderPlugin,
+    // One footer icon per view, in the composer where the writing hand
+    // already is. Each editor's icon withdraws while its editor is not
+    // contributed, so mounting these unconditionally costs an absent editor
+    // nothing.
+    ChatViewPlugin,
+    NotebookViewPlugin,
+    DocumentViewPlugin,
     configurePlugin(AgentsPlugin, {
       serverUrl,
       target,

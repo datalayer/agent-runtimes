@@ -25,7 +25,7 @@
  */
 
 import type { JSX } from 'react';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, Text } from '@primer/react';
 import {
   Cell,
@@ -207,6 +207,51 @@ export function NotebookToolSurfaces({
     id: string | null;
     model: IOutputAreaModel | null;
   }>({ id: null, model: null });
+
+  /*
+   * The claim is a race this row loses on its first render: the executor
+   * creates `lastExecuteOutputs` only once the kernel call actually starts,
+   * which is *after* the transcript has drawn the row as `executing` — and a
+   * long silent run gives React no reason to render again, so the model was
+   * only ever claimed at completion and the whole stream painted at once.
+   * While executing and unclaimed, probe on a short timer; the state bump
+   * re-renders the row and the claim below picks the model up. Once bound,
+   * the output area follows the model on its own.
+   */
+  const [, setClaimTick] = useState(0);
+  useEffect(() => {
+    if (!EXECUTE_TOOLS.has(name) || status !== 'executing') {
+      return undefined;
+    }
+    if (
+      liveExecution.current.id === context.toolCallId &&
+      liveExecution.current.model
+    ) {
+      return undefined;
+    }
+    let cancelled = false;
+    let timer: number | undefined;
+    const probe = () => {
+      if (cancelled) {
+        return;
+      }
+      const candidate =
+        notebookStore.getState().notebooks.get(documentId)?.adapter
+          ?.lastExecuteOutputs ?? null;
+      if (candidate && !claimedModels.has(candidate)) {
+        setClaimTick(tick => tick + 1);
+        return;
+      }
+      timer = window.setTimeout(probe, 250);
+    };
+    probe();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [name, status, context.toolCallId, documentId]);
 
   let cellModel: ICellModel | null = null;
   let outputs: IOutput[] | null = null;

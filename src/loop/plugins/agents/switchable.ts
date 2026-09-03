@@ -183,6 +183,15 @@ export type SwitchableConfig = {
    */
   localAgent?: { createPayload: Record<string, unknown> };
   /**
+   * The capacity plugins' account of the agent, read at switch time.
+   *
+   * A lazy getter rather than a value: blueprints are contributions, and the
+   * plugin that contributes one may register after this service is built.
+   * When it returns a payload it wins over `localAgent` — a mounted capacity
+   * plugin is the more specific statement about what this workspace runs.
+   */
+  blueprint?: () => Record<string, unknown> | undefined;
+  /**
    * Where the in-page kernel comes from.
    *
    * Defaults to JupyterLite. A JupyterLab host supplies the application's own
@@ -197,6 +206,7 @@ export function createSwitchableSandboxService({
   initialTarget = 'local',
   kernelSource,
   localAgent,
+  blueprint,
 }: SwitchableConfig): SwitchableSandboxService {
   const target: Signal<SandboxTarget> = signal(initialTarget);
 
@@ -243,8 +253,14 @@ export function createSwitchableSandboxService({
      * Starting the agent is a precondition for the switch, not the whole of
      * it. The configure that follows is what makes the sandbox colocated.
      */
-    if (next === 'local' && localAgent) {
-      await ensureLocalAgent(localAgent.createPayload);
+    if (next === 'local') {
+      // The blueprint — a capacity plugin's contribution — wins over the
+      // host's own `localAgent`: mounting the capacity is the more specific
+      // statement about what this workspace runs.
+      const createPayload = blueprint?.() ?? localAgent?.createPayload;
+      if (createPayload) {
+        await ensureLocalAgent(createPayload);
+      }
     }
     const configure = TARGET_SPECS[next]?.configure;
     if (!configure) {

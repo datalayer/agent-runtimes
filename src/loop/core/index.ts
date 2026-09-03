@@ -477,6 +477,105 @@ export const LoopFrontendTool =
   defineContributionPoint<FrontendToolContribution>('loop.frontendTool');
 
 /**
+ * The composer — the input prompt — arriving as a plugin.
+ *
+ * The chat view *assembles* everything the composer needs (the draft, the
+ * send handler, the menus' data, the placement) and hands it over; the
+ * plugin owns the component that renders it. Split this way round because
+ * the wiring is the chat's knowledge and the surface is the plugin's: a
+ * host can replace the composer's face without re-deriving a single query,
+ * and unticking the input-prompt plugin removes the composer the way
+ * unticking the notebook removes the editor.
+ */
+export type LoopChatComposerProps = {
+  workspace: LoopWorkspaceContext;
+  /** The standard composer's props, fully assembled by the chat view. */
+  composer: import('../../chat/prompt/InputPrompt').InputPromptProps;
+};
+
+export type ChatComposerContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  Component: ComponentType<LoopChatComposerProps>;
+};
+
+export const LoopChatComposer = defineContributionPoint<
+  ChatComposerContribution
+>('loop.chat.composer');
+
+/**
+ * The chat's title bar, arriving as a plugin.
+ *
+ * Same shape as the composer point: the chat assembles the header's full
+ * props — title, kernel indicator, runtime status, the actions row — and the
+ * plugin renders them, by default with the standard `ChatBaseHeader`. No
+ * contribution, no title bar.
+ */
+export type LoopChatHeaderProps = {
+  workspace: LoopWorkspaceContext;
+  /** The standard header's props, fully assembled by the chat. */
+  header: import('../../chat/header/ChatHeaderBase').ChatBaseHeaderProps;
+};
+
+export type ChatHeaderContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  Component: ComponentType<LoopChatHeaderProps>;
+};
+
+export const LoopChatHeader = defineContributionPoint<ChatHeaderContribution>(
+  'loop.chat.header',
+);
+
+/**
+ * The agent a capacity plugin wants the workspace to run.
+ *
+ * A capacity plugin — codemode, hooks, guardrails — is a statement about
+ * *which agent* answers and *how it is created*: an agentspec id and the
+ * create-payload details the server needs. Contributed here rather than
+ * configured on the agents plugin, so mounting the capacity is the whole
+ * gesture: the agents plugin reads the first blueprint when its Local
+ * target creates the agent, and a workspace with no blueprint behaves as
+ * before. The workspace's `agentId` still names the instance; the blueprint
+ * says what that instance is made from.
+ */
+export type AgentBlueprintContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** The agentspec the agent is created from. */
+  specId?: string;
+  /** Extra fields merged into the server's create-agent payload. */
+  createPayload?: Record<string, unknown>;
+};
+
+export const LoopAgentBlueprint =
+  defineContributionPoint<AgentBlueprintContribution>('loop.agent.blueprint');
+
+/** One conversation opener a plugin offers on the empty chat. */
+export type ChatSuggestionItem = {
+  /** The chip's words. */
+  text: string;
+  /** What is submitted; the chip's words when absent. */
+  message?: string;
+  emoji?: string;
+};
+
+/**
+ * Conversation openers, contributed ahead of the spec's own.
+ *
+ * A capacity plugin knows what its agent is worth asking; when anything is
+ * contributed here the chat shows it instead of the spec's generic list.
+ */
+export type ChatSuggestionContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  suggestions: ChatSuggestionItem[];
+};
+
+export const LoopChatSuggestion =
+  defineContributionPoint<ChatSuggestionContribution>('loop.chat.suggestion');
+
+/**
  * Whether there is anything to chat with.
  *
  * A gate rather than an extension point of its own: `defineGate` is the

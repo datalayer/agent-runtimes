@@ -69,6 +69,32 @@ export {
   type ChatPluginConfig,
 } from './plugins/chat';
 export {
+  ChatHeaderPlugin,
+  CHAT_HEADER_PLUGIN_NAME,
+} from './plugins/chat-header';
+export {
+  InputPromptPlugin,
+  INPUT_PROMPT_PLUGIN_NAME,
+} from './plugins/input-prompt';
+export { ChatViewPlugin, CHAT_VIEW_PLUGIN_NAME } from './plugins/chat-view';
+export {
+  NotebookViewPlugin,
+  NOTEBOOK_VIEW_PLUGIN_NAME,
+} from './plugins/notebook-view';
+export {
+  DocumentViewPlugin,
+  DOCUMENT_VIEW_PLUGIN_NAME,
+} from './plugins/document-view';
+export {
+  defineViewPlugin,
+  type ViewPluginOptions,
+} from './plugins/view-switch';
+export {
+  defineAgentCapacityPlugin,
+  type AgentCapacityOptions,
+} from './plugins/agent-capacity';
+export { AgentHooksPlugin, AGENT_HOOKS_PLUGIN_NAME } from './plugins/agent-hooks';
+export {
   GraphViewPlugin,
   GRAPH_PLUGIN_NAME,
   GRAPH_VIEW_TYPE,

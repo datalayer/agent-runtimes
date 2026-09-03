@@ -31,7 +31,7 @@ import { LoopEmbed } from '@datalayer/agent-runtimes/lib/loop';
   target="browser"          // code runs in the page — no server, no account
   defaultEditor="none"      // conversation is the canvas
   floatingPrompt            // draggable composer over the workspace
-  editorSelector            // None / Notebook / Document, in the header
+  editorSelector            // Chat / Notebook / Document, in the header
   commandPalette            // Ctrl-K / ⌘K over every contributed command
   showHeader
 />
@@ -77,6 +77,10 @@ inside the Datalayer app, and inside a JupyterLab panel.
 | `LoopViewType` | shell plugin | chat (`chat` view), graph, a2ui |
 | `LoopEditorView` | shell plugin | notebook, document — each entry appears in the segmented editor control and renders in the editor column |
 | `LoopFrontendTool` | chat plugin | notebook (cell tools), document (lexical tools) — the tools the chat hands its agent |
+| `LoopChatComposer` | chat plugin | input-prompt plugin — the chat assembles the composer's props, the contribution renders them |
+| `LoopChatHeader` | chat plugin | chat-header plugin — same shape for the conversation's title bar |
+| `LoopChatSuggestion` | chat plugin | capacity plugins — openers shown ahead of the spec's own |
+| `LoopAgentBlueprint` | agents plugin | capacity plugins — which agent the Local target creates, from which spec |
 | `LoopCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |
 | `LoopAgentGate` | chat plugin | agents plugin — whether there is anything to talk to, and why not |
 | `LoopNotebookToolbar` / `LoopDocumentToolbar` items | toolbar plugins | the chat contributes its agent actions onto the editors' toolbars |
@@ -101,8 +105,24 @@ LoopWorkspace (shell component — renders the view host, slots, header)
 │     └──wraps──▶ @datalayer/reactor-shell  the generic view point + selector + choice store
 │
 ├── @datalayer/loop-plugin-chat             ──extends shell──▶ view 'chat' → LoopViewType
-│     owns: LoopFrontendTool, LoopAgentGate, the input prompt
+│     owns: LoopFrontendTool, LoopAgentGate, LoopChatComposer, LoopChatHeader
 │     renders the chosen LoopEditorView beside the transcript
+│
+├── @datalayer/loop-plugin-input-prompt     ──extends chat──▶ composer → LoopChatComposer
+│     the standard InputPrompt, rendered from the chat's assembled props
+│
+├── @datalayer/loop-plugin-chat-header      ──extends chat──▶ title bar → LoopChatHeader
+│     the standard ChatBaseHeader, same arrangement
+│
+├── @datalayer/loop-plugin-chat-view        ──depends on──▶ loop-plugin-input-prompt
+├── @datalayer/loop-plugin-notebook-view    ──depends on──▶ loop-plugin-input-prompt
+├── @datalayer/loop-plugin-document-view    ──depends on──▶ loop-plugin-input-prompt
+│     one footer icon each, switching the workspace to its view; an editor's
+│     icon withdraws while its editor is not contributed
+│
+├── @datalayer/loop-plugin-agent-<capacity> ──extends agents──▶ LoopAgentBlueprint
+│     hooks, codemode, … one folder per capacity, cast from
+│     defineAgentCapacityPlugin: which agent answers, and its openers
 │
 ├── @datalayer/loop-plugin-notebook         ──depends on──▶ loop-plugin-agents
 │     ├─ extends shell ▶ editor 'notebook' → LoopEditorView
@@ -170,14 +190,64 @@ handlers and the browser's defaults.
 
 ### The composer, in three placements
 
-The chat owns one composer — the full `InputPrompt`, with the lexical editor
+The composer arrives as a plugin: the chat *assembles* everything it needs —
+the draft, the send handler, the menus' data, the placement — and offers it
+through `LoopChatComposer`; `@datalayer/loop-plugin-input-prompt` is the
+standard taker, rendering the full `InputPrompt` with the lexical editor
 (`/` opens the command menu, `@` mentions agents) and the session-controls
-footer (tools, skills, model). `promptPlacement` decides where it stands:
+footer (tools, skills, model). Untick the plugin and the box goes; contribute
+your own component to the point and the workspace types through yours, with
+none of the wiring re-derived. The title bar works the same way through
+`LoopChatHeader` and `@datalayer/loop-plugin-chat-header`.
+
+`promptPlacement` decides where the composer stands:
 `bottom` spans the workspace, `bottom-chat` sits under the transcript, and
 `floating` wraps the same composer in a draggable card over the canvas
 (`loopPlugins({ floatingPrompt: true })`). The footer bar is extensible
 through `LoopSlots.promptAction` — the prompt plugin's **+** (start the
 conversation over) arrives that way.
+
+### Views, one click from the composer
+
+Each view is a plugin of its own — `chat-view`, `notebook-view`,
+`document-view` — contributing one icon (with its tooltip) to the composer's
+footer: the writing hand switches what stands beside the conversation
+without leaving the prompt. The active view's icon shows in the accent
+colour; an editor's icon withdraws entirely while its editor is not
+contributed. All three **require** the input-prompt plugin — an icon with no
+footer to sit in is a control that does not exist — so the reactor mounts
+the composer with them and takes them down together. The selector's word
+for the bare conversation is now **Chat**, not "None": with no editor
+beside it, the conversation *is* the view. A host adds its own view icon
+with `defineViewPlugin` from the same mould.
+
+### Capacity plugins
+
+Every capability demonstration — hooks, codemode, guardrails, memory — is,
+from the workspace's side, the same two statements: *which agent* answers
+(an agentspec and the create-payload its server needs) and *what it is
+worth asking* (the openers on the empty chat). `defineAgentCapacityPlugin`
+turns those statements into a plugin: a `LoopAgentBlueprint` contribution
+the agents plugin reads when its Local target creates the agent, and a
+`LoopChatSuggestion` contribution the chat shows ahead of the spec's own.
+
+```tsx
+export const AgentHooksPlugin = defineAgentCapacityPlugin({
+  key: 'hooks',
+  displayName: 'Agent Hooks',
+  description: 'Lifecycle hooks and pydantic-style tool hooks.',
+  specId: 'example-hooks',
+  suggestions: [{ text: 'Explain the hook lifecycle' }],
+});
+
+<LoopEmbed serverUrl={serverUrl} target="local" agentId={agentName}
+  defaultEditor="none" plugins={[AgentHooksPlugin]} />;
+```
+
+One folder per capacity under `loop/plugins/agent-*`; mounting the plugin is
+the whole gesture, and the blueprint wins over the host's own `localAgent`
+because a mounted capacity is the more specific statement about what the
+workspace runs.
 
 ### Editors that work unseen
 
@@ -251,9 +321,9 @@ sandbox with no account:
   is real: untick the chat and the prompt goes with it; untick the notebook
   and it leaves the editor control.
 - **Loop Shell** — the opposite pole: a blank canvas, a floating draggable
-  prompt, the editor selector on `None`, and an agent (`loop-shell`
-  agentspec) whose demonstrations land as Jupyter outputs straight on the
-  conversation.
+  prompt, the editor selector on `Chat` (the bare conversation), and an agent
+  (`loop-shell` agentspec) whose demonstrations land as Jupyter outputs
+  straight on the conversation.
 
 ## Extending Loop
 

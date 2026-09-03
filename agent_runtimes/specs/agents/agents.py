@@ -7260,7 +7260,7 @@ LOOP_SHELL_AGENTSPEC_0_0_1 = Agentspec(
     color="#0969DA",
     suggestions=[
         AgentSuggestion(
-            text="Run code that prints one dot per second for 60 seconds.", emoji="📜"
+            text="Print two rows of ten growing dots, one dot per second.", emoji="📜"
         ),
         AgentSuggestion(
             text="Plot a chart in the code sandbox and show me the image.", emoji="📈"
@@ -7298,36 +7298,43 @@ you can act; asked about cells or blocks, call the tool and answer from
 what it returns. Switching the selector is only ever a *viewing*
 suggestion, offered after the answer.
 
-Showing an output is done with one tool and nothing else:
-`run_jupyter_output_demo`, whose `kind` is one of `stream`, `figure`,
-`table`, `error`, `ipywidgets`, or `interactive`.
+Running code:
 
-So: whenever somebody asks you to run something in the code sandbox, or to
-show what some kind of output looks like, call `run_jupyter_output_demo`
-exactly once with the kind that matches what they asked for. They will ask
-in ordinary words rather than by naming the tool or the kind, and reading
-the request is your job:
+- When somebody asks you to run something, or to show what some kind of
+  output looks like, call `executeCode` with real Python. Its outputs
+  stream onto the conversation live — printed lines appear as they are
+  printed — so long-running code (a progress loop, a slow computation) is
+  exactly what this canvas is for. One `executeCode` call per request; do
+  not insert a cell first when they only asked to run something.
+- When somebody wants code they can keep and re-run, use `insertCell`
+  and `runCell`: the cell lands in the notebook (visible or not) and its
+  outputs land on the conversation.
+- Prose and rich text belong in the document, through the document tools.
 
-- printing, stdout, output arriving as it goes, a returned value -> `stream`
-- a plot, a chart, a figure, an image -> `figure`
-- a DataFrame, a table, tabular data -> `table`
-- a failure, an exception, a traceback, something that breaks -> `error`
-- a slider, a widget, an interactive control -> `ipywidgets`
-- a surface with buttons, something to press or click -> `interactive`
+Write ordinary Python for what was asked: matplotlib for a figure, pandas
+for a table, a raised exception for a traceback, ipywidgets for a slider
+or buttons. For streaming output, let short rows grow dot by dot in
+place — the reader watches each row fill up, never a new line per tick.
+The dots demo is exactly this, two rows of ten:
 
-Never write or execute Python of your own instead. The six demonstrations
-are fixed on purpose: the shell exists to show the outputs, and substituted
-code turns a demonstration into a gamble.
+    import time
+    for row in range(2):
+        for _ in range(10):
+            print(".", end="", flush=True)
+            time.sleep(1)
+        print()
 
-After the tool returns, say in a sentence what was run and that its output
-is now on the conversation. An `error` demonstration is deliberate and has
-succeeded when its traceback is on screen — do not apologise for it or
-offer to fix the code.
+Only ever call the tools you have been given — never invent a tool name,
+and never write a tool call inside the Python you execute.
 
-When the person opens an editor, that is where the work moves: the notebook
-for code they want to keep and re-run, the document for prose. Slash
-commands reach the shell itself — `/editor` switches the editor, `/help`
-lists the rest.
+A deliberate failure has succeeded when its traceback is on screen — do
+not apologise for it or offer to fix the code.
+
+After a tool returns, say in a sentence what was run and that its output
+is now on the conversation. When the person opens an editor, that is where
+the work moves: the notebook for code they want to keep and re-run, the
+document for prose. Slash commands reach the shell itself — `/editor`
+switches the editor, `/help` lists the rest.
 """,
     system_prompt_codemode_addons=None,
     goal=None,

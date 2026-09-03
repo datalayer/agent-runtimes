@@ -88,7 +88,10 @@ import {
   useAgentRuntimeStore,
   useAgentRuntimeWsState,
 } from '../../stores/agentRuntimeStore';
-import { ChatBaseHeader } from '../header/ChatHeaderBase';
+import {
+  ChatBaseHeader,
+  type ChatBaseHeaderProps,
+} from '../header/ChatHeaderBase';
 import { useChatAvailability } from './ChatAvailability';
 import { ChatEmptyState } from '../display/EmptyState';
 import { notebookToolSurfacesRenderer } from '../messages/NotebookToolSurfaces';
@@ -812,6 +815,8 @@ function ChatBaseInner({
   poweredByProps,
   emptyState,
   renderToolResult,
+  renderHeader,
+  showTurnFooter = true,
   notebookToolSurfacesId,
   footerContent,
   showInformation = false,
@@ -3990,6 +3995,19 @@ function ChatBaseInner({
     }
   }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
 
+  // ---- Turn removal (the TurnFooter's remove action) ----
+  const handleRemoveItems = useCallback((ids: string[]) => {
+    const drop = new Set(ids);
+    setDisplayItems(prev => prev.filter(item => !drop.has(item.id)));
+    // The tool-call registry mirrors the transcript; a removed turn's calls
+    // must not linger there or a late protocol event would resurrect them.
+    for (const [toolCallId, toolCall] of toolCallsRef.current.entries()) {
+      if (drop.has(toolCall.id)) {
+        toolCallsRef.current.delete(toolCallId);
+      }
+    }
+  }, []);
+
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
     async (toolCallId: string, result: unknown) => {
@@ -4421,6 +4439,9 @@ function ChatBaseInner({
         approvalConfig={approvalConfig}
         messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
         onRespond={handleRespond}
+        showTurnFooters={showTurnFooter}
+        agentUsage={agentUsage}
+        onRemoveItems={handleRemoveItems}
         emptyContent={
           launching ? null : (
             <ChatEmptyState
@@ -4513,53 +4534,61 @@ function ChatBaseInner({
   // no ephemeral notebook is shown) or INSIDE the chat body column (when the
   // notebook is visible) so the header always follows the chat body across all
   // view modes (docked sidebar, floating popup, floating-small).
-  const chatHeaderElement = showHeader ? (
-    <ChatBaseHeader
-      title={title}
-      subtitle={subtitle}
-      disableReason={disabled ? disableReason : undefined}
-      brandIcon={brandIcon}
-      headerContent={headerContent}
-      headerActions={headerActions}
-      showInformation={showInformation}
-      /*
-        A default, so the button does something.
+  //
+  // Assembled as a props object first: `renderHeader` lets a host take these
+  // exact props — kernel indicator, runtime status, actions, all of it — and
+  // draw the bar itself. The loop's chat-header plugin is that host: the
+  // header then *arrives as a plugin* without this component re-deriving any
+  // of what only it knows.
+  const chatHeaderProps: ChatBaseHeaderProps = {
+    title,
+    subtitle,
+    disableReason: disabled ? disableReason : undefined,
+    brandIcon,
+    headerContent,
+    headerActions,
+    showInformation,
+    /*
+      A default, so the button does something.
 
-        `showInformation` drew an (i) and then forwarded a click to whatever
-        the host supplied — and a host that supplied nothing got a button that
-        did nothing at all, which is worse than no button. `Chat` still passes
-        its own handler and keeps its own pane; everything else gets this one.
-      */
-      onInformationClick={onInformationClick ?? (() => setShowDetails(true))}
-      padding={padding}
-      kernelIndicatorState={kernelIndicatorState}
-      kernelIndicatorPlacement={kernelIndicatorPlacement}
-      runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
-      kernel={
-        notebookVisible
-          ? (notebookKernel ?? kernel)
-          : documentVisible
-            ? (documentKernel ?? kernel)
-            : kernel
-      }
-      kernelEnvironmentName={kernelEnvironmentName}
-      kernelCpu={kernelCpu}
-      kernelMemory={kernelMemory}
-      kernelGpu={kernelGpu}
-      headerButtons={headerButtons}
-      messageCount={messages.length}
-      onNewChat={handleNewChat}
-      onClear={handleClear}
-      chatViewMode={chatViewMode}
-      onChatViewModeChange={onChatViewModeChange}
-      showEphemeralSurfaceControl={
-        enableEphemeralNotebook || enableEphemeralDocument
-      }
-      enableEphemeralNotebookOption={enableEphemeralNotebook}
-      enableEphemeralDocumentOption={enableEphemeralDocument}
-      ephemeralSurfaceMode={ephemeralSurfaceMode}
-      onEphemeralSurfaceModeChange={handleEphemeralSurfaceModeChange}
-    />
+      `showInformation` drew an (i) and then forwarded a click to whatever
+      the host supplied — and a host that supplied nothing got a button that
+      did nothing at all, which is worse than no button. `Chat` still passes
+      its own handler and keeps its own pane; everything else gets this one.
+    */
+    onInformationClick: onInformationClick ?? (() => setShowDetails(true)),
+    padding,
+    kernelIndicatorState,
+    kernelIndicatorPlacement,
+    runtimeStatus: sandboxStatusData ?? sandboxStatusQuery.data,
+    kernel: notebookVisible
+      ? (notebookKernel ?? kernel)
+      : documentVisible
+        ? (documentKernel ?? kernel)
+        : kernel,
+    kernelEnvironmentName,
+    kernelCpu,
+    kernelMemory,
+    kernelGpu,
+    headerButtons,
+    messageCount: messages.length,
+    onNewChat: handleNewChat,
+    onClear: handleClear,
+    chatViewMode,
+    onChatViewModeChange,
+    showEphemeralSurfaceControl:
+      enableEphemeralNotebook || enableEphemeralDocument,
+    enableEphemeralNotebookOption: enableEphemeralNotebook,
+    enableEphemeralDocumentOption: enableEphemeralDocument,
+    ephemeralSurfaceMode,
+    onEphemeralSurfaceModeChange: handleEphemeralSurfaceModeChange,
+  };
+  const chatHeaderElement = showHeader ? (
+    renderHeader ? (
+      renderHeader(chatHeaderProps)
+    ) : (
+      <ChatBaseHeader {...chatHeaderProps} />
+    )
   ) : null;
 
   // ========================================================================

@@ -4,13 +4,14 @@
  */
 
 /**
- * `InputPrompt`'s `draggable` prop: the same composer, in a card.
+ * `InputPrompt`'s `placement`: the same composer, docked or in a card.
  *
  * The point being pinned is that floating is a *wrapper*, not a variant: the
  * prompt keeps its editor and its footer of session controls either way, and
  * the card only adds the handle and takes the layout away. A floating prompt
  * that lost the tools/skills/model menus would be a different, poorer
- * composer wearing the same name.
+ * composer wearing the same name. The `container` prop moves the whole thing
+ * into another subtree without changing what it is.
  */
 
 import React, { act } from 'react';
@@ -45,10 +46,10 @@ async function render(element: React.ReactElement) {
   return { container, root };
 }
 
-describe('a draggable prompt', () => {
+describe('a floating prompt', () => {
   it('stands in a floating card with a handle', async () => {
     const { container, root } = await render(
-      <InputPrompt {...BASE_PROPS} draggable />,
+      <InputPrompt {...BASE_PROPS} placement="floating" />,
     );
 
     const card = container.querySelector<HTMLElement>('[data-floating-prompt]');
@@ -62,7 +63,7 @@ describe('a draggable prompt', () => {
 
   it('keeps the session controls under the input', async () => {
     const { container, root } = await render(
-      <InputPrompt {...BASE_PROPS} draggable />,
+      <InputPrompt {...BASE_PROPS} placement="floating" />,
     );
 
     // The footer band is inside the card: floating changes where the
@@ -89,9 +90,49 @@ describe('a draggable prompt', () => {
     await act(async () => root.unmount());
   });
 
-  it('moves when dragged by its handle', async () => {
+  it('still answers to the deprecated draggable spelling', async () => {
     const { container, root } = await render(
       <InputPrompt {...BASE_PROPS} draggable />,
+    );
+
+    expect(
+      container.querySelector('[data-floating-prompt]'),
+    ).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it('mounts into the given container, docked or floating', async () => {
+    const dock = document.createElement('div');
+    document.body.appendChild(dock);
+
+    const docked = await render(
+      <InputPrompt {...BASE_PROPS} container={dock} />,
+    );
+    // The prompt is in the portal target, not where it was composed.
+    expect(
+      docked.container.querySelector('[data-prompt-stack="session-controls"]'),
+    ).toBeNull();
+    expect(
+      dock.querySelector('[data-prompt-stack="session-controls"]'),
+    ).not.toBeNull();
+    await act(async () => docked.root.unmount());
+
+    const floating = await render(
+      <InputPrompt {...BASE_PROPS} placement="floating" container={dock} />,
+    );
+    expect(
+      floating.container.querySelector('[data-floating-prompt]'),
+    ).toBeNull();
+    expect(dock.querySelector('[data-floating-prompt]')).not.toBeNull();
+    await act(async () => floating.root.unmount());
+
+    dock.remove();
+  });
+
+  it('moves when dragged by its handle', async () => {
+    const { container, root } = await render(
+      <InputPrompt {...BASE_PROPS} placement="floating" />,
     );
     const card = container.querySelector<HTMLElement>(
       '[data-floating-prompt]',

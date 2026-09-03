@@ -1128,6 +1128,26 @@ export interface ChatBaseProps {
   /** Tool result renderer for tool calls */
   renderToolResult?: RenderToolResult;
   /**
+   * Draw the chat's title bar from these fully assembled props.
+   *
+   * Called instead of the built-in `ChatBaseHeader` whenever `showHeader` is
+   * true — with everything the built-in would have received: title, kernel
+   * indicator, runtime status, the actions row. The loop's chat-header
+   * plugin hangs off this: the bar then arrives as a plugin without this
+   * component giving up any of what only it knows.
+   */
+  renderHeader?: (
+    props: import('../chat/header/ChatHeaderBase').ChatBaseHeaderProps,
+  ) => ReactNode;
+  /**
+   * Whether each turn closes with its accounting row.
+   *
+   * True by default: a quiet `ctx · turn ▲▼` line after every exchange —
+   * live while the turn streams, frozen with copy/remove actions once it is
+   * over. False for a host that wants the transcript bare.
+   */
+  showTurnFooter?: boolean;
+  /**
    * Show notebook tool results as read-only surfaces in the transcript,
    * addressed to this notebook document id.
    *

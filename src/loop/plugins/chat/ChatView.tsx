@@ -61,8 +61,8 @@ const EMPTY_SELECTION = signal('');
 import { useWorkspaceFullScreen } from '../../shell/useWorkspaceFullScreen';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
 import {
-  InputPrompt,
   type FooterAgent,
+  type InputPromptProps,
 } from '../../../chat/prompt/InputPrompt';
 import { useAgentRuntimeContextSnapshot } from '../../../stores';
 import { useIAMStore } from '../../../state';
@@ -72,6 +72,9 @@ import type { ContextSnapshotData, ModelConfig } from '../../../types';
 import { AI_MODEL_CATALOGUE } from '../../../specs/models';
 import {
   LoopAgentGate,
+  LoopChatComposer,
+  LoopChatHeader,
+  LoopChatSuggestion,
   LoopChatSurface,
   LoopFrontendTool,
   canOpenView,
@@ -150,6 +153,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const surfaceChosen = useRef(false);
 
   const surfaces = useContributions(LoopChatSurface);
+  /* The composer and the title bar arrive as plugins: this view assembles
+     their props, whoever contributed renders them. First contribution wins —
+     these are single-occupant surfaces, not lists. */
+  const composerEntries = useContributions(LoopChatComposer);
+  const headerEntries = useContributions(LoopChatHeader);
   /* Which editors have ever been mounted; they are never unmounted after —
      see the render below. A ref, not state: adding to it during render is
      idempotent and must not schedule another one. */
@@ -485,25 +493,38 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const spec = getAgentspecs(member?.specId ?? agentId);
 
-  /* The team's openers, or the selected agent's own when it has no team. */
-  const suggestions = useMemo(
-    () =>
-      team?.team.suggestions?.length
-        ? team.team.suggestions
-        : (spec?.suggestions ?? []),
-    [team, spec],
-  );
+  /*
+   * The openers: a capacity plugin's first, then the team's, then the
+   * selected agent's own. A contribution to `LoopChatSuggestion` is a
+   * deliberate statement about what this workspace is worth asking, so it
+   * replaces the spec's generic list rather than joining it.
+   */
+  const suggestionEntries = useContributions(LoopChatSuggestion);
+  const suggestions = useMemo(() => {
+    const contributed = suggestionEntries.flatMap(
+      entry => entry.value.suggestions,
+    );
+    if (contributed.length > 0) {
+      return contributed;
+    }
+    return team?.team.suggestions?.length
+      ? team.team.suggestions
+      : (spec?.suggestions ?? []);
+  }, [suggestionEntries, team, spec]);
 
   /*
    * The same openers in the shape the chat's empty state asks for.
    *
-   * Only the text survives the crossing. `Suggestion` is a title and a message
-   * — what a chip shows and what it sends — and these are the same sentence
-   * for a spec's openers, which offer the whole request rather than a label
-   * for one.
+   * `Suggestion` is a title and a message — what a chip shows and what it
+   * sends. A spec's openers offer the whole request as the label, so the two
+   * are the same sentence; a contributed opener may split them.
    */
   const chatSuggestions = useMemo(
-    () => suggestions.map(item => ({ title: item.text, message: item.text })),
+    () =>
+      suggestions.map(item => ({
+        title: item.text,
+        message: (item as { message?: string }).message ?? item.text,
+      })),
     [suggestions],
   );
 
@@ -530,25 +551,50 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * screen.
    */
   const toolContributions = useContributions(LoopFrontendTool);
-  const notebookTools = useMemo(
-    () =>
-      toolContributions.flatMap(entry => {
-        try {
-          return entry.value.tools(workspace);
-        } catch (error) {
-          // One broken contributor must not cost the agent every tool.
+  const notebookTools = useMemo(() => {
+    /*
+     * One tool per name, first contribution wins. The notebook and the
+     * document both ship an `executeCode` — the notebook's runs in the
+     * sandbox and streams onto the conversation, the document's runs on the
+     * document's own kernel and returns silently. Registered together, the
+     * later one shadowed the earlier in the harness's name-keyed map, and
+     * "run this" stopped streaming. The notebook contributes statically and
+     * therefore first; the document's block tools (runBlock, insertBlock…)
+     * keep their own names and are untouched.
+     */
+    const merged: ReturnType<
+      (typeof toolContributions)[number]['value']['tools']
+    > = [];
+    const owners = new Map<string, string>();
+    for (const entry of toolContributions) {
+      let tools: typeof merged = [];
+      try {
+        tools = entry.value.tools(workspace);
+      } catch (error) {
+        // One broken contributor must not cost the agent every tool.
+        console.warn(
+          `[loop] frontend tools from '${entry.plugin}' failed:`,
+          error,
+        );
+        continue;
+      }
+      for (const tool of tools) {
+        const owner = owners.get(tool.name);
+        if (owner) {
           console.warn(
-            `[loop] frontend tools from '${entry.plugin}' failed:`,
-            error,
+            `[loop] frontend tool '${tool.name}' from '${entry.plugin}' is shadowed by the one from '${owner}'.`,
           );
-          return [];
+          continue;
         }
-      }),
+        owners.set(tool.name, entry.plugin);
+        merged.push(tool);
+      }
+    }
+    return merged;
     // The workspace object is rebuilt when its facts change; surfaceId is
     // the one the factories address by.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [toolContributions, workspace.surfaceId, workspace.agentId],
-  );
+  }, [toolContributions, workspace.surfaceId, workspace.agentId]);
 
   /*
    * Where this workspace's agent actually lives.
@@ -958,159 +1004,90 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const promptHidden = config?.hidePrompt === true;
 
   /*
-   * The prompt, as a value, because where it goes is configuration.
+   * The composer, assembled here and rendered by whoever contributed to the
+   * `LoopChatComposer` point — the input-prompt plugin, normally.
    *
-   * `bottom` spans the workspace: the notebook and the conversation share one
-   * composer, which is right when the agent's job is the document beside it.
-   * `bottom-chat` keeps it inside the chat column, where every other example
-   * puts it — the prompt then reads as part of the conversation rather than as
-   * a bar the whole page sits on.
+   * The wiring is this view's knowledge: the controlled draft (so an outside
+   * suggestion has somewhere to land, with `focusTrigger` putting the caret
+   * back), the lexical variant (the `@` menu needs it), the menus' data with
+   * every control drawn even when its list is empty (a menu that opens onto
+   * "0" is a statement; a missing control is not), the `promptAction` and
+   * `inpromptMenu` slots (asked whether anyone contributed first — an empty
+   * `ReactorSlot` is still an element and would pad out a band of nothing).
+   * The surface is the plugin's: no contribution, no composer, which is the
+   * honest outcome for a workspace mounted without one.
    */
-  const prompt = (
-    <Box sx={{ flex: '0 0 auto' }}>
-      <InputPrompt
-        onSend={() => void handleSend(draft)}
-        // Controlled, so a suggestion from outside the workspace has
-        // somewhere to land. Uncontrolled the prompt owns its text and
-        // nothing else can write to it.
-        input={draft}
-        setInput={setDraft}
-        // Bumped by each suggestion — which is what puts the caret back in
-        // the box: a person who clicked "Try this" is being handed a
-        // sentence to read and send, not one to go and find — and by each
-        // focus request from the `/prompt` command.
-        focusTrigger={
-          suggestion || focusAsked
-            ? (suggestion?.nonce ?? 0) + focusAsked
-            : undefined
-        }
-        // In a draggable card over the workspace when the host asked for the
-        // floating placement; the composer itself is the same either way.
-        draggable={floatingPrompt}
-        // The agent is working: no second request while the first is in
-        // flight. `isLoading` both disables the editor and turns the send
-        // button into a stop — the person keeps a way out, which a flatly
-        // disabled prompt would not give them.
-        isLoading={busy}
-        onStop={() => workspace.viewControls.stop?.()}
-        // The reason where the typing would go, so it is read before the
-        // person types rather than after nothing happens.
-        placeholder={disabledReason ?? placeholder}
-        /*
-          The agent's openers, typed out in the box on a loop.
-
-          This view draws its own prompt, so `ChatBase` cannot hand them over
-          — and the empty state's chips vanish with the first message while
-          the prompt stays. It stops the moment the prompt has focus.
-        */
-        typingSuggestions={suggestions.map(item => item.text)}
-        disableInputPrompt={chatDisabled}
-        connectionConfirmed={!chatDisabled}
-        padding={3}
-        // The `@` menu lives in the Lexical editor, and the default variant
-        // is the plain textarea — so `mentionableAgents` was being handed to
-        // a prompt with nowhere to show them, and typing `@` did nothing at
-        // all. A team is only addressable from a prompt that can offer it.
-        promptVariant="lexical"
-        // Ready to type. This prompt is the reason the workspace is on
-        // screen; making someone click into it first is a step that exists
-        // only because nobody removed it.
-        autoFocus
-        // Everyone this member may hand work to, offered on `@`. The same
-        // list the harness was given, so a name the menu suggests is a name
-        // the model can actually reach.
-        mentionableAgents={mentionable}
-        // Whatever the plugins put above the box: the agent being addressed,
-        /*
-            Whatever a plugin puts inside the prompt — and nothing does today,
-            so nothing is passed.
-
-            `InputPromptHeader` skips itself when it has no children, but a
-            `ReactorSlot` with no contributions is still an element: truthy,
-            padded, and worth a band of empty white above the typing. Asking
-            the platform whether anyone contributed is the difference between
-            "no header" and "an empty one".
-          */
-        headerContent={
-          inpromptMenu.length > 0 ? (
-            <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
-          ) : undefined
-        }
-        // The footer bar's opening for plugins: the prompt plugin's + lands
-        // here, and a host can add its own the same way.
-        footerExtras={
-          promptActions.length > 0 ? (
-            <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
-          ) : undefined
-        }
-        /*
-            The agent, beside the tools, the skills and the model.
-
-            All four decide what the next message does, and three of them were
-            already here — the odd one out was the agent, which lived only in
-            the workspace header and therefore vanished for a host that mounts
-            the workspace without one.
-          */
-        showAgentsMenu
-        // One place for the controls, not two: this workspace already has a
-        // header of its own above the view, and a chip inside the prompt as
-        // well made three rows of chrome around one text box.
-        showInlineAgentsMenu={false}
-        agents={footerAgents}
-        selectedAgentId={selectedMemberId}
-        onSelectAgent={id => team?.select(id)}
-        // What is left of the window. Shown here for the same reason it is
-        // shown in the standalone chat: a person about to paste a notebook
-        // into a prompt should be able to see whether it will fit.
-        showTokenUsage
-        // The ring as well as the numbers. A workspace where an agent works
-        // through a whole notebook is the case that fills a window, so how
-        // it is being spent is worth the picture.
-        showContextRing
-        agentUsage={contextUsage ?? undefined}
-        /*
-          All four, whatever they happen to contain.
-
-          Each was switched on only when something was behind it, so the row
-          gained and lost controls as answers arrived and an in-page agent —
-          which has no config endpoint to ask — showed almost none of them.
-          Worse, "no skills" and "skills not reported" both came out as an
-          absent menu, which are not the same answer.
-
-          `InputPrompt` draws a menu that opens onto nothing as exactly that:
-          a count of zero and an empty list. That is a statement; a missing
-          control is not.
-        */
-        showModelSelector
-        models={offeredModels}
-        selectedModel={activeModel}
-        onModelSelect={model => void selectModel(model)}
-        showToolsMenu
-        availableTools={offeredTools}
-        mcpServers={configQuery.data?.mcpServers ?? []}
-        showSkillsMenu
-        skills={skillsQuery.data?.skills ?? []}
-        skillsLoading={skillsQuery.isLoading}
-        enabledSkills={enabledSkills}
-        onToggleSkill={skillId =>
-          enabledSkills.has(skillId)
-            ? skillActions.disableSkill(skillId)
-            : skillActions.enableSkill(skillId)
-        }
-        onToggleAllSkills={(skillIds, enable) =>
-          skillIds.forEach(skillId =>
-            enable
-              ? skillActions.enableSkill(skillId)
-              : skillActions.disableSkill(skillId),
-          )
-        }
-        codemodeEnabled={false}
-        isA2AProtocol={false}
-        hasConfigData={!!configQuery.data}
-        hasSkillsData={!!skillsQuery.data}
-      />
-    </Box>
-  );
+  const composerProps: InputPromptProps = {
+    onSend: () => void handleSend(draft),
+    input: draft,
+    setInput: setDraft,
+    focusTrigger:
+      suggestion || focusAsked
+        ? (suggestion?.nonce ?? 0) + focusAsked
+        : undefined,
+    // In a draggable card over the workspace when the host asked for the
+    // floating placement; the dragging is the prompt's own feature.
+    placement: floatingPrompt ? 'floating' : 'docked',
+    // The agent is working: `isLoading` disables the editor and turns the
+    // send button into a stop — the person keeps a way out.
+    isLoading: busy,
+    onStop: () => workspace.viewControls.stop?.(),
+    // The reason where the typing would go, read before the person types.
+    placeholder: disabledReason ?? placeholder,
+    typingSuggestions: suggestions.map(item => item.text),
+    disableInputPrompt: chatDisabled,
+    connectionConfirmed: !chatDisabled,
+    padding: 3,
+    promptVariant: 'lexical',
+    autoFocus: true,
+    mentionableAgents: mentionable,
+    headerContent:
+      inpromptMenu.length > 0 ? (
+        <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
+      ) : undefined,
+    footerExtras:
+      promptActions.length > 0 ? (
+        <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
+      ) : undefined,
+    showAgentsMenu: true,
+    showInlineAgentsMenu: false,
+    agents: footerAgents,
+    selectedAgentId: selectedMemberId,
+    onSelectAgent: id => team?.select(id),
+    showTokenUsage: true,
+    showContextRing: true,
+    agentUsage: contextUsage ?? undefined,
+    showModelSelector: true,
+    models: offeredModels,
+    selectedModel: activeModel,
+    onModelSelect: model => void selectModel(model),
+    showToolsMenu: true,
+    availableTools: offeredTools,
+    mcpServers: configQuery.data?.mcpServers ?? [],
+    showSkillsMenu: true,
+    skills: skillsQuery.data?.skills ?? [],
+    skillsLoading: skillsQuery.isLoading,
+    enabledSkills,
+    onToggleSkill: skillId =>
+      enabledSkills.has(skillId)
+        ? skillActions.disableSkill(skillId)
+        : skillActions.enableSkill(skillId),
+    onToggleAllSkills: (skillIds, enable) =>
+      skillIds.forEach(skillId =>
+        enable
+          ? skillActions.enableSkill(skillId)
+          : skillActions.disableSkill(skillId),
+      ),
+    codemodeEnabled: false,
+    isA2AProtocol: false,
+    hasConfigData: !!configQuery.data,
+    hasSkillsData: !!skillsQuery.data,
+  };
+  const ComposerComponent = composerEntries[0]?.value.Component;
+  const HeaderComponent = headerEntries[0]?.value.Component;
+  const prompt = ComposerComponent ? (
+    <ComposerComponent workspace={workspace} composer={composerProps} />
+  ) : null;
 
   return (
     <Box
@@ -1293,7 +1270,23 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 agents behind it.
               */
               suggestions={chatSuggestions}
-              showHeader={!config?.hideHeader}
+              /*
+                The title bar arrives as a plugin: the chat-header plugin
+                contributes the component, this view hands it the assembled
+                props through `renderHeader`. No contribution — or a host
+                that set `hideHeader` — means no bar.
+              */
+              showHeader={!config?.hideHeader && !!HeaderComponent}
+              renderHeader={
+                HeaderComponent
+                  ? headerProps => (
+                      <HeaderComponent
+                        workspace={workspace}
+                        header={headerProps}
+                      />
+                    )
+                  : undefined
+              }
               /*
                 The (i), which opens the agent's details over the transcript.
                 
@@ -1529,7 +1522,8 @@ function SurfacePicker({
           selected={active === NO_SURFACE}
           onClick={() => onChange(NO_SURFACE)}
         >
-          None
+          {/* "Chat", not "None": the conversation is the view that remains. */}
+          Chat
         </SegmentedControl.Button>
         {ordered.map(surface => {
           const openable = canOpenView(surface, workspace);

@@ -9,7 +9,11 @@
  * @module chat/prompt
  */
 
-export { InputPrompt, type InputPromptProps } from './InputPrompt';
+export {
+  InputPrompt,
+  type InputPromptPlacement,
+  type InputPromptProps,
+} from './InputPrompt';
 export { FloatingCard, type FloatingCardProps } from './FloatingCard';
 export {
   InputPromptBase,

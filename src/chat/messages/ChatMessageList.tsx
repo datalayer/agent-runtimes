@@ -11,6 +11,7 @@
  */
 
 import {
+  Fragment,
   type ReactNode,
   type RefObject,
   useState,
@@ -28,6 +29,7 @@ import {
   streamdownCodeBlockStyles,
 } from '../styles/streamdownStyles';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
+import { TurnFooter } from './TurnFooter';
 
 import { isToolCallMessage, getMessageText } from '../../utils';
 import {
@@ -44,6 +46,7 @@ import type {
 } from '../../types/chat';
 import type { ChatMessage } from '../../types/messages';
 import type { AgentStreamSubagentPayload } from '../../types/stream';
+import type { ContextSnapshotData } from '../../types/context';
 
 // ---------------------------------------------------------------------------
 // Tool Approval Config (kept for backward compat — no longer used for REST)
@@ -103,6 +106,18 @@ export interface ChatMessageListProps {
    * approval API.
    */
   approvalConfig?: ToolApprovalConfig;
+  /**
+   * Whether each turn closes with a `TurnFooter` — the quiet accounting row
+   * (`ctx · turn ▲▼`) with copy/remove actions once the turn is over.
+   */
+  showTurnFooters?: boolean;
+  /** The live usage snapshot the footers read while their turn is current. */
+  agentUsage?: ContextSnapshotData;
+  /**
+   * Take these display items out of the transcript — the remove action of a
+   * turn's footer, handing the whole turn's ids back to the state owner.
+   */
+  onRemoveItems?: (ids: string[]) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -637,6 +652,9 @@ export function ChatMessageList({
   messagesEndRef,
   onRespond,
   approvalConfig,
+  showTurnFooters = false,
+  agentUsage,
+  onRemoveItems,
 }: ChatMessageListProps) {
   if (displayItems.length === 0) {
     return <>{emptyContent}</>;
@@ -676,17 +694,82 @@ export function ChatMessageList({
   });
   const hasRenderedToolCall = renderedToolCallIds.size > 0;
 
-  return (
-    <>
-      {displayItems.map((item, index) => {
-        // ---- Tool call item ----
-        if (isToolCallMessage(item)) {
-          const respond =
-            item.status === 'executing' || item.status === 'inProgress'
-              ? createRespondCallback(item.toolCallId)
-              : undefined;
+  /*
+   * Turn boundaries: a turn opens at each of the person's messages and runs
+   * to the item before the next one. The footer stands after a turn's last
+   * item — attached by index, not to the item's own rendering, so a turn
+   * whose closing item happens to be hidden still gets its accounting row.
+   */
+  const turnEnds = new Map<number, number>();
+  if (showTurnFooters) {
+    let start = -1;
+    displayItems.forEach((item, index) => {
+      const opensTurn =
+        !isToolCallMessage(item) && (item as ChatMessage).role === 'user';
+      if (opensTurn) {
+        if (start >= 0) {
+          turnEnds.set(index - 1, start);
+        }
+        start = index;
+      }
+    });
+    if (start >= 0) {
+      turnEnds.set(displayItems.length - 1, start);
+    }
+  }
 
-          /*
+  /** The turn as text: the person's ask, the answers, the tools by name. */
+  const copyTurn = (start: number, end: number): Promise<void> => {
+    const lines: string[] = [];
+    for (let index = start; index <= end; index += 1) {
+      const item = displayItems[index];
+      if (isToolCallMessage(item)) {
+        lines.push(`[tool · ${item.toolName}]`);
+      } else {
+        const message = item as ChatMessage;
+        const text = getMessageText(message);
+        if (text) {
+          lines.push(message.role === 'user' ? `You: ${text}` : text);
+        }
+      }
+    }
+    return (
+      navigator.clipboard?.writeText(lines.join('\n\n')) ?? Promise.resolve()
+    );
+  };
+
+  const footerAt = (index: number): ReactNode => {
+    const start = turnEnds.get(index);
+    if (start === undefined) {
+      return null;
+    }
+    const isLastTurn = index === displayItems.length - 1;
+    const running = isLoading || isStreaming;
+    return (
+      <TurnFooter
+        usage={agentUsage}
+        live={isLastTurn && running}
+        latest={isLastTurn && !running}
+        padding={padding}
+        onCopy={() => copyTurn(start, index)}
+        onRemove={() =>
+          onRemoveItems?.(
+            displayItems.slice(start, index + 1).map(entry => entry.id),
+          )
+        }
+      />
+    );
+  };
+
+  const renderItem = (item: DisplayItem, index: number): ReactNode => {
+    // ---- Tool call item ----
+    if (isToolCallMessage(item)) {
+      const respond =
+        item.status === 'executing' || item.status === 'inProgress'
+          ? createRespondCallback(item.toolCallId)
+          : undefined;
+
+      /*
             The row the chat would draw by itself, handed to the caller.
 
             `renderToolResult` replaces this outright, which is right for a
@@ -696,38 +779,38 @@ export function ChatMessageList({
             not care about hid those tools entirely. Offering the default as a
             node lets it compose instead of choosing.
           */
-          const defaultUI = (
-            <DefaultToolCallRenderer
-              item={item}
-              approvalConfig={approvalConfig}
-              onRespond={createRespondCallback(item.toolCallId)}
-            />
-          );
+      const defaultUI = (
+        <DefaultToolCallRenderer
+          item={item}
+          approvalConfig={approvalConfig}
+          onRespond={createRespondCallback(item.toolCallId)}
+        />
+      );
 
-          const toolUI = renderToolResult
-            ? renderToolResult({
-                toolCallId: item.toolCallId,
-                toolName: item.toolName,
-                name: item.toolName,
-                args: item.args,
-                result: item.result,
-                status: item.status,
-                error: item.error,
-                respond,
-                defaultUI,
-              })
-            : defaultUI;
+      const toolUI = renderToolResult
+        ? renderToolResult({
+            toolCallId: item.toolCallId,
+            toolName: item.toolName,
+            name: item.toolName,
+            args: item.args,
+            result: item.result,
+            status: item.status,
+            error: item.error,
+            respond,
+            defaultUI,
+          })
+        : defaultUI;
 
-          if (toolUI === null || toolUI === undefined) return null;
+      if (toolUI === null || toolUI === undefined) return null;
 
-          return (
-            <Box
-              key={item.id}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                /*
+      return (
+        <Box
+          key={item.id}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            /*
                   The full column. `maxWidth: '95%'` with content-driven
                   width left every tool card as wide as its longest line, so
                   a transcript of executions was a ragged stack of
@@ -736,85 +819,85 @@ export function ChatMessageList({
                   `width: '100%'` — the cell and output surfaces do — gets
                   the whole measure.
                 */
-                width: '100%',
-                px: padding,
-                py: 1,
-              }}
-            >
-              {toolUI}
-            </Box>
-          );
+            width: '100%',
+            px: padding,
+            py: 1,
+          }}
+        >
+          {toolUI}
+        </Box>
+      );
+    }
+
+    // ---- Chat message item ----
+    const message = item as ChatMessage;
+    const isUser = message.role === 'user';
+
+    // Optionally hide assistant messages that follow a rendered tool call
+    if (!isUser && hideMessagesAfterToolUI && hasRenderedToolCall) {
+      const messageText = getMessageText(message);
+
+      const prevIndex = index - 1;
+      if (prevIndex >= 0) {
+        const prevItem = displayItems[prevIndex];
+        if (
+          isToolCallMessage(prevItem) &&
+          renderedToolCallIds.has(prevItem.toolCallId)
+        ) {
+          return null;
         }
+      }
 
-        // ---- Chat message item ----
-        const message = item as ChatMessage;
-        const isUser = message.role === 'user';
+      // Check for HITL-specific patterns
+      const hitlToolCall = displayItems.find(
+        di =>
+          isToolCallMessage(di) &&
+          renderedToolCallIds.has(di.toolCallId) &&
+          di.args &&
+          'steps' in di.args &&
+          Array.isArray(di.args.steps),
+      ) as ToolCallMessage | undefined;
 
-        // Optionally hide assistant messages that follow a rendered tool call
-        if (!isUser && hideMessagesAfterToolUI && hasRenderedToolCall) {
-          const messageText = getMessageText(message);
+      if (hitlToolCall && messageText) {
+        const steps = hitlToolCall.args.steps as Array<{
+          description?: string;
+        }>;
+        const hasStepContent =
+          steps.some(
+            step =>
+              step.description &&
+              messageText
+                .toLowerCase()
+                .includes(step.description.toLowerCase().slice(0, 20)),
+          ) ||
+          /^\s*(\d+\.\s|[-*]\s|\*\*)/.test(messageText) ||
+          messageText.includes('**Enabled**') ||
+          messageText.includes('steps below');
 
-          const prevIndex = index - 1;
-          if (prevIndex >= 0) {
-            const prevItem = displayItems[prevIndex];
-            if (
-              isToolCallMessage(prevItem) &&
-              renderedToolCallIds.has(prevItem.toolCallId)
-            ) {
-              return null;
-            }
-          }
-
-          // Check for HITL-specific patterns
-          const hitlToolCall = displayItems.find(
-            di =>
-              isToolCallMessage(di) &&
-              renderedToolCallIds.has(di.toolCallId) &&
-              di.args &&
-              'steps' in di.args &&
-              Array.isArray(di.args.steps),
-          ) as ToolCallMessage | undefined;
-
-          if (hitlToolCall && messageText) {
-            const steps = hitlToolCall.args.steps as Array<{
-              description?: string;
-            }>;
-            const hasStepContent =
-              steps.some(
-                step =>
-                  step.description &&
-                  messageText
-                    .toLowerCase()
-                    .includes(step.description.toLowerCase().slice(0, 20)),
-              ) ||
-              /^\s*(\d+\.\s|[-*]\s|\*\*)/.test(messageText) ||
-              messageText.includes('**Enabled**') ||
-              messageText.includes('steps below');
-
-            if (hasStepContent) {
-              return null;
-            }
-          }
+        if (hasStepContent) {
+          return null;
         }
+      }
+    }
 
-        return (
-          <Box
-            key={message.id}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: isUser ? 'flex-end' : 'flex-start',
-              px: padding,
-              py: 1,
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 2,
-                flexDirection: isUser ? 'row-reverse' : 'row',
-                alignItems: 'flex-start',
-                /*
+    return (
+      <Box
+        key={message.id}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: isUser ? 'flex-end' : 'flex-start',
+          px: padding,
+          py: 1,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            flexDirection: isUser ? 'row-reverse' : 'row',
+            alignItems: 'flex-start',
+            /*
                   Full width, always.
 
                   This row used to shrink to its content under the column's
@@ -827,72 +910,86 @@ export function ChatMessageList({
                   `row` pins the agent's to the left, and 85% means 85% of
                   the column whatever is being generated below.
                 */
-                width: '100%',
+            width: '100%',
+          }}
+        >
+          {/* Avatar */}
+          {avatarConfig.showAvatars && (
+            <Box
+              sx={{
+                width: avatarConfig.avatarSize,
+                height: avatarConfig.avatarSize,
+                borderRadius: '50%',
+                bg: isUser
+                  ? avatarConfig.userAvatarBg
+                  : avatarConfig.assistantAvatarBg,
+                color: isUser
+                  ? 'fg.default'
+                  : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
-              {/* Avatar */}
-              {avatarConfig.showAvatars && (
-                <Box
-                  sx={{
-                    width: avatarConfig.avatarSize,
-                    height: avatarConfig.avatarSize,
-                    borderRadius: '50%',
-                    bg: isUser
-                      ? avatarConfig.userAvatarBg
-                      : avatarConfig.assistantAvatarBg,
-                    color: isUser
-                      ? 'fg.default'
-                      : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  {isUser
-                    ? avatarConfig.userAvatar
-                    : avatarConfig.assistantAvatar}
-                </Box>
-              )}
+              {isUser ? avatarConfig.userAvatar : avatarConfig.assistantAvatar}
+            </Box>
+          )}
 
-              {/* Message bubble */}
-              <Box
+          {/* Message bubble */}
+          <Box
+            sx={{
+              maxWidth: '85%',
+              p: 2,
+              overflowX: 'auto',
+              borderRadius: 2,
+              backgroundColor: isUser ? 'accent.emphasis' : 'canvas.subtle',
+              // Use primary-button text token for better contrast when
+              // accent.emphasis is bright (e.g. Matrix dark theme).
+              color: isUser
+                ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
+                : 'fg.default',
+              ...streamdownCodeBlockStyles,
+            }}
+          >
+            {isUser ? (
+              <Text
                 sx={{
-                  maxWidth: '85%',
-                  p: 2,
-                  overflowX: 'auto',
-                  borderRadius: 2,
-                  backgroundColor: isUser ? 'accent.emphasis' : 'canvas.subtle',
-                  // Use primary-button text token for better contrast when
-                  // accent.emphasis is bright (e.g. Matrix dark theme).
-                  color: isUser
-                    ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
-                    : 'fg.default',
-                  ...streamdownCodeBlockStyles,
+                  fontSize: 1,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
                 }}
               >
-                {isUser ? (
-                  <Text
-                    sx={{
-                      fontSize: 1,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    {getMessageText(message)}
-                  </Text>
-                ) : (
-                  <Box sx={streamdownMarkdownStyles}>
-                    <Streamdown>
-                      {normalizeAssistantMarkdown(
-                        getMessageText(message) || (isStreaming ? '...' : ''),
-                      )}
-                    </Streamdown>
-                  </Box>
-                )}
+                {getMessageText(message)}
+              </Text>
+            ) : (
+              <Box sx={streamdownMarkdownStyles}>
+                <Streamdown>
+                  {normalizeAssistantMarkdown(
+                    getMessageText(message) || (isStreaming ? '...' : ''),
+                  )}
+                </Streamdown>
               </Box>
-            </Box>
+            )}
           </Box>
+        </Box>
+      </Box>
+    );
+  };
+
+  return (
+    <>
+      {displayItems.map((item, index) => {
+        const itemUI = renderItem(item, index);
+        const footer = footerAt(index);
+        if (itemUI === null && footer === null) {
+          return null;
+        }
+        return (
+          <Fragment key={item.id}>
+            {itemUI}
+            {footer}
+          </Fragment>
         );
       })}
 

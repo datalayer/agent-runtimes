@@ -114,8 +114,8 @@ describe('the prompt', () => {
      * toolbar, which is chrome around the same prompt and forwards the choice
      * under that name.
      */
-    expect(chat()).toContain('promptVariant="lexical"');
-    expect(chat()).toContain('mentionableAgents={mentionable}');
+    expect(chat()).toContain("promptVariant: 'lexical'");
+    expect(chat()).toContain('mentionableAgents: mentionable');
   });
 
   it('carries the agent chooser and the context bar in its footer', () => {
@@ -126,7 +126,7 @@ describe('the prompt', () => {
   });
 
   it('takes focus, so the workspace opens ready to type', () => {
-    expect(chat()).toMatch(/\n\s+autoFocus\n/);
+    expect(chat()).toMatch(/\n\s+autoFocus: true,\n/);
   });
 });
 
@@ -192,8 +192,8 @@ describe('the prompt while the agent is working', () => {
      */
     const chat = read('plugins', 'chat', 'ChatView.tsx');
     expect(chat).toContain('const [busy, setBusy] = useState(false)');
-    expect(chat).toContain('isLoading={busy}');
-    expect(chat).not.toContain('isLoading={workspace.viewControls.busy}');
+    expect(chat).toContain('isLoading: busy');
+    expect(chat).not.toContain('isLoading: workspace.viewControls.busy');
   });
 });
 

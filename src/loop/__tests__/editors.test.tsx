@@ -100,7 +100,7 @@ describe('the selector in the header', () => {
   it('offers none plus every contributed surface, gated', async () => {
     const { container, root } = await mount([ShellPlugin, SurfacesPlugin]);
 
-    expect(buttonByText(container, 'None')).toBeDefined();
+    expect(buttonByText(container, 'Chat')).toBeDefined();
     expect(buttonByText(container, 'Notebook')).toBeDefined();
     const document_ = buttonByText(container, 'Document')!;
     // Focusable but declining, with the reason where a tooltip reads it —
@@ -128,9 +128,10 @@ describe('the selector in the header', () => {
     });
     expect(asked).toEqual(['notebook']);
 
-    // And `None` closes: the same channel, the word the chat knows.
+    // And `Chat` closes the editor: the same channel, the word the chat
+    // knows is still 'none'.
     await act(async () => {
-      buttonByText(container, 'None')!.click();
+      buttonByText(container, 'Chat')!.click();
     });
     expect(asked).toEqual(['notebook', 'none']);
 

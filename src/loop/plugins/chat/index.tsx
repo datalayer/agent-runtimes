@@ -19,6 +19,9 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
   LoopAgentGate,
+  LoopChatComposer,
+  LoopChatHeader,
+  LoopChatSuggestion,
   LoopCommand,
   LoopFrontendTool,
   LoopDocumentToolbarItem,
@@ -161,8 +164,16 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
   // it cannot know who opened it, and a point nobody has filled yet is exactly
   // when knowing it exists is most useful. `LoopFrontendTool` is the chat's
   // own opening: the tools its agent is handed, filled by the notebook, the
-  // document, and whoever else owns a capability.
-  contributionPoints: [LoopAgentGate, LoopFrontendTool],
+  // document, and whoever else owns a capability. The composer and the title
+  // bar are openings too: the chat assembles their props, and the
+  // input-prompt and chat-header plugins render them.
+  contributionPoints: [
+    LoopAgentGate,
+    LoopFrontendTool,
+    LoopChatComposer,
+    LoopChatHeader,
+    LoopChatSuggestion,
+  ],
   contributes: [
     contribution(
       LoopViewType,
