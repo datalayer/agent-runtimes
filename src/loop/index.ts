@@ -93,7 +93,92 @@ export {
   defineAgentCapacityPlugin,
   type AgentCapacityOptions,
 } from './plugins/agent-capacity';
-export { AgentHooksPlugin, AGENT_HOOKS_PLUGIN_NAME } from './plugins/agent-hooks';
+// The agent-capacity plugins: one folder per capacity, one line each.
+export {
+  AgentCheckpointsPlugin,
+  AGENT_CHECKPOINTS_PLUGIN_NAME,
+} from './plugins/agent-checkpoints';
+export {
+  AgentCodeSandboxPlugin,
+  AGENT_CODE_SANDBOX_PLUGIN_NAME,
+} from './plugins/agent-code-sandbox';
+export {
+  AgentCodemodePlugin,
+  AgentNoCodemodePlugin,
+  AGENT_CODEMODE_PLUGIN_NAME,
+  AGENT_NO_CODEMODE_PLUGIN_NAME,
+} from './plugins/agent-codemode';
+export {
+  AgentCompactionPlugin,
+  AGENT_COMPACTION_PLUGIN_NAME,
+} from './plugins/agent-compaction';
+export {
+  AgentEvalsPlugin,
+  AGENT_EVALS_PLUGIN_NAME,
+} from './plugins/agent-evals';
+export {
+  AgentGuardrailsPlugin,
+  AGENT_GUARDRAILS_PLUGIN_NAME,
+} from './plugins/agent-guardrails';
+export {
+  AgentHooksPlugin,
+  AGENT_HOOKS_PLUGIN_NAME,
+} from './plugins/agent-hooks';
+export {
+  AgentInferencePlugin,
+  AGENT_INFERENCE_PLUGIN_NAME,
+} from './plugins/agent-inference';
+export { AgentMcpPlugin, AGENT_MCP_PLUGIN_NAME } from './plugins/agent-mcp';
+export {
+  AgentMemoryPlugin,
+  AGENT_MEMORY_PLUGIN_NAME,
+} from './plugins/agent-memory';
+export {
+  AgentMonitoringPlugin,
+  AGENT_MONITORING_PLUGIN_NAME,
+} from './plugins/agent-monitoring';
+export {
+  AgentNotificationsPlugin,
+  AGENT_NOTIFICATIONS_PLUGIN_NAME,
+} from './plugins/agent-notifications';
+export { AgentOtelPlugin, AGENT_OTEL_PLUGIN_NAME } from './plugins/agent-otel';
+export {
+  AgentOutputsPlugin,
+  AGENT_OUTPUTS_PLUGIN_NAME,
+} from './plugins/agent-outputs';
+export {
+  AgentParametersPlugin,
+  AGENT_PARAMETERS_PLUGIN_NAME,
+} from './plugins/agent-parameters';
+export {
+  AgentSkillsPlugin,
+  AGENT_SKILLS_PLUGIN_NAME,
+} from './plugins/agent-skills';
+export {
+  AgentSubagentsPlugin,
+  AGENT_SUBAGENTS_PLUGIN_NAME,
+} from './plugins/agent-subagents';
+export {
+  AgentToolApprovalsPlugin,
+  AGENT_TOOL_APPROVALS_PLUGIN_NAME,
+} from './plugins/agent-tool-approvals';
+export {
+  AgentTriggersPlugin,
+  AGENT_TRIGGERS_PLUGIN_NAME,
+} from './plugins/agent-triggers';
+export {
+  SANDBOX_CAPACITIES,
+  SandboxCapacityPlugins,
+} from './plugins/agent-code-sandboxes';
+export { AgentA2uiPlugin, AGENT_A2UI_PLUGIN_NAME } from './plugins/agent-a2ui';
+export {
+  AgentA2uiJupyterOutputPlugin,
+  AGENT_A2UI_JUPYTER_OUTPUT_PLUGIN_NAME,
+} from './plugins/agent-a2ui-jupyter-output';
+export {
+  defineA2uiScenePlugin,
+  type A2uiSceneOptions,
+} from './plugins/a2ui-scene';
 export {
   GraphViewPlugin,
   GRAPH_PLUGIN_NAME,

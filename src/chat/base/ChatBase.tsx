@@ -3427,19 +3427,24 @@ function ChatBaseInner({
            * only account of the window there was, and it was being dropped.
            * The bar and its ring simply never appeared for a browser agent.
            */
-          if (event.usage?.totalTokens) {
-            const turnInput = event.usage.promptTokens ?? 0;
-            const turnOutput = event.usage.completionTokens ?? 0;
-            const total = event.usage.totalTokens ?? 0;
-            setLocalUsage(previous => ({
-              turnInput,
-              turnOutput,
-              // Added up, not replaced: the session is every turn so far, and
-              // the harness reports one turn at a time.
-              sessionInput: (previous?.sessionInput ?? 0) + turnInput,
-              sessionOutput: (previous?.sessionOutput ?? 0) + turnOutput,
-              totalTokens: total,
-            }));
+          {
+            const turnInput = event.usage?.promptTokens ?? 0;
+            const turnOutput = event.usage?.completionTokens ?? 0;
+            // The parts sum to the total when the harness did not send one:
+            // keying on `totalTokens` alone dropped turns whose provider
+            // counted input and output but never totalled them.
+            const total = event.usage?.totalTokens ?? turnInput + turnOutput;
+            if (total > 0) {
+              setLocalUsage(previous => ({
+                turnInput,
+                turnOutput,
+                // Added up, not replaced: the session is every turn so far,
+                // and the harness reports one turn at a time.
+                sessionInput: (previous?.sessionInput ?? 0) + turnInput,
+                sessionOutput: (previous?.sessionOutput ?? 0) + turnOutput,
+                totalTokens: total,
+              }));
+            }
           }
           // The adapter signals the entire multi-turn conversation
           // (including all continuations) has finished.

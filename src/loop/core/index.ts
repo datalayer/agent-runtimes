@@ -499,9 +499,8 @@ export type ChatComposerContribution = {
   Component: ComponentType<LoopChatComposerProps>;
 };
 
-export const LoopChatComposer = defineContributionPoint<
-  ChatComposerContribution
->('loop.chat.composer');
+export const LoopChatComposer =
+  defineContributionPoint<ChatComposerContribution>('loop.chat.composer');
 
 /**
  * The chat's title bar, arriving as a plugin.
@@ -523,9 +522,8 @@ export type ChatHeaderContribution = {
   Component: ComponentType<LoopChatHeaderProps>;
 };
 
-export const LoopChatHeader = defineContributionPoint<ChatHeaderContribution>(
-  'loop.chat.header',
-);
+export const LoopChatHeader =
+  defineContributionPoint<ChatHeaderContribution>('loop.chat.header');
 
 /**
  * The agent a capacity plugin wants the workspace to run.

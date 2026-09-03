@@ -445,6 +445,15 @@ export default defineConfig(({ mode, command }) => {
       'prop-types',
       'shallowequal',
       'react-is',
+      // Hoisted to the workspace root, so Vite sees these as *linked* deps
+      // and serves them file by file over @fs — @primer/react alone was 72
+      // waterfall requests standing between the Loop shell and its first
+      // paint. Naming them here forces pre-bundling: one request each.
+      '@primer/react',
+      '@primer/react/experimental',
+      '@primer/octicons-react',
+      '@primer/react-brand',
+      'styled-components',
       '@jupyterlab/coreutils',
       '@jupyterlab/services',
       '@jupyterlab/apputils',

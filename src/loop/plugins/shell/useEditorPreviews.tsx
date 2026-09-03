@@ -26,8 +26,27 @@
 import type { JSX, ReactNode } from 'react';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Box, Text } from '@primer/react';
-import { notebookStore } from '@datalayer/jupyter-react';
 import { getEditorChoice, subscribeEditorChoice } from './editorChoice';
+
+/*
+ * The notebook store, loaded when a notebook is actually on offer.
+ *
+ * `@datalayer/jupyter-react` is most of Jupyter's frontend; imported
+ * statically here it stood between every preset host and its first paint —
+ * the shell plugin imports this hook, the presets import the shell plugin.
+ * The module is cached once fetched, and the hooks below bump their tick
+ * when it arrives so the figures appear the moment they can be known.
+ */
+type JupyterReactModule = typeof import('@datalayer/jupyter-react');
+let jupyterReact: JupyterReactModule | null = null;
+function loadJupyterReact(): Promise<JupyterReactModule> {
+  return jupyterReact
+    ? Promise.resolve(jupyterReact)
+    : import('@datalayer/jupyter-react').then(module => {
+        jupyterReact = module;
+        return module;
+      });
+}
 
 export type EditorPreview = {
   badge: string;
@@ -104,39 +123,58 @@ function useNotebookRows(
     if (!enabled) {
       return undefined;
     }
+    let cancelled = false;
     const bump = () => setTick(value => value + 1);
     const cleanups: (() => void)[] = [];
-    // The store says when the notebook arrives; the model says when it
-    // changes. Both guarded: the test environment mocks the store away.
-    try {
-      const unsubscribe = (
-        notebookStore as { subscribe?: (cb: () => void) => () => void }
-      ).subscribe?.(bump);
-      if (unsubscribe) {
-        cleanups.push(unsubscribe);
+    // Whether the module was already here when this run began: only its
+    // first arrival is news worth a re-render. Bumping on every resolution
+    // would re-run this tick-dependent effect forever.
+    const hadModule = jupyterReact !== null;
+    // The module first (cached after the first mount), then the store says
+    // when the notebook arrives and the model says when it changes. All
+    // guarded: the test environment mocks the store away.
+    void loadJupyterReact().then(({ notebookStore }) => {
+      if (cancelled) {
+        return;
       }
-      const model = notebookStore.getState()?.notebooks?.get(surfaceId)?.model;
-      if (model) {
-        const signals = [
-          (model as { contentChanged?: { connect: any; disconnect: any } })
-            .contentChanged,
-          (
-            model.cells as unknown as {
-              changed?: { connect: any; disconnect: any };
+      try {
+        const unsubscribe = (
+          notebookStore as { subscribe?: (cb: () => void) => () => void }
+        ).subscribe?.(bump);
+        if (unsubscribe) {
+          cleanups.push(unsubscribe);
+        }
+        const model = notebookStore
+          .getState()
+          ?.notebooks?.get(surfaceId)?.model;
+        if (model) {
+          const signals = [
+            (model as { contentChanged?: { connect: any; disconnect: any } })
+              .contentChanged,
+            (
+              model.cells as unknown as {
+                changed?: { connect: any; disconnect: any };
+              }
+            )?.changed,
+          ];
+          for (const signal of signals) {
+            if (signal?.connect) {
+              signal.connect(bump);
+              cleanups.push(() => signal.disconnect(bump));
             }
-          )?.changed,
-        ];
-        for (const signal of signals) {
-          if (signal?.connect) {
-            signal.connect(bump);
-            cleanups.push(() => signal.disconnect(bump));
           }
         }
+        // The first arrival is itself news: the memo below could not read
+        // the store before the module existed.
+        if (!hadModule) {
+          bump();
+        }
+      } catch {
+        // No live store here (tests, SSR): the selector shows no badge.
       }
-    } catch {
-      // No live store here (tests, SSR): the selector simply shows no badge.
-    }
+    });
     return () => {
+      cancelled = true;
       for (const cleanup of cleanups) {
         try {
           cleanup();
@@ -173,7 +211,10 @@ function useNotebookRows(
 
 function safeModel(surfaceId: string) {
   try {
-    return notebookStore.getState()?.notebooks?.get(surfaceId)?.model ?? null;
+    return (
+      jupyterReact?.notebookStore.getState()?.notebooks?.get(surfaceId)
+        ?.model ?? null
+    );
   } catch {
     return null;
   }

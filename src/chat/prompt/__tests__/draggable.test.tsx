@@ -95,9 +95,7 @@ describe('a floating prompt', () => {
       <InputPrompt {...BASE_PROPS} draggable />,
     );
 
-    expect(
-      container.querySelector('[data-floating-prompt]'),
-    ).not.toBeNull();
+    expect(container.querySelector('[data-floating-prompt]')).not.toBeNull();
 
     await act(async () => root.unmount());
   });

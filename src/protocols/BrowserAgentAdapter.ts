@@ -324,17 +324,31 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
             });
             break;
 
-          case 'finish':
+          case 'finish': {
+            /*
+             * Whatever the provider counted, summed when it did not total.
+             *
+             * The SDK's `totalUsage` fields are all optional, and a
+             * provider that reports the parts but not the sum used to leave
+             * `totalTokens` undefined — which is the one field the chat's
+             * local accounting keys on, so the usage bar read 0 for turns
+             * that were counted perfectly well.
+             */
+            const counted = part.totalUsage;
+            const promptTokens = counted?.inputTokens ?? 0;
+            const completionTokens = counted?.outputTokens ?? 0;
+            const totalTokens =
+              counted?.totalTokens ??
+              (promptTokens + completionTokens > 0
+                ? promptTokens + completionTokens
+                : undefined);
             this.emit({
               type: 'done',
-              usage: {
-                promptTokens: part.totalUsage?.inputTokens ?? 0,
-                completionTokens: part.totalUsage?.outputTokens ?? 0,
-                totalTokens: part.totalUsage?.totalTokens ?? undefined,
-              },
+              usage: { promptTokens, completionTokens, totalTokens },
               timestamp: new Date(),
             });
             break;
+          }
 
           default:
             break;

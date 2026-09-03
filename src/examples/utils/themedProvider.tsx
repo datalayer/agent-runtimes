@@ -26,7 +26,8 @@ import {
   themeConfigs,
   useThemeStore as usePrimerThemeStore,
 } from '@datalayer/primer-addons';
-import { JupyterReactTheme } from '@datalayer/jupyter-react';
+// The lean `/core` entry: the theme without the component library.
+import { JupyterReactTheme } from '@datalayer/jupyter-react/core';
 import { useExampleThemeStore } from './themeStore';
 
 /**

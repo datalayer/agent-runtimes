@@ -4,49 +4,442 @@
  */
 
 /**
- * Agent Subagents, demonstrated as a Loop capacity plugin.
+ * AgentSubagentsExample
  *
- * The capacity lives in `@datalayer/loop-plugin-agent-subagents`: the
- * agentspec the agent is created from, and the openers worth asking it.
- * This file is only the mounting — a reactor application assembled from the
- * standard chat plugins plus that one capacity.
+ * Demonstrates multi-agent delegation using the in-repo subagents capability.
+ * The parent agent orchestrates a researcher and a writer subagent,
+ * delegating tasks and combining results for the user.
  *
- * @module examples/AgentSubagentsExample
+ * - Creates an agent from the 'example-subagents' spec on the selected target
+ * - Shows a Chat component for interacting with the orchestrator
+ * - Sidebar displays subagent info and active task status
  */
 
-import React, { useMemo } from 'react';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
+/// <reference types="vite/client" />
+
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Text, Spinner, Heading, Label, Timeline } from '@primer/react';
+import { PeopleIcon, PersonIcon } from '@primer/octicons-react';
+import { Box } from '@datalayer/primer-addons';
+import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentSubagentsPlugin } from '../loop/plugins/agent-subagents';
+import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import { Chat } from '../chat';
+import { SubagentChatPanel } from '../chat/messages/ChatMessageList';
+import { useAgentRuntimeActiveSubagentToolCallId } from '../stores';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
-setupPrimerPortals();
+const AGENT_NAME = 'subagents-example-agent';
+const AGENTSPEC_ID = 'example-subagents';
+
+interface SubagentInfo {
+  name: string;
+  description: string;
+}
+
+const SUBAGENTS: SubagentInfo[] = [
+  {
+    name: 'researcher',
+    description:
+      'Researches topics, gathers facts, and provides detailed analysis',
+  },
+  {
+    name: 'writer',
+    description:
+      'Writes clear, structured content based on research or instructions',
+  },
+];
+
+/** Fixed height (px) for the active-subagent chat viewport. */
+const ACTIVE_PANEL_HEIGHT = 280;
+
+/**
+ * Shows the currently active (running) subagent and its streamed messages.
+ * Falls back to a placeholder when no subagent is active.
+ */
+const ActiveSubagentPanel: React.FC = () => {
+  const activeToolCallId = useAgentRuntimeActiveSubagentToolCallId();
+  return (
+    <Box
+      sx={{
+        p: 3,
+        borderBottom: '1px solid',
+        borderColor: 'border.default',
+      }}
+    >
+      <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+        Active Subagent
+      </Heading>
+      {activeToolCallId ? (
+        <SubagentChatPanel
+          toolCallId={activeToolCallId}
+          height={ACTIVE_PANEL_HEIGHT}
+        />
+      ) : (
+        <Box
+          sx={{
+            height: ACTIVE_PANEL_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid',
+            borderColor: 'border.muted',
+            borderRadius: 2,
+            bg: 'canvas.subtle',
+          }}
+        >
+          <Text sx={{ fontSize: 0, color: 'fg.muted', m: 0 }}>
+            No active Subagent
+          </Text>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
+  onLogout,
+}) => {
+  const { token } = useSimpleAuthStore();
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
+  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
+  const [runtimeStatus, setRuntimeStatus] = useState<
+    'launching' | 'ready' | 'error'
+  >('launching');
+  const [isReady, setIsReady] = useState(false);
+  const [hookError, setHookError] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(agentName);
+  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
+
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
+  const chatAuthToken: string | undefined = token === null ? undefined : token;
+
+  const authFetch = useCallback(
+    (url: string, opts: RequestInit = {}) =>
+      fetch(url, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(opts.headers ?? {}),
+        },
+      }),
+    [token],
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const createAgentForTarget = async () => {
+      setRuntimeStatus('launching');
+      setIsReady(false);
+      setHookError(null);
+      setIsReconnectedAgent(false);
+
+      try {
+        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: agentName,
+            description:
+              'Subagents example – multi-agent delegation with researcher and writer',
+            agent_library: 'pydantic-ai',
+            transport: 'vercel-ai',
+            agent_spec_id: AGENTSPEC_ID,
+            memory: 'ephemeral',
+            enable_skills: true,
+            tools: [],
+          }),
+        });
+
+        let resolvedAgentId = agentName;
+        let isAlreadyRunning = false;
+
+        if (response.ok) {
+          const data = await response.json();
+          resolvedAgentId = data?.id || agentName;
+        } else {
+          const contentType = response.headers.get('content-type') || '';
+          let detail = '';
+
+          if (contentType.includes('application/json')) {
+            const data = await response.json().catch(() => null);
+            detail =
+              (typeof data?.detail === 'string' && data.detail) ||
+              (typeof data?.message === 'string' && data.message) ||
+              '';
+          } else {
+            detail = await response.text();
+          }
+
+          if (response.status === 409 || /already exists/i.test(detail || '')) {
+            isAlreadyRunning = true;
+          } else {
+            throw new Error(
+              detail || `Failed to create local agent: ${response.status}`,
+            );
+          }
+        }
+
+        if (!isCancelled) {
+          setAgentId(resolvedAgentId);
+          setIsReconnectedAgent(isAlreadyRunning);
+          setIsReady(true);
+          setRuntimeStatus('ready');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setHookError(
+            error instanceof Error ? error.message : 'Agent failed to start',
+          );
+          setRuntimeStatus('error');
+        }
+      }
+    };
+
+    void createAgentForTarget();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [agentBaseUrl, authFetch, runtimeTarget]);
+
+  if (!isReady && runtimeStatus !== 'error') {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: 3,
+          bg: 'canvas.default',
+        }}
+      >
+        <Spinner size="large" />
+        <Text sx={{ color: 'fg.muted' }}>
+          Launching subagents example agent ({runtimeTarget})...
+        </Text>
+      </Box>
+    );
+  }
+
+  if (runtimeStatus === 'error' || hookError) {
+    return <ErrorView error={hookError} onLogout={onLogout} />;
+  }
+
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'canvas.default',
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          px: 3,
+          py: 2,
+          borderBottom: '1px solid',
+          borderColor: 'border.default',
+          flexShrink: 0,
+        }}
+      >
+        <PeopleIcon size={16} />
+        <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
+          Subagents Demo
+        </Heading>
+        {isReconnectedAgent && (
+          <Label variant="secondary" size="small">
+            Reconnected
+          </Label>
+        )}
+        <Label variant="accent">{runtimeTarget}</Label>
+        <Label variant="accent">{SUBAGENTS.length} subagents</Label>
+      </Box>
+
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Chat
+            protocol="vercel-ai"
+            baseUrl={agentBaseUrl}
+            agentId={agentId}
+            authToken={chatAuthToken}
+            title="Subagents Orchestrator"
+            brandIcon={<PeopleIcon size={16} />}
+            placeholder="Ask me to research a topic, write content, or both..."
+            description="Multi-agent delegation with researcher & writer"
+            showHeader={true}
+            kernelIndicatorPlacement="right"
+            autoFocus
+            height="100%"
+            runtimeId={agentId}
+            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
+            suggestions={[
+              {
+                title: 'Research & write',
+                message:
+                  'Research the pros and cons of Python async patterns and write a summary.',
+              },
+              {
+                title: 'Research only',
+                message:
+                  'Find recent advances in LLM fine-tuning and provide a detailed analysis.',
+              },
+              {
+                title: 'Write only',
+                message:
+                  'Write a concise guide on REST API design best practices.',
+              },
+            ]}
+            submitOnSuggestionClick
+          />
+        </Box>
+
+        <Box
+          sx={{
+            width: 320,
+            borderLeft: '1px solid',
+            borderColor: 'border.default',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'auto',
+          }}
+        >
+          <ActiveSubagentPanel />
+
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              Available Subagents
+            </Heading>
+            <Timeline>
+              {SUBAGENTS.map(sa => (
+                <Timeline.Item key={sa.name}>
+                  <Timeline.Badge>
+                    <PersonIcon />
+                  </Timeline.Badge>
+                  <Timeline.Body>
+                    <Box sx={{ mb: 1 }}>
+                      <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>
+                        {sa.name}
+                      </Text>
+                    </Box>
+                    <Text
+                      as="p"
+                      sx={{ fontSize: 0, color: 'fg.muted', mt: 0, mb: 1 }}
+                    >
+                      {sa.description}
+                    </Text>
+                  </Timeline.Body>
+                </Timeline.Item>
+              ))}
+            </Timeline>
+          </Box>
+
+          <Box
+            sx={{
+              p: 3,
+              borderBottom: '1px solid',
+              borderColor: 'border.default',
+            }}
+          >
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              Delegation Tools
+            </Heading>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {[
+                {
+                  name: 'delegate_task',
+                  desc: 'Run a named subagent on a task and return its answer',
+                  icon: PeopleIcon,
+                },
+              ].map(tool => (
+                <Box
+                  key={tool.name}
+                  sx={{
+                    p: 2,
+                    border: '1px solid',
+                    borderColor: 'border.default',
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <tool.icon size={14} />
+                  <Box>
+                    <Text
+                      sx={{
+                        fontSize: 1,
+                        fontWeight: 'bold',
+                        fontFamily: 'mono',
+                      }}
+                    >
+                      {tool.name}
+                    </Text>
+                    <Text
+                      as="p"
+                      sx={{ fontSize: 0, color: 'fg.muted', mt: 0, mb: 0 }}
+                    >
+                      {tool.desc}
+                    </Text>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          <Box sx={{ p: 3 }}>
+            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+              How It Works
+            </Heading>
+            <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
+              The orchestrator agent delegates tasks to specialised subagents
+              using the <code>delegate_task</code> tool. Each subagent runs in
+              an isolated child run with its own model and instructions.
+            </Text>
+            <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 0 }}>
+              Token and request usage from each delegation is forwarded to the
+              parent run, so budget limits stay accurate across delegation.
+            </Text>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
 
 const AgentSubagentsExample: React.FC = () => {
-  // Unique per mount, so two tabs do not fight over one server-side agent.
-  const agentName = useMemo(() => uniqueAgentId('subagents-example-agent'), []);
-  const plugins = useMemo(() => [AgentSubagentsPlugin], []);
+  const { token, clearAuth } = useSimpleAuthStore();
+
+  const handleLogout = useCallback(() => {
+    clearAuth();
+  }, [clearAuth]);
+
+  if (!token) {
+    return (
+      <ThemedProvider>
+        <AuthRequiredView />
+      </ThemedProvider>
+    );
+  }
+
   return (
     <ThemedProvider>
-      <Box sx={{ height: '100vh', minHeight: 0 }}>
-        <LoopEmbed
-          // The examples Vite server has no /api proxy; the page origin would
-          // send agent creation to port 3000 and fail loudly.
-          serverUrl={resolveExampleAgentRuntimesUrl('local')}
-          // The capacity runs server-side in the pydantic-ai loop, so the
-          // agent lives on the Local target; the control stays visible so
-          // the target is never one the reader cannot see or move off.
-          target="local"
-          showAgentVariants
-          agentId={agentName}
-          // The conversation is the demonstration; no editor beside it.
-          defaultEditor="none"
-          showHeader
-          plugins={plugins}
-        />
-      </Box>
+      <AgentSubagentsInner onLogout={handleLogout} />
     </ThemedProvider>
   );
 };

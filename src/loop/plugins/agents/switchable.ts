@@ -357,10 +357,13 @@ export function createSwitchableSandboxService({
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        ...createPayload,
-        name: id,
+        // Defaults first, so a blueprint that names its own transport or
+        // sandbox variant — the sandbox capacity plugins do — wins over
+        // them; the name last, because Local's agent id is not negotiable.
         transport: 'ag-ui',
         sandbox_variant: 'jupyter-server',
+        ...createPayload,
+        name: id,
       }),
     });
     if (!created.ok && created.status !== 409) {

@@ -26,7 +26,6 @@ import {
   requestSurface,
   LoopNotebookToolbar,
 } from '../../core';
-import { createNotebookTools } from '../../../tools/adapters/agent-runtimes/notebookHooks';
 import { AgentsPlugin } from '../agents';
 
 export const NOTEBOOK_PLUGIN_NAME = '@datalayer/loop-plugin-notebook';
@@ -63,17 +62,6 @@ export const NotebookPlugin = definePlugin({
       },
       { id: 'notebook', order: 10 },
     ),
-    // The tools: what lets the agent create, edit and run cells — handed to
-    // the chat through its own point, so a chat without this plugin simply
-    // has no notebook tools rather than a hard-wired import of them.
-    contribution(
-      LoopFrontendTool,
-      {
-        id: 'notebook-tools',
-        tools: workspace => createNotebookTools(workspace.surfaceId),
-      },
-      { id: 'notebook-tools' },
-    ),
     contribution(
       LoopCommand,
       {
@@ -97,6 +85,31 @@ export const NotebookPlugin = definePlugin({
       { id: 'notebook' },
     ),
   ],
+  build: ctx => {
+    /*
+     * The tools — what lets the agent create, edit and run cells —
+     * contributed when their module arrives. `notebookHooks` imports
+     * `@datalayer/jupyter-react` at module load, which is most of Jupyter's
+     * frontend; a static contribution would put that whole graph in front
+     * of the shell's first paint. The reactor takes contributions at any
+     * time and bumps its revision, so the chat re-reads its tools point
+     * the moment these land — the same arrangement as the document's
+     * lexical tools.
+     */
+    void import('../../../tools/adapters/agent-runtimes/notebookHooks').then(
+      ({ createNotebookTools }) => {
+        ctx.contribute(
+          LoopFrontendTool,
+          {
+            id: 'notebook-tools',
+            tools: workspace => createNotebookTools(workspace.surfaceId),
+          },
+          { id: 'notebook-tools' },
+        );
+      },
+    );
+    return {};
+  },
 });
 
 export default NotebookPlugin;

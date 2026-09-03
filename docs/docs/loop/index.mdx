@@ -249,6 +249,38 @@ the whole gesture, and the blueprint wins over the host's own `localAgent`
 because a mounted capacity is the more specific statement about what the
 workspace runs.
 
+The shipped roster, each demonstrated by the example of the same name:
+
+| Plugin | Spec | Capacity |
+|---|---|---|
+| `agent-a2ui` | `example-a2ui-agent` | generated interactive A2UI surfaces |
+| `agent-a2ui-jupyter-output` | `example-a2ui-jupyter-output` | kernel outputs on surfaces |
+| `agent-sandbox-*` (×7) | `example-sandbox-*` | one per sandbox variant — eval, jupyter, docker, datalayer, colab, kaggle, monty — each pinning `sandbox_variant` |
+| `agent-checkpoints` | `monitor-sales-kpis` | pause/resume checkpointing |
+| `agent-code-sandbox` | `example-full` | the full code sandbox |
+| `agent-codemode` / `agent-no-codemode` | `example-codemode` / `example-no-codemode` | MCP tools as programmatic tools, and the raw comparison |
+| `agent-compaction` | `example-monitoring` | context compaction |
+| `agent-evals` | `example-evals` | evaluation runs |
+| `agent-guardrails` | `example-guardrails` | cost guardrails and policy denies |
+| `agent-hooks` | `example-hooks` | lifecycle and tool hooks |
+| `agent-inference` | `example-inference` | inference-provider switching |
+| `agent-mcp` | `example-mcp` | MCP servers and their tools |
+| `agent-memory` | `example-memory` | persistent memory |
+| `agent-monitoring` | `example-monitoring` | run monitoring |
+| `agent-notifications` | `example-notifications` | notifications |
+| `agent-otel` | `example-otel` | traces, logs and metrics |
+| `agent-outputs` | `example-output` | structured outputs |
+| `agent-parameters` | `example-parameters` | run parameters |
+| `agent-skills` | `example-skills` | skills |
+| `agent-subagents` | `example-subagents` | delegation to subagents |
+| `agent-tool-approvals` | `example-tool-approvals` | human tool approval |
+| `agent-triggers` | `example-one-trigger` | cron, webhook and event triggers |
+
+Scenes without an agent — the A2UI contact card, restaurant, viewer and
+components gallery — use a sibling mould, `defineA2uiScenePlugin`: the
+canned protocol messages render as a workspace *view*, ordered ahead of the
+chat, and the scene component stays with whoever owns the scene.
+
 ### Editors that work unseen
 
 Every editor that can run is mounted as soon as its sandbox allows — hidden,

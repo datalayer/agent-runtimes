@@ -10,7 +10,7 @@
  * the agent is created from, and the openers worth asking it. This file is
  * only the mounting — a reactor application assembled from the standard
  * chat plugins plus that one capacity — where it used to be a bespoke
- * `<Chat>` carrying the same facts as props.
+ * chat component carrying the same facts as props.
  *
  * @module examples/AgentHooksExample
  */

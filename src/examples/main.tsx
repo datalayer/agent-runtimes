@@ -13,6 +13,9 @@ import React, {
   useState,
 } from 'react';
 import { createRoot } from 'react-dom/client';
+// From the lean `/core` entry: the barrel drags the whole component
+// library (notebook, CodeMirror, cells) into the gallery's first paint,
+// and the gallery only needs the theme and the server config helpers.
 import {
   loadJupyterConfig,
   JupyterReactTheme,
@@ -21,7 +24,7 @@ import {
   setJupyterServerToken,
   getJupyterServerUrl,
   getJupyterServerToken,
-} from '@datalayer/jupyter-react';
+} from '@datalayer/jupyter-react/core';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
 import {
@@ -32,7 +35,10 @@ import {
   Box,
   SlidingPanel,
 } from '@datalayer/primer-addons';
-import { AgentSummary } from '../components';
+// Straight from its module: the components barrel re-exports the
+// code-sandbox gallery and friends, none of which belong in the
+// example gallery's first paint.
+import { AgentSummary } from '../components/agents/AgentSummary';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
 import {
   ActionList,
