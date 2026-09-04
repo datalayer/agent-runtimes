@@ -574,6 +574,56 @@ export const LoopChatSuggestion =
   defineContributionPoint<ChatSuggestionContribution>('loop.chat.suggestion');
 
 /**
+ * The per-example chat extras a host feeds the loop's conversation live.
+ *
+ * An example that keeps its bespoke panels around a `LoopEmbed` still has
+ * things to say to the chat *column* — an error banner it computes from its
+ * own state, the codemode toggle and the MCP/codemode status the footer
+ * shows. These change over the life of the page, so the contribution carries
+ * a **signal** rather than a value: the example updates `.value`, and the
+ * chat view re-renders through `useSignalValue`. `createChatExtrasPlugin`
+ * builds the plugin and hands back the setter.
+ */
+export type LoopChatExtrasValue = {
+  /** A banner drawn above the transcript — the example's own diagnostics. */
+  errorBanner?: { message: string; variant: 'danger' | 'warning' };
+  /** Whether the codemode toggle in the footer reads as on. */
+  codemodeEnabled?: boolean;
+  /** Called when the reader flips the codemode toggle. */
+  onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
+  /** Live MCP toolset status for the footer indicator. */
+  mcpStatusData?: import('../../types/mcp').McpToolsetsStatusResponse | null;
+  /** Live codemode status for the footer indicator. */
+  codemodeStatusData?: import('../../types/stream').CodemodeStatusData | null;
+  /**
+   * A custom renderer for tool results in the transcript.
+   *
+   * For an example whose demonstration *is* how a tool result is drawn — the
+   * A2UI examples render their agent's surface here. Wins over the notebook
+   * tool-surface rendering when set. See `ChatBase.renderToolResult`.
+   */
+  renderToolResult?: import('../../types/chat').RenderToolResult;
+  /**
+   * Extra frontend tools the agent may call, from the host example.
+   *
+   * Folded into the loop's frontend-tool set alongside the notebook and
+   * document tools (first name wins). For an example whose demo is a bespoke
+   * client tool — A2UI Jupyter Output's `run_jupyter_output_demo`.
+   */
+  frontendTools?: FrontendToolDefinition[];
+};
+
+export type ChatExtrasContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** The live extras. Updated by the example; read by the chat view. */
+  extras: ReadonlySignal<LoopChatExtrasValue>;
+};
+
+export const LoopChatExtras =
+  defineContributionPoint<ChatExtrasContribution>('loop.chat.extras');
+
+/**
  * Whether there is anything to chat with.
  *
  * A gate rather than an extension point of its own: `defineGate` is the

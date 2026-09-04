@@ -17,7 +17,13 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
@@ -53,7 +59,9 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentGuardrailsPlugin } from '../loop/plugins/agent-guardrails';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -299,6 +307,36 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   );
   const [totalTokens, setTotalTokens] = useState(0);
   const [otelRunCostUsd, setOtelRunCostUsd] = useState<number | null>(null);
+
+  // The chat column is the shared loop; the example's live over-budget banner
+  // reaches it through the chat-extras channel. Declared here — above the
+  // early returns below — so these hooks run in the same order every render,
+  // and the banner is recomputed from the cost state the effect depends on.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentGuardrailsPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    const cost = Math.max(snapshotRunCostUsd, otelRunCostUsd ?? 0);
+    const over =
+      runBudgetUsd != null && runBudgetUsd > 0 && cost > runBudgetUsd;
+    setExtras({
+      errorBanner: over
+        ? {
+            variant: 'danger',
+            message: `Run budget exceeded: $${cost.toFixed(4)} / $${(
+              runBudgetUsd ?? 0
+            ).toFixed(
+              2,
+            )}. Start a new run or adjust the budget before sending more messages.`,
+          }
+        : undefined,
+    });
+  }, [snapshotRunCostUsd, otelRunCostUsd, runBudgetUsd, setExtras]);
   const [otelCumulativeCostUsd, setOtelCumulativeCostUsd] = useState<
     number | null
   >(null);
@@ -320,6 +358,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     agentBaseUrl;
   const runtimeName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -593,12 +632,10 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     runBudgetUsd != null && runBudgetUsd > 0 && runCostUsd > runBudgetUsd;
   const runBudgetDisplayUsd =
     runBudgetUsd != null ? runBudgetUsd.toFixed(2) : '0.00';
-  const overBudgetBanner = isOverRunBudget
-    ? {
-        variant: 'danger' as const,
-        message: `Run budget exceeded: $${runCostUsd.toFixed(4)} / $${runBudgetDisplayUsd}. Start a new run or adjust the budget before sending more messages.`,
-      }
-    : undefined;
+  // The over-budget banner now rides the chat-extras channel (wired above);
+  // its render-time copy is gone with the <Chat errorBanner> that used it.
+  void runBudgetDisplayUsd;
+
   const budgetForProgress = runBudgetUsd && runBudgetUsd > 0 ? runBudgetUsd : 1;
   const usagePercentRaw = (runCostUsd / budgetForProgress) * 100;
   const costPercent = Math.min(usagePercentRaw, 100);
@@ -782,45 +819,17 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         </Flash>
       ))}
 
-      {/* Chat */}
+      {/* Chat — the shared loop on the guardrails capacity plugin; the cost
+          gauge and approval cards above are the example's own. The live
+          over-budget banner rides the chat-extras channel. */}
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        <Chat
-          protocol="vercel-ai"
-          baseUrl={agentBaseUrl}
+        <LoopEmbed
+          serverUrl={agentBaseUrl}
+          target="local"
           agentId={agentId}
-          authToken={chatAuthToken}
-          title="Guardrails Agent"
-          brandIcon={<ShieldCheckIcon size={16} />}
-          placeholder="Ask something that triggers tools…"
-          description="Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)"
-          showHeader={true}
-          kernelIndicatorPlacement="right"
-          showTokenUsage={true}
-          errorBanner={overBudgetBanner}
-          disableInputPrompt={isOverRunBudget}
-          autoFocus
-          height="100%"
-          runtimeId={agentId}
-          historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-          suggestions={[
-            { title: 'Update CRM', message: 'Update the CRM records for Q3' },
-            {
-              title: 'Trigger before_tool_execute',
-              message:
-                "Call runtime_sensitive_echo with text 'hello' and reason 'audit', then explain the before_tool_execute authorization decision.",
-            },
-            {
-              title: 'Trigger deny policy',
-              message:
-                "Call runtime_sensitive_echo with text 'danger' and reason 'delete CRM rows', then explain why policy denied it.",
-            },
-            {
-              title: 'Explain deferred flow',
-              message:
-                'Explain how deferred_tool_calls and manual approvals interact in this guardrails run.',
-            },
-          ]}
-          submitOnSuggestionClick
+          defaultEditor="none"
+          showHeader
+          plugins={chatPlugins}
         />
       </Box>
     </Box>

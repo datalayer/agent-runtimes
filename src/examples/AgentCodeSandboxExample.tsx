@@ -44,7 +44,8 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentCodeSandboxPlugin } from '../loop/plugins/agent-code-sandbox';
 import type { SandboxWsStatus } from '../types/sandbox';
 import { SANDBOX_STATUS_COLORS, SANDBOX_STATUS_LABELS } from '../types/sandbox';
 import type { SandboxAggregateStatus } from '../types/sandbox';
@@ -111,6 +112,8 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
   const { token } = useSimpleAuthStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
+  const chatPlugins = useMemo(() => [AgentCodeSandboxPlugin], []);
   const agentBaseUrl = useExampleAgentRuntimesUrl();
 
   // ── Agent lifecycle ──
@@ -499,6 +502,7 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
       is_executing: false,
     };
   }, [displayedVariant, sandboxStatus]);
+  void chatSandboxStatus;
   const statusColor = SANDBOX_STATUS_COLORS[aggregate];
   const statusLabel = SANDBOX_STATUS_LABELS[aggregate];
 
@@ -784,73 +788,60 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ position: 'relative', height: '100%' }}>
-            <Chat
-              protocol="vercel-ai"
-              baseUrl={agentBaseUrl}
-              agentId={agentId}
-              authToken={chatAuthToken}
-              title="Sandbox Agent"
-              brandIcon={<TerminalIcon size={16} />}
-              placeholder="Ask the agent to write and run code…"
-              showHeader={true}
-              kernelIndicatorPlacement="right"
-              showNewChatButton={true}
-              showClearButton={true}
-              showTokenUsage={true}
-              autoFocus
-              height="100%"
-              runtimeId={agentId}
-              historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-              headerActions={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <SegmentedControl
-                    aria-label="Sandbox variant"
-                    size="small"
-                    onChange={index => {
-                      if (isTransitionLocked) return;
-                      void switchVariant(
-                        index === 0 ? 'eval' : 'jupyter-server',
-                      );
-                    }}
+            <Box
+              sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  px: 3,
+                  py: 2,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.default',
+                  flexShrink: 0,
+                }}
+              >
+                <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+                  Sandbox variant
+                </Text>
+                <SegmentedControl
+                  aria-label="Sandbox variant"
+                  size="small"
+                  onChange={index => {
+                    if (isTransitionLocked) return;
+                    void switchVariant(index === 0 ? 'eval' : 'jupyter-server');
+                  }}
+                >
+                  <SegmentedControl.Button
+                    selected={displayedVariant === 'eval'}
+                    leadingIcon={TerminalIcon}
+                    disabled={isTransitionLocked}
                   >
-                    <SegmentedControl.Button
-                      selected={displayedVariant === 'eval'}
-                      leadingIcon={TerminalIcon}
-                      disabled={isTransitionLocked}
-                    >
-                      eval
-                    </SegmentedControl.Button>
-                    <SegmentedControl.Button
-                      selected={displayedVariant === 'jupyter-server'}
-                      leadingIcon={CodeIcon}
-                      disabled={isTransitionLocked}
-                    >
-                      jupyter
-                    </SegmentedControl.Button>
-                  </SegmentedControl>
-                  {variantSwitching && <Spinner size="small" />}
-                </Box>
-              }
-              suggestions={[
-                {
-                  title: 'Run some Python',
-                  message:
-                    'Write a Python script that computes the first 20 Fibonacci numbers and prints them.',
-                },
-                {
-                  title: 'Generate a plot',
-                  message:
-                    'Write Python code to generate a matplotlib bar chart of the top 5 programming languages by popularity, and save it to chart.png.',
-                },
-                {
-                  title: 'Long-running task',
-                  message:
-                    'Write Python code that counts from 1 to 30 with a 1-second sleep between each number, printing each one.',
-                },
-              ]}
-              submitOnSuggestionClick
-              sandboxStatusData={chatSandboxStatus}
-            />
+                    eval
+                  </SegmentedControl.Button>
+                  <SegmentedControl.Button
+                    selected={displayedVariant === 'jupyter-server'}
+                    leadingIcon={CodeIcon}
+                    disabled={isTransitionLocked}
+                  >
+                    jupyter
+                  </SegmentedControl.Button>
+                </SegmentedControl>
+                {variantSwitching && <Spinner size="small" />}
+              </Box>
+              <Box sx={{ flex: 1, minHeight: 0 }}>
+                <LoopEmbed
+                  serverUrl={agentBaseUrl}
+                  target="local"
+                  agentId={agentId}
+                  defaultEditor="none"
+                  showHeader
+                  plugins={chatPlugins}
+                />
+              </Box>
+            </Box>
 
             {isTransitionLocked && (
               <Box

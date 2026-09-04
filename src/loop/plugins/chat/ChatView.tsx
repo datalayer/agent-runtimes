@@ -58,6 +58,9 @@ import { useOptionalTeamSelection } from '../agents/useTeamSelection';
  * skipped for the ordinary single-agent case.
  */
 const EMPTY_SELECTION = signal('');
+/* A signal to read when no example contributed chat extras, so the hook
+   below always has one — a hook cannot be called conditionally. */
+const EMPTY_CHAT_EXTRAS = signal<LoopChatExtrasValue>({});
 import { useWorkspaceFullScreen } from '../../shell/useWorkspaceFullScreen';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
 import {
@@ -73,9 +76,11 @@ import { AI_MODEL_CATALOGUE } from '../../../specs/models';
 import {
   LoopAgentGate,
   LoopChatComposer,
+  LoopChatExtras,
   LoopChatHeader,
   LoopChatSuggestion,
   LoopChatSurface,
+  type LoopChatExtrasValue,
   LoopFrontendTool,
   canOpenView,
   type ChatSurfaceContribution,
@@ -158,6 +163,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      these are single-occupant surfaces, not lists. */
   const composerEntries = useContributions(LoopChatComposer);
   const headerEntries = useContributions(LoopChatHeader);
+  /* Live per-example chat extras — an error banner, the codemode toggle, the
+     footer's MCP/codemode status. Carried as a signal so the example can
+     update it without the plugin being rebuilt; first contribution wins. */
+  const extrasEntries = useContributions(LoopChatExtras);
+  const chatExtras = useSignalValue(
+    extrasEntries[0]?.value.extras ?? EMPTY_CHAT_EXTRAS,
+  );
   /* Which editors have ever been mounted; they are never unmounted after —
      see the render below. A ref, not state: adding to it during render is
      idempotent and must not schedule another one. */
@@ -567,7 +579,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     > = [];
     const owners = new Map<string, string>();
     for (const entry of toolContributions) {
-      let tools: typeof merged = [];
+      let tools: typeof merged;
       try {
         tools = entry.value.tools(workspace);
       } catch (error) {
@@ -590,11 +602,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         merged.push(tool);
       }
     }
+    // A host example's own frontend tools, folded in last (first name wins),
+    // so a bespoke client tool like A2UI's run_jupyter_output_demo joins the
+    // agent's toolset without a plugin of its own.
+    for (const tool of chatExtras.frontendTools ?? []) {
+      if (owners.has(tool.name)) {
+        continue;
+      }
+      owners.set(tool.name, 'chat-extras');
+      merged.push(tool);
+    }
     return merged;
     // The workspace object is rebuilt when its facts change; surfaceId is
     // the one the factories address by.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toolContributions, workspace.surfaceId, workspace.agentId]);
+  }, [
+    toolContributions,
+    workspace.surfaceId,
+    workspace.agentId,
+    chatExtras.frontendTools,
+  ]);
 
   /*
    * Where this workspace's agent actually lives.
@@ -1064,6 +1091,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     showToolsMenu: true,
     availableTools: offeredTools,
     mcpServers: configQuery.data?.mcpServers ?? [],
+    // Live from the host example, when one feeds it: the footer's MCP status
+    // indicator. (Codemode surfaces through the toggle below, not a blob.)
+    mcpStatusData: chatExtras.mcpStatusData ?? undefined,
     showSkillsMenu: true,
     skills: skillsQuery.data?.skills ?? [],
     skillsLoading: skillsQuery.isLoading,
@@ -1078,7 +1108,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           ? skillActions.enableSkill(skillId)
           : skillActions.disableSkill(skillId),
       ),
-    codemodeEnabled: false,
+    codemodeEnabled: chatExtras.codemodeEnabled ?? false,
+    onToggleCodemode: chatExtras.onToggleCodemode,
     isA2AProtocol: false,
     hasConfigData: !!configQuery.data,
     hasSkillsData: !!skillsQuery.data,
@@ -1225,6 +1256,33 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             position: 'relative',
           }}
         >
+          {/* The host example's own banner, when it feeds one through the
+              live chat-extras channel: its diagnostics, above the transcript. */}
+          {chatExtras.errorBanner ? (
+            <Box
+              sx={{
+                flexShrink: 0,
+                px: 3,
+                py: 2,
+                fontSize: 1,
+                borderBottom: '1px solid',
+                bg:
+                  chatExtras.errorBanner.variant === 'warning'
+                    ? 'attention.subtle'
+                    : 'danger.subtle',
+                color:
+                  chatExtras.errorBanner.variant === 'warning'
+                    ? 'attention.fg'
+                    : 'danger.fg',
+                borderColor:
+                  chatExtras.errorBanner.variant === 'warning'
+                    ? 'attention.muted'
+                    : 'danger.muted',
+              }}
+            >
+              {chatExtras.errorBanner.message}
+            </Box>
+          ) : null}
           <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
             <ChatBase
               // The header says why, beside the title, for the same reason the
@@ -1423,6 +1481,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 happened, and the default tool row is enough.
               */
               notebookToolSurfacesId={active ? undefined : workspace.surfaceId}
+              // A host example's own tool-result renderer, when it feeds one
+              // through the extras channel — the A2UI examples draw their
+              // surface here. Wins over the notebook surfaces in ChatBase.
+              renderToolResult={chatExtras.renderToolResult}
               onContextSnapshot={setChatUsage}
               onLoadingChange={handleLoadingChange}
               enableStreaming

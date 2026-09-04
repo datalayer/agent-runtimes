@@ -25,8 +25,11 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentInferencePlugin } from '../loop/plugins/agent-inference';
 import { useAIAgentsWebSocket } from '../hooks';
+
+const LOOP_PLUGINS_AGENTINF = [AgentInferencePlugin];
 
 const AGENTSPEC_ID = 'example-inference';
 const AGENT_NAME = 'inference-provider-example-agent';
@@ -402,52 +405,13 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             }}
           >
             {agentId && !isLaunching ? (
-              <Chat
-                protocol="vercel-ai"
-                baseUrl={baseUrl}
+              <LoopEmbed
+                serverUrl={baseUrl}
+                target="local"
                 agentId={agentId}
-                authToken={token ?? undefined}
-                title="Agent Inference Provider Example"
-                subtitle={`Spec: ${AGENTSPEC_ID}`}
-                placeholder="Ask the inference provider something..."
-                showHeader={true}
-                kernelIndicatorPlacement="right"
-                showNewChatButton={true}
-                showClearButton={true}
-                showModelSelector={true}
-                showToolsMenu={true}
-                showSkillsMenu={true}
-                showTokenUsage={true}
-                autoFocus
-                height="100%"
-                runtimeId={agentId}
-                historyEndpoint={`${baseUrl}/api/v1/history`}
-                onMessageSent={content => {
-                  appendProviderEvent(
-                    'provider.request',
-                    `Sent message via ${provider}`,
-                    {
-                      provider,
-                      agentId,
-                      content,
-                    },
-                  );
-                }}
-                onMessageReceived={message => {
-                  appendProviderEvent(
-                    'provider.message',
-                    'Received stream message',
-                    message,
-                  );
-                }}
-                suggestions={[
-                  {
-                    title: 'Compare providers',
-                    message:
-                      'Give me a short 3-point comparison between local and datalayer inference providers.',
-                  },
-                ]}
-                submitOnSuggestionClick
+                defaultEditor="none"
+                showHeader
+                plugins={LOOP_PLUGINS_AGENTINF}
               />
             ) : (
               <Box

@@ -44,8 +44,9 @@ import {
 import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
-import { ChatSidebar } from '../chat';
-import type { AgentLibrary, ProtocolConfig } from '../types';
+import { LoopEmbed } from '../loop';
+import { AgentOtelPlugin } from '../loop/plugins/agent-otel';
+import type { AgentLibrary } from '../types';
 import { Protocol } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
@@ -274,17 +275,18 @@ const AgentOtelExampleInner: React.FC<{
   );
 
   // ── Agent state ─────────────────────────────────────────────────
+  //
+  // The launch panel creates the `example-otel` agent and reports its id; the
+  // LoopEmbed below runs on the Local target pointed at that same id, so its
+  // `ensureLocalAgent` finds the created agent and reuses it rather than
+  // making a second one. The bespoke launcher and its Disconnect control are
+  // kept — the chat column is the shared loop now, everything around it is the
+  // example's own.
   const [connectedAgentId, setConnectedAgentId] = useState<string | null>(null);
-  const [connectedAgentTransport, setConnectedAgentTransport] =
-    useState<Protocol>(DEFAULT_AGENT_PROTOCOL);
 
-  const handleAgentConnected = useCallback(
-    (agentId: string, protocol: Protocol) => {
-      setConnectedAgentId(agentId);
-      setConnectedAgentTransport(protocol);
-    },
-    [],
-  );
+  const handleAgentConnected = useCallback((agentId: string) => {
+    setConnectedAgentId(agentId);
+  }, []);
 
   const handleAgentDisconnected = useCallback(async () => {
     if (connectedAgentId) {
@@ -299,37 +301,7 @@ const AgentOtelExampleInner: React.FC<{
     setConnectedAgentId(null);
   }, [connectedAgentId, agentBaseUrl]);
 
-  // Build protocol config from connected agent
-  const protocolConfig = useMemo((): ProtocolConfig | undefined => {
-    if (!connectedAgentId) return undefined;
-    if (connectedAgentTransport === 'ag-ui') {
-      return {
-        type: 'ag-ui',
-        endpoint: `${agentBaseUrl}/api/v1/ag-ui/${connectedAgentId}/`,
-        agentId: connectedAgentId,
-      };
-    }
-    if (connectedAgentTransport === 'a2a') {
-      return {
-        type: 'a2a',
-        endpoint: `${agentBaseUrl}/api/v1/a2a/${connectedAgentId}`,
-        agentId: connectedAgentId,
-      };
-    }
-    if (connectedAgentTransport === 'vercel-ai') {
-      return {
-        type: 'vercel-ai',
-        endpoint: `${agentBaseUrl}/api/v1/vercel-ai/${connectedAgentId}`,
-        agentId: connectedAgentId,
-      };
-    }
-    // Fallback – vercel-ai
-    return {
-      type: 'vercel-ai',
-      endpoint: `${agentBaseUrl}/api/v1/vercel-ai/${connectedAgentId}`,
-      agentId: connectedAgentId,
-    };
-  }, [connectedAgentId, connectedAgentTransport, agentBaseUrl]);
+  const otelPlugins = useMemo(() => [AgentOtelPlugin], []);
 
   return (
     <Box
@@ -424,49 +396,20 @@ const AgentOtelExampleInner: React.FC<{
           </Box>
         </Box>
 
-        {/* ── Agent sidebar ────────────────────────────────────────── */}
-        <ChatSidebar
-          kernelIndicatorPlacement="right"
-          title="AI Agent"
-          protocol={protocolConfig}
-          position="right"
-          width={380}
-          defaultOpen={true}
-          showNewChatButton={true}
-          showClearButton={true}
-          showSettingsButton={false}
-          clickOutsideToClose={false}
-          placeholder="Ask the agent about your telemetry data…"
-          description="Connect an agent to start chatting about your traces, logs, and metrics."
-          panelProps={
-            protocolConfig
-              ? {
-                  protocol: protocolConfig,
-                  useStore: true,
-                  suggestions: [
-                    {
-                      title: '🔍 Recent traces',
-                      message: 'What do the most recent traces show?',
-                    },
-                    {
-                      title: '⚠️ Errors',
-                      message:
-                        'Are there any errors or anomalies in the telemetry?',
-                    },
-                    {
-                      title: '📊 Metrics summary',
-                      message: 'Give me a summary of the current metrics.',
-                    },
-                    {
-                      title: '🕵️ Root cause',
-                      message: 'Help me find the root cause of slow requests.',
-                    },
-                  ],
-                }
-              : { useStore: true }
-          }
+        {/* ── Agent sidebar: the example's launcher over the shared loop ── */}
+        <Box
+          sx={{
+            width: 380,
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            borderLeft: '1px solid',
+            borderColor: 'border.default',
+            bg: 'canvas.default',
+            minHeight: 0,
+          }}
         >
-          {/* Agent launcher rendered above the chat area */}
+          {/* Agent launcher — kept verbatim, above the chat. */}
           <AgentLaunchPanel
             baseUrl={agentBaseUrl}
             onConnected={handleAgentConnected}
@@ -474,7 +417,37 @@ const AgentOtelExampleInner: React.FC<{
             isConnected={!!connectedAgentId}
             connectedAgentName={connectedAgentId ?? undefined}
           />
-        </ChatSidebar>
+          {/* The conversation, as the shared loop. Local target on the
+              launched agent id; the otel capacity plugin carries its spec and
+              its telemetry openers. */}
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            {connectedAgentId ? (
+              <LoopEmbed
+                serverUrl={agentBaseUrl}
+                target="local"
+                agentId={connectedAgentId}
+                defaultEditor="none"
+                plugins={otelPlugins}
+              />
+            ) : (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  px: 3,
+                  color: 'fg.muted',
+                  fontSize: 1,
+                  textAlign: 'center',
+                }}
+              >
+                Connect an agent to start chatting about your traces, logs, and
+                metrics.
+              </Box>
+            )}
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

@@ -16,7 +16,13 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, Spinner, Heading, Label } from '@primer/react';
 import { GraphIcon } from '@primer/octicons-react';
@@ -43,7 +49,9 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentMonitoringPlugin } from '../loop/plugins/agent-monitoring';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-example-agent';
@@ -77,6 +85,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
+  void alerts;
   const [liveContext, setLiveContext] = useState<
     ContextSnapshotResponse | undefined
   >(undefined);
@@ -89,6 +98,19 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [liveMcpStatus, setLiveMcpStatus] = useState<
     McpToolsetsStatusResponse | undefined
   >(undefined);
+  // The chat column is the shared loop; the live MCP status the footer shows
+  // reaches it through the chat-extras channel.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentMonitoringPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({ mcpStatusData: liveMcpStatus ?? null });
+  }, [liveMcpStatus, setExtras]);
   const [monitorLastSnapshotAt, setMonitorLastSnapshotAt] = useState<
     number | null
   >(null);
@@ -110,6 +132,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   // so the TokenUsageChart WS filter and HTTP query match actual rows.
   const otelServiceName = 'agent-runtimes';
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -531,69 +554,13 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            authToken={chatAuthToken}
-            title="Monitoring Agent"
-            brandIcon={<GraphIcon size={16} />}
-            placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
-            description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            showTokenUsage={true}
-            showToolsMenu={true}
-            showSkillsMenu={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: '▶ No-tool turn',
-                message:
-                  'Briefly introduce yourself without calling any tool or skill — produces a linear Start → Model → Decision → End graph.',
-              },
-              {
-                title: '🔍 Single tool call',
-                message:
-                  'Use the Tavily web search tool to find the latest news about pydantic-graph. Make a single search call.',
-              },
-              {
-                title: '🌀 Parallel tool fan-out',
-                message:
-                  'Use Tavily to search the web in parallel for these three topics in the same turn: (1) OpenTelemetry traces, (2) agent observability, (3) LLM cost monitoring. Issue all three searches together so the turn graph fans out (Broadcast → Spread → Join).',
-              },
-              {
-                title: '🧩 Skill call',
-                message:
-                  'Use the datalayer-whoami skill to identify my profile, then summarize it.',
-              },
-              {
-                title: '😄 Joke skill',
-                message:
-                  'Use the jokes skill to tell me a random dad joke, then wrap it in one-sentence commentary.',
-              },
-              {
-                title: '🧪 Mixed tools + skills',
-                message:
-                  'In one turn: (a) use Tavily to search for "OTEL traces best practices", (b) call the datalayer-whoami skill, (c) call the jokes skill. Summarize all three results together. This should produce a Broadcast → three Spread nodes → Join in the Turn Execution Graph.',
-              },
-              {
-                title: 'Monitoring summary',
-                message:
-                  'Summarize my current token usage, cost status, and recent turn activity.',
-              },
-              {
-                title: 'Turn usage analysis',
-                message:
-                  'Analyze the last turn usage and explain which parts drove input and output tokens.',
-              },
-            ]}
-            submitOnSuggestionClick
-            contextSnapshot={liveContextSnapshot}
-            mcpStatusData={liveMcpStatus}
+            defaultEditor="none"
+            showHeader
+            plugins={chatPlugins}
           />
         </Box>
 

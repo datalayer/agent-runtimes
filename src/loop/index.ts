@@ -76,6 +76,11 @@ export {
   InputPromptPlugin,
   INPUT_PROMPT_PLUGIN_NAME,
 } from './plugins/input-prompt';
+export {
+  createChatExtrasPlugin,
+  CHAT_EXTRAS_PLUGIN_NAME,
+  type ChatExtrasHandle,
+} from './plugins/chat-extras';
 export { ChatViewPlugin, CHAT_VIEW_PLUGIN_NAME } from './plugins/chat-view';
 export {
   NotebookViewPlugin,

@@ -29,9 +29,12 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentSkillsPlugin } from '../loop/plugins/agent-skills';
 import { useSkills, useSkillActions } from '../hooks';
 import type { SkillInfo } from '../types';
+
+const LOOP_PLUGINS_AGENTSKI = [AgentSkillsPlugin];
 
 const queryClient = new QueryClient();
 const AGENT_NAME = 'skills-example-agent';
@@ -204,6 +207,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     },
   });
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   // WS-sourced skills (reads from codemodeStatus pushed via monitoring WS)
   const skillsQuery = useSkills(isReady);
@@ -276,72 +280,13 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     >
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            authToken={chatAuthToken}
-            title={`Skills Demo Agent`}
-            brandIcon={<BriefcaseIcon size={16} />}
-            placeholder="Ask the agent to use its skills..."
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            showNewChatButton={true}
-            showClearButton={true}
-            showTokenUsage={true}
-            showSkillsMenu={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            headerActions={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                  Skills: {skills.length}
-                </Text>
-              </Box>
-            }
-            suggestions={[
-              {
-                title: 'List available skills',
-                message: 'List all your available skills and what they can do.',
-              },
-              {
-                title: '👤 Who am I',
-                message:
-                  'Use the datalayer-whoami skill to tell me who I am, including my user identity and available context.',
-              },
-              {
-                title: '🌐 Crawl a webpage',
-                message:
-                  'Use the crawl skill to fetch the content of https://datalayer.ai and summarize it.',
-              },
-              {
-                title: '📅 Generate an event',
-                message:
-                  'Use the events skill to create a new event named "team-sync" with status "pending" and describe it.',
-              },
-              {
-                title: '🐙 GitHub repos',
-                message:
-                  'Use the GitHub skill to show two sections: first, the top 3 recently updated public repositories from the datalayer organization; second, my top 3 recently updated private repositories. Keep the output clear and concise.',
-              },
-              {
-                title: '📄 Read a PDF',
-                message:
-                  'Use the PDF skill to extract the text from a PDF file at /tmp/sample.pdf and show me the first 200 characters.',
-              },
-              {
-                title: '📝 Summarize text',
-                message:
-                  'Use the text summarizer skill to summarize the following: "Artificial intelligence has transformed many industries. Machine learning enables computers to learn from data. Natural language processing allows machines to understand human language. Computer vision gives machines the ability to interpret images. These technologies are reshaping healthcare, finance, education, and transportation."',
-              },
-              {
-                title: '😄 Tell me a joke',
-                message: 'Use the jokes skill to tell me a random joke.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTSKI}
           />
         </Box>
 

@@ -63,7 +63,8 @@ import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentCheckpointsPlugin } from '../loop/plugins/agent-checkpoints';
 import {
   useAgentsRuntimes,
   useAgentRuntimesQuery,
@@ -73,6 +74,8 @@ import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleA
 import { useAgentLifecycle } from '../hooks/useCheckpoints';
 import { AGENT_STATUS_COLORS } from '../types/agents';
 import type { CheckpointRecord } from '../types/checkpoints';
+
+const LOOP_PLUGINS_AGENTCHE = [AgentCheckpointsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -1017,32 +1020,13 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
             </Box>
           ) : (isReady || runtimeStatus === 'resumed') &&
             runtimeStatus !== 'paused' ? (
-            <Chat
-              protocol="vercel-ai"
-              baseUrl={agentBaseUrl}
+            <LoopEmbed
+              serverUrl={agentBaseUrl}
+              target="local"
               agentId={agentId}
-              title="Monitor Sales KPI Agent"
-              brandIcon={<AgentIcon size={16} />}
-              placeholder="Ask about sales KPIs…"
-              description="Monitor Sales KPI agent with pause/resume checkpointing"
-              showHeader={true}
-              kernelIndicatorPlacement="right"
-              showTokenUsage={true}
-              autoFocus
-              height="100%"
-              runtimeId={runtimeName}
-              historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-              suggestions={[
-                {
-                  title: 'KPIs',
-                  message: "Show me today's sales KPI dashboard",
-                },
-                {
-                  title: 'Trends',
-                  message: 'What are the current revenue trends?',
-                },
-              ]}
-              submitOnSuggestionClick
+              defaultEditor="none"
+              showHeader
+              plugins={LOOP_PLUGINS_AGENTCHE}
             />
           ) : (
             <Box

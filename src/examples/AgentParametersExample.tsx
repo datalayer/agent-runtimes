@@ -6,7 +6,6 @@
 import React, { useMemo, useState } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { Button, Heading, Label, Spinner, Text } from '@primer/react';
-import { FileIcon } from '@primer/octicons-react';
 import { RJSFSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import { Form, yamlSchemaToJsonSchema } from '@datalayer/primer-rjsf';
@@ -14,7 +13,10 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentParametersPlugin } from '../loop/plugins/agent-parameters';
+
+const LOOP_PLUGINS_AGENTPAR = [AgentParametersPlugin];
 
 setupPrimerPortals();
 
@@ -386,38 +388,13 @@ const AgentParametersExample: React.FC = () => {
   }
 
   return (
-    <Chat
-      protocol="vercel-ai"
-      baseUrl={baseUrl}
+    <LoopEmbed
+      serverUrl={baseUrl}
+      target="local"
       agentId={agentId}
-      title={`Parameterized Agent: ${String(formData.project ?? 'Project')}`}
-      brandIcon={<FileIcon size={16} />}
-      placeholder="Ask something about your configured project..."
-      description={`Role: ${String(formData.role ?? 'n/a')} · Tone: ${String(formData.tone ?? 'n/a')}`}
-      showHeader={true}
-      kernelIndicatorPlacement="right"
-      showModelSelector={true}
-      showToolsMenu={true}
-      showSkillsMenu={true}
-      showTokenUsage={true}
-      showInformation={true}
-      autoFocus
-      height="100vh"
-      runtimeId={agentId}
-      historyEndpoint={`${baseUrl}/api/v1/history`}
-      suggestions={[
-        {
-          title: 'Print demo_params',
-          message:
-            'Use execute_code to print(demo_params) from the sandbox, then explain what it is.',
-        },
-        {
-          title: 'Inspect demo_params',
-          message:
-            "Use execute_code to print('demo_params =', demo_params) and confirm its type.",
-        },
-      ]}
-      submitOnSuggestionClick
+      defaultEditor="none"
+      showHeader
+      plugins={LOOP_PLUGINS_AGENTPAR}
     />
   );
 };

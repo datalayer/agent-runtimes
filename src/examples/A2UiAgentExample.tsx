@@ -45,7 +45,9 @@ import {
   specRendererClassName,
   type SpecRenderer,
 } from './hooks/useSpecRenderToolResult';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentA2uiPlugin } from '../loop/plugins/agent-a2ui';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 
 setupPrimerPortals();
 
@@ -153,7 +155,7 @@ function validateFieldValue(
     return `${rule.label} must be a valid email address.`;
   }
   if (rule.pattern && typeof value === 'string') {
-    let matches = true;
+    let matches: boolean;
     try {
       matches = new RegExp(rule.pattern).test(value.trim());
     } catch {
@@ -332,6 +334,7 @@ const A2UiAgentExample: React.FC = () => {
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
     undefined,
   );
+  void pendingPrompt;
   const [validationError, setValidationError] = useState<{
     surfaceId: string;
     message: string;
@@ -488,6 +491,20 @@ const A2UiAgentExample: React.FC = () => {
   );
 
   const renderToolResult = useSpecRenderToolResult(AGENTSPEC_ID, renderers);
+  // The chat column is the shared loop on the A2UI capacity plugin; the
+  // example's own surface renderer reaches the transcript through the
+  // chat-extras channel, so tool results still draw as A2UI surfaces.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentA2uiPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({ renderToolResult });
+  }, [renderToolResult, setExtras]);
 
   const clearCanvas = useCallback(() => {
     resetSurfaces();
@@ -741,28 +758,13 @@ const A2UiAgentExample: React.FC = () => {
                 </Text>
               </Box>
             ) : (
-              <Chat
-                protocol="ag-ui"
-                baseUrl={baseUrl}
+              <LoopEmbed
+                serverUrl={baseUrl}
+                target="local"
                 agentId={agentId}
-                title="A2UI Agent"
-                description="Generate interactive A2UI surfaces"
-                placeholder="Describe the UI you want..."
-                showHeader={true}
-                kernelIndicatorPlacement="right"
-                showModelSelector={true}
-                showToolsMenu={true}
-                showSkillsMenu={true}
-                showTokenUsage={true}
-                showInformation={true}
-                autoFocus
-                height="100%"
-                runtimeId={agentId}
-                historyEndpoint={`${baseUrl}/api/v1/history`}
-                suggestions={SUGGESTIONS}
-                submitOnSuggestionClick
-                pendingPrompt={pendingPrompt}
-                renderToolResult={renderToolResult}
+                defaultEditor="none"
+                showHeader
+                plugins={chatPlugins}
               />
             )}
           </Box>

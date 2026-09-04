@@ -55,8 +55,11 @@ import {
 } from './utils/runtimeTargetStore';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentEvalsPlugin } from '../loop/plugins/agent-evals';
 import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
+
+const LOOP_PLUGINS_AGENTEVA = [AgentEvalsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -534,6 +537,7 @@ const AgentEvalsInner: React.FC<{
   }
 
   const latestScore = evalRuns.length > 0 ? evalRuns[0].score : null;
+  void latestScore;
 
   return (
     <Box
@@ -583,35 +587,13 @@ const AgentEvalsInner: React.FC<{
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            title="Eval Agent"
-            brandIcon={<BeakerIcon size={16} />}
-            placeholder="Chat with the agent, then run evaluations…"
-            description={
-              latestScore != null
-                ? `Last score: ${(latestScore * 100).toFixed(0)}%`
-                : 'No evaluations run yet'
-            }
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            autoFocus
-            height="100%"
-            runtimeId={runtimeName}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Summarize KPIs',
-                message: 'Summarize the latest KPI data',
-              },
-              {
-                title: 'Run eval',
-                message: 'Evaluate your last 10 responses',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTEVA}
           />
         </Box>
 

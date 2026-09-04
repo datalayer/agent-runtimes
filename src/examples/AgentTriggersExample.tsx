@@ -49,7 +49,8 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentTriggersPlugin } from '../loop/plugins/agent-triggers';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useConnectedIdentities } from '../identity';
 import {
@@ -68,6 +69,8 @@ import type { AgentEvent } from '../types';
 import { type AgentStreamToolApprovalPayload } from '../types/stream';
 import { VercelAIAdapter } from '../protocols';
 import { createUserMessage } from '../types/messages';
+
+const LOOP_PLUGINS_AGENTTRI = [AgentTriggersPlugin];
 
 const queryClient = new QueryClient();
 
@@ -123,6 +126,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   // Cron state
   const [cronExpr, setCronExpr] = useState(DEFAULT_CRON);
@@ -1212,24 +1216,13 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           {/* Left: Chat */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {isReady ? (
-              <Chat
-                protocol="vercel-ai"
-                baseUrl={agentBaseUrl}
+              <LoopEmbed
+                serverUrl={agentBaseUrl}
+                target="local"
                 agentId={agentId}
-                authToken={chatAuthToken}
-                title="Trigger Agent"
-                brandIcon={<ZapIcon size={16} />}
-                description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
-                showHeader={true}
-                kernelIndicatorPlacement="right"
-                autoFocus={false}
-                height="100%"
-                runtimeId={agentId}
-                showInput={true}
-                disableInputPrompt={true}
-                showModelSelector={true}
-                showToolsMenu={true}
-                showSkillsMenu={true}
+                defaultEditor="none"
+                showHeader
+                plugins={LOOP_PLUGINS_AGENTTRI}
               />
             ) : (
               <Box

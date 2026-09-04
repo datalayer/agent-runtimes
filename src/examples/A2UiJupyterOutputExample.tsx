@@ -24,7 +24,13 @@
  */
 
 import type { JSX } from 'react';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Box } from '@datalayer/primer-addons';
 import {
   Button,
@@ -40,7 +46,9 @@ import { Output, OutputIPyWidgets } from '@datalayer/jupyter-react';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import type { FrontendToolDefinition } from '../types/tools';
 import type { ToolCallRenderContext } from '../types/chat';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentA2uiJupyterOutputPlugin } from '../loop/plugins/agent-a2ui-jupyter-output';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
 import { ThemedJupyterProvider, ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
@@ -236,34 +244,6 @@ else:
  * They name the code sandbox, because that is the thing being demonstrated
  * and the reader can see it running.
  */
-const CHAT_SUGGESTIONS = [
-  {
-    title: 'Stream output',
-    message: 'Run something in the code sandbox that prints as it goes.',
-  },
-  {
-    title: 'Figure output',
-    message: 'Plot a chart in the code sandbox and show me the image.',
-  },
-  {
-    title: 'Table output',
-    message:
-      'Build a small DataFrame in the code sandbox and show it as a table.',
-  },
-  {
-    title: 'Error output',
-    message:
-      'Run something in the code sandbox that fails, so I can see the traceback.',
-  },
-  {
-    title: 'IPyWidgets output',
-    message: 'Show me an interactive slider from the code sandbox.',
-  },
-  {
-    title: 'Interactive output',
-    message: 'Give me a surface with buttons I can press.',
-  },
-];
 
 /** The surface this example draws into; re-running replaces rather than stacks. */
 const SURFACE_ID = 'jupyter-output';
@@ -1026,6 +1006,21 @@ const A2UiJupyterOutputExample: React.FC = () => {
     [run],
   );
 
+  // The chat column is the shared loop on the A2UI-jupyter-output capacity
+  // plugin; the bespoke run_jupyter_output_demo frontend tool and the surface
+  // renderer reach it through the chat-extras channel.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentA2uiJupyterOutputPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({ frontendTools: [runDemoTool], renderToolResult });
+  }, [runDemoTool, renderToolResult, setExtras]);
+
   const outputPanels = (
     <Box
       sx={{
@@ -1184,25 +1179,13 @@ const A2UiJupyterOutputExample: React.FC = () => {
                     }}
                   >
                     {agentReady && agentId ? (
-                      <Chat
-                        protocol="vercel-ai"
-                        baseUrl={serverUrl}
+                      <LoopEmbed
+                        serverUrl={serverUrl}
+                        target="local"
                         agentId={agentId}
-                        title="Jupyter Output Agent"
-                        description="Run and compare Jupyter output demonstrations"
-                        placeholder="Ask to run an output demonstration…"
-                        height="100%"
-                        runtimeId={agentId}
-                        historyEndpoint={`${serverUrl}/api/v1/history`}
-                        frontendTools={[runDemoTool]}
-                        renderToolResult={renderToolResult}
-                        suggestions={CHAT_SUGGESTIONS}
-                        submitOnSuggestionClick
+                        defaultEditor="none"
                         showHeader
-                        showModelSelector
-                        showToolsMenu
-                        showTokenUsage
-                        showInformation
+                        plugins={chatPlugins}
                       />
                     ) : (
                       <Box

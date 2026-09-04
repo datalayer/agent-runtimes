@@ -25,11 +25,14 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentSubagentsPlugin } from '../loop/plugins/agent-subagents';
 import { SubagentChatPanel } from '../chat/messages/ChatMessageList';
 import { useAgentRuntimeActiveSubagentToolCallId } from '../stores';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
+
+const LOOP_PLUGINS_AGENTSUB = [AgentSubagentsPlugin];
 
 const AGENT_NAME = 'subagents-example-agent';
 const AGENTSPEC_ID = 'example-subagents';
@@ -115,6 +118,7 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -267,39 +271,13 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            authToken={chatAuthToken}
-            title="Subagents Orchestrator"
-            brandIcon={<PeopleIcon size={16} />}
-            placeholder="Ask me to research a topic, write content, or both..."
-            description="Multi-agent delegation with researcher & writer"
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Research & write',
-                message:
-                  'Research the pros and cons of Python async patterns and write a summary.',
-              },
-              {
-                title: 'Research only',
-                message:
-                  'Find recent advances in LLM fine-tuning and provide a detailed analysis.',
-              },
-              {
-                title: 'Write only',
-                message:
-                  'Write a concise guide on REST API design best practices.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTSUB}
           />
         </Box>
 

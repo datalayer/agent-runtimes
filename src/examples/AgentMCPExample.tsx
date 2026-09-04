@@ -32,7 +32,9 @@ import {
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentMcpPlugin } from '../loop/plugins/agent-mcp';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 import { useAIAgentsWebSocket } from '../hooks';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
@@ -305,6 +307,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -589,6 +592,21 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const totalTools = mcpServers.reduce((sum, s) => sum + s.toolsCount, 0);
   const aggregate = deriveAggregate(mcpStatusData?.servers ?? []);
 
+  // The chat column is the shared loop; the live MCP status the footer shows
+  // reaches it through the chat-extras channel. The server panel on the right
+  // is the example's own.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentMcpPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({ mcpStatusData: mcpStatusData ?? null });
+  }, [mcpStatusData, setExtras]);
+
   if (!isReady && runtimeStatus !== 'error') {
     return (
       <Box
@@ -636,58 +654,13 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            authToken={chatAuthToken}
-            title="MCP Demo Agent"
-            brandIcon={<GlobeIcon size={16} />}
-            placeholder="Ask the agent to search the web or explore GitHub..."
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            showNewChatButton={true}
-            showClearButton={true}
-            showToolsMenu={true}
-            showSkillsMenu={true}
-            showTokenUsage={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            mcpStatusData={mcpStatusData}
-            showToolApprovalBanner={true}
-            headerActions={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                  MCP Tools: {totalTools}
-                </Text>
-              </Box>
-            }
-            suggestions={[
-              {
-                title: '🔍 Search the web',
-                message: 'Search the web for recent news about AI agents.',
-              },
-              {
-                title: '🐙 GitHub repos',
-                message: 'Find trending open-source Python projects on GitHub.',
-              },
-              {
-                title: '📚 Research topic',
-                message:
-                  'Research best practices for building RAG applications.',
-              },
-              {
-                title: '⚡ Compare frameworks',
-                message: 'Compare popular JavaScript frameworks in 2024.',
-              },
-              {
-                title: '😄 Tell me a joke',
-                message: 'Use your jokes skill to tell me a random joke.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={chatPlugins}
           />
         </Box>
 

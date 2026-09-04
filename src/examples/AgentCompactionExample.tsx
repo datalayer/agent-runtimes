@@ -36,12 +36,15 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentCompactionPlugin } from '../loop/plugins/agent-compaction';
 import { useAgentRuntimeCompaction, agentRuntimeStore } from '../stores';
 import { getAgentspecs } from '../specs/agents';
 import { AI_MODEL_CATALOGUE } from '../specs';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
+
+const LOOP_PLUGINS_AGENTCOM = [AgentCompactionPlugin];
 
 const AGENT_NAME = 'compaction-example-agent';
 const AGENTSPEC_ID = 'example-monitoring';
@@ -209,6 +212,7 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -436,39 +440,13 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            authToken={chatAuthToken}
-            title="Compaction Agent"
-            brandIcon={<HistoryIcon size={16} />}
-            placeholder="Chat until the history exceeds the token budget..."
-            description="History summarization under a token budget"
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Fill the context',
-                message:
-                  'Write a detailed, multi-paragraph essay on the history of computing, covering hardware, software, and networking eras.',
-              },
-              {
-                title: 'Keep going',
-                message:
-                  'Now expand each section with more detail and concrete examples, adding at least three paragraphs per era.',
-              },
-              {
-                title: 'Recall earlier',
-                message:
-                  'Summarize everything we have discussed so far in this conversation.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTCOM}
           />
         </Box>
 

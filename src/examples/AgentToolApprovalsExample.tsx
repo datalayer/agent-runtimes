@@ -16,13 +16,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { Spinner, Text } from '@primer/react';
-import { CheckCircleIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentToolApprovalsPlugin } from '../loop/plugins/agent-tool-approvals';
 import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
+
+const LOOP_PLUGINS_AGENTTOO = [AgentToolApprovalsPlugin];
 
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
@@ -86,6 +88,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const [disableToolApprovals, setDisableToolApprovals] = useState<boolean>(
     () => parseDisableToolApprovalsFromUi(),
   );
+  void setDisableToolApprovals;
   const agentName = useMemo(
     () =>
       buildAgentNameForSpec(
@@ -103,8 +106,11 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+
+  void chatAuthToken;
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const runtimeName = 'localhost';
+  void runtimeName;
   const approvals = useAgentRuntimeApprovals();
   const pendingApprovalCount = useMemo(
     () =>
@@ -115,6 +121,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       ).length,
     [approvals, agentId],
   );
+  void pendingApprovalCount;
   const createAttemptedRef = useRef(false);
 
   useEffect(() => {
@@ -271,81 +278,13 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            authToken={chatAuthToken}
-            title={`Tool Approval Agent - ${runtimeName}`}
-            brandIcon={<CheckCircleIcon size={16} />}
-            placeholder="Ask for actions that require approval..."
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            showNewChatButton={true}
-            showClearButton={true}
-            showTokenUsage={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            headerActions={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                  Pending: {pendingApprovalCount}
-                </Text>
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    color: 'var(--fgColor-muted)',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={disableToolApprovals}
-                    onChange={event =>
-                      setDisableToolApprovals(event.currentTarget.checked)
-                    }
-                  />
-                  Disable tool approvals
-                </label>
-              </Box>
-            }
-            suggestions={[
-              {
-                title: 'List your tools',
-                message: 'list your tools',
-              },
-              {
-                title: 'Sensitive tool with delegated allow',
-                message:
-                  "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then explain the before_tool_execute decision and reply with the tool result.",
-              },
-              {
-                title: 'Sensitive tool denied by Python hook',
-                message:
-                  "Call the runtime_sensitive_echo tool with text 'danger' and reason 'delete project', then explain why it was denied.",
-              },
-              {
-                title: 'Non-sensitive tool baseline',
-                message:
-                  "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
-              },
-              {
-                title: 'Inspect audit entries',
-                message:
-                  'Use execute_code to print the latest entries from /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize decision + execution status.',
-              },
-              {
-                title: 'Explain deferred approvals hook',
-                message:
-                  'Explain how deferred_tool_calls resolves approval-required tool requests inline when a decision is already available.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTTOO}
           />
         </Box>
       </Box>

@@ -41,10 +41,13 @@ import { uniqueAgentId } from './utils/agentId';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentMemoryPlugin } from '../loop/plugins/agent-memory';
 import { listRuntimeMemories } from '../api/runtimes/runtimes';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
+
+const LOOP_PLUGINS_AGENTMEM = [AgentMemoryPlugin];
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -344,33 +347,13 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             borderColor: 'border.default',
           }}
         >
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            title="Memory Agent"
-            brandIcon={<DatabaseIcon size={16} />}
-            placeholder="Chat — the agent remembers you across sessions…"
-            description="Agent with persistent memory"
-            showHeader={true}
-            kernelIndicatorPlacement="right"
-            showTokenUsage={true}
-            autoFocus
-            height="100%"
-            runtimeId={runtimeName}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Remember',
-                message: 'My favourite colour is midnight blue.',
-              },
-              { title: 'Recall', message: 'What is my favourite colour?' },
-              {
-                title: 'Preference',
-                message: 'I prefer reports in bullet-point format.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTMEM}
           />
         </Box>
 

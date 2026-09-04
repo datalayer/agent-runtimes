@@ -20,6 +20,7 @@ import type { ToolbarItem } from '@datalayer/primer-addons';
 import {
   LoopAgentGate,
   LoopChatComposer,
+  LoopChatExtras,
   LoopChatHeader,
   LoopChatSuggestion,
   LoopCommand,
@@ -173,6 +174,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     LoopChatComposer,
     LoopChatHeader,
     LoopChatSuggestion,
+    LoopChatExtras,
   ],
   contributes: [
     contribution(
