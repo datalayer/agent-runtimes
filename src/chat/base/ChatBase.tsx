@@ -834,6 +834,8 @@ function ChatBaseInner({
   onNewChat,
   onClear,
   onMessagesChange,
+  onItemsChange,
+  onDisplayItemsChange,
   autoFocus = false,
   suggestions,
   submitOnSuggestionClick = true,
@@ -2975,6 +2977,21 @@ function ChatBaseInner({
     }
   }, [displayItems, messages, onMessagesChange]);
 
+  // Every change, streaming included — for a caller following the reply as
+  // it arrives rather than counting messages. See `onItemsChange`.
+  useEffect(() => {
+    onItemsChange?.(
+      displayItems.filter(
+        (item): item is ChatMessage => !isToolCallMessage(item),
+      ),
+    );
+  }, [displayItems, onItemsChange]);
+
+  // And everything, tool calls included — see `onDisplayItemsChange`.
+  useEffect(() => {
+    onDisplayItemsChange?.(displayItems);
+  }, [displayItems, onDisplayItemsChange]);
+
   const padding = compact ? 2 : 3;
 
   // Derive approval config from protocol for built-in tool approval support
@@ -4316,6 +4333,22 @@ function ChatBaseInner({
   }, [configMcpServers, effectiveMcpStatusData, mcpServers]);
 
   // ---- Not ready ----
+  /*
+   * The transcript's tool renderer: the host's own, or — when a notebook was
+   * named — the built-in surfaces that show what each cell tool did. Baked
+   * in here rather than in any workspace, so every chat with a headless
+   * notebook gets the same transcript. Above the early return below, as
+   * every hook must be.
+   */
+  const effectiveRenderToolResult = useMemo(
+    () =>
+      renderToolResult ??
+      (notebookToolSurfacesId
+        ? notebookToolSurfacesRenderer(notebookToolSurfacesId)
+        : undefined),
+    [renderToolResult, notebookToolSurfacesId],
+  );
+
   if (!ready) {
     return (
       <Box
@@ -4394,21 +4427,6 @@ function ChatBaseInner({
             .filter(Boolean)
             .map(item => ({ title: item, message: item }))
         : undefined;
-
-  /*
-   * The transcript's tool renderer: the host's own, or — when a notebook was
-   * named — the built-in surfaces that show what each cell tool did. Baked
-   * in here rather than in any workspace, so every chat with a headless
-   * notebook gets the same transcript.
-   */
-  const effectiveRenderToolResult = useMemo(
-    () =>
-      renderToolResult ??
-      (notebookToolSurfacesId
-        ? notebookToolSurfacesRenderer(notebookToolSurfacesId)
-        : undefined),
-    [renderToolResult, notebookToolSurfacesId],
-  );
 
   const messagesContent = children ? (
     children

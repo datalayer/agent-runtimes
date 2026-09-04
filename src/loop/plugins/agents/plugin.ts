@@ -105,6 +105,15 @@ export type AgentsConfig = {
    */
   teamId?: string;
   /**
+   * Whether the header offers the team's member picker.
+   *
+   * True by default: with a team there is a choice to make, and the picker is
+   * what makes it. A host that draws the choice itself — a presence strip
+   * whose avatars address a member, say — passes `false`, and the choice
+   * stays available from the composer's agents menu regardless.
+   */
+  showTeamPicker?: boolean;
+  /**
    * The agentspec the Datalayer target runs.
    *
    * That target allocates a runtime and creates an agent on it from this spec.
@@ -199,7 +208,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         // other which agent it is, and a person reads them together. The
         // footer under the prompt offers the same choice for a workspace
         // mounted without a header.
-        ...(team
+        ...(team && config.showTeamPicker !== false
           ? [
               {
                 slot: LoopSlots.header,

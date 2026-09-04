@@ -13,12 +13,13 @@
 import type { JSX } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
-import { useSignalValue } from '@datalayer/reactor/react';
+import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
 import { EphemeralNotebook } from '../../../chat/notebook/EphemeralNotebook';
 import {
   LoopNotebookToolbar,
   LoopNotebookToolbarItem,
+  LoopOpeningNotebook,
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
@@ -58,7 +59,36 @@ export default function NotebookView({
    * early, and a hook after an early return runs on some renders and not
    * others, which is the one thing React cannot tolerate.
    */
-  const opening = useMemo(() => openingNotebook(), []);
+  /*
+   * A host's own opening notebook wins over the plugin's one cell.
+   *
+   * Read from the `LoopOpeningNotebook` point: a page whose argument needs
+   * several cells and an output in the first viewport contributes them, and
+   * this view opens on that instead. First contribution wins. What to run so
+   * the kernel agrees with the cells comes with it, or is the code cells'
+   * own source joined top to bottom.
+   */
+  const openingEntries = useContributions(LoopOpeningNotebook);
+  const contributedOpening = openingEntries[0]?.value;
+  const opening = useMemo(
+    () =>
+      contributedOpening ? contributedOpening.notebook() : openingNotebook(),
+    [contributedOpening],
+  );
+  const primeCode = useMemo(() => {
+    if (!contributedOpening) {
+      return openingCode();
+    }
+    if (contributedOpening.prime !== undefined) {
+      return contributedOpening.prime;
+    }
+    return opening.cells
+      .filter(cell => cell.cell_type === 'code')
+      .map(cell =>
+        Array.isArray(cell.source) ? cell.source.join('') : cell.source,
+      )
+      .join('\n');
+  }, [contributedOpening, opening]);
 
   /*
    * Run the opening cell on the sandbox, once it has one.
@@ -89,13 +119,13 @@ export default function NotebookView({
       return;
     }
     primed.current = kernelId;
-    void service.execute(openingCode()).catch((error: unknown) => {
+    void service.execute(primeCode).catch((error: unknown) => {
       // Not worth a banner. The notebook still shows what it showed; what a
       // reader loses is the variable, and the agent will say so plainly the
       // first time it looks.
       console.warn('[loop] could not prime the opening cell', error);
     });
-  }, [service, snapshot.state, snapshot.kernelId]);
+  }, [service, snapshot.state, snapshot.kernelId, primeCode]);
 
   // The switcher's `canOpen` gate should have kept this view shut, but a
   // sandbox can go away while it is on screen — say so rather than rendering a

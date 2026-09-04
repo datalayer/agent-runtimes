@@ -611,6 +611,23 @@ export type LoopChatExtrasValue = {
    * client tool — A2UI Jupyter Output's `run_jupyter_output_demo`.
    */
   frontendTools?: FrontendToolDefinition[];
+  /**
+   * Take the composer off the screen, live.
+   *
+   * The chat plugin's `hidePrompt` is configuration — set once when the
+   * reactor is built. This is the same switch as a signal, for a host whose
+   * page changes what owns the typing while the workspace is running: a
+   * landing page that swaps the prompt for a connection panel when the
+   * visitor chooses to bring their own agent, without rebuilding the reactor
+   * and losing the notebook the visitor was just working in.
+   */
+  hidePrompt?: boolean;
+  /**
+   * Whether the composer draws its usage band — context, session, turn.
+   * True unless a host says otherwise: a public page turns the counters off,
+   * because they answer questions a visitor is not asking.
+   */
+  showTokenUsage?: boolean;
 };
 
 export type ChatExtrasContribution = {
@@ -622,6 +639,34 @@ export type ChatExtrasContribution = {
 
 export const LoopChatExtras =
   defineContributionPoint<ChatExtrasContribution>('loop.chat.extras');
+
+/**
+ * What the notebook already holds when the workspace opens.
+ *
+ * The notebook plugin ships one opening cell with a result in it, so a visitor
+ * never meets a blank editor. A host whose argument needs more — a landing
+ * page showing several cells and an output in the first viewport — contributes
+ * its own here, and the notebook view opens on that instead. First
+ * contribution wins.
+ *
+ * `notebook` is a factory rather than a document: `EphemeralNotebook` keeps
+ * the object it is first given and edits it in place, so a shared literal
+ * would be a shared notebook. `prime` is the code the view runs on the sandbox
+ * as soon as one is ready, so the kernel agrees with the cells on screen —
+ * without it a variable the cells show is undefined the first time anyone
+ * uses it. Left unset, the code cells' own source is run, top to bottom.
+ */
+export type OpeningNotebookContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** The document to open on, built fresh per mount. */
+  notebook: () => import('@jupyterlab/nbformat').INotebookContent;
+  /** Code to run on the sandbox so it matches the cells; defaults to them. */
+  prime?: string;
+};
+
+export const LoopOpeningNotebook =
+  defineContributionPoint<OpeningNotebookContribution>('loop.notebook.opening');
 
 /**
  * Whether there is anything to chat with.
@@ -853,3 +898,117 @@ export {
   type LoopPromptState,
   type SuggestedPrompt,
 } from './promptStore';
+
+/**
+ * How the chat view arranges its parts.
+ *
+ * The chat view assembles everything — the editor surfaces, the transcript
+ * column, the composer, the openers, the surface picker — and by default lays
+ * them out as a split: editor beside transcript, prompt underneath. A layout
+ * contribution takes those same parts, already wired, and arranges them
+ * differently: the page-layout plugin puts the editor on a centred sheet like
+ * a document and floats the prompt at the top of it. First contribution wins.
+ *
+ * The parts are elements, not data: the composer's draft, the transcript's
+ * streaming, the surfaces' hidden mounts all stay the view's business. A
+ * layout decides where things go, never what they do.
+ */
+export type ChatLayoutParts = {
+  workspace: LoopWorkspaceContext;
+  /** The editor surfaces — every mountable surface, the active one shown. */
+  editors: ReactNode;
+  /** Whether an editor surface is on screen (false: the transcript is all). */
+  hasEditor: boolean;
+  /** The conversation column: transcript, banner, expired-key cover. */
+  transcript: ReactNode;
+  /** The composer, or null when hidden. Floating when the layout asked. */
+  prompt: ReactNode;
+  /** The openers as chips, or null. */
+  chips: ReactNode;
+  /** The surface picker strip, or null. */
+  picker: ReactNode;
+  /** A transient notice (a command's output), or null. */
+  transient: ReactNode;
+};
+
+export type ChatLayoutContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** Arranges the parts. */
+  Component: ComponentType<ChatLayoutParts>;
+  /**
+   * How this layout wants the composer built.
+   *
+   * `floating-top` is a floating card anchored to the top edge rather than
+   * the bottom — the page layout's command line over the document.
+   */
+  prompt?: 'docked' | 'floating' | 'floating-top';
+};
+
+export const LoopChatLayout =
+  defineContributionPoint<ChatLayoutContribution>('loop.chat.layout');
+
+/**
+ * A panel attached to the composer, above or below it.
+ *
+ * The input-prompt plugin opens this point and renders every contribution
+ * inside the prompt's own card — so on a floating composer the panel floats
+ * with it. The page layout uses it to show the current turn beside a prompt
+ * whose transcript is out of sight; a host could hang anything else there.
+ */
+export type PromptPanelContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** Which side of the composer. `below` when unsaid. */
+  placement?: 'above' | 'below';
+  /** Among panels on the same side; lower first. */
+  order?: number;
+  Component: ComponentType<{ workspace: LoopWorkspaceContext }>;
+};
+
+export const LoopPromptPanel =
+  defineContributionPoint<PromptPanelContribution>('loop.prompt.panel');
+
+/**
+ * The conversation's current turn, as a live value.
+ *
+ * What was just asked and what is being answered — the last user message,
+ * the assistant's reply as it streams, and where the turn stands. The chat
+ * plugin contributes one of these and its view keeps it current; anything
+ * that shows a conversation without the transcript (the page layout's turn
+ * panel) reads it. A new turn replaces the old one entirely, which is what
+ * "cleared on each turn" means for a reader.
+ */
+export type ChatTurnStatus =
+  'idle' | 'thinking' | 'streaming' | 'done' | 'error';
+
+export type ChatTurnSnapshot = {
+  /** Counts up per turn, so a reader can tell a new turn from an edit. */
+  id: number;
+  /** What the person sent. */
+  user?: string;
+  /** What the agent has said so far. */
+  assistant?: string;
+  status: ChatTurnStatus;
+  /**
+   * The context window as the agent last reported it — what a turn footer
+   * draws: the window's fill, and this turn's tokens in and out.
+   */
+  usage?: import('../../types').ContextSnapshotData;
+  /**
+   * What the agent is doing right now, in a short line — "Analyst is adding
+   * a cell…" — while a tool runs; cleared when it returns. For a layout that
+   * shows the work rather than the transcript.
+   */
+  activity?: string;
+};
+
+export type ChatTurnContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** The turn, live. */
+  turn: ReadonlySignal<ChatTurnSnapshot>;
+};
+
+export const LoopChatTurn =
+  defineContributionPoint<ChatTurnContribution>('loop.chat.turn');

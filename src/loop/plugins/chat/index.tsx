@@ -23,6 +23,7 @@ import {
   LoopChatExtras,
   LoopChatHeader,
   LoopChatSuggestion,
+  LoopChatTurn,
   LoopCommand,
   LoopFrontendTool,
   LoopDocumentToolbarItem,
@@ -30,6 +31,7 @@ import {
   LoopViewType,
   type EditorToolbarContext,
 } from '../../core';
+import { createTurnFeed, feedWriters } from './turnState';
 
 /**
  * An editor toolbar button that asks an agent to do something.
@@ -139,8 +141,14 @@ export type ChatPluginConfig = {
    * card over the workspace, bottom-centre until somebody moves it. For a
    * shell that is mostly canvas. `loopPlugins({ floatingPrompt: true })` asks
    * for it together with the `/prompt` command that focuses it.
+   *
+   * `top` puts it above everything — a horizontal bar across the workspace,
+   * with the openers as a row of chips directly under it. For a host whose
+   * editor is the point: the notebook takes the rest of the height, the
+   * prompt reads as its command line rather than as a chat's tail, and a
+   * reader who has never seen the product knows what to type first.
    */
-  promptPlacement: 'bottom' | 'bottom-chat' | 'floating';
+  promptPlacement: 'top' | 'bottom' | 'bottom-chat' | 'floating';
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
@@ -175,7 +183,26 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     LoopChatHeader,
     LoopChatSuggestion,
     LoopChatExtras,
+    LoopChatTurn,
   ],
+  /*
+   * The current turn, contributed at build so it is one per reactor.
+   *
+   * The chat both opens `LoopChatTurn` and fills it: the point is how anyone
+   * else reads the turn (the page layout's panel under the prompt), and the
+   * chat view is what keeps it current. The feed's writers travel with the
+   * contribution so the view can find its own reactor's feed without a
+   * module-level singleton two workspaces on one page would share.
+   */
+  build: ctx => {
+    const feed = createTurnFeed();
+    ctx.contribute(
+      LoopChatTurn,
+      { id: 'chat-turn', turn: feed.turn, ...feedWriters(feed) },
+      { id: 'chat-turn' },
+    );
+    return {};
+  },
   contributes: [
     contribution(
       LoopViewType,

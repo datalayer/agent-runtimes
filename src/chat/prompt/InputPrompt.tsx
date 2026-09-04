@@ -15,6 +15,7 @@
  */
 
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
@@ -37,7 +38,9 @@ import {
   ToolsMenu,
   SkillsMenu,
   ModelSelector,
+  SuggestionsMenu,
 } from './menus';
+import type { PromptSuggestion } from './menus/SuggestionsMenu';
 import { ContextPie } from '../usage/ContextPie';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
 import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
@@ -99,6 +102,15 @@ export interface InputPromptProps {
    */
   footerExtras?: ReactNode;
   /**
+   * Panels inside the prompt's card, above and below the composer itself.
+   *
+   * Inside rather than beside, so a floating prompt carries them: the loop's
+   * page layout hangs the current turn under the composer this way, and it
+   * travels with the card when the card is dragged.
+   */
+  leadingPanel?: ReactNode;
+  trailingPanel?: ReactNode;
+  /**
    * Where the prompt stands.
    *
    * `'docked'` (the default) renders it in the flow, claiming its strip of
@@ -111,6 +123,12 @@ export interface InputPromptProps {
    * need be wired for it.
    */
   placement?: InputPromptPlacement;
+  /**
+   * Which edge a floating prompt starts on: `bottom` (the default) or
+   * `top`, for a layout whose composer is the command line over a page.
+   * Ignored when docked.
+   */
+  floatingAnchor?: 'bottom' | 'top';
   /** @deprecated Use `placement="floating"`; `true` maps to exactly that. */
   draggable?: boolean;
   /**
@@ -190,6 +208,17 @@ export interface InputPromptProps {
   showModelSelector: boolean;
   showToolsMenu: boolean;
   showSkillsMenu: boolean;
+  /**
+   * Whether the footer offers the agent's suggestions.
+   *
+   * True by default: beside agents, tools, skills and model, a menu of the
+   * openers the agent's spec (or its team) offers. Picking one puts the text
+   * in the box — it does not send. The list is `suggestions`, or, when a
+   * host gave only `typingSuggestions`, those.
+   */
+  showSuggestionsMenu?: boolean;
+  /** The openers behind that menu: what the item shows, and what lands. */
+  suggestions?: PromptSuggestion[];
   codemodeEnabled: boolean;
   /**
    * Optional callback invoked when the user toggles codemode from the Tools
@@ -273,9 +302,12 @@ export function InputPrompt({
   focusTrigger,
   padding,
   placement,
+  floatingAnchor = 'bottom',
   draggable = false,
   container,
   footerExtras,
+  leadingPanel,
+  trailingPanel,
   onSend,
   onStop,
   disableInputPrompt = false,
@@ -293,6 +325,8 @@ export function InputPrompt({
   showModelSelector,
   showToolsMenu,
   showSkillsMenu,
+  showSuggestionsMenu = true,
+  suggestions,
   codemodeEnabled,
   onToggleCodemode,
   isA2AProtocol,
@@ -357,6 +391,19 @@ export function InputPrompt({
   const modelsOffered = showModelSelector;
   const toolsOffered = showToolsMenu;
   const skillsOffered = showSkillsMenu;
+  /*
+   * The suggestions control: the openers as a menu, when there are any.
+   *
+   * `suggestions` when the host gave them; otherwise the typing openers,
+   * which are the same sentences in the placeholder's clothes. Picking one
+   * writes the box and bumps a local focus nonce, so the caret lands where
+   * the words did without the host having to wire anything.
+   */
+  const suggestionItems: PromptSuggestion[] =
+    suggestions ??
+    (typingSuggestions ?? []).map(text => ({ title: text, message: text }));
+  const suggestionsOffered = showSuggestionsMenu && suggestionItems.length > 0;
+  const [pickedFocus, setPickedFocus] = useState(0);
   const anyOffered =
     agentsOffered || modelsOffered || toolsOffered || skillsOffered;
   const extrasOffered = Boolean(footerExtras);
@@ -392,6 +439,7 @@ export function InputPrompt({
 
   const body = (
     <Box>
+      {leadingPanel}
       {/* Input Area — powered by the standalone InputPrompt component */}
       <InputPromptBase
         variant={promptVariant}
@@ -424,7 +472,7 @@ export function InputPrompt({
         onSend={onSend}
         onStop={onStop}
         autoFocus={autoFocus}
-        focusTrigger={focusTrigger}
+        focusTrigger={(focusTrigger ?? 0) + pickedFocus}
         padding={padding}
         value={input}
         onChange={setInput}
@@ -505,7 +553,7 @@ export function InputPrompt({
                   subtle: true,
                   content: (
                     <>
-                      {anyOffered || extrasOffered ? (
+                      {anyOffered || extrasOffered || suggestionsOffered ? (
                         <>
                           {/* Agents Menu */}
                           {agentsOffered && (
@@ -557,6 +605,18 @@ export function InputPrompt({
                             />
                           )}
 
+                          {/* Suggestions: the agent's openers, one click
+                              from the box. Picking one prompts, not sends. */}
+                          {suggestionsOffered && (
+                            <SuggestionsMenu
+                              suggestions={suggestionItems}
+                              onPick={text => {
+                                setInput(text);
+                                setPickedFocus(n => n + 1);
+                              }}
+                            />
+                          )}
+
                           {/* Whatever the host brought; see `footerExtras`. */}
                           {extrasOffered && (
                             <Box
@@ -583,6 +643,7 @@ export function InputPrompt({
             : []
         }
       />
+      {trailingPanel}
     </Box>
   );
 
@@ -591,7 +652,11 @@ export function InputPrompt({
   // only decides which subtree it stands in.
   const floating =
     (placement ?? (draggable ? 'floating' : 'docked')) === 'floating';
-  const framed = floating ? <FloatingCard>{body}</FloatingCard> : body;
+  const framed = floating ? (
+    <FloatingCard anchor={floatingAnchor}>{body}</FloatingCard>
+  ) : (
+    body
+  );
   return container ? createPortal(framed, container) : framed;
 }
 

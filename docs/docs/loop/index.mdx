@@ -81,6 +81,11 @@ inside the Datalayer app, and inside a JupyterLab panel.
 | `LoopChatHeader` | chat plugin | chat-header plugin — same shape for the conversation's title bar |
 | `LoopChatSuggestion` | chat plugin | capacity plugins — openers shown ahead of the spec's own |
 | `LoopAgentBlueprint` | agents plugin | capacity plugins — which agent the Local target creates, from which spec |
+| `LoopChatLayout` | chat plugin | page-layout plugin — the chat view assembles its parts (editors, transcript, prompt, chips, picker) and a layout arranges them; the default is the split |
+| `LoopChatExtras` | chat plugin | a host, via `createChatExtrasPlugin()` — a *live* signal carrying an error banner, the codemode toggle, MCP status, a tool-result renderer, extra frontend tools, or `hidePrompt`, for a page composing panels around a `LoopEmbed` |
+| `LoopOpeningNotebook` | notebook plugin | a host — the notebook the editor opens on (several cells, outputs already in them) in place of the plugin's one cell, plus the code run to prime the sandbox |
+| `LoopPromptPanel` | input-prompt plugin | page-layout plugin — a panel hung on the composer, `above` or `below` it, *inside* its card so a floating prompt carries it |
+| `LoopChatTurn` | chat plugin (opens **and** fills it) | readers — the current turn as a live signal: the last user message, the reply as it streams, and its status; a new message replaces it. The page layout's turn panel reads it |
 | `LoopCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |
 | `LoopAgentGate` | chat plugin | agents plugin — whether there is anything to talk to, and why not |
 | `LoopNotebookToolbar` / `LoopDocumentToolbar` items | toolbar plugins | the chat contributes its agent actions onto the editors' toolbars |
@@ -88,6 +93,26 @@ inside the Datalayer app, and inside a JupyterLab panel.
 
 The segmented editor control shows **nothing at all** until a plugin
 contributes an editor: an empty workspace is an empty control, not a fake one.
+
+#### The page layout
+
+`loopPlugins({ pageLayout: true })` mounts `PageLayoutPlugin`, which fills
+`LoopChatLayout`: the notebook or the document sits on a centred sheet over a
+quiet canvas, like a document application; the composer floats at the *top*
+of the canvas (`promptPlacement` is overridden to a floating card anchored
+top) with the openers as chips under it; and the conversation is a side
+panel, closed until the header's toggle — or a host calling
+`openConversationPanel()` — opens it. The transcript stays mounted while the
+panel is closed, so the agent's tools keep running. `NotebookPageAgent` and
+`DocumentPageAgent` in the examples app are the two editors on that layout.
+
+The **turn panel** hangs the current turn on the composer (`LoopPromptPanel`,
+fed by `LoopChatTurn`): the message just sent, the reply as it streams, and —
+while a tool runs — what the agent is doing in the page ("Analyst is adding a
+cell…", also shown at the top of the sheet). `pageLayoutTurnPanel` picks the
+side (`below` by default), `pageLayoutTurnPanelFooter` what goes under the
+reply (`full` footer, `actions` only, or `none`). A host can also switch the
+composer's counters off live with the extras channel's `showTokenUsage`.
 
 The shell plugin is itself a thin wrapper over the generic
 `@datalayer/reactor-shell` plugin from the reactor repository: the choice

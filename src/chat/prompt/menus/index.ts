@@ -18,3 +18,4 @@ export { InlineAgentsMenu } from './InlineAgentsMenu';
 export { ToolsMenu } from './ToolsMenu';
 export { SkillsMenu } from './SkillsMenu';
 export { ModelSelector } from './ModelSelector';
+export { SuggestionsMenu } from './SuggestionsMenu';

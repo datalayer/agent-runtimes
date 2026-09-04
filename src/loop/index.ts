@@ -81,6 +81,32 @@ export {
   CHAT_EXTRAS_PLUGIN_NAME,
   type ChatExtrasHandle,
 } from './plugins/chat-extras';
+// The live channels a host feeds the workspace through, and what it can
+// read back: the chat extras, the opening notebook, and who the team is
+// talking to. A page composing panels around a `LoopEmbed` needs all three.
+export {
+  LoopChatExtras,
+  LoopChatLayout,
+  LoopChatTurn,
+  LoopOpeningNotebook,
+  LoopPromptPanel,
+  type ChatLayoutContribution,
+  type ChatLayoutParts,
+  type ChatTurnContribution,
+  type ChatTurnSnapshot,
+  type ChatTurnStatus,
+  type LoopChatExtrasValue,
+  type OpeningNotebookContribution,
+  type PromptPanelContribution,
+} from './core';
+export {
+  PageLayoutPlugin,
+  PAGE_LAYOUT_PLUGIN_NAME,
+  openConversationPanel,
+  pageLayoutPanelOpen,
+} from './plugins/page-layout';
+export { useOptionalTeamSelection } from './plugins/agents/useTeamSelection';
+export type { TeamMember, TeamSelection } from './plugins/agents/team';
 export { ChatViewPlugin, CHAT_VIEW_PLUGIN_NAME } from './plugins/chat-view';
 export {
   NotebookViewPlugin,

@@ -23,6 +23,7 @@ import {
   LoopCommand,
   LoopEditorView,
   LoopFrontendTool,
+  LoopOpeningNotebook,
   requestSurface,
   LoopNotebookToolbar,
 } from '../../core';
@@ -45,7 +46,10 @@ export const NotebookPlugin = definePlugin({
   // point, it cannot know who opened it. Declaring it is also what makes
   // the notebook toolbar visible on the plugin graph before anything has
   // filled it — which is exactly when knowing it exists is most useful.
-  contributionPoints: [LoopNotebookToolbar],
+  // And the opening notebook: what the editor holds before anyone types. The
+  // plugin ships one cell with a result; a host whose argument needs several
+  // contributes its own, and the view opens on that instead.
+  contributionPoints: [LoopNotebookToolbar, LoopOpeningNotebook],
   contributes: [
     // The editor: one entry in the shell's segmented control, one view in
     // the editor column.

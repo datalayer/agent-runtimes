@@ -48,6 +48,7 @@ import { ModelsPlugin } from './plugins/models';
 import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
+import { PageLayoutPlugin } from './plugins/page-layout';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -70,6 +71,28 @@ export type LoopPresetOptions = {
   promptPlacement?: ChatPluginConfig['promptPlacement'];
   /** Whether a person may choose between agent variants. */
   showAgentVariants?: boolean;
+  /**
+   * Whether the header offers the team's member picker. True by default; a
+   * host that renders the choice itself passes `false`.
+   */
+  teamPicker?: boolean;
+  /**
+   * The page layout: the editor on a centred sheet, like a document, with
+   * the composer floating at the top of it and the conversation in a panel
+   * beside it. Mounts `PageLayoutPlugin`, which arranges the chat view's
+   * parts through the `LoopChatLayout` point.
+   */
+  pageLayout?: boolean;
+  /**
+   * Where the page layout hangs the current turn on the composer: `below`
+   * (the default), `above`, or `none`. Only read with `pageLayout`.
+   */
+  pageLayoutTurnPanel?: 'below' | 'above' | 'none';
+  /**
+   * What the turn panel draws under the reply: the full turn footer
+   * (counters, copy, dismiss — the default), `actions` only, or `none`.
+   */
+  pageLayoutTurnPanelFooter?: 'full' | 'actions' | 'none';
   /**
    * The agent summary badge in the workspace header. On by default; a host
    * whose page already introduces the agent switches it off.
@@ -142,6 +165,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     showAgentVariants = false,
     agentSummary = true,
     teamId,
+    teamPicker = true,
+    pageLayout = false,
+    pageLayoutTurnPanel = 'below',
+    pageLayoutTurnPanelFooter = 'full',
     localAgent,
     localAgentSpec,
     floatingPrompt = false,
@@ -182,6 +209,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       showAgentVariants,
       showAgentSummary: agentSummary,
       teamId,
+      showTeamPicker: teamPicker,
       localAgent:
         localAgent ??
         (localAgentSpec
@@ -216,6 +244,14 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       showSelector: editorSelector,
     }),
     ...(floatingPrompt ? [PromptPlugin] : []),
+    ...(pageLayout
+      ? [
+          configurePlugin(PageLayoutPlugin, {
+            turnPanel: pageLayoutTurnPanel,
+            turnPanelFooter: pageLayoutTurnPanelFooter,
+          }),
+        ]
+      : []),
     ...(graph ? [GraphViewPlugin] : []),
     ...(commandPalette ? [LoopCommandsPlugin] : []),
     ...(pluginsPanel ? [PluginsPanelPlugin] : []),

@@ -1211,6 +1211,26 @@ export interface ChatBaseProps {
   /** Callback when messages change (for tracking message count) */
   onMessagesChange?: (messages: ChatMessage[]) => void;
 
+  /**
+   * Called on *every* change to the conversation, streaming included.
+   *
+   * `onMessagesChange` fires when the number of messages changes, which is
+   * right for counting and wrong for following a reply as it arrives — the
+   * assistant's message exists from its first token and only grows. This is
+   * the streaming-aware sibling: same messages, every change.
+   */
+  onItemsChange?: (messages: ChatMessage[]) => void;
+
+  /**
+   * Every change to the transcript, tool calls included, streaming included.
+   *
+   * `onItemsChange` reports the messages; this reports everything the
+   * transcript holds — the tool calls the agent is making, with their status
+   * — for a caller that wants to say what the agent is *doing*, not only what
+   * it has said.
+   */
+  onDisplayItemsChange?: (items: Array<ChatMessage | ToolCallMessage>) => void;
+
   /** Auto-focus the input on mount */
   autoFocus?: boolean;
 

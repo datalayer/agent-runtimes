@@ -28,9 +28,21 @@ const MARGIN = 8;
 
 export type FloatingCardProps = {
   children: ReactNode;
+  /**
+   * Which edge the card starts on, until somebody moves it.
+   *
+   * `bottom` (the default): over the work but under the eye, where a
+   * composer waits without being in the way. `top`: the command line of a
+   * page — the page layout puts the prompt where a document's title bar
+   * would be, so the sheet below it reads as the thing being worked on.
+   */
+  anchor?: 'bottom' | 'top';
 };
 
-export function FloatingCard({ children }: FloatingCardProps): JSX.Element {
+export function FloatingCard({
+  children,
+  anchor = 'bottom',
+}: FloatingCardProps): JSX.Element {
   const [position, setPosition] = useState<Position>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   /* Where the pointer took hold of the card, so dragging moves the card by
@@ -97,7 +109,9 @@ export function FloatingCard({ children }: FloatingCardProps): JSX.Element {
         // eye, which is where a composer waits without being in the way.
         ...(position
           ? { left: position.left, top: position.top }
-          : { left: '50%', bottom: 16, transform: 'translateX(-50%)' }),
+          : anchor === 'top'
+            ? { left: '50%', top: 16, transform: 'translateX(-50%)' }
+            : { left: '50%', bottom: 16, transform: 'translateX(-50%)' }),
         width: 'min(640px, calc(100% - 32px))',
         zIndex: 20,
         bg: 'canvas.default',

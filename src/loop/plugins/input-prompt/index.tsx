@@ -34,7 +34,11 @@
 import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopChatComposer, type LoopChatComposerProps } from '../../core';
+import {
+  LoopChatComposer,
+  LoopPromptPanel,
+  type LoopChatComposerProps,
+} from '../../core';
 
 export const INPUT_PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-input-prompt';
 
@@ -55,6 +59,10 @@ export const InputPromptPlugin = definePlugin({
   description: 'The composer under (or over) the conversation.',
   octicon: 'pencil',
   emoji: '\u{270F}\u{FE0F}',
+  // The composer's own opening: panels hung above or below it, inside its
+  // card. Declared here so the graph shows the point before anything fills
+  // it; the page layout's current-turn panel is what normally does.
+  contributionPoints: [LoopPromptPanel],
   contributes: [
     contribution(
       LoopChatComposer,

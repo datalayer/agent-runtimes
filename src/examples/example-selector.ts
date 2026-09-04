@@ -146,6 +146,16 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Configure and run agents from specs and transports.',
   ),
   makeEntry(
+    'NotebookPageAgent',
+    () => import('./NotebookPageAgent'),
+    'A notebook as a page: floating prompt on top, a team of agents working in it.',
+  ),
+  makeEntry(
+    'DocumentPageAgent',
+    () => import('./DocumentPageAgent'),
+    'A document as a page: floating prompt on top, an agent writing in it.',
+  ),
+  makeEntry(
     'CellExample',
     () => import('./CellExample'),
     'Simple cell example.',
