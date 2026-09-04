@@ -15,7 +15,7 @@
  * only its copy and dismiss actions, or nothing. A new message replaces it
  * all: the turn feed is the last turn only, and that is the panel's contract.
  *
- * Plain text, deliberately. The reply may carry markdown; the transcript
+ * Plain text, deliberately, with the markdown marks taken off; the transcript
  * renders it, and is one click away. Here it is a running line of what the
  * agent is saying, not a second transcript.
  *
@@ -36,6 +36,7 @@ import { signal } from '@datalayer/reactor';
 import { TurnFooter } from '../../../chat/messages/TurnFooter';
 import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
 import { openConversationPanel } from './panelState';
+import { flattenMarkdown } from './plainText';
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
@@ -177,7 +178,7 @@ export function TurnPanel({
           }}
         >
           {turn.assistant ? (
-            turn.assistant
+            flattenMarkdown(turn.assistant)
           ) : turn.activity ? (
             <Text sx={{ color: 'fg.muted', fontStyle: 'italic' }}>
               {turn.activity}
