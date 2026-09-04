@@ -8,7 +8,7 @@
  *
  * The same page layout as `NotebookPageAgent`, opened on the document
  * editor instead of the notebook: a sheet at reading width, the composer
- * floating over its top, the conversation in a side panel. Ask for a
+ * docked above it at that same width, the conversation in a side panel. Ask for a
  * paragraph, a heading, a code block that runs — the agent writes it into
  * the document on the page, with the document's own tools, and the result
  * is a document a reader can keep editing by hand.
@@ -41,6 +41,9 @@ const DocumentPageAgent: React.FC = () => (
         /* The document, open on the page. */
         defaultEditor="document"
         pageLayout
+        /* The composer as a draggable card over the top of the page rather
+           than the docked band. */
+        pageLayoutPrompt="floating"
         showHeader
         editorSelector
         commandPalette

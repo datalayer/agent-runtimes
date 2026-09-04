@@ -9,9 +9,9 @@
  * The chat view's default arrangement is a split: the editor beside the
  * transcript, the prompt underneath. This plugin arranges the same parts the
  * way a document application does: the notebook or the document on a centred
- * sheet over a quiet canvas, the composer floating at the top of the sheet
- * like a command line, and the conversation in a panel at the side that
- * opens when it is wanted. The work is the page; the agent is a card over it.
+ * sheet over a quiet canvas, the composer docked in a band directly above it
+ * like a toolbar, and the conversation in a panel at the side that opens when
+ * it is wanted. The work is the page; the agent is the bar above it.
  *
  * Three contributions:
  *
@@ -23,7 +23,7 @@
  *   plugin's `LoopPromptPanel` point and fed by the chat plugin's
  *   `LoopChatTurn`: with the transcript out of sight, the message just sent,
  *   the reply as it streams and what the agent is doing in the page show in
- *   the prompt's own card, cleared by the next message. `turnPanel` says which
+ *   the prompt's own band, cleared by the next message. `turnPanel` says which
  *   side of the composer; `turnPanelFooter` what goes under the reply.
  *
  * The layout component is imported statically: it is a few boxes, and a
@@ -35,10 +35,15 @@
 
 import type { JSX } from 'react';
 import { CommentDiscussionIcon } from '@primer/octicons-react';
-import { contribution, definePlugin } from '@datalayer/reactor';
+import { definePlugin } from '@datalayer/reactor';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { IconButton } from '@primer/react';
-import { LoopChatLayout, LoopPromptPanel, LoopSlots } from '../../core';
+import {
+  LoopChatLayout,
+  LoopPromptPanel,
+  LoopSlots,
+  type ChatLayoutParts,
+} from '../../core';
 import { PageLayout } from './PageLayout';
 import { TurnPanel, type TurnPanelFooter } from './TurnPanel';
 import {
@@ -67,6 +72,15 @@ export type PageLayoutConfig = {
    * rise. `none`: no panel — the conversation is the side panel only.
    */
   turnPanel: 'below' | 'above' | 'none';
+  /**
+   * How the composer stands over the page.
+   *
+   * `docked` (the default): in a band above the canvas, at the sheet's own
+   * width, so the prompt and the page read as one column. `floating`: a
+   * draggable card anchored to the top of the canvas, hovering over a strip
+   * kept clear for it — the document application's title bar, movable.
+   */
+  prompt: 'docked' | 'floating';
   /**
    * What the turn panel draws under the reply.
    *
@@ -106,21 +120,34 @@ function ConversationToggle(): JSX.Element | null {
 
 export const PageLayoutPlugin = definePlugin<PageLayoutConfig>({
   name: PAGE_LAYOUT_PLUGIN_NAME,
-  config: { turnPanel: 'below', turnPanelFooter: 'full' },
+  config: { turnPanel: 'below', turnPanelFooter: 'full', prompt: 'docked' },
   displayName: 'Page layout',
   description:
-    'The editor — or, in the chat view, the conversation — on a centred sheet, the prompt floating over it with the current turn, the conversation in a side panel.',
+    'The editor — or, in the chat view, the conversation — on a centred sheet, the prompt docked above it at the same width or floating over it as a draggable card, the current turn under the prompt, the conversation in a side panel.',
   octicon: 'file',
   emoji: '\u{1F4C4}',
-  contributes: [
-    contribution(
-      LoopChatLayout,
-      // The composer as a floating card anchored to the top of the page.
-      { id: 'page-layout', prompt: 'floating-top', Component: PageLayout },
-      { id: 'page-layout' },
-    ),
-  ],
   build: ({ config, ...ctx }) => {
+    /*
+      The layout, contributed per build because the composer's stance is
+      configuration: `docked-top` means the layout owns the composer's width
+      — `PageLayout` gives it a mount point the width of the sheet, so the
+      prompt and the page read as one column; `floating-top` is the draggable
+      card, sized by itself, over a strip of canvas kept clear for it. The
+      component closes over the choice once, per build.
+    */
+    const promptMode = config.prompt;
+    const ConfiguredLayout = (parts: ChatLayoutParts): JSX.Element => (
+      <PageLayout {...parts} promptMode={promptMode} />
+    );
+    ctx.contribute(
+      LoopChatLayout,
+      {
+        id: 'page-layout',
+        prompt: promptMode === 'floating' ? 'floating-top' : 'docked-top',
+        Component: ConfiguredLayout,
+      },
+      { id: 'page-layout' },
+    );
     // The turn panel is configuration-dependent, so it is contributed here
     // rather than statically: which side, what footer, or not at all. The
     // component closes over the footer choice once, per build.

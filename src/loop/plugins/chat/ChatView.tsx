@@ -1232,7 +1232,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     connectionConfirmed: !chatDisabled,
     // Tighter on top: every pixel of the composer is a pixel of the editor
     // under it pushed down, and the bar reads as a command line at this size.
-    padding: topPrompt || layout?.prompt === 'floating-top' ? 2 : 3,
+    // Both of the page layout's placements are that bar — one floating over
+    // the page, one docked above it — so both take the tighter padding.
+    padding:
+      topPrompt ||
+      layout?.prompt === 'floating-top' ||
+      layout?.prompt === 'docked-top'
+        ? 2
+        : 3,
     promptVariant: 'lexical',
     autoFocus: true,
     mentionableAgents: mentionable,

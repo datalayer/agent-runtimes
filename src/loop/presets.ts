@@ -78,9 +78,9 @@ export type LoopPresetOptions = {
   teamPicker?: boolean;
   /**
    * The page layout: the editor on a centred sheet, like a document, with
-   * the composer floating at the top of it and the conversation in a panel
-   * beside it. Mounts `PageLayoutPlugin`, which arranges the chat view's
-   * parts through the `LoopChatLayout` point.
+   * the composer docked above it at the sheet's own width and the
+   * conversation in a panel beside it. Mounts `PageLayoutPlugin`, which
+   * arranges the chat view's parts through the `LoopChatLayout` point.
    */
   pageLayout?: boolean;
   /**
@@ -88,6 +88,12 @@ export type LoopPresetOptions = {
    * (the default), `above`, or `none`. Only read with `pageLayout`.
    */
   pageLayoutTurnPanel?: 'below' | 'above' | 'none';
+  /**
+   * How the page layout stands the composer over the page: `docked` (the
+   * default) in a band above the canvas at the sheet's width, or `floating`
+   * as a draggable card over the top of the canvas.
+   */
+  pageLayoutPrompt?: 'docked' | 'floating';
   /**
    * What the turn panel draws under the reply: the full turn footer
    * (counters, copy, dismiss — the default), `actions` only, or `none`.
@@ -168,6 +174,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     teamPicker = true,
     pageLayout = false,
     pageLayoutTurnPanel = 'below',
+    pageLayoutPrompt = 'docked',
     pageLayoutTurnPanelFooter = 'full',
     localAgent,
     localAgentSpec,
@@ -249,6 +256,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
           configurePlugin(PageLayoutPlugin, {
             turnPanel: pageLayoutTurnPanel,
             turnPanelFooter: pageLayoutTurnPanelFooter,
+            prompt: pageLayoutPrompt,
           }),
         ]
       : []),

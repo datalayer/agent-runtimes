@@ -7,9 +7,9 @@
  * A notebook as a page, with a team of agents working in it.
  *
  * The page layout: the notebook on a centred sheet over a quiet canvas, like
- * a document application; the composer floating over the top of the sheet
- * as its command line; the conversation in a panel at the side, opened from
- * the header when it is wanted. Ask the Analyst for an analysis and the cells
+ * a document application; the composer docked directly above the sheet and
+ * exactly as wide, as its command line; the conversation in a panel at the
+ * side, opened from the header when it is wanted. Ask the Analyst for an analysis and the cells
  * appear on the page; ask the Reviewer to check it and the verdict lands
  * beside them.
  *
@@ -41,6 +41,9 @@ const NotebookPageAgent: React.FC = () => (
         /* The notebook, open on the page. */
         defaultEditor="notebook"
         pageLayout
+        /* The composer as a draggable card over the top of the page rather
+           than the docked band. */
+        pageLayoutPrompt="floating"
         /* The header carries the editor choice — notebook, document, or the
            conversation alone — and the page layout's conversation toggle. */
         showHeader

@@ -8,14 +8,24 @@
  *
  * A quiet canvas fills the view. On it, one sheet — the notebook or the
  * document, at a reading width, with the margins and the shadow a page has —
- * and the composer floating over the top of the canvas like the title bar of
- * a document application, with the openers as chips directly under it. In
- * the chat view there is no editor, so the transcript is the page: the same
- * sheet, holding the conversation, and no side panel. While
+ * and the composer docked in a band directly above the canvas — or, when the
+ * host asks for it, floating over the canvas as a draggable card — like the
+ * toolbar of a document application, with the openers as chips directly
+ * under it. In the chat view there is no editor, so the transcript is the
+ * page: the same sheet, holding the conversation, and no side panel. While
  * an agent works in the page, a small line at the top of the sheet says what
  * it is doing — "Analyst is adding a cell…" — so the change is seen where it
  * happens. The conversation is a panel on the right that opens when it is
  * wanted; closed, the page is all there is.
+ *
+ * The band holds one **mount point**, and that is what gives the composer its
+ * width: the same `SHEET_WIDTH` column the sheet gets, centred the same way,
+ * inside the same canvas padding. So the prompt and the page below it are one
+ * column with one pair of edges, and they stay one when the conversation
+ * panel opens and narrows the canvas — because the band lives inside the page
+ * column, not across the whole view. A floating card sized itself
+ * (`min(640px, …)`), which is why it never lined up with anything and had to
+ * be given a strip of empty canvas to hover over.
  *
  * Nothing here decides what the parts do. The view wired them; this arranges
  * them, which is the whole contract of `LoopChatLayout`.
@@ -39,13 +49,13 @@ const SHEET_WIDTH = 920;
 /** The conversation panel, when open. */
 const PANEL_WIDTH = 400;
 /**
- * The band at the top of the canvas the floating composer sits over.
+ * The canvas' own gutters, shared by the sheet and the composer's band.
  *
- * The card is absolutely positioned, so the flow has to leave room for it or
- * the sheet slides underneath: measured, the composer with its footer stands
- * about 180px tall, anchored 16px from the top.
+ * One constant rather than two literals: the two are only aligned as long as
+ * they are equal, and a column that lines up by coincidence stops lining up
+ * the first time one of them is edited.
  */
-const PROMPT_BAND = 188;
+const CANVAS_PX = [2, 3, 4];
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
@@ -97,6 +107,24 @@ function ActivityLine({ label }: { label: string }): JSX.Element {
   );
 }
 
+/**
+ * The strip of canvas kept clear under a floating composer.
+ *
+ * The card is absolutely positioned, so the flow has to leave room for it or
+ * the sheet slides underneath: measured, the composer with its footer stands
+ * about 170px tall, anchored 16px from the top.
+ */
+const PROMPT_BAND = 188;
+
+export type PageLayoutProps = ChatLayoutParts & {
+  /**
+   * `docked` (the default): the composer in a band above the canvas, at the
+   * sheet's width. `floating`: the draggable card over the top of the canvas.
+   * Set by the plugin from its configuration.
+   */
+  promptMode?: 'docked' | 'floating';
+};
+
 export function PageLayout({
   editors,
   hasEditor,
@@ -105,7 +133,9 @@ export function PageLayout({
   chips,
   picker,
   transient,
-}: ChatLayoutParts): JSX.Element {
+  promptMode = 'docked',
+}: PageLayoutProps): JSX.Element {
+  const floating = promptMode === 'floating';
   const panelOpen = useSignalValue(pageLayoutPanelOpen);
   const turnEntries = useContributions(LoopChatTurn);
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
@@ -123,7 +153,7 @@ export function PageLayout({
   return (
     <Box
       sx={{
-        // The positioned ancestor the floating prompt anchors to.
+        // The positioned ancestor the out-of-sight transcript parks against.
         position: 'relative',
         flex: '1 1 auto',
         minHeight: 0,
@@ -143,86 +173,127 @@ export function PageLayout({
           bg: 'canvas.inset',
         }}
       >
-        {/* The page. */}
+        {/* The page column: the composer's band, and the canvas under it.
+            Both live in here rather than the row, so the conversation panel
+            narrows the two of them together and the column stays a column. */}
         <Box
           sx={{
             flex: '1 1 auto',
             minWidth: 0,
             minHeight: 0,
-            // An editor's sheet grows with its content and the canvas
-            // scrolls; the transcript's sheet fills the canvas and scrolls
-            // inside, so the conversation keeps following the stream.
-            overflowY: hasEditor ? 'auto' : 'hidden',
-            overflowX: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            // Room for the floating prompt above the first line of the
-            // sheet — only while there is one; a host that hid the prompt
-            // gets the sheet where the eye lands.
-            pt: prompt ? `${PROMPT_BAND}px` : 3,
-            pb: 6,
-            px: [2, 3, 4],
           }}
         >
-          {/* The openers, under the composer and above the sheet. */}
-          {prompt && chips ? (
+          {/* The composer, docked above the page: the band spans the canvas,
+              the mount point inside it is the page's own column, so the two
+              share one pair of edges. Nothing when the host hid the prompt —
+              an empty band is a strip of chrome that does nothing. */}
+          {prompt && !floating ? (
             <Box
+              data-page-prompt-dock=""
               sx={{
-                width: '100%',
-                maxWidth: SHEET_WIDTH,
-                mb: 3,
+                flex: '0 0 auto',
                 display: 'flex',
                 justifyContent: 'center',
-                '& > *': { justifyContent: 'center' },
+                px: CANVAS_PX,
+                // The composer brings its own padding, its own border and
+                // its own `canvas.subtle`; the band only has to carry them
+                // the full width of the canvas and close with a rule.
+                bg: 'canvas.subtle',
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
               }}
             >
-              {chips}
+              {/* The mount point: the same column the sheet gets, so
+                  `[data-page-prompt-dock] > *` and `[data-page-sheet]`
+                  measure the same width and the same left edge. */}
+              <Box sx={{ width: '100%', maxWidth: SHEET_WIDTH, minWidth: 0 }}>
+                {prompt}
+              </Box>
             </Box>
           ) : null}
-          {/* What the agent is doing, at the top of the sheet, while it does. */}
-          {turn.activity ? (
+          {/* The page. */}
+          <Box
+            sx={{
+              flex: '1 1 auto',
+              minWidth: 0,
+              minHeight: 0,
+              // An editor's sheet grows with its content and the canvas
+              // scrolls; the transcript's sheet fills the canvas and scrolls
+              // inside, so the conversation keeps following the stream.
+              overflowY: hasEditor ? 'auto' : 'hidden',
+              overflowX: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              // Under a floating card, room for it above the first line of
+              // the sheet — only while there is one.
+              pt: floating && prompt ? `${PROMPT_BAND}px` : 3,
+              pb: 6,
+              px: CANVAS_PX,
+            }}
+          >
+            {/* The openers, under the composer and above the sheet. */}
+            {prompt && chips ? (
+              <Box
+                sx={{
+                  width: '100%',
+                  maxWidth: SHEET_WIDTH,
+                  mb: 3,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  '& > *': { justifyContent: 'center' },
+                }}
+              >
+                {chips}
+              </Box>
+            ) : null}
+            {/* What the agent is doing, at the top of the sheet, while it does. */}
+            {turn.activity ? (
+              <Box
+                sx={{
+                  width: '100%',
+                  maxWidth: SHEET_WIDTH,
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  mb: 2,
+                }}
+              >
+                <ActivityLine label={turn.activity} />
+              </Box>
+            ) : null}
             <Box
+              data-page-sheet=""
               sx={{
                 width: '100%',
                 maxWidth: SHEET_WIDTH,
+                flex: hasEditor ? '0 0 auto' : '1 1 auto',
+                bg: 'canvas.default',
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: '10px',
+                boxShadow:
+                  '0 1px 2px rgba(0,0,0,0.06), 0 24px 48px -28px rgba(0,0,0,0.35)',
+                // The page's own margins. The editors inside fill the sheet
+                // and read against these, as text on paper does; the
+                // transcript brings its own gutters, so it sits closer.
+                px: hasEditor ? [3, 4, '56px'] : [2, 3, 4],
+                py: hasEditor ? [3, 4, 4] : 2,
+                // The editors position their hidden siblings against this.
+                position: 'relative',
                 display: 'flex',
-                justifyContent: 'flex-end',
-                mb: 2,
-              }}
-            >
-              <ActivityLine label={turn.activity} />
-            </Box>
-          ) : null}
-          <Box
-            sx={{
-              width: '100%',
-              maxWidth: SHEET_WIDTH,
-              flex: hasEditor ? '0 0 auto' : '1 1 auto',
-              bg: 'canvas.default',
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: '10px',
-              boxShadow:
-                '0 1px 2px rgba(0,0,0,0.06), 0 24px 48px -28px rgba(0,0,0,0.35)',
-              // The page's own margins. The editors inside fill the sheet
-              // and read against these, as text on paper does; the
-              // transcript brings its own gutters, so it sits closer.
-              px: hasEditor ? [3, 4, '56px'] : [2, 3, 4],
-              py: hasEditor ? [3, 4, 4] : 2,
-              // The editors position their hidden siblings against this.
-              position: 'relative',
-              display: 'flex',
-              minHeight: hasEditor ? 480 : 0,
-              /*
+                minHeight: hasEditor ? 480 : 0,
+                /*
                 The editors fill the sheet, not the viewport: the sheet grows
                 with its content and the canvas scrolls, which is what makes
                 it a page.
               */
-              '& > *': { flex: '1 1 auto', minWidth: 0 },
-            }}
-          >
-            {hasEditor ? editors : transcript}
+                '& > *': { flex: '1 1 auto', minWidth: 0 },
+              }}
+            >
+              {hasEditor ? editors : transcript}
+            </Box>
           </Box>
         </Box>
 
@@ -240,7 +311,8 @@ export function PageLayout({
               bg: 'canvas.default',
               borderLeft: '1px solid',
               borderColor: 'border.default',
-              // Over the canvas but under the floating prompt.
+              // Over the canvas, and beside the composer's band rather than
+              // under it: the band belongs to the page column.
               zIndex: 1,
               '& > *': { flex: '1 1 auto', minHeight: 0 },
             }}
@@ -267,9 +339,9 @@ export function PageLayout({
         )}
       </Box>
       {transient}
-      {/* Floating, anchored to the top of the canvas: the command line of
+      {/* Floating: anchored to the top of the canvas, the command line of
           the page. It positions itself against the relative root above. */}
-      {prompt}
+      {floating ? prompt : null}
     </Box>
   );
 }

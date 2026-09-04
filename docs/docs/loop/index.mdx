@@ -98,9 +98,10 @@ contributes an editor: an empty workspace is an empty control, not a fake one.
 
 `loopPlugins({ pageLayout: true })` mounts `PageLayoutPlugin`, which fills
 `LoopChatLayout`: the notebook or the document sits on a centred sheet over a
-quiet canvas, like a document application; the composer floats at the *top*
-of the canvas (`promptPlacement` is overridden to a floating card anchored
-top) with the openers as chips under it; and the conversation is a side
+quiet canvas, like a document application; the composer stands at the *top*
+of the page — docked in a band at the sheet's width by default, or as a
+draggable card over the canvas with `pageLayoutPrompt: 'floating'` — with the
+openers as chips under it; and the conversation is a side
 panel, closed until the header's toggle — or a host calling
 `openConversationPanel()` — opens it. The transcript stays mounted while the
 panel is closed, so the agent's tools keep running. `NotebookPageAgent` and
@@ -117,7 +118,7 @@ composer's counters off live with the extras channel's `showTokenUsage`.
 The layout follows the view. With a notebook or a document open, that editor
 is the sheet and the transcript lives in the side panel. In the chat view
 there is no editor, so the transcript itself lies on the sheet: same canvas,
-same floating prompt and chips, no side panel and no turn panel — the turn is
+same prompt and chips, no side panel and no turn panel — the turn is
 already on the page. `pageLayoutSheet` (a signal, `'editor'` or
 `'transcript'`) says which is the case, for a host that wants to follow it.
 

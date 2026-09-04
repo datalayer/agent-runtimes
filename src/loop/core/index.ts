@@ -940,9 +940,13 @@ export type ChatLayoutContribution = {
    * How this layout wants the composer built.
    *
    * `floating-top` is a floating card anchored to the top edge rather than
-   * the bottom — the page layout's command line over the document.
+   * the bottom — a command line over the document, sized by the card.
+   * `docked-top` is that same command line standing in the flow instead: the
+   * layout gives it a mount point and the composer fills it, so its width is
+   * the layout's to decide and the page below starts under it rather than
+   * behind it.
    */
-  prompt?: 'docked' | 'floating' | 'floating-top';
+  prompt?: 'docked' | 'floating' | 'floating-top' | 'docked-top';
 };
 
 export const LoopChatLayout =

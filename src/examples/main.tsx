@@ -109,7 +109,7 @@ const EXAMPLE_GROUP_ORDER = [
   'AG-UI',
   'Agent',
   'Chat',
-  'Lexical',
+  'Document',
   'Notebook',
   'Cell',
   'CopilotKit',
@@ -129,6 +129,9 @@ const ANONYMOUS_EXAMPLES = new Set([
   // Temporarily anonymous so the Jupyter output surface can be driven and
   // debugged without a session. Remove once that work is finished.
   'A2UiJupyterOutputExample',
+  // The two page layouts, on the browser sandbox like the shell.
+  'NotebookPageAgent',
+  'DocumentPageAgent',
 ]);
 
 const getExampleGroup = (id: string): string => {
@@ -145,7 +148,9 @@ const getExampleGroup = (id: string): string => {
   if (id.startsWith('CopilotKit')) return 'CopilotKit';
   if (id.startsWith('Agent')) return 'Agent';
   if (id.startsWith('Chat')) return 'Chat';
-  if (id.startsWith('Lexical')) return 'Lexical';
+  // The document examples: the ones on the Lexical editor, and the page
+  // with a document on it.
+  if (id.startsWith('Lexical') || id.startsWith('Document')) return 'Document';
   if (id.startsWith('Notebook')) return 'Notebook';
   return 'Cell';
 };

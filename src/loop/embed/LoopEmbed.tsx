@@ -104,6 +104,7 @@ export function LoopEmbed({
       preset.pageLayout,
       preset.pageLayoutTurnPanel,
       preset.pageLayoutTurnPanelFooter,
+      preset.pageLayoutPrompt,
       preset.localAgentSpec,
       preset.floatingPrompt,
       preset.editorSelector,

@@ -15,9 +15,10 @@
  * only its copy and dismiss actions, or nothing. A new message replaces it
  * all: the turn feed is the last turn only, and that is the panel's contract.
  *
- * Plain text, deliberately, with the markdown marks taken off; the transcript
- * renders it, and is one click away. Here it is a running line of what the
- * agent is saying, not a second transcript.
+ * The reply is rendered as the transcript renders it — the same markdown
+ * pipeline, a size down — so a table or a list reads as one here too. What
+ * the panel is not is a second transcript: one turn, compact, and the whole
+ * conversation one click away.
  *
  * @module loop/plugins/page-layout/TurnPanel
  */
@@ -35,8 +36,10 @@ import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { signal } from '@datalayer/reactor';
 import { TurnFooter } from '../../../chat/messages/TurnFooter';
 import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
+import { Streamdown } from 'streamdown';
+import { streamdownMarkdownStyles } from '../../../chat/styles/streamdownStyles';
+import { normalizeAssistantMarkdown } from '../../../chat/messages/assistantMarkdown';
 import { openConversationPanel, pageLayoutSheet } from './panelState';
-import { flattenMarkdown } from './plainText';
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
@@ -180,12 +183,18 @@ export function TurnPanel({
             fontSize: 0,
             lineHeight: 1.5,
             color: turn.assistant ? 'fg.default' : 'fg.muted',
-            whiteSpace: 'pre-wrap',
+            // Rendered markdown brings its own flow; the plain fallbacks
+            // below keep their line breaks.
+            whiteSpace: turn.assistant ? 'normal' : 'pre-wrap',
             overflowWrap: 'anywhere',
           }}
         >
           {turn.assistant ? (
-            flattenMarkdown(turn.assistant)
+            <Box sx={{ ...streamdownMarkdownStyles, fontSize: 0 }}>
+              <Streamdown>
+                {normalizeAssistantMarkdown(turn.assistant)}
+              </Streamdown>
+            </Box>
           ) : turn.activity ? (
             <Text sx={{ color: 'fg.muted', fontStyle: 'italic' }}>
               {turn.activity}

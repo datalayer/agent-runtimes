@@ -23,6 +23,9 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bM C P\b/g, 'MCP'],
   [/\bOtel\b/g, 'OTEL'],
   [/\bAgentspecs\b/g, 'Agent Specifications'],
+  // The document editor is Lexical underneath; the examples are about the
+  // document.
+  [/\bLexical\b/g, 'Document'],
 ];
 
 function humanizeExampleName(name: string): string {
@@ -43,7 +46,7 @@ function inferTags(id: string): string[] {
   if (id.startsWith('AgUi')) tags.add('ag-ui');
   if (id.startsWith('A2Ui')) tags.add('a2ui');
   if (id.includes('Notebook')) tags.add('notebook');
-  if (id.includes('Lexical')) tags.add('lexical');
+  if (id.includes('Lexical') || id.includes('Document')) tags.add('document');
   if (id.includes('Chat')) tags.add('chat');
   if (id.includes('Sandbox')) tags.add('sandbox');
   if (id.includes('Monitoring') || id.includes('Otel'))
@@ -178,7 +181,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'CopilotKitLexicalExample',
     () => import('./CopilotKitLexicalExample'),
-    'CopilotKit integration with Lexical editor.',
+    'CopilotKit integration with the document editor.',
   ),
   makeEntry(
     'CopilotKitNotebookExample',
@@ -314,12 +317,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'LexicalAgentExample',
     () => import('./LexicalAgentExample'),
-    'Lexical document integration example.',
+    'Document agent integration example.',
   ),
   makeEntry(
     'LexicalAgentSidebarExample',
     () => import('./LexicalAgentSidebarExample'),
-    'Lexical with sidebar orchestration example.',
+    'Document agent with sidebar orchestration example.',
   ),
   makeEntry(
     'NotebookAgentExample',
