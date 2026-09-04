@@ -41,9 +41,17 @@ import { IconButton } from '@primer/react';
 import { LoopChatLayout, LoopPromptPanel, LoopSlots } from '../../core';
 import { PageLayout } from './PageLayout';
 import { TurnPanel, type TurnPanelFooter } from './TurnPanel';
-import { openConversationPanel, pageLayoutPanelOpen } from './panelState';
+import {
+  openConversationPanel,
+  pageLayoutPanelOpen,
+  pageLayoutSheet,
+} from './panelState';
 
-export { openConversationPanel, pageLayoutPanelOpen } from './panelState';
+export {
+  openConversationPanel,
+  pageLayoutPanelOpen,
+  pageLayoutSheet,
+} from './panelState';
 export type { TurnPanelFooter } from './TurnPanel';
 
 export const PAGE_LAYOUT_PLUGIN_NAME = '@datalayer/loop-plugin-page-layout';
@@ -70,8 +78,13 @@ export type PageLayoutConfig = {
 };
 
 /** The header button that opens and closes the conversation panel. */
-function ConversationToggle(): JSX.Element {
+function ConversationToggle(): JSX.Element | null {
   const open = useSignalValue(pageLayoutPanelOpen);
+  const sheet = useSignalValue(pageLayoutSheet);
+  // In the chat view the transcript is the page; there is nothing to open.
+  if (sheet === 'transcript') {
+    return null;
+  }
   return (
     <IconButton
       icon={CommentDiscussionIcon}
@@ -96,7 +109,7 @@ export const PageLayoutPlugin = definePlugin<PageLayoutConfig>({
   config: { turnPanel: 'below', turnPanelFooter: 'full' },
   displayName: 'Page layout',
   description:
-    'The editor on a centred sheet, the prompt floating over it with the current turn, the conversation in a side panel.',
+    'The editor — or, in the chat view, the conversation — on a centred sheet, the prompt floating over it with the current turn, the conversation in a side panel.',
   octicon: 'file',
   emoji: '\u{1F4C4}',
   contributes: [

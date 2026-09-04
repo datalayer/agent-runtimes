@@ -103,6 +103,7 @@ export {
   PageLayoutPlugin,
   PAGE_LAYOUT_PLUGIN_NAME,
   openConversationPanel,
+  pageLayoutSheet,
   pageLayoutPanelOpen,
 } from './plugins/page-layout';
 export { useOptionalTeamSelection } from './plugins/agents/useTeamSelection';

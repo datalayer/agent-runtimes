@@ -114,6 +114,13 @@ side (`below` by default), `pageLayoutTurnPanelFooter` what goes under the
 reply (`full` footer, `actions` only, or `none`). A host can also switch the
 composer's counters off live with the extras channel's `showTokenUsage`.
 
+The layout follows the view. With a notebook or a document open, that editor
+is the sheet and the transcript lives in the side panel. In the chat view
+there is no editor, so the transcript itself lies on the sheet: same canvas,
+same floating prompt and chips, no side panel and no turn panel — the turn is
+already on the page. `pageLayoutSheet` (a signal, `'editor'` or
+`'transcript'`) says which is the case, for a host that wants to follow it.
+
 The shell plugin is itself a thin wrapper over the generic
 `@datalayer/reactor-shell` plugin from the reactor repository: the choice
 store, the selector and the cycle command live there, and the loop supplies

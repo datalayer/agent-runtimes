@@ -9,7 +9,9 @@
  * A quiet canvas fills the view. On it, one sheet — the notebook or the
  * document, at a reading width, with the margins and the shadow a page has —
  * and the composer floating over the top of the canvas like the title bar of
- * a document application, with the openers as chips directly under it. While
+ * a document application, with the openers as chips directly under it. In
+ * the chat view there is no editor, so the transcript is the page: the same
+ * sheet, holding the conversation, and no side panel. While
  * an agent works in the page, a small line at the top of the sheet says what
  * it is doing — "Analyst is adding a cell…" — so the change is seen where it
  * happens. The conversation is a panel on the right that opens when it is
@@ -21,7 +23,7 @@
  * @module loop/plugins/page-layout/PageLayout
  */
 
-import type { JSX } from 'react';
+import { useEffect, type JSX } from 'react';
 import { Box, Text } from '@primer/react';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { signal } from '@datalayer/reactor';
@@ -30,7 +32,7 @@ import {
   type ChatLayoutParts,
   type ChatTurnSnapshot,
 } from '../../core';
-import { pageLayoutPanelOpen } from './panelState';
+import { pageLayoutPanelOpen, pageLayoutSheet } from './panelState';
 
 /** A page reads best at about this width; wider and lines run too long. */
 const SHEET_WIDTH = 920;
@@ -109,32 +111,14 @@ export function PageLayout({
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
 
   /*
-   * No editor: the conversation is the page.
-   *
-   * The picker's "Chat" choice, or a workspace with no editor plugin, leaves
-   * nothing to put on a sheet — so the transcript takes the width and the
-   * prompt keeps floating over it, which is the Loop Shell's arrangement.
+   * No editor — the picker's "Chat" choice, or a workspace without an editor
+   * plugin — and the transcript is what lies on the sheet. Told to the parts
+   * that only make sense beside an editor, through the shared signal.
    */
-  if (!hasEditor) {
-    return (
-      <Box
-        sx={{
-          position: 'relative',
-          flex: '1 1 auto',
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {picker}
-        <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
-          {transcript}
-        </Box>
-        {transient}
-        {prompt}
-      </Box>
-    );
-  }
+  const sheet = hasEditor ? 'editor' : 'transcript';
+  useEffect(() => {
+    pageLayoutSheet.value = sheet;
+  }, [sheet]);
 
   return (
     <Box
@@ -165,7 +149,10 @@ export function PageLayout({
             flex: '1 1 auto',
             minWidth: 0,
             minHeight: 0,
-            overflowY: 'auto',
+            // An editor's sheet grows with its content and the canvas
+            // scrolls; the transcript's sheet fills the canvas and scrolls
+            // inside, so the conversation keeps following the stream.
+            overflowY: hasEditor ? 'auto' : 'hidden',
             overflowX: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -211,7 +198,7 @@ export function PageLayout({
             sx={{
               width: '100%',
               maxWidth: SHEET_WIDTH,
-              flex: '0 0 auto',
+              flex: hasEditor ? '0 0 auto' : '1 1 auto',
               bg: 'canvas.default',
               border: '1px solid',
               borderColor: 'border.default',
@@ -219,13 +206,14 @@ export function PageLayout({
               boxShadow:
                 '0 1px 2px rgba(0,0,0,0.06), 0 24px 48px -28px rgba(0,0,0,0.35)',
               // The page's own margins. The editors inside fill the sheet
-              // and read against these, as text on paper does.
-              px: [3, 4, '56px'],
-              py: [3, 4, 4],
+              // and read against these, as text on paper does; the
+              // transcript brings its own gutters, so it sits closer.
+              px: hasEditor ? [3, 4, '56px'] : [2, 3, 4],
+              py: hasEditor ? [3, 4, 4] : 2,
               // The editors position their hidden siblings against this.
               position: 'relative',
               display: 'flex',
-              minHeight: 480,
+              minHeight: hasEditor ? 480 : 0,
               /*
                 The editors fill the sheet, not the viewport: the sheet grows
                 with its content and the canvas scrolls, which is what makes
@@ -234,12 +222,13 @@ export function PageLayout({
               '& > *': { flex: '1 1 auto', minWidth: 0 },
             }}
           >
-            {editors}
+            {hasEditor ? editors : transcript}
           </Box>
         </Box>
 
-        {/* The conversation, beside the page, when asked for. */}
-        {panelOpen ? (
+        {/* The conversation, beside the page, when asked for — and only
+            when the page is an editor; the transcript is the page otherwise. */}
+        {!hasEditor ? null : panelOpen ? (
           <Box
             sx={{
               flex: `0 0 ${PANEL_WIDTH}px`,

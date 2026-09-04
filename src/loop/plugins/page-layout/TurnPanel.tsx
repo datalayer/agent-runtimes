@@ -35,7 +35,7 @@ import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { signal } from '@datalayer/reactor';
 import { TurnFooter } from '../../../chat/messages/TurnFooter';
 import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
-import { openConversationPanel } from './panelState';
+import { openConversationPanel, pageLayoutSheet } from './panelState';
 import { flattenMarkdown } from './plainText';
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
@@ -86,6 +86,7 @@ export function TurnPanel({
 }): JSX.Element | null {
   const entries = useContributions(LoopChatTurn);
   const turn = useSignalValue(entries[0]?.value.turn ?? NO_TURN);
+  const sheet = useSignalValue(pageLayoutSheet);
   const replyRef = useRef<HTMLDivElement | null>(null);
   /*
    * Dismissed, per turn: the panel goes away until the next message — the
@@ -117,7 +118,13 @@ export function TurnPanel({
     setCopied(true);
   }, [turn.user, turn.assistant]);
 
-  if (turn.status === 'idle' || !turn.user || dismissedId === turn.id) {
+  // With the transcript on the sheet, the turn is already on the page.
+  if (
+    sheet === 'transcript' ||
+    turn.status === 'idle' ||
+    !turn.user ||
+    dismissedId === turn.id
+  ) {
     return null;
   }
 
