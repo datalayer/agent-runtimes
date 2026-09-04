@@ -4,13 +4,15 @@
  */
 
 /**
- * What the chat says when the visitor's trial key runs out.
+ * What the workspace says when the visitor's trial key runs out.
  *
  * The end of a trial of anonymous inference is a fact worth stating plainly.
  * Left unsaid it arrives as an agent that has stopped answering, and a reader
  * with no account has no way to tell that apart from a broken one — so this
- * takes the conversation's place and says which of the two happened, and what
- * to do about it.
+ * takes the workspace's place and says which of the two happened, and what to
+ * do about it. The workspace, not the conversation: on a layout whose
+ * transcript is a panel the reader has not opened, a message inside the chat
+ * is a message nobody sees.
  *
  * The form is `SignInSimple`, the same one the examples and the landing use,
  * rather than a second sign-in written for this panel: a person who signs in
@@ -148,7 +150,7 @@ export function AnonymousKeyExpired({
             ? 'was answering on a trial key.'
             : 'stopped because your session ran out.'}
           {sandboxStillRuns
-            ? ' Your notebook keeps running — it lives in this page.'
+            ? ' Your notebook is still running in this page — signing in brings it back, with its cells and its state.'
             : ''}
         </Text>
 

@@ -93,6 +93,7 @@ import {
   onPromptFocusRequest,
 } from '../../core';
 import { turnWritersOf, type TurnFeed } from './turnState';
+import { orderToolContributions, toolsForChatView } from './chatViewTools';
 import type { ChatMessage } from '../../../types/messages';
 import type { ToolCallMessage } from '../../../types/chat';
 
@@ -715,20 +716,23 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const toolContributions = useContributions(LoopFrontendTool);
   const notebookTools = useMemo(() => {
     /*
-     * One tool per name, first contribution wins. The notebook and the
-     * document both ship an `executeCode` — the notebook's runs in the
+     * One tool per name, first contribution wins — so the order is decided
+     * here rather than by which lazy import landed first. The notebook and
+     * the document both ship an `executeCode`: the notebook's runs in the
      * sandbox and streams onto the conversation, the document's runs on the
-     * document's own kernel and returns silently. Registered together, the
-     * later one shadowed the earlier in the harness's name-keyed map, and
-     * "run this" stopped streaming. The notebook contributes statically and
-     * therefore first; the document's block tools (runBlock, insertBlock…)
-     * keep their own names and are untouched.
+     * document's own kernel and returns silently. The editor on screen owns
+     * the shared names; with none on screen the notebook does, since its
+     * outputs are what the conversation shows. The document's block tools
+     * (runBlock, insertBlock…) keep their own names and are untouched.
      */
     const merged: ReturnType<
       (typeof toolContributions)[number]['value']['tools']
     > = [];
     const owners = new Map<string, string>();
-    for (const entry of toolContributions) {
+    for (const entry of orderToolContributions(
+      toolContributions,
+      active?.surfaceId,
+    )) {
       let tools: typeof merged;
       try {
         tools = entry.value.tools(workspace);
@@ -762,7 +766,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       owners.set(tool.name, 'chat-extras');
       merged.push(tool);
     }
-    return merged;
+    /*
+     * The view decides the toolset. With an editor on screen the agent has
+     * everything; with none — the chat view — it keeps only what leaves the
+     * editors alone: `executeCode`, whose outputs stream onto the
+     * conversation as surfaces, and the read tools. The editors stay
+     * mounted out of sight either way, so what it can still call, works.
+     */
+    return active ? merged : toolsForChatView(merged);
     // The workspace object is rebuilt when its facts change; surfaceId is
     // the one the factories address by.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -771,6 +782,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     workspace.surfaceId,
     workspace.agentId,
     chatExtras.frontendTools,
+    active?.surfaceId,
   ]);
 
   /*
@@ -1661,33 +1673,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           />
         </Box>
         {besideChat && !promptHidden ? prompt : null}
-        {/*
-            Over the conversation, not instead of it.
-
-            Absolutely positioned so `ChatBase` stays mounted underneath: a
-            visitor who signs in here gets the transcript they were reading
-            back, with the same messages in it, rather than a fresh chat that
-            has forgotten the question they just asked.
-          */}
-        {keyExpired ? (
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 1,
-              bg: 'canvas.default',
-            }}
-          >
-            <AnonymousKeyExpired
-              agentName={spec?.name ?? member?.name}
-              // On the browser target the kernel is in this page and owes
-              // the inference service nothing, so the notebook is genuinely
-              // unaffected and the panel may say so.
-              sandboxStillRuns={inPage}
-              temporary={expiredKeyIsTemporary}
-            />
-          </Box>
-        ) : null}
       </Box>
     </>
   );
@@ -1757,6 +1742,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
+        // The positioned root the expiry panel below covers.
+        position: 'relative',
         /*
           A background of its own once it is full screen, in both modes.
 
@@ -1819,6 +1806,44 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           {besideChat || promptHidden || topPrompt ? null : prompt}
         </>
       )}
+      {/*
+        Over the whole workspace, not over the conversation alone.
+
+        The panel used to sit inside the transcript, which was where the
+        reader was looking when the chat was the page. It is not any more:
+        on the page layout the transcript is a side panel that starts
+        closed, so a visitor whose key ran out saw an agent that had simply
+        stopped answering, with the reason hidden behind a toggle. Covering
+        the workspace — chat, editors, prompt, picker — is what makes the
+        end of the trial impossible to miss.
+
+        Absolutely positioned, so everything stays mounted underneath: a
+        visitor who signs in here gets their notebook and their transcript
+        back exactly as they left them, rather than a fresh workspace that
+        has forgotten the question they just asked.
+      */}
+      {keyExpired ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 5,
+            bg: 'canvas.default',
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+          }}
+        >
+          <AnonymousKeyExpired
+            agentName={spec?.name ?? member?.name}
+            // On the browser target the kernel is in this page and owes the
+            // inference service nothing, so the notebook is genuinely
+            // unaffected and the panel may say so.
+            sandboxStillRuns={inPage}
+            temporary={expiredKeyIsTemporary}
+          />
+        </Box>
+      ) : null}
     </Box>
   );
 }

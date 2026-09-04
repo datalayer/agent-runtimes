@@ -294,6 +294,26 @@ export function PageLayout({
             >
               {hasEditor ? editors : transcript}
             </Box>
+            {/* In the chat view the editors are parked out of sight, not
+                unmounted: the agent's tools live in them, and a notebook
+                that left the page would take its cell tools with it - the
+                same contract the split layout keeps. Hidden visibility keeps
+                real dimensions for Lumino to measure. */}
+            {hasEditor ? null : (
+              <Box
+                aria-hidden="true"
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  visibility: 'hidden',
+                  pointerEvents: 'none',
+                  zIndex: -1,
+                  display: 'flex',
+                }}
+              >
+                {editors}
+              </Box>
+            )}
           </Box>
         </Box>
 
