@@ -43,7 +43,7 @@ const PANEL_WIDTH = 400;
  * the sheet slides underneath: measured, the composer with its footer stands
  * about 180px tall, anchored 16px from the top.
  */
-const PROMPT_BAND = 200;
+const PROMPT_BAND = 188;
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });

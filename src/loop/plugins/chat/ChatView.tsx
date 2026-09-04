@@ -1645,6 +1645,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // through the extras channel — the A2UI examples draw their
             // surface here. Wins over the notebook surfaces in ChatBase.
             renderToolResult={chatExtras.renderToolResult}
+            showTurnFooter={chatExtras.showTokenUsage ?? true}
             onContextSnapshot={handleContextSnapshot}
             onLoadingChange={handleLoadingChange}
             onItemsChange={handleMessagesChange}
