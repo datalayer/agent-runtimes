@@ -1194,6 +1194,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
 
           throw new Error(
             `Failed to delete existing agent '${agentName}' before retry: ${deleteResponse.status}`,
+            { cause: error },
           );
         }
 

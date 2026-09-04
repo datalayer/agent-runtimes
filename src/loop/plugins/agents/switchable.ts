@@ -285,6 +285,7 @@ export function createSwitchableSandboxService({
           `Start one and try again. (${
             reason instanceof Error ? reason.message : String(reason)
           })`,
+        { cause: reason },
       );
     }
     if (!response.ok) {
@@ -334,6 +335,7 @@ export function createSwitchableSandboxService({
           `Start one and try again. (${
             reason instanceof Error ? reason.message : String(reason)
           })`,
+        { cause: reason },
       );
     }
     if (existing.ok) {
