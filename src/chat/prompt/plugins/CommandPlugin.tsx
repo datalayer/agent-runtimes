@@ -259,7 +259,7 @@ export function CommandPlugin({
     const unregister = [
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
-        () => {
+        (event: KeyboardEvent) => {
           /*
             Declined when nothing can be chosen.
 
@@ -271,6 +271,9 @@ export function CommandPlugin({
           if (choosable.length === 0) {
             return false;
           }
+          // The browser's default too: the arrow would otherwise move the
+          // caret off the `@word`, and the menu it was steering would close.
+          event.preventDefault();
           setHighlighted(current => (current + 1) % choosable.length);
           return true;
         },
@@ -278,10 +281,11 @@ export function CommandPlugin({
       ),
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
-        () => {
+        (event: KeyboardEvent) => {
           if (choosable.length === 0) {
             return false;
           }
+          event.preventDefault();
           setHighlighted(
             current => (current - 1 + choosable.length) % choosable.length,
           );

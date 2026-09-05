@@ -129,10 +129,23 @@ export function AgentMentionPlugin({
   /* Set while the document change that inserted a mention is being applied. */
   const justInserted = useRef(false);
 
+  /*
+   * Choosable rows first, then the greyed ones.
+   *
+   * The highlight — where Enter lands — starts on the first row a person can
+   * pick. The one already being addressed is listed too, greyed, and it used
+   * to come first because the team lists its front door first: so the menu
+   * opened with its second row lit, which read as the wrong row preselected.
+   * A stable sort keeps the team's own order within each group.
+   */
   const matches = query
-    ? agents.filter(agent =>
-        agent.name.toLowerCase().startsWith(query.text.toLowerCase()),
-      )
+    ? agents
+        .filter(agent =>
+          agent.name.toLowerCase().startsWith(query.text.toLowerCase()),
+        )
+        .sort(
+          (left, right) => Number(!!left.disabled) - Number(!!right.disabled),
+        )
     : [];
   const open = matches.length > 0;
   /*
@@ -261,7 +274,7 @@ export function AgentMentionPlugin({
     const unregister = [
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
-        () => {
+        (event: KeyboardEvent) => {
           /*
             Declined when nothing can be chosen.
 
@@ -273,6 +286,9 @@ export function AgentMentionPlugin({
           if (choosable.length === 0) {
             return false;
           }
+          // The browser's default too: the arrow would otherwise move the
+          // caret off the `@word`, and the menu it was steering would close.
+          event.preventDefault();
           setHighlighted(current => (current + 1) % choosable.length);
           return true;
         },
@@ -280,10 +296,11 @@ export function AgentMentionPlugin({
       ),
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
-        () => {
+        (event: KeyboardEvent) => {
           if (choosable.length === 0) {
             return false;
           }
+          event.preventDefault();
           setHighlighted(
             current => (current - 1 + choosable.length) % choosable.length,
           );

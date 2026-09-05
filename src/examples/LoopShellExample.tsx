@@ -14,9 +14,11 @@
  *
  * The code runs in the browser sandbox — the in-page kernel reached through
  * the Jupyter service manager — so the page needs no server and no account.
- * The `loop-shell` agentspec pairs with the `None` state: its demonstrations
- * come back as Jupyter outputs rendered straight onto the conversation, which
- * is the whole canvas when no editor is open.
+ * The agents are the `shared-notebook` team the landing page runs — Analyst,
+ * Reviewer, Writer and Decks — with the Analyst at the front door; `@` in the
+ * composer reaches the others, and the team picker in the header switches to
+ * one. The decks plugin is mounted so the fourth member has its tools and a
+ * deck can open beside the conversation, like the notebook and the document.
  *
  * @module examples/LoopShellExample
  */
@@ -26,16 +28,28 @@ import { useMemo } from 'react';
 import { Box } from '@primer/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor } from '@datalayer/reactor/react';
+import { registerDecks } from '@datalayer/decks';
+import { exampleDecks } from '@datalayer/decks/examples';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
+import { DeckViewPlugin, LoopDecksPlugin } from '../loop/plugins/decks';
 import { loopPlugins } from '../loop/presets';
 import { internalQueryClient } from '../utils';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ThemedProvider } from './utils/themedProvider';
 
+/** The team the landing page runs, and this example with it. */
+const TEAM_ID = 'shared-notebook';
+/** Its front door: the member a prompt reaches unless `@` says otherwise. */
+const FRONT_DOOR = 'jupyter-notebook-analyst';
+
+// The package's example decks, so the Decks member has something to open and
+// change before it has made one. Once, at module load.
+registerDecks(exampleDecks);
+
 export type LoopShellExampleProps = {
   /** Server backing the session. Defaults to this page's origin. */
   serverUrl?: string;
-  /** Agent bound to the session. */
+  /** Agent bound to the session; the team's front door by default. */
   agentId?: string;
   /**
    * Which editor the shell opens on.
@@ -43,22 +57,22 @@ export type LoopShellExampleProps = {
    * `'none'` is the point of this example: the conversation is the canvas,
    * and the selector in the top-right corner is how an editor arrives.
    */
-  defaultEditor?: 'none' | 'notebook' | 'document';
+  defaultEditor?: 'none' | 'notebook' | 'document' | 'deck';
   /** Render without wrapping the shell in a theme provider. */
   inheritTheme?: boolean;
 };
 
 export function LoopShellExample({
   serverUrl = resolveExampleAgentRuntimesUrl('local'),
-  agentId = 'loop-shell',
+  agentId = FRONT_DOOR,
   defaultEditor = 'none',
   inheritTheme = false,
 }: LoopShellExampleProps): JSX.Element {
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
     () =>
-      buildLoopReactor(
-        loopPlugins({
+      buildLoopReactor([
+        ...loopPlugins({
           serverUrl,
           // The browser sandbox: the in-page kernel behind the Jupyter
           // service manager, so nothing has to be installed or signed into.
@@ -75,11 +89,18 @@ export function LoopShellExample({
           hideChatHeader: true,
           // First-class commands still deserve their keystrokes.
           commandPalette: true,
-          // The spec that pairs the agent with the blank shell: its
-          // demonstrations return as Jupyter outputs on the conversation.
-          localAgentSpec: 'loop-shell',
+          // The landing page's team, front door and all: what `@` offers
+          // in the composer and what the header's picker switches between.
+          teamId: TEAM_ID,
+          localAgentSpec: FRONT_DOOR,
         }),
-      ),
+        // The deck beside the chat — an editor in the selector, a footer
+        // icon, a menu in the composer — and the tools the Decks member
+        // reads and writes decks with. Without these the fourth member
+        // would be a name with nothing behind it.
+        LoopDecksPlugin,
+        DeckViewPlugin,
+      ]),
     [serverUrl, defaultEditor],
   );
 

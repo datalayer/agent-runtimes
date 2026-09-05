@@ -93,6 +93,17 @@ export type SubagentToolsOptions = {
   sharing?: TeamContextSharing;
   /** Turn ceiling for one delegated task. */
   maxSteps?: number;
+  /**
+   * The page's tools, for a member that declares none of its own.
+   *
+   * A team's members all work in the page the person has open — the Reviewer
+   * re-runs the cells, Decks writes the deck — and a member reached by
+   * delegation is still that member. Without this a delegated task ran with
+   * no tools at all, and "ask the Reviewer to check this" came back as an
+   * opinion about cells it could not run. A subagent that names a narrower
+   * set of its own keeps it.
+   */
+  tools?: ToolSet;
 };
 
 /** The input every delegation tool takes. */
@@ -123,6 +134,7 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
     model,
     sharing = 'shared',
     maxSteps = DEFAULT_SUBAGENT_MAX_STEPS,
+    tools: shared,
   } = options;
 
   const tools: ToolSet = {};
@@ -144,7 +156,7 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
             model: subagent.model ?? model,
           }) as LanguageModel,
           instructions: subagent.instructions,
-          tools: subagent.tools ?? {},
+          tools: subagent.tools ?? shared ?? {},
           stopWhen: stepCountIs(maxSteps),
         });
 

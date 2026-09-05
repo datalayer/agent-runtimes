@@ -112,20 +112,24 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
   constructor(config: BrowserAgentAdapterConfig) {
     super(config);
     this.browserConfig = config;
+    const page = frontendToolsToVercelAI(config.frontendTools ?? [], {
+      onHitlRequired: config.onHitlRequired,
+      onStatusChange: config.onStatusChange,
+    });
     // One set: to the model there is no difference between reaching into the
     // page and reaching another agent — both are tools it may call, and the
     // names are what it chooses between.
     this.tools = {
-      ...frontendToolsToVercelAI(config.frontendTools ?? [], {
-        onHitlRequired: config.onHitlRequired,
-        onStatusChange: config.onStatusChange,
-      }),
+      ...page,
       ...(config.subagents?.length && config.inference
         ? subagentTools({
             subagents: config.subagents,
             inference: config.inference,
             model: config.model,
             sharing: config.sharing,
+            // A member reached by delegation works in this page too, with
+            // the same tools as the one that delegated.
+            tools: page,
           })
         : {}),
     };
