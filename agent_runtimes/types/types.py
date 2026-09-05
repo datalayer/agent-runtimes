@@ -1052,6 +1052,34 @@ class FrontendConfig(BaseModel):
     )
 
 
+class A2ASubagentConfig(BaseModel):
+    """Where a subagent reached over A2A lives, or how to launch it.
+
+    Either ``url`` names an agent already running, or the subagent's ``ref``
+    names the agentspec to launch one from — on the local agent-runtimes server
+    when the parent runs locally and on a Datalayer runtime when it runs in the
+    cloud (``launch: auto``, the default), or on one of those explicitly.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    url: Optional[str] = Field(
+        default=None,
+        description="JSON-RPC endpoint of an A2A agent already running",
+    )
+    launch: Literal["local", "cloud", "auto"] = Field(
+        default="auto",
+        description=(
+            "Where to launch the agent named by `ref`: the local server, a "
+            "Datalayer runtime, or whichever the parent runs on"
+        ),
+    )
+    environment: Optional[str] = Field(
+        default=None,
+        description="Runtime environment for a cloud launch",
+    )
+
+
 class SubAgentspecConfig(BaseModel):
     """Configuration for a subagent within an agent specification.
 
@@ -1077,6 +1105,13 @@ class SubAgentspecConfig(BaseModel):
             "An agentspec this subagent *is*, as `<id>:<version>`. A specialist "
             "defined once and referenced by many parents, rather than its "
             "instructions copy-pasted into each — which is how they drift."
+        ),
+    )
+    a2a: Optional[A2ASubagentConfig] = Field(
+        default=None,
+        description=(
+            "Reach this subagent over A2A, as a separate agent, instead of "
+            "running it inside the parent's process"
         ),
     )
     model: Optional[str] = Field(

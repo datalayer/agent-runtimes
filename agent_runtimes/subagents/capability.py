@@ -9,19 +9,33 @@ its final output is returned to the parent. Usage (tokens/requests) is forwarded
 to the parent run so budget limits stay accurate across delegation.
 
 This is intentionally simpler than the ``pydantic-ai-harness`` subagents
-capability: no disk-loaded agent folders, no model menus, no nested delegation.
-It covers the common orchestrator/specialist pattern used by the examples.
+capability: no disk-loaded agent folders, no model menus. It covers the common
+orchestrator/specialist pattern used by the examples.
+
+A subagent may also be a *separate* agent reached over A2A (``a2a`` on its
+definition): the same tool, the same events on the parent's stream, but the
+run happens in another process — launched beside this server or on a
+Datalayer runtime — and the events say so with ``transport: "a2a"``.
 """
 
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.toolsets import AgentToolset, FunctionToolset
+
+from .a2a import (
+    A2ARemoteAgent,
+    A2ARemoteTarget,
+    ensure_remote_agent,
+    relay_a2a_task,
+    spec_id_of,
+)
 
 if TYPE_CHECKING:
     from pydantic_ai.models import Model
@@ -49,6 +63,40 @@ def _resolve_referenced_spec(ref: str) -> Any:
         return get_agent_spec(ref)
     except Exception:  # noqa: BLE001
         return None
+
+
+def _remote_definition(sa: Any, a2a: Any) -> "SubagentDefinition | None":
+    """The definition for a subagent reached over A2A, or ``None`` if unusable.
+
+    It needs somewhere to reach: a ``url`` an agent already answers on, or a
+    ``ref`` naming the agentspec to launch one from. The ref is not resolved
+    here — the launching server resolves it, which for a cloud launch is not
+    this one — only used for a description when the subagent gives none.
+    """
+    url = getattr(a2a, "url", None)
+    ref = getattr(sa, "ref", None)
+    spec_id = spec_id_of(str(ref)) if ref else None
+    if not url and not spec_id:
+        logger.warning(
+            "A2A subagent %r names neither a url nor a ref to launch; skipping",
+            sa.name,
+        )
+        return None
+    description = getattr(sa, "description", "") or ""
+    if not description and ref:
+        referenced = _resolve_referenced_spec(str(ref))
+        if referenced is not None:
+            description = getattr(referenced, "description", "") or ""
+    return SubagentDefinition(
+        name=sa.name,
+        description=description,
+        a2a=A2ARemoteTarget(
+            url=url,
+            spec_id=spec_id,
+            launch=getattr(a2a, "launch", None) or "auto",
+            environment=getattr(a2a, "environment", None),
+        ),
+    )
 
 
 def _build_subagent_capabilities(
@@ -113,15 +161,21 @@ class SubagentDefinition:
     description : str
         Short capability summary shown to the parent model.
     instructions : str
-        System instructions for the subagent.
+        System instructions for the subagent. Empty for one reached over A2A,
+        whose instructions are its own.
     model : str | Model | None
         Optional model override; falls back to the capability default model.
+    a2a : A2ARemoteTarget | None
+        Set when the subagent is a separate agent reached over A2A: where it
+        is, or how to launch it. Nothing is built for it here; it is resolved
+        on the first delegation.
     """
 
     name: str
     description: str
-    instructions: str
+    instructions: str = ""
     model: str | Model | None = None
+    a2a: A2ARemoteTarget | None = None
 
 
 @dataclass
@@ -167,6 +221,15 @@ class SubagentsCapability(AbstractCapability[Any]):
         default_factory=dict, init=False, repr=False
     )
     _descriptions: dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    # The subagents reached over A2A, the agents they resolved to once
+    # delegated to, and the A2A context each conversation with one runs in.
+    _remotes: dict[str, SubagentDefinition] = field(
+        default_factory=dict, init=False, repr=False
+    )
+    _remote_agents: dict[str, A2ARemoteAgent] = field(
+        default_factory=dict, init=False, repr=False
+    )
+    _a2a_contexts: dict[str, str] = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
         definitions = list(self.subagents)
@@ -184,8 +247,13 @@ class SubagentsCapability(AbstractCapability[Any]):
             )
 
         for definition in definitions:
-            if definition.name in self._agents:
+            if definition.name in self._agents or definition.name in self._remotes:
                 raise ValueError(f"Duplicate subagent name: {definition.name!r}")
+            if definition.a2a is not None:
+                # A separate agent, spoken to over A2A: nothing to build here.
+                self._remotes[definition.name] = definition
+                self._descriptions[definition.name] = definition.description
+                continue
             model = definition.model or self.default_model
             if model is None:
                 logger.warning(
@@ -204,14 +272,17 @@ class SubagentsCapability(AbstractCapability[Any]):
             self._descriptions[definition.name] = definition.description
 
     def get_instructions(self) -> str | None:
-        if not self._agents:
+        if not self._agents and not self._remotes:
             return None
         lines = [
             "You can delegate scoped tasks to specialist subagents with the "
             f"`{self.tool_name}` tool. Available subagents:",
         ]
-        for name in sorted(self._agents):
-            lines.append(f"- {name}: {self._descriptions.get(name, '')}".rstrip())
+        for name in sorted(self._descriptions):
+            line = f"- {name}: {self._descriptions.get(name, '')}".rstrip()
+            if name in self._remotes:
+                line += " (a separate agent, reached over A2A)"
+            lines.append(line)
         lines.append(
             "Delegate a single, well-specified task at a time, then synthesize "
             "the subagent results into your own final answer."
@@ -219,11 +290,11 @@ class SubagentsCapability(AbstractCapability[Any]):
         return "\n".join(lines)
 
     def get_toolset(self) -> AgentToolset[Any] | None:
-        if not self._agents:
+        if not self._agents and not self._remotes:
             return None
 
         toolset: FunctionToolset[Any] = FunctionToolset()
-        available = ", ".join(sorted(self._agents))
+        available = ", ".join(sorted(self._descriptions))
 
         async def delegate_task(
             ctx: RunContext[Any], subagent_name: str, task: str
@@ -238,24 +309,43 @@ class SubagentsCapability(AbstractCapability[Any]):
                 The self-contained task description for the subagent.
             """
             agent = self._agents.get(subagent_name)
-            if agent is None:
+            remote = self._remotes.get(subagent_name)
+            if agent is None and remote is None:
                 return (
                     f"Unknown subagent '{subagent_name}'. "
                     f"Available subagents: {available}."
                 )
             tool_call_id = getattr(ctx, "tool_call_id", None)
-            self._emit_subagent_event(subagent_name, tool_call_id, "start", task=task)
+            transport = self._transport_payload(subagent_name)
+            self._emit_subagent_event(
+                subagent_name, tool_call_id, "start", task=task, **transport
+            )
             try:
-                output = await self._run_subagent_streaming(
-                    agent, subagent_name, tool_call_id, task, ctx.usage
-                )
+                if remote is not None:
+                    output = await self._run_remote_streaming(
+                        remote, subagent_name, tool_call_id, task
+                    )
+                else:
+                    output = await self._run_subagent_streaming(
+                        agent, subagent_name, tool_call_id, task, ctx.usage
+                    )
             except Exception as exc:  # noqa: BLE001 - surface to the model
                 logger.exception("Subagent %r failed", subagent_name)
                 self._emit_subagent_event(
-                    subagent_name, tool_call_id, "error", error=str(exc)
+                    subagent_name,
+                    tool_call_id,
+                    "error",
+                    error=str(exc),
+                    **self._transport_payload(subagent_name),
                 )
                 return f"Subagent '{subagent_name}' failed: {exc}"
-            self._emit_subagent_event(subagent_name, tool_call_id, "end", output=output)
+            self._emit_subagent_event(
+                subagent_name,
+                tool_call_id,
+                "end",
+                output=output,
+                **self._transport_payload(subagent_name),
+            )
             return output
 
         toolset.add_function(
@@ -264,6 +354,62 @@ class SubagentsCapability(AbstractCapability[Any]):
             retries=self.tool_retries,
         )
         return toolset
+
+    def _transport_payload(self, subagent_name: str) -> dict[str, Any]:
+        """How the subagent is reached, said on every event about it."""
+        definition = self._remotes.get(subagent_name)
+        if definition is None or definition.a2a is None:
+            return {}
+        remote = self._remote_agents.get(subagent_name)
+        if remote is not None:
+            return remote.describe()
+        return {"transport": "a2a", "launch": definition.a2a.launch}
+
+    async def _run_remote_streaming(
+        self,
+        definition: SubagentDefinition,
+        subagent_name: str,
+        tool_call_id: str | None,
+        task: str,
+    ) -> str:
+        """Run a delegation on a separate agent over A2A, republishing its stream.
+
+        The agent is resolved — or launched — on the first delegation and kept
+        for the next ones, and every delegation to it from this parent shares
+        one A2A context, so the remote agent keeps the thread.
+        """
+        target = definition.a2a
+        assert target is not None
+        remote = self._remote_agents.get(subagent_name)
+        if remote is None:
+            self._emit_subagent_event(
+                subagent_name,
+                tool_call_id,
+                "status",
+                transport="a2a",
+                launch=target.launch,
+                state="launching",
+            )
+            remote = await ensure_remote_agent(
+                subagent_name, definition.description, target
+            )
+            self._remote_agents[subagent_name] = remote
+        self._emit_subagent_event(
+            subagent_name, tool_call_id, "status", state="ready", **remote.describe()
+        )
+        context_id = self._a2a_contexts.setdefault(subagent_name, str(uuid.uuid4()))
+
+        def emit(phase: str, **payload: Any) -> None:
+            self._emit_subagent_event(
+                subagent_name,
+                tool_call_id,
+                phase,
+                transport="a2a",
+                url=remote.url,
+                **payload,
+            )
+
+        return await relay_a2a_task(remote, task, context_id=context_id, emit=emit)
 
     async def _run_subagent_streaming(
         self,
@@ -439,6 +585,15 @@ def build_subagents_capability(
     for sa in raw_subagents:
         instructions = sa.instructions
         model = getattr(sa, "model", None)
+
+        # A subagent reached over A2A is a separate agent: it brings its own
+        # instructions and model, so none are needed — or used — here.
+        a2a = getattr(sa, "a2a", None)
+        if a2a is not None:
+            remote = _remote_definition(sa, a2a)
+            if remote is not None:
+                definitions.append(remote)
+            continue
 
         # A subagent may *be* another agentspec rather than repeat it: the
         # specialist is defined once and referenced by every parent that wants

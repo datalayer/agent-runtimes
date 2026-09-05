@@ -97,7 +97,7 @@ contributes an editor: an empty workspace is an empty control, not a fake one.
 
 #### The page layout
 
-`loopPlugins({ pageLayout: true })` mounts `PageLayoutPlugin`, which fills
+`loopPlugins({ pageLayout: true })` mounts `LoopPageLayoutPlugin`, which fills
 `LoopChatLayout`: the notebook or the document sits on a centred sheet over a
 quiet canvas, like a document application; the composer stands at the *top*
 of the page — docked in a band at the sheet's width by default, or as a
@@ -107,6 +107,14 @@ panel, closed until the header's toggle — or a host calling
 `openConversationPanel()` — opens it. The transcript stays mounted while the
 panel is closed, so the agent's tools keep running. `NotebookPageAgent` and
 `DocumentPageAgent` in the examples app are the two editors on that layout.
+
+The layout itself lives in primer-addons — `PageLayout`, its panel signals
+and its header toggle, in `@datalayer/primer-addons/lib/reactor` — where any
+Reactor host can mount it, on its own or as `PageLayoutPlugin` over slots
+(`page`, `page-band`, `page-panel`, `page-chips`). The Loop's plugin is the
+adapter: it hands the chat view's parts to that layout — the editors as the
+page, the transcript as the panel, the composer as the band — and keeps the
+turn panel, which renders the reply the way the transcript does.
 
 The **turn panel** hangs the current turn on the composer (`LoopPromptPanel`,
 fed by `LoopChatTurn`): the message just sent, the reply as it streams, and —
@@ -120,8 +128,9 @@ The layout follows the view. With a notebook or a document open, that editor
 is the sheet and the transcript lives in the side panel. In the chat view
 there is no editor, so the transcript itself lies on the sheet: same canvas,
 same prompt and chips, no side panel and no turn panel — the turn is
-already on the page. `pageLayoutSheet` (a signal, `'editor'` or
-`'transcript'`) says which is the case, for a host that wants to follow it.
+already on the page. `pageLayoutSheet` (a signal, `'page'` or `'panel'`:
+the editor is on the sheet, or the transcript is) says which is the case, for
+a host that wants to follow it.
 The editors stay mounted out of sight, and the agent's toolset follows the
 view too: with no editor on screen it keeps `executeCodeInNotebook` and
 `executeCodeInDocument`, whose outputs

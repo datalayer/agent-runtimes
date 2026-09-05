@@ -4,14 +4,17 @@
 """
 A2A (Agent-to-Agent) protocol routes.
 
-Implements the A2A protocol using fasta2a for agent-to-agent communication.
-This module provides FastA2A application mounts for registered agents.
+Implements the A2A protocol with fasta2a. Every registered agent gets a FastA2A
+application mounted under ``{api_prefix}/a2a/agents/{agent_id}``, run by the
+`A2AWorker` of ``transports/a2a.py`` — the agent adapter with everything it has
+(MCP servers, skills, codemode, guardrails), streamed over ``message/stream``.
 """
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, AsyncIterator
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -21,7 +24,7 @@ try:
     from fasta2a import FastA2A, Skill
     from fasta2a.broker import InMemoryBroker
     from fasta2a.schema import AgentProvider
-    from fasta2a.storage import InMemoryStorage, StreamingStorageWrapper
+    from fasta2a.storage import InMemoryStorage
 
     FASTA2A_AVAILABLE = True
 except ImportError:
@@ -165,14 +168,18 @@ def register_a2a_agent(
     """
     Register an agent with the A2A server.
 
-    This creates a FastA2A application for the agent that can be mounted
-    in the FastAPI application.
+    Builds a FastA2A application for the agent — its own storage and broker,
+    and an `A2AWorker` running the agent adapter — and mounts it under
+    ``{api_prefix}/a2a/agents/{agent_id}``. Any `BaseAgent` will do: the worker
+    speaks to the adapter, not to the framework agent underneath it, so the
+    agent answers over A2A with the same tools and guardrails it has over the
+    other transports.
 
     Args:
-        agent: The agent to register (must be a PydanticAIAgent)
-        card: Agent card configuration
-        broker: Optional custom broker (defaults to InMemoryBroker)
-        storage: Optional custom storage (defaults to InMemoryStorage)
+        agent: The agent to register.
+        card: Agent card configuration.
+        broker: Optional custom broker (defaults to InMemoryBroker).
+        storage: Optional custom storage (defaults to InMemoryStorage).
     """
     if not FASTA2A_AVAILABLE:
         logger.warning("fasta2a not installed, A2A agent registration skipped")
@@ -180,99 +187,86 @@ def register_a2a_agent(
 
     agent_id = card.id
 
-    # Check if agent is a PydanticAIAgent with to_a2a method
-    from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from ..transports.a2a import A2AWorker
 
-    if isinstance(agent, PydanticAIAdapter) and hasattr(agent._agent, "to_a2a"):
-        # Use pydantic-ai's native to_a2a() method
-        try:
-            # Convert skills to fasta2a Skill format if provided
-            skills = None
-            if card.skills:
-                skills = [
-                    Skill(
-                        id=s.get("id", s.get("name", "").lower().replace(" ", "-")),
-                        name=s.get("name", ""),
-                        description=s.get("description"),
-                    )
-                    for s in card.skills
-                ]
-
-            # Convert provider to fasta2a AgentProvider if provided
-            provider = None
-            if card.provider:
-                provider = AgentProvider(
-                    organization=card.provider.get("organization", ""),
-                    url=card.provider.get("url", ""),
+    try:
+        # Convert skills to fasta2a Skill format if provided
+        skills = None
+        if card.skills:
+            skills = [
+                Skill(
+                    id=s.get("id", s.get("name", "").lower().replace(" ", "-")),
+                    name=s.get("name", ""),
+                    description=s.get("description"),
                 )
+                for s in card.skills
+            ]
 
-            # Create broker and streaming-enabled storage
-            # StreamingStorageWrapper publishes events to broker when tasks are updated
-            a2a_broker = broker or InMemoryBroker()
-            base_storage = storage or InMemoryStorage()
-            streaming_storage = StreamingStorageWrapper(base_storage, a2a_broker)
-
-            # Create FastA2A app using pydantic-ai's to_a2a()
-            a2a_app = agent._agent.to_a2a(
-                name=card.name,
-                url=card.url,
-                version=card.version,
-                description=card.description,
-                provider=provider,
-                skills=skills,
-                storage=streaming_storage,
-                broker=a2a_broker,
+        # Convert provider to fasta2a AgentProvider if provided
+        provider = None
+        if card.provider:
+            provider = AgentProvider(
+                organization=card.provider.get("organization", ""),
+                url=card.provider.get("url", ""),
             )
 
-            # Enable streaming for SSE responses
-            a2a_app.streaming = True
+        a2a_broker = broker or InMemoryBroker()
+        a2a_storage = storage or InMemoryStorage()
+        worker = A2AWorker(broker=a2a_broker, storage=a2a_storage, agent=agent)
 
-            registration = A2AAgentRegistration(
-                agent=agent,
-                card=card,
-                app=a2a_app,
-                broker=a2a_broker,
-                storage=streaming_storage,
-            )
-            _a2a_agents[agent_id] = registration
+        @asynccontextmanager
+        async def lifespan(app: Any) -> AsyncIterator[None]:
+            # The task manager and the worker start and stop together. A
+            # mounted app's lifespan does not run on its own; it is driven
+            # from here, at registration or at server startup.
+            async with app.task_manager, worker.run():
+                yield
 
-            # Create mount for this agent
-            mount = Mount(f"/{agent_id}", app=a2a_app)
-            _a2a_mounts.append(mount)
-
-            # If app is available, also add route dynamically to running app
-            if _app is not None:
-                full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=a2a_app)
-                _app.routes.append(full_mount)
-                logger.info(
-                    f"Dynamically mounted A2A route: {_api_prefix}/a2a/agents/{agent_id}/"
-                )
-
-                # Start the lifespan for this agent's TaskManager
-                import asyncio
-
-                try:
-                    if hasattr(a2a_app, "router") and hasattr(
-                        a2a_app.router, "lifespan_context"
-                    ):
-                        lifespan = a2a_app.router.lifespan_context(a2a_app)
-                        asyncio.create_task(
-                            _start_a2a_lifespan(agent_id, a2a_app, lifespan)
-                        )
-                except Exception as e:
-                    logger.warning(f"Could not start lifespan for {agent_id}: {e}")
-
-            logger.info(f"Registered A2A agent (via to_a2a): {agent_id} ({card.name})")
-
-        except Exception as e:
-            logger.error(f"Failed to create A2A app for {agent_id}: {e}")
-            raise
-    else:
-        # For non-Pydantic AI agents, create a wrapper FastA2A app
-        logger.warning(
-            f"Agent {agent_id} is not a PydanticAIAgent, "
-            "A2A support requires pydantic-ai agent with to_a2a() method"
+        a2a_app = FastA2A(
+            storage=a2a_storage,
+            broker=a2a_broker,
+            name=card.name,
+            url=card.url,
+            version=card.version,
+            description=card.description,
+            provider=provider,
+            skills=skills,
+            lifespan=lifespan,
         )
+
+        registration = A2AAgentRegistration(
+            agent=agent,
+            card=card,
+            app=a2a_app,
+            broker=a2a_broker,
+            storage=a2a_storage,
+        )
+        _a2a_agents[agent_id] = registration
+
+        # Create mount for this agent
+        mount = Mount(f"/{agent_id}", app=a2a_app)
+        _a2a_mounts.append(mount)
+
+        # If app is available, also add route dynamically to running app
+        if _app is not None:
+            full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=a2a_app)
+            _app.routes.append(full_mount)
+            logger.info(
+                f"Dynamically mounted A2A route: {_api_prefix}/a2a/agents/{agent_id}/"
+            )
+            try:
+                lifespan_context = a2a_app.router.lifespan_context(a2a_app)
+                asyncio.create_task(
+                    _start_a2a_lifespan(agent_id, a2a_app, lifespan_context)
+                )
+            except Exception as e:
+                logger.warning(f"Could not start lifespan for {agent_id}: {e}")
+
+        logger.info(f"Registered A2A agent: {agent_id} ({card.name})")
+
+    except Exception as e:
+        logger.error(f"Failed to create A2A app for {agent_id}: {e}")
+        raise
 
 
 def unregister_a2a_agent(agent_id: str) -> None:

@@ -15,8 +15,8 @@ import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { loopPlugins } from '../presets';
 import { LoopChatLayout, LoopPromptPanel } from '../core';
 import {
-  PAGE_LAYOUT_PLUGIN_NAME,
-  type PageLayoutConfig,
+  LOOP_PAGE_LAYOUT_PLUGIN_NAME,
+  type LoopPageLayoutConfig,
 } from '../plugins/page-layout';
 
 async function started(options: Parameters<typeof loopPlugins>[0]) {
@@ -29,7 +29,8 @@ describe('the page layout composer', () => {
   it('docks the composer above the sheet by default', async () => {
     const reactor = await started({ pageLayout: true });
     expect(
-      reactor.getConfig<PageLayoutConfig>(PAGE_LAYOUT_PLUGIN_NAME)?.prompt,
+      reactor.getConfig<LoopPageLayoutConfig>(LOOP_PAGE_LAYOUT_PLUGIN_NAME)
+        ?.prompt,
     ).toBe('docked');
     const layouts = reactor.getContributions(LoopChatLayout);
     expect(layouts).toHaveLength(1);
@@ -42,7 +43,8 @@ describe('the page layout composer', () => {
       pageLayoutPrompt: 'floating',
     });
     expect(
-      reactor.getConfig<PageLayoutConfig>(PAGE_LAYOUT_PLUGIN_NAME)?.prompt,
+      reactor.getConfig<LoopPageLayoutConfig>(LOOP_PAGE_LAYOUT_PLUGIN_NAME)
+        ?.prompt,
     ).toBe('floating');
     expect(reactor.getContributions(LoopChatLayout)[0].value.prompt).toBe(
       'floating-top',

@@ -13,8 +13,9 @@
  * appear on the page; ask the Reviewer to check it and the verdict lands
  * beside them.
  *
- * Reactor plugins only. `pageLayout` mounts `PageLayoutPlugin`, which
- * arranges the chat view's parts through the `LoopChatLayout` point; the
+ * Reactor plugins only. `pageLayout` mounts `LoopPageLayoutPlugin`, which
+ * hands the chat view's parts to primer-addons' page layout through the
+ * `LoopChatLayout` point; the
  * `jupyter` team brings the Analyst, the Reviewer, the Writer and
  * the rest of the notebook's agents;
  * the loop turns in the browser, so nothing has to be installed or signed

@@ -430,6 +430,9 @@ from agent_runtimes.types import (
                     ]
                     for opt_key in (
                         "ref",
+                        # Where a subagent reached over A2A is, or how to
+                        # launch it; a mapping, coerced by the pydantic model.
+                        "a2a",
                         "model",
                         "can_ask_questions",
                         "max_questions",

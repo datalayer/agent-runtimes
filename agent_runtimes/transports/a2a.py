@@ -10,10 +10,14 @@ Supports identity context for OAuth token propagation across agent boundaries.
 
 import logging
 import uuid
-from typing import Any, AsyncIterator
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from ..context.identities import IdentityContextManager
 from .base import BaseTransport
+
+if TYPE_CHECKING:
+    from ..adapters.base import BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -230,3 +234,280 @@ class A2ATransport(BaseTransport):
                     "receiver_agent_id": sender_agent_id,
                     "status": "error",
                 }
+
+
+# ---------------------------------------------------------------------------
+# FastA2A worker
+# ---------------------------------------------------------------------------
+
+try:
+    from fasta2a.schema import (
+        Artifact,
+        Message,
+        Part,
+        StreamResponse,
+        TaskArtifactUpdateEvent,
+        TaskIdParams,
+        TaskSendParams,
+        TaskStatus,
+        TaskStatusUpdateEvent,
+    )
+    from fasta2a.worker import Worker as _FastA2AWorker
+
+    FASTA2A_AVAILABLE = True
+except ImportError:  # pragma: no cover - fasta2a is optional
+    FASTA2A_AVAILABLE = False
+    _FastA2AWorker = object  # type: ignore[assignment,misc]
+
+
+A2AContext = list[dict[str, Any]]
+"""What the worker keeps per A2A context: the messages exchanged so far."""
+
+TERMINAL_TASK_STATES = frozenset({"completed", "canceled", "failed", "rejected"})
+
+
+def a2a_message_text(message: Any) -> str:
+    """The text of an A2A message: its text parts joined, data parts as JSON."""
+    import json
+
+    chunks: list[str] = []
+    for part in message.get("parts") or []:
+        if not isinstance(part, dict):
+            continue
+        if part.get("text"):
+            chunks.append(str(part["text"]))
+        elif "data" in part:
+            try:
+                chunks.append(json.dumps(part["data"]))
+            except (TypeError, ValueError):
+                chunks.append(str(part["data"]))
+    return "\n".join(chunks)
+
+
+def activated_extensions_of(params: Any) -> list[str]:
+    """The A2A extensions the client and the agent agreed on for a task."""
+    try:
+        from fasta2a.extensions import activated_extensions
+    except ImportError:  # pragma: no cover - older fasta2a without extensions
+        metadata = params.get("metadata") or {}
+        value = metadata.get("a2a.activated_extensions")
+        return [str(v) for v in value] if isinstance(value, list) else []
+    return activated_extensions(params)
+
+
+def _tool_call_payload(data: Any) -> dict[str, Any]:
+    if isinstance(data, dict):
+        return {
+            "id": data.get("id"),
+            "name": data.get("name"),
+            "arguments": data.get("arguments") or data.get("args") or {},
+        }
+    return {
+        "id": getattr(data, "id", None),
+        "name": getattr(data, "name", None),
+        "arguments": getattr(data, "arguments", None) or {},
+    }
+
+
+def _tool_result_payload(data: Any) -> dict[str, Any]:
+    if isinstance(data, dict):
+        return {
+            "id": data.get("tool_call_id") or data.get("id"),
+            "name": data.get("name"),
+            "result": _short(data.get("result")),
+            "error": data.get("error"),
+        }
+    return {
+        "id": getattr(data, "tool_call_id", None),
+        "name": getattr(data, "name", None),
+        "result": _short(getattr(data, "result", None)),
+        "error": getattr(data, "error", None),
+    }
+
+
+def _short(value: Any, limit: int = 2000) -> str:
+    if value is None:
+        return ""
+    text = value if isinstance(value, str) else str(value)
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
+@dataclass
+class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
+    """Runs a `BaseAgent` for the tasks a FastA2A app receives, streaming as it goes.
+
+    The A2A server side of agent-runtimes. Where the pydantic-ai bridge in
+    fasta2a runs a bare ``pydantic_ai.Agent`` and reports only when it is done,
+    this worker runs the agent *adapter* — so MCP servers, skills, codemode,
+    guardrails and approvals apply exactly as they do over the other transports
+    — and republishes the run while it happens: each text delta as an artifact
+    chunk (``append=True``), each tool call and result as a ``working`` status
+    carrying a data part, the whole answer once more as the last chunk, then
+    the final status.
+
+    The parent's ``AgentContext.metadata["a2a"]`` names the task, the context
+    and the activated extensions, for tools that want to know.
+    """
+
+    agent: "BaseAgent" = None  # type: ignore[assignment]
+
+    async def run_task(self, params: "TaskSendParams") -> None:
+        task = await self.storage.load_task(params["id"])
+        if task is None:
+            raise ValueError(f"Task {params['id']} not found")
+        task_id = task["id"]
+        context_id = task["context_id"]
+
+        await self.storage.update_task(task_id, state="working")
+        await self._emit_status(task_id, context_id, "working")
+
+        history: A2AContext = list(await self.storage.load_context(context_id) or [])
+        incoming = params["message"]
+        prompt = a2a_message_text(incoming)
+
+        from ..adapters.base import AgentContext
+
+        context = AgentContext(
+            session_id=context_id,
+            conversation_history=self.build_message_history(history),
+            metadata={
+                "a2a": {
+                    "task_id": task_id,
+                    "context_id": context_id,
+                    "activated_extensions": activated_extensions_of(params),
+                }
+            },
+        )
+
+        artifact_id = str(uuid.uuid4())
+        text = ""
+        final_output: str | None = None
+        async for event in self.agent.stream(prompt, context):
+            if event.type == "text":
+                delta = str(event.data or "")
+                if not delta:
+                    continue
+                text += delta
+                await self._emit(
+                    task_id,
+                    StreamResponse(
+                        artifact_update=TaskArtifactUpdateEvent(
+                            task_id=task_id,
+                            context_id=context_id,
+                            artifact=Artifact(
+                                artifact_id=artifact_id,
+                                name="result",
+                                parts=[Part(text=delta)],
+                            ),
+                            append=True,
+                            last_chunk=False,
+                        )
+                    ),
+                )
+            elif event.type == "tool_call":
+                await self._emit_working_message(
+                    task_id,
+                    context_id,
+                    Part(data={"tool_call": _tool_call_payload(event.data)}),
+                )
+            elif event.type == "tool_result":
+                await self._emit_working_message(
+                    task_id,
+                    context_id,
+                    Part(data={"tool_result": _tool_result_payload(event.data)}),
+                )
+            elif event.type == "output":
+                final_output = str(event.data) if event.data is not None else None
+            elif event.type == "error":
+                raise RuntimeError(str(event.data))
+
+        output = text or final_output or ""
+        reply = Message(
+            role="agent",
+            parts=[Part(text=output)],
+            message_id=str(uuid.uuid4()),
+            context_id=context_id,
+        )
+        await self.storage.update_context(context_id, [*history, incoming, reply])
+        artifact = Artifact(artifact_id=artifact_id, name="result", parts=[Part(text=output)])
+        await self.storage.update_task(
+            task_id,
+            state="completed",
+            new_artifacts=[artifact],
+            new_messages=[reply],
+        )
+        # The whole result once more, as the last chunk: a client that does
+        # not assemble chunks, or joined late, still gets the answer.
+        await self._emit(
+            task_id,
+            StreamResponse(
+                artifact_update=TaskArtifactUpdateEvent(
+                    task_id=task_id,
+                    context_id=context_id,
+                    artifact=artifact,
+                    append=False,
+                    last_chunk=True,
+                )
+            ),
+        )
+        await self._emit_status(task_id, context_id, "completed")
+        await self.broker.event_bus.close(task_id)
+
+    async def cancel_task(self, params: "TaskIdParams") -> None:
+        logger.info("A2A cancel requested for task %s", params.get("id"))
+
+    def build_message_history(self, history: list[Any]) -> list[dict[str, Any]]:
+        return [
+            {
+                "role": "user" if message.get("role") == "user" else "assistant",
+                "content": a2a_message_text(message),
+            }
+            for message in history
+            if isinstance(message, dict)
+        ]
+
+    def build_artifacts(self, result: Any) -> list["Artifact"]:
+        return [
+            Artifact(
+                artifact_id=str(uuid.uuid4()),
+                name="result",
+                parts=[Part(text=str(result))],
+            )
+        ]
+
+    async def _emit(self, task_id: str, event: "StreamResponse") -> None:
+        await self.broker.event_bus.emit(task_id, event)
+
+    async def _emit_status(
+        self,
+        task_id: str,
+        context_id: str,
+        state: str,
+        message: "Message | None" = None,
+    ) -> None:
+        status = TaskStatus(state=state)  # type: ignore[typeddict-item]
+        if message is not None:
+            status["message"] = message
+        await self._emit(
+            task_id,
+            StreamResponse(
+                status_update=TaskStatusUpdateEvent(
+                    task_id=task_id, context_id=context_id, status=status
+                )
+            ),
+        )
+
+    async def _emit_working_message(
+        self, task_id: str, context_id: str, part: "Part"
+    ) -> None:
+        await self._emit_status(
+            task_id,
+            context_id,
+            "working",
+            Message(
+                role="agent",
+                parts=[part],
+                message_id=str(uuid.uuid4()),
+                context_id=context_id,
+            ),
+        )

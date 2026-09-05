@@ -13,18 +13,27 @@
  * like a toolbar, and the conversation in a panel at the side that opens when
  * it is wanted. The work is the page; the agent is the bar above it.
  *
- * Three contributions:
+ * The layout itself is primer-addons' `PageLayout` — with its panel signals
+ * and its header toggle, in `@datalayer/primer-addons/lib/reactor` — which
+ * any Reactor host can mount, on its own or as `PageLayoutPlugin` over
+ * slots. This plugin is the Loop's side of it, in three contributions:
  *
- * - the layout itself, through `LoopChatLayout`;
+ * - the layout, through `LoopChatLayout`: the chat view's parts handed to
+ *   `PageLayout` — the editors as the page, the transcript as the panel,
+ *   the composer as the band — with what the agent is doing in the page,
+ *   read from `LoopChatTurn`, pinned to the top of the sheet;
  * - a button in the workspace header that opens and closes the conversation
- *   panel — it shares one signal, `pageLayoutPanelOpen`, with the layout and
- *   with any host that wants to open the panel too;
+ *   panel — primer-addons' toggle, labelled for a conversation; it shares
+ *   the layout's `pageLayoutPanelOpen` signal with any host that wants to
+ *   open the panel too;
  * - the **turn panel**, hung on the composer through the input-prompt
  *   plugin's `LoopPromptPanel` point and fed by the chat plugin's
  *   `LoopChatTurn`: with the transcript out of sight, the message just sent,
  *   the reply as it streams and what the agent is doing in the page show in
  *   the prompt's own band, cleared by the next message. `turnPanel` says which
- *   side of the composer; `turnPanelFooter` what goes under the reply.
+ *   side of the composer; `turnPanelFooter` what goes under the reply. It
+ *   stays here rather than moving with the layout: it renders the reply as
+ *   the transcript does, with the chat's markdown and the turn footer.
  *
  * The layout component is imported statically: it is a few boxes, and a
  * layout that arrived late would draw the split first and the page a moment
@@ -35,34 +44,39 @@
 
 import type { JSX } from 'react';
 import { CommentDiscussionIcon } from '@primer/octicons-react';
-import { definePlugin } from '@datalayer/reactor';
-import { useSignalValue } from '@datalayer/reactor/react';
-import { IconButton } from '@primer/react';
+import { definePlugin, signal } from '@datalayer/reactor';
+import { useContributions, useSignalValue } from '@datalayer/reactor/react';
+import {
+  PageLayout,
+  PagePanelToggle,
+} from '@datalayer/primer-addons/lib/reactor';
 import {
   LoopChatLayout,
+  LoopChatTurn,
   LoopPromptPanel,
   LoopSlots,
   type ChatLayoutParts,
+  type ChatTurnSnapshot,
 } from '../../core';
-import { PageLayout } from './PageLayout';
 import { TurnPanel, type TurnPanelFooter } from './TurnPanel';
-import {
-  openConversationPanel,
-  pageLayoutPanelOpen,
-  pageLayoutSheet,
-} from './panelState';
 
+/*
+ * The layout's state is primer-addons', re-exported under the names the
+ * Loop always had: a host that opened the conversation panel by calling
+ * `openConversationPanel()` keeps doing so.
+ */
 export {
-  openConversationPanel,
   pageLayoutPanelOpen,
   pageLayoutSheet,
-} from './panelState';
+  openPagePanel as openConversationPanel,
+} from '@datalayer/primer-addons/lib/reactor';
 export type { TurnPanelFooter } from './TurnPanel';
 
-export const PAGE_LAYOUT_PLUGIN_NAME = '@datalayer/loop-plugin-page-layout';
+export const LOOP_PAGE_LAYOUT_PLUGIN_NAME =
+  '@datalayer/loop-plugin-page-layout';
 
 /** What a host may set on the page layout. */
-export type PageLayoutConfig = {
+export type LoopPageLayoutConfig = {
   /**
    * Where the turn panel hangs on the composer.
    *
@@ -91,35 +105,53 @@ export type PageLayoutConfig = {
   turnPanelFooter: TurnPanelFooter;
 };
 
-/** The header button that opens and closes the conversation panel. */
-function ConversationToggle(): JSX.Element | null {
-  const open = useSignalValue(pageLayoutPanelOpen);
-  const sheet = useSignalValue(pageLayoutSheet);
-  // In the chat view the transcript is the page; there is nothing to open.
-  if (sheet === 'transcript') {
-    return null;
-  }
+/* A signal to read when no chat contributed a turn: the hook needs one. */
+const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
+
+/**
+ * The chat view's parts on the page layout.
+ *
+ * The editors are the page, the transcript the panel, the composer the band;
+ * what the agent is doing — the turn's `activity` — is the line at the top
+ * of the sheet, so the change is seen where it happens.
+ */
+function LoopPageLayout({
+  parts,
+  promptMode,
+}: {
+  parts: ChatLayoutParts;
+  promptMode: 'docked' | 'floating';
+}): JSX.Element {
+  const turnEntries = useContributions(LoopChatTurn);
+  const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
   return (
-    <IconButton
-      icon={CommentDiscussionIcon}
-      size="small"
-      variant={open ? 'default' : 'invisible'}
-      aria-label={open ? 'Hide the conversation' : 'Show the conversation'}
-      aria-pressed={open}
-      onClick={() => {
-        if (open) {
-          pageLayoutPanelOpen.value = false;
-        } else {
-          openConversationPanel();
-        }
-      }}
-      sx={{ order: 2, color: open ? 'accent.fg' : 'fg.muted' }}
+    <PageLayout
+      page={parts.editors}
+      hasPage={parts.hasEditor}
+      panel={parts.transcript}
+      band={parts.prompt}
+      chips={parts.chips}
+      picker={parts.picker}
+      transient={parts.transient}
+      activity={turn.activity}
+      bandMode={promptMode}
     />
   );
 }
 
-export const PageLayoutPlugin = definePlugin<PageLayoutConfig>({
-  name: PAGE_LAYOUT_PLUGIN_NAME,
+/** The header button that opens and closes the conversation panel. */
+function ConversationToggle(): JSX.Element | null {
+  return (
+    <PagePanelToggle
+      panelName="conversation"
+      icon={CommentDiscussionIcon}
+      sx={{ order: 2 }}
+    />
+  );
+}
+
+export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
+  name: LOOP_PAGE_LAYOUT_PLUGIN_NAME,
   config: { turnPanel: 'below', turnPanelFooter: 'full', prompt: 'docked' },
   displayName: 'Page layout',
   description:
@@ -137,7 +169,7 @@ export const PageLayoutPlugin = definePlugin<PageLayoutConfig>({
     */
     const promptMode = config.prompt;
     const ConfiguredLayout = (parts: ChatLayoutParts): JSX.Element => (
-      <PageLayout {...parts} promptMode={promptMode} />
+      <LoopPageLayout parts={parts} promptMode={promptMode} />
     );
     ctx.contribute(
       LoopChatLayout,
@@ -179,4 +211,4 @@ export const PageLayoutPlugin = definePlugin<PageLayoutConfig>({
   },
 });
 
-export default PageLayoutPlugin;
+export default LoopPageLayoutPlugin;

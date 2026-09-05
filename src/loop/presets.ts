@@ -49,7 +49,7 @@ import { ModelsPlugin } from './plugins/models';
 import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
-import { PageLayoutPlugin } from './plugins/page-layout';
+import { LoopPageLayoutPlugin } from './plugins/page-layout';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -80,8 +80,9 @@ export type LoopPresetOptions = {
   /**
    * The page layout: the editor on a centred sheet, like a document, with
    * the composer docked above it at the sheet's own width and the
-   * conversation in a panel beside it. Mounts `PageLayoutPlugin`, which
-   * arranges the chat view's parts through the `LoopChatLayout` point.
+   * conversation in a panel beside it. Mounts `LoopPageLayoutPlugin`, which
+   * hands the chat view's parts to primer-addons' page layout through the
+   * `LoopChatLayout` point.
    */
   pageLayout?: boolean;
   /**
@@ -258,7 +259,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     ...(floatingPrompt ? [PromptPlugin] : []),
     ...(pageLayout
       ? [
-          configurePlugin(PageLayoutPlugin, {
+          configurePlugin(LoopPageLayoutPlugin, {
             turnPanel: pageLayoutTurnPanel,
             turnPanelFooter: pageLayoutTurnPanelFooter,
             prompt: pageLayoutPrompt,

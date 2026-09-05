@@ -211,6 +211,17 @@ def terminate_local_agent_runtime(runtime: LocalAgentRuntime) -> None:
         process.kill()
 
 
+def _agent_transport(agent: dict[str, Any]) -> str:
+    """The transport an agent listing says an agent answers on.
+
+    The listing calls it ``protocol``; older servers and the create request
+    call it ``transport``. Read both, or an agent is torn down and recreated
+    on every check because its transport read as unknown.
+    """
+    value = agent.get("transport") or agent.get("protocol") or ""
+    return str(value).strip().lower().replace("_", "-")
+
+
 def ensure_local_agent(
     *,
     base_url: str,
@@ -223,31 +234,33 @@ def ensure_local_agent(
     description: Optional[str] = None,
     timeout: int = 120,
     disable_tool_approvals: bool = False,
-) -> None:
-    """Ensure a local agent with the expected transport is registered."""
-    base = base_url.rstrip("/")
-    headers = {"Authorization": f"Bearer {token}"}
+) -> str:
+    """Ensure an agent with the expected transport is registered on an agent-runtimes server.
 
+    The server may be the local one or the one on a cloud runtime; only its
+    base URL differs. An agent of that name already answering on ``transport``
+    is kept; one on another transport is replaced. Returns the agent's id.
+    """
+    base = base_url.rstrip("/")
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    wanted_transport = str(transport or "").strip().lower().replace("_", "-")
     try:
         response = requests.get(f"{base}/api/v1/agents", headers=headers, timeout=30)
         payload = response.json() if response.content else {}
     except Exception:
         payload = {}
-
     existing_agents = payload.get("agents") if isinstance(payload, dict) else []
     if not isinstance(existing_agents, list):
         existing_agents = []
-
     for agent in existing_agents:
         if not isinstance(agent, dict):
             continue
         existing_id = str(agent.get("id") or "").strip()
         existing_name = str(agent.get("name") or "").strip()
         if agent_name and (existing_id == agent_name or existing_name == agent_name):
-            existing_transport = str(agent.get("transport") or "").strip().lower()
-            if existing_transport in {"vercel-ai", "vercel_ai"}:
-                return
-
+            existing_transport = _agent_transport(agent)
+            if existing_transport == wanted_transport:
+                return existing_id or agent_name
             delete_target = existing_id or agent_name
             try:
                 requests.delete(
@@ -257,16 +270,15 @@ def ensure_local_agent(
                 )
             except Exception as exc:
                 raise RuntimeError(
-                    "Local agent exists with incompatible transport "
+                    "Agent exists with incompatible transport "
                     f"'{existing_transport or 'unknown'}' and could not be "
                     f"replaced: {exc}"
                 ) from exc
             break
-
     body = {
         "name": agent_name,
         "description": description
-        or f"Local agent '{agent_name}' registered by datalayer-core.",
+        or f"Agent '{agent_name}' registered by agent-runtimes.",
         "agent_library": agent_library,
         "transport": transport,
         "agent_spec_id": agent_spec_id,
@@ -287,20 +299,24 @@ def ensure_local_agent(
         port = parsed.port or 8000
         scheme = parsed.scheme or "http"
         raise RuntimeError(
-            "Local agent bootstrap request failed: "
+            "Agent bootstrap request failed: "
             f"{exc}. Start agent-runtimes first, for example: "
             f"agent-runtimes serve --host {host} --port {port} "
             f"--agent-id {agent_spec_id} --agent-name {agent_name} "
             f"(base URL: {scheme}://{host}:{port})."
         ) from exc
-
     if response.status_code < 400:
-        return
+        try:
+            data = response.json()
+        except ValueError:
+            data = {}
+        agent_id = data.get("id") if isinstance(data, dict) else None
+        return str(agent_id or agent_name)
     body_text = response.text or ""
     if response.status_code == 409 and "already exists" in body_text.lower():
-        return
+        return agent_name
     raise RuntimeError(
-        f"Local agent bootstrap failed ({response.status_code}): "
+        f"Agent bootstrap failed ({response.status_code}): "
         f"{body_text or 'unknown error'}"
     )
 
@@ -1473,7 +1489,7 @@ class AgentClient(
         description: Optional[str] = None,
         timeout: int = 120,
         disable_tool_approvals: bool = False,
-    ) -> None:
+    ) -> str:
         """Ensure a local agent with the expected transport is registered.
 
         Parameters
@@ -1497,7 +1513,7 @@ class AgentClient(
         disable_tool_approvals : bool
             Whether to disable tool approvals for the agent.
         """
-        ensure_local_agent(
+        return ensure_local_agent(
             base_url=base_url,
             agent_name=agent_name,
             token=str(token or self._get_api_key() or ""),

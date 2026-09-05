@@ -102,11 +102,12 @@ export {
   type PromptPanelContribution,
 } from './core';
 export {
-  PageLayoutPlugin,
-  PAGE_LAYOUT_PLUGIN_NAME,
+  LoopPageLayoutPlugin,
+  LOOP_PAGE_LAYOUT_PLUGIN_NAME,
   openConversationPanel,
   pageLayoutSheet,
   pageLayoutPanelOpen,
+  type LoopPageLayoutConfig,
 } from './plugins/page-layout';
 export { useOptionalTeamSelection } from './plugins/agents/useTeamSelection';
 export type { TeamMember, TeamSelection } from './plugins/agents/team';

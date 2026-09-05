@@ -39,7 +39,10 @@ import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
 import { Streamdown } from 'streamdown';
 import { streamdownMarkdownStyles } from '../../../chat/styles/streamdownStyles';
 import { normalizeAssistantMarkdown } from '../../../chat/messages/assistantMarkdown';
-import { openConversationPanel, pageLayoutSheet } from './panelState';
+import {
+  openPagePanel,
+  pageLayoutSheet,
+} from '@datalayer/primer-addons/lib/reactor';
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
@@ -123,7 +126,7 @@ export function TurnPanel({
 
   // With the transcript on the sheet, the turn is already on the page.
   if (
-    sheet === 'transcript' ||
+    sheet === 'panel' ||
     turn.status === 'idle' ||
     !turn.user ||
     dismissedId === turn.id
@@ -213,7 +216,7 @@ export function TurnPanel({
           size="small"
           variant="invisible"
           aria-label="Open the conversation"
-          onClick={openConversationPanel}
+          onClick={openPagePanel}
           sx={{ color: 'fg.muted', flexShrink: 0 }}
         />
       </Box>

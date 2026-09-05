@@ -8,6 +8,7 @@ agent delegate scoped tasks to specialist subagents. Replaces the external
 ``subagents-pydantic-ai`` dependency with a smaller, focused implementation.
 """
 
+from .a2a import A2ARemoteAgent, A2ARemoteTarget
 from .capability import (
     SubagentDefinition,
     SubagentsCapability,
@@ -15,6 +16,8 @@ from .capability import (
 )
 
 __all__ = [
+    "A2ARemoteAgent",
+    "A2ARemoteTarget",
     "SubagentDefinition",
     "SubagentsCapability",
     "build_subagents_capability",
