@@ -193,6 +193,16 @@ export {
   AgentSubagentsPlugin,
   AGENT_SUBAGENTS_PLUGIN_NAME,
 } from './plugins/agent-subagents';
+export { AgentA2APlugin, AGENT_A2A_PLUGIN_NAME } from './plugins/agent-a2a';
+export {
+  A2ASidebarPlugin,
+  A2ASidebar,
+  A2A_SIDEBAR_PLUGIN_NAME,
+  describeRemoteAgents,
+  remoteStatusOf,
+  type A2ARemoteAgentView,
+  type A2ARemoteStatus,
+} from './plugins/a2a-sidebar';
 export {
   AgentToolApprovalsPlugin,
   AGENT_TOOL_APPROVALS_PLUGIN_NAME,

@@ -151,6 +151,23 @@ export interface Agentspec {
 }
 
 /**
+ * Where a subagent reached over A2A lives, or how to launch it.
+ *
+ * Either `url` names an agent already running, or the subagent's `ref` names
+ * the agentspec to launch one from — on the local agent-runtimes server when
+ * the parent runs locally and on a Datalayer runtime when it runs in the
+ * cloud (`launch: 'auto'`, the default), or on one of those explicitly.
+ */
+export interface A2ASubagentConfig {
+  /** JSON-RPC endpoint of an A2A agent already running. */
+  url?: string;
+  /** Where to launch the agent named by `ref`. */
+  launch?: 'local' | 'cloud' | 'auto';
+  /** Runtime environment for a cloud launch. */
+  environment?: string;
+}
+
+/**
  * Configuration for a subagent within an agent specification.
  */
 export interface SubAgentspecConfig {
@@ -170,6 +187,11 @@ export interface SubAgentspecConfig {
    * instructions copy-pasted into each — which is how they drift apart.
    */
   ref?: string;
+  /**
+   * Reach this subagent over A2A, as a separate agent, instead of running it
+   * inside the parent's process.
+   */
+  a2a?: A2ASubagentConfig;
   /** LLM model to use (defaults to parent agent's model) */
   model?: string;
   /** Whether the subagent can ask the parent for clarification */

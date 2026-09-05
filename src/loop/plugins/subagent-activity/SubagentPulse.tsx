@@ -50,7 +50,10 @@ export function SubagentPulse(): JSX.Element | null {
     return null;
   }
 
-  const label = `${name} is working…`;
+  const overA2A = events.some(event => event.transport === 'a2a');
+  const label = overA2A
+    ? `${name} is working over A2A…`
+    : `${name} is working…`;
   return (
     <>
       <style>{KEYFRAMES}</style>

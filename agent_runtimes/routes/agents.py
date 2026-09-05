@@ -2265,6 +2265,9 @@ async def create_agent(
             id=agent_id,
             name=request.name,
             description=request.description,
+            # The transport the agent is registered on, so a listing says
+            # `a2a` for an A2A agent rather than the model's default.
+            protocol=request.transport,
             capabilities=AgentCapabilities(
                 streaming=True,
                 tool_calling=True,
@@ -2642,7 +2645,15 @@ def _get_agent_details(agent: Any, agent_id: str, info: Any) -> dict[str, Any]:
         "name": info.name,
         "description": info.description,
         "status": "running",
-        "protocol": getattr(info, "protocol", "ag-ui"),
+        # The transport the agent answers on. `protocol` is the older name for
+        # the same thing; both are given, and neither is guessed as ag-ui when
+        # the agent was created on another transport.
+        "protocol": getattr(info, "protocol", None)
+        or getattr(info, "transport", None)
+        or "ag-ui",
+        "transport": getattr(info, "transport", None)
+        or getattr(info, "protocol", None)
+        or "ag-ui",
         "model": model_name,
         "system_prompt": system_prompt,
         "capabilities": info.capabilities.model_dump() if info.capabilities else {},
@@ -2873,7 +2884,9 @@ async def update_agent_transport(
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
     agent, info = _agents[agent_id]
-    current_transport = getattr(info, "transport", None)
+    current_transport = getattr(info, "transport", None) or getattr(
+        info, "protocol", None
+    )
     new_transport = request.transport
 
     if current_transport == new_transport:
@@ -2976,6 +2989,7 @@ async def update_agent_transport(
             )
 
     # Update the stored info transport field
+    info.protocol = new_transport
     if hasattr(info, "transport"):
         info.transport = new_transport
 

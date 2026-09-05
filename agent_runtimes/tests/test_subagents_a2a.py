@@ -98,12 +98,16 @@ class TestDefinitions:
 
 
 class TestLaunch:
-    def test_auto_is_local_outside_a_runtime(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_auto_is_local_outside_a_runtime(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("DATALAYER_RUNTIME_ID", raising=False)
         assert resolve_launch("auto") == "local"
         assert resolve_launch(None) == "local"
 
-    def test_auto_is_cloud_inside_a_runtime(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_auto_is_cloud_inside_a_runtime(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("DATALAYER_RUNTIME_ID", "01ABC")
         assert resolve_launch("auto") == "cloud"
         assert resolve_launch("local") == "local"
@@ -179,7 +183,11 @@ class TestRelay:
                     "role": "agent",
                     "message_id": "m1",
                     "parts": [
-                        {"data": {"tool_call": {"name": "search", "arguments": {"q": "x"}}}}
+                        {
+                            "data": {
+                                "tool_call": {"name": "search", "arguments": {"q": "x"}}
+                            }
+                        }
                     ],
                 },
             ),
@@ -188,7 +196,9 @@ class TestRelay:
                 {
                     "role": "agent",
                     "message_id": "m2",
-                    "parts": [{"data": {"tool_result": {"name": "search", "result": "found"}}}],
+                    "parts": [
+                        {"data": {"tool_result": {"name": "search", "result": "found"}}}
+                    ],
                 },
             ),
             _artifact("lo", append=True, last=False),
@@ -222,7 +232,11 @@ class TestRelay:
     @pytest.mark.asyncio
     async def test_a_jsonrpc_error_is_raised(self) -> None:
         responses = [
-            {"jsonrpc": "2.0", "id": "1", "error": {"code": -32001, "message": "Task not found"}}
+            {
+                "jsonrpc": "2.0",
+                "id": "1",
+                "error": {"code": -32001, "message": "Task not found"},
+            }
         ]
         with pytest.raises(RuntimeError, match="Task not found"):
             await relay_stream(_responses(responses), lambda *_a, **_k: None)
@@ -239,7 +253,9 @@ class TestDelegation:
     ) -> None:
         launches: list[tuple[str, str | None]] = []
 
-        async def fake_ensure(name: str, description: str, target: A2ARemoteTarget) -> A2ARemoteAgent:
+        async def fake_ensure(
+            name: str, description: str, target: A2ARemoteTarget
+        ) -> A2ARemoteAgent:
             launches.append((name, target.spec_id))
             return A2ARemoteAgent(
                 name=name,
@@ -248,7 +264,9 @@ class TestDelegation:
                 card={"name": "Example A2A Researcher", "version": "1.0.0"},
             )
 
-        async def fake_relay(remote: A2ARemoteAgent, task: str, *, context_id: str, emit: Any) -> str:
+        async def fake_relay(
+            remote: A2ARemoteAgent, task: str, *, context_id: str, emit: Any
+        ) -> str:
             emit("text", text=f"notes about {task}")
             return f"notes about {task}"
 
@@ -271,14 +289,19 @@ class TestDelegation:
             )
             calls = {"n": 0}
 
-            def parent_model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            def parent_model(
+                messages: list[ModelMessage], info: AgentInfo
+            ) -> ModelResponse:
                 calls["n"] += 1
                 if calls["n"] <= 2:
                     return ModelResponse(
                         parts=[
                             ToolCallPart(
                                 tool_name="delegate_task",
-                                args={"subagent_name": "researcher", "task": f"topic {calls['n']}"},
+                                args={
+                                    "subagent_name": "researcher",
+                                    "task": f"topic {calls['n']}",
+                                },
                             )
                         ]
                     )
@@ -327,10 +350,22 @@ class TestEnsureAgent:
         from agent_runtimes.client import agent_client
 
         calls: list[tuple[str, str]] = []
-        listing = {"agents": [{"id": "a2a-researcher", "name": "a2a-researcher", "protocol": "a2a"}]}
-        monkeypatch.setattr(agent_client.requests, "get", lambda url, **kw: self._Response(200, listing))
-        monkeypatch.setattr(agent_client.requests, "delete", lambda url, **kw: calls.append(("delete", url)))
-        monkeypatch.setattr(agent_client.requests, "post", lambda url, **kw: calls.append(("post", url)))
+        listing = {
+            "agents": [
+                {"id": "a2a-researcher", "name": "a2a-researcher", "protocol": "a2a"}
+            ]
+        }
+        monkeypatch.setattr(
+            agent_client.requests, "get", lambda url, **kw: self._Response(200, listing)
+        )
+        monkeypatch.setattr(
+            agent_client.requests,
+            "delete",
+            lambda url, **kw: calls.append(("delete", url)),
+        )
+        monkeypatch.setattr(
+            agent_client.requests, "post", lambda url, **kw: calls.append(("post", url))
+        )
 
         agent_id = agent_client.ensure_local_agent(
             base_url="http://127.0.0.1:8765/",
@@ -348,8 +383,18 @@ class TestEnsureAgent:
         from agent_runtimes.client import agent_client
 
         calls: list[tuple[str, str]] = []
-        listing = {"agents": [{"id": "a2a-researcher", "name": "a2a-researcher", "protocol": "vercel-ai"}]}
-        monkeypatch.setattr(agent_client.requests, "get", lambda url, **kw: self._Response(200, listing))
+        listing = {
+            "agents": [
+                {
+                    "id": "a2a-researcher",
+                    "name": "a2a-researcher",
+                    "protocol": "vercel-ai",
+                }
+            ]
+        }
+        monkeypatch.setattr(
+            agent_client.requests, "get", lambda url, **kw: self._Response(200, listing)
+        )
 
         def delete(url: str, **kw: Any) -> None:
             calls.append(("delete", url))
@@ -446,7 +491,9 @@ class TestWorker:
             await runner
 
         kinds = [
-            "artifact" if "artifact_update" in event else event["status_update"]["status"]["state"]
+            "artifact"
+            if "artifact_update" in event
+            else event["status_update"]["status"]["state"]
             for event in events
         ]
         assert kinds == [
@@ -458,14 +505,21 @@ class TestWorker:
             "artifact",
             "completed",
         ]
-        chunks = [event["artifact_update"] for event in events if "artifact_update" in event]
-        assert [c["artifact"]["parts"][0]["text"] for c in chunks] == ["Hel", "lo", "Hello"]
+        chunks = [
+            event["artifact_update"] for event in events if "artifact_update" in event
+        ]
+        assert [c["artifact"]["parts"][0]["text"] for c in chunks] == [
+            "Hel",
+            "lo",
+            "Hello",
+        ]
         assert [c["append"] for c in chunks] == [True, True, False]
         assert chunks[-1]["last_chunk"] is True
         tool_messages = [
             event["status_update"]["status"]["message"]["parts"][0]["data"]
             for event in events
-            if "status_update" in event and "message" in event["status_update"]["status"]
+            if "status_update" in event
+            and "message" in event["status_update"]["status"]
         ]
         assert tool_messages[0]["tool_call"]["name"] == "search"
         assert tool_messages[1]["tool_result"]["result"] == "found"

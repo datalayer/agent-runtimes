@@ -20,8 +20,12 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import { Text, Spinner } from '@primer/react';
-import { DependabotIcon, PersonIcon } from '@primer/octicons-react';
+import { Text, Spinner, Link } from '@primer/react';
+import {
+  BroadcastIcon,
+  DependabotIcon,
+  PersonIcon,
+} from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { Streamdown } from 'streamdown';
 import {
@@ -299,6 +303,25 @@ export function SubagentChatPanel({
     () => events.some(e => e.phase === 'error'),
     [events],
   );
+  /*
+   * A run over A2A is a separate agent's: the box says so, names where it
+   * runs, links its card, and while the agent is still being launched says
+   * that rather than "working".
+   */
+  const remote = useMemo(() => {
+    let transport: AgentStreamSubagentPayload['transport'];
+    let url: string | undefined;
+    let launch: string | undefined;
+    let state: string | undefined;
+    for (const event of events) {
+      if (event.transport) transport = event.transport;
+      if (event.url) url = event.url;
+      if (event.launch && event.launch !== 'auto') launch = event.launch;
+      if (event.phase === 'status' && event.state) state = event.state;
+    }
+    return { transport, url, launch, state };
+  }, [events]);
+  const overA2A = remote.transport === 'a2a';
 
   // Forward inline tool-approval decisions to the shared monitoring socket.
   const handleRespond = useCallback(
@@ -334,9 +357,17 @@ export function SubagentChatPanel({
    * more grey card among the tool cards.
    */
   const tone = hasError ? 'danger' : isDone ? 'success' : 'accent';
+  const progress = hasError
+    ? 'failed'
+    : isDone
+      ? 'done'
+      : overA2A && remote.state === 'launching'
+        ? 'launching\u2026'
+        : 'working\u2026';
   return (
     <Box
       data-subagent-panel={subagentName}
+      data-subagent-transport={remote.transport ?? 'in-process'}
       sx={{
         mt: 2,
         display: 'flex',
@@ -364,14 +395,31 @@ export function SubagentChatPanel({
         }}
       >
         <Box sx={{ display: 'flex', color: `${tone}.fg` }}>
-          <DependabotIcon size={14} />
+          {overA2A ? <BroadcastIcon size={14} /> : <DependabotIcon size={14} />}
         </Box>
-        <Text sx={{ fontSize: 0, color: `${tone}.fg` }}>Subagent</Text>
+        <Text sx={{ fontSize: 0, color: `${tone}.fg` }}>
+          {overA2A ? 'A2A agent' : 'Subagent'}
+        </Text>
         <Text sx={{ fontSize: 0, fontWeight: 'bold', color: `${tone}.fg` }}>
           {subagentName}
         </Text>
+        {overA2A && remote.launch ? (
+          <Text sx={{ fontSize: 0, color: `${tone}.fg`, opacity: 0.8 }}>
+            {remote.launch}
+          </Text>
+        ) : null}
+        {overA2A && remote.url ? (
+          <Link
+            href={`${remote.url}/.well-known/agent-card.json`}
+            target="_blank"
+            rel="noreferrer"
+            sx={{ fontSize: 0, ml: 1 }}
+          >
+            card
+          </Link>
+        ) : null}
         <Text sx={{ fontSize: 0, color: `${tone}.fg`, ml: 'auto' }}>
-          {hasError ? 'failed' : isDone ? 'done' : 'working\u2026'}
+          {progress}
         </Text>
       </Box>
 

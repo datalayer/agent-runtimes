@@ -147,6 +147,21 @@ def agent_name_for(subagent_name: str) -> str:
     return f"a2a-{slug}"
 
 
+def spec_declares_skills(spec_id: str) -> bool:
+    """Whether the agentspec lists skills, read from this server's catalogue.
+
+    ``False`` when the spec is not in the catalogue here — the launching server
+    resolves the spec itself; this only decides whether to hand it a toolset.
+    """
+    try:
+        from agent_runtimes.specs.agents.agents import get_agent_spec
+
+        spec = get_agent_spec(spec_id)
+    except Exception:  # noqa: BLE001 - catalogue absent or spec unknown
+        return False
+    return bool(getattr(spec, "skills", None))
+
+
 def card_summary(card: dict[str, Any] | None) -> dict[str, Any] | None:
     """The part of an agent card worth showing: name, description, version, skills."""
     if not isinstance(card, dict):
@@ -165,21 +180,31 @@ def card_summary(card: dict[str, Any] | None) -> dict[str, Any] | None:
     return summary or None
 
 
-async def fetch_agent_card(url: str, token: str | None = None) -> dict[str, Any] | None:
-    """The agent card at ``url``, or ``None`` — a card is nice to have, not needed."""
+async def fetch_agent_card(
+    url: str, token: str | None = None, *, attempts: int = 1, delay: float = 0.5
+) -> dict[str, Any] | None:
+    """The agent card at ``url``, or ``None`` — a card is nice to have, not needed.
+
+    With ``attempts`` above one this doubles as a readiness check: a just-mounted
+    A2A app answers its card only once its task manager runs.
+    """
     import httpx
 
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    try:
-        async with httpx.AsyncClient(timeout=10.0, headers=headers) as http:
-            response = await http.get(f"{url.rstrip('/')}/.well-known/agent-card.json")
-            if response.status_code >= 400:
-                return None
-            data = response.json()
-            return data if isinstance(data, dict) else None
-    except Exception:  # noqa: BLE001 - best effort
-        logger.debug("Could not fetch the agent card at %s", url, exc_info=True)
-        return None
+    for attempt in range(max(1, attempts)):
+        try:
+            async with httpx.AsyncClient(timeout=10.0, headers=headers) as http:
+                response = await http.get(
+                    f"{url.rstrip('/')}/.well-known/agent-card.json"
+                )
+                if response.status_code < 400:
+                    data = response.json()
+                    return data if isinstance(data, dict) else None
+        except Exception:  # noqa: BLE001 - best effort
+            logger.debug("Could not fetch the agent card at %s", url, exc_info=True)
+        if attempt + 1 < attempts:
+            await asyncio.sleep(delay)
+    return None
 
 
 async def ensure_remote_agent(
@@ -194,14 +219,22 @@ async def ensure_remote_agent(
     """
     token = caller_token()
     if target.url:
-        remote = A2ARemoteAgent(name=name, url=target.url.rstrip("/"), launch="remote", token=token)
+        remote = A2ARemoteAgent(
+            name=name, url=target.url.rstrip("/"), launch="remote", token=token
+        )
         remote.card = await fetch_agent_card(remote.url, token)
         return remote
 
     launch = resolve_launch(target.launch)
     runtime_uid: str | None = None
     if launch == "cloud":
-        base_url, runtime_uid = await asyncio.to_thread(_launch_cloud_runtime, target, token)
+        base_url, runtime_uid = await asyncio.to_thread(
+            _launch_cloud_runtime, target, token
+        )
+        # Provisioned is not answering yet: wait for the runtime's server.
+        from ..client.agent_client import wait_for_local_runtime
+
+        await asyncio.to_thread(wait_for_local_runtime, base_url, 180)
     else:
         base_url = local_agent_runtimes_url()
 
@@ -215,6 +248,9 @@ async def ensure_remote_agent(
         token=token or "",
         agent_spec_id=str(target.spec_id),
         transport="a2a",
+        # Skills only when the spec has some: an empty skills toolset is an
+        # invitation for the model to call a skill that does not exist.
+        enable_skills=spec_declares_skills(str(target.spec_id)),
         description=description or f"A2A agent '{name}'",
     )
     remote = A2ARemoteAgent(
@@ -224,11 +260,13 @@ async def ensure_remote_agent(
         runtime_uid=runtime_uid,
         token=token,
     )
-    remote.card = await fetch_agent_card(remote.url, token)
+    remote.card = await fetch_agent_card(remote.url, token, attempts=20)
     return remote
 
 
-def _launch_cloud_runtime(target: A2ARemoteTarget, token: str | None) -> tuple[str, str | None]:
+def _launch_cloud_runtime(
+    target: A2ARemoteTarget, token: str | None
+) -> tuple[str, str | None]:
     """A Datalayer runtime for the agentspec; its agent-runtimes base URL and uid."""
     from datalayer_core.utils.defaults import DEFAULT_ENVIRONMENT
     from datalayer_core.utils.urls import DatalayerURLs
@@ -254,6 +292,8 @@ class RelayOutcome:
     state: str | None = None
     streamed: str = ""
     final: str | None = None
+    detail: str | None = None
+    """What the remote agent said with its final status: the reason, when it failed."""
 
     @property
     def output(self) -> str:
@@ -265,6 +305,14 @@ def _artifact_text(artifact: dict[str, Any]) -> str:
         str(part.get("text") or "")
         for part in artifact.get("parts") or []
         if isinstance(part, dict) and "text" in part
+    )
+
+
+def _message_text(message: dict[str, Any]) -> str:
+    return "\n".join(
+        str(part.get("text"))
+        for part in message.get("parts") or []
+        if isinstance(part, dict) and part.get("text")
     )
 
 
@@ -283,7 +331,9 @@ def _relay_message(message: dict[str, Any], emit: EmitFn) -> None:
             emit(
                 "tool_call",
                 toolName=str(call.get("name") or ""),
-                toolArgs=call.get("arguments") if isinstance(call.get("arguments"), dict) else {},
+                toolArgs=call.get("arguments")
+                if isinstance(call.get("arguments"), dict)
+                else {},
             )
         elif isinstance(data.get("tool_result"), dict):
             result = data["tool_result"]
@@ -307,7 +357,11 @@ async def relay_stream(responses: AsyncIterator[Any], emit: EmitFn) -> RelayOutc
     async for response in responses:
         error = response.get("error") if isinstance(response, dict) else None
         if error:
-            message = str(error.get("message") or error) if isinstance(error, dict) else str(error)
+            message = (
+                str(error.get("message") or error)
+                if isinstance(error, dict)
+                else str(error)
+            )
             raise RuntimeError(f"A2A error: {message}")
         result = response.get("result") if isinstance(response, dict) else None
         if not isinstance(result, dict):
@@ -323,13 +377,18 @@ async def relay_stream(responses: AsyncIterator[Any], emit: EmitFn) -> RelayOutc
         if isinstance(status_update, dict):
             status = status_update.get("status") or {}
             message = status.get("message")
-            if isinstance(message, dict):
-                _relay_message(message, emit)
             outcome.task_id = status_update.get("task_id") or outcome.task_id
             outcome.state = status.get("state") or outcome.state
-            emit("status", taskId=outcome.task_id, state=outcome.state)
             if outcome.state in TERMINAL_STATES:
+                # The message on a final status is the agent's last word — the
+                # reason, when it failed — not more of the answer.
+                if isinstance(message, dict):
+                    outcome.detail = _message_text(message) or None
+                emit("status", taskId=outcome.task_id, state=outcome.state)
                 break
+            if isinstance(message, dict):
+                _relay_message(message, emit)
+            emit("status", taskId=outcome.task_id, state=outcome.state)
 
         artifact_update = result.get("artifact_update")
         if isinstance(artifact_update, dict):
@@ -376,7 +435,8 @@ async def relay_a2a_task(
         outcome = await relay_stream(client.stream_message(message), emit)
 
         if outcome.state in {"failed", "canceled", "rejected"}:
-            raise RuntimeError(f"The remote agent's task ended {outcome.state}")
+            reason = f": {outcome.detail}" if outcome.detail else ""
+            raise RuntimeError(f"The remote agent's task ended {outcome.state}{reason}")
 
         output = outcome.output
         if not output and outcome.task_id:
@@ -386,6 +446,9 @@ async def relay_a2a_task(
             task_result = response.get("result") if isinstance(response, dict) else None
             if isinstance(task_result, dict):
                 output = "\n".join(
-                    filter(None, (_artifact_text(a) for a in task_result.get("artifacts") or []))
+                    filter(
+                        None,
+                        (_artifact_text(a) for a in task_result.get("artifacts") or []),
+                    )
                 )
         return output

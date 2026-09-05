@@ -357,7 +357,31 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             raise ValueError(f"Task {params['id']} not found")
         task_id = task["id"]
         context_id = task["context_id"]
+        try:
+            await self._run(task_id, context_id, params)
+        except Exception as exc:
+            # The base worker marks the task failed and ends the stream, but
+            # says nothing about why. Log it here, and put the reason on the
+            # failed status so the client learns it too.
+            logger.exception(
+                "A2A task %s for agent %s failed", task_id, self.agent.name
+            )
+            await self._emit_status(
+                task_id,
+                context_id,
+                "failed",
+                Message(
+                    role="agent",
+                    parts=[Part(text=f"{type(exc).__name__}: {exc}")],
+                    message_id=str(uuid.uuid4()),
+                    context_id=context_id,
+                ),
+            )
+            raise
 
+    async def _run(
+        self, task_id: str, context_id: str, params: "TaskSendParams"
+    ) -> None:
         await self.storage.update_task(task_id, state="working")
         await self._emit_status(task_id, context_id, "working")
 
@@ -429,7 +453,9 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             context_id=context_id,
         )
         await self.storage.update_context(context_id, [*history, incoming, reply])
-        artifact = Artifact(artifact_id=artifact_id, name="result", parts=[Part(text=output)])
+        artifact = Artifact(
+            artifact_id=artifact_id, name="result", parts=[Part(text=output)]
+        )
         await self.storage.update_task(
             task_id,
             state="completed",

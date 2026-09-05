@@ -101,6 +101,54 @@ The `SubagentsCapability` contributes a system prompt section listing the
 available subagents with their names and descriptions, so the model knows what
 it can delegate to.
 
+## Subagents Over A2A
+
+A subagent need not run inside the orchestrator's process. Give it an `a2a`
+block and it becomes a *separate agent* reached over the
+[A2A protocol](https://a2a-protocol.org): the same `delegate_task` tool, the
+same events on the orchestrator's stream, but the run happens in another
+agent — launched from its own agentspec, with its own tools and guardrails.
+
+```yaml
+subagents:
+  include_general_purpose: false
+  subagents:
+    - name: researcher
+      description: "A separate research agent, reached over A2A"
+      ref: example-a2a-researcher:0.0.1
+      a2a:
+        launch: auto      # local | cloud | auto (default)
+    - name: reviewer
+      description: "An agent already running elsewhere"
+      a2a:
+        url: https://agents.example.com/api/v1/a2a/agents/reviewer
+```
+
+Either `url` names an agent already answering, or `ref` names the agentspec
+to launch one from. With `launch: auto` the agent is launched where the
+orchestrator runs: beside it on the local `agent-runtimes` server, or on a
+Datalayer runtime when the orchestrator is itself a cloud runtime. Launching
+goes through the client the CLI and the evals already use
+(`ensure_local_agent`, `AgentClient.create_runtime`), so there is one way of
+starting agents. The launched agent is registered with the `a2a` transport and
+kept for the next delegations; every delegation to it from one orchestrator
+shares one A2A context, so it keeps the thread.
+
+Serving side, every agent registered with the `a2a` transport is mounted at
+`/api/v1/a2a/agents/{agent_id}` by a FastA2A application whose worker runs the
+agent *adapter* — MCP servers, skills, codemode, guardrails and approvals apply
+as over the other transports — and streams the run over `message/stream`:
+each text delta as an artifact chunk, each tool call and result as a `working`
+status carrying a data part, the whole answer as the last chunk, then the
+final status.
+
+On the orchestrator's stream the `agent.subagent` events carry
+`transport: "a2a"`, the agent's `url`, where it was launched, its card, its
+task id and the task's states (`status` phase), so a UI can tell a remote run
+from an in-process one. The `AgentA2AExample` shows it with the A2A sidebar
+plugin (`@datalayer/loop-plugin-a2a-sidebar`): the remote agents, their status
+and card, and the live run box.
+
 ## TypeScript Types
 
 The TypeScript types for subagents are available in the `@datalayer/agent-runtimes` package:

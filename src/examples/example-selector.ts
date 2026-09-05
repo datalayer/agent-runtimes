@@ -18,6 +18,7 @@ export interface ExampleEntry {
 const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bAg Ui\b/g, 'AG-UI'],
   [/\bA2 Ui\b/g, 'A2UI'],
+  [/\bA2 A\b/g, 'A2A'],
   [/\bCopilot Kit\b/g, 'CopilotKit'],
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],
@@ -45,6 +46,7 @@ function inferTags(id: string): string[] {
   if (id.startsWith('Agent')) tags.add('agent');
   if (id.startsWith('AgUi')) tags.add('ag-ui');
   if (id.startsWith('A2Ui')) tags.add('a2ui');
+  if (id.startsWith('AgentA2A')) tags.add('a2a');
   if (id.includes('Notebook')) tags.add('notebook');
   if (id.includes('Lexical') || id.includes('Document')) tags.add('document');
   if (id.includes('Chat')) tags.add('chat');
@@ -298,6 +300,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentSubagentsExample',
     () => import('./AgentSubagentsExample'),
     'Multi-agent delegation with the in-repo subagents capability.',
+  ),
+  makeEntry(
+    'AgentA2AExample',
+    () => import('./AgentA2AExample'),
+    'Delegation to separate agents over the A2A protocol, launched locally or on Datalayer runtimes.',
   ),
   makeEntry(
     'AgentNotificationsExample',

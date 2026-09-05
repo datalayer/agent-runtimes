@@ -256,7 +256,7 @@ def register_a2a_agent(
             )
             try:
                 lifespan_context = a2a_app.router.lifespan_context(a2a_app)
-                asyncio.create_task(
+                a2a_app._lifespan_task = asyncio.create_task(
                     _start_a2a_lifespan(agent_id, a2a_app, lifespan_context)
                 )
             except Exception as e:
@@ -276,13 +276,9 @@ def unregister_a2a_agent(agent_id: str) -> None:
     if agent_id in _a2a_agents:
         # Stop lifespan if running
         registration = _a2a_agents[agent_id]
-        if registration.app and hasattr(registration.app, "_lifespan_context"):
-            import asyncio
-
+        if registration.app is not None:
             try:
-                asyncio.create_task(
-                    registration.app._lifespan_context.__aexit__(None, None, None)
-                )
+                _request_lifespan_stop(agent_id, registration.app)
             except Exception as e:
                 logger.warning(f"Could not stop lifespan for {agent_id}: {e}")
 
@@ -327,16 +323,45 @@ def get_a2a_mounts() -> list[Mount]:
 
 async def _start_a2a_lifespan(agent_id: str, app: Any, lifespan: Any) -> None:
     """
-    Start A2A lifespan context for a dynamically registered agent.
+    Run a dynamically registered agent's lifespan, in a task of its own, until asked to stop.
+
+    Entered and exited in the same task on purpose: the lifespan runs the
+    worker's anyio task group, and anyio refuses to exit a cancel scope from a
+    task other than the one that entered it — which is what shutdown did when
+    it exited a context this task had entered, and logged an error for.
     """
+    stop = asyncio.Event()
+    app._lifespan_stop = stop
     try:
         await lifespan.__aenter__()
-        app._lifespan_context = lifespan
-        logger.info(
-            f"Started lifespan for dynamically registered A2A agent: {agent_id}"
-        )
     except Exception as e:
         logger.error(f"Failed to start lifespan for {agent_id}: {e}")
+        return
+    app._lifespan_context = lifespan
+    logger.info(f"Started lifespan for dynamically registered A2A agent: {agent_id}")
+    try:
+        await stop.wait()
+    finally:
+        try:
+            await lifespan.__aexit__(None, None, None)
+            logger.info(f"Stopped lifespan for A2A agent: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not stop lifespan for {agent_id}: {e}")
+
+
+def _request_lifespan_stop(agent_id: str, app: Any) -> "asyncio.Task[None] | None":
+    """
+    Ask a dynamically registered agent's lifespan task to stop; returns it, to await.
+
+    An app whose lifespan was entered at server startup has no task of its own
+    and is stopped where it was started, in `stop_a2a_task_managers`.
+    """
+    stop = getattr(app, "_lifespan_stop", None)
+    task = getattr(app, "_lifespan_task", None)
+    if stop is None:
+        return None
+    stop.set()
+    return task
 
 
 async def start_a2a_task_managers() -> None:
@@ -373,12 +398,19 @@ async def stop_a2a_task_managers() -> None:
     Clean up the FastA2A app lifespan contexts.
     """
     for agent_id, registration in _a2a_agents.items():
-        if registration.app and hasattr(registration.app, "_lifespan_context"):
-            try:
-                await registration.app._lifespan_context.__aexit__(None, None, None)
+        app = registration.app
+        if app is None:
+            continue
+        try:
+            task = _request_lifespan_stop(agent_id, app)
+            if task is not None:
+                # Dynamically registered: its own task exits the context.
+                await asyncio.wait_for(task, timeout=10)
+            elif hasattr(app, "_lifespan_context"):
+                await app._lifespan_context.__aexit__(None, None, None)
                 logger.info(f"Stopped lifespan for A2A agent: {agent_id}")
-            except Exception as e:
-                logger.error(f"Failed to stop lifespan for {agent_id}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to stop lifespan for {agent_id}: {e}")
 
 
 # REST endpoint to list available A2A agents

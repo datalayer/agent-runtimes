@@ -106,6 +106,7 @@ const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
 const EXAMPLE_GROUP_ORDER = [
   'Loop',
   'A2UI',
+  'A2A',
   'AG-UI',
   'Agent',
   'Chat',
@@ -147,6 +148,8 @@ const getExampleGroup = (id: string): string => {
     return 'Loop';
   }
   if (id.startsWith('A2Ui')) return 'A2UI';
+  // Agents reached over the A2A protocol: their own category, after A2UI.
+  if (id.startsWith('AgentA2A')) return 'A2A';
   if (id.startsWith('AgUi')) return 'AG-UI';
   if (id.startsWith('CopilotKit')) return 'CopilotKit';
   if (id.startsWith('Agent')) return 'Agent';

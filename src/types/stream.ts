@@ -45,9 +45,22 @@ export interface AgentStreamCompactionPayload {
   reduced?: boolean;
 }
 
-/** Phase of a streamed subagent interaction. */
+/**
+ * Phase of a streamed subagent interaction.
+ *
+ * `status` is the remote side of a delegation talking: an agent reached over
+ * A2A being launched, its task submitted, working, completed. It renders no
+ * text; it tells a sidebar where the run stands.
+ */
 export type AgentSubagentPhase =
-  'start' | 'text' | 'thinking' | 'tool_call' | 'tool_result' | 'end' | 'error';
+  | 'start'
+  | 'status'
+  | 'text'
+  | 'thinking'
+  | 'tool_call'
+  | 'tool_result'
+  | 'end'
+  | 'error';
 
 /**
  * Incremental subagent activity pushed on the parent agent's monitoring
@@ -75,6 +88,40 @@ export interface AgentStreamSubagentPayload {
   output?: string;
   /** Failure message (`error`). */
   error?: string;
+  /**
+   * How the subagent is reached: inside the parent's process, or over A2A as
+   * a separate agent. Absent means in-process.
+   */
+  transport?: 'in-process' | 'a2a';
+  /** Where the A2A agent answers (`transport: 'a2a'`). */
+  url?: string;
+  /**
+   * Where an A2A agent runs: `local` (launched beside the parent), `cloud`
+   * (a Datalayer runtime launched for it), `remote` (given by URL), or the
+   * `auto` a spec asked for before the choice was made.
+   */
+  launch?: string;
+  /** The A2A task id, once the remote agent has one (`status`). */
+  taskId?: string | null;
+  /**
+   * Where a remote run stands (`status`): `launching`, `ready`, then the A2A
+   * task states — `submitted`, `working`, `completed`, `failed`, …
+   */
+  state?: string;
+  /** The remote agent's card, summarised. */
+  agentCard?: {
+    name?: string;
+    description?: string;
+    version?: string;
+    url?: string;
+    skills?: string[];
+  };
+  /** Uid of the runtime launched for a cloud A2A agent. */
+  runtimeUid?: string;
+  /** Delegation depth, `0` for a top-level delegation (server harness). */
+  depth?: number;
+  /** The delegation stack, the running subagent last (server harness). */
+  chain?: string[];
 }
 
 export interface AgentStreamMessage<TPayload = Record<string, unknown>> {
