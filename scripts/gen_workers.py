@@ -1,6 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
-"""One-off generator for the workers-* agent specs (9 verticals).
+"""One-off generator for the worker-* agent specs (9 verticals).
 
 Creates one YAML spec per worker example from the Agent Workers portfolio.
 Skips the three flagship workers that already exist as hand-authored specs.
@@ -395,7 +395,7 @@ TEMPLATE = """# Copyright (c) 2025-2026 Datalayer, Inc.
 # Agent Specification: {name}
 # {vertical_label} vertical worker.
 
-id: workers-{slug}
+id: worker-{slug}
 version: 0.0.1
 name: {name}
 domain: {vertical}
@@ -498,7 +498,7 @@ def main():
             goal=goal,
             system_prompt=system_prompt,
         )
-        path = AGENTS_DIR / f"workers-{slug}.yaml"
+        path = AGENTS_DIR / f"worker-{slug}.yaml"
         path.write_text(content, encoding="utf-8")
         written += 1
     print(f"Wrote {written} worker specs to {AGENTS_DIR}")

@@ -28,11 +28,11 @@ DEFAULT_RUNTIME_AGENT_NAME = "chat"
 # the picker focused while preserving the existing valid/env/sort logic.
 DEFAULT_AGENTSPEC_CONTEXT_IDS: tuple[str, ...] = (
     "example-simple",
-    "gallery-accountant",
-    "gallery-analyze-excel-spreadsheet",
-    "gallery-agent-critic-loop-for-analysis",
-    "gallery-ai-explains-notebook-output",
-    "gallery-replace-excel-pivot-work",
+    "worker-accountant",
+    "example-analyze-excel-spreadsheet",
+    "example-agent-critic-loop-for-analysis",
+    "example-ai-explains-notebook-output",
+    "example-replace-excel-pivot-work",
 )
 
 

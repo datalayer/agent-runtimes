@@ -1302,7 +1302,7 @@ SHARED_NOTEBOOK_TEAM_SPEC_0_0_1 = TeamSpec(
     execution_mode="supervisor",
     supervisor=TeamSupervisorSpec(
         name="Analyst",
-        ref="notebook-analyst:0.0.1",
+        ref="jupyter-notebook-analyst:0.0.1",
         model="bedrock:us.anthropic.claude-sonnet-4-6",
         goal="Keep the work in the notebook. Answer analysis requests directly; send a request to check something to the Reviewer and a request to write something up to the Writer, and never leave results anywhere but the cells.",
         instructions="",
@@ -1324,7 +1324,7 @@ SHARED_NOTEBOOK_TEAM_SPEC_0_0_1 = TeamSpec(
         TeamAgentspec(
             id="analyst",
             name="Analyst",
-            ref="notebook-analyst:0.0.1",
+            ref="jupyter-notebook-analyst:0.0.1",
             role="initiator",
             goal="Explore the data in the open notebook — add the cells, run them, and leave the results on them for the others to build on.",
             depends_on=[],
@@ -1338,7 +1338,7 @@ SHARED_NOTEBOOK_TEAM_SPEC_0_0_1 = TeamSpec(
         TeamAgentspec(
             id="reviewer",
             name="Reviewer",
-            ref="notebook-reviewer:0.0.1",
+            ref="jupyter-notebook-reviewer:0.0.1",
             role="reviewer",
             goal="Re-run what matters, find what is wrong or unsupported, and record the verdict in the notebook beside the code it concerns.",
             depends_on=[],
@@ -1352,7 +1352,7 @@ SHARED_NOTEBOOK_TEAM_SPEC_0_0_1 = TeamSpec(
         TeamAgentspec(
             id="writer",
             name="Writer",
-            ref="notebook-writer:0.0.1",
+            ref="jupyter-notebook-writer:0.0.1",
             role="finalizer",
             goal="Write the analysis up between the cells — summary, explanations, conclusion — saying only what the cells support.",
             depends_on=[],

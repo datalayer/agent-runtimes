@@ -74,7 +74,7 @@ class TestCLIHelp:
         assert "Available Agent Specs" in result.stdout
         # Check for known agent specs
         assert VALID_AGENT_ID in result.stdout
-        assert "gallery-crawler" in result.stdout
+        assert "worker-crawler" in result.stdout
 
     def test_list_specs_json_output(self) -> None:
         """Test that list-specs --output json returns valid JSON."""
