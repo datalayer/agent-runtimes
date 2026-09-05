@@ -132,6 +132,8 @@ const ANONYMOUS_EXAMPLES = new Set([
   // The two page layouts, on the browser sandbox like the shell.
   'NotebookPageAgent',
   'DocumentPageAgent',
+  // The decks plugin in a Loop; the agent and the decks both live in the page.
+  'DecksAgent',
 ]);
 
 const getExampleGroup = (id: string): string => {
@@ -139,7 +141,8 @@ const getExampleGroup = (id: string): string => {
     id === 'AgentspecsExample' ||
     id === 'AgentLoopExample' ||
     id === 'LoopWorkspaceExample' ||
-    id === 'LoopShellExample'
+    id === 'LoopShellExample' ||
+    id === 'DecksAgent'
   ) {
     return 'Loop';
   }

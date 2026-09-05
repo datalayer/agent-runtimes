@@ -44,19 +44,23 @@ describe('the theme plugin in Loop', () => {
     const root = document.getElementById('__primerPortalRoot__');
     expect(root).not.toBeNull();
 
+    // Every press is a visible change: from light to dark, from dark to
+    // light, and from `auto` to the opposite of whatever `auto` is showing.
+    // The store's own cycle passes through `auto`, which is a step nobody
+    // can see when it resolves to the mode already on screen.
+    const showing = (mode: string): string =>
+      mode === 'auto'
+        ? window.matchMedia?.('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : mode;
     const before = useThemeStore.getState().colorMode;
     await reactor.executeCommand(TOGGLE_COLOR_MODE_COMMAND);
     const after = useThemeStore.getState().colorMode;
-    expect(after).not.toBe(before);
-
-    // And the root followed the store — the subscription the inline call
-    // never had.
-    const cycle: Record<string, string> = {
-      light: 'dark',
-      dark: 'auto',
-      auto: 'light',
-    };
-    expect(cycle[before]).toBe(after);
+    expect(after).toBe(showing(before) === 'dark' ? 'light' : 'dark');
+    // And back again, never landing on `auto`.
+    await reactor.executeCommand(TOGGLE_COLOR_MODE_COMMAND);
+    expect(useThemeStore.getState().colorMode).toBe(showing(before));
 
     const command = reactor.getCommand(TOGGLE_COLOR_MODE_COMMAND);
     expect(command?.keybinding).toBe('Mod+Alt+T');

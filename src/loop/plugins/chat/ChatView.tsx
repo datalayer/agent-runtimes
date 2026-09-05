@@ -730,6 +730,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       (typeof toolContributions)[number]['value']['tools']
     > = [];
     const owners = new Map<string, string>();
+    // Tools a contribution vouched for in the chat view; see `chatView`.
+    const keep = new Set<string>();
     for (const entry of orderToolContributions(
       toolContributions,
       active?.surfaceId,
@@ -755,6 +757,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         }
         owners.set(tool.name, entry.plugin);
         merged.push(tool);
+        if (entry.value.chatView) {
+          keep.add(tool.name);
+        }
       }
     }
     // A host example's own frontend tools, folded in last (first name wins),
@@ -774,7 +779,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      * conversation as surfaces, and the read tools. The editors stay
      * mounted out of sight either way, so what it can still call, works.
      */
-    return active ? merged : toolsForChatView(merged);
+    return active ? merged : toolsForChatView(merged, keep);
     // The workspace object is rebuilt when its facts change; surfaceId is
     // the one the factories address by.
     // eslint-disable-next-line react-hooks/exhaustive-deps

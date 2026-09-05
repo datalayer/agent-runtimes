@@ -54,6 +54,19 @@ describe('the chat view toolset', () => {
     ]);
   });
 
+  it('keeps what a contribution vouched for, whatever its name', () => {
+    const tools = [
+      { name: 'decks_create_deck' },
+      { name: 'insertCell' },
+      { name: 'readAllCells' },
+    ];
+    expect(
+      toolsForChatView(tools, new Set(['decks_create_deck'])).map(
+        tool => tool.name,
+      ),
+    ).toEqual(['decks_create_deck', 'readAllCells']);
+  });
+
   it('lets the editor on screen own shared tool names, the notebook otherwise', () => {
     const entries = [
       { value: { id: 'document-tools' } },

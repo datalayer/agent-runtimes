@@ -36,8 +36,14 @@ export function isChatViewTool(name: string): boolean {
 }
 
 /** The subset of `tools` an agent is handed while no editor is on screen. */
-export function toolsForChatView<T extends { name: string }>(tools: T[]): T[] {
-  return tools.filter(tool => isChatViewTool(tool.name));
+export function toolsForChatView<T extends { name: string }>(
+  tools: T[],
+  /** Names a contribution vouched for (`chatView: true`), kept regardless. */
+  keep?: ReadonlySet<string>,
+): T[] {
+  return tools.filter(
+    tool => keep?.has(tool.name) || isChatViewTool(tool.name),
+  );
 }
 
 /**

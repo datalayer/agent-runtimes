@@ -50,6 +50,35 @@ export const ThemedProvider: React.FC<
     usePrimerThemeStore.setState({ theme: themeVariant, colorMode });
   }, [themeVariant, colorMode]);
 
+  // And the other way round. The reactor's `theme.toggleColorMode` command —
+  // the palette, Mod+Alt+T — and any primer-addons consumer move the
+  // singleton, not the examples' store; with only the mirror above, the chat
+  // (which reads the singleton) changed and the provider around everything
+  // else kept the old mode. Following the singleton here brings the header,
+  // the sidebar and every editor along on the first call. Through the
+  // store's setters rather than `setState`, so the active variant's saved
+  // preference moves too. No loop: the mirror above then writes back the same
+  // values, and equal values are not a change.
+  useEffect(
+    () =>
+      usePrimerThemeStore.subscribe((state, previous) => {
+        if (
+          state.colorMode === previous.colorMode &&
+          state.theme === previous.theme
+        ) {
+          return;
+        }
+        const example = useExampleThemeStore.getState();
+        if (example.colorMode !== state.colorMode) {
+          example.setColorMode(state.colorMode);
+        }
+        if (example.theme !== state.theme) {
+          example.setTheme(state.theme);
+        }
+      }),
+    [],
+  );
+
   return (
     <DatalayerThemeProvider
       colorMode={rest.colorMode ?? colorMode}

@@ -1,0 +1,148 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Decks in a Loop: a deck beside the chat, and the tools an agent makes one
+ * with.
+ *
+ * The plugin pulls `@datalayer/decks`'s own reactor plugin in as a dependency,
+ * pointed at the Loop's slots — the list of decks in the sidebar, the "new
+ * deck" dialog at the root — and adds what only a Loop can know:
+ *
+ * - a **Deck** editor surface, one entry in the shell's editor selector, that
+ *   shows the open deck in the column beside the conversation;
+ * - the `decks` tool bundle as **frontend tools**, implemented against the
+ *   plugin mounted here (see `deckTools.ts`), vouched for in the chat view;
+ * - a **menu in the composer** with the decks to open and the plugin's
+ *   commands, and a `deck` slash command with a keystroke.
+ *
+ * `DeckViewPlugin` is the footer icon that switches to the deck, like the
+ * notebook's and the document's.
+ *
+ * @module loop/plugins/decks
+ */
+
+import { ProjectIcon } from '@primer/octicons-react';
+import {
+  configurePlugin,
+  contribution,
+  definePlugin,
+} from '@datalayer/reactor';
+import type { ReactorReactOutput } from '@datalayer/reactor/react';
+import { DecksPlugin } from '@datalayer/decks/plugin';
+import {
+  LoopCommand,
+  LoopEditorView,
+  LoopFrontendTool,
+  LoopSlots,
+  requestSurface,
+} from '../../core';
+import { InputPromptPlugin } from '../input-prompt';
+import { defineViewPlugin } from '../view-switch';
+import DecksMenu from './DecksMenu';
+import { DECK_SURFACE_ID, createDeckTools } from './deckTools';
+
+export {
+  DECK_SURFACE_ID,
+  createDeckTools,
+  deckToolHandlers,
+} from './deckTools';
+
+export const DECKS_PLUGIN_NAME = '@datalayer/loop-plugin-decks';
+
+/**
+ * A slot nobody renders: the decks plugin's main view is shown through the
+ * Deck surface instead, so the plugin's own `slot` output must land nowhere.
+ */
+export const DECKS_UNUSED_SLOT = 'loop.decks.unused';
+
+export const LoopDecksPlugin = definePlugin<
+  Record<string, never>,
+  unknown,
+  ReactorReactOutput
+>({
+  name: DECKS_PLUGIN_NAME,
+  displayName: 'Decks',
+  description:
+    'A deck beside the chat, the decks in the sidebar, and the tools an agent writes a presentation with.',
+  octicon: 'project',
+  emoji: '\u{1F4CA}',
+  dependencies: [
+    configurePlugin(DecksPlugin, {
+      listSlot: LoopSlots.sidebar,
+      slot: DECKS_UNUSED_SLOT,
+      dialogSlot: LoopSlots.root,
+      shellView: false,
+    }),
+    // The menu sits in the composer's action row; without the composer there
+    // is nowhere for it to be.
+    InputPromptPlugin,
+  ],
+  contributes: [
+    contribution(
+      LoopEditorView,
+      {
+        surfaceId: DECK_SURFACE_ID,
+        title: 'Deck',
+        icon: ProjectIcon,
+        order: 30,
+        load: () => import('./DeckSurface'),
+      },
+      { id: DECK_SURFACE_ID, order: 30 },
+    ),
+    contribution(
+      LoopCommand,
+      {
+        name: 'deck',
+        description: 'Open the deck beside the chat',
+        group: 'Open',
+        keybinding: 'Mod+Alt+D',
+        run: async ({ workspace }) => {
+          workspace.setActiveViewType('chat');
+          if (!requestSurface(DECK_SURFACE_ID)) {
+            throw new Error('No chat is on screen to open the deck beside.');
+          }
+        },
+      },
+      { id: 'deck' },
+    ),
+    contribution(
+      LoopFrontendTool,
+      {
+        id: 'deck-tools',
+        // A deck is not an editor the reader might be unable to see: the
+        // tools stay in the chat view, and open the deck surface themselves.
+        chatView: true,
+        tools: workspace => createDeckTools(workspace),
+      },
+      { id: 'deck-tools' },
+    ),
+  ],
+  build: () => ({
+    components: [
+      {
+        id: 'decks-menu',
+        slot: LoopSlots.promptAction,
+        order: 40,
+        Component: DecksMenu,
+      },
+    ],
+  }),
+});
+
+/** The footer icon that shows the deck, beside the notebook's and the document's. */
+export const DeckViewPlugin = defineViewPlugin({
+  key: 'deck',
+  viewId: DECK_SURFACE_ID,
+  displayName: 'Deck View',
+  description: 'The deck beside the chat, from the composer footer.',
+  icon: ProjectIcon,
+  tooltip: 'Show the deck',
+  octicon: 'project',
+  emoji: '\u{1F4CA}',
+  order: 12,
+});
+
+export default LoopDecksPlugin;

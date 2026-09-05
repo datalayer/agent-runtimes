@@ -471,6 +471,13 @@ export type FrontendToolContribution = {
   id: string;
   /** Build the tools for this workspace. Called on mount and agent switch. */
   tools: (workspace: LoopWorkspaceContext) => FrontendToolDefinition[];
+  /**
+   * Whether these tools stay in the chat view — the conversation alone, no
+   * editor on screen. Off by default: the chat view withholds tools that
+   * change a notebook or a document the reader cannot see. A contribution
+   * whose tools touch no editor — a deck the agent makes, say — says so here.
+   */
+  chatView?: boolean;
 };
 
 export const LoopFrontendTool =
