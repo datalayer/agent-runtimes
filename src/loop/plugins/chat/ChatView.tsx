@@ -718,7 +718,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     /*
      * One tool per name, first contribution wins — so the order is decided
      * here rather than by which lazy import landed first. The notebook and
-     * the document both ship an `executeCode`: the notebook's runs in the
+     * the document each ship a kernel tool — `executeCodeInNotebook` runs in the
      * sandbox and streams onto the conversation, the document's runs on the
      * document's own kernel and returns silently. The editor on screen owns
      * the shared names; with none on screen the notebook does, since its
@@ -769,7 +769,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     /*
      * The view decides the toolset. With an editor on screen the agent has
      * everything; with none — the chat view — it keeps only what leaves the
-     * editors alone: `executeCode`, whose outputs stream onto the
+     * editors alone: the `executeCodeIn…` tools, whose outputs stream onto the
      * conversation as surfaces, and the read tools. The editors stay
      * mounted out of sight either way, so what it can still call, works.
      */

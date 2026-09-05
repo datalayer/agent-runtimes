@@ -800,7 +800,7 @@ class AgentClient(
         snapshot_name : Optional[str], optional
             Name of the snapshot to create from. If provided, the runtime will be created from this snapshot.
         runtime_name : Optional[str], optional
-            Pod name (``runtime-<ULID>``) the Contents attachments were made for;
+            The runtime's uid (a ULID) the Contents attachments were made for;
             the runtime is created under it.
         content_attachment_uids : Optional[list[str]], optional
             Contents attachments to mount, created for ``runtime_name`` before the

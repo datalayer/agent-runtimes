@@ -149,7 +149,7 @@ class RuntimesClient:
         from_snapshot_uid : Optional[str]
             UID of the snapshot to create the runtime from.
         runtime_name : Optional[str]
-            Pod name (``runtime-<ULID>``) the Contents attachments were made
+            The runtime's uid (a ULID) the Contents attachments were made
             for; the runtime is created under it.
         content_attachment_uids : Optional[list[str]]
             Contents attachments to mount, created for ``runtime_name`` before the

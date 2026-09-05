@@ -895,7 +895,7 @@ export function CodeSandboxPicker(
                       const choiceKey =
                         codeSandboxDescKey(candidateRuntimeDesc);
                       const annotation = candidateRuntimeDesc.runtimeName
-                        ? ` - ${candidateRuntimeDesc.runtimeName.split('-', 2).reverse()[0]}`
+                        ? ` - ${candidateRuntimeDesc.runtimeName}`
                         : candidateRuntimeDesc.kernelId
                           ? ` - ${candidateRuntimeDesc.kernelId}`
                           : '';

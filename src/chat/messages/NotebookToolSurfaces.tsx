@@ -13,7 +13,7 @@
  * or run appears under its tool row in two parts, the change first (the
  * cell's source, read-only) and the outputs after, bound to the live model's
  * own output area so a run that prints as it goes streams into the
- * transcript. An `executeCode` shows only its outputs: the code was the
+ * transcript. An `executeCodeInNotebook` shows only its outputs: the code was the
  * agent's means, the output is the result.
  *
  * Part of the chat rather than of any workspace: `ChatBase` turns it on for
@@ -53,7 +53,12 @@ export const CELL_TOOLS = new Set([
   'datalayer_runCell',
 ]);
 
-export const EXECUTE_TOOLS = new Set(['executeCode', 'datalayer_executeCode']);
+export const EXECUTE_TOOLS = new Set([
+  'executeCodeInNotebook',
+  'datalayer_executeCodeInNotebook',
+  'executeCodeInDocument',
+  'datalayer_executeCodeInDocument',
+]);
 
 /**
  * The tool's result, as the structure it was before serialisation.
@@ -123,7 +128,7 @@ export function touchedCellModel(
   return model?.cells?.get(index) ?? null;
 }
 
-/** Best-effort nbformat outputs from an `executeCode` result. */
+/** Best-effort nbformat outputs from an `executeCodeInNotebook` result. */
 export function executionOutputs(context: ToolCallRenderContext): IOutput[] {
   const result = (decodedResult(context) ?? {}) as {
     outputs?: Array<{ type?: string; content?: unknown }>;
@@ -158,7 +163,7 @@ export function executionOutputs(context: ToolCallRenderContext): IOutput[] {
 /*
  * Live models already spoken for by a finished row.
  *
- * The adapter exposes only "the last execution's outputs" — `executeCode`
+ * The adapter exposes only "the last execution's outputs" — `executeCodeInNotebook`
  * has no cell, so there is nothing better to address one by. Tool calls run
  * one at a time, so the model an *executing* row reads is its own — unless
  * it renders in the instant before its handler starts, when the previous
@@ -173,7 +178,8 @@ const TOOL_VERBS: Record<string, string> = {
   insertCell: 'inserted',
   updateCell: 'updated',
   runCell: 'ran',
-  executeCode: 'executed',
+  executeCodeInNotebook: 'executed',
+  executeCodeInDocument: 'executed',
 };
 
 export function NotebookToolSurfaces({
@@ -193,7 +199,7 @@ export function NotebookToolSurfaces({
    * Output example splits its panels: the cell's *source* first — the change
    * itself — and its outputs after, drawn from the live model's own output
    * area so a run that prints as it goes streams into the transcript rather
-   * than appearing all at once. `executeCode` runs in the kernel without
+   * than appearing all at once. `executeCodeInNotebook` runs in the kernel without
    * touching any cell — the code was the agent's means, the output is the
    * result — so it shows only what came back.
    *

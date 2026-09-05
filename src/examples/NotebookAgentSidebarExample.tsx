@@ -110,7 +110,7 @@ export function AgentRuntimeNotebookExampleInner({
     agentName: DEFAULT_AGENT_ID,
     description: 'Demo agent for notebook sidebar example',
     systemPrompt:
-      'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
+      'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCodeInNotebook only for temporary inspection code that should not modify notebook cells.',
     serviceManager,
     frontendTools: tools,
   });

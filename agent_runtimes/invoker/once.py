@@ -40,8 +40,8 @@ class OnceInvoker(BaseInvoker):
         started_at = self._now()
 
         # ── 1. AGENT_STARTED event ───────────────────────────────
-        # Events are keyed by runtime_id (pod name) so the UI can
-        # look them up by the runtime pod name it already knows.
+        # Events are keyed by runtime_id (the runtime's uid) so the UI can
+        # look them up by the runtime uid it already knows.
         """
         TODO reenable this when we've confirmed the agent state machine.
         try:
@@ -270,8 +270,8 @@ class OnceInvoker(BaseInvoker):
         """Stop the runtime after a once-trigger completes.
 
         1. Delete the agent registration from the local server.
-        2. Ask the Datalayer platform to delete the runtime pod
-           (uses ``runtime_id`` which is the Kubernetes pod name).
+        2. Ask the Datalayer platform to delete the runtime
+           (uses ``runtime_id``, the runtime's uid).
         """
         await stop_runtime_and_local_agent(
             agent_id=self.agent_id,

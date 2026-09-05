@@ -250,7 +250,7 @@ export function ChatLexicalAgentExampleInner({
     agentName: DEFAULT_AGENT_ID,
     description: 'Demo agent for lexical sidebar example',
     systemPrompt:
-      'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
+      'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCodeInDocument only for temporary inspection code that should not modify persisted document content.',
     serviceManager,
     frontendTools: tools,
   });

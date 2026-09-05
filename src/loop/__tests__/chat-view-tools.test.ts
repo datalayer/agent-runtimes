@@ -11,11 +11,12 @@ import {
 } from '../plugins/chat/chatViewTools';
 
 describe('the chat view toolset', () => {
-  it('keeps executeCode and the read and list tools', () => {
+  it('keeps the kernel tools and the read and list tools', () => {
     for (const name of [
-      'executeCode',
-      'datalayer_executeCode',
-      'datalayer_executeCode_lexical',
+      'executeCodeInNotebook',
+      'datalayer_executeCodeInNotebook',
+      'executeCodeInDocument',
+      'datalayer_executeCodeInDocument',
       'readCell',
       'readAllCells',
       'datalayer_readAllBlocks',
@@ -45,11 +46,11 @@ describe('the chat view toolset', () => {
     const tools = [
       { name: 'readAllCells' },
       { name: 'insertCell' },
-      { name: 'executeCode' },
+      { name: 'executeCodeInNotebook' },
     ];
     expect(toolsForChatView(tools).map(tool => tool.name)).toEqual([
       'readAllCells',
-      'executeCode',
+      'executeCodeInNotebook',
     ]);
   });
 

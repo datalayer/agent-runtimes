@@ -45,7 +45,7 @@ export const getRunningAgents = async (
 /**
  * Get detailed status for a specific agent.
  * @param token - Authentication token
- * @param runtimeName - Pod name hosting the agent
+ * @param runtimeName - The uid of the runtime hosting the agent
  * @param agentId - Agent ID within the pod (optional, defaults to primary)
  * @param baseUrl - Base URL
  * @returns Promise resolving to agent status
@@ -68,7 +68,7 @@ export const getAgentStatus = async (
 /**
  * Pause a running agent (light checkpoint by default, CRIU optional).
  * @param token - Authentication token
- * @param runtimeName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param baseUrl - Base URL
  */
 export const pauseAgent = async (
@@ -87,7 +87,7 @@ export const pauseAgent = async (
 /**
  * Resume a paused/checkpointed agent.
  * @param token - Authentication token
- * @param runtimeName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param baseUrl - Base URL
  */
 export const resumeAgent = async (
@@ -106,7 +106,7 @@ export const resumeAgent = async (
 /**
  * Get conversation checkpoints for an agent.
  * @param token - Authentication token
- * @param runtimeName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param agentId - Agent ID
  * @param baseUrl - Base URL
  */
@@ -128,7 +128,7 @@ export const getAgentCheckpoints = async (
 /**
  * Get usage summary for an agent.
  * @param token - Authentication token
- * @param runtimeName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param agentId - Agent ID
  * @param baseUrl - Base URL
  */

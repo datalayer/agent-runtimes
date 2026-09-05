@@ -6,7 +6,7 @@
  *
  * This is the shared component used to render the plain (non-floating) chat
  * view for an agent runtime. It is designed to be reused across the app:
- * - The agent runtime detail page (e.g. `/agents/runtime-...`).
+ * - The agent runtime detail page (`/agents/<uid>`).
  * - Gallery example pages (e.g. `/gallery/agents/analyze-excel-spreadsheet`).
  *
  * Behaviour:

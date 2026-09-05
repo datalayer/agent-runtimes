@@ -104,7 +104,7 @@ function buildLoopSystemPrompt(loop: LoopSpec): string {
   lines.push(
     `Keep loop state (dataframes, charts, intermediate results) in the notebook/runtime, not in the prompt. ` +
       `For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. ` +
-      `Use executeCode only for temporary inspection code that should not modify notebook cells.`,
+      `Use executeCodeInNotebook only for temporary inspection code that should not modify notebook cells.`,
   );
   return lines.join('\n\n');
 }

@@ -32,7 +32,7 @@ export type RuntimeData = IRuntimeRecord;
 export interface RuntimeJSON {
   /** ulid for the runtime */
   uid: string;
-  /** Kubernetes pod name for the runtime instance */
+  /** The runtime's name, which is its uid; the Pod is called by it. */
   runtimeName: string;
   /** User-friendly name for the runtime */
   givenName: string;
@@ -148,7 +148,7 @@ export class RuntimeDTO {
   // Static Properties (set at creation, never change)
   // ========================================================================
 
-  /** Kubernetes pod name for the runtime instance. */
+  /** The runtime's name, which is its uid; the Pod is called by it. */
   get runtimeName(): string {
     this._checkDeleted();
     return this._data.runtime_name;

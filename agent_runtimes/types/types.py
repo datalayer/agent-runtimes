@@ -198,6 +198,82 @@ class FrontendToolSpec(BaseModel):
     )
 
 
+
+class ReactorCommandToolSpec(BaseModel):
+    """One Reactor command, exposed as a tool executed in the browser."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    name: str = Field(..., description="What the model calls the tool")
+    command: str = Field(..., description="The reactor command id it executes")
+    description: str = Field(default="", description="Tool description for the model")
+    parameters: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="JSON Schema of the command's argument, passed whole",
+    )
+    approval: str = Field(default="auto", description="'auto' or 'manual'")
+
+
+class ReactorBackendToolSpec(BaseModel):
+    """One HTTP endpoint of a Reactor plugin's Python half, as a tool.
+
+    Properties named in the path are substituted; the rest travel as query
+    parameters for GET and DELETE and as the JSON body otherwise.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    name: str = Field(..., description="What the model calls the tool")
+    method: str = Field(default="GET", description="HTTP method")
+    path: str = Field(..., description="Path on the reactor backend, `{param}` allowed")
+    description: str = Field(default="", description="Tool description for the model")
+    parameters: Optional[Dict[str, Any]] = Field(
+        default=None, description="JSON Schema of the tool's arguments"
+    )
+    approval: str = Field(default="auto", description="'auto' or 'manual'")
+
+
+class ReactorBackendSpec(BaseModel):
+    """Where a plugin's backend is, and what it offers."""
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    base_url: Optional[str] = Field(
+        default=None, description="The reactor backend's origin", alias="baseUrl"
+    )
+    base_url_envvar: Optional[str] = Field(
+        default=None,
+        description="Environment variable that overrides base_url",
+        alias="baseUrlEnvvar",
+    )
+    tools: List[ReactorBackendToolSpec] = Field(default_factory=list)
+
+
+class ReactorToolSpec(BaseModel):
+    """
+    Specification for a Reactor tool bundle: a plugin's commands and backend.
+
+    The frontend half is executed where the plugin is mounted, through
+    ``reactor.executeCommand``; the backend half is the plugin's HTTP API,
+    called by the harness on the server.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    id: str = Field(..., description="Unique reactor tool identifier")
+    version: str = Field(default="0.0.1", description="Reactor tool version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="Description")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    enabled: bool = Field(default=True, description="Whether the bundle is enabled")
+    plugin: Optional[str] = Field(
+        default=None, description="The reactor plugin whose commands these are"
+    )
+    frontend: List[ReactorCommandToolSpec] = Field(default_factory=list)
+    backend: Optional[ReactorBackendSpec] = Field(default=None)
+    icon: Optional[str] = Field(default=None, description="Octicon name for UI display")
+    emoji: Optional[str] = Field(default=None, description="Unicode emoji for UI display")
+
 class FrontendRenderToolSpec(BaseModel):
     """
     Specification binding a backend tool to a frontend renderer.
@@ -1203,6 +1279,11 @@ class Agentspec(BaseModel):
         default_factory=list,
         description="Frontend tool IDs available to this agent",
         alias="frontendTools",
+    )
+    reactor_tools: List[str] = Field(
+        default_factory=list,
+        description="Reactor tool bundle IDs available to this agent",
+        alias="reactorTools",
     )
     frontend_render_tools: List[FrontendRenderToolSpec] = Field(
         default_factory=list,

@@ -3671,8 +3671,8 @@ read them first with `readAllCells` so you build on what is there rather
 than starting over. A variable a cell defines is defined for you.
 
 When the person has the conversation on screen rather than the notebook,
-you are handed `executeCode` and the read tools only, not the cell tools.
-Then run the analysis with `executeCode` — its outputs stream onto the
+you are handed `executeCodeInNotebook` and the read tools only, not the cell tools.
+Then run the analysis with `executeCodeInNotebook` — its outputs stream onto the
 conversation, where they are looking — and mention that the cells will be
 there once they open the notebook, rather than asking them to switch
 first.
@@ -3695,8 +3695,8 @@ When somebody asks you to analyse, explore, plot or compute something:
   stop the analysis over it.
 
 When the notebook is not on screen — the person is reading the
-conversation alone — you have `executeCode` and the read tools, and no
-`insertCell`. Run the analysis with `executeCode` then: its outputs, a
+conversation alone — you have `executeCodeInNotebook` and the read tools, and no
+`insertCell`. Run the analysis with `executeCodeInNotebook` then: its outputs, a
 figure included, stream into the conversation. Do not ask them to open
 the notebook first, and do not describe cells you could not add.
 
@@ -4345,7 +4345,8 @@ The notebook and the document both exist and stay connected to you the
 whole time, so reading them always works — asked about cells or blocks,
 call the read tool and answer from what it returns. With an editor shown
 you also have its editing tools (insert, update, run, delete). With `none`
-shown you have `executeCode` and the read tools only: the person is
+shown you have `executeCodeInNotebook`, `executeCodeInDocument` and the
+read tools only: the person is
 looking at the conversation, so results belong on it, not in an editor
 they cannot see. Never tell somebody to switch the editor before you can
 answer; suggest the switch, after the answer, only when they want
@@ -4361,10 +4362,10 @@ only when they ask you to run, execute, demonstrate or show something.
 Running code:
 
 - When somebody asks you to run something, or to show what some kind of
-  output looks like, call `executeCode` with real Python. Its outputs
+  output looks like, call `executeCodeInNotebook` with real Python. Its outputs
   stream onto the conversation live — printed lines appear as they are
   printed — so long-running code (a progress loop, a slow computation) is
-  exactly what this canvas is for. One `executeCode` call per request; do
+  exactly what this canvas is for. One `executeCodeInNotebook` call per request; do
   not insert a cell first when they only asked to run something.
 - When somebody wants code they can keep and re-run and the notebook is
   shown, use `insertCell` and `runCell`: the cell lands in the notebook

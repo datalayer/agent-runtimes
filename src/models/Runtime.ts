@@ -158,7 +158,7 @@ export interface IRuntimeDesc {
    */
   burningRate?: number;
   /**
-   * Runtime Pod name (if applicable).
+   * The runtime's name, which is its uid (if applicable).
    */
   runtimeName?: string;
 }

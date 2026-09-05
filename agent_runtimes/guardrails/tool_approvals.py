@@ -330,12 +330,9 @@ class ToolApprovalConfig:
     def from_env(cls) -> ToolApprovalConfig:
         import os
 
-        runtime_name = (
-            os.environ.get("POD_NAME")
-            or os.environ.get("DATALAYER_RUNTIME_ID")
-            or os.environ.get("HOSTNAME")
-            or ""
-        )
+        # The runtime's uid, set on the pod by the Operator. An approval is
+        # filed under it, which is what the platform knows the runtime by.
+        runtime_name = os.environ.get("DATALAYER_RUNTIME_ID") or ""
 
         return cls(
             agent_id=os.environ.get("AGENT_ID", "default"),

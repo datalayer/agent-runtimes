@@ -2824,7 +2824,9 @@ async def delete_agent(
             or os.environ.get("RUNTIMES_URL")
             or "https://r1.datalayer.run"
         )
-        resolved_runtime_id = runtime_id or os.environ.get("HOSTNAME")
+        # The runtime's uid, which the Operator sets on the pod: what the
+        # platform knows this runtime by. The pod's own name is not it.
+        resolved_runtime_id = runtime_id or os.environ.get("DATALAYER_RUNTIME_ID")
         if resolved_runtime_id:
             await stop_runtime_prefer_core(
                 runtime_id=resolved_runtime_id,
@@ -2833,7 +2835,7 @@ async def delete_agent(
             )
         else:
             logger.warning(
-                "delete_agent called with stop_runtime=true but no runtime_id provided and HOSTNAME not set"
+                "delete_agent called with stop_runtime=true but no runtime_id provided and DATALAYER_RUNTIME_ID not set"
             )
 
     return {"message": f"Agent {agent_id} deleted successfully"}
@@ -3817,7 +3819,7 @@ def _emit_agent_assigned_event(
 ) -> None:
     """Emit agent-assigned lifecycle event for companion runtime assignment."""
     token = (user_token or "").strip()
-    runtime_id = (os.environ.get("HOSTNAME") or "").strip()
+    runtime_id = (os.environ.get("DATALAYER_RUNTIME_ID") or "").strip()
     if not token:
         logger.debug(
             "[mcp-servers/start] Skipping agent-assigned event for '%s': no auth token",
@@ -3826,7 +3828,7 @@ def _emit_agent_assigned_event(
         return
     if not runtime_id:
         logger.debug(
-            "[mcp-servers/start] Skipping agent-assigned event for '%s': missing HOSTNAME runtime id",
+            "[mcp-servers/start] Skipping agent-assigned event for '%s': DATALAYER_RUNTIME_ID not set",
             agent_name,
         )
         return
@@ -4674,7 +4676,7 @@ async def trigger_run(
         or os.environ.get("RUNTIMES_URL")
         or "https://r1.datalayer.run"
     )
-    runtime_id = os.environ.get("HOSTNAME")
+    runtime_id = os.environ.get("DATALAYER_RUNTIME_ID")
 
     import asyncio
 

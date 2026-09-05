@@ -8,7 +8,7 @@
  *
  * The rendering itself is a read-only `Cell` and needs a browser to look at;
  * what is pinned here is the part that decides *what* to render: which tools
- * count, and how an `executeCode` result's loosely-typed outputs become
+ * count, and how an `executeCodeInNotebook` result's loosely-typed outputs become
  * nbformat the output area can draw.
  */
 
@@ -26,8 +26,8 @@ import type { ToolCallRenderContext } from '../../../types/chat';
 function contextWith(result: unknown): ToolCallRenderContext {
   return {
     toolCallId: 't1',
-    toolName: 'executeCode',
-    name: 'executeCode',
+    toolName: 'executeCodeInNotebook',
+    name: 'executeCodeInNotebook',
     args: {},
     result,
     status: 'complete',
@@ -42,7 +42,9 @@ describe('which tools get a cell in the transcript', () => {
       expect(CELL_TOOLS.has(name)).toBe(true);
       expect(CELL_TOOLS.has(`datalayer_${name}`)).toBe(true);
     }
-    expect(EXECUTE_TOOLS.has('executeCode')).toBe(true);
+    expect(EXECUTE_TOOLS.has('executeCodeInNotebook')).toBe(true);
+    expect(EXECUTE_TOOLS.has('executeCodeInDocument')).toBe(true);
+    expect(EXECUTE_TOOLS.has('executeCode')).toBe(false);
   });
 });
 
@@ -77,7 +79,7 @@ describe('which cell a call touched', () => {
   });
 });
 
-describe('executeCode outputs, as nbformat', () => {
+describe('executeCodeInNotebook outputs, as nbformat', () => {
   it('passes a real nbformat output through untouched', () => {
     const output = {
       output_type: 'execute_result',

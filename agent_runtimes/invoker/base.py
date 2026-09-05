@@ -51,9 +51,10 @@ class BaseInvoker(ABC):
         Base URL for the Runtimes API used for runtime termination.
         Falls back to ``DATALAYER_RUNTIMES_URL`` when not set.
     runtime_id : str | None
-        Kubernetes pod name (HOSTNAME).  Used as the ``agent_id``
-        when creating events and when terminating the runtime via
-        the platform API.  Falls back to *agent_id* when not set.
+        The runtime's uid (``DATALAYER_RUNTIME_ID``).  Used as the
+        ``agent_id`` when creating events and when terminating the
+        runtime via the platform API.  Falls back to *agent_id* when not
+        set.
     """
 
     def __init__(

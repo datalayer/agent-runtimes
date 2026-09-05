@@ -1153,7 +1153,7 @@ export interface ChatBaseProps {
    *
    * For a chat whose agent works a notebook the reader cannot see. A cell
    * that was inserted, updated or run appears under its tool row — source
-   * first, then its outputs streaming from the live model; `executeCode`
+   * first, then its outputs streaming from the live model; `executeCodeInNotebook`
    * shows only what came back. Ignored when `renderToolResult` is given:
    * a host that writes its own renderer owns the whole surface.
    */

@@ -122,7 +122,8 @@ same prompt and chips, no side panel and no turn panel — the turn is
 already on the page. `pageLayoutSheet` (a signal, `'editor'` or
 `'transcript'`) says which is the case, for a host that wants to follow it.
 The editors stay mounted out of sight, and the agent's toolset follows the
-view too: with no editor on screen it keeps `executeCode`, whose outputs
+view too: with no editor on screen it keeps `executeCodeInNotebook` and
+`executeCodeInDocument`, whose outputs
 stream onto the transcript as surfaces, and the read tools — nothing that
 would change a notebook or a document nobody is looking at.
 
@@ -333,7 +334,7 @@ When no editor is on screen, the chat renders what the tools did — a cell
 that was inserted, updated or run appears under its tool row as a captioned
 surface: the change first (the cell source, read-only), then its outputs,
 bound to the live model's own output area so a run that prints as it goes
-**streams into the transcript**. `executeCode` shows only its outputs. This
+**streams into the transcript**. `executeCodeInNotebook` shows only its outputs. This
 is chat machinery (`ChatBase`'s `notebookToolSurfacesId` prop), not Loop
 magic — any `ChatBase` host can turn it on.
 

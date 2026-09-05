@@ -42,7 +42,7 @@ export type CreateAgentRuntimeRequest = {
   /** Source organization handle for team-billed runtimes. */
   billingSourceOrganizationHandle?: string;
   /**
-   * Pod name (`runtime-<ULID>`) the Contents attachments were made for; the
+   * The runtime's uid (a ULID) the Contents attachments were made for; the
    * runtime is created under it so the attachments name the right sandbox.
    */
   runtimeName?: string;
