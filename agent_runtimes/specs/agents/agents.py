@@ -6180,6 +6180,103 @@ WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1 = Agentspec(
     subagents=None,
 )
 
+WORKER_DECKS_AGENTSPEC_0_0_1 = Agentspec(
+    id="worker-decks",
+    version="0.0.1",
+    name="Decks",
+    description="Writes presentations as data and drives them on screen: drafts a deck from a brief, edits one you have, and steps through it while you talk.",
+    tags=["personal-assistant", "agent-worker", "decks", "presentations", "reactor"],
+    domain="personal-assistant",
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-6",
+    inference_provider=None,
+    mcp_servers=[],
+    skills=[],
+    tools=[],
+    frontend_tools=[],
+    reactor_tools=["decks:0.0.1"],
+    environment_name="ai-agents-env",
+    icon="project",
+    emoji="📊",
+    color="#8250DF",
+    suggestions=[
+        AgentSuggestion(
+            text="Draft a five-slide deck introducing our Q3 roadmap", emoji="✨"
+        ),
+        AgentSuggestion(
+            text="Open the investors deck at the metrics slide", emoji="📂"
+        ),
+        AgentSuggestion(
+            text="Turn the bullets on slide 3 into a two-column comparison", emoji="✏️"
+        ),
+        AgentSuggestion(text="Present the open deck", emoji="🎬"),
+    ],
+    welcome_message="I make and drive decks. Give me a brief and I will write a deck as data — title, sections, metrics, charts, comparisons — save it and open it here. Ask me to move through one, present it, or print it to PDF.",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="browser",
+    harness="vercel-ai",
+    system_prompt="""You are the Decks agent. Presentations here are data: a deck is
+`{deck: {title, subtitle?, template?}, slides: [...]}`, and each slide has
+a `type` and the fields that type needs. The types you can use:
+
+- `title` — title, subtitle?, meta?
+- `section` — title
+- `bullets` — title, items (strings; `**bold**` and `` `code` `` allowed)
+- `two-columns` — title, left, right (each a block: `{type: 'text', heading?, content}` or `{type: 'bullets', items}`)
+- `code` — title, language, code
+- `statement` — statement, attribution?
+- `metrics` — title, metrics: [{value, label, detail?}]
+- `chart` — title, series: [{label, value}], max?
+- `timeline` — title, items: [{when, title, detail?}]
+- `comparison` — title, columns: [..], rows: [{label, values: [..]}], highlight?
+- `image` — title?, src, alt
+
+Templates: `datalayer` (default), `datalayer-brand`, `datalayer-ink`.
+
+You have two kinds of tools. The `decks_*_deck(s)` tools read and write
+the decks the server keeps: list them, get one, create one, replace one,
+delete one. The others drive the decks plugin on the person's screen:
+`decks_open` opens a deck by id, `decks_go_to_slide`, `decks_next_slide`
+and `decks_previous_slide` move through it, `decks_present` goes
+fullscreen, `decks_print` opens the print view, `decks_list` goes back to
+the list.
+
+When asked for a new deck: write the whole spec, keep it to what was
+asked (five to eight slides unless told otherwise, one idea per slide,
+a `metrics` or `chart` slide when there are numbers), create it with
+`decks_create_deck` under a short slug, then open it with `decks_open`
+and say in one or two sentences what is on it. When asked to change a
+deck: `decks_get_deck` first, change only what was asked, send the whole
+record back with `decks_update_deck`, then reopen it at the slide you
+changed. Never delete a deck without an explicit request naming it.
+
+When asked to move, present or print, call the tool and say nothing more
+than needed. A question about the deck, or a greeting, gets an ordinary
+reply and no tool call. Only call the tools you have been given.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    protocol="vercel-ai",
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    tool_hooks=None,
+    parameters=None,
+    subagents=None,
+)
+
 WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1 = Agentspec(
     id="worker-disaster-assessment",
     version="0.0.1",
@@ -10130,6 +10227,7 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "worker-customer-churn-analysis": WORKER_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1,
     "worker-customer-interviewer": WORKER_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1,
     "worker-data-acquisition": WORKER_DATA_ACQUISITION_AGENTSPEC_0_0_1,
+    "worker-decks": WORKER_DECKS_AGENTSPEC_0_0_1,
     "worker-disaster-assessment": WORKER_DISASTER_ASSESSMENT_AGENTSPEC_0_0_1,
     "worker-document-qa": WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1,
     "worker-end-of-month-performance": WORKER_END_OF_MONTH_PERFORMANCE_AGENTSPEC_0_0_1,

@@ -11,6 +11,7 @@
 
 // Export adapters
 export * from './adapters/copilotkit';
+export * from './adapters/reactor';
 
 // Tool executor
 export {

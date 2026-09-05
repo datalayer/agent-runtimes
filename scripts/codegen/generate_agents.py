@@ -311,6 +311,15 @@ from agent_runtimes.types import (
                 versioned_ref(*split_spec_ref(ft))
                 for ft in spec.get("frontend_tools", [])
             ]
+            reactor_tool_refs = [
+                versioned_ref(*split_spec_ref(rt))
+                for rt in spec.get("reactor_tools", [])
+            ]
+            reactor_tools_py_line = (
+                f"    reactor_tools={_fmt_list(reactor_tool_refs)},\n"
+                if reactor_tool_refs
+                else ""
+            )
             frontend_render_tools = spec.get("frontend_render_tools") or []
             frontend_render_tools_py_line = (
                 f"    frontend_render_tools={_fmt_py_literal(frontend_render_tools)},\n"
@@ -487,7 +496,7 @@ from agent_runtimes.types import (
     skills={_fmt_list(skill_refs)},
     tools={_fmt_list(tool_refs)},
 {disable_tool_approvals_line}    frontend_tools={_fmt_list(frontend_tool_refs)},
-{frontend_render_tools_py_line}    environment_name="{spec.get("environment_name", "ai-agents-env")}",
+{reactor_tools_py_line}{frontend_render_tools_py_line}    environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
     emoji={emoji},
     color={color},
@@ -627,6 +636,7 @@ def generate_typescript_code(
     used_skills = set()
     used_tools = set()
     used_frontend_tools = set()
+    used_reactor_tools = set()
     for _, spec in specs:
         for server in spec.get("mcp_servers", []):
             used_mcp_servers.add(versioned_ref(*split_spec_ref(server)))
@@ -636,6 +646,8 @@ def generate_typescript_code(
             used_tools.add(versioned_ref(*split_spec_ref(tool)))
         for ft in spec.get("frontend_tools", []):
             used_frontend_tools.add(versioned_ref(*split_spec_ref(ft)))
+        for rt in spec.get("reactor_tools", []):
+            used_reactor_tools.add(versioned_ref(*split_spec_ref(rt)))
 
     # Only import what's actually used
     mcp_imports = []
@@ -710,11 +722,33 @@ def generate_typescript_code(
                 frontend_tool_map_entries.append(f"  '{ftref}': {const_name},")
                 frontend_tool_map_entries.append(f"  '{ftid}': {const_name},")
 
+    # Reactor tool bundles: a plugin's commands and backend, as tools.
+    reactor_tool_imports = []
+    reactor_tool_map_entries = []
+    reactor_tools_specs_dir = Path(tools_specs_dir).parent / "reactor-tools"
+    if reactor_tools_specs_dir.exists():
+        for rpath in sorted(reactor_tools_specs_dir.glob("*.yaml")):
+            with open(rpath, "r") as f:
+                rt_spec = yaml.safe_load(f)
+                ensure_spec_version(rt_spec)
+            rtid = rt_spec["id"]
+            rtref = versioned_ref(rtid, rt_spec["version"])
+            if rtref in used_reactor_tools:
+                const_name = (
+                    rtid.upper().replace("-", "_")
+                    + "_REACTOR_TOOL_SPEC"
+                    + version_suffix(rt_spec["version"])
+                )
+                reactor_tool_imports.append(const_name)
+                reactor_tool_map_entries.append(f"  '{rtref}': {const_name},")
+                reactor_tool_map_entries.append(f"  '{rtid}': {const_name},")
+
     # Determine if we need any helper code
     has_mcp = len(mcp_imports) > 0
     has_skills = len(skill_imports) > 0
     has_tools = len(tool_imports) > 0
     has_frontend_tools = len(frontend_tool_imports) > 0
+    has_reactor_tools = len(reactor_tool_imports) > 0
 
     # Root-level specs produce src/specs/agents/agents.ts, while nested specs
     # produce src/specs/agents/<folder>/agents.ts. Import paths differ.
@@ -725,6 +759,9 @@ def generate_typescript_code(
     tools_import_path = "../tools" if is_root_layout else "../../tools"
     frontend_tools_import_path = (
         "../frontendTools" if is_root_layout else "../../frontendTools"
+    )
+    reactor_tools_import_path = (
+        "../reactorTools" if is_root_layout else "../../reactorTools"
     )
 
     # Header
@@ -779,6 +816,14 @@ import type { Agentspec } from '"""
         code += "  " + ",\n  ".join(frontend_tool_imports) + ",\n"
         code += "} from '"
         code += frontend_tools_import_path
+        code += "';\n"
+
+    # Only add reactor tool imports if needed
+    if has_reactor_tools:
+        code += "import {\n"
+        code += "  " + ",\n  ".join(reactor_tool_imports) + ",\n"
+        code += "} from '"
+        code += reactor_tools_import_path
         code += "';\n"
 
     # Only add MCP server lookup if used
@@ -837,6 +882,17 @@ const TOOL_MAP: Record<string, any> = {
 const FRONTEND_TOOL_MAP: Record<string, any> = {
 """
         code += "\n".join(frontend_tool_map_entries) + "\n"
+        code += "};\n"
+
+    # Only add reactor tool lookup if used
+    if has_reactor_tools:
+        code += """
+/**
+ * Map reactor tool bundle IDs to ReactorToolSpec objects.
+ */
+const REACTOR_TOOL_MAP: Record<string, any> = {
+"""
+        code += "\n".join(reactor_tool_map_entries) + "\n"
         code += "};\n"
 
     code += """
@@ -931,6 +987,19 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 )
             else:
                 frontend_tools_str = ""
+
+            # Reactor tool bundles - resolve to ReactorToolSpec via REACTOR_TOOL_MAP
+            reactor_tool_ids_list = [
+                versioned_ref(*split_spec_ref(sid))
+                for sid in spec.get("reactor_tools", [])
+            ]
+            reactor_tools_ts_line = (
+                "    reactorTools: ["
+                + ", ".join(f"REACTOR_TOOL_MAP['{rtid}']" for rtid in reactor_tool_ids_list)
+                + "],\n"
+                if has_reactor_tools and reactor_tool_ids_list
+                else ""
+            )
 
             # Frontend render tools - inline structured data read verbatim
             frontend_render_tools = spec.get("frontend_render_tools") or []
@@ -1051,7 +1120,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
 {disable_tool_approvals_line}    frontendTools: [{frontend_tools_str}],
-{frontend_render_tools_ts_line}    environmentName: '{spec.get("environment_name", "ai-agents-env")}',
+{reactor_tools_ts_line}{frontend_render_tools_ts_line}    environmentName: '{spec.get("environment_name", "ai-agents-env")}',
     icon: {icon},
     emoji: {emoji},
     color: {color},
