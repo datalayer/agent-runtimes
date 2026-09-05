@@ -197,6 +197,7 @@ async def _create_and_register_cli_agent(
         tools_requiring_approval_ids,
         wire_skills_into_codemode,
     )
+    from .services.reactor_tools import reactor_backend_toolset
     from .transports import AGUITransport, MCPUITransport
 
     logger.info(
@@ -210,6 +211,14 @@ async def _create_and_register_cli_agent(
 
     # Build list of non-MCP toolsets (codemode, skills)
     non_mcp_toolsets = []
+
+    # Reactor tool bundles: the backend half, which the harness can call
+    # itself. The frontend half arrives from the browser as client tools.
+    reactor_toolset = reactor_backend_toolset(
+        list(getattr(agent_spec, "reactor_tools", []) or [])
+    )
+    if reactor_toolset is not None:
+        non_mcp_toolsets.append(reactor_toolset)
 
     # Get Jupyter sandbox URL from environment if configured
     jupyter_sandbox_url = os.getenv("AGENT_RUNTIMES_JUPYTER_SANDBOX")

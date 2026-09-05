@@ -94,6 +94,7 @@ import {
 } from '../../core';
 import { turnWritersOf, type TurnFeed } from './turnState';
 import { orderToolContributions, toolsForChatView } from './chatViewTools';
+import { useReactorTools } from '../../../tools/adapters/reactor';
 import type { ChatMessage } from '../../../types/messages';
 import type { ToolCallMessage } from '../../../types/chat';
 
@@ -786,6 +787,25 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   ]);
 
   /*
+   * Reactor tool bundles the agent's spec names (`reactor_tools`): a plugin's
+   * commands, executed on this workspace's own reactor, and its backend,
+   * reached over HTTP. Folded in after the editor tools, which keep their
+   * names. A bundle whose plugin is not mounted here still offers its backend
+   * tools; its command tools answer with the plugin's name instead of a result.
+   */
+  const reactorTools = useReactorTools(spec?.reactorTools);
+  const agentTools = useMemo(() => {
+    if (reactorTools.length === 0) {
+      return notebookTools;
+    }
+    const taken = new Set(notebookTools.map(tool => tool.name));
+    return [
+      ...notebookTools,
+      ...reactorTools.filter(tool => !taken.has(tool.name)),
+    ];
+  }, [notebookTools, reactorTools]);
+
+  /*
    * Where this workspace's agent actually lives.
    *
    * A Datalayer runtime brings its own agent-runtimes server: the agent is
@@ -1019,7 +1039,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // The agent runs them itself, so they go to the harness rather
             // than to the chat — handing them to both would run each tool
             // twice.
-            frontendTools: notebookTools,
+            frontendTools: agentTools,
             subagents:
               team && member ? subagentsFor(team.team, member.id) : undefined,
             sharing: team?.sharing,
@@ -1039,7 +1059,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       inPage,
       inference,
       member,
-      notebookTools,
+      agentTools,
       team,
       spec?.model,
       spec?.systemPrompt,
@@ -1133,11 +1153,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     const seen = new Set(fromServer.map(tool => tool.name));
     return [
       ...fromServer,
-      ...notebookTools
+      ...agentTools
         .filter(tool => !seen.has(tool.name))
         .map(tool => ({ id: tool.name, name: tool.name })),
     ];
-  }, [configQuery.data?.builtinTools, notebookTools]);
+  }, [configQuery.data?.builtinTools, agentTools]);
 
   /* Which skills are on, as the runtime last reported them. Derived rather
      than held: the source of truth is the agent, and a local copy would drift

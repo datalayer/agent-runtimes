@@ -63,7 +63,7 @@ describe('what an in-page agent can reach', () => {
     expect(chat).toContain('useContributions(LoopFrontendTool)');
     const notebook = readFileSync(join(PLUGINS, 'notebook/index.ts'), 'utf8');
     expect(notebook).toContain('createNotebookTools(workspace.surfaceId)');
-    expect(chat).toContain('frontendTools: notebookTools');
+    expect(chat).toContain('frontendTools: agentTools');
   });
 
   it('does not also hand them to the chat', () => {

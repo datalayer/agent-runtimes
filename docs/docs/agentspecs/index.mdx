@@ -56,6 +56,51 @@ The generated catalogs are written under `agent_runtimes/specs/` (Python) and
 Agent specs are not just static prompts. They define runtime behavior across UX,
 workflows, controls, programmatic tooling, and delivery.
 
+### Reactor Tools: a Plugin's Commands and Backend
+
+A [Reactor](https://reactor.datalayer.tech) plugin has two halves an agent can
+drive: its **commands**, which run in the browser where the plugin is mounted,
+and its **backend**, the Python half's HTTP API. A `reactor-tools` spec names
+both, and an agent takes the whole bundle:
+
+```yaml
+# agentspecs/reactor-tools/decks.yaml
+id: decks
+plugin: "@datalayer/decks"
+frontend:                      # reactor commands → frontend tools
+  - name: decks_next_slide
+    command: decks.nextSlide
+    description: Advance the open deck by one slide.
+  - name: decks_open
+    command: decks.open
+    parameters: { type: object, properties: { id: { type: string } }, required: [id] }
+backend:                       # HTTP API → embedded tools
+  base_url: http://127.0.0.1:8797
+  base_url_envvar: DATALAYER_DECKS_URL
+  tools:
+    - name: decks_create_deck
+      method: POST
+      path: /decks
+      parameters: { ... }
+
+# agentspecs/agents/worker-decks.yaml
+reactor_tools:
+  - decks:0.0.1
+```
+
+`make specs` emits the bundle as data on both tiers (`agent_runtimes/specs/reactor_tools.py`,
+`src/specs/reactorTools.ts`). The runtime then:
+
+- **frontend entries** → `FrontendToolDefinition`s that call `reactor.executeCommand(command, args)`
+  on the reactor the page is mounted in (`useReactorTools(spec.reactorTools)` in
+  `@datalayer/agent-runtimes`), sent to the harness as client tools like the notebook tools;
+- **backend entries** → a pydantic-ai `FunctionToolset` built from the spec's JSON Schema
+  (`agent_runtimes.services.reactor_tools.reactor_backend_toolset`), attached to the agent
+  for both the AG-UI and Vercel AI transports; a browser-only loop makes the same HTTP
+  calls from the page. Path parameters are substituted from the arguments; the rest go as
+  query for GET/DELETE and as the JSON body otherwise. `approval: manual` on an entry
+  asks a person first.
+
 ### UX Patterns and Protocol-Oriented Agents
 
 Use transport and UI configuration in specs to power GenUI experiences and

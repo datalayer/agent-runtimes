@@ -42,7 +42,7 @@ class TestCatalog:
         assert any(s.id == "decks" for s in list_reactor_tool_specs())
 
     def test_the_decks_worker_takes_the_bundle(self) -> None:
-        worker = next(a for a in AGENTSPECS if a.id == "worker-decks")
+        worker = next(a for a in AGENTSPECS.values() if a.id == "worker-decks")
         assert worker.reactor_tools == ["decks:0.0.1"]
 
     def test_names_and_approvals(self) -> None:
