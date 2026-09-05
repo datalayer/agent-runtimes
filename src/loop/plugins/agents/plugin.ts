@@ -98,7 +98,7 @@ export type AgentsConfig = {
   /**
    * The team this workspace works with, by id.
    *
-   * A team is a group of agents with one front door — `jupyter-notebook` is a
+   * A team is a group of agents with one front door — `jupyter` is a
    * tutor and a compactor behind a supervising tutor. Given one, the header
    * gains a control for choosing which member the next prompt reaches, and the
    * teamspec decides what each of them is told about the conversation.

@@ -17,14 +17,8 @@
  */
 
 import type { JSX } from 'react';
-import {
-  FormControl,
-  IconButton,
-  TextInput,
-  ToggleSwitch,
-  Tooltip,
-} from '@primer/react';
-import { AlertIcon } from '@primer/octicons-react';
+import { FormControl, Link, TextInput, ToggleSwitch } from '@primer/react';
+import { InfoIcon } from '@primer/octicons-react';
 import { useCoreStore, useIAMStore } from '../../state/substates';
 import {
   CodeSandboxReservationControl,
@@ -151,13 +145,25 @@ export function NewCodeSandboxControls(
         <FormControl disabled={storageDisabled} layout="horizontal">
           <FormControl.Label id="new-sandbox-home-folder-label">
             Mount Home Folder
-            <Tooltip
-              text="The sandbox will be slower to start when a Home Folder is mounted."
-              direction="e"
-              style={{ marginLeft: 3 }}
+            <Link
+              href="/docs/contents/home-folder"
+              target="_blank"
+              rel="noopener noreferrer"
+              // The label is a <label> for the toggle; a click on the link
+              // must open the doc, not flip the switch.
+              onClick={event => event.stopPropagation()}
+              muted
+              sx={{
+                marginLeft: 2,
+                fontWeight: 'normal',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+              }}
             >
-              <IconButton icon={AlertIcon} aria-label="" variant="invisible" />
-            </Tooltip>
+              <InfoIcon size={14} />
+              Read more on Home Content
+            </Link>
           </FormControl.Label>
           <ToggleSwitch
             disabled={storageDisabled}

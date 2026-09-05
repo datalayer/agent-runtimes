@@ -126,6 +126,8 @@ export function AgentMentionPlugin({
   const [query, setQuery] = useState<MentionQuery | null>(null);
   const [highlighted, setHighlighted] = useState(0);
   const anchorRef = useRef<HTMLDivElement>(null);
+  /* The rows, by agent name, so the lit one can be brought into view. */
+  const rowRefs = useRef(new Map<string, HTMLLIElement>());
   /* Set while the document change that inserted a mention is being applied. */
   const justInserted = useRef(false);
 
@@ -170,6 +172,25 @@ export function AgentMentionPlugin({
   useEffect(() => {
     setHighlighted(current => (current < choosable.length ? current : 0));
   }, [choosable.length]);
+
+  /*
+   * Keep the lit row in view.
+   *
+   * The menu shows a few rows and scrolls for the rest, so an arrow that
+   * moved the highlight past the fold moved it out of sight — and Enter then
+   * chose a row the person never saw. `nearest` scrolls the menu by the
+   * least that shows the row, and nothing when it already shows.
+   */
+  const litName = choosable[highlighted]?.name;
+  useEffect(() => {
+    if (!open || !litName) {
+      return;
+    }
+    const row = rowRefs.current.get(litName);
+    if (row && typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  }, [open, litName]);
 
   useEffect(() => {
     return editor.registerUpdateListener(() => {
@@ -440,6 +461,13 @@ export function AgentMentionPlugin({
               return (
                 <ActionList.Item
                   key={agent.name}
+                  ref={element => {
+                    if (element) {
+                      rowRefs.current.set(agent.name, element);
+                    } else {
+                      rowRefs.current.delete(agent.name);
+                    }
+                  }}
                   active={index >= 0 && index === highlighted}
                   // Focusable while inert, so the reason is readable rather
                   // than merely implied by the grey.

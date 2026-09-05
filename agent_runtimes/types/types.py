@@ -1506,9 +1506,9 @@ class TeamContextSpec(BaseModel):
       model sees, which is a cost worth naming.
 
     It is a team's property rather than a runtime's setting because it follows
-    from what the team *is*: the jupyter-notebook team routes between a tutor
-    and a compactor, and a compactor that cannot see what the learner was just
-    told would undo the explanation.
+    from what the team *is*: the jupyter team routes between an analyst, a
+    tutor, a compactor and the rest, and a compactor that cannot see what the
+    learner was just told would undo the explanation.
     """
 
     sharing: str = Field(

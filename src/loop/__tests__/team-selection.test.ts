@@ -25,13 +25,18 @@ import {
 } from '../plugins/agents/team';
 import { TEAM_SPECS } from '../../specs/teams/teams';
 
-const TEAM_ID = 'jupyter-notebook';
+const TEAM_ID = 'jupyter';
 
-describe('the jupyter-notebook team', () => {
+describe('the jupyter team', () => {
   it('has a supervisor and the members it routes between', () => {
     const selection = createTeamSelection(TEAM_ID);
     expect(selection).toBeDefined();
+    // The supervisor first, then the roster in the order the work goes.
     expect(selection!.members.map(member => member.specId)).toEqual([
+      'jupyter-data-analyst',
+      'jupyter-notebook-reviewer',
+      'jupyter-notebook-writer',
+      'worker-decks',
       'jupyter-tutor',
       'jupyter-notebook-compactor',
     ]);
@@ -45,7 +50,7 @@ describe('the jupyter-notebook team', () => {
       member => member.id === selection.selected.value,
     );
     expect(active?.isSupervisor).toBe(true);
-    expect(active?.specId).toBe('jupyter-tutor');
+    expect(active?.specId).toBe('jupyter-data-analyst');
   });
 
   it('reads its context model from the spec, not from a default here', () => {
@@ -133,8 +138,10 @@ describe('who a member may hand work to', () => {
   it('lets the supervisor reach the other members', () => {
     // Routing is the supervisor's job, and it can only route to somebody.
     const team = TEAM_SPECS[TEAM_ID];
-    const names = subagentsFor(team, 'tutor').map(entry => entry.name);
-    expect(names).toContain('Notebook Compactor');
+    const names = subagentsFor(team, 'analyst').map(entry => entry.name);
+    expect(names).toContain('Jupyter Compactor');
+    expect(names).toContain('Jupyter Tutor');
+    expect(names).toContain('Jupyter Decks');
   });
 
   it('does not let a member reach a peer when the team forbids it', () => {
@@ -147,7 +154,8 @@ describe('who a member may hand work to', () => {
     expect(team.delegation?.allowPeerDelegation).toBe(false);
 
     const names = subagentsFor(team, 'compactor').map(entry => entry.name);
-    expect(names).not.toContain('Code Tutor');
+    expect(names).not.toContain('Jupyter Tutor');
+    expect(subagentsFor(team, 'tutor').map(entry => entry.name)).toEqual([]);
   });
 
   it('gives a member its own specialists', () => {

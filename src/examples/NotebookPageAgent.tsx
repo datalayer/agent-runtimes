@@ -15,7 +15,8 @@
  *
  * Reactor plugins only. `pageLayout` mounts `PageLayoutPlugin`, which
  * arranges the chat view's parts through the `LoopChatLayout` point; the
- * `shared-notebook` team brings the Analyst, the Reviewer and the Writer;
+ * `jupyter` team brings the Analyst, the Reviewer, the Writer and
+ * the rest of the notebook's agents;
  * the loop turns in the browser, so nothing has to be installed or signed
  * into.
  *
@@ -32,10 +33,10 @@ const NotebookPageAgent: React.FC = () => (
     <Box sx={{ height: '100vh', minHeight: 0 }}>
       <LoopEmbed
         target="browser"
-        /* The Analyst is the team's front door; the team puts the Reviewer
-           and the Writer one click away in the composer's agents menu. */
-        agentId="jupyter-notebook-analyst"
-        teamId="shared-notebook"
+        /* The Analyst is the team's front door; the team puts the other
+           members one click away in the composer's agents menu. */
+        agentId="jupyter-data-analyst"
+        teamId="jupyter"
         /* The notebook, open on the page. */
         defaultEditor="notebook"
         pageLayout

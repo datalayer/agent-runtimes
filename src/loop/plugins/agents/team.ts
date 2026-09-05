@@ -159,7 +159,7 @@ export function createTeamSelection(teamId: string): TeamSelection | undefined {
  * things about delegation and they mean different things:
  *
  * - `delegation.allowPeerDelegation` — whether a member may reach *another
- *   member*. The jupyter-notebook team says no: the Tutor handing work to the
+ *   member*. The jupyter team says no: the Tutor handing work to the
  *   Compactor would edit a notebook the learner is working in, which is the one
  *   thing the Tutor exists not to do. Routing between them is the supervisor's
  *   job, where a person can see it happen.

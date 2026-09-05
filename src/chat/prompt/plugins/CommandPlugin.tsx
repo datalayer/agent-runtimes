@@ -150,6 +150,8 @@ export function CommandPlugin({
   const [query, setQuery] = useState<CommandQuery | null>(null);
   const [highlighted, setHighlighted] = useState(0);
   const anchorRef = useRef<HTMLDivElement>(null);
+  /* The rows, by command name, so the lit one can be brought into view. */
+  const rowRefs = useRef(new Map<string, HTMLLIElement>());
   /* Set while the document change that inserted a command is being applied. */
   const justInserted = useRef(false);
 
@@ -181,6 +183,21 @@ export function CommandPlugin({
   useEffect(() => {
     setHighlighted(current => (current < choosable.length ? current : 0));
   }, [choosable.length]);
+
+  /*
+   * Keep the lit row in view: the menu scrolls past a few rows, and a
+   * highlight moved below the fold is a choice the person cannot see.
+   */
+  const litName = choosable[highlighted]?.name;
+  useEffect(() => {
+    if (!open || !litName) {
+      return;
+    }
+    const row = rowRefs.current.get(litName);
+    if (row && typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  }, [open, litName]);
 
   useEffect(() => {
     return editor.registerUpdateListener(() => {
@@ -425,6 +442,13 @@ export function CommandPlugin({
               return (
                 <ActionList.Item
                   key={command.name}
+                  ref={element => {
+                    if (element) {
+                      rowRefs.current.set(command.name, element);
+                    } else {
+                      rowRefs.current.delete(command.name);
+                    }
+                  }}
                   active={index >= 0 && index === highlighted}
                   // Focusable while inert, so the reason is readable rather
                   // than merely implied by the grey.

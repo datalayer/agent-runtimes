@@ -199,6 +199,15 @@ export interface Suggestion {
   title: string;
   /** Message to send when clicked */
   message: string;
+  /**
+   * A heading this opener is offered under, where a surface draws headings.
+   *
+   * Ungrouped openers come first, as one row; each group follows as a block
+   * of its own with its name on it. A team's openers are the first kind and
+   * the addressed member's own are the second, so a person sees what the
+   * team can be asked and, under it, what this member in particular can.
+   */
+  group?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +264,25 @@ export interface EmptyStateConfig {
   subtitle?: string;
   /** Custom empty state renderer */
   render?: () => ReactNode;
+  /**
+   * The empty state in levels, each with its own openers.
+   *
+   * A workspace running a team introduces two things, not one: the team —
+   * its name, what it is for, what it can be asked — and, under it, the
+   * member being addressed with what that member in particular offers. Each
+   * level is a section; the openers whose `group` is the section's are drawn
+   * under it. Given, this replaces `icon`, `title` and `subtitle`.
+   */
+  sections?: EmptyStateSection[];
+}
+
+/** One level of an empty state: a heading, and the openers grouped under it. */
+export interface EmptyStateSection {
+  /** The `group` of the suggestions this section draws. */
+  group: string;
+  icon?: ReactNode;
+  title: string;
+  subtitle?: string;
 }
 
 // ---------------------------------------------------------------------------

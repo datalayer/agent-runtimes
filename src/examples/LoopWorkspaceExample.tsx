@@ -93,8 +93,8 @@ export type LoopWorkspaceExampleProps = {
    * The team to work with, by id.
    *
    * Given one, the header gains a control for choosing which member the next
-   * prompt reaches. `jupyter-notebook` is the tutor and the compactor behind a
-   * supervising tutor.
+   * prompt reaches. `jupyter` is the notebook's six specialists — analyst,
+   * reviewer, writer, decks, tutor, compactor — behind a supervising analyst.
    */
   teamId?: string;
   /**
@@ -181,7 +181,7 @@ export function LoopWorkspaceExample({
   agentId = 'loop-workspace',
   initialTarget = 'browser',
   showAgentVariants = true,
-  teamId = 'jupyter-notebook',
+  teamId = 'jupyter',
   showGraph = true,
   showCommandPalette = true,
   showWindowFrame = true,

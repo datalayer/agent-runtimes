@@ -14,11 +14,12 @@
  *
  * The code runs in the browser sandbox — the in-page kernel reached through
  * the Jupyter service manager — so the page needs no server and no account.
- * The agents are the `shared-notebook` team the landing page runs — Analyst,
- * Reviewer, Writer and Decks — with the Analyst at the front door; `@` in the
- * composer reaches the others, and the team picker in the header switches to
- * one. The decks plugin is mounted so the fourth member has its tools and a
- * deck can open beside the conversation, like the notebook and the document.
+ * The agents are the `jupyter` team the landing page runs — Analyst,
+ * Reviewer, Writer, Decks, Tutor and Compactor — with the Analyst at the
+ * front door; `@` in the composer reaches the others, and the team picker in
+ * the header switches to one. The decks plugin is mounted so the Decks member
+ * has its tools and a deck can open beside the conversation, like the
+ * notebook and the document.
  *
  * @module examples/LoopShellExample
  */
@@ -38,9 +39,9 @@ import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesU
 import { ThemedProvider } from './utils/themedProvider';
 
 /** The team the landing page runs, and this example with it. */
-const TEAM_ID = 'shared-notebook';
+const TEAM_ID = 'jupyter';
 /** Its front door: the member a prompt reaches unless `@` says otherwise. */
-const FRONT_DOOR = 'jupyter-notebook-analyst';
+const FRONT_DOOR = 'jupyter-data-analyst';
 
 // The package's example decks, so the Decks member has something to open and
 // change before it has made one. Once, at module load.

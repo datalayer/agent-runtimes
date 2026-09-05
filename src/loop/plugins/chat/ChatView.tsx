@@ -71,7 +71,11 @@ import { useAgentRuntimeContextSnapshot } from '../../../stores';
 import { useIAMStore } from '../../../state';
 import { useConfig } from '../../../hooks/useConfig';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
-import type { ContextSnapshotData, ModelConfig } from '../../../types';
+import type {
+  AgentSuggestion,
+  ContextSnapshotData,
+  ModelConfig,
+} from '../../../types';
 import { AI_MODEL_CATALOGUE } from '../../../specs/models';
 import {
   LoopAgentGate,
@@ -678,26 +682,58 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * reason the specs package exports it.
    */
   const spec = getAgentspecs(member?.specId ?? agentId);
-  agentNameRef.current = spec?.name ?? member?.name ?? agentId;
+  /*
+   * The team's name for a member first, then the spec's own.
+   *
+   * A spec is named for the catalogue — "Jupyter Data Analyst" — and a team
+   * names the same agent for the person working with it — "Analyst", which is
+   * what the picker in the header says. The header, the empty state and the
+   * openers' heading say the same word as the picker, or a person reads two
+   * names for one agent on one screen.
+   */
+  agentNameRef.current = member?.name ?? spec?.name ?? agentId;
 
   /*
-   * The openers: a capacity plugin's first, then the team's, then the
-   * selected agent's own. A contribution to `LoopChatSuggestion` is a
-   * deliberate statement about what this workspace is worth asking, so it
-   * replaces the spec's generic list rather than joining it.
+   * The openers: a capacity plugin's first, then the team's with the
+   * addressed member's own beneath, then — with no team — the agent's own.
+   *
+   * A contribution to `LoopChatSuggestion` is a deliberate statement about
+   * what this workspace is worth asking, so it replaces the spec's generic
+   * list rather than joining it.
+   *
+   * With a team, its openers are always shown: they are what the *team* can
+   * be asked, whoever is addressed, and a person who has just opened the
+   * workspace should see the whole before the part. Under them, in a block
+   * with its name on it, come the addressed member's own openers — picking
+   * the Reviewer used to change nothing on screen, and the reverse (the
+   * member's only) hid the team. An opener the team already lists is not
+   * repeated.
    */
   const suggestionEntries = useContributions(LoopChatSuggestion);
-  const suggestions = useMemo(() => {
+  const suggestions = useMemo((): (AgentSuggestion & { group?: string })[] => {
     const contributed = suggestionEntries.flatMap(
       entry => entry.value.suggestions,
     );
     if (contributed.length > 0) {
       return contributed;
     }
-    return team?.team.suggestions?.length
-      ? team.team.suggestions
-      : (spec?.suggestions ?? []);
-  }, [suggestionEntries, team, spec]);
+    const own = spec?.suggestions ?? [];
+    const teams = team?.team.suggestions ?? [];
+    if (teams.length === 0) {
+      return own;
+    }
+    // Two groups, named for the two levels the empty state draws: the
+    // team's openers under the team's name, the member's own under its.
+    const listed = new Set(teams.map(item => item.text));
+    const teamName = team?.team.name ?? 'Team';
+    const memberName = member?.name ?? spec?.name ?? agentId;
+    return [
+      ...teams.map(item => ({ ...item, group: teamName })),
+      ...own
+        .filter(item => !listed.has(item.text))
+        .map(item => ({ ...item, group: memberName })),
+    ];
+  }, [suggestionEntries, team, spec, member, agentId]);
 
   /*
    * The same openers in the shape the chat's empty state asks for.
@@ -711,12 +747,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       suggestions.map(item => ({
         title: item.text,
         message: (item as { message?: string }).message ?? item.text,
+        group: item.group,
       })),
     [suggestions],
   );
 
   /* The icon its spec asked for, at the size the empty state draws. */
   const BrandIcon = agentIcon(spec?.icon);
+  /* And the team's, for the level above it. */
+  const TeamIcon = agentIcon(team?.team.icon);
 
   /*
    * How an in-page agent reaches the notebook.
@@ -1524,7 +1563,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 nothing about this one. The empty state is the first thing a
                 person sees and the only place the agent introduces itself.
               */
-            title={spec?.name ?? member?.name ?? agentId}
+            title={member?.name ?? spec?.name ?? agentId}
             description={spec?.description}
             /*
                 Two sizes, because it is drawn in two places.
@@ -1544,7 +1583,31 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // else — the `title` above reaches the header only — so
               // without this the agent introduced itself as "Start a
               // conversation".
-              title: spec?.name ?? member?.name ?? agentId,
+              title: member?.name ?? spec?.name ?? agentId,
+              /*
+                Two levels when there is a team: the team first — its name,
+                what it is for, what it can be asked — and under it the
+                member being addressed, with its own description and its
+                own openers. The groups match the ones the openers carry.
+              */
+              ...(team && member
+                ? {
+                    sections: [
+                      {
+                        group: team.team.name,
+                        icon: <TeamIcon size={48} />,
+                        title: team.team.name,
+                        subtitle: team.team.description,
+                      },
+                      {
+                        group: member.name,
+                        icon: <BrandIcon size={32} />,
+                        title: member.name,
+                        subtitle: spec?.description,
+                      },
+                    ],
+                  }
+                : null),
             }}
             /*
                 And what it can be asked. From the team rather than the
@@ -1884,7 +1947,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           }}
         >
           <AnonymousKeyExpired
-            agentName={spec?.name ?? member?.name}
+            agentName={member?.name ?? spec?.name}
             // On the browser target the kernel is in this page and owes the
             // inference service nothing, so the notebook is genuinely
             // unaffected and the panel may say so.
