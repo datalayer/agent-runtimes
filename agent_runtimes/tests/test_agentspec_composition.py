@@ -67,20 +67,20 @@ class TestMergeSpec:
 class TestResolve:
     def _catalogue(self) -> tuple[dict, dict]:
         base = {
-            "id": "loop-base",
+            "id": "base",
             "model": "m1",
             "sandbox_variant": "jupyter-server",
             "tools": ["a", "b"],
             "system_prompt": "Base.",
         }
         fragment = {"id": "surfaces", "frontend_tools": ["jupyter-notebook:0.0.1"]}
-        return {"loop-base": base}, {"surfaces": fragment}
+        return {"base": base}, {"surfaces": fragment}
 
     def test_inheritance_and_composition_together(self) -> None:
         specs, fragments = self._catalogue()
         child = {
             "id": "child",
-            "extends": "loop-base:0.0.1",
+            "extends": "base:0.0.1",
             "includes": ["surfaces"],
             "tools": ["!remove b", "c"],
             "system_prompt_append": "Also this.",
@@ -97,7 +97,7 @@ class TestResolve:
 
     def test_a_versioned_reference_finds_its_parent(self) -> None:
         specs, fragments = self._catalogue()
-        child = {"id": "c", "extends": "loop-base:0.0.1"}
+        child = {"id": "c", "extends": "base:0.0.1"}
         specs["c"] = child
 
         assert resolve_spec(child, specs, fragments)["model"] == "m1"
@@ -153,41 +153,32 @@ class TestGeneratedCatalogue:
         # brought in.
         assert "notebook" in AGENTSPECS["jupyter-cell-fixer"].tags
 
-    def test_the_base_agent_references_the_specialists(self) -> None:
-        from agent_runtimes.specs.agents.agents import AGENTSPECS
-
-        base = AGENTSPECS["loop-base"]
-        refs = {sa.name: sa.ref for sa in base.subagents.subagents}
-
-        assert refs == {
-            "NotebookCompactor": "jupyter-notebook-compactor:0.0.1",
-            "CellFixer": "jupyter-cell-fixer:0.0.1",
-            "NotebookReproducer": "jupyter-notebook-reproducer:0.0.1",
-        }
-        # Lifted from 0, so an agent can delegate to an agent — with a cap.
-        assert base.subagents.max_nesting_depth == 2
-
-    def test_the_base_agent_gets_both_surfaces(self) -> None:
-        from agent_runtimes.specs.agents.agents import AGENTSPECS
-
-        assert AGENTSPECS["loop-base"].frontend_tools == [
-            "jupyter-notebook:0.0.1",
-            "lexical-document:0.0.1",
-        ]
-
 
 class TestSubagentRefs:
     def test_a_referenced_specialist_brings_its_own_instructions(self) -> None:
-        from agent_runtimes.specs.agents.agents import AGENTSPECS
+        from types import SimpleNamespace
+
         from agent_runtimes.subagents.capability import build_subagents_capability
 
-        capability = build_subagents_capability(
-            AGENTSPECS["loop-base"].subagents, "bedrock:model", agent_id="loop-base"
+        # A delegating agent names the specialists by reference; each brings
+        # its own spec's instructions. Built inline: no shipped spec delegates
+        # to these three any more — a teamspec does — and the mechanism is
+        # what this checks.
+        config = SimpleNamespace(
+            subagents=[
+                SimpleNamespace(name="NotebookCompactor", description="", instructions="", ref="jupyter-notebook-compactor:0.0.1"),
+                SimpleNamespace(name="CellFixer", description="", instructions="", ref="jupyter-cell-fixer:0.0.1"),
+                SimpleNamespace(name="NotebookReproducer", description="", instructions="", ref="jupyter-notebook-reproducer:0.0.1"),
+            ],
+            include_general_purpose=True,
+            max_nesting_depth=2,
+            default_model=None,
         )
+        capability = build_subagents_capability(config, "bedrock:model", agent_id="loop-shell")
         assert capability is not None
 
         by_name = {d.name: d for d in capability.subagents}
-        assert set(by_name) == {"NotebookCompactor", "CellFixer", "NotebookReproducer"}
+        assert {"NotebookCompactor", "CellFixer", "NotebookReproducer"} <= set(by_name)
         assert "Cell Fixer" in by_name["CellFixer"].instructions
 
     def test_an_unknown_reference_is_skipped_not_fatal(self) -> None:

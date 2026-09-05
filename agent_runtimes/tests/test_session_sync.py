@@ -115,7 +115,7 @@ class TestFailure:
 
 class TestUrl:
     def test_it_reads_the_shared_history(self) -> None:
-        sync = SessionSync(server_url="http://server/", agent_id="loop-base")
+        sync = SessionSync(server_url="http://server/", agent_id="loop-shell")
 
         assert sync.history_url == "http://server/api/v1/history"
-        assert sync.agent_id == "loop-base"
+        assert sync.agent_id == "loop-shell"

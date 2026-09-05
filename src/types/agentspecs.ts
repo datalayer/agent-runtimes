@@ -8,7 +8,6 @@ import type { MCPServer, AgentMCPServerToolConfig } from './mcp';
 import type {
   ToolSpec,
   FrontendToolSpec,
-  ReactorToolSpec,
   FrontendRenderToolSpec,
 } from './tools';
 import type { AgentTriggerConfig } from './triggers';
@@ -77,8 +76,6 @@ export interface Agentspec {
   disableToolApprovals?: boolean;
   /** Frontend tool sets available to this agent */
   frontendTools?: FrontendToolSpec[];
-  /** Reactor tool bundles — plugin commands and backends — available to this agent */
-  reactorTools?: ReactorToolSpec[];
   /** Bindings of backend tools to frontend renderers (tool name + css) */
   frontendRenderTools?: FrontendRenderToolSpec[];
   /** Runtime environment name for this agent */

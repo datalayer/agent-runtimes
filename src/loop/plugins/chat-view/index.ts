@@ -22,7 +22,7 @@ export const CHAT_VIEW_PLUGIN_NAME = '@datalayer/loop-plugin-chat-view';
 export const ChatViewPlugin = defineViewPlugin({
   key: 'chat',
   viewId: NONE_EDITOR,
-  displayName: 'Chat View',
+  displayName: 'Chat view',
   description: 'The conversation on its own, from the composer footer.',
   icon: CommentDiscussionIcon,
   tooltip: 'Show the chat',

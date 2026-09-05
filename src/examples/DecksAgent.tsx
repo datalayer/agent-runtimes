@@ -23,12 +23,16 @@
  */
 
 import React from 'react';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
+import { registerDecks } from '@datalayer/decks';
+import { exampleDecks } from '@datalayer/decks/examples';
 import { LoopEmbed } from '../loop';
 import { DeckViewPlugin, LoopDecksPlugin } from '../loop/plugins/decks';
 
-setupPrimerPortals();
+// The package's example decks, so the catalog has something to open and the
+// agent's suggestions point at decks that exist. Once, at module load.
+registerDecks(exampleDecks);
 
 // Module-level, so the embed builds its reactor once rather than on every
 // render of this component.

@@ -63,9 +63,13 @@ class TestTheSpecialists:
         assert "updateCell" in (allowed or ())
         assert "deleteCells" not in (allowed or ())
 
-    def test_the_base_agent_keeps_everything(self) -> None:
-        # The generalist is not narrowed; only the specialists are.
-        assert resolve_allowed_tools(AGENTSPECS["loop-base"].frontend_tools) is None
+    def test_the_shell_names_no_bundle_and_is_not_narrowed(self) -> None:
+        # The generalist is not narrowed; only the specialists are. The shell
+        # declares no bundle at all: its tools arrive from the mounted plugins.
+        assert AGENTSPECS["loop-shell"].frontend_tools == []
+        # With no bundle named, the transports never filter (the gate is
+        # `bool(frontend_tools)`), so the empty union is never consulted.
+        assert resolve_allowed_tools(AGENTSPECS["loop-shell"].frontend_tools) == ()
 
     def test_the_narrowing_survived_composition(self) -> None:
         # The fragment grants the full notebook bundle; `!remove` takes it back.

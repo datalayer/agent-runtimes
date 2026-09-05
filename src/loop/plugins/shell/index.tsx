@@ -125,8 +125,10 @@ function EditorSelectorComponent(
 
 export const ShellPlugin = definePlugin<ShellPluginConfig>({
   name: SHELL_PLUGIN_NAME,
-  displayName: 'Shell',
-  description: 'The workspace’s extension points, and the editor choice.',
+  // Named apart from the reactor's own `Shell` plugin, which sits beside it
+  // in the plugins panel: this is the Loop workspace's.
+  displayName: 'Loop shell',
+  description: 'The Loop workspace’s extension points, and the editor choice.',
   octicon: 'columns',
   emoji: '\u{1F4D1}',
   config: {
@@ -147,6 +149,11 @@ export const ShellPlugin = definePlugin<ShellPluginConfig>({
       showSelector: false,
       announce: (viewId: string) => requestSurface(viewId),
       commandId: 'loop.shell.cycleEditor',
+      // Named for what it cycles here: the palette said "Switch the view" and
+      // a person looking for the notebook did not recognise it.
+      commandName: 'Switch the editor',
+      commandDescription:
+        'Cycle through the editors beside the conversation, and none',
       keybinding: '',
     }),
   ],

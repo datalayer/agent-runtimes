@@ -21,7 +21,7 @@ export const DOCUMENT_VIEW_PLUGIN_NAME = '@datalayer/loop-plugin-document-view';
 export const DocumentViewPlugin = defineViewPlugin({
   key: 'document',
   viewId: 'document',
-  displayName: 'Document View',
+  displayName: 'Document view',
   description: 'The document beside the chat, from the composer footer.',
   icon: FileIcon,
   tooltip: 'Show the document',

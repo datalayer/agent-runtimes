@@ -258,7 +258,7 @@ class TestModelsCommand:
 
             async def get(self, url: str, timeout: float = 0) -> FakeResponse:
                 return FakeResponse(
-                    {"spec": {"id": "loop-base", "model": "openai:gpt-4o"}}
+                    {"spec": {"id": "loop-shell", "model": "openai:gpt-4o"}}
                 )
 
             async def post(self, url: str, json: dict, timeout: float = 0):
@@ -268,7 +268,7 @@ class TestModelsCommand:
         return SimpleNamespace(
             console=FakeConsole(),
             server_url="http://server",
-            agent_id="loop-base",
+            agent_id="loop-shell",
             session=SimpleNamespace(model="openai:gpt-4o"),
             _client=FakeClient,
         )

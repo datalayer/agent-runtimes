@@ -94,11 +94,11 @@ class TestToggle:
         posted: list[dict] = []
         console = _Console()
         tux = SimpleNamespace(
-            console=console, server_url="http://server", agent_id="loop-base"
+            console=console, server_url="http://server", agent_id="loop-shell"
         )
 
         async def read_spec(_tux):
-            return {"id": "loop-base", "skills": list(spec_skills)}
+            return {"id": "loop-shell", "skills": list(spec_skills)}
 
         class FakeResponse:
             def raise_for_status(self) -> None:

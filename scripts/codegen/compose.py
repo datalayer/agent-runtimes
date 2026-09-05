@@ -36,7 +36,6 @@ LIST_FIELDS = (
     "skills",
     "mcp_servers",
     "frontend_tools",
-    "reactor_tools",
     "envvars",
     "suggestions",
 )

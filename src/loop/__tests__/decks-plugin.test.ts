@@ -18,7 +18,8 @@ import {
 } from '@datalayer/decks';
 import { getDecksState, resetDecksState } from '@datalayer/decks/plugin';
 import type { DeckSpec } from '@datalayer/decks';
-import { REACTOR_TOOL_CATALOG } from '../../specs/reactorTools';
+import { DECKS_AGENT_TOOLS } from '@datalayer/decks/plugin';
+import { TOOL_CATALOG } from '../../specs/tools';
 import {
   LoopEditorView,
   LoopFrontendTool,
@@ -29,6 +30,7 @@ import {
   LoopDecksPlugin,
   createDeckTools,
 } from '../plugins/decks';
+import { DECK_TOOL_DEFINITIONS } from '../plugins/decks/deckTools';
 
 vi.mock('../core', async importOriginal => {
   const actual = await importOriginal<typeof import('../core')>();
@@ -60,21 +62,26 @@ beforeEach(() => {
 });
 
 describe('createDeckTools', () => {
-  it('implements every tool the bundle declares, with the spec’s schemas', () => {
-    const bundle = REACTOR_TOOL_CATALOG.decks;
+  it('implements every tool declared, the plugin’s commands and the backend alike', () => {
     const declared = [
-      ...bundle.frontend.map(entry => entry.name),
-      ...(bundle.backend?.tools ?? []).map(entry => entry.name),
+      ...DECKS_AGENT_TOOLS.commands.map(entry => entry.name),
+      ...Object.values(TOOL_CATALOG)
+        .filter(tool => tool.id.startsWith('decks-'))
+        .map(tool => tool.runtime.method),
     ];
     const tools = toolsByName();
     expect(Object.keys(tools).sort()).toEqual([...declared].sort());
-    expect(tools.decks_open.parameters).toEqual(
-      bundle.frontend.find(entry => entry.name === 'decks_open')!.parameters,
-    );
+    // The command tools say what the plugin's bundle says.
+    const open = DECKS_AGENT_TOOLS.commands.find(
+      entry => entry.name === 'decks_open',
+    )!;
+    expect(tools.decks_open.parameters).toEqual(open.parameters);
+    expect(tools.decks_open.description).toBe(open.description);
     for (const tool of Object.values(tools)) {
       expect(tool.location).toBe('frontend');
       expect(typeof tool.handler).toBe('function');
     }
+    expect(DECK_TOOL_DEFINITIONS.map(d => d.name)).toEqual(Object.keys(tools));
   });
 
   it('creates a deck in the page, opens it and shows the deck surface', async () => {
@@ -130,6 +137,54 @@ describe('createDeckTools', () => {
     expect(listDecks()).toEqual([]);
   });
 
+  it('edits one slide at a time, with an outline to find it by', async () => {
+    registerDecks([
+      { collection: 'c', slug: 'one', spec: spec('One', 3), source: 'bundled' },
+    ]);
+    const tools = toolsByName();
+    const got = (await tools.decks_get_deck.handler!({ id: 'c/one' })) as {
+      outline: unknown[];
+    };
+    expect(got.outline).toEqual([
+      { slide: 1, type: 'section', title: '1' },
+      { slide: 2, type: 'section', title: '2' },
+      { slide: 3, type: 'section', title: '3' },
+    ]);
+    const updated = (await tools.decks_update_slide.handler!({
+      id: 'c/one',
+      slide: 2,
+      slide_spec: { type: 'two-columns', title: 'Compared' },
+    })) as { outline: { type: string }[] };
+    expect(updated.outline.map(o => o.type)).toEqual([
+      'section',
+      'two-columns',
+      'section',
+    ]);
+    expect(getDecksState()).toMatchObject({ selected: 'c/one', slide: 2 });
+    const inserted = (await tools.decks_insert_slide.handler!({
+      id: 'c/one',
+      slide: 99,
+      slide_spec: { type: 'statement', statement: 'Fin' },
+    })) as { outline: { type: string; title: string }[] };
+    expect(inserted.outline.at(-1)).toEqual({
+      slide: 4,
+      type: 'statement',
+      title: 'Fin',
+    });
+    const deleted = (await tools.decks_delete_slide.handler!({
+      id: 'c/one',
+      slide: 1,
+    })) as { slides: number };
+    expect(deleted.slides).toBe(3);
+    await expect(
+      tools.decks_update_slide.handler!({
+        id: 'c/one',
+        slide: 9,
+        slide_spec: {},
+      }),
+    ).rejects.toThrow(/no slide 9/);
+  });
+
   it('answers a bad request with a message the model can act on', async () => {
     const tools = toolsByName();
     await expect(tools.decks_open.handler!({ id: 'nope' })).rejects.toThrow(
@@ -151,6 +206,27 @@ describe('createDeckTools', () => {
 });
 
 describe('LoopDecksPlugin', () => {
+  it('brings the deck surface on screen whenever decks are asked for', async () => {
+    const { buildReactorFromPlugins } = await import('@datalayer/reactor');
+    const editorChoice = await import('../plugins/shell/editorChoice');
+    const choose = vi.spyOn(editorChoice, 'chooseEditor').mockReturnValue(true);
+    const reactor = buildReactorFromPlugins([LoopDecksPlugin]);
+    reactor.start();
+    await reactor.whenReady();
+    const { closeDeck, openDeck } = await import('@datalayer/decks/plugin');
+    registerDecks([
+      { collection: 'c', slug: 'one', spec: spec('One'), source: 'bundled' },
+    ]);
+    closeDeck(); // nothing was open: still an ask to see the list
+    openDeck('c/one');
+    expect(choose.mock.calls.map(call => call[0])).toEqual([
+      DECK_SURFACE_ID,
+      DECK_SURFACE_ID,
+    ]);
+    reactor.stop();
+    choose.mockRestore();
+  });
+
   it('contributes the deck surface and vouches for its tools in the chat view', () => {
     const contributes = LoopDecksPlugin.contributes ?? [];
     const surface = contributes.find(entry => entry.point === LoopEditorView);

@@ -38,7 +38,7 @@ afterEach(() => {
 
 const workspace: LoopWorkspaceContext = {
   serverUrl: 'http://server',
-  agentId: 'loop-base',
+  agentId: 'loop-shell',
   sandbox: { state: 'idle' },
   activeViewType: 'chat',
   setActiveViewType: () => {},

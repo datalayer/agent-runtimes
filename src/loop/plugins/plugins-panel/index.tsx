@@ -60,6 +60,10 @@ export const PluginsPanelPlugin = definePlugin<
       {
         id: 'plugins-panel',
         slot: LoopSlots.sidebar,
+        // Last in the sidebar: it is about the workspace rather than part of
+        // the work, so a plugin's own panel — the decks list, say — sits
+        // above it whatever order the plugins were listed in.
+        order: 900,
         // Itself protected: switching the panel off would remove the only way
         // to switch anything back on.
         //

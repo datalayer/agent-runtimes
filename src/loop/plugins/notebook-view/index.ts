@@ -23,7 +23,7 @@ export const NOTEBOOK_VIEW_PLUGIN_NAME = '@datalayer/loop-plugin-notebook-view';
 export const NotebookViewPlugin = defineViewPlugin({
   key: 'notebook',
   viewId: 'notebook',
-  displayName: 'Notebook View',
+  displayName: 'Notebook view',
   description: 'The notebook beside the chat, from the composer footer.',
   icon: RowsIcon,
   tooltip: 'Show the notebook',

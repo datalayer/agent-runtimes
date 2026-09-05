@@ -7,6 +7,7 @@ Generate Python and TypeScript code from YAML frontend-tool specifications.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,15 @@ def _fmt_toolset_ts(value):
         return "[" + ", ".join(f"'{name}'" for name in value) + "]"
     return f"'{value}'"
 
+def _py_literal(value: Any) -> str:
+    return (
+        json.dumps(value, ensure_ascii=False)
+        .replace(": true", ": True")
+        .replace(": false", ": False")
+        .replace(": null", ": None")
+    )
+
+
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
     lines = [
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -85,8 +95,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"{const_name} = FrontendToolSpec(",
                 f'    id="{tool_id}",',
                 f'    version="{version}",',
-                f'    name="{spec["name"]}",',
-                f'    description="{spec.get("description", "")}",',
+                f"    name={_py_literal(spec['name'])},",
+                f"    description={_py_literal(spec.get('description', ''))},",
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
                 f"    toolset={_fmt_toolset(spec.get('toolset', 'all'))},",
@@ -176,8 +186,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"export const {const_name}: FrontendToolSpec = {{",
                 f"  id: '{tool_id}',",
                 f"  version: '{version}',",
-                f"  name: '{spec['name']}',",
-                f"  description: '{spec.get('description', '')}',",
+                # JSON-escaped: an apostrophe in a description is not a syntax error.
+                f"  name: {json.dumps(spec['name'], ensure_ascii=False)},",
+                f"  description: {json.dumps(spec.get('description', ''), ensure_ascii=False)},",
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 f"  toolset: {_fmt_toolset_ts(spec.get('toolset', 'all'))},",

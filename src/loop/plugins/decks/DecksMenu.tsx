@@ -15,7 +15,9 @@
 
 import type { JSX } from 'react';
 import { ActionList, ActionMenu, IconButton } from '@primer/react';
-import { ProjectIcon } from '@primer/octicons-react';
+// A stack of slides — not the project icon, which the Deck view button
+// beside this menu already wears.
+import { StackIcon } from '@primer/octicons-react';
 import { useReactorPlatform } from '@datalayer/reactor/react';
 import { deckId } from '@datalayer/decks';
 import {
@@ -51,7 +53,7 @@ export default function DecksMenu(): JSX.Element | null {
     <ActionMenu>
       <ActionMenu.Anchor>
         <IconButton
-          icon={ProjectIcon}
+          icon={StackIcon}
           aria-label="Decks"
           size="small"
           variant="invisible"
@@ -61,9 +63,7 @@ export default function DecksMenu(): JSX.Element | null {
         <ActionList>
           {decks.length > 0 ? (
             <ActionList.Group>
-              <ActionList.GroupHeading as="h3">
-                Open a deck
-              </ActionList.GroupHeading>
+              <ActionList.GroupHeading>Open a deck</ActionList.GroupHeading>
               {decks.map(entry => {
                 const id = deckId(entry);
                 return (
@@ -89,9 +89,7 @@ export default function DecksMenu(): JSX.Element | null {
           ) : null}
           {commands.length > 0 ? (
             <ActionList.Group>
-              <ActionList.GroupHeading as="h3">
-                Commands
-              </ActionList.GroupHeading>
+              <ActionList.GroupHeading>Commands</ActionList.GroupHeading>
               {commands.map(command => (
                 <ActionList.Item
                   key={command.id}

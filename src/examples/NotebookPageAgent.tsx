@@ -23,11 +23,9 @@
  */
 
 import React from 'react';
-import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
+import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { LoopEmbed } from '../loop';
-
-setupPrimerPortals();
 
 const NotebookPageAgent: React.FC = () => (
   <ThemedProvider>

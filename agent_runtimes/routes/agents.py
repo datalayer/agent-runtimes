@@ -52,7 +52,6 @@ from ..services import (
     tools_requiring_approval_ids,
     wire_skills_into_codemode,
 )
-from ..services.reactor_tools import reactor_backend_toolset
 from ..specs.agents import AGENTSPECS
 from ..specs.agents import get_agent_spec as get_library_agent_spec
 from ..specs.agents import list_agentspecs as list_library_agents
@@ -961,14 +960,6 @@ class CreateAgentRequest(BaseModel):
         default_factory=list,
         description="Selected runtime tool IDs to enable for this agent",
     )
-    reactor_tools: list[str] = Field(
-        default_factory=list,
-        description=(
-            "Reactor tool bundle IDs (agentspecs reactor-tools) whose backend "
-            "half the agent may call; the frontend half is sent by the browser."
-        ),
-        alias="reactorTools",
-    )
     enable_codemode: bool = Field(
         default=False,
         description="Enable agent-codemode toolset for code-based tool composition",
@@ -1171,8 +1162,6 @@ async def create_agent(
                 request.skills = library_spec.skills
             if not request.tools and library_spec.tools and not caller_disabled_tools:
                 request.tools = library_spec.tools
-            if not request.reactor_tools and getattr(library_spec, "reactor_tools", None):
-                request.reactor_tools = list(library_spec.reactor_tools)
             if (
                 library_spec.system_prompt_codemode_addons
                 and not request.enable_codemode
@@ -1457,12 +1446,6 @@ async def create_agent(
         # Build list of non-MCP toolsets (skills, codemode, etc.)
         # MCP toolsets will be dynamically fetched at run time by the adapter
         non_mcp_toolsets = []
-
-        # Reactor tool bundles: the backend half, callable by the harness on
-        # both transports; the browser sends the frontend half as client tools.
-        reactor_toolset = reactor_backend_toolset(list(request.reactor_tools or []))
-        if reactor_toolset is not None:
-            non_mcp_toolsets.append(reactor_toolset)
 
         # Determine which MCP servers to use and ensure they are running
         # These will be dynamically fetched at run time, not stored at creation time
@@ -4454,7 +4437,6 @@ async def configure_from_spec_endpoint(
         # tool_ids would be empty, no approval capability would be registered,
         # and tools would execute without waiting for human sign-off.
         tools=list(spec.tools or []),
-        reactor_tools=list(getattr(spec, "reactor_tools", []) or []),
     )
     # Serialise to a dict for comparison (env_vars are excluded since
     # they don't affect agent identity — only secrets/keys).

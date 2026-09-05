@@ -63,6 +63,6 @@ describe('the theme plugin in Loop', () => {
     expect(useThemeStore.getState().colorMode).toBe(showing(before));
 
     const command = reactor.getCommand(TOGGLE_COLOR_MODE_COMMAND);
-    expect(command?.keybinding).toBe('Mod+Alt+T');
+    expect(command?.keybinding).toBe('Mod+Alt+C');
   });
 });

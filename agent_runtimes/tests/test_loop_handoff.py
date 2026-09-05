@@ -17,12 +17,12 @@ class TestHandoffStore:
     def test_a_code_carries_the_session_and_dies_on_first_use(self) -> None:
         store = HandoffStore()
         code, _ = store.mint(
-            "sess-1", {"agent_id": "loop-base", "view": "notebook"}, now=1000.0
+            "sess-1", {"agent_id": "loop-shell", "view": "notebook"}, now=1000.0
         )
 
         assert store.exchange(code, now=1005.0) == {
             "session_id": "sess-1",
-            "agent_id": "loop-base",
+            "agent_id": "loop-shell",
             "view": "notebook",
         }
         # Single use: a code left in scrollback is worthless after redemption.
@@ -67,7 +67,7 @@ class TestEndpoints:
 
         response = asyncio.run(
             create_handoff(
-                "sess-42", HandoffRequest(agent_id="loop-base", view="sandbox")
+                "sess-42", HandoffRequest(agent_id="loop-shell", view="sandbox")
             )
         )
 
@@ -95,7 +95,7 @@ class TestBrowserCommand:
         return SimpleNamespace(
             console=FakeConsole(),
             server_url="http://server",
-            agent_id="loop-base",
+            agent_id="loop-shell",
             session=SimpleNamespace(
                 conversation_id="conv-9", model="openai:gpt-4o", sandbox={}
             ),
@@ -139,7 +139,7 @@ class TestBrowserCommand:
         opened = self._run(monkeypatch, "notebook", None)
 
         # An older server still opens something useful, just without continuity.
-        assert opened == ["http://server/static/agent-notebook.html?agentId=loop-base"]
+        assert opened == ["http://server/static/agent-notebook.html?agentId=loop-shell"]
 
     def test_an_unknown_view_opens_nothing(
         self, monkeypatch: pytest.MonkeyPatch

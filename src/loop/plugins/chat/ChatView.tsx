@@ -94,7 +94,12 @@ import {
 } from '../../core';
 import { turnWritersOf, type TurnFeed } from './turnState';
 import { orderToolContributions, toolsForChatView } from './chatViewTools';
-import { useReactorTools } from '../../../tools/adapters/reactor';
+import { useAgentCommandTools } from '../../../tools/adapters/commands';
+import {
+  NONE_EDITOR,
+  seedEditorChoice,
+  setEditorOptions,
+} from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import type { ToolCallMessage } from '../../../types/chat';
 
@@ -449,6 +454,24 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   useEffect(() => onSurfaceRequest(chooseSurface), [chooseSurface]);
 
+  /*
+   * The editor choice store — what the shell's selector, the `/editor`
+   * command and the reactor shell's cycle read — learns two things only the
+   * chat knows: which editors exist, and which one is on screen. Nobody fed
+   * it the options before, so "cycle the editors" cycled an empty list and
+   * always landed on none; and a surface opened by a tool or a plugin, past
+   * the store, left it pointing at the wrong one. Seeded, not chosen: the
+   * chat already shows it, there is nothing to announce.
+   */
+  useEffect(() => {
+    setEditorOptions(surfaces.map(entry => entry.value.surfaceId));
+  }, [surfaces]);
+  useEffect(() => {
+    seedEditorChoice(
+      surfaceId && surfaceId !== NO_SURFACE ? surfaceId : NONE_EDITOR,
+    );
+  }, [surfaceId]);
+
   /** The surface the host asked to open, once its plugin has contributed it. */
   const wanted = useMemo(
     () =>
@@ -792,23 +815,24 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   ]);
 
   /*
-   * Reactor tool bundles the agent's spec names (`reactor_tools`): a plugin's
-   * commands, executed on this workspace's own reactor, and its backend,
-   * reached over HTTP. Folded in after the editor tools, which keep their
-   * names. A bundle whose plugin is not mounted here still offers its backend
-   * tools; its command tools answer with the plugin's name instead of a result.
+   * The commands the mounted plugins declared for an agent — the reactor's
+   * `AgentTools` point — executed on this workspace's own reactor. Folded in
+   * after the contributions, which keep their names, so a plugin with a
+   * richer in-page implementation of the same tool (the decks plugin's) is
+   * what the agent gets, and the bundle's command is the fallback. The agent
+   * spec names none of these: they follow the plugin.
    */
-  const reactorTools = useReactorTools(spec?.reactorTools);
+  const commandTools = useAgentCommandTools();
   const agentTools = useMemo(() => {
-    if (reactorTools.length === 0) {
+    if (commandTools.length === 0) {
       return notebookTools;
     }
     const taken = new Set(notebookTools.map(tool => tool.name));
     return [
       ...notebookTools,
-      ...reactorTools.filter(tool => !taken.has(tool.name)),
+      ...commandTools.filter(tool => !taken.has(tool.name)),
     ];
-  }, [notebookTools, reactorTools]);
+  }, [notebookTools, commandTools]);
 
   /*
    * Where this workspace's agent actually lives.

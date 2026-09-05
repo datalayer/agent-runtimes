@@ -38,6 +38,14 @@ import {
 } from '../skills';
 import type { SkillSpec } from '../../types';
 import {
+  DECKS_CREATE_DECK_TOOL_SPEC_0_0_1,
+  DECKS_DELETE_DECK_TOOL_SPEC_0_0_1,
+  DECKS_DELETE_SLIDE_TOOL_SPEC_0_0_1,
+  DECKS_GET_DECK_TOOL_SPEC_0_0_1,
+  DECKS_INSERT_SLIDE_TOOL_SPEC_0_0_1,
+  DECKS_LIST_DECKS_TOOL_SPEC_0_0_1,
+  DECKS_UPDATE_DECK_TOOL_SPEC_0_0_1,
+  DECKS_UPDATE_SLIDE_TOOL_SPEC_0_0_1,
   EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
   EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
   EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
@@ -57,7 +65,6 @@ import {
   JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
   LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
 } from '../frontendTools';
-import { DECKS_REACTOR_TOOL_SPEC_0_0_1 } from '../reactorTools';
 
 // ============================================================================
 // MCP Server Lookup
@@ -128,6 +135,22 @@ function toAgentSkillSpec(skill: SkillSpec) {
  * Map tool IDs to ToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
+  'decks-create-deck:0.0.1': DECKS_CREATE_DECK_TOOL_SPEC_0_0_1,
+  'decks-create-deck': DECKS_CREATE_DECK_TOOL_SPEC_0_0_1,
+  'decks-delete-deck:0.0.1': DECKS_DELETE_DECK_TOOL_SPEC_0_0_1,
+  'decks-delete-deck': DECKS_DELETE_DECK_TOOL_SPEC_0_0_1,
+  'decks-delete-slide:0.0.1': DECKS_DELETE_SLIDE_TOOL_SPEC_0_0_1,
+  'decks-delete-slide': DECKS_DELETE_SLIDE_TOOL_SPEC_0_0_1,
+  'decks-get-deck:0.0.1': DECKS_GET_DECK_TOOL_SPEC_0_0_1,
+  'decks-get-deck': DECKS_GET_DECK_TOOL_SPEC_0_0_1,
+  'decks-insert-slide:0.0.1': DECKS_INSERT_SLIDE_TOOL_SPEC_0_0_1,
+  'decks-insert-slide': DECKS_INSERT_SLIDE_TOOL_SPEC_0_0_1,
+  'decks-list-decks:0.0.1': DECKS_LIST_DECKS_TOOL_SPEC_0_0_1,
+  'decks-list-decks': DECKS_LIST_DECKS_TOOL_SPEC_0_0_1,
+  'decks-update-deck:0.0.1': DECKS_UPDATE_DECK_TOOL_SPEC_0_0_1,
+  'decks-update-deck': DECKS_UPDATE_DECK_TOOL_SPEC_0_0_1,
+  'decks-update-slide:0.0.1': DECKS_UPDATE_SLIDE_TOOL_SPEC_0_0_1,
+  'decks-update-slide': DECKS_UPDATE_SLIDE_TOOL_SPEC_0_0_1,
   'example-create-plan:0.0.1': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
   'example-create-plan': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
   'example-current-time:0.0.1': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
@@ -169,14 +192,6 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
   'jupyter-notebook': JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
   'lexical-document:0.0.1': LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
   'lexical-document': LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
-};
-
-/**
- * Map reactor tool bundle IDs to ReactorToolSpec objects.
- */
-const REACTOR_TOOL_MAP: Record<string, any> = {
-  'decks:0.0.1': DECKS_REACTOR_TOOL_SPEC_0_0_1,
-  decks: DECKS_REACTOR_TOOL_SPEC_0_0_1,
 };
 
 // ============================================================================
@@ -4703,86 +4718,6 @@ On execution: where you can run code, run it to show a result rather than assert
   subagents: undefined,
 };
 
-export const LOOP_BASE_AGENTSPEC_0_0_1: Agentspec = {
-  id: 'loop-base',
-  version: '0.0.1',
-  name: 'Loop',
-  description: `The default LOOP agent: drives the notebook and the document, runs code in the sandbox, and delegates notebook work to the specialists.`,
-  tags: ['notebook', 'workflow'],
-  domain: undefined,
-  enabled: true,
-  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
-  mcpServers: [],
-  skills: [].filter(Boolean) as SkillSpec[],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
-  frontendTools: [
-    FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
-    FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
-  ],
-  environmentName: 'ai-agents-env',
-  icon: 'sync',
-  emoji: '🔁',
-  color: '#1F883D',
-  suggestions: [
-    { text: 'Compact this notebook without changing its results.' },
-  ],
-  welcomeMessage:
-    'Hi! I drive the notebook and the document beside this conversation, and I run code in the sandbox. Ask for something, or hand work to a specialist with @NotebookCompactor, @CellFixer or @NotebookReproducer.',
-  welcomeNotebook: undefined,
-  welcomeDocument: undefined,
-  sandboxVariant: 'jupyter-server',
-  harness: 'pydantic-ai',
-  systemPrompt: `You are the LOOP agent. You work alongside a person in a workspace that has a notebook, a document and a code sandbox.
-How to work:
-1. Prefer doing over describing: run the code, edit the cell, write the block. 2. Hand specialist work to the specialist rather than improvising it —
-   shortening a notebook, fixing a failing cell, checking reproducibility.
-3. Say what you changed, in the reader's terms, after you change it. 4. When something cannot be done, say why instead of producing a plausible
-   substitute.`,
-  systemPromptCodemodeAddons: `Compose focused execution steps and validate intermediate results before moving on.`,
-  goal: undefined,
-  protocol: undefined,
-  uiExtension: undefined,
-  trigger: undefined,
-  modelConfig: undefined,
-  mcpServerTools: undefined,
-  guardrails: undefined,
-  evals: undefined,
-  codemode: { enabled: true },
-  output: undefined,
-  advanced: undefined,
-  authorizationPolicy: undefined,
-  notifications: undefined,
-  memory: 'ephemeral',
-  preHooks: undefined,
-  postHooks: undefined,
-  toolHooks: undefined,
-  parameters: undefined,
-  subagents: {
-    includeGeneralPurpose: true,
-    maxNestingDepth: 2,
-    subagents: [
-      {
-        name: 'NotebookCompactor',
-        ref: 'jupyter-notebook-compactor:0.0.1',
-        description:
-          'Rewrites the notebook as short as it can be without changing what it computes. Use when a notebook has grown repetitive or full of dead code.',
-      },
-      {
-        name: 'CellFixer',
-        ref: 'jupyter-cell-fixer:0.0.1',
-        description:
-          'Fixes a failing cell and proves the fix by running it. Use when a cell raises.',
-      },
-      {
-        name: 'NotebookReproducer',
-        ref: 'jupyter-notebook-reproducer:0.0.1',
-        description:
-          'Runs the notebook top to bottom on a fresh sandbox and reports what does not reproduce. Use before sharing a notebook with someone else.',
-      },
-    ],
-  },
-};
-
 export const LOOP_SHELL_AGENTSPEC_0_0_1: Agentspec = {
   id: 'loop-shell',
   version: '0.0.1',
@@ -7085,18 +7020,26 @@ export const WORKER_DECKS_AGENTSPEC_0_0_1: Agentspec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
-  tools: [],
+  tools: [
+    TOOL_MAP['decks-list-decks:0.0.1'],
+    TOOL_MAP['decks-get-deck:0.0.1'],
+    TOOL_MAP['decks-create-deck:0.0.1'],
+    TOOL_MAP['decks-update-deck:0.0.1'],
+    TOOL_MAP['decks-update-slide:0.0.1'],
+    TOOL_MAP['decks-insert-slide:0.0.1'],
+    TOOL_MAP['decks-delete-slide:0.0.1'],
+    TOOL_MAP['decks-delete-deck:0.0.1'],
+  ],
   frontendTools: [],
-  reactorTools: [REACTOR_TOOL_MAP['decks:0.0.1']],
   environmentName: 'ai-agents-env',
   icon: 'project',
   emoji: '📊',
   color: '#8250DF',
   suggestions: [
     { text: 'Draft a five-slide deck introducing our Q3 roadmap', emoji: '✨' },
-    { text: 'Open the investors deck at the metrics slide', emoji: '📂' },
+    { text: 'Open the Q2 review at the metrics slide', emoji: '📂' },
     {
-      text: 'Turn the bullets on slide 3 into a two-column comparison',
+      text: 'Turn the bullets on slide 3 of "Reactor in five slides" into a two-column comparison',
       emoji: '✏️',
     },
     { text: 'Present the open deck', emoji: '🎬' },
@@ -7129,13 +7072,20 @@ Templates: \`datalayer\` (default), \`datalayer-brand\`, \`datalayer-ink\`.
 Every slide may carry \`notes\` for the speaker.
 
 Your tools come in two kinds. \`decks_list_decks\`, \`decks_get_deck\`,
-\`decks_create_deck\`, \`decks_update_deck\` and \`decks_delete_deck\` read and
-write the catalog — in the page, and on the server when there is one. The
-others drive the deck on the person's screen: \`decks_open\` opens a deck by
-id, \`decks_go_to_slide\`, \`decks_next_slide\` and \`decks_previous_slide\`
-move through it, \`decks_present\` goes fullscreen, \`decks_print\` opens the
-print view, and \`decks_list\` goes back to the list. A deck you create or
-update opens beside the conversation by itself; you need not open it again.
+\`decks_create_deck\`, \`decks_update_deck\`, \`decks_update_slide\`,
+\`decks_insert_slide\`, \`decks_delete_slide\` and \`decks_delete_deck\` read
+and write the decks — in the page, and on the server when there is one.
+\`decks_get_deck\` answers with the full spec and an \`outline\` (slide
+number, type, title), which is how you find "the metrics slide" or
+"slide 3" before you open or change it. The others drive the deck on the
+person's screen: \`decks_open\` opens a deck by id, optionally at a slide,
+\`decks_go_to_slide\`, \`decks_next_slide\` and \`decks_previous_slide\` move
+through it, \`decks_present\` goes fullscreen, \`decks_print\` opens the print
+view, and \`decks_list\` goes back to the list. A deck you create or change
+opens beside the conversation by itself. Browsers only allow fullscreen
+and new tabs from a person's click: when \`decks_present\` or \`decks_print\`
+answers that it was blocked, say so and tell them to press F (or the
+Present button) or to open the address the result gives.
 
 When asked for a new deck: write the whole spec, keep it to what was
 asked — five to eight slides unless told otherwise, one idea per slide, a
@@ -7145,10 +7095,13 @@ slug. The result names the deck's \`id\` and any \`issues\` validation found;
 fix issues with \`decks_update_deck\` before you say you are done. Then say
 in one or two sentences what is on it.
 
-When asked to change a deck: \`decks_get_deck\` first, change only what was
-asked, send the whole record back with \`decks_update_deck\` (same \`slug\`
-to keep the address), then \`decks_go_to_slide\` to the slide you changed.
-Never delete a deck without an explicit request naming it.
+When asked to change a deck: \`decks_get_deck\` first, then change only
+what was asked — \`decks_update_slide\` for one slide, \`decks_insert_slide\`
+or \`decks_delete_slide\` to add or remove one, \`decks_update_deck\` (same
+\`slug\` to keep the address) only when most of the deck changes — then
+\`decks_go_to_slide\` to the slide you touched. To find a deck by its name,
+\`decks_list_decks\` and match the title. Never delete a deck without an
+explicit request naming it.
 
 When asked to move, present or print, call the tool and say nothing more
 than needed. A question about the deck, or a greeting, gets an ordinary
@@ -11908,7 +11861,6 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'jupyter-notebook-reviewer': JUPYTER_NOTEBOOK_REVIEWER_AGENTSPEC_0_0_1,
   'jupyter-notebook-writer': JUPYTER_NOTEBOOK_WRITER_AGENTSPEC_0_0_1,
   'jupyter-tutor': JUPYTER_TUTOR_AGENTSPEC_0_0_1,
-  'loop-base': LOOP_BASE_AGENTSPEC_0_0_1,
   'loop-shell': LOOP_SHELL_AGENTSPEC_0_0_1,
   'worker-accountant': WORKER_ACCOUNTANT_AGENTSPEC_0_0_1,
   'worker-agent-reviews-sql': WORKER_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1,

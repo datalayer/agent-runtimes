@@ -31,7 +31,11 @@ import {
   definePlugin,
 } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
-import { DecksPlugin } from '@datalayer/decks/plugin';
+import {
+  DecksPlugin,
+  getDecksState,
+  subscribeDecksState,
+} from '@datalayer/decks/plugin';
 import {
   LoopCommand,
   LoopEditorView,
@@ -40,6 +44,7 @@ import {
   requestSurface,
 } from '../../core';
 import { InputPromptPlugin } from '../input-prompt';
+import { chooseEditor } from '../shell/editorChoice';
 import { defineViewPlugin } from '../view-switch';
 import DecksMenu from './DecksMenu';
 import { DECK_SURFACE_ID, createDeckTools } from './deckTools';
@@ -64,14 +69,18 @@ export const LoopDecksPlugin = definePlugin<
   ReactorReactOutput
 >({
   name: DECKS_PLUGIN_NAME,
-  displayName: 'Decks',
+  // `Deck editor`, like `Notebook editor`: the decks plugin it depends on is
+  // the one called `Decks`, and the two sit side by side in the plugins panel.
+  displayName: 'Deck editor',
   description:
-    'A deck beside the chat, the decks in the sidebar, and the tools an agent writes a presentation with.',
+    'A deck beside the chat, and the tools an agent writes a presentation with.',
   octicon: 'project',
   emoji: '\u{1F4CA}',
   dependencies: [
     configurePlugin(DecksPlugin, {
       listSlot: LoopSlots.sidebar,
+      // Above the plugins panel, which puts itself last.
+      listOrder: 10,
       slot: DECKS_UNUSED_SLOT,
       dialogSlot: LoopSlots.root,
       shellView: false,
@@ -120,6 +129,27 @@ export const LoopDecksPlugin = definePlugin<
       { id: 'deck-tools' },
     ),
   ],
+  register: () => {
+    /*
+     * The deck surface follows the decks. Whatever asks to see a deck or the
+     * list — the sidebar row, the palette's "Show the decks", an agent's
+     * `decks_open` — bumps the store's `revealed`, and this brings the Deck
+     * editor beside the chat so the ask has a visible answer. Without it,
+     * "Show the decks" with the notebook on screen changed the store and
+     * nothing else.
+     */
+    let seen = getDecksState().revealed;
+    return subscribeDecksState(() => {
+      const { revealed } = getDecksState();
+      if (revealed === seen) {
+        return;
+      }
+      seen = revealed;
+      if (!chooseEditor(DECK_SURFACE_ID)) {
+        console.warn('[loop] No chat is on screen to show the deck beside.');
+      }
+    });
+  },
   build: () => ({
     components: [
       {
@@ -136,7 +166,7 @@ export const LoopDecksPlugin = definePlugin<
 export const DeckViewPlugin = defineViewPlugin({
   key: 'deck',
   viewId: DECK_SURFACE_ID,
-  displayName: 'Deck View',
+  displayName: 'Deck view',
   description: 'The deck beside the chat, from the composer footer.',
   icon: ProjectIcon,
   tooltip: 'Show the deck',

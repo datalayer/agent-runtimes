@@ -92,63 +92,6 @@ export interface FrontendToolSpec {
   emoji?: string;
 }
 
-/** One Reactor command, exposed as a tool executed in the browser. */
-export interface ReactorCommandToolSpec {
-  /** What the model calls the tool */
-  name: string;
-  /** The reactor command id it executes */
-  command: string;
-  description: string;
-  /** JSON Schema of the command's argument, passed whole */
-  parameters?: Record<string, unknown>;
-  approval?: 'auto' | 'manual';
-}
-
-/**
- * One HTTP endpoint of a Reactor plugin's Python half, as a tool.
- *
- * Properties named in the path are substituted; the rest travel as query
- * parameters for GET and DELETE and as the JSON body otherwise.
- */
-export interface ReactorBackendToolSpec {
-  name: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  /** Path on the reactor backend; `{param}` is substituted from the arguments */
-  path: string;
-  description: string;
-  parameters?: Record<string, unknown>;
-  approval?: 'auto' | 'manual';
-}
-
-/** Where a plugin's backend is, and what it offers. */
-export interface ReactorBackendSpec {
-  baseUrl?: string;
-  /** Environment variable that overrides `baseUrl` on the server */
-  baseUrlEnvvar?: string;
-  tools: ReactorBackendToolSpec[];
-}
-
-/**
- * A Reactor tool bundle: a plugin's commands and its backend, as tools.
- *
- * The frontend half is executed where the plugin is mounted, through
- * `reactor.executeCommand`; the backend half is the plugin's HTTP API.
- */
-export interface ReactorToolSpec {
-  id: string;
-  version?: string;
-  name: string;
-  description: string;
-  tags: string[];
-  enabled: boolean;
-  /** The reactor plugin whose commands these are */
-  plugin?: string;
-  frontend: ReactorCommandToolSpec[];
-  backend?: ReactorBackendSpec;
-  icon?: string;
-  emoji?: string;
-}
-
 import type { ReactNode } from 'react';
 
 /**

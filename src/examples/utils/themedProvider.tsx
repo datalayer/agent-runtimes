@@ -51,7 +51,7 @@ export const ThemedProvider: React.FC<
   }, [themeVariant, colorMode]);
 
   // And the other way round. The reactor's `theme.toggleColorMode` command —
-  // the palette, Mod+Alt+T — and any primer-addons consumer move the
+  // the palette, Mod+Alt+C — and any primer-addons consumer move the
   // singleton, not the examples' store; with only the mirror above, the chat
   // (which reads the singleton) changed and the provider around everything
   // else kept the old mode. Following the singleton here brings the header,
