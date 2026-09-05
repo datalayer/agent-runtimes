@@ -27,6 +27,7 @@
 
 import { configurePlugin, type PluginRef } from '@datalayer/reactor';
 import { ThemePlugin } from '@datalayer/primer-addons/lib/reactor';
+import { SubagentActivityPlugin } from './plugins/subagent-activity';
 import { A2uiPlugin } from './plugins/a2ui';
 import { ShellPlugin } from './plugins/shell';
 import { PromptPlugin } from './plugins/prompt';
@@ -242,6 +243,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // something, and the palette's dependency alone would tie the theme to
     // whether Ctrl-K happens to be mounted.
     ThemePlugin,
+    // A delegation, visible: the subagent's icon pulses in the prompt's
+    // header while it works. Unconditional, because a parent that has handed
+    // work off is otherwise indistinguishable from one that has stopped.
+    SubagentActivityPlugin,
     // The shell plugin is unconditional: it declares the points the others
     // extend, and a workspace where extending works only if a selector
     // happens to be on is a workspace with a trap in it. The selector itself

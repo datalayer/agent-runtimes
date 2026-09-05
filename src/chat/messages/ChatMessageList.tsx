@@ -35,6 +35,7 @@ import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { isToolCallMessage, getMessageText } from '../../utils';
 import {
   useAgentRuntimeStore,
+  useAgentRuntimeSubagentActivity,
   useAgentRuntimeSubagentActivityByToolCall,
   agentRuntimeStore,
 } from '../../stores/agentRuntimeStore';
@@ -319,15 +320,23 @@ export function SubagentChatPanel({
   );
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ block: 'end' });
+    messagesEndRef.current?.scrollIntoView?.({ block: 'end' });
   }, [displayItems]);
 
   if (events.length === 0) {
     return null;
   }
 
+  /*
+   * Coloured for what it is: a run under way is accent, a finished one
+   * success, a failed one danger — the frame, the header and the name all
+   * say so, so the box reads as a subagent's at a glance rather than as one
+   * more grey card among the tool cards.
+   */
+  const tone = hasError ? 'danger' : isDone ? 'success' : 'accent';
   return (
     <Box
+      data-subagent-panel={subagentName}
       sx={{
         mt: 2,
         display: 'flex',
@@ -335,7 +344,7 @@ export function SubagentChatPanel({
         height,
         width: '100%',
         border: '1px solid',
-        borderColor: 'border.default',
+        borderColor: `${tone}.emphasis`,
         borderRadius: 2,
         overflow: 'hidden',
         bg: 'canvas.default',
@@ -349,23 +358,19 @@ export function SubagentChatPanel({
           px: 2,
           py: 1,
           borderBottom: '1px solid',
-          borderColor: 'border.muted',
-          bg: 'canvas.subtle',
+          borderColor: `${tone}.muted`,
+          bg: `${tone}.subtle`,
           flexShrink: 0,
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            color: hasError ? 'danger.fg' : isDone ? 'success.fg' : 'accent.fg',
-          }}
-        >
+        <Box sx={{ display: 'flex', color: `${tone}.fg` }}>
           <DependabotIcon size={14} />
         </Box>
-        <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.default' }}>
+        <Text sx={{ fontSize: 0, color: `${tone}.fg` }}>Subagent</Text>
+        <Text sx={{ fontSize: 0, fontWeight: 'bold', color: `${tone}.fg` }}>
           {subagentName}
         </Text>
-        <Text sx={{ fontSize: 0, color: 'fg.muted', ml: 'auto' }}>
+        <Text sx={{ fontSize: 0, color: `${tone}.fg`, ml: 'auto' }}>
           {hasError ? 'failed' : isDone ? 'done' : 'working\u2026'}
         </Text>
       </Box>
@@ -542,12 +547,27 @@ function DefaultToolCallRenderer({
       ? 'external'
       : undefined;
 
-  // `normalizeName` strips underscores, so compare against the normalized form.
-  const isSubagentDelegation = normalizedToolName === 'delegatetask';
+  /*
+   * A delegation, either way it is spelled.
+   *
+   * A server-side harness delegates through one `delegate_task` tool that
+   * names the subagent in its arguments; the in-page loop gives the parent
+   * one tool *per* subagent, named after it. The store is keyed by the parent
+   * tool call whichever way, so a call that has activity under its id is a
+   * delegation — and the box below shows the run, boxed like the tool card
+   * above it and named for who is running.
+   */
+  const delegationEvents = useAgentRuntimeSubagentActivity(item.toolCallId);
+  const isSubagentDelegation =
+    normalizedToolName === 'delegatetask' || delegationEvents.length > 0;
   const delegatedSubagentName =
     typeof item.args?.subagent_name === 'string'
       ? item.args.subagent_name
-      : undefined;
+      : typeof item.args?.subagent === 'string'
+        ? item.args.subagent
+        : normalizedToolName === 'delegatetask'
+          ? undefined
+          : item.toolName;
 
   return (
     <>

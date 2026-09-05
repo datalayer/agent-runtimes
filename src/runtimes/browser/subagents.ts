@@ -44,6 +44,7 @@ import {
   type ToolSet,
 } from 'ai';
 
+import type { AgentStreamSubagentPayload } from '../../types/stream';
 import type { TeamContextSharing } from '../../types/teams';
 import { createBrowserModel, type BrowserModelOptions } from './model';
 
@@ -94,6 +95,16 @@ export type SubagentToolsOptions = {
   /** Turn ceiling for one delegated task. */
   maxSteps?: number;
   /**
+   * Told what a delegated run does, as it does it.
+   *
+   * The same events the server-side harness puts on its monitoring stream —
+   * `start`, `text`, `tool_call`, `tool_result`, `end`, `error`, keyed by the
+   * parent's tool call — so whatever draws a delegation's progress (the
+   * side panel, the pulse in the composer) draws it the same whether the
+   * loop turns on a server or in this page.
+   */
+  onEvent?: (event: AgentStreamSubagentPayload) => void;
+  /**
    * The page's tools, for a member that declares none of its own.
    *
    * A team's members all work in the page the person has open — the Reviewer
@@ -104,6 +115,14 @@ export type SubagentToolsOptions = {
    * set of its own keeps it.
    */
   tools?: ToolSet;
+  /**
+   * The run's abort signal, read when a delegation starts.
+   *
+   * The SDK hands a tool the run's signal too, and the child listens to
+   * both: a person pressing stop must stop the child as surely as the
+   * parent, and a signal reached one way is as good as the other.
+   */
+  signal?: () => AbortSignal | undefined;
 };
 
 /** The input every delegation tool takes. */
@@ -135,6 +154,8 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
     sharing = 'shared',
     maxSteps = DEFAULT_SUBAGENT_MAX_STEPS,
     tools: shared,
+    onEvent,
+    signal: runSignal,
   } = options;
 
   const tools: ToolSet = {};
@@ -148,6 +169,26 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
         if (!task?.trim()) {
           return { error: 'A delegated task needs to say what to do.' };
         }
+        // Keyed by the parent's tool call, as the server keys its events:
+        // one delegation, one timeline, whichever side ran it. A run ends
+        // once: a stream that reports an error and then rejects would
+        // otherwise say so twice.
+        const toolCallId = executionOptions?.toolCallId ?? null;
+        let ended = false;
+        const emit = (
+          event: Omit<
+            AgentStreamSubagentPayload,
+            'subagentName' | 'toolCallId'
+          >,
+        ) => {
+          if (event.phase === 'end' || event.phase === 'error') {
+            if (ended) {
+              return;
+            }
+            ended = true;
+          }
+          onEvent?.({ subagentName: subagent.name, toolCallId, ...event });
+        };
 
         const child = new ToolLoopAgent({
           id: subagent.name,
@@ -160,6 +201,17 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
           stopWhen: stepCountIs(maxSteps),
         });
 
+        // Stopped when either the run or this tool call is: the two signals
+
+        // are one to the child.
+
+        const signal = anySignal([
+          executionOptions?.abortSignal,
+
+          runSignal?.(),
+        ]);
+
+        emit({ phase: 'start', task });
         try {
           // `messages` for a shared conversation, `prompt` for an isolated
           // one — the same two shapes the SDK documents, chosen by the team.
@@ -167,19 +219,37 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
             sharing === 'shared'
               ? ((executionOptions?.messages ?? []) as ModelMessage[])
               : [];
-          const result = await child.generate({
+          // Streamed rather than generated, so the run can be watched: each
+          // part becomes an event as it arrives, and the text is what the
+          // parent is handed at the end.
+          const result = await child.stream({
             messages: [...history, { role: 'user' as const, content: task }],
-            abortSignal: executionOptions?.abortSignal,
+            abortSignal: signal,
           });
-          return { agent: subagent.name, result: result.text };
+          const streamed = await relaySubagentRun(
+            result.fullStream,
+            emit,
+            signal,
+          );
+          if (signal?.aborted) {
+            emit({ phase: 'error', error: STOPPED });
+            return { agent: subagent.name, error: STOPPED };
+          }
+          const output = streamed || (await result.text);
+          emit({ phase: 'end', output });
+          return { agent: subagent.name, result: output };
         } catch (reason) {
           // Returned rather than thrown: a failed delegation is a step the
           // parent can recover from — try another member, or tell the person
           // — and a throw would abort the whole run instead.
-          return {
-            agent: subagent.name,
-            error: reason instanceof Error ? reason.message : String(reason),
-          };
+          // A stop is said as a stop, not as whatever the aborted fetch threw.
+          const error = signal?.aborted
+            ? STOPPED
+            : reason instanceof Error
+              ? reason.message
+              : String(reason);
+          emit({ phase: 'error', error });
+          return { agent: subagent.name, error };
         }
       },
       // What the parent's model reads. The person can see the whole delegated
@@ -199,4 +269,116 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
   }
 
   return tools;
+}
+
+/** What a delegation says when the person stopped it. */
+export const STOPPED = 'Stopped.';
+
+/** One signal for several, or the one there is. */
+function anySignal(
+  signals: (AbortSignal | undefined)[],
+): AbortSignal | undefined {
+  const present = signals.filter((entry): entry is AbortSignal =>
+    Boolean(entry),
+  );
+  if (present.length <= 1) {
+    return present[0];
+  }
+  if (typeof AbortSignal.any === 'function') {
+    return AbortSignal.any(present);
+  }
+  // Older runtimes: a controller that follows whichever fires first.
+  const controller = new AbortController();
+  for (const entry of present) {
+    if (entry.aborted) {
+      controller.abort(entry.reason);
+      break;
+    }
+    entry.addEventListener('abort', () => controller.abort(entry.reason), {
+      once: true,
+    });
+  }
+  return controller.signal;
+}
+
+/** The parts of a streamed run this relays; the SDK's stream has more, which pass. */
+export type SubagentStreamPart = {
+  type: string;
+  text?: string;
+  toolName?: string;
+  input?: unknown;
+  output?: unknown;
+  error?: unknown;
+};
+
+/** A tool's result as a line the timeline can show. */
+function preview(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  return text.length > 400 ? `${text.slice(0, 400)}…` : text;
+}
+
+/**
+ * Turn a delegated run's stream into subagent events, and return its text.
+ *
+ * Text and reasoning deltas, tool calls and their results, and errors — the
+ * phases the server-side harness reports — each emitted as the part arrives.
+ * Everything else the SDK streams (step and finish markers, sources, files)
+ * is not a phase and passes in silence.
+ */
+export async function relaySubagentRun(
+  stream: AsyncIterable<SubagentStreamPart>,
+  emit: (
+    event: Omit<AgentStreamSubagentPayload, 'subagentName' | 'toolCallId'>,
+  ) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  let text = '';
+  for await (const part of stream) {
+    // Stopped: whatever is still in the pipe is not worth relaying.
+    if (signal?.aborted) {
+      break;
+    }
+    switch (part.type) {
+      case 'text-delta':
+        text += part.text ?? '';
+        emit({ phase: 'text', text: part.text ?? '' });
+        break;
+      case 'reasoning-delta':
+        emit({ phase: 'thinking', text: part.text ?? '' });
+        break;
+      case 'tool-call':
+        emit({
+          phase: 'tool_call',
+          toolName: part.toolName,
+          toolArgs: (part.input ?? {}) as Record<string, unknown>,
+        });
+        break;
+      case 'tool-result':
+        emit({
+          phase: 'tool_result',
+          toolName: part.toolName,
+          result: preview(part.output),
+        });
+        break;
+      case 'tool-error':
+        emit({
+          phase: 'tool_result',
+          toolName: part.toolName,
+          result: preview(part.error),
+        });
+        break;
+      case 'error':
+        emit({
+          phase: 'error',
+          error:
+            part.error instanceof Error
+              ? part.error.message
+              : String(part.error),
+        });
+        break;
+      default:
+        break;
+    }
+  }
+  return text;
 }

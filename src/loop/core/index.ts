@@ -676,6 +676,25 @@ export const LoopOpeningNotebook =
   defineContributionPoint<OpeningNotebookContribution>('loop.notebook.opening');
 
 /**
+ * What the document editor holds when it opens.
+ *
+ * The document's twin of {@link LoopOpeningNotebook}: a host that wants the
+ * editor to open on something — a heading, a paragraph, a cell that has
+ * already run — contributes it here, as a serialised Lexical editor state
+ * built fresh per mount. Nothing contributed means the document plugin's own
+ * opening document, which is a short one of exactly that shape.
+ */
+export type OpeningDocumentContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  /** The editor state to open on, built fresh per mount. */
+  document: () => import('lexical').SerializedEditorState;
+};
+
+export const LoopOpeningDocument =
+  defineContributionPoint<OpeningDocumentContribution>('loop.document.opening');
+
+/**
  * Whether there is anything to chat with.
  *
  * A gate rather than an extension point of its own: `defineGate` is the

@@ -20,6 +20,7 @@ import {
   LoopFrontendTool,
   requestSurface,
   LoopDocumentToolbar,
+  LoopOpeningDocument,
 } from '../../core';
 import { AgentsPlugin } from '../agents';
 
@@ -38,7 +39,9 @@ export const DocumentPlugin = definePlugin({
   // point, it cannot know who opened it. Declaring it is also what makes
   // the document toolbar visible on the plugin graph before anything has
   // filled it — which is exactly when knowing it exists is most useful.
-  contributionPoints: [LoopDocumentToolbar],
+  // And the opening document: what the editor holds before anyone types,
+  // for a host with a story of its own to open on.
+  contributionPoints: [LoopDocumentToolbar, LoopOpeningDocument],
   contributes: [
     // The editor: one entry in the shell's segmented control, one view in
     // the editor column.

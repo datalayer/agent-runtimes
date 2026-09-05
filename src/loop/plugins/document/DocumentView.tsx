@@ -14,17 +14,20 @@
  */
 
 import type { JSX } from 'react';
+import { useMemo } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
-import { useSignalValue } from '@datalayer/reactor/react';
+import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { Box, Text } from '@primer/react';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
 import {
   LoopDocumentToolbar,
   LoopDocumentToolbarItem,
+  LoopOpeningDocument,
   type ChatSurfaceProps,
 } from '../../core';
 import { useEditorToolbar } from '../../core/toolbar';
 import { useSandboxService } from '../agents';
+import { openingDocument } from './openingDocument';
 
 export default function DocumentView({
   workspace,
@@ -44,6 +47,19 @@ export default function DocumentView({
       workspace,
       editorId: documentId,
     },
+  );
+
+  /*
+   * What the editor opens on. A host's own opening document wins over the
+   * plugin's; either is built fresh here and handed over as the serialised
+   * state `EphemeralDocument` loads exactly once, when it mounts — which is
+   * below the early return, so the state is ready before the editor is.
+   */
+  const openingEntries = useContributions(LoopOpeningDocument);
+  const contributedOpening = openingEntries[0]?.value;
+  const opening = useMemo(
+    () => JSON.stringify((contributedOpening?.document ?? openingDocument)()),
+    [contributedOpening],
   );
 
   if (snapshot.state !== 'running') {
@@ -84,6 +100,7 @@ export default function DocumentView({
         // it over BaseStyles and font tokens (§3.5, §3.6).
         inheritTheme
         documentId={documentId}
+        content={opening}
         serviceManager={browserManager}
         showToolbar={toolbar.present}
         toolbarExtraItems={toolbar.items}

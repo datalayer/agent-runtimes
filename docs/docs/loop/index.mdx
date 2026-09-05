@@ -84,6 +84,7 @@ inside the Datalayer app, and inside a JupyterLab panel.
 | `LoopChatLayout` | chat plugin | page-layout plugin — the chat view assembles its parts (editors, transcript, prompt, chips, picker) and a layout arranges them; the default is the split |
 | `LoopChatExtras` | chat plugin | a host, via `createChatExtrasPlugin()` — a *live* signal carrying an error banner, the codemode toggle, MCP status, a tool-result renderer, extra frontend tools, or `hidePrompt`, for a page composing panels around a `LoopEmbed` |
 | `LoopOpeningNotebook` | notebook plugin | a host — the notebook the editor opens on (several cells, outputs already in them) in place of the plugin's one cell, plus the code run to prime the sandbox |
+| `LoopOpeningDocument` | document plugin | a host — the document the editor opens on, as a serialised Lexical state, in place of the plugin's own (a heading, a paragraph and a cell that has already run) |
 | `LoopPromptPanel` | input-prompt plugin | page-layout plugin — a panel hung on the composer, `above` or `below` it, *inside* its card so a floating prompt carries it |
 | `LoopChatTurn` | chat plugin (opens **and** fills it) | readers — the current turn as a live signal: the last user message, the reply as it streams, and its status; a new message replaces it. The page layout's turn panel reads it |
 | `LoopCommand` | — | every plugin; each command is a slash command, a palette entry, and (optionally) a keystroke |

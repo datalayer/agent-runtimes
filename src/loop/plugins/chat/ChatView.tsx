@@ -48,6 +48,7 @@ import {
   type SandboxTarget,
 } from '../agents/switchable';
 import { agentIcon } from '../agents/agentIcons';
+import { specSubagents } from '../agents/specSubagents';
 import { subagentsFor } from '../agents/team';
 import { useOptionalTeamSelection } from '../agents/useTeamSelection';
 
@@ -67,7 +68,10 @@ import {
   type FooterAgent,
   type InputPromptProps,
 } from '../../../chat/prompt/InputPrompt';
-import { useAgentRuntimeContextSnapshot } from '../../../stores';
+import {
+  agentRuntimeStore,
+  useAgentRuntimeContextSnapshot,
+} from '../../../stores';
 import { useIAMStore } from '../../../state';
 import { useConfig } from '../../../hooks/useConfig';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
@@ -78,23 +82,24 @@ import type {
 } from '../../../types';
 import { AI_MODEL_CATALOGUE } from '../../../specs/models';
 import {
+  LoopAgentBlueprint,
   LoopAgentGate,
   LoopChatComposer,
   LoopChatExtras,
   LoopChatHeader,
   LoopChatLayout,
-  LoopChatTurn,
   LoopChatSuggestion,
   LoopChatSurface,
-  type LoopChatExtrasValue,
+  LoopChatTurn,
   LoopFrontendTool,
-  canOpenView,
-  type ChatSurfaceContribution,
   LoopSlots,
-  useLoopPromptStore,
-  type LoopViewProps,
-  onSurfaceRequest,
+  canOpenView,
   onPromptFocusRequest,
+  onSurfaceRequest,
+  useLoopPromptStore,
+  type ChatSurfaceContribution,
+  type LoopChatExtrasValue,
+  type LoopViewProps,
 } from '../../core';
 import { turnWritersOf, type TurnFeed } from './turnState';
 import { orderToolContributions, toolsForChatView } from './chatViewTools';
@@ -681,7 +686,21 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * name. `getAgentspecs` strips the version and retries, which is the whole
    * reason the specs package exports it.
    */
-  const spec = getAgentspecs(member?.specId ?? agentId);
+  /*
+   * The spec, found two ways.
+   *
+   * By the agent's id first — a team member's spec id, or a host that names
+   * the spec as the agent, as the Loop Shell does. Failing that, by the
+   * blueprint a capacity plugin contributed: an agent it created on a server
+   * carries an instance name (`subagents-example-agent-…`), not a spec id, and
+   * the same agent turned in this page had no prompt, no subagents and no
+   * icon for want of this lookup — it used the document tools and called
+   * nobody.
+   */
+  const blueprintSpecId = useContributions(LoopAgentBlueprint)[0]?.value.specId;
+  const spec =
+    getAgentspecs(member?.specId ?? agentId) ??
+    (blueprintSpecId ? getAgentspecs(blueprintSpecId) : undefined);
   /*
    * The team's name for a member first, then the spec's own.
    *
@@ -894,7 +913,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const mentionable = useMemo(() => {
     if (!team || !member) {
-      return [];
+      // No team: the spec's own subagents, which the in-page loop can reach
+      // and a server-side one already could.
+      return specSubagents(spec).map(subagent => ({
+        name: subagent.name,
+        description: subagent.description,
+        icon: agentIcon(subagent.icon),
+      }));
     }
     /*
      * The team, plus whatever specialists the selected member brings.
@@ -925,7 +950,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         icon: agentIcon(subagent.icon),
       }));
     return [...roster, ...specialists];
-  }, [team, member]);
+  }, [team, member, spec]);
   /*
    * Where the model is reached, and on whose key.
    *
@@ -1108,9 +1133,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // than to the chat — handing them to both would run each tool
             // twice.
             frontendTools: agentTools,
+            // A team's members and specialists when there is a team; the
+            // spec's own subagents otherwise — a researcher and a writer are
+            // as much the agent's as its prompt is.
             subagents:
-              team && member ? subagentsFor(team.team, member.id) : undefined,
+              team && member
+                ? subagentsFor(team.team, member.id)
+                : specSubagents(spec),
             sharing: team?.sharing,
+            // What a delegated run does lands in the same store the
+            // server's monitoring stream fills, so the side panel and the
+            // composer's pulse draw an in-page delegation like any other.
+            onSubagentEvent: event =>
+              agentRuntimeStore.getState().appendSubagentEvent(event),
           })
         : {
             type: 'ag-ui',
@@ -1129,8 +1164,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       member,
       agentTools,
       team,
-      spec?.model,
-      spec?.systemPrompt,
+      spec,
       activeModel,
       agentServerUrl,
     ],

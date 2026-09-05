@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { subagentTools } from '../browser/subagents';
+import { STOPPED, subagentTools } from '../browser/subagents';
 
 const INFERENCE_URL = 'https://prod1.example';
 
@@ -40,6 +40,31 @@ function completion(text: string): Response {
 }
 
 /**
+ * The same completion, streamed — what the child asks for now that a
+ * delegated run is watched as it goes. Three chunks and the end marker, as
+ * the OpenAI-compatible service sends them.
+ */
+function streamed(text: string): Response {
+  const chunk = (delta: Record<string, unknown>, finish: string | null) =>
+    `data: ${JSON.stringify({
+      id: 'c1',
+      object: 'chat.completion.chunk',
+      created: 0,
+      model: 'stub',
+      choices: [{ index: 0, delta, finish_reason: finish }],
+    })}\n\n`;
+  const body =
+    chunk({ role: 'assistant', content: '' }, null) +
+    chunk({ content: text }, null) +
+    chunk({}, 'stop') +
+    'data: [DONE]\n\n';
+  return new Response(body, {
+    status: 200,
+    headers: { 'content-type': 'text/event-stream' },
+  });
+}
+
+/**
  * Delegate once, and report what the child actually asked the model.
  *
  * Through a stubbed `fetch` rather than a stubbed model: `createBrowserModel`
@@ -52,9 +77,14 @@ async function delegate(options: {
   task?: string;
 }) {
   const sent: Record<string, unknown>[] = [];
+  const events: AgentStreamSubagentPayload[] = [];
   const fetchStub = (async (_input: unknown, init?: RequestInit) => {
-    sent.push(JSON.parse(String(init?.body ?? '{}')));
-    return completion('31 cells to 18.');
+    const body = JSON.parse(String(init?.body ?? '{}'));
+    sent.push(body);
+    // Streamed when asked to stream, as the service would.
+    return body.stream
+      ? streamed('31 cells to 18.')
+      : completion('31 cells to 18.');
   }) as unknown as typeof globalThis.fetch;
 
   const tools = subagentTools({
@@ -68,6 +98,7 @@ async function delegate(options: {
     inference: { inferenceUrl: INFERENCE_URL, token: 'tok', fetch: fetchStub },
     model: 'bedrock:us.anthropic.claude-sonnet-4-6',
     sharing: options.sharing,
+    onEvent: event => events.push(event),
   });
 
   const entry = tools.Compactor as {
@@ -77,10 +108,10 @@ async function delegate(options: {
 
   const result = await entry.execute(
     { task: options.task ?? 'compact it' },
-    { messages: options.messages ?? [] },
+    { messages: options.messages ?? [], toolCallId: 'call-7' },
   );
 
-  return { entry, result, sent };
+  return { entry, result, sent, events };
 }
 
 /** The `content` of every message the child sent, in order. */
@@ -204,5 +235,87 @@ describe('what the child is told', () => {
   it('returns the child’s answer to the parent', async () => {
     const { result } = await delegate({ messages: [] });
     expect(result).toEqual({ agent: 'Compactor', result: '31 cells to 18.' });
+  });
+});
+
+describe('what the page is shown while the child works', () => {
+  it('reports the run as it goes, keyed by the parent’s tool call', async () => {
+    const { events } = await delegate({ messages: [] });
+    expect(events.map(event => event.phase)).toEqual(['start', 'text', 'end']);
+    for (const event of events) {
+      expect(event.subagentName).toBe('Compactor');
+      expect(event.toolCallId).toBe('call-7');
+    }
+    expect(events[0].task).toBe('compact it');
+    expect(events.at(-1)?.output).toBe('31 cells to 18.');
+  });
+
+  it('reports a failure as one, and still answers the parent', async () => {
+    const events: AgentStreamSubagentPayload[] = [];
+    const fetchStub = (async () =>
+      new Response('down', {
+        status: 503,
+      })) as unknown as typeof globalThis.fetch;
+    const tools = subagentTools({
+      subagents: [
+        { name: 'Writer', description: 'Writes.', instructions: 'Write.' },
+      ],
+      inference: {
+        inferenceUrl: INFERENCE_URL,
+        token: 'tok',
+        fetch: fetchStub,
+      },
+      model: 'stub',
+      onEvent: event => events.push(event),
+    });
+    const entry = tools.Writer as {
+      execute: (input: unknown, options: unknown) => Promise<unknown>;
+    };
+    const result = (await entry.execute(
+      { task: 'write it' },
+      { messages: [] },
+    )) as {
+      agent: string;
+      error?: string;
+    };
+    expect(result.agent).toBe('Writer');
+    expect(result.error).toBeTruthy();
+    expect(events.map(event => event.phase)).toEqual(['start', 'error']);
+  });
+});
+
+describe('when the person presses stop', () => {
+  it('stops the child, and says so rather than failing', async () => {
+    const events: AgentStreamSubagentPayload[] = [];
+    const controller = new AbortController();
+    // A model that never answers until aborted, like a slow one would.
+    const fetchStub = ((_input: unknown, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('aborted', 'AbortError')),
+        );
+      })) as unknown as typeof globalThis.fetch;
+    const tools = subagentTools({
+      subagents: [
+        { name: 'Writer', description: 'Writes.', instructions: 'Write.' },
+      ],
+      inference: {
+        inferenceUrl: INFERENCE_URL,
+        token: 'tok',
+        fetch: fetchStub,
+      },
+      model: 'stub',
+      onEvent: event => events.push(event),
+      signal: () => controller.signal,
+    });
+    const entry = tools.Writer as {
+      execute: (input: unknown, options: unknown) => Promise<unknown>;
+    };
+    const run = entry.execute({ task: 'write it' }, { messages: [] });
+    controller.abort();
+    const result = (await run) as { agent: string; error?: string };
+    expect(result).toEqual({ agent: 'Writer', error: STOPPED });
+    expect(events.map(event => event.phase)).toEqual(['start', 'error']);
+    expect(events[1].error).toBe(STOPPED);
   });
 });

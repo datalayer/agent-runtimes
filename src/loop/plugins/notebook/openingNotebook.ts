@@ -51,7 +51,8 @@ import type { INotebookContent } from '@jupyterlab/nbformat';
  * fabricated output in a product demonstration is a lie told to somebody
  * deciding whether to trust the product.
  */
-const FRAME_REPR = `  region quarter  revenue
+/** As pandas prints the frame. Shared with the opening document, which shows the same result. */
+export const OPENING_FRAME_REPR = `  region quarter  revenue
 0  North      Q1   182400
 1  North      Q2   196750
 2  South      Q1   141200
@@ -111,7 +112,7 @@ export function openingNotebook(): INotebookContent {
           {
             output_type: 'execute_result',
             execution_count: 1,
-            data: { 'text/plain': [FRAME_REPR] },
+            data: { 'text/plain': [OPENING_FRAME_REPR] },
             metadata: {},
           },
         ],

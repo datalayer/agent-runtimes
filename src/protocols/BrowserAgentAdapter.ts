@@ -33,6 +33,7 @@ import type { ProtocolAdapterConfig } from '../types/protocol';
 import type { ChatMessage } from '../types/messages';
 import { createAssistantMessage, generateMessageId } from '../types/messages';
 import type { FrontendToolDefinition } from '../types/tools';
+import type { AgentStreamSubagentPayload } from '../types/stream';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 import type { TeamContextSharing } from '../types/teams';
 import {
@@ -77,6 +78,8 @@ export interface BrowserAgentAdapterConfig
   subagents?: BrowserSubagent[];
   /** What a subagent is told about the conversation so far. */
   sharing?: TeamContextSharing;
+  /** Told what a delegated run does, as it does it — see `subagentTools`. */
+  onSubagentEvent?: (event: AgentStreamSubagentPayload) => void;
 }
 
 /** The text of a chat message, whatever shape it arrived in. */
@@ -130,6 +133,9 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
             // A member reached by delegation works in this page too, with
             // the same tools as the one that delegated.
             tools: page,
+            onEvent: config.onSubagentEvent,
+            // The run being stopped stops its delegations too.
+            signal: () => this.abortController?.signal,
           })
         : {}),
     };

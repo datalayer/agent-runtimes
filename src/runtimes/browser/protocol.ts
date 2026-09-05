@@ -21,6 +21,7 @@
  */
 
 import type { ProtocolConfig } from '../../types/protocol';
+import type { AgentStreamSubagentPayload } from '../../types/stream';
 import type { FrontendToolDefinition } from '../../types/tools';
 import type { TeamContextSharing } from '../../types/teams';
 import type { BrowserModelOptions } from './model';
@@ -47,6 +48,8 @@ export type BrowserProtocolOptions = {
   subagents?: BrowserSubagent[];
   /** What a subagent is told about the conversation so far. */
   sharing?: TeamContextSharing;
+  /** Told what a delegated run does, as it does it — see `subagentTools`. */
+  onSubagentEvent?: (event: AgentStreamSubagentPayload) => void;
 };
 
 /**
@@ -73,6 +76,7 @@ export function browserProtocolConfig(
     inference,
     subagents,
     sharing,
+    onSubagentEvent,
   } = options;
   return {
     type: 'browser-vercel-ai',
@@ -86,6 +90,7 @@ export function browserProtocolConfig(
       inference,
       subagents,
       sharing,
+      onSubagentEvent,
     },
   };
 }

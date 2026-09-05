@@ -88,6 +88,7 @@ export {
   LoopChatExtras,
   LoopChatLayout,
   LoopChatTurn,
+  LoopOpeningDocument,
   LoopOpeningNotebook,
   LoopPromptPanel,
   type ChatLayoutContribution,
@@ -96,6 +97,7 @@ export {
   type ChatTurnSnapshot,
   type ChatTurnStatus,
   type LoopChatExtrasValue,
+  type OpeningDocumentContribution,
   type OpeningNotebookContribution,
   type PromptPanelContribution,
 } from './core';
@@ -277,6 +279,11 @@ export { LoopCommandsPlugin, COMMANDS_PLUGIN_NAME } from './plugins/commands';
 export { PromptPlugin, PROMPT_PLUGIN_NAME } from './plugins/prompt';
 // Loop, ready to drop into somebody else's page.
 export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
+export {
+  SubagentActivityPlugin,
+  SubagentPulse,
+  SUBAGENT_ACTIVITY_PLUGIN_NAME,
+} from './plugins/subagent-activity';
 
 // The set a workspace normally has, so a host starts from a working Loop
 // rather than assembling one — and never from the example.
