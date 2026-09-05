@@ -4,8 +4,7 @@
  */
 
 /**
- * Decks in a Loop: a deck beside the chat, and the tools an agent makes one
- * with.
+ * Decks in a Loop: a deck beside the chat.
  *
  * The plugin pulls `@datalayer/decks`'s own reactor plugin in as a dependency,
  * pointed at the Loop's slots — the list of decks in the sidebar, the "new
@@ -13,10 +12,17 @@
  *
  * - a **Deck** editor surface, one entry in the shell's editor selector, that
  *   shows the open deck in the column beside the conversation;
- * - the `decks` tool bundle as **frontend tools**, implemented against the
- *   plugin mounted here (see `deckTools.ts`), vouched for in the chat view;
  * - a **menu in the composer** with the decks to open and the plugin's
- *   commands, and a `deck` slash command with a keystroke.
+ *   commands, and a `deck` slash command with a keystroke;
+ * - the deck **following the decks**: whatever asks to see one — a row in the
+ *   list, the palette, an agent's tool — brings the surface beside the chat.
+ *
+ * It declares no tools. The decks plugin does: its `AgentTools` bundle names
+ * every command an agent may call — reading and writing decks as much as
+ * opening and presenting one — and the chat reads the bundle from the reactor
+ * (`useAgentCommandTools`) and runs each as the command it is, on this page,
+ * saved to the decks server when the plugin was given one. Nothing here
+ * duplicates, and nothing here can drift from, what the plugin declared.
  *
  * `DeckViewPlugin` is the footer icon that switches to the deck, like the
  * notebook's and the document's.
@@ -39,7 +45,6 @@ import {
 import {
   LoopCommand,
   LoopEditorView,
-  LoopFrontendTool,
   LoopSlots,
   requestSurface,
 } from '../../core';
@@ -47,13 +52,9 @@ import { InputPromptPlugin } from '../input-prompt';
 import { chooseEditor } from '../shell/editorChoice';
 import { defineViewPlugin } from '../view-switch';
 import DecksMenu from './DecksMenu';
-import { DECK_SURFACE_ID, createDeckTools } from './deckTools';
+import { DECK_SURFACE_ID } from './surface';
 
-export {
-  DECK_SURFACE_ID,
-  createDeckTools,
-  deckToolHandlers,
-} from './deckTools';
+export { DECK_SURFACE_ID } from './surface';
 
 export const DECKS_PLUGIN_NAME = '@datalayer/loop-plugin-decks';
 
@@ -116,17 +117,6 @@ export const LoopDecksPlugin = definePlugin<
         },
       },
       { id: 'deck' },
-    ),
-    contribution(
-      LoopFrontendTool,
-      {
-        id: 'deck-tools',
-        // A deck is not an editor the reader might be unable to see: the
-        // tools stay in the chat view, and open the deck surface themselves.
-        chatView: true,
-        tools: workspace => createDeckTools(workspace),
-      },
-      { id: 'deck-tools' },
     ),
   ],
   register: () => {

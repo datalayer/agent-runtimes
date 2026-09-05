@@ -57,6 +57,18 @@ describe('agentBundleTools', () => {
     });
   });
 
+  it('answers with what the command returned, when it returned something', async () => {
+    const reactor = fakeReactor();
+    reactor.executeCommand.mockResolvedValueOnce([
+      { id: 'talks/q2', slides: 7 },
+    ]);
+    const [, open] = agentBundleTools(decks, reactor);
+    // The command's own answer, whole — not a note that it ran.
+    expect(await open.handler!({ id: 'talks/q2' })).toEqual([
+      { id: 'talks/q2', slides: 7 },
+    ]);
+  });
+
   it('names the plugin when there is no reactor to run the command on', async () => {
     const [next] = agentBundleTools(decks, null);
     await expect(next.handler!({})).rejects.toThrow(

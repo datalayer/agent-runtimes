@@ -57,33 +57,34 @@ workflows, controls, programmatic tooling, and delivery.
 
 ### A Plugin's Tools
 
-A [Reactor](https://reactor.datalayer.tech) plugin has two halves an agent can
-drive, and neither needs a spec of its own in this repository.
+A [Reactor](https://reactor.datalayer.tech) plugin's tools are declared *by
+the plugin*, and none of them needs a spec in this repository — not the
+commands a person runs from the palette, and not the reading and writing of
+the plugin's data either.
 
-- Its **commands** — what a person does from the palette — are declared *by
-  the plugin*, as an `AgentTools` bundle contributed to the reactor it is
-  mounted in ([reactor.datalayer.tech/agent-tools](https://reactor.datalayer.tech/agent-tools)).
-  The Loop reads every mounted plugin's bundle (`useAgentCommandTools`) and
-  hands the agent one client tool per command, executed with
-  `reactor.executeCommand`; a plugin with a richer in-page implementation
-  contributes it under the same name and wins. The agent spec keeps
-  `frontend_tools: []`, as the notebook agents do: the tools follow the plugin.
-- Its **backend** is ordinary `tools`, bound to Python callables:
+The plugin contributes one `AgentTools` bundle to the reactor it is mounted in
+([reactor.datalayer.tech/agent-tools](https://reactor.datalayer.tech/agent-tools)):
+one entry per command an agent may call, with the name the model uses, the
+command id, a description and the argument's JSON Schema. A command answers
+with a value, and that value is the tool's result — so "list the decks" is a
+command that returns the list, in the same registry as "next slide". The Loop
+reads every mounted plugin's bundle (`useAgentCommandTools`) and hands the
+agent one client tool per command, executed with `reactor.executeCommand` on
+the page the person is looking at; the plugin saves to its server when it was
+given one. The agent spec names nothing:
 
 ```yaml
-# agentspecs/tools/decks-create-deck.yaml
-id: decks-create-deck
-runtime: { language: python, package: agent_runtimes.tools.decks, method: decks_create_deck }
-
 # agentspecs/agents/worker-decks.yaml
-tools: [decks-list-decks:0.0.1, decks-create-deck:0.0.1, ...]
+tools: []
 frontend_tools: []
 ```
 
-`agent_runtimes/tools/decks.py` calls the decks server (`DATALAYER_DECKS_URL`);
-the Loop's decks plugin implements the same names in the page, so a loop
-running in the browser needs no server. The model sees one set of tools either
-way.
+The decks plugin is the worked example: `decks_list_decks`, `decks_get_deck`,
+`decks_create_deck`, the per-slide edits and `decks_delete_deck` are its
+commands as much as `decks_open` and `decks_present`, and its Python half
+serves the same bundle from `GET /plugins/agent-tools` so a server can learn
+them too. A plugin with a richer in-page implementation of a tool contributes
+it under the same name, and the chat lets it win.
 
 ### UX Patterns and Protocol-Oriented Agents
 

@@ -10,9 +10,11 @@
  * named and described for a model. Each becomes a `FrontendToolDefinition` —
  * the shape the notebook tools have, so a host adds them the same way — whose
  * handler runs `reactor.executeCommand(command, args)` on the reactor the
- * host is mounted in, which is exactly what the keystroke does. A host with a
- * richer in-page implementation of the same tool (the Loop's decks plugin,
- * say) contributes it under the same name, and the chat folds these in after
+ * host is mounted in, which is exactly what the keystroke does. What the
+ * command returns is the tool's result: a command that lists the decks
+ * answers with the list, and a command that returns nothing answers that it
+ * ran. A host with a richer in-page implementation of the same tool
+ * contributes it under the same name, and the chat folds these in after
  * contributions, so the bundle's version steps aside.
  *
  * @module tools/adapters/commands
@@ -52,8 +54,15 @@ export function agentBundleTools(
           );
         }
         const argument = Object.keys(args ?? {}).length > 0 ? args : undefined;
-        await reactor.executeCommand(entry.command, argument);
-        return { ok: true, command: entry.command, argument };
+        const result = await reactor.executeCommand<
+          Record<string, unknown> | undefined,
+          unknown
+        >(entry.command, argument);
+        // The command's own answer when it gave one; otherwise the fact that
+        // it ran, which is all a keystroke-shaped command has to say.
+        return result === undefined
+          ? { ok: true, command: entry.command, argument }
+          : result;
       },
     }));
 }

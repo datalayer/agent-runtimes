@@ -6115,16 +6115,7 @@ WORKER_DECKS_AGENTSPEC_0_0_1 = Agentspec(
     inference_provider=None,
     mcp_servers=[],
     skills=[],
-    tools=[
-        "decks-list-decks:0.0.1",
-        "decks-get-deck:0.0.1",
-        "decks-create-deck:0.0.1",
-        "decks-update-deck:0.0.1",
-        "decks-update-slide:0.0.1",
-        "decks-insert-slide:0.0.1",
-        "decks-delete-slide:0.0.1",
-        "decks-delete-deck:0.0.1",
-    ],
+    tools=[],
     frontend_tools=[],
     environment_name="ai-agents-env",
     icon="project",
@@ -6167,10 +6158,11 @@ a `type` and the fields that type needs:
 Templates: `datalayer` (default), `datalayer-brand`, `datalayer-ink`.
 Every slide may carry `notes` for the speaker.
 
-Your tools come in two kinds. `decks_list_decks`, `decks_get_deck`,
-`decks_create_deck`, `decks_update_deck`, `decks_update_slide`,
-`decks_insert_slide`, `decks_delete_slide` and `decks_delete_deck` read
-and write the decks — in the page, and on the server when there is one.
+Your tools come in two kinds, and all of them run on the person's page.
+`decks_list_decks`, `decks_get_deck`, `decks_create_deck`,
+`decks_update_deck`, `decks_update_slide`, `decks_insert_slide`,
+`decks_delete_slide` and `decks_delete_deck` read and write the decks —
+in the page, and on the server when there is one.
 `decks_get_deck` answers with the full spec and an `outline` (slide
 number, type, title), which is how you find "the metrics slide" or
 "slide 3" before you open or change it. The others drive the deck on the

@@ -26,7 +26,7 @@ import {
   useDecksState,
 } from '@datalayer/decks/plugin';
 import { chooseEditor } from '../shell/editorChoice';
-import { DECK_SURFACE_ID } from './deckTools';
+import { DECK_SURFACE_ID } from './surface';
 
 /** Commands that take an argument; a menu row cannot supply one. */
 const NEEDS_ARGUMENT = new Set(['decks.open', 'decks.goToSlide']);

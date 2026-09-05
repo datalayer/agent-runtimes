@@ -38,14 +38,6 @@ import {
 } from '../skills';
 import type { SkillSpec } from '../../types';
 import {
-  DECKS_CREATE_DECK_TOOL_SPEC_0_0_1,
-  DECKS_DELETE_DECK_TOOL_SPEC_0_0_1,
-  DECKS_DELETE_SLIDE_TOOL_SPEC_0_0_1,
-  DECKS_GET_DECK_TOOL_SPEC_0_0_1,
-  DECKS_INSERT_SLIDE_TOOL_SPEC_0_0_1,
-  DECKS_LIST_DECKS_TOOL_SPEC_0_0_1,
-  DECKS_UPDATE_DECK_TOOL_SPEC_0_0_1,
-  DECKS_UPDATE_SLIDE_TOOL_SPEC_0_0_1,
   EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
   EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
   EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
@@ -135,22 +127,6 @@ function toAgentSkillSpec(skill: SkillSpec) {
  * Map tool IDs to ToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
-  'decks-create-deck:0.0.1': DECKS_CREATE_DECK_TOOL_SPEC_0_0_1,
-  'decks-create-deck': DECKS_CREATE_DECK_TOOL_SPEC_0_0_1,
-  'decks-delete-deck:0.0.1': DECKS_DELETE_DECK_TOOL_SPEC_0_0_1,
-  'decks-delete-deck': DECKS_DELETE_DECK_TOOL_SPEC_0_0_1,
-  'decks-delete-slide:0.0.1': DECKS_DELETE_SLIDE_TOOL_SPEC_0_0_1,
-  'decks-delete-slide': DECKS_DELETE_SLIDE_TOOL_SPEC_0_0_1,
-  'decks-get-deck:0.0.1': DECKS_GET_DECK_TOOL_SPEC_0_0_1,
-  'decks-get-deck': DECKS_GET_DECK_TOOL_SPEC_0_0_1,
-  'decks-insert-slide:0.0.1': DECKS_INSERT_SLIDE_TOOL_SPEC_0_0_1,
-  'decks-insert-slide': DECKS_INSERT_SLIDE_TOOL_SPEC_0_0_1,
-  'decks-list-decks:0.0.1': DECKS_LIST_DECKS_TOOL_SPEC_0_0_1,
-  'decks-list-decks': DECKS_LIST_DECKS_TOOL_SPEC_0_0_1,
-  'decks-update-deck:0.0.1': DECKS_UPDATE_DECK_TOOL_SPEC_0_0_1,
-  'decks-update-deck': DECKS_UPDATE_DECK_TOOL_SPEC_0_0_1,
-  'decks-update-slide:0.0.1': DECKS_UPDATE_SLIDE_TOOL_SPEC_0_0_1,
-  'decks-update-slide': DECKS_UPDATE_SLIDE_TOOL_SPEC_0_0_1,
   'example-create-plan:0.0.1': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
   'example-create-plan': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
   'example-current-time:0.0.1': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
@@ -7020,16 +6996,7 @@ export const WORKER_DECKS_AGENTSPEC_0_0_1: Agentspec = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
-  tools: [
-    TOOL_MAP['decks-list-decks:0.0.1'],
-    TOOL_MAP['decks-get-deck:0.0.1'],
-    TOOL_MAP['decks-create-deck:0.0.1'],
-    TOOL_MAP['decks-update-deck:0.0.1'],
-    TOOL_MAP['decks-update-slide:0.0.1'],
-    TOOL_MAP['decks-insert-slide:0.0.1'],
-    TOOL_MAP['decks-delete-slide:0.0.1'],
-    TOOL_MAP['decks-delete-deck:0.0.1'],
-  ],
+  tools: [],
   frontendTools: [],
   environmentName: 'ai-agents-env',
   icon: 'project',
@@ -7071,10 +7038,11 @@ a \`type\` and the fields that type needs:
 Templates: \`datalayer\` (default), \`datalayer-brand\`, \`datalayer-ink\`.
 Every slide may carry \`notes\` for the speaker.
 
-Your tools come in two kinds. \`decks_list_decks\`, \`decks_get_deck\`,
-\`decks_create_deck\`, \`decks_update_deck\`, \`decks_update_slide\`,
-\`decks_insert_slide\`, \`decks_delete_slide\` and \`decks_delete_deck\` read
-and write the decks — in the page, and on the server when there is one.
+Your tools come in two kinds, and all of them run on the person's page.
+\`decks_list_decks\`, \`decks_get_deck\`, \`decks_create_deck\`,
+\`decks_update_deck\`, \`decks_update_slide\`, \`decks_insert_slide\`,
+\`decks_delete_slide\` and \`decks_delete_deck\` read and write the decks —
+in the page, and on the server when there is one.
 \`decks_get_deck\` answers with the full spec and an \`outline\` (slide
 number, type, title), which is how you find "the metrics slide" or
 "slide 3" before you open or change it. The others drive the deck on the
