@@ -348,3 +348,41 @@ describe('the browser adapter as a protocol adapter', () => {
     expect(events.some(event => event.type === 'done')).toBe(true);
   });
 });
+
+describe('stopping a run in flight', () => {
+  it('cuts the model call when the chat says stop, and stays connected', async () => {
+    // A model that streams nothing and never finishes — until the run is
+    // aborted, when it fails the way a cancelled fetch does.
+    const model = new MockLanguageModelV4({
+      doStream: async ({ abortSignal }) => ({
+        stream: new ReadableStream({
+          start(controller) {
+            abortSignal?.addEventListener('abort', () =>
+              controller.error(new DOMException('aborted', 'AbortError')),
+            );
+          },
+        }),
+      }),
+    });
+    const adapter = new BrowserAgentAdapter({
+      protocol: 'browser-vercel-ai',
+      baseUrl: '',
+      languageModel: model,
+    });
+    const events: any[] = [];
+    adapter.subscribe(event => events.push(event));
+    await adapter.connect();
+    const run = adapter.sendMessage(userMessage('go'), {
+      messages: [userMessage('go')],
+    });
+    // Let the run reach the model before stopping it.
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(typeof adapter.stopGeneration).toBe('function');
+    adapter.stopGeneration();
+    await run;
+    // Stopped is not failed: no error is reported, and the adapter is still
+    // connected for the next message.
+    expect(events.some(event => event.type === 'error')).toBe(false);
+    expect(adapter.connectionState).toBe('connected');
+  });
+});

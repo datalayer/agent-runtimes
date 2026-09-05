@@ -157,6 +157,20 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
     this.setConnectionState('disconnected');
   }
 
+  /**
+   * Stop the run in flight, and stay connected.
+   *
+   * What the chat's stop button calls on an adapter that has it. The other
+   * adapters cut a network stream; this one cuts the model call turning in
+   * the page — and, through the signal every delegation reads, the
+   * subagents that call started. Without this the button stopped the
+   * chat's *display* of the run and nothing else: the parent kept calling
+   * the model and the children kept working.
+   */
+  stopGeneration(): void {
+    this.abortController?.abort();
+  }
+
   override supportsFeature(feature: string): boolean {
     // Tools, yes — they are the whole point. Not the rest: there is no server
     // to hold a thread, resume a run, or approve anything out of band.
