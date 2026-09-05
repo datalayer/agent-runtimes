@@ -13,10 +13,9 @@
  * list and launched on demand.
  *
  * The OTEL backend is configured via `configuration.otelUrl` when available
- * (falling back to `configuration.datalayerUrl`, then `VITE_OTEL_BASE_URL`, then
- * `VITE_DATALAYER_URL`, then https://prod1.datalayer.run).
- * Agent routes use `VITE_BASE_URL` when provided, otherwise the same resolved
- * direct run URL to avoid proxy-relative calls.
+ * (falling back to `configuration.otelUrl`, then `VITE_OTEL_BASE_URL`, then
+ * `VITE_DATALAYER_OTEL_URL`, then the resolved runtime base URL).
+ * Agent routes resolve from the shared local/cloud runtime target hook.
  *
  * For Python-side observability, wire in `agent_runtimes/otel.py`:
  *   from agent_runtimes.otel import setup_otel
@@ -45,9 +44,11 @@ import {
 import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
-import { ChatSidebar } from '../chat';
-import type { AgentLibrary, ProtocolConfig } from '../types';
+import { LoopEmbed } from '../loop';
+import { AgentOtelPlugin } from '../loop/plugins/agent-otel';
+import type { AgentLibrary } from '../types';
 import { Protocol } from '../types';
+import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 // ─── Environment / defaults ────────────────────────────────────────────────
 
@@ -56,13 +57,7 @@ const OTEL_BASE_URL_ENV: string = import.meta.env.VITE_OTEL_BASE_URL ?? '';
 // read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
 const OTEL_IN_BASE_URL_ENV: string =
   import.meta.env.VITE_OTEL_IN_BASE_URL ?? '';
-const DATALAYER_URL_ENV: string = import.meta.env.VITE_DATALAYER_URL ?? '';
-
-/**
- * Base URL of the agent-runtimes server.
- * Defaults to proxy-relative calls when VITE_BASE_URL is unset.
- */
-const AGENT_BASE_URL_ENV: string = import.meta.env.VITE_BASE_URL || '';
+const OTEL_URL_ENV: string = import.meta.env.VITE_DATALAYER_OTEL_URL ?? '';
 
 const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
 const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
@@ -192,7 +187,7 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
         flexDirection: 'column',
         gap: 2,
         flexShrink: 0,
-        bg: 'canvas.subtle',
+        bg: 'canvas.default',
       }}
     >
       <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
@@ -248,16 +243,15 @@ const AgentOtelExampleInner: React.FC<{
   token: string;
 }> = ({ token }) => {
   const { configuration } = useCoreStore();
+  const agentBaseUrl = useExampleAgentRuntimesUrl();
   const resolvedUrl =
-    configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
-    configuration?.datalayerUrl ||
+    configuration?.otelUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_URL_ENV ||
-    'https://prod1.datalayer.run';
+    OTEL_URL_ENV ||
+    agentBaseUrl;
   const otelBaseUrl = resolvedUrl;
-  const agentBaseUrl = AGENT_BASE_URL_ENV;
 
   // ── OTEL view state ─────────────────────────────────────────────
   const [view, setView] = useState<OtelView>('dashboard');
@@ -281,17 +275,18 @@ const AgentOtelExampleInner: React.FC<{
   );
 
   // ── Agent state ─────────────────────────────────────────────────
+  //
+  // The launch panel creates the `example-otel` agent and reports its id; the
+  // LoopEmbed below runs on the Local target pointed at that same id, so its
+  // `ensureLocalAgent` finds the created agent and reuses it rather than
+  // making a second one. The bespoke launcher and its Disconnect control are
+  // kept — the chat column is the shared loop now, everything around it is the
+  // example's own.
   const [connectedAgentId, setConnectedAgentId] = useState<string | null>(null);
-  const [connectedAgentTransport, setConnectedAgentTransport] =
-    useState<Protocol>(DEFAULT_AGENT_PROTOCOL);
 
-  const handleAgentConnected = useCallback(
-    (agentId: string, protocol: Protocol) => {
-      setConnectedAgentId(agentId);
-      setConnectedAgentTransport(protocol);
-    },
-    [],
-  );
+  const handleAgentConnected = useCallback((agentId: string) => {
+    setConnectedAgentId(agentId);
+  }, []);
 
   const handleAgentDisconnected = useCallback(async () => {
     if (connectedAgentId) {
@@ -306,37 +301,7 @@ const AgentOtelExampleInner: React.FC<{
     setConnectedAgentId(null);
   }, [connectedAgentId, agentBaseUrl]);
 
-  // Build protocol config from connected agent
-  const protocolConfig = useMemo((): ProtocolConfig | undefined => {
-    if (!connectedAgentId) return undefined;
-    if (connectedAgentTransport === 'ag-ui') {
-      return {
-        type: 'ag-ui',
-        endpoint: `${agentBaseUrl}/api/v1/ag-ui/${connectedAgentId}/`,
-        agentId: connectedAgentId,
-      };
-    }
-    if (connectedAgentTransport === 'a2a') {
-      return {
-        type: 'a2a',
-        endpoint: `${agentBaseUrl}/api/v1/a2a/${connectedAgentId}`,
-        agentId: connectedAgentId,
-      };
-    }
-    if (connectedAgentTransport === 'vercel-ai') {
-      return {
-        type: 'vercel-ai',
-        endpoint: `${agentBaseUrl}/api/v1/vercel-ai/${connectedAgentId}`,
-        agentId: connectedAgentId,
-      };
-    }
-    // Fallback – vercel-ai
-    return {
-      type: 'vercel-ai',
-      endpoint: `${agentBaseUrl}/api/v1/vercel-ai/${connectedAgentId}`,
-      agentId: connectedAgentId,
-    };
-  }, [connectedAgentId, connectedAgentTransport, agentBaseUrl]);
+  const otelPlugins = useMemo(() => [AgentOtelPlugin], []);
 
   return (
     <Box
@@ -431,48 +396,20 @@ const AgentOtelExampleInner: React.FC<{
           </Box>
         </Box>
 
-        {/* ── Agent sidebar ────────────────────────────────────────── */}
-        <ChatSidebar
-          title="AI Agent"
-          protocol={protocolConfig}
-          position="right"
-          width={380}
-          defaultOpen={true}
-          showNewChatButton={true}
-          showClearButton={true}
-          showSettingsButton={false}
-          clickOutsideToClose={false}
-          placeholder="Ask the agent about your telemetry data…"
-          description="Connect an agent to start chatting about your traces, logs, and metrics."
-          panelProps={
-            protocolConfig
-              ? {
-                  protocol: protocolConfig,
-                  useStore: true,
-                  suggestions: [
-                    {
-                      title: '🔍 Recent traces',
-                      message: 'What do the most recent traces show?',
-                    },
-                    {
-                      title: '⚠️ Errors',
-                      message:
-                        'Are there any errors or anomalies in the telemetry?',
-                    },
-                    {
-                      title: '📊 Metrics summary',
-                      message: 'Give me a summary of the current metrics.',
-                    },
-                    {
-                      title: '🕵️ Root cause',
-                      message: 'Help me find the root cause of slow requests.',
-                    },
-                  ],
-                }
-              : { useStore: true }
-          }
+        {/* ── Agent sidebar: the example's launcher over the shared loop ── */}
+        <Box
+          sx={{
+            width: 380,
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            borderLeft: '1px solid',
+            borderColor: 'border.default',
+            bg: 'canvas.default',
+            minHeight: 0,
+          }}
         >
-          {/* Agent launcher rendered above the chat area */}
+          {/* Agent launcher — kept verbatim, above the chat. */}
           <AgentLaunchPanel
             baseUrl={agentBaseUrl}
             onConnected={handleAgentConnected}
@@ -480,7 +417,37 @@ const AgentOtelExampleInner: React.FC<{
             isConnected={!!connectedAgentId}
             connectedAgentName={connectedAgentId ?? undefined}
           />
-        </ChatSidebar>
+          {/* The conversation, as the shared loop. Local target on the
+              launched agent id; the otel capacity plugin carries its spec and
+              its telemetry openers. */}
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            {connectedAgentId ? (
+              <LoopEmbed
+                serverUrl={agentBaseUrl}
+                target="local"
+                agentId={connectedAgentId}
+                defaultEditor="none"
+                plugins={otelPlugins}
+              />
+            ) : (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  px: 3,
+                  color: 'fg.muted',
+                  fontSize: 1,
+                  textAlign: 'center',
+                }}
+              >
+                Connect an agent to start chatting about your traces, logs, and
+                metrics.
+              </Box>
+            )}
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

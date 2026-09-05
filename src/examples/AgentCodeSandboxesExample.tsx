@@ -8,20 +8,20 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Button, Heading, Label, Spinner, Text } from '@primer/react';
-import { PackageIcon } from '@primer/octicons-react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView, ErrorView } from './components';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { defineAgentCapacityPlugin } from '../loop/plugins/agent-capacity';
 
 type SandboxVariant =
   | 'eval'
-  | 'jupyter'
+  | 'jupyter-server'
   | 'docker'
   | 'datalayer'
-  | 'colab'
+  | 'google-colab'
   | 'kaggle'
   | 'monty'
   | 'modal';
@@ -41,7 +41,7 @@ const SANDBOX_SPEC_OPTIONS: SandboxSpecOption[] = [
     description: 'In-process Python execution for quick local iteration.',
   },
   {
-    variant: 'jupyter',
+    variant: 'jupyter-server',
     specId: 'example-sandbox-jupyter',
     title: 'Jupyter Sandbox',
     description: 'Kernel-backed execution with notebook-compatible behavior.',
@@ -59,7 +59,7 @@ const SANDBOX_SPEC_OPTIONS: SandboxSpecOption[] = [
     description: 'Cloud sandbox runtime powered by Datalayer environments.',
   },
   {
-    variant: 'colab',
+    variant: 'google-colab',
     specId: 'example-sandbox-colab',
     title: 'Colab Sandbox',
     description:
@@ -112,6 +112,29 @@ const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
       SANDBOX_SPEC_OPTIONS.find(option => option.specId === activeSpecId) ??
       selectedOption,
     [activeSpecId, selectedOption],
+  );
+
+  // The chat column is the shared loop; the capacity plugin is built from the
+  // selected sandbox variant so its blueprint pins the right sandbox_variant.
+  const chatPlugins = useMemo(
+    () => [
+      defineAgentCapacityPlugin({
+        key: `sandbox-${activeOption.variant}`,
+        displayName: activeOption.title,
+        description: activeOption.description,
+        specId: activeOption.specId,
+        octicon: 'codespaces',
+        createPayload: { sandbox_variant: activeOption.variant },
+        suggestions: [
+          {
+            text: 'Identify sandbox variant',
+            message:
+              'Use execute_code to print(os.getenv("DATALAYER_CODE_SANDBOX_VARIANT")) and summarize the result.',
+          },
+        ],
+      }),
+    ],
+    [activeOption],
   );
 
   const authFetch = useCallback(
@@ -201,7 +224,7 @@ const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 3,
-          bg: 'canvas.subtle',
+          bg: 'canvas.default',
         }}
       >
         <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
@@ -272,41 +295,14 @@ const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   return (
-    <Chat
-      protocol="vercel-ai"
-      baseUrl={baseUrl}
+    <LoopEmbed
+      key={agentId}
+      serverUrl={baseUrl}
+      target="local"
       agentId={agentId}
-      runtimeId={agentId}
-      title={`Code Sandboxes: ${activeOption.title}`}
-      description={`Spec ${activeOption.specId} (${activeOption.variant})`}
-      brandIcon={<PackageIcon size={16} />}
-      showHeader={true}
-      showModelSelector={true}
-      showToolsMenu={true}
-      showSkillsMenu={true}
-      showTokenUsage={true}
-      showInformation={true}
-      autoFocus
-      height="100vh"
-      historyEndpoint={`${baseUrl}/api/v1/history`}
-      suggestions={[
-        {
-          title: 'Identify sandbox variant',
-          message:
-            'Use execute_code to print(os.getenv("DATALAYER_CODE_SANDBOX_VARIANT")) and summarize the result.',
-        },
-        {
-          title: 'Run numeric workload',
-          message:
-            'Use execute_code to compute sum(i*i for i in range(10000)) and report timing and result.',
-        },
-        {
-          title: 'Check package availability',
-          message:
-            'Use execute_code to import pandas and print(pandas.__version__).',
-        },
-      ]}
-      submitOnSuggestionClick
+      defaultEditor="none"
+      showHeader
+      plugins={chatPlugins}
     />
   );
 };

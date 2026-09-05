@@ -39,6 +39,8 @@ import type {
 } from '../types';
 import type {
   AgentStreamSnapshotPayload,
+  AgentStreamSubagentPayload,
+  AgentStreamCompactionPayload,
   AgentStreamToolApprovalPayload,
   CodemodeStatusData,
 } from '../types/stream';
@@ -122,6 +124,17 @@ export interface AgentRuntimeStoreState {
   wsState: AgentRuntimeWsState;
   approvals: AgentStreamToolApprovalPayload[];
   pendingApprovalCount: number;
+  /**
+   * Live subagent (`delegate_task`) activity keyed by the parent delegation
+   * tool call id. Each entry is the ordered stream of interaction events for
+   * that subagent run.
+   */
+  subagentActivity: Record<string, AgentStreamSubagentPayload[]>;
+  /**
+   * Latest history-compaction activity for the connected agent, or `null` when
+   * no compaction has occurred on the current stream.
+   */
+  compaction: AgentStreamCompactionPayload | null;
   contextSnapshot: ContextSnapshotData | null;
   costUsage: ContextSnapshotData['costUsage'] | null;
   mcpStatus: McpToolsetsStatusResponse | null;
@@ -184,7 +197,7 @@ export interface AgentRuntimeStoreActions {
   // ─── Runtime connection ──────────────────────────────────────────
   launchAgent: (options: LaunchAgentOptions) => Promise<AgentConnection>;
   connectAgent: (connection: {
-    podName: string;
+    runtimeName: string;
     environmentName: string;
     serviceManager?: ServiceManager.IManager;
     jupyterBaseUrl?: string;
@@ -201,6 +214,9 @@ export interface AgentRuntimeStoreActions {
   setWsState: (state: AgentRuntimeWsState) => void;
   setWs: (ws: WebSocket | null, agentId?: string) => void;
   applySnapshot: (payload: AgentStreamSnapshotPayload) => void;
+  appendSubagentEvent: (event: AgentStreamSubagentPayload) => void;
+  clearSubagentActivity: () => void;
+  setCompaction: (payload: AgentStreamCompactionPayload | null) => void;
   upsertApproval: (approval: AgentStreamToolApprovalPayload) => void;
   removeApproval: (approvalId: string) => void;
   sendDecision: (
@@ -286,11 +302,28 @@ function getTransportEndpoint(
   }
 }
 
+function toAgentRuntimeBaseUrl(baseUrl: string): string {
+  const normalized = baseUrl.replace(/\/$/, '');
+  if (normalized.includes('/api/agent-runtimes')) return normalized;
+  if (normalized.includes('/api/jupyter-server')) {
+    return normalized.replace('/api/jupyter-server', '/api/agent-runtimes');
+  }
+  if (normalized.includes('/jupyter/server/')) {
+    return normalized.replace('/jupyter/server/', '/agent-runtimes/');
+  }
+  if (normalized.includes('/jupyter-server/')) {
+    return normalized.replace('/jupyter-server/', '/agent-runtimes/');
+  }
+  return normalized.replace('/jupyter/', '/agent-runtimes/');
+}
+
 async function createAgentOnRuntime(
   agentBaseUrl: string,
   agentId: string,
   config: AgentConfig = {},
 ): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
+  const { iamStore } = await import('@datalayer/core/lib/state');
+  const token = iamStore.getState().token || '';
   if (!config.protocol && !config.agentSpecId) {
     throw new Error(
       'Agent protocol is required. Provide config.protocol from the selected spec/config.',
@@ -339,7 +372,10 @@ async function createAgentOnRuntime(
 
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
   });
 
@@ -373,6 +409,8 @@ const initialWsState: Pick<
   | 'wsState'
   | 'approvals'
   | 'pendingApprovalCount'
+  | 'subagentActivity'
+  | 'compaction'
   | 'contextSnapshot'
   | 'costUsage'
   | 'mcpStatus'
@@ -384,6 +422,8 @@ const initialWsState: Pick<
   wsState: 'closed',
   approvals: [],
   pendingApprovalCount: 0,
+  subagentActivity: {},
+  compaction: null,
   contextSnapshot: null,
   costUsage: null,
   mcpStatus: null,
@@ -624,13 +664,10 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               'connectAgent requires either jupyterBaseUrl or serviceManager',
             );
           }
-          const agentBaseUrl = baseUrl.replace(
-            '/jupyter/server/',
-            '/agent-runtimes/',
-          );
+          const agentBaseUrl = toAgentRuntimeBaseUrl(baseUrl);
           set({
             runtime: {
-              podName: connection.podName,
+              runtimeName: connection.runtimeName,
               environmentName: connection.environmentName,
               jupyterBaseUrl: baseUrl,
               agentBaseUrl,
@@ -655,7 +692,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             }
 
             const { runtimesUrl: _runtimesUrl, ...runtimeOptions } = config;
-            const runtimePod = await createRuntime({
+            const runtimeRecord = await createRuntime({
               environmentName: runtimeOptions.environmentName,
               creditsLimit: runtimeOptions.creditsLimit,
               type: runtimeOptions.type || 'notebook',
@@ -664,14 +701,11 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               snapshot: runtimeOptions.snapshot,
             });
             set({ status: 'connecting' });
-            const jupyterBaseUrl = runtimePod.ingress;
-            const agentBaseUrl = jupyterBaseUrl.replace(
-              '/jupyter/server/',
-              '/agent-runtimes/',
-            );
+            const jupyterBaseUrl = runtimeRecord.ingress;
+            const agentBaseUrl = toAgentRuntimeBaseUrl(jupyterBaseUrl);
             const conn: AgentConnection = {
-              podName: runtimePod.pod_name,
-              environmentName: runtimePod.environment_name,
+              runtimeName: runtimeRecord.runtime_name,
+              environmentName: runtimeRecord.environment.name,
               jupyterBaseUrl,
               agentBaseUrl,
               status: 'ready',
@@ -694,7 +728,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             );
           }
           try {
-            const agentId = config.name || runtime.podName;
+            const agentId = config.name || runtime.runtimeName;
             const agentConnection = await createAgentOnRuntime(
               runtime.agentBaseUrl,
               agentId,
@@ -753,6 +787,22 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             codemodeStatus: payload.codemodeStatus ?? null,
             fullContext: payload.fullContext ?? null,
           })),
+
+        appendSubagentEvent: event =>
+          set(state => {
+            const key = event.toolCallId ?? event.subagentName;
+            const existing = state.subagentActivity[key] ?? [];
+            return {
+              subagentActivity: {
+                ...state.subagentActivity,
+                [key]: [...existing, event],
+              },
+            };
+          }),
+
+        clearSubagentActivity: () => set({ subagentActivity: {} }),
+
+        setCompaction: payload => set({ compaction: payload }),
 
         upsertApproval: approval =>
           set(state => {
@@ -1203,6 +1253,65 @@ export const useAgentRuntimeLoadedSkills = (agentId?: string) =>
   useAgentRuntimeStore(s =>
     agentId ? (s.loadedSkillsByAgentId[agentId] ?? []) : [],
   );
+
+const EMPTY_SUBAGENT_EVENTS: readonly AgentStreamSubagentPayload[] = [];
+
+/** Live subagent activity for a given parent `delegate_task` tool call id. */
+export const useAgentRuntimeSubagentActivity = (toolCallId?: string) =>
+  useAgentRuntimeStore(s =>
+    toolCallId
+      ? (s.subagentActivity[toolCallId] ?? EMPTY_SUBAGENT_EVENTS)
+      : EMPTY_SUBAGENT_EVENTS,
+  );
+
+/**
+ * Live subagent activity resolved by tool-call id with a subagent-name
+ * fallback. The backend keys events by the parent run's `tool_call_id`, which
+ * can differ from the id surfaced in the chat transport stream; when the id
+ * misses we fall back to the most recent run for the named subagent.
+ */
+export const useAgentRuntimeSubagentActivityByToolCall = (
+  toolCallId?: string,
+  subagentName?: string,
+) =>
+  useAgentRuntimeStore(s => {
+    if (toolCallId) {
+      const byId = s.subagentActivity[toolCallId];
+      if (byId && byId.length > 0) return byId;
+    }
+    if (subagentName) {
+      const byNameKey = s.subagentActivity[subagentName];
+      if (byNameKey && byNameKey.length > 0) return byNameKey;
+      let match: AgentStreamSubagentPayload[] | undefined;
+      for (const events of Object.values(s.subagentActivity)) {
+        if (events.length > 0 && events[0]?.subagentName === subagentName) {
+          match = events;
+        }
+      }
+      if (match) return match;
+    }
+    return EMPTY_SUBAGENT_EVENTS;
+  });
+
+/**
+ * Key of the currently active (running) subagent run, or `null` when none is
+ * active. A run is active while its event list has no `end`/`error` phase; when
+ * several are active the most recently started one wins.
+ */
+export const useAgentRuntimeActiveSubagentToolCallId = (): string | null =>
+  useAgentRuntimeStore(s => {
+    let activeKey: string | null = null;
+    for (const [key, events] of Object.entries(s.subagentActivity)) {
+      if (events.length === 0) continue;
+      const done = events.some(e => e.phase === 'end' || e.phase === 'error');
+      if (!done) activeKey = key;
+    }
+    return activeKey;
+  });
+
+/** Latest history-compaction activity for the connected agent. */
+export const useAgentRuntimeCompaction = () =>
+  useAgentRuntimeStore(s => s.compaction);
 
 // ---------------------------------------------------------------------------
 // Non-React access

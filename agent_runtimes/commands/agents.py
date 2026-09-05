@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Agent runtime commands for Datalayer CLI."""
 
 from __future__ import annotations
@@ -332,10 +329,10 @@ def list_agents(
         for runtime in runtimes:
             runtime_payload: dict[str, Any] = {}
             ownership_payload: dict[str, Any] = {}
-            pod_name = str(runtime.pod_name or "")
-            if pod_name:
+            runtime_name = str(runtime.runtime_name or "")
+            if runtime_name:
                 try:
-                    runtime_response = client._get_runtime(pod_name)
+                    runtime_response = client.runtimes.get(runtime_name)
                     runtime_payload = runtime_response.get("runtime") or {}
                     ownership_payload = runtime_payload.get("ownership") or {}
                 except Exception:
@@ -359,7 +356,7 @@ def list_agents(
 
             expired_at = runtime.expired_at
             table.add_row(
-                pod_name,
+                runtime_name,
                 str(runtime.name or ""),
                 str(runtime.environment or ""),
                 display_billing_uid,
@@ -548,10 +545,10 @@ def create_agent_runtime(
 
         created_runtime_payload: dict[str, Any] = {}
         ownership_payload: dict[str, Any] = {}
-        created_pod_name = str(runtime.pod_name or "")
-        if created_pod_name:
+        created_runtime_name = str(runtime.runtime_name or "")
+        if created_runtime_name:
             try:
-                created_runtime_response = client._get_runtime(created_pod_name)
+                created_runtime_response = client.runtimes.get(created_runtime_name)
                 created_runtime_payload = created_runtime_response.get("runtime") or {}
                 ownership_payload = created_runtime_payload.get("ownership") or {}
             except Exception:
@@ -572,8 +569,10 @@ def create_agent_runtime(
                 "success": True,
                 "runtime": {
                     "given_name": runtime.name,
-                    "environment_name": runtime.environment,
-                    "pod_name": runtime.pod_name,
+                    "environment": {
+                        "name": runtime.environment,
+                    },
+                    "runtime_name": runtime.runtime_name,
                     "uid": runtime.uid,
                     "ingress": runtime.ingress,
                     "reservation_id": runtime.reservation_id,
@@ -593,7 +592,7 @@ def create_agent_runtime(
             return
 
         spec_label = resolved_spec_id or spec or "n/a"
-        identifier = str(runtime.pod_name or runtime.uid or runtime.name or "")
+        identifier = str(runtime.runtime_name or runtime.uid or runtime.name or "")
         url = str(runtime.ingress or "")
         _print_runtime_summary_panel(
             title="Agent Runtime Created",
@@ -612,7 +611,7 @@ def create_agent_runtime(
 
 @app.command(name="get")
 def get_agent_runtime(
-    pod_name: Optional[str] = typer.Argument(
+    runtime_name: Optional[str] = typer.Argument(
         None,
         help="Pod name of the agent runtime to read.",
     ),
@@ -643,19 +642,19 @@ def get_agent_runtime(
     try:
         client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
 
-        if pod_name is None:
+        if runtime_name is None:
             runtimes = client.list_runtimes()
             if not runtimes:
                 console.print("[yellow]No running runtimes found.[/yellow]")
                 raise typer.Exit(0)
             choices = []
             for runtime in runtimes:
-                label = runtime.pod_name or ""
+                label = runtime.runtime_name or ""
                 if runtime.name:
-                    label = f"{runtime.pod_name}  ({runtime.name})"
+                    label = f"{runtime.runtime_name}  ({runtime.name})"
                 if runtime.environment:
                     label += f"  [{runtime.environment}]"
-                choices.append(questionary.Choice(title=label, value=runtime.pod_name))
+                choices.append(questionary.Choice(title=label, value=runtime.runtime_name))
 
             selected = questionary.select(
                 "Select the agent runtime to read:",
@@ -663,12 +662,12 @@ def get_agent_runtime(
             ).ask()
             if selected is None:
                 raise typer.Exit(0)
-            pod_name = selected
+            runtime_name = selected
 
-        runtime_response = client._get_runtime(pod_name)
+        runtime_response = client.runtimes.get(runtime_name)
         runtime_payload = runtime_response.get("runtime") or {}
         ownership_payload = runtime_payload.get("ownership") or {}
-        runtime = client.get_runtime(pod_name)
+        runtime = client.get_runtime(runtime_name)
 
         authenticated_uid = str(
             _resolve_billing_entity_details(
@@ -689,8 +688,10 @@ def get_agent_runtime(
 
         runtime_dict = {
             "given_name": runtime.name,
-            "environment_name": runtime.environment,
-            "pod_name": runtime.pod_name,
+            "environment": {
+                "name": runtime.environment,
+            },
+            "runtime_name": runtime.runtime_name,
             "ingress": runtime.ingress,
             "reservation_id": runtime.reservation_id,
             "uid": runtime.uid,
@@ -715,7 +716,7 @@ def get_agent_runtime(
 
         _print_runtime_summary_panel(
             title="Agent Runtime",
-            identifier=str(runtime.pod_name or runtime.uid or runtime.name or ""),
+            identifier=str(runtime.runtime_name or runtime.uid or runtime.name or ""),
             agentspec=_resolve_agentspec_label(runtime_payload),
             url=str(runtime.ingress or ""),
         )
@@ -729,7 +730,7 @@ def get_agent_runtime(
 
 @app.command(name="update")
 def update_agent_runtime(
-    pod_name: Optional[str] = typer.Argument(
+    runtime_name: Optional[str] = typer.Argument(
         None,
         help="Pod name of the agent runtime to update.",
     ),
@@ -765,19 +766,19 @@ def update_agent_runtime(
     try:
         client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
 
-        if pod_name is None:
+        if runtime_name is None:
             runtimes = client.list_runtimes()
             if not runtimes:
                 console.print("[yellow]No running runtimes found.[/yellow]")
                 raise typer.Exit(0)
             choices = []
             for runtime in runtimes:
-                label = runtime.pod_name or ""
+                label = runtime.runtime_name or ""
                 if runtime.name:
-                    label = f"{runtime.pod_name}  ({runtime.name})"
+                    label = f"{runtime.runtime_name}  ({runtime.name})"
                 if runtime.environment:
                     label += f"  [{runtime.environment}]"
-                choices.append(questionary.Choice(title=label, value=runtime.pod_name))
+                choices.append(questionary.Choice(title=label, value=runtime.runtime_name))
 
             selected = questionary.select(
                 "Select the agent runtime to update:",
@@ -785,16 +786,16 @@ def update_agent_runtime(
             ).ask()
             if selected is None:
                 raise typer.Exit(0)
-            pod_name = selected
+            runtime_name = selected
 
-        client.update_runtime(pod_name, list(capability))
+        client.update_runtime(runtime_name, list(capability))
 
         if raw:
             console.print(
                 json.dumps(
                     {
                         "success": True,
-                        "pod_name": pod_name,
+                        "runtime_name": runtime_name,
                         "capabilities": list(capability),
                     },
                     ensure_ascii=False,
@@ -803,7 +804,7 @@ def update_agent_runtime(
             return
 
         console.print(
-            f"[green]Agent runtime '{pod_name}' updated successfully![/green]"
+            f"[green]Agent runtime '{runtime_name}' updated successfully![/green]"
         )
         if capability:
             console.print(f"Capabilities: {', '.join(capability)}")
@@ -818,7 +819,7 @@ def update_agent_runtime(
 @app.command(name="delete")
 @app.command(name="terminate")
 def terminate_agent_runtime(
-    pod_name: Optional[str] = typer.Argument(
+    runtime_name: Optional[str] = typer.Argument(
         None,
         help="Pod name of the runtime to terminate.",
     ),
@@ -844,7 +845,7 @@ def terminate_agent_runtime(
     try:
         client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
 
-        if pod_name is None:
+        if runtime_name is None:
             runtimes = client.list_runtimes()
             if not runtimes:
                 console.print("[yellow]No running runtimes found.[/yellow]")
@@ -852,12 +853,12 @@ def terminate_agent_runtime(
 
             choices = []
             for runtime in runtimes:
-                label = runtime.pod_name or ""
+                label = runtime.runtime_name or ""
                 if runtime.name:
-                    label = f"{runtime.pod_name}  ({runtime.name})"
+                    label = f"{runtime.runtime_name}  ({runtime.name})"
                 if runtime.environment:
                     label += f"  [{runtime.environment}]"
-                choices.append(questionary.Choice(title=label, value=runtime.pod_name))
+                choices.append(questionary.Choice(title=label, value=runtime.runtime_name))
 
             selected = questionary.select(
                 "Select the agent runtime to terminate:",
@@ -865,15 +866,15 @@ def terminate_agent_runtime(
             ).ask()
             if selected is None:
                 raise typer.Exit(0)
-            pod_name = selected
+            runtime_name = selected
 
-        success = client.terminate_runtime(pod_name)
+        success = client.stop_runtime(runtime_name)
         if success:
             console.print(
-                f"[green]Agent runtime '{pod_name}' terminated successfully![/green]"
+                f"[green]Agent runtime '{runtime_name}' terminated successfully![/green]"
             )
         else:
-            console.print(f"[red]Failed to terminate agent runtime '{pod_name}'[/red]")
+            console.print(f"[red]Failed to terminate agent runtime '{runtime_name}'[/red]")
             raise typer.Exit(1)
 
     except typer.Exit:
@@ -939,7 +940,7 @@ def inspect_agent_runtime(
         selected = None
         if agent:
             for candidate in runtimes:
-                if agent in {candidate.pod_name, candidate.uid, candidate.name}:
+                if agent in {candidate.runtime_name, candidate.uid, candidate.name}:
                     selected = candidate
                     break
             if selected is None:
@@ -948,12 +949,12 @@ def inspect_agent_runtime(
         else:
             selected = runtimes[0]
 
-        pod_name = selected.pod_name or ""
-        runtime_response = client._get_runtime(pod_name)
+        runtime_name = selected.runtime_name or ""
+        runtime_response = client.runtimes.get(runtime_name)
         runtime_payload = runtime_response.get("runtime") or {}
         ownership_payload = runtime_payload.get("ownership") or {}
 
-        refreshed = client.get_runtime(pod_name)
+        refreshed = client.get_runtime(runtime_name)
         endpoint = str(refreshed.ingress or "").rstrip("/")
         runtime_token = str(refreshed.jupyter_token or client._get_api_key() or "")
         if not endpoint:
@@ -1049,7 +1050,7 @@ def inspect_agent_runtime(
 
         _print_runtime_summary_panel(
             title="Agent Runtime Inspection",
-            identifier=str(refreshed.pod_name or refreshed.uid or refreshed.name or ""),
+            identifier=str(refreshed.runtime_name or refreshed.uid or refreshed.name or ""),
             agentspec=_resolve_agentspec_label(runtime_payload),
             url=endpoint,
         )
@@ -1057,8 +1058,8 @@ def inspect_agent_runtime(
         summary = Table(title="Agent Runtime Inspection")
         summary.add_column("Field", style="cyan")
         summary.add_column("Value")
-        summary.add_row("Runtime", str(refreshed.name or pod_name))
-        summary.add_row("Pod", str(pod_name))
+        summary.add_row("Runtime", str(refreshed.name or runtime_name))
+        summary.add_row("Pod", str(runtime_name))
         summary.add_row("UID", str(refreshed.uid or ""))
         summary.add_row("Ingress", endpoint)
         summary.add_row("Billing Entity UID", display_billing_uid)
@@ -1155,7 +1156,7 @@ def health_agent_runtime(
         selected = None
         if agent:
             for candidate in runtimes:
-                if agent in {candidate.pod_name, candidate.uid, candidate.name}:
+                if agent in {candidate.runtime_name, candidate.uid, candidate.name}:
                     selected = candidate
                     break
             if selected is None:
@@ -1164,10 +1165,10 @@ def health_agent_runtime(
         else:
             selected = runtimes[0]
 
-        pod_name = selected.pod_name or selected.uid or selected.name or ""
-        refreshed = client.get_runtime(pod_name)
+        runtime_name = selected.runtime_name or selected.uid or selected.name or ""
+        refreshed = client.get_runtime(runtime_name)
         health = client.check_runtime_health(
-            pod_name,
+            runtime_name,
             api_key=token,
         )
 
@@ -1178,8 +1179,8 @@ def health_agent_runtime(
         table = Table(title="Agent Runtime Health")
         table.add_column("Field", style="cyan")
         table.add_column("Value")
-        table.add_row("Runtime", str(refreshed.name or pod_name))
-        table.add_row("Pod", str(pod_name))
+        table.add_row("Runtime", str(refreshed.name or runtime_name))
+        table.add_row("Pod", str(runtime_name))
         table.add_row("UID", str(refreshed.uid or ""))
         table.add_row("Ingress", str(refreshed.ingress or "n/a"))
         table.add_row("Probe", probe_mode)

@@ -194,11 +194,7 @@ async def discover_mcp_server_tools(
                             name=tool.name,
                             description=tool.description or "",
                             enabled=True,
-                            input_schema=(
-                                tool.inputSchema
-                                if hasattr(tool, "inputSchema")
-                                else None
-                            ),
+                            input_schema=tool.input_schema,
                         )
                         tools.append(mcp_tool)
 

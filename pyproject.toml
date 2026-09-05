@@ -25,44 +25,36 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "a2a-sdk[all]>=0.3.0,<0.4.0",
-    "a2ui-agent-sdk>=0.4.0",
-    "ag-ui-protocol>=0.1.19",
-    "agent-client-protocol>=0.7.1",
-    "agent-codemode",
-    "agent-skills",
-    "anthropic>=0.105.0,<1.0.0",
-    "boto3>=1.42.96,<1.43.0",
-    "code-sandboxes",
-    "croniter>=6.0.0",
-    "datalayer-core",
-    "dbos>=2.10.0,<2.23.0",
-    "fasta2a @ git+https://github.com/datalayer-externals/fasta2a.git@feat/extensions#egg=fasta2a",
+    # The first releases of both on mcp 2; an older one pins mcp<2.
+    "agent-codemode>=1.1.0",
+    "agent-skills>=1.1.0",
+    # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
+    # draws from — arrived in 1.3.0.
+    "code-sandboxes>=1.3.0",
+    "croniter",
+    "datalayer-core>=1.1.57",
     "fastapi",
     "filelock>=3.20.3",
-    "httpx>=0.28.0",
-    "google-auth>=2.52.0",
-    "google-api-core>=2.30.3",
-    "jupyter-kernel-client>=0.0.9",
+    "httpx",
     "nbformat",
     "jupyter-server>=2.10,<3",
-    "logfire>=4.32.1",
-    "logfire-api>=4.33.0",
-    "mcp-ui-server>=1.0.0,<1.1.0",
-    "mcp>=1.26.0,<2.0.0",
-    "mem0ai>=2.0.1,<2.1.0",
-    "openai>=2.29.0,<2.38.0",
-    "opentelemetry-api>=1.39.0,<1.41.0",
-    "opentelemetry-sdk>=1.39.0,<1.41.0",
-    "opentelemetry-semantic-conventions>=0.60b0,<0.62b0",
-    "opentelemetry-exporter-otlp-proto-http>=1.39.0,<1.41.0",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.39.0,<1.41.0",
-    "opentelemetry-instrumentation>=0.60b0,<0.62b0",
-    "pydantic-ai-slim[openai,anthropic,google,dbos,bedrock]>=1.106.0,<2.0.0",
-    "pydantic-graph>=1.97.0",
-    "pydantic-settings>=2.14.0",
+    # The MCP Python SDK 2. The client-side integration runs through
+    # pydantic-ai, whose `mcp` extra accepts fastmcp-slim 3 (mcp 1) as well
+    # as 4 (mcp 2): the fastmcp-slim floor below is what pins the mcp 2 line,
+    # and it has to name the pre-release explicitly for pip to consider it.
+    # See https://py.sdk.modelcontextprotocol.io/v2/migration/
+    "mcp>=2,<3",
+    "fastmcp-slim[client]>=4.0.0b3,<5",
+    "opentelemetry-api>=1.40.0,<2.0.0",
+    "opentelemetry-sdk>=1.40.0,<2.0.0",
+    "opentelemetry-semantic-conventions>=0.61b0,<0.62",
+    "opentelemetry-exporter-otlp-proto-http>=1.40.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.40.0,<2.0.0",
+    "opentelemetry-instrumentation>=0.61b0,<0.62",
+    "pydantic-ai-slim[mcp]>=2.35.0,<3",
+    "pydantic-graph>=2.35.0,<3",
+    "pydantic-settings>=2.14.2",
     "pydantic[email]>=2.13.3",
-    "subagents-pydantic-ai @ git+https://github.com/datalayer-externals/pydantic-ai-subagents.git@main#egg=subagents-pydantic-ai",
     "tiktoken>=0.5.0",
     "typer>=0.16.0",
     "urllib3>=2.6.3",
@@ -77,17 +69,52 @@ Issues = "https://github.com/datalayer/agent-runtimes/issues"
 Changelog = "https://github.com/datalayer/agent-runtimes/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-test = [
-    "coverage>=7.9.2",
-    "mypy>=1.16.1",
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1.0",
-    "pytest-cov>=6.2.1",
-    "pytest_jupyter>=0.10.1",
-    "pytest-tornasync",
-    "python-dotenv>=1.1.1",
-    "types-requests>=2.32.4",
-    "typing-extensions>=4.15.0",
+anthropic = [
+    # pydantic-ai 2.34+ builds on the anthropic SDK 1.x; nothing here calls
+    # the SDK directly, so the floor follows pydantic-ai's.
+    "anthropic>=1.0.0,<2.0.0",
+    "pydantic-ai-slim[anthropic]>=2.35.0,<3",
+]
+openai = [
+    # The ceiling is the next MAJOR of the SDK, not the current one.
+    #
+    # pydantic-ai-slim moved its `openai` extra to `openai>=3.0.0` in 2.32.0,
+    # which our own `<3.0.0` then contradicted: pip could satisfy neither and
+    # the image stopped building. The only thing taken from the SDK directly
+    # is `AsyncAzureOpenAI`, whose arguments are unchanged in 3.x, so the
+    # ceiling was holding back the ecosystem rather than protecting anything.
+    "openai>=2.29.0,<4.0.0",
+    "pydantic-ai-slim[openai]>=2.35.0,<3",
+]
+google = [
+    "google-auth>=2.52.0",
+    "google-api-core>=2.30.3",
+    "pydantic-ai-slim[google]>=2.35.0,<3",
+]
+aws = [
+    "boto3>=1.42.96,<1.43.0",
+    "pydantic-ai-slim[bedrock]>=2.35.0,<3",
+]
+a2a = [
+    "a2a-sdk[all]>=0.3.0,<0.4.0",
+    "fasta2a",
+]
+ui = [
+    "a2ui-agent-sdk>=0.5.0",
+    "ag-ui-protocol>=0.1.19",
+    "agent-client-protocol>=0.7.1",
+    "mcp-ui-server>=1.0.0,<1.1.0",
+]
+memory = [
+    "mem0ai>=2.0.1",
+]
+durable = [
+    "dbos",
+    "pydantic-ai-slim[dbos]>=2.35.0,<3",
+]
+logfire = [
+    "logfire>=4.32.1",
+    "logfire-api>=4.33.0",
 ]
 docs = [
     "npdoc_to_md>=2.0.1",
@@ -102,8 +129,10 @@ examples = [
     "uvicorn",
 ]
 cli = [
+    "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
+    "keyring>=24.0.0",
     "prompt_toolkit>=3.0.0",
     "requests",
     "rich>=13.0.0",
@@ -112,6 +141,7 @@ cli = [
 chat = [
     "jupyter-nbmodel-client",
     "pillow",
+    "keyring>=24.0.0",
     "prompt_toolkit>=3.0.0",
     "requests",
     "rich>=13.0.0",
@@ -120,11 +150,44 @@ chat = [
 agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
+all = [
+    "agent_runtimes[a2a,anthropic,aws,cli,durable,google,logfire,memory,openai,ui]",
+]
+test = [
+    # Several tests build agents from `openai:` model strings, and pydantic-ai
+    # resolves those through the provider SDK -- without it they fail on import.
+    # CLI tests also import the ACP client, so keep the test dependency explicit
+    # instead of promoting agent-client-protocol to a core runtime dependency.
+    "agent_runtimes[cli,openai]",
+    "coverage>=7.9.2",
+    "mypy>=1.16.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+    "pytest_jupyter>=0.10.1",
+    "pytest-tornasync",
+    "python-dotenv>=1.1.1",
+    "types-requests>=2.32.4",
+    "typing-extensions>=4.15.0",
+    "datalayer_reactor",
+]
 
 [project.scripts]
+datalayer-agents = "agent_runtimes.main:main"
 agent-runtimes = "agent_runtimes.main:main"
 loop = "agent_runtimes.main:main"
 l = "agent_runtimes.main:main"
+
+# The Datalayer CLI discovers its extensions through this group: installing
+# agent-runtimes is what makes `datalayer sandboxes` (and the other command
+# groups of this package) exist over there.
+[project.entry-points."datalayer.cli"]
+agent-runtimes = "agent_runtimes.reactor_extension:plugin"
+
+# And through the reactor's own CLI group: `reactor sandboxes` works wherever
+# both are installed, with the same plugin doing the extending.
+[project.entry-points."datalayer.reactor.cli"]
+agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 
 [tool.hatch.metadata]
 allow-direct-references = true

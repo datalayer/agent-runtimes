@@ -79,7 +79,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                   sx={{
                     py: 1,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   📁 notebooks/
@@ -89,7 +89,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                     py: 1,
                     pl: 3,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   📓 analysis.ipynb
@@ -99,7 +99,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                     py: 1,
                     pl: 3,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   📓 demo.ipynb
@@ -108,7 +108,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                   sx={{
                     py: 1,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   📁 data/
@@ -118,7 +118,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                     py: 1,
                     pl: 3,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   📄 dataset.csv
@@ -127,7 +127,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                   sx={{
                     py: 1,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   📁 models/
@@ -137,7 +137,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                     py: 1,
                     pl: 3,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   📄 agent.py
@@ -161,7 +161,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
                   sx={{
                     py: 1,
                     cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.subtle' },
+                    '&:hover': { bg: 'canvas.default' },
                   }}
                 >
                   🪣 s3://nasa-1

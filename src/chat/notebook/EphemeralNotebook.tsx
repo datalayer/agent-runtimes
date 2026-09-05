@@ -20,16 +20,18 @@
  * @module chat/notebook/EphemeralNotebook
  */
 
+import type { JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
-  Box,
   DatalayerThemeProvider,
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
+  type ToolbarItem,
 } from '@datalayer/primer-addons';
+import { Box } from '@primer/react';
 import {
   Notebook,
   NotebookToolbar,
@@ -38,8 +40,11 @@ import {
   JupyterReactTheme,
   notebookStore,
   disposeServiceManager,
+  useJupyterLabCssLoaded,
 } from '@datalayer/jupyter-react';
+import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
+import { useResumeServerExecutions } from '../../jupyter/useResumeServerExecutions';
 import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
 import { useProgressTask } from '../../hooks/useProgressTask';
 import type { EphemeralNotebookToolbarComponent } from '../../types/chat';
@@ -70,6 +75,25 @@ const EPHEMERAL_NOTEBOOK_CONTENT: INotebookContent = {
   nbformat_minor: 5,
 };
 
+/**
+ * Explicit runtime endpoint used to bind an ephemeral notebook kernel without
+ * resolving a pod from the user's runtimes list. Used to reach an agent node's
+ * Jupyter server through the runtimes tunnel HTTP/WebSocket proxy.
+ */
+export interface EphemeralRuntimeOverride {
+  /** REST base URL, e.g. `https://.../agent-nodes/{nodeId}/jupyter`. */
+  baseUrl: string;
+  /**
+   * WebSocket base URL. Defaults to `baseUrl` with the http(s) scheme swapped
+   * for ws(s). For the tunnel proxy this is the `/ws` sibling of `baseUrl`.
+   */
+  wsUrl?: string;
+  /** Bearer/JWT token appended to requests (`appendToken`). */
+  token?: string;
+  /** Stable identifier used for the sandbox service-manager registry. */
+  runtimeName?: string;
+}
+
 export interface EphemeralNotebookProps {
   /**
    * Notebook identifier. Must match the id passed to `useNotebookTools` so the
@@ -77,7 +101,15 @@ export interface EphemeralNotebookProps {
    */
   notebookId: string;
   /** Preferred runtime pod name to bind the notebook kernel to. */
-  runtimePodName?: string;
+  runtimeName?: string;
+  /**
+   * Explicit runtime endpoint override. When supplied, the notebook binds its
+   * kernel to this endpoint directly instead of resolving a pod from the user's
+   * runtimes list. This is how a SaaS browser reaches an agent node's Jupyter
+   * server through the runtimes tunnel proxy: `baseUrl` points at
+   * `.../agent-nodes/{nodeId}/jupyter` and `wsUrl` at its `/ws` sibling.
+   */
+  runtimeOverride?: EphemeralRuntimeOverride;
   /** Left margin reserved for the cell sidebar (default 120). */
   cellSidebarMargin?: number;
   /** Optional persisted notebook model to restore when mounting. */
@@ -86,18 +118,131 @@ export interface EphemeralNotebookProps {
   onNbformatChange?: (content: INotebookContent) => void;
   /** Optional toolbar component override. */
   toolbarComponent?: EphemeralNotebookToolbarComponent;
+  /**
+   * Whether to draw a toolbar at all. Defaults to true.
+   *
+   * For a host where the toolbar is somebody's to provide — the LOOP
+   * workspace, where a plugin owns it and can be switched off. `false` draws
+   * no bar rather than an empty one: an empty bar still costs a row and a
+   * border, and reads as broken rather than as absent.
+   */
+  showToolbar?: boolean;
+  /**
+   * Whether the toolbar offers Save.
+   *
+   * False by default. This notebook is held in memory and written back by
+   * whoever mounted it, so the button commits nothing a reader can point at —
+   * and in a browser sandbox there is no file behind it at all. A host that
+   * does persist the notebook, and wants an explicit save, sets this.
+   */
+  showSaveItem?: boolean;
+  /**
+   * Items added to the toolbar of the notebook.
+   *
+   * The notebook toolbar merges them with its own and orders the whole by the
+   * `order` of each item, so a host adds what the notebook itself knows
+   * nothing about — the status of the sandbox it runs on, a selector to
+   * change it — without replacing the toolbar through `toolbarComponent`.
+   */
+  toolbarExtraItems?: ToolbarItem[];
+  /** Optional theme variant override from host chat context. */
+  themeVariant?: string;
+  /** Optional color mode override from host chat context. */
+  colorMode?: 'light' | 'dark' | 'auto';
+  /**
+   * Optional real-time collaboration provider. When supplied, the notebook
+   * joins a shared collaborative room (the ydoc becomes the source of truth)
+   * and the local in-memory persistence poll is disabled. This is how a node's
+   * notebook state transits to the SaaS UI (and back) over RTC instead of the
+   * tunnel.
+   */
+  collaborationProvider?: ICollaborationProvider;
+
+  /**
+   * A `ServiceManager` to bind to instead of resolving one from a runtime.
+   *
+   * For hosts that already own the connection — a browser (Pyodide) sandbox,
+   * where the kernel runs in the page and there is no pod to look up. Binding
+   * to the host's manager is what puts the agent's executions and the reader's
+   * cells in the same kernel.
+   */
+
+  /**
+   * Render without wrapping the content in a theme provider.
+   *
+   * For a host that already owns one — the LOOP workspace, where the entry
+   * point provides the theme and the views inherit it. Nested providers fight
+   * over `BaseStyles` and font tokens, and the inner one wins for the wrong
+   * reasons.
+   */
+  inheritTheme?: boolean;
+  serviceManager?: ServiceManager.IManager;
+
+  /**
+   * A kernel already running on that manager to bind to.
+   *
+   * Supplied with `serviceManager` when the host has a kernel of its own — a
+   * browser sandbox, say. Without it the notebook starts a second kernel on the
+   * same manager, which for Pyodide dies on arrival and, more importantly,
+   * would put the reader's cells and the agent's executions in different
+   * kernels.
+   */
+  kernelId?: string;
 }
 
 /**
  * Renders an in-memory notebook backed by a sandbox kernel.
  */
+
+/**
+ * The theme provider, or nothing.
+ *
+ * A host that already owns a theme root passes `inherit`; nested providers
+ * fight over `BaseStyles` and font tokens, and the inner one wins for the wrong
+ * reasons.
+ */
+function ThemeRoot({
+  inherit,
+  colorMode,
+  themeConfig,
+  children,
+}: {
+  inherit: boolean;
+  colorMode: 'light' | 'dark' | 'auto';
+  themeConfig: { primerTheme: unknown; themeStyles: unknown };
+  children: React.ReactNode;
+}): JSX.Element {
+  if (inherit) {
+    return <>{children}</>;
+  }
+  return (
+    <DatalayerThemeProvider
+      colorMode={colorMode}
+      theme={themeConfig.primerTheme as never}
+      themeStyles={themeConfig.themeStyles as never}
+    >
+      {children}
+    </DatalayerThemeProvider>
+  );
+}
+
 export function EphemeralNotebook({
   notebookId,
-  runtimePodName,
+  runtimeName,
+  runtimeOverride,
+  serviceManager: externalServiceManager,
+  inheritTheme = false,
+  kernelId: externalKernelId,
   cellSidebarMargin = 120,
   nbformat,
   onNbformatChange,
   toolbarComponent,
+  toolbarExtraItems,
+  showToolbar = true,
+  showSaveItem = false,
+  themeVariant,
+  colorMode,
+  collaborationProvider,
 }: EphemeralNotebookProps) {
   // The `nbformat` passed to the `Notebook` component MUST stay a stable
   // reference for the lifetime of a given `notebookId`: the underlying
@@ -125,20 +270,43 @@ export function EphemeralNotebook({
   // notebook must bind to exactly the runtime assigned to this agent, or to
   // none at all (straight path).
   const { runtimes, refetchRuntimes } = useAgentsRuntimes();
-  const selectedRuntime = useMemo(() => {
-    const preferredPod = String(runtimePodName || '').trim();
-    if (!preferredPod) {
+  const resolvedRuntime = useMemo(() => {
+    const preferredRuntime = String(runtimeName || '').trim();
+    if (!preferredRuntime) {
       return undefined;
     }
-    return runtimes.find(rt => String(rt?.pod_name || '') === preferredPod);
-  }, [runtimePodName, runtimes]);
+    return runtimes.find(
+      rt => String(rt?.runtime_name || '') === preferredRuntime,
+    );
+  }, [runtimeName, runtimes]);
+
+  // An explicit endpoint override wins over the pod lookup: it lets a SaaS
+  // browser bind the kernel through the runtimes tunnel proxy (the node's
+  // Jupyter server is not directly reachable, so no pod exists in the list).
+  const selectedRuntime = useMemo(() => {
+    const overrideBaseUrl = String(runtimeOverride?.baseUrl || '').trim();
+    if (overrideBaseUrl) {
+      return {
+        url: overrideBaseUrl,
+        wsUrl: String(runtimeOverride?.wsUrl || '').trim() || undefined,
+        token: String(runtimeOverride?.token || '').trim(),
+        runtime_name:
+          String(runtimeOverride?.runtimeName || '').trim() ||
+          'agent-node-proxy',
+      };
+    }
+    return resolvedRuntime;
+  }, [runtimeOverride, resolvedRuntime]);
 
   // While the assigned pod has not yet appeared in the runtimes list, poll the
   // list quickly instead of waiting for the default (10s) refresh interval.
   // This is what makes the "Starting notebook…" state clear promptly once the
-  // agent runtime is ready, rather than lingering for several seconds.
+  // agent runtime is ready, rather than lingering for several seconds. The
+  // override path binds immediately, so no polling is needed there.
   const needsRuntimeLookup = Boolean(
-    String(runtimePodName || '').trim() && !selectedRuntime,
+    !runtimeOverride?.baseUrl &&
+    String(runtimeName || '').trim() &&
+    !selectedRuntime,
   );
   useEffect(() => {
     if (!needsRuntimeLookup) {
@@ -179,30 +347,61 @@ export function EphemeralNotebook({
 
       try {
         const token = String(selectedRuntime?.token || '').trim();
+        const wsUrl =
+          String((selectedRuntime as { wsUrl?: string })?.wsUrl || '').trim() ||
+          baseUrl.replace(/^http/, 'ws');
         const serverSettings = ServerConnection.makeSettings({
           baseUrl,
-          wsUrl: baseUrl.replace(/^http/, 'ws'),
+          wsUrl,
           token,
           appendToken: true,
         });
-        manager = new ServiceManager({ serverSettings });
+        const pending = new ServiceManager({ serverSettings });
+        manager = pending;
         // Central sandbox registry: runtime terminate/pause disposes this
         // manager immediately so its pollers cannot hit the dead pod ingress.
         unregisterManager = registerSandboxServiceManager(
-          String(selectedRuntime?.pod_name || ''),
+          String(selectedRuntime?.runtime_name || ''),
           manager,
         );
-        await manager.ready;
-        await manager.kernels.refreshRunning();
-        const runningKernel = [...manager.kernels.running()][0];
-
-        if (!cancelled) {
-          setRuntimeServiceManager(manager);
-          setRuntimeKernelId(runningKernel?.id);
-          setRuntimeStartDefaultKernel(!runningKernel);
+        // The cleanup below may already have run: it captured `manager` while
+        // it was still null, because this function is async and assigns it
+        // after the first await the caller does not wait for. Switching
+        // sandboxes quickly is exactly that race, and the manager it orphans
+        // polls the abandoned server for the life of the page.
+        if (cancelled) {
+          release(pending);
+          return;
         }
-      } catch {
+        await pending.ready;
+        await pending.kernels.refreshRunning();
+        const runningKernel = [...pending.kernels.running()][0];
+
+        if (cancelled) {
+          release(pending);
+          return;
+        }
+        setRuntimeServiceManager(pending);
+        setRuntimeKernelId(runningKernel?.id);
+        setRuntimeStartDefaultKernel(!runningKernel);
+      } catch (reason) {
+        // Give up the manager, do not merely stop looking at it.
+        //
+        // A `ServiceManager` starts polling `/api/kernels` and `/api/sessions`
+        // the moment it is constructed, on its own schedule. Abandoning one
+        // whose `ready` rejected left those polls running against a server
+        // that had gone — a switch away from a restarted sandbox produced an
+        // endless run of ERR_CONNECTION_REFUSED, one every few seconds,
+        // forever.
+        if (manager) {
+          release(manager);
+          manager = null;
+        }
         if (!cancelled) {
+          console.warn(
+            `[agent-runtimes] Could not reach the sandbox at ${baseUrl}.`,
+            reason,
+          );
           setRuntimeServiceManager(null);
           setRuntimeKernelId(undefined);
           setRuntimeStartDefaultKernel(false);
@@ -210,31 +409,142 @@ export function EphemeralNotebook({
       }
     };
 
+    /** Unregister and dispose one manager, once. */
+    const release = (target: ServiceManager) => {
+      unregisterManager?.();
+      unregisterManager = null;
+      disposeServiceManager(target);
+    };
+
     connectRuntime();
 
     return () => {
       cancelled = true;
-      unregisterManager?.();
       if (manager) {
-        disposeServiceManager(manager);
+        release(manager);
+        manager = null;
+      } else {
+        unregisterManager?.();
+        unregisterManager = null;
       }
     };
-  }, [selectedRuntime?.pod_name, selectedRuntime?.url, selectedRuntime?.token]);
+  }, [
+    selectedRuntime?.runtime_name,
+    selectedRuntime?.url,
+    selectedRuntime?.token,
+    (selectedRuntime as { wsUrl?: string })?.wsUrl,
+  ]);
 
   // Bind strictly to the agent runtime sandbox; there is NO local fallback
   // kernel. The notebook executes on the agent's runtime or shows a waiting
   // state until the runtime is ready.
-  const activeServiceManager = runtimeServiceManager;
-  const activeKernelId = runtimeKernelId;
-  const activeStartDefaultKernel = runtimeStartDefaultKernel;
-  const ToolbarComponent = toolbarComponent || NotebookToolbar;
+  // A host that already owns a `ServiceManager` — a browser (Pyodide) sandbox,
+  // where the kernel runs in the page and there is no pod to resolve — passes
+  // it in. Binding to *that* manager is what puts the agent's executions and
+  // the reader's cells in the same kernel.
+  const activeServiceManager = externalServiceManager ?? runtimeServiceManager;
+
+  /*
+   * Wait for the JupyterLab stylesheets before the first paint.
+   *
+   * They arrive as their own webpack chunks, fetched when the first notebook
+   * on the page asks for them, and a notebook drawn before they land has no
+   * rules at all — the cells stack, the toolbar unwraps, and the panel looks
+   * broken until something makes it render again. On a reload the chunks come
+   * from cache fast enough that nobody sees it, which is why this only ever
+   * showed up on the first visit to an agent page.
+   *
+   * Holding here rather than in `JupyterReactTheme` because the theme wraps
+   * the whole page: blanking the conversation while a notebook's stylesheet
+   * loads would trade a small ugly moment for a large empty one. This is the
+   * one component that cannot be read without them.
+   *
+   * The hook resolves even if a chunk fails, so a missing stylesheet still
+   * gets a notebook — the old, ugly one — and never an empty box forever.
+   *
+   * It waits for as long as that takes — measured at about 3s warm and 6.5s
+   * cold — rather than drawing after a grace period, and the reason is in the
+   * bug report: a refresh was needed. Stylesheets that arrive late apply
+   * themselves, so a notebook that were merely racing them would repair itself
+   * the moment they landed and nobody would ever reach for reload. It does not
+   * repair, because Lumino measures this panel when it attaches and never
+   * measures again — attach it against no rules and it keeps those numbers for
+   * as long as it lives. Drawing early on a timer would reproduce exactly the
+   * state being fixed, on precisely the slow connections that hit it most.
+   */
+  const notebookReady = useJupyterLabCssLoaded();
+  const activeKernelId = externalKernelId ?? runtimeKernelId;
+  // Join the host's kernel when there is one; only start a kernel of our own
+  // when the host handed us a manager without one. Starting a second kernel
+  // beside the host's would split the reader's cells from the agent's
+  // executions — and for Pyodide the second one dies on arrival.
+  const activeStartDefaultKernel = externalServiceManager
+    ? !externalKernelId
+    : runtimeStartDefaultKernel;
+  // The toolbar of the notebook, with the items of the host merged in. A host
+  // replacing the toolbar altogether receives them as well, as every toolbar
+  // built on the notebook one takes `extraItems`.
+  const ToolbarComponent = useMemo(() => {
+    if (!showToolbar) {
+      // Undefined, not a component that renders null. `Notebook` guards with
+      // `{Toolbar && <Toolbar/>}`, so this removes it from the tree entirely —
+      // which matters for the sibling selectors below.
+      return undefined;
+    }
+    const Base = toolbarComponent || NotebookToolbar;
+    /*
+     * No save button, unless a host asks for one.
+     *
+     * This notebook is ephemeral — that is its name. It is held in memory,
+     * written back by the host that mounted it, and in a browser sandbox there
+     * is no file on the other side of the button at all. A control that looks
+     * like it commits work and does not is worse than no control, and it is
+     * the first thing in the toolbar, where it reads as the primary action.
+     *
+     * The divider goes with it. Hiding the item alone leaves the toolbar
+     * opening on a rule with nothing before it.
+     */
+    const hiddenItems = showSaveItem
+      ? undefined
+      : ['notebook-save', 'notebook-divider-file'];
+    if (!toolbarExtraItems?.length && !hiddenItems) {
+      return Base;
+    }
+    return function EphemeralNotebookToolbar(props: any) {
+      return (
+        <Base
+          {...props}
+          extraItems={toolbarExtraItems}
+          hiddenItems={hiddenItems}
+        />
+      );
+    };
+  }, [showToolbar, showSaveItem, toolbarComponent, toolbarExtraItems]);
 
   const isRuntimeStarting = Boolean(
-    String(runtimePodName || '').trim() && !activeServiceManager,
+    (String(runtimeName || '').trim() ||
+      String(runtimeOverride?.baseUrl || '').trim()) &&
+    !activeServiceManager,
   );
   useProgressTask(`ephemeral-notebook-start-${notebookId}`, isRuntimeStarting);
 
+  /*
+   * What a previous page left running on the sandbox.
+   *
+   * The cells come back from the persisted model, each carrying the request
+   * the server accepted for it; once the sandbox is bound again, those
+   * requests are polled back into the cells, so a refresh mid-run finds the
+   * outputs that kept arriving while it was away.
+   */
+  useResumeServerExecutions(notebookId, activeServiceManager ?? undefined);
+
   useEffect(() => {
+    // When a collaboration provider is active the shared ydoc is the single
+    // source of truth and is synced remotely; the local in-memory persistence
+    // poll would fight it, so it is disabled in that mode.
+    if (collaborationProvider) {
+      return;
+    }
     // Read the CURRENT live notebook model straight from the notebook store.
     // The `NotebookAdapter` exposes `notebook` (the widget, whose `.model` is
     // the `INotebookModel`) and `panel` (`panel.content.model`). There is NO
@@ -282,10 +592,14 @@ export function EphemeralNotebook({
   // Resolve the active theme/color-mode exactly like the notebook editor
   // (NotebookEditorPanel) so the notebook honours dark / branded themes
   // instead of always rendering light.
-  const { colorMode, theme: themeVariant } = useThemeStore();
+  const { colorMode: storeColorMode, theme: storeThemeVariant } =
+    useThemeStore();
+  const effectiveColorMode = colorMode ?? storeColorMode;
+  const effectiveThemeVariant = themeVariant ?? storeThemeVariant;
   const systemMode = useSystemColorMode();
-  const themeConfig = getThemeConfig(themeVariant);
-  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const themeConfig = getThemeConfig(effectiveThemeVariant as any);
+  const resolvedMode =
+    effectiveColorMode === 'auto' ? systemMode : effectiveColorMode;
   const modeStyles =
     resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
@@ -296,6 +610,24 @@ export function EphemeralNotebook({
   const extensions = useMemo(
     () => [new CellSidebarExtension({ factory: CellSidebarButton })],
     [],
+  );
+
+  /*
+   * A session path under `.datalayer/`, so the server executor recovers outputs.
+   *
+   * `jupyter-server-nbmodel` streams a cell's outputs into the shared document
+   * of the server when the session names a file of it, and turns on HTTP
+   * output recovery when it does not — the case for every editor of Datalayer.
+   * Left to default, Jupyter React names the session `kernel-<id>`, which the
+   * executor reads as a real server document, so it keeps recovery OFF and an
+   * ephemeral notebook (which has no shared document on the pod at all) shows
+   * no outputs and loses a running cell on refresh. A `.datalayer/` path is
+   * how the executor is told there is no file here; the notebook id keeps two
+   * ephemeral notebooks on one sandbox from sharing a session.
+   */
+  const sessionPath = useMemo(
+    () => `.datalayer/${notebookId}.ipynb`,
+    [notebookId],
   );
 
   return (
@@ -309,11 +641,11 @@ export function EphemeralNotebook({
         bg: 'canvas.default',
       }}
     >
-      {activeServiceManager ? (
-        <DatalayerThemeProvider
-          colorMode={colorMode}
-          theme={themeConfig.primerTheme}
-          themeStyles={themeConfig.themeStyles}
+      {activeServiceManager && notebookReady ? (
+        <ThemeRoot
+          inherit={inheritTheme}
+          colorMode={effectiveColorMode}
+          themeConfig={themeConfig}
         >
           <JupyterReactTheme
             colormode={resolvedMode}
@@ -329,6 +661,7 @@ export function EphemeralNotebook({
                 overscrollBehaviorY: 'contain',
                 overflowAnchor: 'none',
                 padding: 2,
+                backgroundColor: themeBackground,
                 // Give the notebook a resolved height so cells render. The
                 // Jupyter Notebook component renders its outer container with
                 // id "dla-Jupyter-Notebook"; pin its toolbar and let the cell
@@ -337,22 +670,42 @@ export function EphemeralNotebook({
                   display: 'flex',
                   flexDirection: 'column',
                 },
-                '& #dla-Jupyter-Notebook > :first-of-type': {
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 2,
-                  flex: '0 0 auto',
-                  background: 'var(--jp-layout-color0, transparent)',
-                },
+                // Pin the toolbar — but only while there is one. This targets
+                // the first child, and with the toolbar gone that is the
+                // notebook body: it would be made sticky and painted with the
+                // toolbar's own background.
+                ...(showToolbar
+                  ? {
+                      '& #dla-Jupyter-Notebook > :first-of-type': {
+                        position: 'sticky' as const,
+                        top: 0,
+                        zIndex: 2,
+                        flex: '0 0 auto',
+                        backgroundColor: themeBackground,
+                      },
+                    }
+                  : {
+                      // `Notebook` gives the panel header `min-height: 50px` to
+                      // reserve room for a toolbar. With no toolbar that room
+                      // is a white band under nothing.
+                      '& .datalayer-NotebookPanel-header': {
+                        display: 'none',
+                        minHeight: 0,
+                      },
+                    }),
                 '& #dla-Jupyter-Notebook > .dla-Box-Notebook': {
                   flex: '1 1 auto',
                   minHeight: 0,
+                },
+                '& [role="toolbar"][aria-label="Notebook toolbar"]': {
+                  backgroundColor: themeBackground,
                 },
               }}
             >
               <Notebook
                 nbformat={initialNbformat}
                 id={notebookId}
+                path={sessionPath}
                 serviceManager={activeServiceManager}
                 startDefaultKernel={activeStartDefaultKernel}
                 kernelId={activeKernelId}
@@ -360,10 +713,11 @@ export function EphemeralNotebook({
                 cellSidebarMargin={cellSidebarMargin}
                 extensions={extensions}
                 Toolbar={ToolbarComponent}
+                collaborationProvider={collaborationProvider}
               />
             </Box>
           </JupyterReactTheme>
-        </DatalayerThemeProvider>
+        </ThemeRoot>
       ) : null}
     </Box>
   );

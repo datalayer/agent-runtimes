@@ -29,7 +29,6 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
 import type { ToolCallRenderContext } from '../types';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
@@ -141,7 +140,7 @@ const StepsFeedback: React.FC<{
       sx={{
         width: '100%',
         padding: 3,
-        backgroundColor: 'canvas.subtle',
+        backgroundColor: 'canvas.default',
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'border.default',
@@ -349,9 +348,8 @@ const AGENTSPEC_ID = 'example-human-in-the-loop';
 
 const AgUiHumanInTheLoopExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId } = useExampleAgentRuntime({
+  const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiHumanInTheLoopExample',
     agentName,
     specId: AGENTSPEC_ID,
@@ -387,7 +385,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Human in the Loop Example
+            AG-UI Human in the Loop Example
           </Text>
           <Text
             as="p"
@@ -405,7 +403,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -442,10 +440,10 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'accent.subtle',
+              backgroundColor: 'neutral.muted',
               borderRadius: 2,
               border: '1px solid',
-              borderColor: 'accent.muted',
+              borderColor: 'border.default',
             }}
           >
             <Text
@@ -467,6 +465,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
         {/* Floating chat with tool rendering */}
         {humanInTheLoopEndpoint && (
           <ChatFloating
+            kernelIndicatorPlacement="right"
             protocol="ag-ui"
             endpoint={humanInTheLoopEndpoint}
             title="Task Planner"

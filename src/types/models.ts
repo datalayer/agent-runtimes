@@ -21,8 +21,37 @@ export interface AIModel {
   provider: string;
   /** Whether this is the default model */
   default: boolean;
+  /**
+   * Whether this model is offered to a person choosing one.
+   *
+   * The catalogue is what the platform knows how to talk to; this says what
+   * is worth offering today. Without the distinction a picker lists every
+   * model ever added, most of them superseded, and choosing becomes a chore
+   * rather than a help.
+   */
+  available: boolean;
   /** Required environment variable names */
   requiredEnvVars: string[];
+  /**
+   * Maximum output tokens the model can generate in a single run
+   * (maps to pydantic-ai output_tokens_limit).
+   */
+  tokensLimit?: number;
+  /**
+   * Whether the model runs on the user's own machine (Ollama, LM Studio,
+   * vLLM, llama.cpp). A local model needs no API key, and choosing one moves
+   * execution to a local sandbox so the code stays where the tokens do.
+   */
+  local?: boolean;
+  /** OpenAI-compatible base URL, for local and self-hosted endpoints. */
+  baseUrl?: string;
+  /** Environment variable holding an API key, when the endpoint wants one. */
+  apiKeyEnv?: string;
+  /**
+   * What the model can be trusted with: 'tools', 'codemode', 'vision',
+   * 'thinking'. Empty means unstated rather than incapable.
+   */
+  capabilities?: string[];
 }
 
 /**

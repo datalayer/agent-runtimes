@@ -38,7 +38,6 @@ import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useA2uiProcessor } from './utils/a2ui';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { uniqueAgentId } from './utils/agentId';
 import {
@@ -46,7 +45,9 @@ import {
   specRendererClassName,
   type SpecRenderer,
 } from './hooks/useSpecRenderToolResult';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentA2uiPlugin } from '../loop/plugins/agent-a2ui';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 
 setupPrimerPortals();
 
@@ -154,7 +155,7 @@ function validateFieldValue(
     return `${rule.label} must be a valid email address.`;
   }
   if (rule.pattern && typeof value === 'string') {
-    let matches = true;
+    let matches: boolean;
     try {
       matches = new RegExp(rule.pattern).test(value.trim());
     } catch {
@@ -308,7 +309,6 @@ const InlineA2uiSurface: React.FC<{
 };
 
 const A2UiAgentExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
 
   const {
@@ -316,6 +316,7 @@ const A2UiAgentExample: React.FC = () => {
     error: chatError,
     status,
     isReady,
+    baseUrl,
   } = useExampleAgentRuntime({
     exampleId: 'A2UiAgentExample',
     agentName,
@@ -333,6 +334,7 @@ const A2UiAgentExample: React.FC = () => {
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
     undefined,
   );
+  void pendingPrompt;
   const [validationError, setValidationError] = useState<{
     surfaceId: string;
     message: string;
@@ -469,7 +471,7 @@ const A2UiAgentExample: React.FC = () => {
                   borderRadius: 2,
                   px: 3,
                   py: 2,
-                  bg: 'canvas.subtle',
+                  bg: 'canvas.default',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 2,
@@ -489,6 +491,20 @@ const A2UiAgentExample: React.FC = () => {
   );
 
   const renderToolResult = useSpecRenderToolResult(AGENTSPEC_ID, renderers);
+  // The chat column is the shared loop on the A2UI capacity plugin; the
+  // example's own surface renderer reaches the transcript through the
+  // chat-extras channel, so tool results still draw as A2UI surfaces.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentA2uiPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({ renderToolResult });
+  }, [renderToolResult, setExtras]);
 
   const clearCanvas = useCallback(() => {
     resetSurfaces();
@@ -540,7 +556,7 @@ const A2UiAgentExample: React.FC = () => {
                   py: 2,
                   borderBottom: '1px solid',
                   borderColor: 'border.default',
-                  bg: 'canvas.subtle',
+                  bg: 'canvas.default',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -687,7 +703,7 @@ const A2UiAgentExample: React.FC = () => {
                         m: 0,
                         p: 2,
                         borderRadius: 2,
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         border: '1px solid',
                         borderColor: 'border.default',
                         fontSize: 0,
@@ -742,27 +758,13 @@ const A2UiAgentExample: React.FC = () => {
                 </Text>
               </Box>
             ) : (
-              <Chat
-                protocol="ag-ui"
-                baseUrl={baseUrl}
+              <LoopEmbed
+                serverUrl={baseUrl}
+                target="local"
                 agentId={agentId}
-                title="A2UI Agent"
-                description="Generate interactive A2UI surfaces"
-                placeholder="Describe the UI you want..."
-                showHeader={true}
-                showModelSelector={true}
-                showToolsMenu={true}
-                showSkillsMenu={true}
-                showTokenUsage={true}
-                showInformation={true}
-                autoFocus
-                height="100%"
-                runtimeId={agentId}
-                historyEndpoint={`${baseUrl}/api/v1/history`}
-                suggestions={SUGGESTIONS}
-                submitOnSuggestionClick
-                pendingPrompt={pendingPrompt}
-                renderToolResult={renderToolResult}
+                defaultEditor="none"
+                showHeader
+                plugins={chatPlugins}
               />
             )}
           </Box>

@@ -38,84 +38,6 @@ module.exports = {
       },
       items: [
         {
-          type: 'doc',
-          docId: 'features/index',
-          position: 'left',
-          label: 'Features',
-        },
-        {
-          type: 'doc',
-          docId: 'agentspecs/index',
-          position: 'left',
-          label: 'Agentspecs',
-        },
-        {
-          type: 'doc',
-          docId: 'protocols/index',
-          position: 'left',
-          label: 'Protocols',
-        },
-        {
-          type: 'doc',
-          docId: 'identity/index',
-          position: 'left',
-          label: 'Identity',
-        },
-        {
-          type: 'doc',
-          docId: 'programmatic-tools/index',
-          position: 'left',
-          label: 'Tools',
-        },
-        {
-          type: 'doc',
-          docId: 'chat/index',
-          position: 'left',
-          label: 'Chat',
-        },
-        {
-          type: 'doc',
-          docId: 'subagents/index',
-          position: 'left',
-          label: 'Subagents',
-        },
-        {
-          type: 'doc',
-          docId: 'agent-nodes/index',
-          position: 'left',
-          label: 'Nodes',
-        },
-        {
-          type: 'doc',
-          docId: 'integrations/index',
-          position: 'left',
-          label: 'Integrations',
-        },
-        {
-          type: 'doc',
-          docId: 'plugins/index',
-          position: 'left',
-          label: 'Plugins',
-        },
-        {
-          type: 'doc',
-          docId: 'hooks/index',
-          position: 'left',
-          label: 'Hooks',
-        },
-        {
-          type: 'doc',
-          docId: 'cli/index',
-          position: 'left',
-          label: 'CLI',
-        },
-        {
-          type: 'doc',
-          docId: 'endpoints/index',
-          position: 'left',
-          label: 'Endpoints',
-        },
-        {
           href: 'https://discord.gg/YQFwvmSSuR',
           position: 'right',
           className: 'header-discord-link',
@@ -186,7 +108,7 @@ module.exports = {
             },
             {
               label: 'Bluesky',
-              href: 'https://assets.datalayer.tech/logos-social-grey/youtube.svg',
+              href: 'https://assets.datalayer.tech/logos-social-grey/bluesky.svg',
             },
             {
               label: 'LinkedIn',

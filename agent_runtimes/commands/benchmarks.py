@@ -30,9 +30,9 @@ def benchmarks_callback(ctx: typer.Context) -> None:
 
 @app.command(name="web")
 def benchmarks_web(
-    datalayer_url: Optional[str] = typer.Option(
+    iam_url: Optional[str] = typer.Option(
         None,
-        "--datalayer-url",
+        "--iam-url",
         help="Datalayer URL",
     ),
     disable_xsrf: bool = typer.Option(
@@ -44,18 +44,18 @@ def benchmarks_web(
     """Launch the benchmarks web application."""
     try:
         # Get URLs configuration
-        urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
+        urls = DatalayerURLs.from_environment(iam_url=iam_url)
 
         # Prepare arguments for Jupyter server
         sys.argv = [
             "",
             f"--ServerApp.disable_check_xsrf={disable_xsrf}",
             "--DatalayerExtensionApp.benchmarks=True",
-            f"--DatalayerExtensionApp.datalayer_url={urls.datalayer_url}",
+            f"--DatalayerExtensionApp.iam_url={urls.iam_url}",
         ]
 
         console.print("[green]Starting benchmarks web application...[/green]")
-        console.print(f"Datalayer URL: {urls.datalayer_url}")
+        console.print(f"Datalayer IAM URL: {urls.iam_url}")
         console.print("[yellow]Press Ctrl+C to stop the server[/yellow]")
 
         # Launch the Jupyter server

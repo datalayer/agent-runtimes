@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import dynamic from 'next/dynamic';

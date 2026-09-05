@@ -9,15 +9,33 @@
  * @module types/chat
  */
 
+import type { ToolbarItem } from '@datalayer/primer-addons';
 import type { ComponentType, ReactNode } from 'react';
+import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import type { ChatMessage, MessageHandler } from './messages';
 import type { Protocol, ProtocolConfig } from './protocol';
 import type { McpServerSelection } from './inference';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
+import type { ContextSnapshotData } from './context';
+import type { InputPromptVariant } from '../chat/prompt/InputPromptBase';
+import type { MentionableAgent } from '../chat/prompt/plugins/AgentMentionPlugin';
+import type { Icon } from '@primer/octicons-react';
+
+/** One agent a chat may address, as its controls need it. */
+export interface FooterAgent {
+  id: string;
+  name: string;
+  description?: string;
+  emoji?: string;
+  /** The octicon its agentspec asked for, resolved by whoever built the list. */
+  icon?: Icon;
+}
 import type { SandboxWsStatus } from './sandbox';
 import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
+import type { EphemeralRuntimeOverride } from '../chat/notebook/EphemeralNotebook';
+import type { EphemeralDocumentCollaboration } from '../chat/document/EphemeralDocument';
 
 // ---------------------------------------------------------------------------
 // Tool invocation hooks
@@ -111,6 +129,23 @@ export interface ToolCallRenderContext {
   /** Error message if status is 'error' */
   error?: string;
   /**
+   * What the chat would have drawn for this tool call by itself.
+   *
+   * Supplying `renderToolResult` replaces the default row outright, and
+   * returning nothing from it draws nothing at all — so a caller who only
+   * wanted to *add* something under one tool had to either reimplement the
+   * row or lose it, and lose every other tool's row along with it.
+   *
+   * Render it to compose:
+   *
+   * ```tsx
+   * renderToolResult={({ name, defaultUI }) =>
+   *   name === 'my_tool' ? <>{defaultUI}<MyPanel /></> : defaultUI
+   * }
+   * ```
+   */
+  defaultUI?: ReactNode;
+  /**
    * Callback to send response back to the agent (human-in-the-loop).
    * Only available when status is 'executing'.
    * Calling this resolves the tool call with the provided result.
@@ -164,6 +199,15 @@ export interface Suggestion {
   title: string;
   /** Message to send when clicked */
   message: string;
+  /**
+   * A heading this opener is offered under, where a surface draws headings.
+   *
+   * Ungrouped openers come first, as one row; each group follows as a block
+   * of its own with its name on it. A team's openers are the first kind and
+   * the addressed member's own are the second, so a person sees what the
+   * team can be asked and, under it, what this member in particular can.
+   */
+  group?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +264,25 @@ export interface EmptyStateConfig {
   subtitle?: string;
   /** Custom empty state renderer */
   render?: () => ReactNode;
+  /**
+   * The empty state in levels, each with its own openers.
+   *
+   * A workspace running a team introduces two things, not one: the team —
+   * its name, what it is for, what it can be asked — and, under it, the
+   * member being addressed with what that member in particular offers. Each
+   * level is a section; the openers whose `group` is the section's are drawn
+   * under it. Given, this replaces `icon`, `title` and `subtitle`.
+   */
+  sections?: EmptyStateSection[];
+}
+
+/** One level of an empty state: a heading, and the openers grouped under it. */
+export interface EmptyStateSection {
+  /** The `group` of the suggestions this section draws. */
+  group: string;
+  icon?: ReactNode;
+  title: string;
+  subtitle?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +297,15 @@ export interface ModelConfig {
   name: string;
   builtinTools?: string[];
   isAvailable?: boolean;
+  /**
+   * Why this model cannot be picked, when it cannot.
+   *
+   * The menu used to say "Missing API key" under every unavailable row, which
+   * is right for a provider whose key is not set and wrong for a model this
+   * deployment is not entitled to — that one sends the reader off to find a
+   * key that would change nothing.
+   */
+  unavailableReason?: string;
 }
 
 /**
@@ -316,6 +388,51 @@ export interface ChatCommonProps {
 
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
+  /**
+   * Which editor the prompt uses — `'text'` (default) or `'lexical'`.
+   *
+   * There is one prompt component; this picks the editor inside it. Lexical
+   * is the one with the `@` menu, so a chat offering agents to address needs
+   * it.
+   */
+  promptVariant?: InputPromptVariant;
+  /** Agents the prompt may address by typing `@`. Lexical only. */
+  mentionableAgents?: MentionableAgent[];
+  /**
+   * Whether the prompt offers a chooser for who answers.
+   *
+   * True by default, and shown for a single agent as much as for several: the
+   * control is a label before it is a switch, and in a chat with one agent
+   * nothing else on screen says which one.
+   */
+  showAgentsMenu?: boolean;
+  /** Who may answer. Defaults to the agent this chat is talking to. */
+  agents?: FooterAgent[];
+  /** Who is answering now. */
+  selectedAgentId?: string;
+  /** Address somebody else. */
+  onSelectAgent?: (agentId: string) => void;
+
+  /**
+   * Whether the chat can be used at all.
+   *
+   * Different from `launching`, which says "not yet": this says "not here".
+   * A sandbox with no agent behind it — code running in the browser, or an
+   * anonymous Jupyter server — has nothing to chat with, and the honest answer
+   * is to show the chat as it will look and say why it is off, rather than
+   * hide it and leave the person wondering where it went.
+   *
+   * The input and the selectors go dead; the header stays readable.
+   */
+  disabled?: boolean;
+
+  /**
+   * Why the chat is off, in the person's terms — "No agent in browser mode".
+   *
+   * Shown in the header beside the title, because that is where someone looks
+   * when a control does not respond. Ignored unless `disabled` is true.
+   */
+  disableReason?: string;
 
   /**
    * Whether the underlying agent runtime is still launching. When true, the
@@ -412,6 +529,13 @@ export interface ChatCommonProps {
    * @default true
    */
   showTokenUsage?: boolean;
+  /**
+   * Whether the usage bar draws its context ring.
+   *
+   * False by default: the ring earns its place where a person is likely to
+   * fill a context window, not in every chat that reports usage.
+   */
+  showContextRing?: boolean;
 
   /** Indicate tools are accessed via Codemode meta-tools */
   codemodeEnabled?: boolean;
@@ -485,6 +609,51 @@ export interface ChatCommonProps {
    * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
    */
   ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
+
+  /**
+   * Items added to the toolbar of the ephemeral notebook, e.g. the status of
+   * the sandbox it runs on. Merged with the items of the toolbar and ordered
+   * by the `order` of each item.
+   */
+  ephemeralNotebookToolbarExtraItems?: ToolbarItem[];
+
+  /**
+   * Items added to the toolbar of the ephemeral document, the same way as
+   * {@link ChatProps.ephemeralNotebookToolbarExtraItems} for the notebook.
+   */
+  ephemeralDocumentToolbarExtraItems?: ToolbarItem[];
+
+  /**
+   * Optional real-time collaboration provider for the ephemeral notebook.
+   * When supplied, the notebook joins a shared collaborative room so its state
+   * transits over RTC (e.g. between an Agent Node and the SaaS UI) instead of
+   * the tunnel. The caller owns the provider lifecycle.
+   */
+  ephemeralNotebookCollaborationProvider?: ICollaborationProvider;
+
+  /**
+   * Explicit collaboration room / document id for the ephemeral notebook. When
+   * set it becomes the notebook id directly so multiple peers (e.g. an Agent
+   * Node and the SaaS UI) share the same collaborative room and tool scope.
+   */
+  ephemeralNotebookCollaborationDocumentId?: string;
+
+  /**
+   * Optional real-time collaboration configuration for the ephemeral document
+   * (Lexical). When supplied the document joins a shared Loro room over
+   * WebSocket so its rich-text state transits over RTC (e.g. between an Agent
+   * Node and the SaaS UI). Its `roomId` also becomes the document id so all
+   * peers share the same collaborative room and lexical tool scope.
+   */
+  ephemeralDocumentCollaboration?: EphemeralDocumentCollaboration;
+
+  /**
+   * Explicit runtime endpoint for the ephemeral notebook kernel. When set, the
+   * notebook binds its kernel to this endpoint directly instead of resolving a
+   * pod from the user's runtimes list — used to reach an Agent Node's Jupyter
+   * server through the runtimes tunnel HTTP/WebSocket proxy.
+   */
+  ephemeralRuntimeOverride?: EphemeralRuntimeOverride;
 
   /** Pre-hook: fires when a tool call starts executing */
   onToolCallStart?: (context: ToolCallStartContext) => void;
@@ -561,6 +730,9 @@ export interface ChatCommonProps {
   /** Optional sandbox status override for immediate UI updates. */
   sandboxStatusData?: SandboxWsStatus | null;
 
+  /** Horizontal placement for the header kernel indicator. @default 'left' */
+  kernelIndicatorPlacement?: 'left' | 'center' | 'right';
+
   /**
    * Live kernel connection of the companion notebook/document sandbox.
    * When provided, it is forwarded to the chat header's `<KernelIndicator>`
@@ -568,6 +740,28 @@ export interface ChatCommonProps {
    */
   kernel?:
     import('@jupyterlab/services/lib/kernel/kernel').IKernelConnection | null;
+
+  /**
+   * Optional environment name displayed in the chat header's kernel
+   * indicator details (e.g. the agent's local sandbox name). Defaults to
+   * the indicator's own "browser-runtime" placeholder when omitted.
+   */
+  kernelEnvironmentName?: string;
+
+  /** Optional CPU info displayed in the chat header's kernel indicator. */
+  kernelCpu?: string;
+
+  /** Optional memory info displayed in the chat header's kernel indicator. */
+  kernelMemory?: string;
+
+  /** Optional GPU info displayed in the chat header's kernel indicator. */
+  kernelGpu?: string;
+
+  /** Optional theme variant override for companion notebook/document surfaces. */
+  themeVariant?: string;
+
+  /** Optional color mode override for companion notebook/document surfaces. */
+  colorMode?: 'light' | 'dark' | 'auto';
 
   /**
    * Disable ChatBase's internal JupyterReactTheme wrapper.
@@ -630,6 +824,43 @@ export interface ChatCommonProps {
  * ChatBase props
  */
 export interface ChatBaseProps {
+  /**
+   * Hands an imperative send function to the host, once the chat is able to
+   * send.
+   *
+   * `pendingPrompt` deliberately sends a given text only once, which makes it
+   * unusable as a live input channel: a user asking the same question twice
+   * would be ignored the second time. A host that owns the input box — the LOOP
+   * workspace, whose prompt is the shell — needs a channel with no such memory.
+   *
+   * Called again with `null` when the chat can no longer send.
+   */
+  onSendReady?: (
+    controls: {
+      send: (message: string) => void;
+      stop: () => void;
+      /** Start the conversation over — what the header's + does. */
+      newChat: () => void;
+    } | null,
+  ) => void;
+
+  /**
+   * Reports whether the chat is streaming a reply, so a host that owns the
+   * input box can show the spinner and the stop button where the user is
+   * actually looking.
+   */
+  onLoadingChange?: (isLoading: boolean) => void;
+  /**
+   * What the context window is holding, as this chat last accounted for it.
+   *
+   * For a host that draws its own prompt and therefore its own usage bar. The
+   * chat is the one thing that sees every source — a snapshot pushed over the
+   * socket by a server-side runtime, and the totals an in-page harness reports
+   * as it finishes a turn — so it hands on the answer rather than making every
+   * host reassemble it.
+   */
+  onContextSnapshot?: (usage: ContextSnapshotData | undefined) => void;
+
   /** Chat title */
   title?: string;
 
@@ -646,6 +877,13 @@ export interface ChatBaseProps {
    * @default true
    */
   showTokenUsage?: boolean;
+  /**
+   * Whether the usage bar draws its context ring.
+   *
+   * False by default: the ring earns its place where a person is likely to
+   * fill a context window, not in every chat that reports usage.
+   */
+  showContextRing?: boolean;
 
   /**
    * External context snapshot data for the token usage bar.
@@ -687,6 +925,41 @@ export interface ChatBaseProps {
 
   /** Keep input visible but disabled */
   disableInputPrompt?: boolean;
+  /**
+   * Which editor the prompt uses — `'text'` (default) or `'lexical'`.
+   *
+   * There is one prompt component; this picks the editor inside it. Lexical
+   * is the one with the `@` menu, so a chat offering agents to address needs
+   * it.
+   */
+  promptVariant?: InputPromptVariant;
+  /** Agents the prompt may address by typing `@`. Lexical only. */
+  mentionableAgents?: MentionableAgent[];
+  /**
+   * Whether the prompt offers a chooser for who answers.
+   *
+   * True by default, and shown for a single agent as much as for several: the
+   * control is a label before it is a switch, and in a chat with one agent
+   * nothing else on screen says which one.
+   */
+  showAgentsMenu?: boolean;
+  /** Who may answer. Defaults to the agent this chat is talking to. */
+  agents?: FooterAgent[];
+  /** Who is answering now. */
+  selectedAgentId?: string;
+  /** Address somebody else. */
+  onSelectAgent?: (agentId: string) => void;
+
+  /**
+   * Whether the chat can be used at all — see `ChatCommonProps.disabled`.
+   *
+   * `launching` says "not yet"; this says "not here". A sandbox with no agent
+   * behind it has nothing to chat with.
+   */
+  disabled?: boolean;
+
+  /** Why the chat is off, shown in the header. Ignored unless `disabled`. */
+  disableReason?: string;
 
   /**
    * Whether the underlying agent runtime is still launching. When true, the
@@ -758,6 +1031,9 @@ export interface ChatBaseProps {
   /** Notebook kernel indicator state override for the chat header. */
   kernelIndicatorState?: import('@datalayer/jupyter-react').ExecutionState;
 
+  /** Horizontal placement for the header kernel indicator. @default 'left' */
+  kernelIndicatorPlacement?: 'left' | 'center' | 'right';
+
   /**
    * Live notebook kernel connection. When provided, the chat header
    * renders the same `<KernelIndicator>` as the notebook toolbar so
@@ -784,6 +1060,12 @@ export interface ChatBaseProps {
 
   /** Optional GPU info displayed in kernel indicator details. */
   kernelGpu?: string;
+
+  /** Optional theme variant override for companion notebook/document surfaces. */
+  themeVariant?: string;
+
+  /** Optional color mode override for companion notebook/document surfaces. */
+  colorMode?: 'light' | 'dark' | 'auto';
 
   /**
    * Current chat view mode.
@@ -873,6 +1155,37 @@ export interface ChatBaseProps {
 
   /** Tool result renderer for tool calls */
   renderToolResult?: RenderToolResult;
+  /**
+   * Draw the chat's title bar from these fully assembled props.
+   *
+   * Called instead of the built-in `ChatBaseHeader` whenever `showHeader` is
+   * true — with everything the built-in would have received: title, kernel
+   * indicator, runtime status, the actions row. The loop's chat-header
+   * plugin hangs off this: the bar then arrives as a plugin without this
+   * component giving up any of what only it knows.
+   */
+  renderHeader?: (
+    props: import('../chat/header/ChatHeaderBase').ChatBaseHeaderProps,
+  ) => ReactNode;
+  /**
+   * Whether each turn closes with its accounting row.
+   *
+   * True by default: a quiet `ctx · turn ▲▼` line after every exchange —
+   * live while the turn streams, frozen with copy/remove actions once it is
+   * over. False for a host that wants the transcript bare.
+   */
+  showTurnFooter?: boolean;
+  /**
+   * Show notebook tool results as read-only surfaces in the transcript,
+   * addressed to this notebook document id.
+   *
+   * For a chat whose agent works a notebook the reader cannot see. A cell
+   * that was inserted, updated or run appears under its tool row — source
+   * first, then its outputs streaming from the live model; `executeCodeInNotebook`
+   * shows only what came back. Ignored when `renderToolResult` is given:
+   * a host that writes its own renderer owns the whole surface.
+   */
+  notebookToolSurfacesId?: string;
 
   /** Custom footer content (rendered above input) */
   footerContent?: ReactNode;
@@ -925,6 +1238,26 @@ export interface ChatBaseProps {
 
   /** Callback when messages change (for tracking message count) */
   onMessagesChange?: (messages: ChatMessage[]) => void;
+
+  /**
+   * Called on *every* change to the conversation, streaming included.
+   *
+   * `onMessagesChange` fires when the number of messages changes, which is
+   * right for counting and wrong for following a reply as it arrives — the
+   * assistant's message exists from its first token and only grows. This is
+   * the streaming-aware sibling: same messages, every change.
+   */
+  onItemsChange?: (messages: ChatMessage[]) => void;
+
+  /**
+   * Every change to the transcript, tool calls included, streaming included.
+   *
+   * `onItemsChange` reports the messages; this reports everything the
+   * transcript holds — the tool calls the agent is making, with their status
+   * — for a caller that wants to say what the agent is *doing*, not only what
+   * it has said.
+   */
+  onDisplayItemsChange?: (items: Array<ChatMessage | ToolCallMessage>) => void;
 
   /** Auto-focus the input on mount */
   autoFocus?: boolean;
@@ -1008,6 +1341,51 @@ export interface ChatBaseProps {
    * Defaults to the toolbar from `@datalayer/jupyter-react` when omitted.
    */
   ephemeralNotebookToolbar?: EphemeralNotebookToolbarComponent;
+
+  /**
+   * Items added to the toolbar of the ephemeral notebook, e.g. the status of
+   * the sandbox it runs on. Merged with the items of the toolbar and ordered
+   * by the `order` of each item.
+   */
+  ephemeralNotebookToolbarExtraItems?: ToolbarItem[];
+
+  /**
+   * Items added to the toolbar of the ephemeral document, the same way as
+   * {@link ChatProps.ephemeralNotebookToolbarExtraItems} for the notebook.
+   */
+  ephemeralDocumentToolbarExtraItems?: ToolbarItem[];
+
+  /**
+   * Optional real-time collaboration provider for the ephemeral notebook.
+   * When supplied, the notebook joins a shared collaborative room so its state
+   * transits over RTC (e.g. between an Agent Node and the SaaS UI) instead of
+   * the tunnel. The caller owns the provider lifecycle.
+   */
+  ephemeralNotebookCollaborationProvider?: ICollaborationProvider;
+
+  /**
+   * Explicit collaboration room / document id for the ephemeral notebook. When
+   * set it becomes the notebook id directly so multiple peers (e.g. an Agent
+   * Node and the SaaS UI) share the same collaborative room and tool scope.
+   */
+  ephemeralNotebookCollaborationDocumentId?: string;
+
+  /**
+   * Optional real-time collaboration configuration for the ephemeral document
+   * (Lexical). When supplied the document joins a shared Loro room over
+   * WebSocket so its rich-text state transits over RTC (e.g. between an Agent
+   * Node and the SaaS UI). Its `roomId` also becomes the document id so all
+   * peers share the same collaborative room and lexical tool scope.
+   */
+  ephemeralDocumentCollaboration?: EphemeralDocumentCollaboration;
+
+  /**
+   * Explicit runtime endpoint for the ephemeral notebook kernel. When set, the
+   * notebook binds its kernel to this endpoint directly instead of resolving a
+   * pod from the user's runtimes list — used to reach an Agent Node's Jupyter
+   * server through the runtimes tunnel HTTP/WebSocket proxy.
+   */
+  ephemeralRuntimeOverride?: EphemeralRuntimeOverride;
 
   // ============ Identity/Authorization Support ============
 

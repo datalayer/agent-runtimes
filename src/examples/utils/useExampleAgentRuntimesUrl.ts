@@ -8,6 +8,7 @@ import {
   type ExampleRuntimeTarget,
   useRuntimeTargetStore,
 } from './runtimeTargetStore';
+import { useAgentSummaryStore } from './agentSummaryStore';
 
 const normalizeBaseUrl = (value?: string): string | undefined => {
   if (!value) {
@@ -32,13 +33,16 @@ export function resolveExampleAgentRuntimesUrl(
   }
 
   const localUrl =
-    normalizeBaseUrl(import.meta.env.VITE_BASE_URL) ?? LOCAL_DEFAULT;
+    normalizeBaseUrl(import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL) ??
+    LOCAL_DEFAULT;
   const cloudUrl =
     normalizeBaseUrl(import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL) ??
     normalizeBaseUrl(import.meta.env.VITE_DATALAYER_RUNTIMES_URL) ??
     CLOUD_DEFAULT;
 
-  return target === 'cloud' ? cloudUrl : localUrl;
+  // Only the Datalayer target reaches the hosted service; the rest are local
+  // or have no agent at all, and asking the cloud for one would be wrong.
+  return target === 'datalayer' ? cloudUrl : localUrl;
 }
 
 /**
@@ -47,8 +51,14 @@ export function resolveExampleAgentRuntimesUrl(
  */
 export function useExampleAgentRuntimesUrl(override?: string): string {
   const target = useRuntimeTargetStore(state => state.target);
+  const activeRuntimeBaseUrl = useAgentSummaryStore(state =>
+    state.active?.location === target ? state.active.baseUrl : undefined,
+  );
 
   return useMemo(() => {
+    if (target === 'datalayer' && activeRuntimeBaseUrl) {
+      return normalizeBaseUrl(activeRuntimeBaseUrl) ?? activeRuntimeBaseUrl;
+    }
     return resolveExampleAgentRuntimesUrl(target, override);
-  }, [target, override]);
+  }, [activeRuntimeBaseUrl, target, override]);
 }

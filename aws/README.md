@@ -12,32 +12,25 @@ Two deployment models are provided:
 ## Prerequisites
 
 - An AWS account and the AWS CLI configured (`aws configure`).
-- A Datalayer **API key** (optional). When provided via `DatalayerApiKey`,
-  the node exchanges it for a session token at startup and skips the
-  sign-in screen. When omitted, open the public URL and paste your key
-  on the built-in sign-in screen. You can create a key from
+- A Datalayer **API key** (recommended for AWS). It enables non-interactive
+  authentication/registration from the node. You can create a key from
   https://datalayer.ai under **Settings → API Keys**.
+
+AWS templates run the node in SaaS-chat mode: execution stays on the node,
+while chat is accessed from Datalayer SaaS through the runtimes tunnel.
 
 ## Deploy on EC2
 
 ```bash
-# Without a preconfigured API key (sign in from the node UI).
-aws cloudformation deploy \
-  --template-file agent-node-ec2.yaml \
-  --stack-name agent-node-ec2 \
-  --capabilities CAPABILITY_IAM \
-  --parameter-overrides \
-      DatalayerUrl=https://prod1.datalayer.run \
-      KeyName=$EC2_KEY_PAIR
-
-# With a preconfigured API key (skips the sign-in screen).
+# Recommended for AWS: provide API key for non-interactive registration.
 aws cloudformation deploy \
   --template-file agent-node-ec2.yaml \
   --stack-name agent-node-ec2 \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
       DatalayerApiKey=$DATALAYER_API_KEY \
-      DatalayerUrl=https://prod1.datalayer.run \
+      DatalayerIamUrl=https://prod1.datalayer.run \
+      DatalayerRuntimesUrl=https://r1.datalayer.run \
       KeyName=$EC2_KEY_PAIR
 ```
 
@@ -49,30 +42,25 @@ aws cloudformation describe-stacks --stack-name agent-node-ec2 \
   --query 'Stacks[0].Outputs'
 ```
 
-Open `http://<PublicIp>:8765` in your browser. If `DatalayerApiKey` was
-provided, the node is already signed in. Otherwise, paste your API key on
-the sign-in screen and the node will register itself with the Datalayer
-platform.
+The node registers itself to Datalayer Runtimes and keeps a tunnel
+connected for SaaS chat access.
+
+For AWS nodes, use the SaaS Agent Nodes page to chat: enter your 12-digit AWS
+account id in **Discover AWS Agent Nodes**, click **Discover**, then open chat
+on the discovered node.
 
 ## Deploy on Fargate
 
 ```bash
-# Without a preconfigured API key.
-aws cloudformation deploy \
-  --template-file agent-node-fargate.yaml \
-  --stack-name agent-node-fargate \
-  --capabilities CAPABILITY_IAM \
-  --parameter-overrides \
-  DatalayerUrl=https://prod1.datalayer.run
-
-# With a preconfigured API key.
+# Recommended for AWS: provide API key for non-interactive registration.
 aws cloudformation deploy \
   --template-file agent-node-fargate.yaml \
   --stack-name agent-node-fargate \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
       DatalayerApiKey=$DATALAYER_API_KEY \
-      DatalayerUrl=https://prod1.datalayer.run
+      DatalayerIamUrl=https://prod1.datalayer.run \
+      DatalayerRuntimesUrl=https://r1.datalayer.run
 ```
 
 The Application Load Balancer URL is printed in the stack outputs:
@@ -84,7 +72,7 @@ aws cloudformation describe-stacks --stack-name agent-node-fargate \
 
 If you need a dedicated ai-inference endpoint, add
 `DatalayerAiInferenceUrl=<url>` to either template's `--parameter-overrides`.
-When omitted, both templates default ai-inference routing to `DatalayerUrl`.
+When omitted, both templates default ai-inference routing to `DatalayerIamUrl`.
 
 ## Cleanup
 

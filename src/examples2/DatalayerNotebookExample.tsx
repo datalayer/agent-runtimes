@@ -60,7 +60,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
       }
 
       // Create DatalayerServiceManager if we have credentials
-      if (configuration?.token && configuration?.datalayerUrl) {
+      if (configuration?.token && configuration?.spacerUrl) {
         try {
           // Now we can pass undefined to use config/defaults
           const manager = await createDatalayerServiceManager(
@@ -74,7 +74,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
         }
       } else {
         console.warn(
-          'Datalayer credentials not configured. Please set datalayerUrl and token.',
+          'Datalayer credentials not configured. Please set spacerUrl and token.',
         );
       }
     };
@@ -88,12 +88,12 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
       return undefined;
     }
 
-    const datalayerUrl = configuration?.datalayerUrl;
+    const spacerUrl = configuration?.spacerUrl;
     const token = configuration?.token;
 
-    if (!datalayerUrl || !token) {
+    if (!spacerUrl || !token) {
       console.warn(
-        'Datalayer collaboration enabled but datalayerUrl or token not configured. ' +
+        'Datalayer collaboration enabled but spacerUrl or token not configured. ' +
           'Please configure them in the Datalayer store or environment.',
       );
       return undefined;
@@ -101,7 +101,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
 
     // Create and return the Datalayer collaboration provider
     return new DatalayerCollaborationProvider({
-      datalayerUrl,
+      spacerUrl,
       token,
     });
   }, [enableCollaboration, configuration]);
@@ -125,11 +125,11 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
           </FormControl>
         </Box>
 
-        {(!configuration?.datalayerUrl || !configuration?.token) && (
+        {(!configuration?.spacerUrl || !configuration?.token) && (
           <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
             Warning: Datalayer configuration is missing. Please configure
-            datalayerUrl and token to use DatalayerServiceManager and
-            collaboration features.
+            spacerUrl and token to use DatalayerServiceManager and collaboration
+            features.
           </Box>
         )}
 
@@ -247,7 +247,7 @@ const DatalayerNotebookExample = (props: IDatalayerNotebookExampleProps) => {
               <strong>DatalayerCollaborationProvider:</strong> Enables real-time
               collaboration
             </li>
-            <li>Both require Datalayer credentials (datalayerUrl and token)</li>
+            <li>Both require Datalayer credentials (spacerUrl and token)</li>
             <li>Pass them directly to the base Notebook component</li>
             <li>
               No wrapper components needed - just create the services and pass

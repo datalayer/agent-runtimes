@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Slash command: /code-sandbox - Show the code sandbox details."""
 
 from __future__ import annotations
@@ -59,7 +55,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
     state = "[green]running[/green]" if running else "[yellow]stopped[/yellow]"
     tux.console.print(f"  Variant: {variant} ({state})", style=STYLE_MUTED)
 
-    if variant == "jupyter":
+    if variant == "jupyter-server":
         jupyter_url = sandbox.get("jupyter_url")
         kernel_name = sandbox.get("kernel_name") or "python3"
         kernel_id = sandbox.get("kernel_id")

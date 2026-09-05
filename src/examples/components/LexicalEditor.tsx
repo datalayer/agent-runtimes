@@ -196,7 +196,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
             <YouTubePlugin />
             <AutoEmbedPlugin />
             <JupyterCellPlugin />
-            <JupyterReactTheme>
+            <JupyterReactTheme useBaseStyles={false}>
               <SimpleKernelPluginsInner />
             </JupyterReactTheme>
             {floatingAnchorElem && (

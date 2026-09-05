@@ -16,17 +16,27 @@ SHELL = /bin/bash
 .PHONY: help \
 	build build-agent-runtime build-agent-node \
 	push push-agent-runtime push-agent-node \
-	release release-agent-runtime release-agent-node
+	release release-agent-runtime release-agent-node \
+	start start-local stop logs
 
 # ─── Image configuration ──────────────────────────────────────────────────
 AGENT_RUNTIME_IMAGE ?= datalayer/agent-runtime
-AGENT_NODE_IMAGE    ?= datalayer/agent-nodes
+AGENT_NODE_IMAGE    ?= datalayer/agent-node
 DOCKER_TAG          ?= latest
 DOCKER_PLATFORM     ?=
+CONTAINER_NAME      ?= agent-node-example
 
 # Build context is the repository root (one level up from this folder).
 CONTEXT   := ..
 PLATFORM_FLAG = $(if $(DOCKER_PLATFORM),--platform $(DOCKER_PLATFORM),)
+
+# Host-local services mapping used by `start-local`.
+HOST_GATEWAY_NAME   ?= host.docker.internal
+HOST_GATEWAY_FLAG   ?= --add-host $(HOST_GATEWAY_NAME):host-gateway
+LOCAL_IAM_URL       ?= http://$(HOST_GATEWAY_NAME):9700
+LOCAL_RUNTIMES_URL  ?= http://$(HOST_GATEWAY_NAME):9500
+LOCAL_SPACER_URL    ?= http://$(HOST_GATEWAY_NAME):9900
+LOCAL_INFERENCE_URL ?= http://$(HOST_GATEWAY_NAME):4450
 
 help: ## show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -58,3 +68,39 @@ release: release-agent-runtime release-agent-node ## build and push both images
 release-agent-runtime: build-agent-runtime push-agent-runtime ## build and push the Agent Runtime image
 
 release-agent-node: build-agent-node push-agent-node ## build and push the Agent Node image
+
+# ─── Run ──────────────────────────────────────────────────────────────────
+start: ## start Agent Node container detached (default settings)
+	@docker rm -f $(CONTAINER_NAME) >/dev/null 2>&1 || true
+	docker run -d --name $(CONTAINER_NAME) -p 8765:8765 \
+		-e AGENT_RUNTIMES_NODE=true \
+		-e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer \
+		$(AGENT_NODE_IMAGE):$(DOCKER_TAG)
+	@echo ""
+	@echo "Agent Node started. Connect at: http://localhost:8765"
+	@echo "Stop with: make stop"
+	@echo "Logs with: make logs"
+
+start-local: ## start Agent Node wired to services running on local host
+	@docker rm -f $(CONTAINER_NAME) >/dev/null 2>&1 || true
+	docker run -d --name $(CONTAINER_NAME) -p 8765:8765 $(HOST_GATEWAY_FLAG) \
+		-e AGENT_RUNTIMES_NODE=true \
+		-e AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer \
+		-e DATALAYER_IAM_URL=$(LOCAL_IAM_URL) \
+		-e DATALAYER_IAM_URL=$(LOCAL_IAM_URL) \
+		-e DATALAYER_RUNTIMES_URL=$(LOCAL_RUNTIMES_URL) \
+		-e DATALAYER_AGENT_RUNTIMES_URL=http://localhost:8765 \
+		-e DATALAYER_SPACER_URL=$(LOCAL_SPACER_URL) \
+		-e DATALAYER_AI_INFERENCE_URL=$(LOCAL_INFERENCE_URL) \
+		$(AGENT_NODE_IMAGE):$(DOCKER_TAG)
+	@echo ""
+	@echo "Agent Node started with local-host services. Connect at: http://localhost:8765"
+	@echo "Host services resolved as: $(HOST_GATEWAY_NAME)"
+	@echo "Stop with: make stop"
+	@echo "Logs with: make logs"
+
+stop: ## stop and remove Agent Node container
+	docker rm -f $(CONTAINER_NAME)
+
+logs: ## tail Agent Node container logs
+	docker logs -f $(CONTAINER_NAME)

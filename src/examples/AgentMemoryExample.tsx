@@ -6,8 +6,10 @@
 /**
  * AgentMemoryExample
  *
- * Demonstrates the Mem0 memory backend for durable agents.
- * Creates a local agent-runtimes agent using the `example-memory` spec.
+ * Demonstrates durable agent memory.
+ * Uses a local SQLite store for local runs (offline, no API key) and
+ * pgvector-backed Mem0 (PostgreSQL) for cloud runs when server-side
+ * postgres env is configured.
  *
  * The left panel shows a standard Chat. The right panel shows the
  * agent's memory contents (fetched from the runtime sidecar) and lets
@@ -27,7 +29,11 @@ import {
   Label,
   Flash,
 } from '@primer/react';
-import { SearchIcon, DatabaseIcon } from '@primer/octicons-react';
+import {
+  SearchIcon,
+  DatabaseIcon,
+  ListUnorderedIcon,
+} from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
@@ -35,8 +41,13 @@ import { uniqueAgentId } from './utils/agentId';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentMemoryPlugin } from '../loop/plugins/agent-memory';
+import { listRuntimeMemories } from '../api/runtimes/runtimes';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
+
+const LOOP_PLUGINS_AGENTMEM = [AgentMemoryPlugin];
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -58,6 +69,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { token } = useSimpleAuthStore();
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const agentBaseUrl = useExampleAgentRuntimesUrl();
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
@@ -66,11 +78,16 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [agentId, setAgentId] = useState<string>(agentName);
 
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
+  const [accountMemories, setAccountMemories] = useState<MemoryEntry[]>([]);
+  const [accountMemoriesError, setAccountMemoriesError] = useState<
+    string | null
+  >(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MemoryEntry[]>([]);
+  const [searchAttempted, setSearchAttempted] = useState(false);
   const [searching, setSearching] = useState(false);
 
-  const podName = isReady ? `local:${agentId}` : '(launching…)';
+  const runtimeName = isReady ? `local:${agentId}` : '(launching…)';
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -99,10 +116,11 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           method: 'POST',
           body: JSON.stringify({
             name: agentName,
-            description: 'Agent with Mem0 persistent memory',
+            description: 'Agent with persistent memory',
             agent_library: 'pydantic-ai',
             transport: 'vercel-ai',
             agent_spec_id: AGENTSPEC_ID,
+            memory: runtimeTarget === 'local' ? 'sqlite' : 'mem0',
             enable_skills: true,
             tools: [],
           }),
@@ -154,7 +172,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     return () => {
       isCancelled = true;
     };
-  }, [agentBaseUrl, agentName, authFetch]);
+  }, [agentBaseUrl, agentName, authFetch, runtimeTarget]);
 
   // ── Fetch memory list ────────────────────────────────────────────────────
 
@@ -181,10 +199,56 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     }
   }, [isReady, fetchMemories]);
 
+  const fetchAccountMemories = useCallback(async () => {
+    if (!isReady || !agentBaseUrl || !token) {
+      return;
+    }
+    try {
+      const response = await listRuntimeMemories(
+        token,
+        { agentId: agentId, limit: 10 },
+        agentBaseUrl,
+      );
+      const normalized = (response.memories || []).map((item: any) => ({
+        id: String(item?.id || ''),
+        content: String(item?.memory || ''),
+        score: typeof item?.score === 'number' ? item.score : undefined,
+        metadata:
+          item?.metadata && typeof item.metadata === 'object'
+            ? item.metadata
+            : undefined,
+      }));
+      setAccountMemories(normalized);
+      setAccountMemoriesError(null);
+    } catch (error: any) {
+      setAccountMemories([]);
+      const rawMessage = String(error?.message || '');
+      const isMissingEndpoint = /404|not\s*found/i.test(rawMessage);
+      setAccountMemoriesError(
+        isMissingEndpoint
+          ? 'Runtimes memory API endpoint is not available in this environment (expected in local example-only mode).'
+          : rawMessage ||
+              'Runtimes memory API is not available in this environment.',
+      );
+    }
+  }, [agentBaseUrl, agentId, isReady, token]);
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+    void fetchAccountMemories();
+    const interval = setInterval(() => {
+      void fetchAccountMemories();
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [fetchAccountMemories, isReady]);
+
   // ── Search memory ────────────────────────────────────────────────────────
 
   const handleSearch = useCallback(async () => {
     if (!isReady || !agentBaseUrl || !searchQuery.trim()) return;
+    setSearchAttempted(true);
     setSearching(true);
     try {
       const res = await authFetch(
@@ -197,13 +261,25 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       if (res.ok) {
         const data = await res.json();
         setSearchResults(Array.isArray(data) ? data : (data.results ?? []));
+      } else {
+        setSearchResults([]);
       }
     } catch {
       // Endpoint may not exist yet
+      setSearchResults([]);
     } finally {
       setSearching(false);
     }
   }, [isReady, agentBaseUrl, agentId, searchQuery, authFetch]);
+
+  // ── List all memories (clears any active search) ──────────────────────────
+
+  const handleListAll = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchAttempted(false);
+    void fetchMemories();
+  }, [fetchMemories]);
 
   // ── Loading state ────────────────────────────────────────────────────────
 
@@ -217,6 +293,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           justifyContent: 'center',
           height: '100%',
           gap: 3,
+          bg: 'canvas.default',
         }}
       >
         <Spinner size="large" />
@@ -239,6 +316,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        bg: 'canvas.default',
       }}
     >
       {/* Toolbar */}
@@ -256,7 +334,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       >
         <DatabaseIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Durable Memory — {podName}
+          Durable Memory — {runtimeName}
         </Heading>
       </Box>
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
@@ -269,32 +347,13 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             borderColor: 'border.default',
           }}
         >
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            title="Memory Agent"
-            brandIcon={<DatabaseIcon size={16} />}
-            placeholder="Chat — the agent remembers you across sessions…"
-            description="Agent with Mem0 persistent memory"
-            showHeader={true}
-            showTokenUsage={true}
-            autoFocus
-            height="100%"
-            runtimeId={podName}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Remember',
-                message: 'My favourite colour is midnight blue.',
-              },
-              { title: 'Recall', message: 'What is my favourite colour?' },
-              {
-                title: 'Preference',
-                message: 'I prefer reports in bullet-point format.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTMEM}
           />
         </Box>
 
@@ -305,7 +364,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           <Box
@@ -323,8 +382,16 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               </Heading>
             </Box>
             <Label variant="accent" sx={{ mb: 2 }}>
-              Mem0 backend
+              {runtimeTarget === 'local'
+                ? 'SQLite backend (local, persistent)'
+                : 'Mem0 pgvector backend (cloud)'}
             </Label>
+
+            <Flash variant="default" sx={{ fontSize: 0, mt: 2 }}>
+              Memory persistence conditions: for local runs the agent uses a
+              durable SQLite store; for cloud runs it uses Mem0. Durable facts
+              are saved when the model emits a remember action (not every turn).
+            </Flash>
 
             <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
               <TextInput
@@ -342,6 +409,13 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 disabled={searching}
               >
                 {searching ? <Spinner size="small" /> : 'Search'}
+              </Button>
+              <Button
+                size="small"
+                leadingVisual={ListUnorderedIcon}
+                onClick={handleListAll}
+              >
+                List all
               </Button>
             </Box>
           </Box>
@@ -390,6 +464,24 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             </Box>
           )}
 
+          {searchAttempted &&
+            !searching &&
+            searchQuery.trim() &&
+            searchResults.length === 0 && (
+              <Box
+                sx={{
+                  px: 3,
+                  py: 2,
+                  borderBottom: '1px solid',
+                  borderColor: 'border.default',
+                }}
+              >
+                <Flash variant="default" sx={{ fontSize: 0 }}>
+                  No matching memories found for this query yet.
+                </Flash>
+              </Box>
+            )}
+
           {/* All memories */}
           <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 2 }}>
             <Box
@@ -430,6 +522,53 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 </Box>
               ))
             )}
+
+            <Box sx={{ mt: 3 }}>
+              <Text
+                sx={{
+                  fontWeight: 'semibold',
+                  fontSize: 0,
+                  display: 'block',
+                  mb: 2,
+                }}
+              >
+                Runtimes API (account scoped)
+              </Text>
+              <Text
+                sx={{ color: 'fg.muted', fontSize: 0, display: 'block', mb: 2 }}
+              >
+                Uses listRuntimeMemories against /api/runtimes/v1/memories. This
+                endpoint is only available when the runtimes service is
+                configured; local example-only runs may return Not Found.
+              </Text>
+              {accountMemoriesError ? (
+                <Flash variant="warning" sx={{ fontSize: 0, mb: 2 }}>
+                  {accountMemoriesError}
+                </Flash>
+              ) : null}
+              {accountMemories.length === 0 ? (
+                <Flash variant="default" sx={{ fontSize: 0 }}>
+                  No runtime memories returned.
+                </Flash>
+              ) : (
+                accountMemories.map((entry, i) => (
+                  <Box
+                    key={`runtime-${entry.id || i}`}
+                    sx={{
+                      p: 2,
+                      mb: 1,
+                      bg: 'canvas.default',
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: 'border.muted',
+                      fontSize: 0,
+                    }}
+                  >
+                    <Text sx={{ display: 'block' }}>{entry.content}</Text>
+                  </Box>
+                ))
+              )}
+            </Box>
           </Box>
         </Box>
       </Box>

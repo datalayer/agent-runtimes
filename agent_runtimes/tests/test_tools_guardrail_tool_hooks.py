@@ -15,6 +15,7 @@ import pytest
 from pydantic_ai.messages import ToolCallPart
 
 from agent_runtimes.guardrails.tool_approvals import (
+    _APPROVED_TOOL_GRANTS_BY_SCOPE,
     ToolApprovalConfig,
     ToolApprovalExecutionReservationError,
     ToolApprovalManager,
@@ -63,7 +64,7 @@ class _FakeManager:
                 ToolApprovalRecord(
                     id=approval_id,
                     agent_id="agent-1",
-                    pod_name="",
+                    runtime_name="",
                     tool_name=tool_name,
                     tool_args=safe_args,
                     tool_call_id=tool_call_id,
@@ -104,6 +105,8 @@ async def _put_record(record: ToolApprovalRecord) -> None:
 @pytest.fixture(autouse=True)
 def _reset_post_hook_payloads() -> None:
     _POST_HOOK_PAYLOADS.clear()
+    # Cross-turn grants are process-global; clear them so tests stay isolated.
+    _APPROVED_TOOL_GRANTS_BY_SCOPE.clear()
 
 
 @pytest.mark.asyncio
@@ -269,7 +272,7 @@ async def test_execution_reservation_is_atomic() -> None:
             ToolApprovalRecord(
                 id="approval-race",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-race-original",
@@ -315,7 +318,7 @@ async def test_pre_tool_reuses_recent_approval_for_matching_args(
             ToolApprovalRecord(
                 id="approval-reuse-match",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-reuse-original",
@@ -369,7 +372,7 @@ async def test_pre_tool_does_not_reuse_recent_approval_for_changed_args(
             ToolApprovalRecord(
                 id="approval-reuse-changed",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-reuse-original",
@@ -418,7 +421,7 @@ async def test_manager_reuses_recent_approval_for_matching_args() -> None:
             ToolApprovalRecord(
                 id="approval-manager-match",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-manager-original",
@@ -456,7 +459,7 @@ async def test_manager_does_not_reuse_recent_approval_for_changed_args() -> None
             ToolApprovalRecord(
                 id="approval-manager-changed",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-manager-original",
@@ -590,7 +593,7 @@ async def test_post_tool_success_consumes_matching_approval(tmp_path: Path) -> N
             ToolApprovalRecord(
                 id="approval-consume-success",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-consume-1",
@@ -725,7 +728,7 @@ async def test_post_tool_error_consumes_executing_approval(tmp_path: Path) -> No
             ToolApprovalRecord(
                 id="approval-consume-error",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-error-consume",
@@ -780,7 +783,7 @@ async def test_terminal_transition_failure_leaves_approval_non_reusable(
             ToolApprovalRecord(
                 id="approval-stuck-executing",
                 agent_id="agent-1",
-                pod_name="",
+                runtime_name="",
                 tool_name="runtime_sensitive_echo",
                 tool_args={"text": "hello"},
                 tool_call_id="tool-stuck",

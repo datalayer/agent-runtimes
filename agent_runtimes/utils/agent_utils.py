@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Cloud agent runtime provisioning helpers.
 
 Reusable logic for launching cloud ``agent-runtimes`` from a
@@ -161,14 +158,14 @@ def create_cloud_agent_runtime(
     Returns
     -------
     Any
-        The created runtime object (exposes ``pod_name`` and ``ingress``).
+        The created runtime object (exposes ``runtime_name`` and ``ingress``).
 
     Raises
     ------
     ValueError
         If neither ``time_reservation`` nor ``credits_limit`` is provided.
     RuntimeError
-        If runtime creation fails or returns no ``pod_name``.
+        If runtime creation fails or returns no ``runtime_name``.
     """
     if time_reservation is None:
         if credits_limit is None:
@@ -197,15 +194,15 @@ def create_cloud_agent_runtime(
             f"environment={environment_name}, agent_spec={spec_hint}, error={exc}"
         ) from exc
 
-    pod_name = str(getattr(runtime, "pod_name", "") or "").strip()
-    if not pod_name:
-        raise RuntimeError("Runtime creation succeeded but pod_name is missing.")
+    runtime_name = str(getattr(runtime, "runtime_name", "") or "").strip()
+    if not runtime_name:
+        raise RuntimeError("Runtime creation succeeded but runtime_name is missing.")
     return runtime
 
 
-def terminate_cloud_agent_runtime(
+def stop_cloud_agent_runtime(
     client: Any,
-    runtime_or_pod_name: Any,
+    runtime_or_runtime_name: Any,
     *,
     raise_on_error: bool = False,
 ) -> bool:
@@ -214,9 +211,9 @@ def terminate_cloud_agent_runtime(
     Parameters
     ----------
     client : DatalayerClient
-        An authenticated client exposing ``terminate_runtime``.
-    runtime_or_pod_name : Any
-        Runtime object (with ``pod_name``) or raw pod-name string.
+        An authenticated client exposing ``stop_runtime``.
+    runtime_or_runtime_name : Any
+        Runtime object (with ``runtime_name``) or raw pod-name string.
     raise_on_error : bool
         When ``True``, raise :class:`RuntimeError` if termination fails.
 
@@ -225,28 +222,28 @@ def terminate_cloud_agent_runtime(
     bool
         ``True`` when the runtime was terminated, otherwise ``False``.
     """
-    if isinstance(runtime_or_pod_name, str):
-        pod_name = runtime_or_pod_name.strip()
+    if isinstance(runtime_or_runtime_name, str):
+        runtime_name = runtime_or_runtime_name.strip()
     else:
-        pod_name = str(getattr(runtime_or_pod_name, "pod_name", "") or "").strip()
+        runtime_name = str(getattr(runtime_or_runtime_name, "runtime_name", "") or "").strip()
 
-    if not pod_name:
+    if not runtime_name:
         if raise_on_error:
-            raise RuntimeError("Cannot terminate cloud runtime: pod_name is missing.")
+            raise RuntimeError("Cannot terminate cloud runtime: runtime_name is missing.")
         return False
 
     try:
-        success = bool(client.terminate_runtime(pod_name))
+        success = bool(client.stop_runtime(runtime_name))
     except Exception as exc:
         if raise_on_error:
             raise RuntimeError(
-                f"Cloud runtime termination failed for pod {pod_name}: {exc}"
+                f"Cloud runtime termination failed for pod {runtime_name}: {exc}"
             ) from exc
         return False
 
     if not success and raise_on_error:
         raise RuntimeError(
-            f"Cloud runtime termination returned unsuccessful for pod {pod_name}."
+            f"Cloud runtime termination returned unsuccessful for pod {runtime_name}."
         )
     return success
 
@@ -255,7 +252,7 @@ def teardown_agent_execution_resources(
     client: Any,
     *,
     execution_target: str,
-    cloud_runtime_or_pod_name: Any = None,
+    cloud_runtime_or_runtime_name: Any = None,
     local_base_url: Optional[str] = None,
     local_agent_name: Optional[str] = None,
     token: Optional[str] = None,
@@ -274,10 +271,10 @@ def teardown_agent_execution_resources(
 
     target = str(execution_target or "").strip().lower()
     if target == "cloud":
-        if cloud_runtime_or_pod_name:
-            result["cloud_runtime_terminated"] = terminate_cloud_agent_runtime(
+        if cloud_runtime_or_runtime_name:
+            result["cloud_runtime_terminated"] = stop_cloud_agent_runtime(
                 client,
-                cloud_runtime_or_pod_name,
+                cloud_runtime_or_runtime_name,
             )
         return result
 

@@ -302,7 +302,6 @@ export function IdentityCard({
             justifyContent: 'center',
             backgroundColor: display.color,
             color: 'white',
-            flexShrink: 0,
           }}
         >
           <display.icon size={16} />
@@ -350,7 +349,7 @@ export function IdentityCard({
             }
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: 'block', lineHeight: 0, flexShrink: 0 }}
+            style={{ display: 'block', lineHeight: 0 }}
           >
             <Avatar
               src={identity.userInfo.avatarUrl}

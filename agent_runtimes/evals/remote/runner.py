@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Reusable evalset execution runner.
 
 This module hosts the end-to-end "execute an evalset spec against one or more
@@ -275,7 +272,7 @@ def execute_evalset_spec(
                 runtimes_by_spec[spec_id] = runtime
                 _emit(
                     f"Launched runtime for agentspec {spec_id}: "
-                    f"pod={getattr(runtime, 'pod_name', '')} "
+                    f"pod={getattr(runtime, 'runtime_name', '')} "
                     f"runtime_id={getattr(runtime, 'uid', '')}"
                 )
         elif target == "local":
@@ -329,14 +326,14 @@ def execute_evalset_spec(
             experiment_ids.append(experiment_id)
 
             ingress = ""
-            pod_name = ""
+            runtime_name = ""
             runtime_id = ""
             if target == "cloud":
                 runtime = runtimes_by_spec[spec_id]
                 ingress = str(getattr(runtime, "ingress", "") or "").strip()
-                pod_name = str(getattr(runtime, "pod_name", "") or "").strip()
+                runtime_name = str(getattr(runtime, "runtime_name", "") or "").strip()
                 runtime_id = str(getattr(runtime, "uid", "") or "").strip()
-                if not ingress or not pod_name:
+                if not ingress or not runtime_name:
                     raise RuntimeError(
                         f"Runtime missing ingress/pod for agentspec {spec_id}"
                     )
@@ -373,7 +370,7 @@ def execute_evalset_spec(
                             route_candidates=runtime_route_candidates(
                                 agent_name=agent_name,
                                 agent_spec_id=spec_id,
-                                pod_name=pod_name,
+                                runtime_name=runtime_name,
                             ),
                             timeout=case_request_timeout,
                         )
@@ -442,7 +439,7 @@ def execute_evalset_spec(
                     # can show which runtime produced the failure for easier
                     # debugging.
                     for cause in failure_causes:
-                        cause.setdefault("runtime_pod_name", pod_name)
+                        cause.setdefault("runtime_name", runtime_name)
                         if runtime_id:
                             cause.setdefault("runtime_id", runtime_id)
                 summary: dict[str, Any] = {
@@ -457,7 +454,7 @@ def execute_evalset_spec(
                     "agent_output": [item["output"] for item in interaction],
                 }
                 if target == "cloud":
-                    summary["runtime_pod_name"] = pod_name
+                    summary["runtime_name"] = runtime_name
                     if runtime_id:
                         summary["runtime_id"] = runtime_id
                 else:
@@ -478,7 +475,7 @@ def execute_evalset_spec(
                     summary["usage"] = {"pydantic_ai_usage": aggregated_usage}
                     report["usage"] = {"pydantic_ai_usage": aggregated_usage}
                 if target == "cloud":
-                    report["runtime_pod_name"] = pod_name
+                    report["runtime_name"] = runtime_name
                     if runtime_id:
                         report["runtime_id"] = runtime_id
                 else:
@@ -520,19 +517,19 @@ def execute_evalset_spec(
     finally:
         if target == "cloud":
             for spec_id, runtime in runtimes_by_spec.items():
-                pod_name = str(getattr(runtime, "pod_name", "") or "").strip()
+                runtime_name = str(getattr(runtime, "runtime_name", "") or "").strip()
                 cleanup = teardown_agent_execution_resources(
                     client,
                     execution_target="cloud",
-                    cloud_runtime_or_pod_name=pod_name,
+                    cloud_runtime_or_runtime_name=runtime_name,
                     token=token,
                 )
                 if cleanup.get("cloud_runtime_terminated"):
-                    _emit(f"Terminated runtime for agentspec {spec_id}: {pod_name}")
+                    _emit(f"Terminated runtime for agentspec {spec_id}: {runtime_name}")
                 else:
                     _emit(
                         "Warning: runtime termination unconfirmed for agentspec "
-                        f"{spec_id}: {pod_name}"
+                        f"{spec_id}: {runtime_name}"
                     )
         else:
             cleanup = teardown_agent_execution_resources(

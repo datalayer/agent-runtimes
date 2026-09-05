@@ -9,9 +9,120 @@ import type { SkillStatus } from './skills';
 
 export type AgentStreamEventType =
   | 'agent.snapshot'
+  | 'agent.subagent'
+  | 'agent.compaction'
   | 'tool_approval_created'
   | 'tool_approval_approved'
   | 'tool_approval_rejected';
+
+/** Phase of a streamed history-compaction interaction. */
+export type AgentCompactionPhase = 'start' | 'end';
+
+/**
+ * History-compaction activity pushed on the agent's monitoring stream when the
+ * conversation is summarized to stay under the configured token budget. A
+ * `start` event precedes summarization; the matching `end` event reports the
+ * before/after token and message counts plus the elapsed time.
+ */
+export interface AgentStreamCompactionPayload {
+  /** Interaction phase. */
+  phase: AgentCompactionPhase;
+  /** Token ceiling driving compaction. */
+  budget: number;
+  /** Estimated history tokens before compaction. */
+  beforeTokens: number;
+  /** Estimated history tokens after compaction (`end`). */
+  afterTokens?: number;
+  /** Message count before compaction. */
+  beforeMessages: number;
+  /** Message count after compaction (`end`). */
+  afterMessages?: number;
+  /** Elapsed summarization time in milliseconds (`end`). */
+  durationMs?: number;
+  /** Cumulative number of compactions performed (`end`). */
+  compactionCount?: number;
+  /** Whether history was actually reduced (`end`). */
+  reduced?: boolean;
+}
+
+/**
+ * Phase of a streamed subagent interaction.
+ *
+ * `status` is the remote side of a delegation talking: an agent reached over
+ * A2A being launched, its task submitted, working, completed. It renders no
+ * text; it tells a sidebar where the run stands.
+ */
+export type AgentSubagentPhase =
+  | 'start'
+  | 'status'
+  | 'text'
+  | 'thinking'
+  | 'tool_call'
+  | 'tool_result'
+  | 'end'
+  | 'error';
+
+/**
+ * Incremental subagent activity pushed on the parent agent's monitoring
+ * stream while a `delegate_task` call runs. Consumers key events by
+ * `toolCallId` (the parent delegation tool call) to render a live timeline.
+ */
+export interface AgentStreamSubagentPayload {
+  /** Name of the subagent producing the activity. */
+  subagentName: string;
+  /** Parent `delegate_task` tool call id, when resolvable. */
+  toolCallId?: string | null;
+  /** Interaction phase. */
+  phase: AgentSubagentPhase;
+  /** Delegated task description (`start`). */
+  task?: string;
+  /** Text or thinking delta (`text` / `thinking`). */
+  text?: string;
+  /** Tool name (`tool_call` / `tool_result`). */
+  toolName?: string;
+  /** Tool call arguments (`tool_call`). */
+  toolArgs?: Record<string, unknown>;
+  /** Tool result preview (`tool_result`). */
+  result?: string;
+  /** Final subagent output (`end`). */
+  output?: string;
+  /** Failure message (`error`). */
+  error?: string;
+  /**
+   * How the subagent is reached: inside the parent's process, or over A2A as
+   * a separate agent. Absent means in-process.
+   */
+  transport?: 'in-process' | 'a2a';
+  /** Where the A2A agent answers (`transport: 'a2a'`). */
+  url?: string;
+  /**
+   * Where an A2A agent runs: `local` (launched beside the parent), `cloud`
+   * (a Datalayer runtime launched for it), `remote` (given by URL), or the
+   * `auto` a spec asked for before the choice was made.
+   */
+  launch?: string;
+  /** The A2A task id, once the remote agent has one (`status`). */
+  taskId?: string | null;
+  /**
+   * Where a remote run stands (`status`): `launching`, `ready`, then the A2A
+   * task states — `submitted`, `working`, `completed`, `failed`, …
+   */
+  state?: string;
+  /** The remote agent's card, summarised. */
+  agentCard?: {
+    name?: string;
+    description?: string;
+    version?: string;
+    url?: string;
+    skills?: string[];
+  };
+  /** Uid of the runtime launched for a cloud A2A agent. */
+  runtimeUid?: string;
+  /** Delegation depth, `0` for a top-level delegation (server harness). */
+  depth?: number;
+  /** The delegation stack, the running subagent last (server harness). */
+  chain?: string[];
+}
 
 export interface AgentStreamMessage<TPayload = Record<string, unknown>> {
   version: string;
@@ -27,7 +138,7 @@ export interface AgentStreamMessage<TPayload = Record<string, unknown>> {
 export interface AgentStreamToolApprovalPayload {
   id: string;
   agent_id?: string;
-  pod_name?: string;
+  runtime_name?: string;
   tool_name: string;
   tool_call_id?: string;
   tool_args?: Record<string, unknown>;

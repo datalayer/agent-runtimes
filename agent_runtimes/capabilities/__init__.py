@@ -27,6 +27,7 @@ from ..monitoring import (
     run_graph_with_telemetry,
 )
 from .factory import (
+    apply_model_output_tokens_limit,
     build_capabilities_from_agent_spec,
     build_default_choice_guardrails,
     build_usage_limits_from_agent_spec,
@@ -40,6 +41,7 @@ __all__ = [
     "ToolApprovalRejectedError",
     "ToolApprovalTimeoutError",
     "ToolsGuardrailCapability",
+    "apply_model_output_tokens_limit",
     "build_capabilities_from_agent_spec",
     "build_default_choice_guardrails",
     "build_usage_limits_from_agent_spec",

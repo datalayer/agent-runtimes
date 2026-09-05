@@ -7,7 +7,7 @@ import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 
 export interface RuntimeInfo {
   runtimeId: string;
-  podName: string;
+  runtimeName: string;
   ingress: string;
   token: string;
   environmentName?: string;
@@ -27,7 +27,7 @@ export interface RuntimeInfo {
  * ```typescript
  * const runtimeInfo = {
  *   runtimeId: 'abc123',
- *   podName: 'jupyter-pod-xyz',
+ *   runtimeName: 'jupyter-pod-xyz',
  *   ingress: 'https://jupyter.example.com',
  *   token: 'secret-token'
  * };
@@ -53,7 +53,7 @@ export const reconnectToRuntime = async (
       environmentName: runtimeInfo.environmentName || 'unknown',
       credits: 0,
       reservationId: runtimeInfo.runtimeId,
-      podName: runtimeInfo.podName,
+      runtimeName: runtimeInfo.runtimeName,
       ingress: runtimeInfo.ingress,
       token: runtimeInfo.token,
       createdAt: new Date().toISOString(),
@@ -61,7 +61,7 @@ export const reconnectToRuntime = async (
 
     console.log('Reconnected to existing runtime:', {
       runtimeId: runtimeInfo.runtimeId,
-      podName: runtimeInfo.podName,
+      runtimeName: runtimeInfo.runtimeName,
       ingress: runtimeInfo.ingress,
     });
 

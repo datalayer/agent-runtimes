@@ -16,6 +16,11 @@ export {
 } from './ToolCallDisplay';
 
 export {
+  SubagentActivity,
+  type SubagentActivityProps,
+} from './SubagentActivity';
+
+export {
   ToolApprovalBanner,
   type ToolApprovalBannerProps,
   type PendingApproval,

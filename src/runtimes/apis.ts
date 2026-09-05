@@ -149,6 +149,14 @@ export interface IRemoteRuntimesManager extends IDisposable {
   refresh(): Promise<void>;
 
   /**
+   * Resolve full kernel models for discovered runtime pods on demand.
+   *
+   * Implementations may omit this when {@link refresh} already returns full
+   * kernel models.
+   */
+  refreshRuntimeModels?(): Promise<void>;
+
+  /**
    * Launch a Kernel.
    *
    * @param createOptions - The kernel creation options
@@ -209,7 +217,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
   /**
    * Snapshot a runtime
    *
-   * The runtime may be given by its `id` or `podName`.
+   * The runtime may be given by its `id` or `runtimeName`.
    * A custom description for the snapshot can be provided.
    *
    * @returns The snapshot description
@@ -222,7 +230,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
     /**
      * The kernel pod name to snapshot
      */
-    podName?: string;
+    runtimeName?: string;
     /**
      * The snapshot name
      */
@@ -240,7 +248,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
   /**
    * Load a snapshot within a runtim
    *
-   * The runtime may be given by its `id` or `podName`.
+   * The runtime may be given by its `id` or `runtimeName`.
    */
   loadSandboxSnapshot(options: {
     /**
@@ -250,7 +258,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
     /**
      * The kernel pod name
      */
-    podName?: string;
+    runtimeName?: string;
     /**
      * The snapshot UID
      */

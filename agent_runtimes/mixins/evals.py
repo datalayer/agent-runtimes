@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Evals management mixin for Datalayer Core."""
 
 from __future__ import annotations

@@ -6,16 +6,17 @@
 import React, { useMemo, useState } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { Button, Heading, Label, Spinner, Text } from '@primer/react';
-import { FileIcon } from '@primer/octicons-react';
 import { RJSFSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import { Form, yamlSchemaToJsonSchema } from '@datalayer/primer-rjsf';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentParametersPlugin } from '../loop/plugins/agent-parameters';
+
+const LOOP_PLUGINS_AGENTPAR = [AgentParametersPlugin];
 
 setupPrimerPortals();
 
@@ -139,7 +140,6 @@ function hasRequiredValues(
 }
 
 const AgentParametersExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const [agentName] = useState(() => uniqueAgentId(AGENT_NAME));
   const [showSchemaForm, setShowSchemaForm] = useState(false);
   const [isSchemaLoading, setIsSchemaLoading] = useState(false);
@@ -153,6 +153,7 @@ const AgentParametersExample: React.FC = () => {
     agentId,
     error: runtimeError,
     createAgent,
+    baseUrl,
   } = useExampleAgentRuntime({
     exampleId: 'AgentParametersExample',
     agentName,
@@ -244,7 +245,7 @@ const AgentParametersExample: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: 2,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
@@ -313,7 +314,7 @@ const AgentParametersExample: React.FC = () => {
                 border: '1px solid',
                 borderColor: 'border.default',
                 borderRadius: 2,
-                bg: 'canvas.subtle',
+                bg: 'canvas.default',
               }}
             >
               <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
@@ -387,37 +388,13 @@ const AgentParametersExample: React.FC = () => {
   }
 
   return (
-    <Chat
-      protocol="vercel-ai"
-      baseUrl={baseUrl}
+    <LoopEmbed
+      serverUrl={baseUrl}
+      target="local"
       agentId={agentId}
-      title={`Parameterized Agent: ${String(formData.project ?? 'Project')}`}
-      brandIcon={<FileIcon size={16} />}
-      placeholder="Ask something about your configured project..."
-      description={`Role: ${String(formData.role ?? 'n/a')} · Tone: ${String(formData.tone ?? 'n/a')}`}
-      showHeader={true}
-      showModelSelector={true}
-      showToolsMenu={true}
-      showSkillsMenu={true}
-      showTokenUsage={true}
-      showInformation={true}
-      autoFocus
-      height="100vh"
-      runtimeId={agentId}
-      historyEndpoint={`${baseUrl}/api/v1/history`}
-      suggestions={[
-        {
-          title: 'Print demo_params',
-          message:
-            'Use execute_code to print(demo_params) from the sandbox, then explain what it is.',
-        },
-        {
-          title: 'Inspect demo_params',
-          message:
-            "Use execute_code to print('demo_params =', demo_params) and confirm its type.",
-        },
-      ]}
-      submitOnSuggestionClick
+      defaultEditor="none"
+      showHeader
+      plugins={LOOP_PLUGINS_AGENTPAR}
     />
   );
 };

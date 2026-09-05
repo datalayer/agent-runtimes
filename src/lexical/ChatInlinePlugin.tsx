@@ -36,6 +36,7 @@
  * @module lexical/ChatInlinePlugin
  */
 
+import type { JSX } from 'react';
 import {
   useCallback,
   useEffect,

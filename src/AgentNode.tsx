@@ -3,27 +3,36 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
-  Box,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { AiAgentIcon, AlienIcon } from '@datalayer/icons-react';
+import {
   DatalayerLogoText,
   DatalayerThemeProvider,
+  getColorPalette,
   getLogoColors,
   setupPrimerPortals,
   themeConfigs,
 } from '@datalayer/primer-addons';
-import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
+import { AppearanceMenu } from '@datalayer/primer-addons/lib/components/appearance';
 import {
   ActionList,
   ActionMenu,
-  Avatar,
+  Box,
   Button,
-  FormControl,
   Heading,
   Label,
   PageHeader,
   PageLayout,
+  Spinner,
   Text,
 } from '@primer/react';
 import {
@@ -35,13 +44,14 @@ import {
   PeopleIcon,
   PersonIcon,
   GearIcon,
-  SignInIcon,
   SignOutIcon,
   type Icon as OcticonIcon,
 } from '@primer/octicons-react';
 import { SignInSimple } from '@datalayer/core/lib/views/iam';
+import { UserAvatar } from '@datalayer/core/lib/components/avatars';
 import { UserBadge } from '@datalayer/core/lib/views/profile';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import * as coreState from '@datalayer/core/lib/state';
 import { useIAMStore } from '@datalayer/core/lib/state';
 import {
   BillingEntitySelect,
@@ -49,7 +59,11 @@ import {
 } from '@datalayer/core/lib/components/billing';
 import { ShareAccessComponent } from '@datalayer/core/lib/components/sharing';
 import { useAgentNodeThemeStore } from './agent-node/themeStore';
+import { AgentNodeGallery } from './agent-node/AgentNodeGallery';
 import { Chat } from './chat';
+import type { EphemeralRuntimeOverride } from './chat/notebook/EphemeralNotebook';
+import type { Suggestion } from './types/chat';
+import { DatalayerCollaborationProvider } from './collaboration';
 
 import '../style/primer-primitives.css';
 
@@ -61,8 +75,126 @@ const AGENT_RUNTIMES_BASE_URL = (
   window.location.origin
 ).replace(/\/$/, '');
 
+/**
+ * LOCAL Jupyter sandbox endpoint shared by the node's agent and the chat's
+ * ephemeral notebook/document surfaces. When set (node-local dev, injected via
+ * `VITE_JUPYTER_SANDBOX_URL`), the surfaces bind their kernel straight to this
+ * Jupyter server — no proxy or tunnel — exactly like `NotebookAgentExample`.
+ * Parsed once into a clean base URL + token for `ServerConnection`.
+ */
+const LOCAL_JUPYTER_SANDBOX = (() => {
+  const raw = String(import.meta.env.VITE_JUPYTER_SANDBOX_URL || '').trim();
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    const url = new URL(raw);
+    const token = url.searchParams.get('token') || undefined;
+    url.searchParams.delete('token');
+    const baseUrl = `${url.origin}${url.pathname}`.replace(/\/$/, '');
+    return { baseUrl, token };
+  } catch {
+    return { baseUrl: raw.replace(/\/$/, ''), token: undefined };
+  }
+})();
+
+const DEFAULT_DATALAYER_SERVICE_URL = 'https://prod1.datalayer.run';
+
+/**
+ * localStorage key recording that the user explicitly signed out. When set, the
+ * UI must not silently re-authenticate from the env-supplied DATALAYER_API_KEY
+ * via /auth/bootstrap, so the sign-out survives a page refresh.
+ */
+/** The chat protocols a node-hosted agent may speak. */
+type ChatProtocol = 'ag-ui' | 'vercel-ai';
+
+/** The protocol a node reports for an agent, as the chat understands it. */
+const normalizeChatProtocol = (value: unknown): ChatProtocol =>
+  value === 'vercel-ai' || value === 'vercel-ai-jupyter'
+    ? 'vercel-ai'
+    : 'ag-ui';
+
+/**
+ * Whether a JWT's `exp` is in the past. A token that does not parse is not
+ * called expired — that is IAM's verdict to give, and it gives it as a 401.
+ */
+const isJwtExpired = (token: string): boolean => {
+  try {
+    const payload = token.split('.')[1];
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp = Number(JSON.parse(json)?.exp);
+    return Number.isFinite(exp) && exp * 1000 < Date.now();
+  } catch {
+    return false;
+  }
+};
+
+const AUTO_BOOTSTRAP_DISABLED_KEY = 'agent-node-auto-bootstrap-disabled';
+
+/** Persist (or clear) the signed-out intent in localStorage. */
+function setAutoBootstrapDisabled(disabled: boolean): void {
+  try {
+    if (disabled) {
+      window.localStorage.setItem(AUTO_BOOTSTRAP_DISABLED_KEY, 'true');
+    } else {
+      window.localStorage.removeItem(AUTO_BOOTSTRAP_DISABLED_KEY);
+    }
+  } catch {
+    // Ignore storage failures (private mode, disabled storage, etc.).
+  }
+}
+
+/**
+ * Read a service URL from the server-injected `datalayer-config-data` script
+ * tag. The agent-runtimes Python server injects this tag (populated from the
+ * `DATALAYER_*_URL` environment variables, e.g. from `plane local`) when it
+ * serves the built agent pages. Reading it at runtime lets the node target the
+ * configured services (IAM, runtimes, ...) instead of the build-time-baked
+ * `VITE_DATALAYER_*_URL`, which default to production because `make build` runs
+ * without the local environment.
+ */
+const getConfigUrlFromDocument = (...keys: string[]): string | undefined => {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+  const el = document.getElementById('datalayer-config-data');
+  if (!el?.textContent) {
+    return undefined;
+  }
+  try {
+    const config = JSON.parse(el.textContent);
+    for (const key of keys) {
+      const value = config?.[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.replace(/\/$/, '');
+      }
+    }
+  } catch {
+    // Ignore malformed config; fall back to env / default.
+  }
+  return undefined;
+};
+
+/** Resolve the IAM URL: injected config → VITE env → production. */
+const resolveIamUrl = (): string =>
+  getConfigUrlFromDocument('iamUrl') ||
+  (import.meta as any).env?.VITE_DATALAYER_IAM_URL ||
+  DEFAULT_DATALAYER_SERVICE_URL;
+
+/** Resolve the runtimes URL: injected config → VITE env → production. */
+const resolveRuntimesUrl = (): string =>
+  getConfigUrlFromDocument('runtimesUrl') ||
+  (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL ||
+  DEFAULT_DATALAYER_SERVICE_URL;
+
+/** Resolve the spacer URL: injected config → VITE env → production. */
+const resolveSpacerUrl = (): string =>
+  getConfigUrlFromDocument('spacerUrl') ||
+  (import.meta as any).env?.VITE_DATALAYER_SPACER_URL ||
+  DEFAULT_DATALAYER_SERVICE_URL;
+
 type AgentNodeMode = 'private' | 'shared' | 'sleep';
-type Step = 'auth' | 'config' | 'chat' | 'profile';
+type Step = 'auth' | 'config' | 'gallery' | 'chat' | 'profile';
 
 type ModeCard = {
   mode: AgentNodeMode;
@@ -102,6 +234,14 @@ type AgentNodeConfiguration = {
   billing_entity_type?: string;
   billing_entity_handle?: string;
   sharing: Record<string, any>;
+  active_agent_id?: string;
+  collaboration_notebook_uid?: string;
+  collaboration_document_uid?: string;
+  deployment_target?: 'localhost' | 'aws' | 'other';
+  chat_access_mode?: 'local_and_saas' | 'saas_only';
+  aws_account_id?: string;
+  aws_region?: string;
+  aws_identity_arn?: string;
 };
 
 const DEFAULT_CONFIGURATION: AgentNodeConfiguration = {
@@ -132,24 +272,47 @@ type InferenceModelResponse = {
  * but assembled exclusively from core building blocks so agent-runtimes does
  * not pull in the `ui` package.
  */
-function AgentNodeProfileView({ token }: { token: string | null }) {
+function AgentNodeProfileView({
+  token,
+  onTokenExpired,
+  avatarFallbackBackground,
+  avatarFallbackForeground,
+}: {
+  token: string | null;
+  onTokenExpired?: () => void;
+  avatarFallbackBackground?: string;
+  avatarFallbackForeground?: string;
+}) {
   const user = useIAMStore(state => state.user);
+  const hasRealAvatar = (url?: string): boolean => {
+    if (!url) {
+      return false;
+    }
+    if (url.startsWith('https://www.gravatar.com/avatar')) {
+      return false;
+    }
+    return true;
+  };
 
   const display = useMemo(() => {
     if (!user) return null;
     const u = user as any;
     const displayName =
-      [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
       u.display_name ||
-      u.name ||
-      u.handle ||
-      u.email ||
-      'Datalayer user';
+      u.displayName ||
+      u.profile?.display_name ||
+      u.profile?.displayName ||
+      u.full_name ||
+      u.fullName ||
+      [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
+      '';
     const username =
       u.username || u.handle || (u.email ? String(u.email).split('@')[0] : '');
+    const headingDisplayName =
+      displayName || username || u.email || 'Datalayer user';
     const initials =
       u.initials ||
-      String(displayName)
+      String(headingDisplayName)
         .split(/\s+/)
         .filter(Boolean)
         .slice(0, 2)
@@ -159,6 +322,7 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
       id: String(u.id || u.uid || ''),
       username,
       displayName,
+      headingDisplayName,
       initials,
       origin: String(u.origin || 'datalayer'),
       handle: u.handle ? `@${u.handle}` : '',
@@ -186,78 +350,115 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
         <Text sx={{ color: 'fg.muted' }}>Loading profile…</Text>
       ) : (
         <>
-          <Heading sx={{ fontSize: 2, mb: 2 }}>Identity</Heading>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {display.avatarUrl ? (
-              <Avatar
-                src={display.avatarUrl}
-                size={72}
-                alt={display.displayName}
-              />
-            ) : (
-              <Box
-                sx={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: '50%',
-                  bg: 'canvas.subtle',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'fg.muted',
-                }}
-              >
-                <PersonIcon size={30} />
-              </Box>
-            )}
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Heading sx={{ fontSize: 3, mb: 1 }}>
-                {display.displayName}
-              </Heading>
-              {display.handle && (
-                <Text sx={{ color: 'fg.muted' }}>{display.handle}</Text>
-              )}
-              {display.email && (
-                <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                  {display.email}
-                </Text>
-              )}
-            </Box>
-          </Box>
-          {display.id && (
-            <Box sx={{ mt: 2 }}>
-              <Label size="large" variant="secondary">
-                {display.id}
-              </Label>
-            </Box>
-          )}
+          <Heading sx={{ fontSize: 2, mb: 2 }}>Profile</Heading>
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: '1fr 2fr',
-              rowGap: 2,
-              columnGap: 3,
-              maxWidth: 560,
+              gridTemplateColumns: [
+                '1fr',
+                null,
+                'minmax(280px, 1fr) minmax(320px, 2fr)',
+              ],
+              gap: 4,
+              alignItems: 'start',
             }}
           >
-            <Text sx={{ fontWeight: 'bold' }}>Username</Text>
-            <Text>{display.username || '-'}</Text>
-            <Text sx={{ fontWeight: 'bold' }}>Display name</Text>
-            <Text>{display.displayName || '-'}</Text>
-            <Text sx={{ fontWeight: 'bold' }}>Initials</Text>
-            <Text>{display.initials || '-'}</Text>
-            <Text sx={{ fontWeight: 'bold' }}>Origin</Text>
-            <Text>{display.origin || '-'}</Text>
-          </Box>
-          {display.roles.length > 0 && (
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              {display.roles.map(role => (
-                <Label key={role} size="small" variant="secondary">
-                  {role}
-                </Label>
-              ))}
+            <Box
+              sx={{
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                p: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 3,
+              }}
+            >
+              <Box sx={{ textAlign: 'left' }}>
+                <UserBadge
+                  token={token}
+                  variant="small"
+                  onTokenExpired={onTokenExpired}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                {hasRealAvatar(display.avatarUrl) ? (
+                  <UserAvatar
+                    avatarUrl={display.avatarUrl}
+                    size={72}
+                    square={false}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: '50%',
+                      bg: avatarFallbackBackground || 'accent.subtle',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      '--datalayer-icon-fg':
+                        avatarFallbackForeground || 'accent.fg',
+                    }}
+                  >
+                    <AlienIcon size={34} themed colormode />
+                  </Box>
+                )}
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <Heading sx={{ fontSize: 3, mb: 1 }}>
+                    {display.headingDisplayName}
+                  </Heading>
+                  {display.handle && (
+                    <Text sx={{ color: 'fg.muted' }}>{display.handle}</Text>
+                  )}
+                </Box>
+              </Box>
+              {display.id && (
+                <Box>
+                  <Label size="large" variant="secondary">
+                    {display.id}
+                  </Label>
+                </Box>
+              )}
             </Box>
-          )}
+
+            <Box
+              sx={{
+                border: '1px solid',
+                borderColor: 'border.default',
+                borderRadius: 2,
+                p: 3,
+                display: 'grid',
+                gridTemplateColumns: '1fr 2fr',
+                rowGap: 2,
+                columnGap: 3,
+              }}
+            >
+              <Text sx={{ fontWeight: 'bold' }}>Username</Text>
+              <Text>{display.username || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Display name</Text>
+              <Text>{display.displayName || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Email</Text>
+              <Text>{display.email || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Initials</Text>
+              <Text>{display.initials || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Origin</Text>
+              <Text>{display.origin || '-'}</Text>
+              <Text sx={{ fontWeight: 'bold' }}>Roles</Text>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {display.roles.length > 0 ? (
+                  display.roles.map(role => (
+                    <Label key={role} size="small" variant="secondary">
+                      {role}
+                    </Label>
+                  ))
+                ) : (
+                  <Text>-</Text>
+                )}
+              </Box>
+            </Box>
+          </Box>
         </>
       )}
     </Box>
@@ -267,9 +468,12 @@ function AgentNodeProfileView({ token }: { token: string | null }) {
 export function AgentNode() {
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const tokenForCore = token ?? undefined;
+  const signInLoginUrl = `${resolveIamUrl()}/api/iam/v1/login`;
   const queryClient = useQueryClient();
   const iamUser = useIAMStore(state => state.user);
   const { colorMode, theme: themeVariant } = useAgentNodeThemeStore();
+  const setColorMode = useAgentNodeThemeStore(state => state.setColorMode);
+  const setTheme = useAgentNodeThemeStore(state => state.setTheme);
 
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
@@ -282,10 +486,26 @@ export function AgentNode() {
       : colorMode === 'dark'
         ? 'dark'
         : 'light';
+  const avatarPalette = getColorPalette(themeVariant as any, resolvedMode);
   const authGradient = cfg.cardGradient[resolvedMode];
 
   const [step, setStep] = useState<Step>('auth');
-  const [disableAutoBootstrap, setDisableAutoBootstrap] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('default');
+  // Persisted across refreshes: once the user explicitly signs out we must
+  // not silently re-authenticate them from the env-supplied DATALAYER_API_KEY
+  // via /auth/bootstrap. Initialise from localStorage so the intent survives a
+  // page reload (React state alone resets to false on refresh).
+  const [disableAutoBootstrap, setDisableAutoBootstrap] = useState<boolean>(
+    () => {
+      try {
+        return (
+          window.localStorage.getItem(AUTO_BOOTSTRAP_DISABLED_KEY) === 'true'
+        );
+      } catch {
+        return false;
+      }
+    },
+  );
   const [configuration, setConfiguration] = useState<AgentNodeConfiguration>(
     DEFAULT_CONFIGURATION,
   );
@@ -294,12 +514,289 @@ export function AgentNode() {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Ephemeral notebook RTC (shared room with the SaaS UI) ───────────────
+  // The node provisions a spacer notebook room on registration and stores its
+  // uid in the configuration. When present, both the node-local chat and the
+  // SaaS gallery view join that room so the agent's notebook edits transit via
+  // RTC instead of the tunnel. Absent (e.g. before sign-in) the ephemeral
+  // notebook stays in-memory, unchanged.
+  const ephemeralCollaborationDocumentId =
+    token && configuration.collaboration_notebook_uid
+      ? configuration.collaboration_notebook_uid
+      : undefined;
+  const ephemeralNotebookCollaborationProvider = useMemo(() => {
+    if (!ephemeralCollaborationDocumentId || !token) {
+      return undefined;
+    }
+    const spacerUrl = resolveSpacerUrl();
+    return new DatalayerCollaborationProvider({
+      spacerUrl,
+      token,
+    });
+  }, [ephemeralCollaborationDocumentId, token]);
+
+  // ── Ephemeral document RTC (shared Lexical/Loro room with the SaaS UI) ────
+  // The node provisions a spacer *lexical* room (distinct from the notebook
+  // room) on registration and stores its uid as `collaboration_document_uid`.
+  // Both peers join that Loro room over the spacer lexical WebSocket.
+  //
+  // The URL is the bare endpoint: the Loro provider composes
+  // `${websocketUrl}/${roomId}` itself, so a query string here would land
+  // *between* the path and the room (`…/ws?token=…/ROOM`) and match no route —
+  // which is what this used to do. The spacer reads no token on this socket.
+  const collaborationDocumentUser = useIAMStore(state => state.user) as
+    Record<string, any> | null | undefined;
+  const ephemeralDocumentCollaboration = useMemo(() => {
+    const documentRoomId = configuration.collaboration_document_uid;
+    if (!token || !documentRoomId) {
+      return undefined;
+    }
+    const spacerUrl = resolveSpacerUrl();
+    const wsSpacer = String(spacerUrl).replace(/^http/, 'ws');
+    const websocketUrl = `${wsSpacer}/api/spacer/v1/lexical/ws`;
+    const u = collaborationDocumentUser;
+    return {
+      websocketUrl,
+      roomId: documentRoomId,
+      identity: u
+        ? {
+            userId: u.uid,
+            handle: u.handle,
+            displayName: u.displayName,
+            initials: u.initials,
+            avatarUrl: u.avatarUrl,
+          }
+        : undefined,
+    };
+  }, [
+    configuration.collaboration_document_uid,
+    token,
+    collaborationDocumentUser,
+  ]);
+
   const [inferenceProvider, setInferenceProvider] =
     useState<InferenceProvider>('datalayer');
   const [inferenceModels, setInferenceModels] = useState<string[]>([]);
   const [inferenceDefaultModel, setInferenceDefaultModel] = useState<
     string | null
   >(null);
+  const [configurationLoaded, setConfigurationLoaded] = useState(false);
+  const [isActiveAgentRunning, setIsActiveAgentRunning] = useState(false);
+  // The protocol the active agent actually speaks, as reported by the node.
+  // The chat must speak the same one; a node hosts AG-UI and Vercel AI
+  // agents alike.
+  const [activeAgentProtocol, setActiveAgentProtocol] =
+    useState<ChatProtocol>('ag-ui');
+  const chatRestoreAttemptRef = useRef<string>('');
+  const hasActiveAgent =
+    Boolean(String(configuration.active_agent_id || '').trim()) &&
+    isActiveAgentRunning;
+
+  const isSaasOnlyChat =
+    configuration.chat_access_mode === 'saas_only' ||
+    configuration.deployment_target === 'aws';
+
+  // ── Local sandbox runtime override for the ephemeral surfaces ─────────────
+  // In the node-local webapp the agent's Jupyter sandbox is a LOCAL server, not
+  // a Kubernetes pod resolvable by `runtime_name`, so the ephemeral notebook and
+  // document surfaces cannot bind their kernel through the runtimes pod lookup.
+  // Instead we read the live sandbox Jupyter endpoint from `/health/startup`
+  // and pass it as an explicit override so the surfaces connect a service
+  // manager straight to the sandbox kernel. This is what makes the surfaces
+  // actually render and the chat header's kernel indicator reflect the sandbox
+  // kernel (rather than the browser/Pyodide placeholder).
+  const [sandboxRuntimeOverride, setSandboxRuntimeOverride] = useState<
+    EphemeralRuntimeOverride | undefined
+  >(undefined);
+  // Environment name shown in the chat header's kernel indicator details, so
+  // it reads e.g. "Local Agent Sandbox (python3)" instead of the indicator's
+  // generic "browser-runtime" placeholder once the local sandbox is bound.
+  const [sandboxEnvironmentName, setSandboxEnvironmentName] = useState<
+    string | undefined
+  >(undefined);
+  useEffect(() => {
+    const selected = String(selectedAgentId || '').trim();
+    if (step !== 'chat' || !selected || selected === 'default') {
+      setSandboxRuntimeOverride(undefined);
+      setSandboxEnvironmentName(undefined);
+      return;
+    }
+
+    // Fast path: in node-local dev the agent's Jupyter sandbox is a LOCAL
+    // server whose URL/token are known up front (VITE_JUPYTER_SANDBOX_URL).
+    // Bind the ephemeral surfaces straight to it — no /health/startup polling,
+    // no proxy, no tunnel — mirroring NotebookAgentExample.
+    if (LOCAL_JUPYTER_SANDBOX?.baseUrl) {
+      setSandboxEnvironmentName('Local Agent Sandbox');
+      setSandboxRuntimeOverride(prev => {
+        if (
+          prev?.baseUrl === LOCAL_JUPYTER_SANDBOX.baseUrl &&
+          (prev?.token || '') === (LOCAL_JUPYTER_SANDBOX.token || '')
+        ) {
+          return prev;
+        }
+        return {
+          baseUrl: LOCAL_JUPYTER_SANDBOX.baseUrl,
+          token: LOCAL_JUPYTER_SANDBOX.token || undefined,
+          runtimeName: 'agent-node-sandbox',
+        };
+      });
+      return;
+    }
+
+    let cancelled = false;
+    let intervalId: number | null = null;
+
+    const stopPolling = () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const poll = async () => {
+      try {
+        const resp = await fetch(`${AGENT_RUNTIMES_BASE_URL}/health/startup`);
+        if (!resp.ok) {
+          return;
+        }
+        const payload = await resp.json();
+        const sandbox = payload?.sandbox;
+        const jupyterUrl = String(sandbox?.jupyter_url || '').trim();
+        if (sandbox?.variant !== 'jupyter-server' || !jupyterUrl) {
+          return;
+        }
+        const jupyterToken = String(sandbox?.jupyter_token || '').trim();
+        if (cancelled) {
+          return;
+        }
+        const kernelName = String(sandbox?.kernel_name || '').trim();
+        setSandboxEnvironmentName(
+          kernelName
+            ? `Local Agent Sandbox (${kernelName})`
+            : 'Local Agent Sandbox',
+        );
+        setSandboxRuntimeOverride(prev => {
+          if (
+            prev?.baseUrl === jupyterUrl &&
+            (prev?.token || '') === jupyterToken
+          ) {
+            return prev;
+          }
+          return {
+            baseUrl: jupyterUrl,
+            token: jupyterToken || undefined,
+            runtimeName: 'agent-node-sandbox',
+          };
+        });
+        // Endpoint resolved — stop the fast poll.
+        stopPolling();
+      } catch {
+        // Sandbox not ready yet; keep polling.
+      }
+    };
+
+    void poll();
+    intervalId = window.setInterval(() => {
+      void poll();
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      stopPolling();
+    };
+  }, [step, selectedAgentId]);
+
+  // ── Agent spec info for the chat header (title/description/suggestions) ──
+  // Mirrors the `ui` runtime chat view: the chat header shows the agent spec's
+  // display name and welcome message, and the empty state offers the spec's
+  // suggested prompts. The node-local agent is launched from a library spec
+  // whose id is used as the agent id (see AgentNodeGallery `launch`), so the
+  // spec is looked up by that same id via `GET /api/v1/agents/library/{id}`.
+  const [agentSpecInfo, setAgentSpecInfo] = useState<{
+    name?: string;
+    description?: string;
+    welcomeMessage?: string;
+    suggestions?: string[];
+  } | null>(null);
+  useEffect(() => {
+    const agentId = String(selectedAgentId || '').trim();
+    if (step !== 'chat' || !agentId || agentId === 'default') {
+      setAgentSpecInfo(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch(
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agents/library/${encodeURIComponent(agentId)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          },
+        );
+        if (!resp.ok) {
+          if (!cancelled) {
+            setAgentSpecInfo(null);
+          }
+          return;
+        }
+        const spec = await resp.json().catch(() => null);
+        if (cancelled || !spec) {
+          return;
+        }
+        setAgentSpecInfo({
+          name: typeof spec.name === 'string' ? spec.name : undefined,
+          description:
+            typeof spec.description === 'string' ? spec.description : undefined,
+          welcomeMessage:
+            typeof spec.welcomeMessage === 'string'
+              ? spec.welcomeMessage
+              : typeof spec.welcome_message === 'string'
+                ? spec.welcome_message
+                : undefined,
+          /*
+           * Either shape, because this reads a spec off a running node.
+           *
+           * A node may have been launched from an older catalogue, where a
+           * suggestion was a bare string. Filtering to strings — which is what
+           * this did — silently emptied the list the moment the catalogue
+           * started sending the mapping form, and an empty state with no
+           * openers looks like an agent with nothing to offer.
+           */
+          suggestions: Array.isArray(spec.suggestions)
+            ? (spec.suggestions as unknown[])
+                .map(item =>
+                  typeof item === 'string'
+                    ? item
+                    : ((item as { text?: unknown })?.text ?? ''),
+                )
+                .filter(
+                  (text): text is string => typeof text === 'string' && !!text,
+                )
+            : undefined,
+        });
+      } catch {
+        if (!cancelled) {
+          setAgentSpecInfo(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, selectedAgentId, token]);
+
+  const chatTitle = agentSpecInfo?.name || 'Agent Node Chat';
+  const chatDescription =
+    agentSpecInfo?.welcomeMessage ||
+    agentSpecInfo?.description ||
+    'Node-local chat';
+  const chatSuggestions: Suggestion[] | undefined =
+    agentSpecInfo?.suggestions && agentSpecInfo.suggestions.length > 0
+      ? agentSpecInfo.suggestions.map(s => ({ title: s, message: s }))
+      : undefined;
+
   type BannerKind = 'success' | 'info' | 'warning' | 'error';
   type BannerState = { id: number; kind: BannerKind; message: string };
   const [banner, setBanner] = useState<BannerState | null>(null);
@@ -327,11 +824,7 @@ export function AgentNode() {
 
   const pushCredentials = useCallback(
     (authToken: string | null, payloadToken: string | null = authToken) => {
-      const datalayerUrl =
-        (import.meta as any).env?.VITE_DATALAYER_URL ||
-        'https://prod1.datalayer.run';
-      const runtimesUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || datalayerUrl;
+      const runtimesUrl = resolveRuntimesUrl();
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -351,6 +844,66 @@ export function AgentNode() {
     },
     [],
   );
+
+  // A token that IAM no longer accepts ends the session, here and now.
+  //
+  // The billing entity selector reads the signed-in user from the core IAM
+  // store, which this page fills by asking IAM `whoami` with the node's token.
+  // When that call fails the core store logs its user out while the node's own
+  // token stays — and the page used to sit there "loading" a user that was
+  // never coming. A token past its `exp` is signed out at once; one that IAM
+  // rejects is retried briefly (a plane still starting), then signed out too.
+  const [identityAttempt, setIdentityAttempt] = useState(0);
+  const expireSession = useCallback(
+    (why: string) => {
+      showBanner('info', `${why} Please sign in again.`);
+      setAutoBootstrapDisabled(true);
+      setDisableAutoBootstrap(true);
+      void pushCredentials(token, null).catch(() => {
+        // Best-effort; local state is signed out regardless.
+      });
+      clearAuth();
+      setStep('auth');
+    },
+    [token, showBanner, pushCredentials, clearAuth],
+  );
+  useEffect(() => {
+    if (!token || iamUser) {
+      return;
+    }
+    if (isJwtExpired(token)) {
+      expireSession('Your session has expired.');
+      return;
+    }
+    let cancelled = false;
+    const attempt = identityAttempt;
+    const timer = window.setTimeout(
+      async () => {
+        try {
+          const api = coreState.iamStore.getState() as any;
+          await api.refreshUserByToken(token);
+        } catch {
+          // Decided below, on whether a user arrived.
+        }
+        if (cancelled) {
+          return;
+        }
+        if (coreState.iamStore.getState().user) {
+          return;
+        }
+        if (attempt >= 2) {
+          expireSession(`${resolveIamUrl()} did not recognise your session.`);
+        } else {
+          setIdentityAttempt(n => n + 1);
+        }
+      },
+      attempt === 0 ? 1500 : 4000,
+    );
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [token, iamUser, identityAttempt, expireSession]);
 
   // Refs kept in sync with state so the BillingEntitySelect callbacks
   // (passed via stable identities) can read the latest values without
@@ -407,6 +960,7 @@ export function AgentNode() {
           `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
         );
         if (!response.ok) {
+          setConfigurationLoaded(true);
           return;
         }
         const payload = await response.json();
@@ -415,8 +969,13 @@ export function AgentNode() {
           ...(payload?.configuration || {}),
         };
         setConfiguration(loadedConfiguration);
+        if (loadedConfiguration.active_agent_id) {
+          setSelectedAgentId(loadedConfiguration.active_agent_id);
+        }
       } catch {
         // Ignore initial-load failures in local development.
+      } finally {
+        setConfigurationLoaded(true);
       }
     };
     load();
@@ -521,7 +1080,7 @@ export function AgentNode() {
         }
         if (data?.has_key && data?.token) {
           setAuth(String(data.token), String(data.handle || 'api-key-user'));
-          setStep('config');
+          setStep('gallery');
         }
       } catch {
         // Best-effort; fall back to the sign-in screen.
@@ -544,31 +1103,35 @@ export function AgentNode() {
     });
   }, [token, pushCredentials]);
 
-  useEffect(() => {
-    import('@datalayer/core/lib/state').then(({ iamStore, coreStore }) => {
-      const datalayerUrl =
-        (import.meta as any).env?.VITE_DATALAYER_URL ||
-        'https://prod1.datalayer.run';
-      const runtimesUrl =
-        (import.meta as any).env?.VITE_DATALAYER_RUNTIMES_URL || datalayerUrl;
+  // Before paint, and before any child effect: children fetch runtimes and
+  // the like in their own effects, and a parent's layout effect runs first.
+  // Seeded in a plain effect behind a dynamic import, as this used to be,
+  // the first round of requests went to the core store's *default* URLs —
+  // production — and came back 401 against a local token before the local
+  // plane was even named.
+  useLayoutEffect(() => {
+    Promise.resolve(coreState).then(({ iamStore, coreStore }) => {
+      const iamUrl = resolveIamUrl();
+      const runtimesUrl = resolveRuntimesUrl();
       const aiInferenceUrl =
+        getConfigUrlFromDocument('aiInferenceUrl') ||
         (import.meta as any).env?.VITE_DATALAYER_AI_INFERENCE_URL ||
-        datalayerUrl;
+        DEFAULT_DATALAYER_SERVICE_URL;
       // Seed all per-service URLs to match the main UI login behavior.
       const coreApi = coreStore.getState() as any;
       const prevCfg = coreApi.configuration ?? {};
       const urls = {
-        iamUrl: datalayerUrl,
+        iamUrl: iamUrl,
         runtimesUrl,
-        spacerUrl: datalayerUrl,
-        libraryUrl: datalayerUrl,
-        aiAgentsUrl: datalayerUrl,
+        spacerUrl: iamUrl,
+        libraryUrl: iamUrl,
+        aiAgentsUrl: iamUrl,
         aiInferenceUrl: aiInferenceUrl,
-        mcpServersUrl: datalayerUrl,
-        otelUrl: datalayerUrl,
-        growthUrl: datalayerUrl,
-        successUrl: datalayerUrl,
-        supportUrl: datalayerUrl,
+        jupyterMcpServerUrl: 'https://mcp.datalayer.run/mcp',
+        otelUrl: iamUrl,
+        growthUrl: iamUrl,
+        successUrl: iamUrl,
+        supportUrl: iamUrl,
       };
       if (typeof coreApi.setConfiguration === 'function') {
         coreApi.setConfiguration({ ...prevCfg, ...urls });
@@ -579,7 +1142,7 @@ export function AgentNode() {
       }
 
       const api = iamStore.getState() as any;
-      iamStore.setState({ token: tokenForCore, iamUrl: datalayerUrl } as any);
+      iamStore.setState({ token: tokenForCore, iamUrl } as any);
       if (tokenForCore && typeof api.refreshUserByToken === 'function') {
         void Promise.resolve(api.refreshUserByToken(tokenForCore)).then(() => {
           queryClient.invalidateQueries({ queryKey: ['organizations'] });
@@ -596,10 +1159,138 @@ export function AgentNode() {
   }, [token, step]);
 
   useEffect(() => {
+    if (!token || !String(configuration.active_agent_id || '').trim()) {
+      setIsActiveAgentRunning(false);
+    }
+  }, [token, configuration.active_agent_id]);
+
+  useEffect(() => {
+    if (!token || !configurationLoaded) {
+      return;
+    }
+    const activeAgentId = (configuration.active_agent_id || '').trim();
+    if (!activeAgentId) {
+      return;
+    }
+    const restoreKey = `${activeAgentId}`;
+    if (chatRestoreAttemptRef.current === restoreKey) {
+      return;
+    }
+    chatRestoreAttemptRef.current = restoreKey;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agents`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        if (!response.ok) {
+          return;
+        }
+        const payload = await response.json().catch(() => null);
+        if (cancelled) {
+          return;
+        }
+        const agents: Array<Record<string, any>> = Array.isArray(payload)
+          ? payload
+          : payload?.agents || payload?.items || [];
+        const running = agents.some(agent => {
+          const id = String(agent?.agent_id || agent?.id || '').trim();
+          return id === activeAgentId;
+        });
+        setIsActiveAgentRunning(running);
+        if (running) {
+          setSelectedAgentId(activeAgentId);
+          setConfiguration(prev =>
+            prev.mode === 'private' ? prev : { ...prev, mode: 'private' },
+          );
+          setStep('chat');
+        } else if (selectedAgentId === activeAgentId) {
+          setSelectedAgentId('default');
+        }
+      } catch {
+        setIsActiveAgentRunning(false);
+        // Best-effort restore only.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    token,
+    configurationLoaded,
+    configuration.active_agent_id,
+    selectedAgentId,
+  ]);
+
+  // Keep "is the active agent running" true to life.
+  //
+  // The restore effect above decides that once, when the page loads, so that
+  // it can send the reader to the chat once and not on every tick. But the
+  // answer changes: an agent launched later from the gallery, by another tab,
+  // or through the API (the SaaS, say) used to leave the header's Chat
+  // disabled for as long as the page stayed open, while the gallery — which
+  // refetches — plainly showed the agent as active.
+  useEffect(() => {
+    if (!token || !configurationLoaded) {
+      return;
+    }
+    const activeAgentId = (configuration.active_agent_id || '').trim();
+    if (!activeAgentId) {
+      setIsActiveAgentRunning(false);
+      return;
+    }
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const response = await fetch(
+          `${AGENT_RUNTIMES_BASE_URL}/api/v1/agents`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const payload = await response.json().catch(() => null);
+        if (cancelled) {
+          return;
+        }
+        const agents: Array<Record<string, any>> = Array.isArray(payload)
+          ? payload
+          : payload?.agents || payload?.items || [];
+        const active = agents.find(agent => {
+          const id = String(agent?.agent_id || agent?.id || '').trim();
+          return id === activeAgentId;
+        });
+        setIsActiveAgentRunning(Boolean(active));
+        if (active) {
+          setActiveAgentProtocol(
+            normalizeChatProtocol(active.protocol ?? active.transport),
+          );
+        }
+      } catch {
+        // Leave the last known answer; the next tick asks again.
+      }
+    };
+    void check();
+    const timer = window.setInterval(() => void check(), 10_000);
+    const onFocus = () => void check();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [token, configurationLoaded, configuration.active_agent_id]);
+
+  useEffect(() => {
     // If a persisted session is already authenticated on first load,
-    // skip the auth screen and land on the main configuration view.
+    // skip the auth screen and land on the agents gallery.
     if (token && step === 'auth') {
-      setStep('config');
+      setStep('gallery');
     }
   }, [token, step]);
 
@@ -609,20 +1300,31 @@ export function AgentNode() {
     }
   }, [step, configuration.mode]);
 
+  useEffect(() => {
+    if (step === 'chat' && !hasActiveAgent) {
+      setStep('gallery');
+    }
+  }, [step, hasActiveAgent]);
+
+  useEffect(() => {
+    if (step === 'chat' && isSaasOnlyChat) {
+      setStep('gallery');
+    }
+  }, [step, isSaasOnlyChat]);
+
   const handleSignIn = (newToken: string, handle: string) => {
+    setAutoBootstrapDisabled(false);
     setDisableAutoBootstrap(false);
     setAuth(newToken, handle);
-    setStep('config');
+    setStep('gallery');
   };
 
   // API keys are exchanged for a session token before login so billing and
   // plans endpoints (/api/iam/v1/plans/*) resolve the correct paid plan.
   const handleApiKeySignIn = async (apiKey: string) => {
-    const datalayerUrl =
-      (import.meta as any).env?.VITE_DATALAYER_URL ||
-      'https://prod1.datalayer.run';
+    const iamUrl = resolveIamUrl();
     try {
-      const resp = await fetch(`${datalayerUrl}/api/iam/v1/login`, {
+      const resp = await fetch(`${iamUrl}/api/iam/v1/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: apiKey }),
@@ -641,6 +1343,9 @@ export function AgentNode() {
   };
 
   const handleSignOut = () => {
+    // Persist the signed-out intent so a refresh does not re-bootstrap the
+    // session from the env-supplied DATALAYER_API_KEY.
+    setAutoBootstrapDisabled(true);
     setDisableAutoBootstrap(true);
     // Clear backend fallback credentials while still authenticated.
     void pushCredentials(token, null).catch(() => {
@@ -690,9 +1395,12 @@ export function AgentNode() {
         ...(payload?.configuration || {}),
       };
       setConfiguration(saved);
+      if (saved.active_agent_id) {
+        setSelectedAgentId(saved.active_agent_id);
+      }
       showBanner('success', 'Agent Node configuration saved.');
       if (saved.mode === 'private') {
-        setStep('chat');
+        setStep('gallery');
       }
     } catch (reason: any) {
       const message = reason?.message || 'Unable to save configuration.';
@@ -706,7 +1414,12 @@ export function AgentNode() {
   const isStepEnabled = (nextStep: Step) => {
     if (nextStep === 'auth') return true;
     if (!token) return false;
-    if (nextStep === 'chat') return configuration.mode === 'private';
+    if (nextStep === 'gallery') return true;
+    if (nextStep === 'chat') {
+      return (
+        configuration.mode === 'private' && hasActiveAgent && !isSaasOnlyChat
+      );
+    }
     return true;
   };
 
@@ -717,7 +1430,7 @@ export function AgentNode() {
   }: {
     entryStep: Step;
     label: string;
-    leadingVisual?: OcticonIcon;
+    leadingVisual?: ComponentType<any>;
   }) => {
     const enabled = isStepEnabled(entryStep);
     const active = step === entryStep;
@@ -766,66 +1479,62 @@ export function AgentNode() {
         >
           <PageLayout.Header>
             <PageHeader>
+              <PageHeader.TitleArea>
+                <PageHeader.Title>
+                  <Box
+                    as="a"
+                    href="https://datalayer.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Datalayer website"
+                    sx={{ display: 'inline-flex', alignItems: 'center' }}
+                  >
+                    <DatalayerLogoText
+                      size={24}
+                      inverse
+                      variant={themeVariant}
+                      colorMode={colorMode}
+                      primaryColor={logoColors.primary}
+                      secondaryColor={logoColors.secondary}
+                      textColor={logoColors.textColor}
+                      primaryGradient={logoColors.primaryGradient}
+                      secondaryGradient={logoColors.secondaryGradient}
+                      gradient={true}
+                    />
+                  </Box>
+                </PageHeader.Title>
+              </PageHeader.TitleArea>
               <PageHeader.Actions>
                 <Box
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 3,
+                    gap: 2,
                     fontSize: 2,
                     lineHeight: '22px',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    {token && (
-                      <>
-                        <StepEntry
-                          entryStep="chat"
-                          label="Chat"
-                          leadingVisual={CommentIcon}
-                        />
-                        <StepEntry
-                          entryStep="config"
-                          label="Configuration"
-                          leadingVisual={GearIcon}
-                        />
-                      </>
-                    )}
-                  </Box>
-                  <AppearanceControlsWithStore
-                    useStore={useAgentNodeThemeStore}
-                  />
-                  {!token ? (
-                    <Button
-                      size="small"
-                      variant="invisible"
-                      onClick={() => setStep('auth')}
-                      leadingVisual={SignInIcon}
-                      sx={{ color: 'fg.muted' }}
-                    >
-                      Sign in
-                    </Button>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          textAlign: 'left',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <UserBadge
-                          token={token}
-                          variant="small"
-                          onTokenExpired={handleSignOut}
-                        />
-                      </Box>
+                  {token && (
+                    <>
+                      <StepEntry
+                        entryStep="chat"
+                        label="Chat"
+                        leadingVisual={CommentIcon}
+                      />
+                      <StepEntry
+                        entryStep="gallery"
+                        label="Agents"
+                        leadingVisual={AiAgentIcon}
+                      />
+                      <StepEntry
+                        entryStep="config"
+                        label="Configuration"
+                        leadingVisual={GearIcon}
+                      />
+                    </>
+                  )}
+                  {!token ? null : (
+                    <>
                       <StepEntry
                         entryStep="profile"
                         label="Profile"
@@ -840,28 +1549,15 @@ export function AgentNode() {
                       >
                         Sign out
                       </Button>
-                    </Box>
+                    </>
                   )}
-                  <Box
-                    as="a"
-                    href="https://datalayer.ai"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Open Datalayer website"
-                    sx={{ display: 'inline-flex', alignItems: 'center' }}
-                  >
-                    <DatalayerLogoText
-                      size={24}
-                      variant={themeVariant}
-                      colorMode={colorMode}
-                      primaryColor={logoColors.primary}
-                      secondaryColor={logoColors.secondary}
-                      textColor={logoColors.textColor}
-                      primaryGradient={logoColors.primaryGradient}
-                      secondaryGradient={logoColors.secondaryGradient}
-                      gradient={true}
-                    />
-                  </Box>
+                  <AppearanceMenu
+                    colorMode={colorMode}
+                    themeVariant={themeVariant}
+                    onColorModeChange={setColorMode}
+                    onThemeChange={nextTheme => setTheme(nextTheme, false)}
+                    shape="circle"
+                  />
                 </Box>
               </PageHeader.Actions>
             </PageHeader>
@@ -921,20 +1617,22 @@ export function AgentNode() {
                 </Text>
               </Box>
             </Box>
-            <Box sx={{ mb: 3 }}>
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}
-              >
-                <Box sx={{ color: 'fg.muted', display: 'inline-flex' }}>
-                  <KeyAsteriskIcon size={18} />
+            {!token && (
+              <Box sx={{ mb: 3 }}>
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}
+                >
+                  <Box sx={{ color: 'fg.muted', display: 'inline-flex' }}>
+                    <KeyAsteriskIcon size={18} />
+                  </Box>
+                  <Heading sx={{ fontSize: 3, m: 0 }}>Agent Node</Heading>
                 </Box>
-                <Heading sx={{ fontSize: 3, m: 0 }}>Agent Node</Heading>
+                <Text sx={{ color: 'fg.muted' }}>
+                  Authenticate, configure Private/Shared/Sleep mode, then chat
+                  from this node.
+                </Text>
               </Box>
-              <Text sx={{ color: 'fg.muted' }}>
-                Authenticate, configure Private/Shared/Sleep mode, then chat
-                from this node.
-              </Text>
-            </Box>
+            )}
 
             {step === 'auth' && (
               <Box
@@ -963,8 +1661,12 @@ export function AgentNode() {
                     '& > div > div': {
                       width: '100%',
                       bg: 'canvas.default',
+                      border: '1px solid',
                       borderColor: `${cfg.brandColor}66`,
                       boxShadow: `0 0 0 1px ${cfg.brandColor}2B`,
+                      borderRadius: 2,
+                      px: [3, 4],
+                      py: [3, 4],
                     },
                     '& h2, & h3': {
                       color: cfg.brandColor,
@@ -972,6 +1674,7 @@ export function AgentNode() {
                   }}
                 >
                   <SignInSimple
+                    loginUrl={signInLoginUrl}
                     onSignIn={handleSignIn}
                     onApiKeySignIn={handleApiKeySignIn}
                     title="Agent Node"
@@ -1015,8 +1718,15 @@ export function AgentNode() {
                       gap: 3,
                     }}
                   >
-                    <FormControl>
-                      <FormControl.Label>Mode</FormControl.Label>
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        borderRadius: 2,
+                        p: 3,
+                      }}
+                    >
+                      <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>Mode</Heading>
                       <Box
                         sx={{
                           display: 'grid',
@@ -1085,10 +1795,19 @@ export function AgentNode() {
                           );
                         })}
                       </Box>
-                    </FormControl>
+                    </Box>
 
-                    <FormControl>
-                      <FormControl.Label>Inference</FormControl.Label>
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        borderRadius: 2,
+                        p: 3,
+                      }}
+                    >
+                      <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
+                        Inference
+                      </Heading>
                       <Text sx={{ color: 'fg.muted', fontSize: 1, mb: 2 }}>
                         Used inference provider for newly launched agent
                         sessions.
@@ -1166,24 +1885,48 @@ export function AgentNode() {
                           )}
                         </Box>
                       )}
-                    </FormControl>
+                    </Box>
 
                     {iamUser ? (
-                      <BillingEntitySelect
-                        value={configuration.billing_entity_uid || ''}
-                        onChange={handleBillingEntityChange}
-                        onSelectedAccountChange={handleSelectedAccountChange}
-                        onAccountsResolved={handleAccountsResolved}
-                      />
+                      <Box
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'border.default',
+                          borderRadius: 2,
+                          p: 3,
+                        }}
+                      >
+                        <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
+                          Billing Entity
+                        </Heading>
+                        <BillingEntitySelect
+                          value={configuration.billing_entity_uid || ''}
+                          onChange={handleBillingEntityChange}
+                          onSelectedAccountChange={handleSelectedAccountChange}
+                          onAccountsResolved={handleAccountsResolved}
+                        />
+                      </Box>
                     ) : (
-                      <FormControl>
-                        <FormControl.Label>
-                          Run this agent under
-                        </FormControl.Label>
-                        <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                          Loading billing entitys...
-                        </Text>
-                      </FormControl>
+                      <Box
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'border.default',
+                          borderRadius: 2,
+                          p: 3,
+                        }}
+                      >
+                        <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
+                          Billing Entity
+                        </Heading>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        >
+                          <Spinner size="small" />
+                          <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
+                            Loading billing entities...
+                          </Text>
+                        </Box>
+                      </Box>
                     )}
                   </Box>
 
@@ -1194,15 +1937,24 @@ export function AgentNode() {
                       gap: 2,
                     }}
                   >
-                    <Heading sx={{ fontSize: 2, m: 0 }}>Share</Heading>
-                    <ShareAccessComponent
-                      isOpen
-                      displayMode="inline"
-                      requestUrl={`${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/sharing`}
-                      resourceLabel="Agent Node"
-                      resourceName="this Agent Node"
-                      onClose={handleSharingInlineClose}
-                    />
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'border.default',
+                        borderRadius: 2,
+                        p: 3,
+                      }}
+                    >
+                      <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>Share</Heading>
+                      <ShareAccessComponent
+                        isOpen
+                        displayMode="inline"
+                        requestUrl={`${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/sharing`}
+                        resourceLabel="Agent Node"
+                        resourceName="this Agent Node"
+                        onClose={handleSharingInlineClose}
+                      />
+                    </Box>
                   </Box>
                 </Box>
 
@@ -1220,7 +1972,68 @@ export function AgentNode() {
               </Box>
             )}
 
-            {step === 'profile' && <AgentNodeProfileView token={token} />}
+            {step === 'profile' && (
+              <AgentNodeProfileView
+                token={token}
+                onTokenExpired={handleSignOut}
+                avatarFallbackBackground={avatarPalette.bgAlt}
+                avatarFallbackForeground={avatarPalette.primary}
+              />
+            )}
+
+            {step === 'gallery' && (
+              <AgentNodeGallery
+                baseUrl={AGENT_RUNTIMES_BASE_URL}
+                token={token}
+                activeAgentId={configuration.active_agent_id}
+                onLaunchError={message => {
+                  showBanner('error', message);
+                }}
+                onLaunched={(agentId, protocol) => {
+                  setSelectedAgentId(agentId);
+                  setIsActiveAgentRunning(true);
+                  setActiveAgentProtocol(normalizeChatProtocol(protocol));
+                  const nextConfiguration = {
+                    ...configuration,
+                    active_agent_id: agentId,
+                    mode: 'private' as const,
+                  };
+                  setConfiguration(nextConfiguration);
+                  // Persist mode=private so Chat stays enabled and the node
+                  // advertises the active agent state to the sync loop.
+                  void fetch(
+                    `${AGENT_RUNTIMES_BASE_URL}/api/v1/agent-node/configuration`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(nextConfiguration),
+                    },
+                  ).catch(() => {
+                    // Best-effort persistence; local state already switched.
+                  });
+                  if (isSaasOnlyChat) {
+                    showBanner(
+                      'info',
+                      'This node is configured for SaaS chat. Open Agent Nodes in Datalayer to chat with it.',
+                    );
+                    setStep('gallery');
+                  } else {
+                    setStep('chat');
+                  }
+                }}
+                onTerminated={() => {
+                  setSelectedAgentId('default');
+                  setIsActiveAgentRunning(false);
+                  setConfiguration(prev => ({
+                    ...prev,
+                    active_agent_id: undefined,
+                  }));
+                  setStep('gallery');
+                }}
+              />
+            )}
 
             {step === 'chat' && (
               <Box
@@ -1231,24 +2044,55 @@ export function AgentNode() {
                   overflow: 'hidden',
                 }}
               >
-                <Chat
-                  protocol="ag-ui"
-                  baseUrl={AGENT_RUNTIMES_BASE_URL}
-                  agentId="default"
-                  title="Agent Node Chat"
-                  placeholder="Send a message..."
-                  description="Node-local chat"
-                  showHeader={true}
-                  height={'70vh'}
-                  showModelSelector={true}
-                  showToolsMenu={true}
-                  showSkillsMenu={true}
-                  showTokenUsage={true}
-                  showInformation={true}
-                  autoFocus
-                  runtimeId="default"
-                  historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
-                />
+                {isSaasOnlyChat ? (
+                  <Box sx={{ p: 4 }}>
+                    <Heading sx={{ fontSize: 2, mb: 2 }}>
+                      Chat From SaaS
+                    </Heading>
+                    <Text sx={{ color: 'fg.muted' }}>
+                      This Agent Node deployment is configured for SaaS-only
+                      chat. Use the Datalayer Agent Nodes view to open chat
+                      sessions over the runtimes tunnel.
+                    </Text>
+                  </Box>
+                ) : (
+                  <Chat
+                    protocol={activeAgentProtocol}
+                    baseUrl={AGENT_RUNTIMES_BASE_URL}
+                    agentId={selectedAgentId}
+                    title={chatTitle}
+                    placeholder="Send a message..."
+                    description={chatDescription}
+                    suggestions={chatSuggestions}
+                    submitOnSuggestionClick
+                    showHeader={true}
+                    height={'70vh'}
+                    showModelSelector={true}
+                    showToolsMenu={true}
+                    showSkillsMenu={true}
+                    showTokenUsage={true}
+                    showInformation={true}
+                    autoFocus
+                    enableEphemeralNotebook
+                    enableEphemeralDocument
+                    initialEphemeralSurfaceMode="notebook"
+                    runtimeId={selectedAgentId}
+                    ephemeralRuntimeOverride={sandboxRuntimeOverride}
+                    kernelEnvironmentName={sandboxEnvironmentName}
+                    themeVariant={themeVariant}
+                    colorMode={colorMode}
+                    ephemeralNotebookCollaborationProvider={
+                      ephemeralNotebookCollaborationProvider
+                    }
+                    ephemeralNotebookCollaborationDocumentId={
+                      ephemeralCollaborationDocumentId
+                    }
+                    ephemeralDocumentCollaboration={
+                      ephemeralDocumentCollaboration
+                    }
+                    historyEndpoint={`${AGENT_RUNTIMES_BASE_URL}/api/v1/history`}
+                  />
+                )}
               </Box>
             )}
           </PageLayout.Content>

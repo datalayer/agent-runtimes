@@ -78,7 +78,7 @@ export const JOVYAN_PERSONA_0_0_1: PersonaSpec = {
   name: 'Jovyan',
   description:
     'A Jupyter-native companion that lives in notebooks and lexical documents, runs cells, inspects kernels and helps you explore data, narratives and computations.',
-  tags: ['jupyter', 'notebook', 'data-science', 'kernels'],
+  tags: ['jupyter-server', 'notebook', 'data-science', 'kernels'],
   icon: 'zap',
   emoji: '🪐',
 };

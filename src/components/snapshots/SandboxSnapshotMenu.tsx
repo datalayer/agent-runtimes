@@ -3,6 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import type { JSX } from 'react';
 import {
   useCallback,
   useEffect,
@@ -52,7 +53,7 @@ type ICodeSandboxSnapshotMenu = {
    *
    * It is needed for remote kernels.
    */
-  podName?: string;
+  runtimeName?: string;
   /**
    * Whether the menu is disabled.
    */
@@ -65,7 +66,7 @@ type ICodeSandboxSnapshotMenu = {
 export function SandboxSnapshotMenu({
   children,
   connection,
-  podName,
+  runtimeName,
   multiServiceManager,
   disabled = false,
 }: PropsWithChildren<ICodeSandboxSnapshotMenu>): JSX.Element {
@@ -104,15 +105,15 @@ export function SandboxSnapshotMenu({
     async ({
       id,
       connection,
-      podName,
+      runtimeName,
     }: {
       id: string;
       connection?: Kernel.IKernelConnection;
-      podName?: string;
+      runtimeName?: string;
     }) => {
-      if (podName) {
-        await loadSandboxSnapshot({ id: podName, from: id });
-        enqueueToast(`Code Sandbox snapshot ${podName} is loaded.`, {
+      if (runtimeName) {
+        await loadSandboxSnapshot({ id: runtimeName, from: id });
+        enqueueToast(`Code Sandbox snapshot ${runtimeName} is loaded.`, {
           variant: 'success',
         });
       } else if (connection) {
@@ -131,15 +132,15 @@ export function SandboxSnapshotMenu({
       let task: Promise<any> | undefined;
       let ref = '';
       let snapshotName = '';
-      if (podName && multiServiceManager?.remote) {
+      if (runtimeName && multiServiceManager?.remote) {
         snapshotName = createSandboxSnapshotName('cloud');
         task = multiServiceManager.remote.runtimesManager.snapshotRuntime({
-          podName,
+          runtimeName,
           name: snapshotName,
           description: snapshotName,
           stop: false,
         });
-        ref = podName.split('-', 2).reverse()[0];
+        ref = runtimeName.split('-', 2).reverse()[0];
         task.then(s => {
           snapshot = s;
         });
@@ -189,7 +190,7 @@ export function SandboxSnapshotMenu({
     } finally {
       setTakingSandboxSnapshot(false);
     }
-  }, [connection, podName, multiServiceManager]);
+  }, [connection, runtimeName, multiServiceManager]);
   return (
     <>
       <ActionMenu>
@@ -256,11 +257,11 @@ export function SandboxSnapshotMenu({
                     const snapshot = runtimeSnapshots.find(
                       s => s.id === selection,
                     );
-                    if (snapshot && (connection || podName)) {
+                    if (snapshot && (connection || runtimeName)) {
                       await onLoadSandboxSnapshotSubmit({
                         connection,
                         id: snapshot.id,
-                        podName,
+                        runtimeName,
                       });
                     } else {
                       setError('No code sandbox snapshot found.');

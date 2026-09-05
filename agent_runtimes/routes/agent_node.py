@@ -36,6 +36,26 @@ class AgentNodeConfiguration(BaseModel):
     billing_entity_type: str | None = None
     billing_entity_handle: str | None = None
     sharing: dict[str, Any] = Field(default_factory=dict)
+    # Id of the agent chosen from the gallery and launched on this node. The
+    # tunnel routes incoming chat requests to this agent by default so remote
+    # prompts (from the main UI) reach the agent the user selected.
+    active_agent_id: str | None = None
+    # Spacer document (notebook) uid used as the shared RTC collaboration room
+    # for the ephemeral notebook. Provisioned once, after the node registers and
+    # the user has signed in, so the node-local UI and the SaaS gallery view
+    # join the same room. Owned/persisted by the node like ``node_uid``.
+    collaboration_notebook_uid: str | None = None
+    # Spacer *lexical* document uid used as the shared RTC collaboration room for
+    # the ephemeral document (Lexical/Loro). Distinct from the notebook room
+    # above and provisioned alongside it, so the node-local UI and the SaaS
+    # gallery view join the same Loro room for rich-text editing.
+    collaboration_document_uid: str | None = None
+    # Deployment/runtime metadata propagated to the central runtimes registry.
+    deployment_target: Literal["localhost", "aws", "other"] | None = None
+    chat_access_mode: Literal["local_and_saas", "saas_only"] | None = None
+    aws_account_id: str | None = None
+    aws_region: str | None = None
+    aws_identity_arn: str | None = None
 
 
 def _state_path() -> Path:
@@ -48,6 +68,7 @@ def _state_path() -> Path:
 _LOCK = threading.Lock()
 _MODE_CHANGE_CALLBACKS: list[Any] = []
 _CREDENTIALS_CHANGE_CALLBACKS: list[Any] = []
+_CONFIGURATION_CHANGE_CALLBACKS: list[Any] = []
 
 
 # In-process credentials supplied by the Agent Node UI after the user signs in.
@@ -74,6 +95,11 @@ def register_credentials_change_callback(callback: Any) -> None:
     _CREDENTIALS_CHANGE_CALLBACKS.append(callback)
 
 
+def register_configuration_change_callback(callback: Any) -> None:
+    """Register a callable invoked whenever persisted configuration changes."""
+    _CONFIGURATION_CHANGE_CALLBACKS.append(callback)
+
+
 def _notify_mode_change(new_mode: str) -> None:
     for callback in list(_MODE_CHANGE_CALLBACKS):
         try:
@@ -88,6 +114,14 @@ def _notify_credentials_change() -> None:
             callback()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Credentials change callback failed: %s", exc)
+
+
+def _notify_configuration_change() -> None:
+    for callback in list(_CONFIGURATION_CHANGE_CALLBACKS):
+        try:
+            callback()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Configuration change callback failed: %s", exc)
 
 
 def get_runtime_credentials() -> dict[str, str | None]:
@@ -146,8 +180,22 @@ def _initial_configuration() -> AgentNodeConfiguration:
     persisted = _read_from_disk()
     if persisted is not None:
         return persisted
+    deployment_target = (
+        (os.environ.get("AGENT_NODE_DEPLOYMENT_TARGET") or "localhost").strip().lower()
+    )
+    if deployment_target not in ("localhost", "aws", "other"):
+        deployment_target = "localhost"
+    chat_access_mode = (
+        (os.environ.get("AGENT_NODE_CHAT_ACCESS_MODE") or "").strip().lower()
+    )
+    if chat_access_mode not in ("local_and_saas", "saas_only"):
+        chat_access_mode = (
+            "saas_only" if deployment_target == "aws" else "local_and_saas"
+        )
     return AgentNodeConfiguration(
-        mode=(os.environ.get("AGENT_NODE_MODE") or "sleep").strip().lower() or "sleep"
+        mode=(os.environ.get("AGENT_NODE_MODE") or "sleep").strip().lower() or "sleep",
+        deployment_target=deployment_target,
+        chat_access_mode=chat_access_mode,
     )
 
 
@@ -168,15 +216,32 @@ def set_agent_node_configuration(
     """
     global _CURRENT_CONFIGURATION
     with _LOCK:
+        previous = _CURRENT_CONFIGURATION
         merged = configuration.model_copy(
-            update={"node_uid": _CURRENT_CONFIGURATION.node_uid}
+            update={
+                "node_uid": _CURRENT_CONFIGURATION.node_uid,
+                "collaboration_notebook_uid": (
+                    _CURRENT_CONFIGURATION.collaboration_notebook_uid
+                ),
+                "collaboration_document_uid": (
+                    _CURRENT_CONFIGURATION.collaboration_document_uid
+                ),
+                "deployment_target": _CURRENT_CONFIGURATION.deployment_target,
+                "chat_access_mode": _CURRENT_CONFIGURATION.chat_access_mode,
+                "aws_account_id": _CURRENT_CONFIGURATION.aws_account_id,
+                "aws_region": _CURRENT_CONFIGURATION.aws_region,
+                "aws_identity_arn": _CURRENT_CONFIGURATION.aws_identity_arn,
+            }
         )
         previous_mode = _CURRENT_CONFIGURATION.mode
         _CURRENT_CONFIGURATION = merged
         _write_to_disk(merged)
+        configuration_changed = merged != previous
         mode_changed = merged.mode != previous_mode
     if mode_changed:
         _notify_mode_change(merged.mode)
+    if configuration_changed:
+        _notify_configuration_change()
     return _CURRENT_CONFIGURATION
 
 
@@ -196,6 +261,102 @@ def set_agent_node_uid(node_uid: str) -> AgentNodeConfiguration:
     return _CURRENT_CONFIGURATION
 
 
+def set_agent_node_aws_identity(
+    *,
+    aws_account_id: str | None,
+    aws_region: str | None,
+    aws_identity_arn: str | None,
+) -> AgentNodeConfiguration:
+    """Persist detected AWS identity metadata when it changes."""
+    global _CURRENT_CONFIGURATION
+    cleaned_account = (aws_account_id or "").strip() or None
+    if cleaned_account and (
+        not cleaned_account.isdigit() or len(cleaned_account) != 12
+    ):
+        cleaned_account = None
+    cleaned_region = (aws_region or "").strip() or None
+    cleaned_arn = (aws_identity_arn or "").strip() or None
+    with _LOCK:
+        if (
+            _CURRENT_CONFIGURATION.aws_account_id == cleaned_account
+            and _CURRENT_CONFIGURATION.aws_region == cleaned_region
+            and _CURRENT_CONFIGURATION.aws_identity_arn == cleaned_arn
+        ):
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={
+                "aws_account_id": cleaned_account,
+                "aws_region": cleaned_region,
+                "aws_identity_arn": cleaned_arn,
+            }
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    _notify_configuration_change()
+    return _CURRENT_CONFIGURATION
+
+
+def set_collaboration_notebook_uid(notebook_uid: str) -> AgentNodeConfiguration:
+    """Persist the spacer notebook uid used as the RTC collaboration room.
+
+    Provisioned once after the node registers and credentials are available.
+    A no-op when the uid is unchanged so repeated sync ticks do not rewrite
+    the on-disk state.
+    """
+    global _CURRENT_CONFIGURATION
+    cleaned = (notebook_uid or "").strip()
+    if not cleaned:
+        return _CURRENT_CONFIGURATION
+    with _LOCK:
+        if _CURRENT_CONFIGURATION.collaboration_notebook_uid == cleaned:
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={"collaboration_notebook_uid": cleaned}
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    return _CURRENT_CONFIGURATION
+
+
+def set_collaboration_document_uid(document_uid: str) -> AgentNodeConfiguration:
+    """Persist the spacer lexical uid used as the RTC document collaboration room.
+
+    Provisioned once, alongside the notebook room, after the node registers and
+    credentials are available. A no-op when the uid is unchanged so repeated
+    sync ticks do not rewrite the on-disk state.
+    """
+    global _CURRENT_CONFIGURATION
+    cleaned = (document_uid or "").strip()
+    if not cleaned:
+        return _CURRENT_CONFIGURATION
+    with _LOCK:
+        if _CURRENT_CONFIGURATION.collaboration_document_uid == cleaned:
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={"collaboration_document_uid": cleaned}
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    return _CURRENT_CONFIGURATION
+
+
+def set_active_agent_id(agent_id: str | None) -> AgentNodeConfiguration:
+    """Persist the id of the agent chosen from the gallery on this node.
+
+    The tunnel routes remote chat requests to this agent by default, so
+    updating it re-points prompts coming from the main UI to the newly
+    launched agent without rewriting the rest of the configuration.
+    """
+    global _CURRENT_CONFIGURATION
+    cleaned = (agent_id or "").strip() or None
+    with _LOCK:
+        if _CURRENT_CONFIGURATION.active_agent_id == cleaned:
+            return _CURRENT_CONFIGURATION
+        _CURRENT_CONFIGURATION = _CURRENT_CONFIGURATION.model_copy(
+            update={"active_agent_id": cleaned}
+        )
+        _write_to_disk(_CURRENT_CONFIGURATION)
+    _notify_configuration_change()
+    return _CURRENT_CONFIGURATION
+
+
 @router.get("/configuration")
 def get_configuration_endpoint() -> dict[str, Any]:
     return {
@@ -212,6 +373,29 @@ def set_configuration_endpoint(body: AgentNodeConfiguration) -> dict[str, Any]:
         "success": True,
         "message": "Agent node configuration updated",
         "configuration": updated.model_dump(),
+    }
+
+
+class AgentNodeActiveAgentBody(BaseModel):
+    agent_id: str | None = None
+
+
+@router.get("/active-agent")
+def get_active_agent_endpoint() -> dict[str, Any]:
+    return {
+        "success": True,
+        "message": "Active agent loaded",
+        "active_agent_id": get_agent_node_configuration().active_agent_id,
+    }
+
+
+@router.post("/active-agent")
+def set_active_agent_endpoint(body: AgentNodeActiveAgentBody) -> dict[str, Any]:
+    updated = set_active_agent_id(body.agent_id)
+    return {
+        "success": True,
+        "message": "Active agent updated",
+        "active_agent_id": updated.active_agent_id,
     }
 
 
@@ -298,20 +482,20 @@ def set_sharing_endpoint(body: dict[str, Any]) -> dict[str, Any]:
 _BOOTSTRAP_CACHE: dict[str, Any] = {"key": None, "result": None}
 
 
-def _bootstrap_datalayer_url() -> str:
-    return (os.environ.get("DATALAYER_URL") or "https://prod1.datalayer.run").rstrip(
-        "/"
-    )
+def _bootstrap_iam_url() -> str:
+    return (
+        os.environ.get("DATALAYER_IAM_URL") or "https://prod1.datalayer.run"
+    ).rstrip("/")
 
 
-async def _exchange_api_key(api_key: str, datalayer_url: str) -> dict[str, Any] | None:
+async def _exchange_api_key(api_key: str, iam_url: str) -> dict[str, Any] | None:
     """Exchange a personal API key for a session token via central IAM."""
     import httpx  # local import to keep module import cheap
 
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(
-                f"{datalayer_url}/api/iam/v1/login",
+                f"{iam_url}/api/iam/v1/login",
                 json={"token": api_key},
                 headers={"Content-Type": "application/json"},
             )
@@ -328,7 +512,7 @@ async def _exchange_api_key(api_key: str, datalayer_url: str) -> dict[str, Any] 
     return {
         "token": str(data["token"]),
         "handle": str(handle),
-        "datalayer_url": datalayer_url,
+        "iam_url": iam_url,
     }
 
 
@@ -344,12 +528,12 @@ async def auth_bootstrap_endpoint() -> dict[str, Any]:
     api_key = (os.environ.get("DATALAYER_API_KEY") or "").strip()
     if not api_key:
         return {"success": True, "has_key": False}
-    datalayer_url = _bootstrap_datalayer_url()
-    cache_key = f"{api_key}@{datalayer_url}"
+    iam_url = _bootstrap_iam_url()
+    cache_key = f"{api_key}@{iam_url}"
     cached = _BOOTSTRAP_CACHE.get("result")
     if cached and _BOOTSTRAP_CACHE.get("key") == cache_key:
         return {"success": True, "has_key": True, **cached}
-    result = await _exchange_api_key(api_key, datalayer_url)
+    result = await _exchange_api_key(api_key, iam_url)
     if not result:
         return {"success": True, "has_key": False}
     _BOOTSTRAP_CACHE["key"] = cache_key

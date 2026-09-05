@@ -1,4 +1,5 @@
 ---
+sidebar_position: 12
 title: Integrations
 ---
 
@@ -30,8 +31,8 @@ mcp_toolsets = get_mcp_toolsets()
 # Create an agent with MCP tools
 agent = Agent(
     "anthropic:claude-sonnet-4-20250514",
-    system_prompt="You are a helpful assistant with access to web search.",
-    mcp_servers=mcp_toolsets,
+    instructions="You are a helpful assistant with access to web search.",
+    toolsets=mcp_toolsets,
 )
 ```
 
@@ -71,7 +72,7 @@ from pydantic_ai import Agent
 
 agent = Agent(
         model='anthropic:claude-sonnet-4-5',
-        system_prompt='You are a helpful assistant.',
+    instructions='You are a helpful assistant.',
 )
 
 app = AgentRuntimesApp()
@@ -128,8 +129,8 @@ tool_hooks:
                 print("error", payload.get("tool"), payload.get("error_type"))
 ```
 
-For plugin-based authorization and audit workflows, including Agent_Sudo,
-see [Plugins](/plugins).
+For the plugin mechanisms these hooks belong to, see [Plugins](/plugins)
+and [Hooks](/hooks).
 
 ## Model Providers
 

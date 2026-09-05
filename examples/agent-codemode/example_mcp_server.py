@@ -18,10 +18,10 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from typing_extensions import TypedDict
 
-mcp = FastMCP("example-mcp-server")
+mcp = MCPServer("example-mcp-server")
 
 # Base directory for file operations - defaults to system temp dir if CWD is not writable
 _BASE_DIR: Path | None = None

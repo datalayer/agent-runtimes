@@ -25,6 +25,33 @@ import type { FrontendToolDefinition } from '../../../types/tools';
 const useNotebookStore = () => notebookStore.getState();
 
 /**
+ * The notebook's frontend tools, built without React.
+ *
+ * What `useNotebookTools` memoises, as a plain function — for callers that
+ * are not components: a reactor plugin contributing the tools to the chat's
+ * `LoopFrontendTool` point builds them here. The executor reads the store's
+ * live state through its methods, so nothing here needs reactivity.
+ */
+export function createNotebookTools(
+  documentId: string,
+  contextOverrides?: Partial<
+    Omit<ToolExecutionContext, 'executor' | 'documentId'>
+  >,
+): FrontendToolDefinition[] {
+  const executor = new DefaultExecutor(
+    documentId,
+    notebookStore.getState() as unknown as ConstructorParameters<
+      typeof DefaultExecutor
+    >[1],
+  );
+  return createAllAgentRuntimesTools(
+    notebookToolDefinitions,
+    notebookToolOperations,
+    { documentId, executor, format: 'toon', ...contextOverrides },
+  );
+}
+
+/**
  * Hook that creates agent-runtimes tools for notebook operations.
  * Returns stable tools array that won't cause re-renders.
  *

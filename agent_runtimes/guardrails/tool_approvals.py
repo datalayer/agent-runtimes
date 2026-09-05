@@ -38,6 +38,44 @@ from .common import GuardrailBlockedError
 
 logger = logging.getLogger(__name__)
 
+# Cross-turn in-process grants so an approval for a tool can be reused within
+# the same chat scope even if capability instances are recreated per request.
+_APPROVED_TOOL_GRANTS_BY_SCOPE: dict[str, set[str]] = {}
+
+
+def _agent_scope_key(agent_id: str | None) -> str:
+    """Build the scope key used when no chat/conversation id is available.
+
+    See ``ToolsGuardrailCapability._approval_scope_key``.
+    """
+    return f"agent:{agent_id or 'default-agent'}"
+
+
+def _grant_envelope_key(tool_name: str, tool_args: Any) -> str:
+    """Canonical grant key for a tool call: normalized name + normalized args.
+
+    Args-sensitive on purpose: approving ``echo(text=hello)`` must NOT grant
+    ``echo(text=danger)`` — different arguments are a different action and must
+    be re-approved.
+    """
+    norm_name = tool_name.strip().lower().replace("-", "_")
+    norm_args = _normalize_tool_args_for_match(tool_args or {})
+    args_repr = json_mod.dumps(norm_args, sort_keys=True, separators=(",", ":"))
+    return f"{norm_name}|{args_repr}"
+
+
+def has_tool_grant_for_scope(scope_key: str, tool_name: str, tool_args: Any) -> bool:
+    """Return True if this exact tool+args was already approved in ``scope_key``.
+
+    Shared with the streaming approval wrapper so it can suppress duplicate
+    approval banners / remote (ai-agents) records for already-granted calls.
+    """
+    granted = _APPROVED_TOOL_GRANTS_BY_SCOPE.get(scope_key)
+    if not granted:
+        return False
+    return _grant_envelope_key(tool_name, tool_args) in granted
+
+
 _HOOK_DECISION_ALIASES = {
     "allow": "allow",
     "allowed": "allow",
@@ -272,7 +310,7 @@ class ToolApprovalConfig:
     """Configuration for the tool-approval flow."""
 
     agent_id: str = "default"
-    pod_name: str = ""
+    runtime_name: str = ""
     tools_requiring_approval: list[str] = field(default_factory=list)
     timeout: float = 300.0
     tool_hooks: dict[str, Any] = field(default_factory=dict)
@@ -292,16 +330,13 @@ class ToolApprovalConfig:
     def from_env(cls) -> ToolApprovalConfig:
         import os
 
-        pod_name = (
-            os.environ.get("POD_NAME")
-            or os.environ.get("DATALAYER_RUNTIME_ID")
-            or os.environ.get("HOSTNAME")
-            or ""
-        )
+        # The runtime's uid, set on the pod by the Operator. An approval is
+        # filed under it, which is what the platform knows the runtime by.
+        runtime_name = os.environ.get("DATALAYER_RUNTIME_ID") or ""
 
         return cls(
             agent_id=os.environ.get("AGENT_ID", "default"),
-            pod_name=pod_name,
+            runtime_name=runtime_name,
             actor=os.environ.get("DATALAYER_ACTOR") or os.environ.get("USER") or None,
             audit_log_path=os.environ.get(
                 "DATALAYER_TOOL_APPROVAL_AUDIT_LOG",
@@ -535,7 +570,7 @@ class ToolApprovalManager:
 
         req = ToolApprovalCreateRequest(
             agent_id=self.config.agent_id,
-            pod_name=self.config.pod_name,
+            runtime_name=self.config.runtime_name,
             tool_name=tool_name,
             tool_args=tool_args,
             tool_call_id=tool_call_id,
@@ -646,10 +681,34 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
     _decision_by_tool_call: dict[str, dict[str, Any]] = field(
         default_factory=dict, init=False, repr=False
     )
+    _approved_tools_by_scope: dict[str, set[str]] = field(
+        default_factory=dict, init=False, repr=False
+    )
     _sudo_gateway: Any = field(default=None, init=False, repr=False)
     _sudo_lock: asyncio.Lock = field(
         default_factory=asyncio.Lock, init=False, repr=False
     )
+
+    def _approval_scope_key(self, ctx: RunContext[Any]) -> str:
+        """Derive a stable scope key for chat-local approval reuse."""
+        for attr_name in ("conversation_id", "session_id", "thread_id", "chat_id"):
+            value = getattr(ctx, attr_name, None)
+            if isinstance(value, str) and value.strip():
+                return f"{attr_name}:{value.strip()}"
+        agent_id = self.config.agent_id or "default-agent"
+        return f"agent:{agent_id}"
+
+    def _has_tool_grant(
+        self, *, scope_key: str, tool_name: str, tool_args: Any
+    ) -> bool:
+        return has_tool_grant_for_scope(scope_key, tool_name, tool_args)
+
+    def _remember_tool_grant(
+        self, *, scope_key: str, tool_name: str, tool_args: Any
+    ) -> None:
+        key = _grant_envelope_key(tool_name, tool_args)
+        self._approved_tools_by_scope.setdefault(scope_key, set()).add(key)
+        _APPROVED_TOOL_GRANTS_BY_SCOPE.setdefault(scope_key, set()).add(key)
 
     def __post_init__(self) -> None:
         has_agent_sudo_local = False
@@ -701,7 +760,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             "run_id": run_id,
             "tool_call_id": getattr(call, "tool_call_id", None),
             "agent_id": self.config.agent_id,
-            "pod_name": self.config.pod_name,
+            "runtime_name": self.config.runtime_name,
         }
 
     def _get_steps_for_phase(
@@ -1026,6 +1085,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         approvals: dict[str, bool | ToolDenied] = {}
         now = datetime.now(timezone.utc)
         recent_window_seconds = 120.0
+        approval_scope_key = self._approval_scope_key(ctx)
 
         from agent_runtimes.routes.tool_approvals import (
             _APPROVALS,
@@ -1041,6 +1101,23 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
 
             call_tool_id = getattr(call, "tool_call_id", None)
             call_safe_args = _normalize_tool_args_for_match(getattr(call, "args", {}))
+
+            # Chat-scoped reuse: once this exact tool+args was approved by a
+            # human in this chat, auto-approve later identical calls.
+            if call_tool_id and self._has_tool_grant(
+                scope_key=approval_scope_key,
+                tool_name=call.tool_name,
+                tool_args=call_safe_args,
+            ):
+                logger.info(
+                    "[tool-approval] Reusing chat grant for deferred tool='%s' "
+                    "scope=%s tool_call_id=%s — auto-approving",
+                    call.tool_name,
+                    approval_scope_key,
+                    call_tool_id,
+                )
+                approvals[call_tool_id] = True
+                continue
 
             matched = None
 
@@ -1096,6 +1173,12 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
 
             if matched.status == "approved":
                 approvals[call_tool_id] = True
+                # Remember the grant so future turns in this chat skip the prompt.
+                self._remember_tool_grant(
+                    scope_key=approval_scope_key,
+                    tool_name=call.tool_name,
+                    tool_args=call_safe_args,
+                )
             elif matched.status == "rejected":
                 approvals[call_tool_id] = ToolDenied(
                     matched.note or "Tool call denied by reviewer"
@@ -1135,6 +1218,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         )
 
         safe_args = _normalize_tool_args_for_match(args)
+        approval_scope_key = self._approval_scope_key(ctx)
 
         auth_request = self._build_authorization_request(
             ctx=ctx,
@@ -1163,6 +1247,13 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         )
 
         if hook_decision in {"allow", "delegated-allow"}:
+            # Persist grant for this chat scope so subsequent identical calls in
+            # the same chat do not require another prompt.
+            self._remember_tool_grant(
+                scope_key=approval_scope_key,
+                tool_name=call.tool_name,
+                tool_args=safe_args,
+            )
             self._remember_decision(
                 tool_call_id=getattr(call, "tool_call_id", None),
                 decision=hook_decision,
@@ -1182,6 +1273,26 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 call.tool_name,
                 hook_note or "Denied by tool authorization policy hook",
             )
+
+        if self._has_tool_grant(
+            scope_key=approval_scope_key,
+            tool_name=call.tool_name,
+            tool_args=safe_args,
+        ):
+            logger.info(
+                "[tool-approval] Reusing chat grant for tool='%s' scope=%s "
+                "tool_call_id=%s — skipping re-approval",
+                call.tool_name,
+                approval_scope_key,
+                tool_call_id,
+            )
+            self._remember_decision(
+                tool_call_id=getattr(call, "tool_call_id", None),
+                decision="delegated-allow",
+                note="reused prior human approval in the same chat",
+                request_payload=auth_request,
+            )
+            return args
 
         recent_window_seconds = 120.0
         now = datetime.now(timezone.utc)
@@ -1208,8 +1319,8 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                     approval.updated_at,
                 )
 
-                if approval.status not in ("approved", "pending"):
-                    # Skip rejected/deleted
+                if approval.status not in ("approved", "pending", "executing"):
+                    # Skip rejected/deleted/consumed
                     continue
 
                 if tool_call_id and approval.tool_call_id == tool_call_id:
@@ -1228,7 +1339,9 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                             approval.id,
                         )
                         continue
-                    if approval.status == "approved":
+                    if approval.status in ("approved", "executing"):
+                        # 'executing' means this same call was already reserved
+                        # by another pass/capability — resume idempotently.
                         logger.info(
                             "Tool '%s' already approved via deferred continuation "
                             "for the same envelope (approval_id=%s, tool_call_id=%s) — skipping re-approval",
@@ -1307,6 +1420,11 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 tool_call_id=tool_call_id,
                 request_payload=auth_request,
             )
+            self._remember_tool_grant(
+                scope_key=approval_scope_key,
+                tool_name=call.tool_name,
+                tool_args=safe_args,
+            )
             return args
 
         logger.info(
@@ -1332,6 +1450,11 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
             safe_args=safe_args,
             tool_call_id=tool_call_id,
             request_payload=auth_request,
+        )
+        self._remember_tool_grant(
+            scope_key=approval_scope_key,
+            tool_name=call.tool_name,
+            tool_args=safe_args,
         )
 
         self._log_decision(

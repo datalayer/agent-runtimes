@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Evals commands for Datalayer CLI."""
 
 from __future__ import annotations
@@ -854,7 +851,7 @@ def runs_launch(
     run_mode: Optional[str] = typer.Option(
         None, "--run-mode", help="Run mode hint (batch/interactive)."
     ),
-    agent_pod_name: Optional[str] = typer.Option(
+    agent_runtime_name: Optional[str] = typer.Option(
         None, "--agent-pod-name", help="Agent pod for interactive execution."
     ),
     submitted_code_file: Optional[str] = typer.Option(
@@ -910,8 +907,8 @@ def runs_launch(
     }
     if run_mode:
         cli_summary["run_mode"] = run_mode
-    if agent_pod_name:
-        cli_summary["runtime_pod_name"] = agent_pod_name
+    if agent_runtime_name:
+        cli_summary["runtime_name"] = agent_runtime_name
     if submitted_code_file:
         path = Path(submitted_code_file)
         if not path.exists():

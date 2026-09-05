@@ -7,7 +7,7 @@
  * AgentOutputsExample
  *
  * Demonstrates rich output rendering for agent responses. The agent (spec
- * `example-outputs`) is prompted to return exactly one of four output types per
+ * `example-output`) is prompted to return exactly one of four output types per
  * response:
  *   - TABLE  → GitHub-flavored Markdown table
  *   - JSON   → ```json fenced block
@@ -43,17 +43,21 @@ import { AuthRequiredView, ErrorView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentOutputsPlugin } from '../loop/plugins/agent-outputs';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+
+const LOOP_PLUGINS_AGENTOUT = [AgentOutputsPlugin];
 
 const queryClient = new QueryClient();
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'outputs-example-agent';
-const AGENTSPEC_ID = 'demo-outputs';
+// Keep this aligned with the generated agentspec catalog (`example-output`).
+const AGENTSPEC_ID = 'example-output';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -285,7 +289,7 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
             whiteSpace: 'normal',
             wordBreak: 'break-word',
           },
-          th: { bg: 'canvas.subtle', fontWeight: 'bold' },
+          th: { bg: 'canvas.default', fontWeight: 'bold' },
         }}
       >
         <thead>
@@ -363,7 +367,7 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
           fontFamily: 'mono',
           fontSize: 0,
           whiteSpace: 'pre-wrap',
-          bg: 'canvas.subtle',
+          bg: 'canvas.default',
           p: 2,
           borderRadius: 2,
           m: 0,
@@ -397,6 +401,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -611,45 +616,13 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* Left: Chat */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
             agentId={agentId}
-            authToken={chatAuthToken}
-            title="Outputs Demo Agent"
-            brandIcon={<FileIcon size={16} />}
-            placeholder="Ask for a Table, JSON, Chart, or File…"
-            description={`${detected.length} detected output${detected.length !== 1 ? 's' : ''}`}
-            showHeader={true}
-            showToolsMenu={true}
-            showSkillsMenu={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: 'Table',
-                message:
-                  'Generate a Markdown table of the top 5 US cities by population, with columns City, State, Population.',
-              },
-              {
-                title: 'JSON',
-                message:
-                  'Return a JSON object describing a fictitious product catalog with 3 items (id, name, price, tags).',
-              },
-              {
-                title: 'Chart',
-                message:
-                  'Produce a bar chart ECharts spec (valid JSON, with `// chart` on the first line of the fenced block) showing monthly sales for Jan–Jun.',
-              },
-              {
-                title: 'File',
-                message:
-                  'Create a downloadable CSV file with sample sales data for the last 7 days. Output it inside a ```csv fenced block whose first line is `# filename: sales.csv`.',
-              },
-            ]}
-            submitOnSuggestionClick
+            defaultEditor="none"
+            showHeader
+            plugins={LOOP_PLUGINS_AGENTOUT}
           />
         </Box>
 
@@ -754,7 +727,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
                     <Box
                       as="pre"
                       sx={{
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         p: 2,
                         borderRadius: 2,
                         fontFamily: 'mono',
@@ -780,7 +753,7 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
                       <Box
                         as="pre"
                         sx={{
-                          bg: 'canvas.subtle',
+                          bg: 'canvas.default',
                           p: 2,
                           borderRadius: 2,
                           fontFamily: 'mono',

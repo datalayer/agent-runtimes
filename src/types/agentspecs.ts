@@ -24,6 +24,25 @@ import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
  * Defines the configuration for a reusable agent template that can be
  * instantiated as an Agent Runtime.
  */
+/**
+ * An opener offered to somebody arriving at an empty chat.
+ *
+ * Text and, optionally, a mark to show beside it. It was a bare string, which
+ * is enough for a chip in an empty state and not enough for anywhere else a
+ * suggestion is offered — a menu, a launcher, a list of what an agent is for —
+ * where an unmarked row of sentences is hard to scan. Both marks are optional
+ * and independent: an octicon suits chrome already drawn in line art, an emoji
+ * suits a place that has colour.
+ */
+export interface AgentSuggestion {
+  /** What is sent when the suggestion is taken. */
+  text: string;
+  /** Octicon name to show beside it. */
+  icon?: string;
+  /** Unicode emoji to show beside it. */
+  emoji?: string;
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -39,6 +58,8 @@ export interface Agentspec {
   systemPromptCodemodeAddons?: string;
   /** Tags for categorization */
   tags: string[];
+  /** Domain used to group agents in the gallery */
+  domain?: string;
   /** Whether the agent is enabled */
   enabled: boolean;
   /** AI model identifier to use for this agent */
@@ -66,14 +87,23 @@ export interface Agentspec {
   /** Theme color for the agent (hex code) */
   color?: string;
   /** Chat suggestions to show users what this agent can do */
-  suggestions?: string[];
+  suggestions?: AgentSuggestion[];
   /** Welcome message shown when agent starts */
   welcomeMessage?: string;
   /** Path to Jupyter notebook to show on agent creation */
   welcomeNotebook?: string;
   /** Path to Lexical document to show on agent creation */
   welcomeDocument?: string;
-  /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter', 'kaggle'). */
+  /**
+   * Which agent framework runs this agent's loop.
+   *
+   * `pydantic-ai` (the default) runs it server-side in the agent runtime;
+   * `vercel-ai` runs it in the browser with the Vercel AI SDK, for an agent
+   * that has to work with no server behind it. Distinct from `protocol`,
+   * which says how a client and an agent talk rather than what runs the loop.
+   */
+  harness?: string;
+  /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter-server', 'kaggle'). */
   sandboxVariant?: string;
   /** User-facing objective for the agent */
   goal?: string;
@@ -121,6 +151,23 @@ export interface Agentspec {
 }
 
 /**
+ * Where a subagent reached over A2A lives, or how to launch it.
+ *
+ * Either `url` names an agent already running, or the subagent's `ref` names
+ * the agentspec to launch one from — on the local agent-runtimes server when
+ * the parent runs locally and on a Datalayer runtime when it runs in the
+ * cloud (`launch: 'auto'`, the default), or on one of those explicitly.
+ */
+export interface A2ASubagentConfig {
+  /** JSON-RPC endpoint of an A2A agent already running. */
+  url?: string;
+  /** Where to launch the agent named by `ref`. */
+  launch?: 'local' | 'cloud' | 'auto';
+  /** Runtime environment for a cloud launch. */
+  environment?: string;
+}
+
+/**
  * Configuration for a subagent within an agent specification.
  */
 export interface SubAgentspecConfig {
@@ -128,8 +175,23 @@ export interface SubAgentspecConfig {
   name: string;
   /** Brief description shown to the parent agent */
   description: string;
-  /** System prompt for the subagent */
-  instructions: string;
+  /**
+   * System prompt for the subagent. Optional when `ref` names an agentspec to
+   * take it from.
+   */
+  instructions?: string;
+  /**
+   * An agentspec this subagent *is*, as `<id>:<version>`.
+   *
+   * A specialist defined once and referenced by many parents, rather than its
+   * instructions copy-pasted into each — which is how they drift apart.
+   */
+  ref?: string;
+  /**
+   * Reach this subagent over A2A, as a separate agent, instead of running it
+   * inside the parent's process.
+   */
+  a2a?: A2ASubagentConfig;
   /** LLM model to use (defaults to parent agent's model) */
   model?: string;
   /** Whether the subagent can ask the parent for clarification */

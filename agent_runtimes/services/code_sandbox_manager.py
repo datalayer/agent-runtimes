@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """
 Code Sandbox Manager for Agent Runtimes.
 
@@ -30,7 +26,7 @@ Usage:
 
     # Configure for Jupyter sandbox
     manager.configure(
-        variant="jupyter",
+        variant="jupyter-server",
         jupyter_url="http://localhost:8888",
         jupyter_token="my-token",
     )
@@ -55,14 +51,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# The full set of ``code_sandboxes.models.SandboxVariant``: what the factory
+# can create is what an agent may ask for, and a variant left out of this
+# alias is one the type checker rejects while ``code_sandboxes`` runs it
+# happily — which is how kaggle, daytona, e2b, coreweave and cloudflare came
+# to be unspellable here long after they worked.
 SandboxVariant = Literal[
     "eval",
-    "jupyter",
+    "jupyter-server",
     "docker",
     "datalayer",
-    "colab",
+    "google-colab",
+    "kaggle",
     "monty",
     "modal",
+    "daytona",
+    "cloudflare",
+    "coreweave",
+    "e2b",
 ]
 
 
@@ -351,8 +357,10 @@ class CodeSandboxManager:
     - jupyter: Connects to an *existing* Jupyter server (URL required)
     - jupyter: Delegates to code_sandboxes to start its own Jupyter server
       on a random free port (no external URL needed)
-        - docker, datalayer, colab, monty, modal: Delegated to the
-            code_sandboxes variant factory.
+        - docker, datalayer, google-colab, kaggle, monty, modal, daytona,
+            cloudflare, coreweave, e2b: Delegated to the code_sandboxes
+            variant factory, which reaches each provider with the credentials
+            that provider needs.
     """
 
     _instance: CodeSandboxManager | None = None
@@ -407,7 +415,7 @@ class CodeSandboxManager:
     @property
     def is_jupyter(self) -> bool:
         """Check if the current variant is Jupyter-based."""
-        return self._config.variant == "jupyter"
+        return self._config.variant == "jupyter-server"
 
     def _active_sandbox(self) -> "Sandbox | None":
         """Return the sandbox that reflects the live execution context.
@@ -425,15 +433,20 @@ class CodeSandboxManager:
         return None
 
     @staticmethod
-    def _sandbox_connection_details(
+    def connection_details(
         sandbox: "Sandbox | None",
     ) -> dict[str, Any]:
         """Best-effort extraction of a sandbox's live Jupyter/kernel details.
 
         Different sandbox implementations expose their kernel id in different
-        ways.  ``JupyterSandbox`` keeps a ``jupyter_kernel_client.KernelClient``
-        in ``_client`` whose ``id`` is the live kernel id, so we probe several
+        ways. ``JupyterSandbox`` keeps its execution backend in ``_client``;
+        its ``id`` is the live kernel id, so we probe several
         well-known attributes to remain robust across variants.
+
+        Public because the status WebSocket needs it for a *specific* sandbox
+        rather than the active one: it reports the agent's sandbox when there
+        is one, and a URL taken from that sandbox with a token taken from
+        another is worse than reporting neither.
         """
         details: dict[str, Any] = {
             "kernel_id": None,
@@ -458,12 +471,23 @@ class CodeSandboxManager:
                 kernel_id = kernel_model.get("id")
         details["kernel_id"] = kernel_id or None
 
-        server_url = getattr(sandbox, "_server_url", None)
+        server_url = getattr(sandbox, "server_url", None) or getattr(
+            sandbox, "_server_url", None
+        )
         if not server_url and client is not None:
             server_url = getattr(client, "server_url", None)
         details["jupyter_url"] = server_url or None
 
-        details["jupyter_token"] = getattr(sandbox, "_token", None) or None
+        # `jupyter_token` first, and it is not fussiness: on a Datalayer
+        # sandbox `_token` is the *API key* that authenticates this process to
+        # the platform. Handing that to a browser as a Jupyter token would fail
+        # the connection and leak a credential in the same breath. A sandbox
+        # that mints a token for its server publishes it under its own name.
+        details["jupyter_token"] = (
+            getattr(sandbox, "jupyter_token", None)
+            or getattr(sandbox, "_token", None)
+            or None
+        )
 
         if client is not None:
             details["username"] = getattr(client, "username", None) or None
@@ -496,6 +520,19 @@ class CodeSandboxManager:
         """
         with self._sandbox_lock:
             old_variant = self._config.variant
+
+            # An empty string means "no server named — use a colocated one".
+            #
+            # `None` means "leave whatever is configured", which is right for a
+            # caller changing only the variant. But it made switching *to* a
+            # colocated sandbox impossible: after any target that named a URL,
+            # asking for `jupyter-server` with no URL kept the old one, so an
+            # agent asked to run beside its own Jupyter server went on driving
+            # somebody else's. The two intentions need two spellings.
+            cleared = jupyter_url == ""
+            if cleared:
+                self._config.jupyter_url = None
+                self._config.jupyter_token = None
 
             # Parse jupyter_url if it contains a token query parameter
             if jupyter_url:
@@ -534,7 +571,11 @@ class CodeSandboxManager:
             # If variant changed or we're reconfiguring jupyter, stop existing sandbox
             if self._sandbox is not None:
                 config_changed = old_variant != self._config.variant or (
-                    self._config.variant == "jupyter" and jupyter_url
+                    self._config.variant == "jupyter-server"
+                    # Cleared counts as changed. Without this the running
+                    # sandbox — pointed at the server just disowned — stayed
+                    # up and kept answering.
+                    and (bool(jupyter_url) or cleared)
                 )
                 if config_changed:
                     logger.info(
@@ -585,7 +626,7 @@ class CodeSandboxManager:
             )
 
         self.configure(
-            variant="jupyter",
+            variant="jupyter-server",
             jupyter_url=jupyter_sandbox_url,
             mcp_proxy_url=mcp_proxy_url,
             env_vars=env_vars,
@@ -693,12 +734,12 @@ class CodeSandboxManager:
 
         # Always inject sandbox metadata env vars
         env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = self._config.variant
-        if self._config.variant == "jupyter" and self._config.jupyter_url:
+        if self._config.variant == "jupyter-server" and self._config.jupyter_url:
             # Strip query string (token) from the URL
             clean_url = self._config.jupyter_url.split("?")[0]
             env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
 
-        if self._config.variant == "jupyter":
+        if self._config.variant == "jupyter-server":
             # Build a Python snippet that sets every env var in the kernel.
             lines = ["import os"]
             for name, value in env_vars.items():
@@ -745,19 +786,16 @@ class CodeSandboxManager:
             ValueError: If configuration is invalid.
         """
         effective_variant = variant or self._config.variant
-        try:
-            from code_sandboxes import Sandbox as CodeSandbox
-        except (ImportError, AttributeError):
-            CodeSandbox = None
+        # One door, whichever variant: the client is the provider-neutral
+        # surface of `code_sandboxes`, and the sandbox it wraps is the base
+        # `Sandbox` every consumer here is written against. Reaching for an
+        # adapter (`eval_sandbox`, `jupyter_server_sandbox`) when the package
+        # looked incomplete bound this module to the adapters — and a package
+        # that lacks the client lacks the adapters too.
+        from code_sandboxes import CodeSandboxClient
 
-        if effective_variant == "eval":
-            if CodeSandbox is None:
-                from code_sandboxes.eval_sandbox import EvalSandbox
-
-                return EvalSandbox()
-            return CodeSandbox.create(variant="eval")
-
-        elif effective_variant == "jupyter":
+        options: dict[str, Any] = {}
+        if effective_variant == "jupyter-server":
             # In sidecar mode, companion must provide a concrete Jupyter URL.
             # Never start a local fallback server in this mode.
             if (
@@ -767,35 +805,15 @@ class CodeSandboxManager:
                 raise ValueError(
                     "Jupyter sidecar mode requires jupyter_url before sandbox start"
                 )
-
             if self._config.jupyter_url:
-                if CodeSandbox is None:
-                    from code_sandboxes.jupyter_sandbox import JupyterSandbox
-
-                    return JupyterSandbox(
-                        server_url=self._config.jupyter_url,
-                        token=self._config.jupyter_token,
-                    )
-                return CodeSandbox.create(
-                    variant="jupyter",
-                    server_url=self._config.jupyter_url,
-                    token=self._config.jupyter_token,
-                )
-
-            # No external URL configured: let code_sandboxes start its own
+                options = {
+                    "server_url": self._config.jupyter_url,
+                    "token": self._config.jupyter_token,
+                }
+            # No external URL configured: `code_sandboxes` starts its own
             # local Jupyter server on a free port.
-            if CodeSandbox is None:
-                from code_sandboxes.jupyter_sandbox import JupyterSandbox
 
-                return JupyterSandbox()
-            return CodeSandbox.create(variant="jupyter")
-
-        else:
-            if CodeSandbox is None:
-                raise ImportError(
-                    "code_sandboxes.Sandbox is required for non-jupyter/eval variants"
-                )
-            return CodeSandbox.create(variant=effective_variant)
+        return CodeSandboxClient.create(variant=effective_variant, **options).sandbox
 
     def stop(self) -> None:
         """Stop the current sandbox if running."""
@@ -821,7 +839,7 @@ class CodeSandboxManager:
         Create a dedicated sandbox for a specific agent.
 
         Each agent gets its own isolated sandbox instance.  For the
-        ``"jupyter"`` variant, ``code_sandboxes.JupyterSandbox``
+        ``"jupyter-server"`` variant, ``code_sandboxes.JupyterSandbox``
         starts its own Jupyter server on a random free port.
 
         Args:
@@ -872,7 +890,7 @@ class CodeSandboxManager:
         """
         Stop and remove the sandbox for a specific agent.
 
-        For the ``"jupyter"`` variant this stops the Jupyter server that
+        For the ``"jupyter-server"`` variant this stops the Jupyter server that
         ``code_sandboxes`` started.
 
         Args:
@@ -924,11 +942,11 @@ class CodeSandboxManager:
         # Add sandbox metadata env vars
         env_vars = dict(env_vars)
         env_vars["DATALAYER_CODE_SANDBOX_VARIANT"] = variant
-        if variant == "jupyter" and self._config.jupyter_url:
+        if variant == "jupyter-server" and self._config.jupyter_url:
             clean_url = self._config.jupyter_url.split("?")[0]
             env_vars["DATALAYER_CODE_SANDBOX_URL"] = clean_url
 
-        if variant == "jupyter":
+        if variant == "jupyter-server":
             lines = ["import os"]
             for name, value in env_vars.items():
                 lines.append(f"os.environ[{name!r}] = {value!r}")
@@ -960,10 +978,25 @@ class CodeSandboxManager:
         """
         Restart the sandbox with current configuration.
 
+        Every sandbox this manager owns, not only the global one. A per-agent
+        sandbox was created under the *previous* configuration, so after a
+        `configure()` it is stale by definition — and it is the one the status
+        WebSocket reports when a caller asks about an agent. Leaving it running
+        meant switching where code runs replaced the global sandbox while the
+        browser went on being handed the old agent sandbox's address: a port
+        that was either dead or about to be, and an endless run of connection
+        failures against it.
+
+        The per-agent sandboxes are stopped rather than recreated here. They
+        are made on demand for whichever agent needs one, and recreating them
+        eagerly would start Jupyter servers for agents that may never run
+        again.
+
         Returns:
-            The new Sandbox instance.
+            The new global Sandbox instance.
         """
         self.stop()
+        self.stop_all_agent_sandboxes()
         return self.get_sandbox()
 
     def get_status(self) -> dict[str, Any]:
@@ -990,7 +1023,11 @@ class CodeSandboxManager:
         # Compute python_path (what gets added to sys.path)
         # For Jupyter/remote sandboxes, it's /tmp
         # For eval, it's the parent of generated_path
-        if self._config.variant in ("jupyter", "datalayer-runtime"):
+        # Both are reached over a Jupyter server, so both run code somewhere
+        # this process cannot see. "datalayer-runtime" was written here and is
+        # not a variant name — `SandboxVariant` calls it "datalayer" — so a
+        # Datalayer sandbox has been getting a local path all along.
+        if self._config.variant in ("jupyter-server", "datalayer"):
             python_path = "/tmp"  # nosec B108
         else:
             python_path = str(Path(generated_path).resolve().parent)
@@ -1003,7 +1040,7 @@ class CodeSandboxManager:
         # to starting their OWN default kernel, diverging from the sandbox
         # kernel used by the agent.
         active_sandbox = self._active_sandbox()
-        details = self._sandbox_connection_details(active_sandbox)
+        details = self.connection_details(active_sandbox)
 
         return {
             "variant": self._config.variant,

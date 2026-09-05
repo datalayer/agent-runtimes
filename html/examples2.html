@@ -10,25 +10,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Datalayer ☰ Agent Runtimes Examples 2</title>
 
+    <!--
+      Webpack public-path shim. Some Jupyter deps (@jupyter-widgets) assign to
+      the free variable `__webpack_public_path__` at module scope. In the
+      strict-mode ESM bundles Vite produces, that bare assignment throws
+      `ReferenceError: __webpack_public_path__ is not defined` unless the global
+      already exists. This classic (non-module) script runs before any deferred
+      module script, guaranteeing the global is present first.
+    -->
+    <script>
+      window.__webpack_public_path__ = window.__webpack_public_path__ || '';
+    </script>
+
     <!-- Datalayer Configuration -->
     <script id="datalayer-config-data" type="application/json">
       {
-        "datalayerUrl": "%VITE_DATALAYER_URL%",
-        "aiAgentsUrl": "%VITE_DATALAYER_URL%",
-        "aiInferenceUrl": "%VITE_DATALAYER_URL%",
-        "mcpServersUrl": "%VITE_DATALAYER_URL%",
-        "iamUrl": "%VITE_DATALAYER_URL%",
+        "aiAgentsUrl": "%VITE_DATALAYER_AI_AGENTS_URL%",
+        "aiInferenceUrl": "%VITE_DATALAYER_AI_INFERENCE_URL%",
+        "jupyterMcpServerUrl": "%VITE_DATALAYER_JUPYTER_MCP_SERVER_URL%",
+        "iamUrl": "%VITE_DATALAYER_IAM_URL%",
         "runtimesUrl": "%VITE_DATALAYER_RUNTIMES_URL%",
         "jupyterServerToken": "60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6",
         "jupyterServerUrl": "%VITE_JUPYTER_SERVER_URL%",
         "jupyterServerless": "true",
-        "libraryUrl": "%VITE_DATALAYER_URL%",
-        "spacerUrl": "%VITE_DATALAYER_URL%",
-        "otelUrl": "%VITE_DATALAYER_URL%",
-        "growthUrl": "%VITE_DATALAYER_URL%",
-        "inboundsUrl": "%VITE_DATALAYER_URL%",
-        "successUrl": "%VITE_DATALAYER_URL%",
-        "supportUrl": "%VITE_DATALAYER_URL%",
+        "libraryUrl": "%VITE_DATALAYER_LIBRARY_URL%",
+        "spacerUrl": "%VITE_DATALAYER_SPACER_URL%",
+        "otelUrl": "%VITE_DATALAYER_OTEL_URL%",
+        "growthUrl": "%VITE_DATALAYER_GROWTH_URL%",
+        "inboundsUrl": "%VITE_DATALAYER_INBOUNDS_URL%",
+        "successUrl": "%VITE_DATALAYER_SUCCESS_URL%",
+        "supportUrl": "%VITE_DATALAYER_SUPPORT_URL%",
         "useMock": false,
         "whiteLabel": false,
         "loadConfigurationFromServer": false,

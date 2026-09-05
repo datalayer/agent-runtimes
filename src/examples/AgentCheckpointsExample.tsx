@@ -63,17 +63,19 @@ import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentCheckpointsPlugin } from '../loop/plugins/agent-checkpoints';
 import {
   useAgentsRuntimes,
-  useAgentRuntimes,
   useAgentRuntimesQuery,
   useRefreshAgentRuntimes,
 } from '../hooks/useAgentRuntimes';
+import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 import { useAgentLifecycle } from '../hooks/useCheckpoints';
-import { useDeletePausedAgentRuntime } from '../hooks/useCheckpoints';
 import { AGENT_STATUS_COLORS } from '../types/agents';
 import type { CheckpointRecord } from '../types/checkpoints';
+
+const LOOP_PLUGINS_AGENTCHE = [AgentCheckpointsPlugin];
 
 const queryClient = new QueryClient();
 
@@ -83,7 +85,7 @@ type CheckpointMode = 'criu' | 'light';
 
 interface RunningAgent {
   id: string;
-  podName: string;
+  runtimeName: string;
   name?: string;
   description?: string;
   status?: string;
@@ -114,7 +116,7 @@ const AGENTSPEC = {
   model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   protocol: 'vercel-ai',
   memory: 'mem0',
-  sandbox_variant: 'jupyter',
+  sandbox_variant: 'jupyter-server',
   environment_name: 'ai-agents-env',
   tags: ['support', 'chatbot', 'sales', 'kpi', 'monitoring'],
   trigger: {
@@ -210,10 +212,8 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
   // Agent runtimes from the focused hook
   const { data: agentRuntimes } = useAgentRuntimesQuery();
-  const { terminateRuntimeByPod } = useAgentsRuntimes();
+  const { stopRuntimeByName } = useAgentsRuntimes();
   const refetchRuntimes = useRefreshAgentRuntimes();
-  const deletePausedRuntimeMutation = useDeletePausedAgentRuntime();
-  const deletePausedRuntimeByPod = deletePausedRuntimeMutation.mutateAsync;
 
   const [isStarting, setIsStarting] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -226,7 +226,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   const autoConnectAttemptRef = useRef<string | null>(null);
 
   const displayError = hookError || actionError;
-  const podName = runtime?.podName || '(launching…)';
+  const runtimeName = runtime?.runtimeName || '(launching…)';
   const agentId = runtime?.agentId || AGENTSPEC_ID;
   const agentBaseUrl = runtime?.agentBaseUrl || '';
 
@@ -271,11 +271,15 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   );
 
   const handleResume = useCallback(
-    async (mode: CheckpointMode, checkpointId?: string, podName?: string) => {
+    async (
+      mode: CheckpointMode,
+      checkpointId?: string,
+      runtimeName?: string,
+    ) => {
       setActionLoading(true);
       setActionError(null);
       try {
-        await resume(mode, checkpointId, podName);
+        await resume(mode, checkpointId, runtimeName);
         await Promise.all([refreshCheckpoints(), refreshAgents()]);
       } catch (e) {
         setActionError(e instanceof Error ? e.message : 'Resume failed');
@@ -288,11 +292,11 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
   // Refresh lists when a runtime connection is established.
   useEffect(() => {
-    if (runtime?.podName) {
+    if (runtime?.runtimeName) {
       refreshCheckpoints();
       refreshAgents();
     }
-  }, [runtime?.podName, refreshCheckpoints, refreshAgents]);
+  }, [runtime?.runtimeName, refreshCheckpoints, refreshAgents]);
 
   // Clear the manual override once a real runtimes fetch lands.
   useEffect(() => {
@@ -305,12 +309,12 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     if (runningAgentsOverride) return runningAgentsOverride;
     return (agentRuntimes || []).map(rt => ({
       id: rt.id,
-      podName: rt.pod_name,
+      runtimeName: rt.runtime_name,
       name: rt.name,
-      description: rt.environment_title || rt.environment_name,
+      description: rt.environment.title || rt.environment.name,
       status: rt.status,
       protocol: 'vercel-ai',
-      environmentName: rt.environment_name,
+      environmentName: rt.environment.name,
       jupyterBaseUrl: rt.url,
     }));
   }, [agentRuntimes, runningAgentsOverride]);
@@ -336,13 +340,13 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
     }
 
     // Prevent reconnect loops to the same runtime while status remains idle/disconnected.
-    if (autoConnectAttemptRef.current === candidate.podName) {
+    if (autoConnectAttemptRef.current === candidate.runtimeName) {
       return;
     }
-    autoConnectAttemptRef.current = candidate.podName;
+    autoConnectAttemptRef.current = candidate.runtimeName;
 
     connectToRuntime({
-      podName: candidate.podName,
+      runtimeName: candidate.runtimeName,
       environmentName: candidate.environmentName,
       jupyterBaseUrl: candidate.jupyterBaseUrl,
     });
@@ -365,33 +369,30 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       setActionLoading(true);
       setActionError(null);
       try {
-        const isCurrentRuntime = runtime?.podName === agent.podName;
+        const isCurrentRuntime = runtime?.runtimeName === agent.runtimeName;
         const isLastKnownRuntime =
           runningAgents.length === 1 &&
-          runningAgents[0].podName === agent.podName;
-        if (agent.status === 'paused') {
-          await deletePausedRuntimeByPod(agent.podName);
-        } else {
-          await terminateRuntimeByPod(agent.podName);
-        }
-        // Ensure sidebar terminate resets to the home state like header terminate.
+          runningAgents[0].runtimeName === agent.runtimeName;
+        // One verb for both: stopping reaps the pod when there is one and the
+        // checkpoint records when there is not.
+        await stopRuntimeByName(agent.runtimeName);
+        // Ensure sidebar stop resets to the home state like the header's.
         if (isCurrentRuntime || isLastKnownRuntime) {
           await terminate();
         }
         await Promise.all([refreshAgents(), refreshCheckpoints()]);
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : 'Terminate failed');
+        setActionError(e instanceof Error ? e.message : 'Stop failed');
       } finally {
         setActionLoading(false);
       }
     },
     [
-      deletePausedRuntimeByPod,
-      terminateRuntimeByPod,
+      stopRuntimeByName,
       refreshAgents,
       refreshCheckpoints,
       runningAgents,
-      runtime?.podName,
+      runtime?.runtimeName,
       terminate,
     ],
   );
@@ -404,7 +405,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       .filter((value): value is string => Boolean(value)),
   );
   const pausedAgentsWithoutCheckpoint = pausedAgents.filter(
-    (a: RunningAgent) => !checkpointRuntimeIds.has(a.podName),
+    (a: RunningAgent) => !checkpointRuntimeIds.has(a.runtimeName),
   );
 
   const showNoAgentRunningView =
@@ -452,7 +453,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
           aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Agent — {podName}
+          Agent — {runtimeName}
         </Heading>
         <Label variant={STATUS_COLORS[runtimeStatus]}>{runtimeStatus}</Label>
         {(runtimeStatus === 'ready' ||
@@ -547,7 +548,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               borderRight: '1px solid',
               borderColor: 'border.default',
               overflowY: 'auto',
-              bg: 'canvas.subtle',
+              bg: 'canvas.default',
             }}
           >
             {/* Spec Attributes */}
@@ -829,7 +830,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                       variant="primary"
                       leadingVisual={PlayIcon}
                       onClick={() =>
-                        handleResume(resumeMode, undefined, a.podName)
+                        handleResume(resumeMode, undefined, a.runtimeName)
                       }
                       disabled={actionLoading}
                     >
@@ -1019,31 +1020,13 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
             </Box>
           ) : (isReady || runtimeStatus === 'resumed') &&
             runtimeStatus !== 'paused' ? (
-            <Chat
-              protocol="vercel-ai"
-              baseUrl={agentBaseUrl}
+            <LoopEmbed
+              serverUrl={agentBaseUrl}
+              target="local"
               agentId={agentId}
-              title="Monitor Sales KPI Agent"
-              brandIcon={<AgentIcon size={16} />}
-              placeholder="Ask about sales KPIs…"
-              description="Monitor Sales KPI agent with pause/resume checkpointing"
-              showHeader={true}
-              showTokenUsage={true}
-              autoFocus
-              height="100%"
-              runtimeId={podName}
-              historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-              suggestions={[
-                {
-                  title: 'KPIs',
-                  message: "Show me today's sales KPI dashboard",
-                },
-                {
-                  title: 'Trends',
-                  message: 'What are the current revenue trends?',
-                },
-              ]}
-              submitOnSuggestionClick
+              defaultEditor="none"
+              showHeader
+              plugins={LOOP_PLUGINS_AGENTCHE}
             />
           ) : (
             <Box

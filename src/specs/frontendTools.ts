@@ -18,12 +18,61 @@ import type { FrontendToolSpec } from '../types';
 // Frontend Tool Definitions
 // ============================================================================
 
+export const JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec =
+  {
+    id: 'jupyter-notebook-edit',
+    version: '0.0.1',
+    name: 'Jupyter Notebook (edit)',
+    description:
+      'Read and edit a notebook, and run cells — but never delete from it.',
+    tags: ['frontend', 'notebook', 'edit'],
+    enabled: true,
+    toolset: [
+      'readCell',
+      'readAllCells',
+      'insertCell',
+      'updateCell',
+      'runCell',
+      'executeCode',
+    ],
+    icon: 'notebook',
+    emoji: '📓',
+  };
+
+export const JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec =
+  {
+    id: 'jupyter-notebook-propose',
+    version: '0.0.1',
+    name: 'Jupyter Notebook (propose)',
+    description:
+      'Read a notebook and propose changes for a person to accept, never applying them.',
+    tags: ['frontend', 'notebook', 'propose'],
+    enabled: true,
+    toolset: ['readCell', 'readAllCells', 'proposeCellUpdate', 'runCell'],
+    icon: 'notebook',
+    emoji: '📓',
+  };
+
+export const JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec =
+  {
+    id: 'jupyter-notebook-read',
+    version: '0.0.1',
+    name: 'Jupyter Notebook (read only)',
+    description:
+      'Read a notebook without changing it — cells, outputs and errors.',
+    tags: ['frontend', 'notebook', 'read'],
+    enabled: true,
+    toolset: ['readCell', 'readAllCells'],
+    icon: 'notebook',
+    emoji: '📓',
+  };
+
 export const JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   id: 'jupyter-notebook',
   version: '0.0.1',
   name: 'Jupyter Notebook',
   description: 'Frontend tools for interacting with Jupyter notebooks.',
-  tags: ['frontend', 'notebook', 'jupyter'],
+  tags: ['frontend', 'notebook', 'jupyter-server'],
   enabled: true,
   toolset: 'all',
   icon: 'notebook',
@@ -47,6 +96,9 @@ export const LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
 // ============================================================================
 
 export const FRONTEND_TOOL_CATALOG: Record<string, FrontendToolSpec> = {
+  'jupyter-notebook-edit': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
+  'jupyter-notebook-propose': JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,
+  'jupyter-notebook-read': JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook': JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
   'lexical-document': LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
 };

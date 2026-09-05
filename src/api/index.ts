@@ -25,6 +25,7 @@ export * as output from './output';
 export * from '../runtimes';
 
 import { iamStore } from '@datalayer/core/lib/state';
+import { runtimesStore } from '../state/substates';
 import { listEnvironments } from './runtimes/environments';
 import {
   listSnapshots,
@@ -41,6 +42,18 @@ import {
   type ICodeSandboxSnapshot,
 } from '../models/CodeSandboxSnapshot';
 
+/*
+ * The runtimes URL of the PAGE's configuration, not the built-in default.
+ *
+ * Every function below takes an optional `baseUrl`, and the low-level API
+ * layer defaults it to the production URL. Callers all over the application
+ * pass nothing — so against a local plane they silently queried production,
+ * and the picker offered the environments of the wrong deployment.
+ */
+function resolveRuntimesUrl(baseUrl?: string): string | undefined {
+  return baseUrl ?? runtimesStore.getState().runtimesUrl ?? undefined;
+}
+
 function resolveToken(token?: string): string {
   const resolved = token ?? iamStore.getState()?.token;
   if (!resolved) {
@@ -53,7 +66,10 @@ export async function getEnvironments(
   token?: string,
   baseUrl?: string,
 ): Promise<ListEnvironmentsResponse['environments']> {
-  const response = await listEnvironments(resolveToken(token), baseUrl);
+  const response = await listEnvironments(
+    resolveToken(token),
+    resolveRuntimesUrl(baseUrl),
+  );
   return (response.environments ?? []).map(environment => ({
     ...environment,
     burningRate:
@@ -65,7 +81,10 @@ export async function getSandboxSnapshots(
   token?: string,
   baseUrl?: string,
 ): Promise<ICodeSandboxSnapshot[]> {
-  const response = await listSnapshots(resolveToken(token), baseUrl);
+  const response = await listSnapshots(
+    resolveToken(token),
+    resolveRuntimesUrl(baseUrl),
+  );
   return (response.snapshots ?? []).map(snapshot =>
     asCodeSandboxSnapshot(snapshot as any),
   );
@@ -78,13 +97,13 @@ export async function createSandboxSnapshot(
 ): Promise<CodeSandboxSnapshotData | Record<string, any>> {
   // Legacy browser snapshots pass a rich object (connection, metadata, callbacks)
   // that is handled client-side. Keep compatibility by returning early.
-  if (!('pod_name' in data)) {
+  if (!('runtime_name' in data)) {
     return data;
   }
   const response = await createSnapshot(
     resolveToken(token),
     data as CreateCodeSandboxSnapshotRequest,
-    baseUrl,
+    resolveRuntimesUrl(baseUrl),
   );
   return response.snapshot;
 }
@@ -94,7 +113,11 @@ export async function deleteCodeSandboxSnapshot(
   token?: string,
   baseUrl?: string,
 ): Promise<void> {
-  return deleteSnapshot(resolveToken(token), snapshotId, baseUrl);
+  return deleteSnapshot(
+    resolveToken(token),
+    snapshotId,
+    resolveRuntimesUrl(baseUrl),
+  );
 }
 
 export async function exportCodeSandboxSnapshot(

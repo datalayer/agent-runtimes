@@ -36,6 +36,18 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
   private a2aConfig: A2AAdapterConfig;
   private abortController: AbortController | null = null;
+
+  /**
+   * Every in-flight request's abort controller, not just the newest.
+   *
+   * `abortController` is a single field that each request overwrites, and each
+   * request's `finally` used to clear it unconditionally — so a request that
+   * finished just after a newer one started would null the newer one's handle,
+   * and a subsequent stop had nothing left to abort. The stream carried on and
+   * the transcript went on typing itself after the reader had asked it not to.
+   */
+  private inFlight = new Set<AbortController>();
+
   private agentCard: AgentCard | null = null;
   private currentTaskId: string | null = null;
 
@@ -83,10 +95,8 @@ export class A2AAdapter extends BaseProtocolAdapter {
    * Disconnect and terminate any ongoing agent execution
    */
   disconnect(): void {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+    // Every open stream, not merely the newest.
+    this.stopGeneration();
 
     // Send terminate request to backend if we have a task ID
     if (this.currentTaskId) {
@@ -160,7 +170,9 @@ export class A2AAdapter extends BaseProtocolAdapter {
       }>;
     },
   ): Promise<void> {
-    this.abortController = new AbortController();
+    const controller = new AbortController();
+    this.abortController = controller;
+    this.inFlight.add(controller);
 
     const taskId =
       options?.threadId || this.currentTaskId || generateMessageId();
@@ -239,7 +251,7 @@ export class A2AAdapter extends BaseProtocolAdapter {
           Accept: 'text/event-stream, application/json',
         }),
         body: JSON.stringify(jsonRpcRequest),
-        signal: this.abortController.signal,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -274,8 +286,27 @@ export class A2AAdapter extends BaseProtocolAdapter {
       });
       throw error;
     } finally {
-      this.abortController = null;
+      this.inFlight.delete(controller);
+      if (this.abortController === controller) {
+        this.abortController = null;
+      }
     }
+  }
+
+  /**
+   * Abort every in-flight stream without tearing the adapter down.
+   *
+   * This adapter had no such method, so pressing Stop reached only
+   * `terminateTask` — a request to the backend to cancel — and never closed
+   * the client's own stream. Whatever was already on the wire kept arriving
+   * and kept being rendered. `ChatBase` looks for this by name.
+   */
+  stopGeneration(): void {
+    for (const controller of this.inFlight) {
+      controller.abort();
+    }
+    this.inFlight.clear();
+    this.abortController = null;
   }
 
   /**

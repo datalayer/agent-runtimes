@@ -49,7 +49,8 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentTriggersPlugin } from '../loop/plugins/agent-triggers';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useConnectedIdentities } from '../identity';
 import {
@@ -68,6 +69,8 @@ import type { AgentEvent } from '../types';
 import { type AgentStreamToolApprovalPayload } from '../types/stream';
 import { VercelAIAdapter } from '../protocols';
 import { createUserMessage } from '../types/messages';
+
+const LOOP_PLUGINS_AGENTTRI = [AgentTriggersPlugin];
 
 const queryClient = new QueryClient();
 
@@ -123,6 +126,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   // Cron state
   const [cronExpr, setCronExpr] = useState(DEFAULT_CRON);
@@ -1212,23 +1216,13 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
           {/* Left: Chat */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {isReady ? (
-              <Chat
-                protocol="vercel-ai"
-                baseUrl={agentBaseUrl}
+              <LoopEmbed
+                serverUrl={agentBaseUrl}
+                target="local"
                 agentId={agentId}
-                authToken={chatAuthToken}
-                title="Trigger Agent"
-                brandIcon={<ZapIcon size={16} />}
-                description={`View-only trigger output. Cron: ${cronExpr} | Webhook: ${webhookEnabled ? 'on' : 'off'} | Event: ${eventSubscribed ? eventTopic : 'none'}`}
-                showHeader={true}
-                autoFocus={false}
-                height="100%"
-                runtimeId={agentId}
-                showInput={true}
-                disableInputPrompt={true}
-                showModelSelector={true}
-                showToolsMenu={true}
-                showSkillsMenu={true}
+                defaultEditor="none"
+                showHeader
+                plugins={LOOP_PLUGINS_AGENTTRI}
               />
             ) : (
               <Box
@@ -1334,7 +1328,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
                 <Box
                   sx={{
-                    bg: 'canvas.subtle',
+                    bg: 'canvas.default',
                     border: '1px solid',
                     borderColor: 'border.default',
                     borderRadius: 2,
@@ -1645,7 +1639,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                 key={`once-msg-${msg.id}`}
                                 sx={{
                                   p: 2,
-                                  bg: 'canvas.subtle',
+                                  bg: 'canvas.default',
                                   borderRadius: 2,
                                   border: '1px solid',
                                   borderColor: 'border.default',
@@ -1989,7 +1983,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                 key={`approval-msg-${msg.id}`}
                                 sx={{
                                   p: 2,
-                                  bg: 'canvas.subtle',
+                                  bg: 'canvas.default',
                                   borderRadius: 2,
                                   border: '1px solid',
                                   borderColor: 'border.default',
@@ -2059,7 +2053,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                     <Box
                       sx={{
                         mt: 1,
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         borderRadius: 2,
                         p: 2,
                         fontFamily: 'mono',
@@ -2174,7 +2168,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
                     <Box
                       sx={{
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         p: 2,
                         borderRadius: 2,
                         mb: 2,
@@ -2193,7 +2187,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         </Text>
                         <Box
                           sx={{
-                            bg: 'canvas.subtle',
+                            bg: 'canvas.default',
                             p: 2,
                             borderRadius: 2,
                             mt: 1,
@@ -2438,12 +2432,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         key={evt.id}
                         sx={{
                           p: 2,
-                          bg: evt.read ? 'canvas.subtle' : 'accent.subtle',
+                          bg: evt.read ? 'canvas.default' : 'neutral.muted',
                           borderRadius: 2,
                           border: '1px solid',
-                          borderColor: evt.read
-                            ? 'border.default'
-                            : 'accent.muted',
+                          borderColor: 'border.default',
                         }}
                       >
                         <Box

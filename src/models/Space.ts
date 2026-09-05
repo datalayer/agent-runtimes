@@ -70,7 +70,7 @@ export const asSpace = (raw_space: any): ISpace => {
       : undefined,
     sharedOwnerUserUids,
     // Preserve raw Solr fields so consumers can access dynamic fields
-    // (e.g. attached_agent_pod_name_s for project-agent assignment)
+    // (e.g. attached_agent_runtime_name_s for project-agent assignment)
     ...raw_space,
   };
   return space;

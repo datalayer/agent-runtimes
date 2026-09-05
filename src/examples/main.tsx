@@ -2,12 +2,20 @@
  * Copyright (c) 2025-2026 Datalayer, Inc.
  * Distributed under the terms of the Modified BSD License.
  */
-import { createDatalayerServiceManager } from '../services/DatalayerServiceManager';
 
 /// <reference types="vite/client" />
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createRoot } from 'react-dom/client';
+// From the lean `/core` entry: the barrel drags the whole component
+// library (notebook, CodeMirror, cells) into the gallery's first paint,
+// and the gallery only needs the theme and the server config helpers.
 import {
   loadJupyterConfig,
   JupyterReactTheme,
@@ -16,7 +24,7 @@ import {
   setJupyterServerToken,
   getJupyterServerUrl,
   getJupyterServerToken,
-} from '@datalayer/jupyter-react';
+} from '@datalayer/jupyter-react/core';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
 import {
@@ -25,10 +33,22 @@ import {
   getLogoColors,
   themeConfigs,
   Box,
+  SlidingPanel,
 } from '@datalayer/primer-addons';
-import { AgentSummary } from '../components';
+// Straight from its module: the components barrel re-exports the
+// code-sandbox gallery and friends, none of which belong in the
+// example gallery's first paint.
+import { AgentSummary } from '../components/agents/AgentSummary';
 import { HomeIcon, SignInIcon, SignOutIcon } from '@primer/octicons-react';
-import { Button, Spinner, Text } from '@primer/react';
+import {
+  ActionList,
+  ActionMenu,
+  Button,
+  SegmentedControl,
+  Spinner,
+  Text,
+  TextInput,
+} from '@primer/react';
 import { AppearanceControlsWithStore } from '@datalayer/primer-addons/lib/components/appearance';
 import { coreStore, iamStore } from '@datalayer/core';
 import {
@@ -46,16 +66,25 @@ import {
   type ExampleEntry,
 } from './example-selector';
 import {
+  RUNTIME_TARGETS,
+  runtimeTargetCapabilities,
   runtimeTargetStore,
+  targetHasAgent,
   useRuntimeTargetStore,
   type ExampleRuntimeTarget,
 } from './utils/runtimeTargetStore';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { agentSummaryStore } from './utils/agentSummaryStore';
+import { isSandboxOnlyExample } from './utils/exampleSurfaces';
 import { useAgentSummaryStore } from './utils/agentSummaryStore';
 import { useExampleThemeStore } from './utils/themeStore';
+import HomeExample, { type HomeExampleCardEntry } from './HomeExample';
 import { ExampleWrapper } from './components/ExampleWrapper';
 import { ExampleErrorBoundary } from './components/ExampleErrorBoundary';
+import { createServiceManagerFromAgentSandbox } from '../hooks/useAgentRuntimes';
+import type { RuntimeEnvironmentDetails } from '../hooks/useAgentRuntimes';
+import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
+import { DEFAULT_MODEL } from '../specs/models';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
 
@@ -68,10 +97,137 @@ declare global {
 }
 
 const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
+const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
+  'http://localhost:8888/api/jupyter-server';
+const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
+  '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
+const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
+
+const EXAMPLE_GROUP_ORDER = [
+  'Loop',
+  'A2UI',
+  'A2A',
+  'AG-UI',
+  'Agent',
+  'Chat',
+  'Document',
+  'Notebook',
+  'Cell',
+  'CopilotKit',
+] as const;
+
+/**
+ * The examples that open without an account.
+ *
+ * A list, not a rule: most examples here allocate a runtime somebody pays
+ * for, and this one happens to run entirely in the visitor's browser. Adding
+ * another is adding an id.
+ */
+const ANONYMOUS_EXAMPLES = new Set([
+  'LoopWorkspaceExample',
+  // Runs on the browser sandbox: nothing to allocate, nothing to sign into.
+  'LoopShellExample',
+  // Temporarily anonymous so the Jupyter output surface can be driven and
+  // debugged without a session. Remove once that work is finished.
+  'A2UiJupyterOutputExample',
+  // The two page layouts, on the browser sandbox like the shell.
+  'NotebookPageAgent',
+  'DocumentPageAgent',
+  // The decks plugin in a Loop; the agent and the decks both live in the page.
+  'DecksAgent',
+]);
+
+const getExampleGroup = (id: string): string => {
+  if (
+    id === 'AgentspecsExample' ||
+    id === 'AgentLoopExample' ||
+    id === 'LoopWorkspaceExample' ||
+    id === 'LoopShellExample' ||
+    id === 'DecksAgent'
+  ) {
+    return 'Loop';
+  }
+  if (id.startsWith('A2Ui')) return 'A2UI';
+  // Agents reached over the A2A protocol: their own category, after A2UI.
+  if (id.startsWith('AgentA2A')) return 'A2A';
+  if (id.startsWith('AgUi')) return 'AG-UI';
+  if (id.startsWith('CopilotKit')) return 'CopilotKit';
+  if (id.startsWith('Agent')) return 'Agent';
+  if (id.startsWith('Chat')) return 'Chat';
+  // The document examples: the ones on the Lexical editor, and the page
+  // with a document on it.
+  if (id.startsWith('Lexical') || id.startsWith('Document')) return 'Document';
+  if (id.startsWith('Notebook')) return 'Notebook';
+  return 'Cell';
+};
+
+const wait = (ms: number) =>
+  new Promise<void>(resolve => {
+    window.setTimeout(resolve, ms);
+  });
+
+const safeExampleId = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+};
+
+const toSurfaceLabel = (exampleId: string): 'cell' | 'notebook' => {
+  if (exampleId.toLowerCase().includes('cell')) {
+    return 'cell';
+  }
+  return 'notebook';
+};
+
+const normalizeSandboxBaseUrl = (
+  sandboxBaseUrl: string | undefined,
+  agentBaseUrl: string,
+): string => {
+  const sandboxRaw = String(sandboxBaseUrl || '').trim();
+  const agentRaw = String(agentBaseUrl || '').trim();
+  if (!sandboxRaw) {
+    return agentRaw;
+  }
+  try {
+    const sandboxUrl = new URL(sandboxRaw);
+    const host = sandboxUrl.hostname;
+    const isInternalHost =
+      host === '0.0.0.0' || host === '127.0.0.1' || host === 'localhost';
+    if (!isInternalHost) {
+      return sandboxRaw;
+    }
+    const agentUrl = new URL(agentRaw);
+    sandboxUrl.protocol = agentUrl.protocol;
+    sandboxUrl.host = agentUrl.host;
+    return sandboxUrl.toString();
+  } catch {
+    return sandboxRaw;
+  }
+};
+
+type CloudSandboxBootstrap = {
+  agentBaseUrl: string;
+  agentId: string;
+  ingress: string;
+  runtimeEnvironment?: RuntimeEnvironmentDetails;
+};
+
+type TopNoticeTone =
+  'default' | 'info' | 'success' | 'warning' | 'error' | 'danger';
+
+interface TopNotice {
+  id: number;
+  message: string;
+  details?: string;
+  tone?: TopNoticeTone;
+  durationMs?: number;
+}
 
 const resolveRuntimesUrl = (configured?: string): string => {
   const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
-  const envBaseUrl = import.meta.env.VITE_DATALAYER_URL;
+  const envBaseUrl = import.meta.env.VITE_DATALAYER_IAM_URL;
   const candidate = configured || envRuntimeUrl || envBaseUrl;
   if (!candidate) {
     return DEFAULT_RUNTIMES_URL;
@@ -91,6 +247,148 @@ const toAgentRuntimesBaseUrl = (value?: string | null): string | undefined => {
     return undefined;
   }
   return normalized;
+};
+
+/**
+ * Whether a URL names a Jupyter server on this machine.
+ *
+ * Asked this way round on purpose. The previous test was "is this prod1?",
+ * which took every host it did not recognise for a local one — so once the
+ * configured server moved to `r1`, Local mode accepted the cloud URL as its
+ * own and the browser dialled it from `localhost`, where CORS refused it.
+ *
+ * The set of remote hosts is open — `prod1`, `r1`, whatever a deployment adds
+ * next — while the set of local ones is not, so the closed set is the one
+ * worth enumerating.
+ */
+const isLocalJupyterServerUrl = (value?: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+  let host: string;
+  try {
+    host = new URL(value).hostname.toLowerCase();
+  } catch {
+    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(
+      value,
+    );
+  }
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host === '::1' ||
+    host === '[::1]' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local')
+  );
+};
+
+/**
+ * The anonymous Jupyter server the `jupyter` target uses.
+ *
+ * The same one the jupyter-react examples point at: a real server, reachable
+ * without an account, so an example can execute code with nothing installed
+ * and nobody signed in. It is a sandbox and only a sandbox — no agent lives
+ * there, which is why that target shows the chat switched off.
+ */
+const ANONYMOUS_JUPYTER_SERVER_URL =
+  'https://prod1.datalayer.run/api/jupyter-server';
+const ANONYMOUS_JUPYTER_SERVER_TOKEN =
+  '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
+
+const resolveLocalJupyterServerUrl = (): string => {
+  const normalizeLoopbackHost = (raw: string): string => {
+    const trimmed = raw.trim().replace(/\/$/, '');
+    if (!trimmed) {
+      return DEFAULT_LOCAL_JUPYTER_SERVER_URL;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.hostname === '0.0.0.0') {
+        parsed.hostname = 'localhost';
+      }
+      return parsed.toString().replace(/\/$/, '');
+    } catch {
+      return trimmed.replace('://0.0.0.0', '://localhost');
+    }
+  };
+
+  const envLocalUrl = (
+    import.meta.env.VITE_JUPYTER_SERVER_URL as string | undefined
+  )?.trim();
+  if (envLocalUrl) {
+    return normalizeLoopbackHost(envLocalUrl);
+  }
+
+  const configured = getJupyterServerUrl();
+  if (configured && isLocalJupyterServerUrl(configured)) {
+    return normalizeLoopbackHost(configured);
+  }
+  return normalizeLoopbackHost(DEFAULT_LOCAL_JUPYTER_SERVER_URL);
+};
+
+/**
+ * The one in-page JupyterLite manager, created at most once.
+ *
+ * A `LiteServer` registers a mock WebSocket server per kernel URL, so building
+ * a second one on the same page throws `A mock server is already listening on
+ * this url` and leaves the notebook without a kernel. Switching to Browser,
+ * away, and back is an ordinary thing to do, so the manager is remembered
+ * rather than rebuilt — which is what jupyter-react does behind `<Jupyter
+ * lite>`, where it is created only `if (!serviceManager)`.
+ *
+ * The promise is cached, not the resolved value: a second switch arriving
+ * mid-start awaits the same start instead of racing it into the same error.
+ */
+let browserServiceManager: Promise<ServiceManager.IManager> | null = null;
+
+/** A sandbox in this page: JupyterLite over a Pyodide kernel, no server. */
+const createBrowserServiceManager =
+  async (): Promise<ServiceManager.IManager> => {
+    // The in-page server is this page. Whichever target ran before left the
+    // Jupyter base url pointing at its own server — `prod1`, or localhost —
+    // and JupyterLite builds its kernel WebSocket addresses from that, so
+    // without this the browser sandbox dials a remote host for a kernel that
+    // only exists here.
+    setJupyterServerUrl(window.location.origin);
+    setJupyterServerToken('');
+
+    browserServiceManager =
+      browserServiceManager ??
+      // JupyterLite and the Pyodide kernel are megabytes; a person who never
+      // picks this target should not pay for them.
+      import('@datalayer/jupyter-react')
+        .then(({ createLiteServiceManager }) => createLiteServiceManager())
+        .then(manager => manager as ServiceManager.IManager)
+        .catch(error => {
+          // A failed start must not be cached, or the target stays dead for
+          // the rest of the session.
+          browserServiceManager = null;
+          throw error;
+        });
+    return browserServiceManager;
+  };
+
+/** A sandbox on the anonymous Jupyter server — real server, no account. */
+const createAnonymousJupyterServiceManager =
+  async (): Promise<ServiceManager.IManager> => {
+    setJupyterServerUrl(ANONYMOUS_JUPYTER_SERVER_URL);
+    setJupyterServerToken(ANONYMOUS_JUPYTER_SERVER_TOKEN);
+    const serverSettings = createServerSettings(
+      ANONYMOUS_JUPYTER_SERVER_URL,
+      ANONYMOUS_JUPYTER_SERVER_TOKEN,
+    );
+    const manager = new ServiceManager({ serverSettings });
+    await manager.ready;
+    return manager;
+  };
+
+const ensureLocalJupyterToken = (): void => {
+  const token = (getJupyterServerToken() || '').trim();
+  if (!token) {
+    setJupyterServerToken(DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN);
+  }
 };
 
 // Load configurations from DOM
@@ -114,7 +412,7 @@ const loadConfigurations = () => {
         }
       }
 
-      if (datalayerConfig.datalayerUrl) {
+      if (datalayerConfig.iamUrl) {
         datalayerConfig.runtimesUrl = resolveRuntimesUrl(
           datalayerConfig.runtimesUrl,
         );
@@ -181,6 +479,17 @@ const loadConfigurations = () => {
 };
 
 const getExampleEntriesList = () => getExampleEntries();
+/**
+ * Those examples, as cards.
+ *
+ * Module scope, not a `useMemo`: the list is a constant, and computing it in
+ * the component put a hook after three early returns — so a render that took
+ * one of them called fewer hooks than the render before it, which React
+ * refuses outright. A value that never changes has no business being a hook.
+ */
+const ANONYMOUS_EXAMPLE_ENTRIES = getExampleEntriesList().filter(entry =>
+  ANONYMOUS_EXAMPLES.has(entry.id),
+);
 
 const getInitialSearchQuery = (): string => {
   const params = new URLSearchParams(window.location.search);
@@ -456,13 +765,13 @@ const NotebookOnlyApp: React.FC = () => {
       try {
         const { configuration } = coreStore.getState();
 
-        // Always try to create collaboration provider if we have token and datalayerUrl
-        if (configuration?.token && configuration?.datalayerUrl) {
+        // Always try to create collaboration provider if we have token and spacerUrl
+        if (configuration?.token && configuration?.spacerUrl) {
           try {
             const { DatalayerCollaborationProvider } =
               await import('../collaboration/DatalayerCollaborationProvider');
             const provider = new DatalayerCollaborationProvider({
-              datalayerUrl: configuration.datalayerUrl,
+              spacerUrl: configuration.spacerUrl,
               token: configuration.token,
             });
             setCollaborationProvider(provider);
@@ -476,18 +785,27 @@ const NotebookOnlyApp: React.FC = () => {
 
         // Create service manager
         if (
-          runtimeTargetStore.getState().target === 'cloud' &&
+          runtimeTargetStore.getState().target === 'datalayer' &&
           configuration?.token
         ) {
           try {
-            const manager = await createDatalayerServiceManager(
-              configuration.cpuEnvironment || 'python-3.11',
-              configuration.credits || 100,
+            const activeSummary = agentSummaryStore.getState().active;
+            if (!activeSummary || activeSummary.location !== 'datalayer') {
+              throw new Error(
+                'No active cloud agent sandbox found for notebook-only mode.',
+              );
+            }
+            const manager = await createServiceManagerFromAgentSandbox(
+              {
+                baseUrl: activeSummary.sandboxBaseUrl || activeSummary.baseUrl,
+                agentId: activeSummary.agentId,
+                agentBaseUrl: activeSummary.baseUrl,
+              },
+              configuration.token,
             );
-            await manager.ready;
             setServiceManager(manager);
           } catch (error) {
-            console.error('Failed to create DatalayerServiceManager:', error);
+            console.error('Failed to connect to cloud sandbox:', error);
             const serverSettings = createServerSettings(
               getJupyterServerUrl(),
               getJupyterServerToken(),
@@ -497,12 +815,25 @@ const NotebookOnlyApp: React.FC = () => {
             setServiceManager(manager);
           }
         } else {
-          const serverSettings = createServerSettings(
-            getJupyterServerUrl(),
-            getJupyterServerToken(),
-          );
-          const manager = new ServiceManager({ serverSettings });
-          await manager.ready;
+          // Notebook-only mode has no agent of its own, but it still runs on
+          // whichever sandbox the person picked.
+          const target = runtimeTargetStore.getState().target;
+          const manager =
+            target === 'browser'
+              ? await createBrowserServiceManager()
+              : target === 'jupyter'
+                ? await createAnonymousJupyterServiceManager()
+                : await (async () => {
+                    setJupyterServerUrl(resolveLocalJupyterServerUrl());
+                    ensureLocalJupyterToken();
+                    const serverSettings = createServerSettings(
+                      getJupyterServerUrl(),
+                      getJupyterServerToken(),
+                    );
+                    const local = new ServiceManager({ serverSettings });
+                    await local.ready;
+                    return local;
+                  })();
           setServiceManager(manager);
         }
 
@@ -577,10 +908,37 @@ export const ExampleApp: React.FC = () => {
   const [selectedExample, setSelectedExample] = useState<string>(
     getDefaultExampleName(),
   );
+  // The example on screen, readable from closures that were frozen at the
+  // first render — see `createCloudServiceManager`.
+  const selectedExampleRef = useRef(selectedExample);
+  selectedExampleRef.current = selectedExample;
   const [searchQuery, setSearchQuery] = useState(getInitialSearchQuery());
   const [isChangingExample, setIsChangingExample] = useState(false);
+  const [topNotice, setTopNotice] = useState<TopNotice | null>(null);
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const setRuntimeTarget = useRuntimeTargetStore(state => state.setTarget);
+  const shellRuntime = useAgentRuntimes({
+    autoCreateAgent: false,
+    runtimeCreationTarget: 'backend-services',
+  });
+
+  const showTopNotice = useCallback(
+    (
+      message: string,
+      tone: TopNoticeTone = 'info',
+      durationMs = 4500,
+      details?: string,
+    ) => {
+      setTopNotice({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        message,
+        details,
+        tone,
+        durationMs,
+      });
+    },
+    [],
+  );
 
   const filteredExampleEntries = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -619,6 +977,11 @@ export const ExampleApp: React.FC = () => {
       setIsChangingExample(false);
     } catch (e) {
       console.error('Failed to load example:', e);
+      showTopNotice(
+        `Failed to load example: ${e instanceof Error ? e.message : String(e)}`,
+        'error',
+        6000,
+      );
       setError(`Failed to load example: ${e}`);
       setIsChangingExample(false);
     }
@@ -626,6 +989,8 @@ export const ExampleApp: React.FC = () => {
 
   const createLocalServiceManager =
     async (): Promise<ServiceManager.IManager> => {
+      setJupyterServerUrl(resolveLocalJupyterServerUrl());
+      ensureLocalJupyterToken();
       const serverSettings = createServerSettings(
         getJupyterServerUrl(),
         getJupyterServerToken(),
@@ -637,31 +1002,179 @@ export const ExampleApp: React.FC = () => {
 
   const createCloudServiceManager =
     async (): Promise<ServiceManager.IManager> => {
+      // Read, not captured: `createServiceManagerForTarget` is a `useCallback`
+      // with no dependencies, so anything this closure takes from render scope
+      // is frozen at the first render. Switching example and then switching
+      // target would otherwise bootstrap a sandbox for whichever example was
+      // on screen when the app started.
+      const exampleId = selectedExampleRef.current;
       const { configuration } = coreStore.getState();
       if (!configuration?.token) {
         throw new Error(
           'Cloud runtime requires authentication. Please sign in.',
         );
       }
+
+      const connectFromSummary = async (summary: {
+        baseUrl: string;
+        sandboxBaseUrl?: string;
+        agentId?: string;
+        runtimeEnvironment?: RuntimeEnvironmentDetails;
+      }): Promise<ServiceManager.IManager> => {
+        const connectOnce = async (candidate: {
+          baseUrl: string;
+          sandboxBaseUrl?: string;
+          agentId?: string;
+          runtimeEnvironment?: RuntimeEnvironmentDetails;
+        }): Promise<ServiceManager.IManager> => {
+          const resolvedSandboxBaseUrl = normalizeSandboxBaseUrl(
+            candidate.sandboxBaseUrl,
+            candidate.baseUrl,
+          );
+          const manager = await createServiceManagerFromAgentSandbox(
+            {
+              baseUrl: resolvedSandboxBaseUrl,
+              agentId: candidate.agentId,
+              agentBaseUrl: candidate.baseUrl,
+              runtimeEnvironment: candidate.runtimeEnvironment,
+            },
+            configuration.token,
+          );
+          const cloudBaseUrl = String(
+            manager.serverSettings.baseUrl || '',
+          ).trim();
+          const cloudToken = String(manager.serverSettings.token || '').trim();
+          if (cloudBaseUrl) {
+            setJupyterServerUrl(cloudBaseUrl.replace(/\/$/, ''));
+          }
+          if (cloudToken) {
+            setJupyterServerToken(cloudToken);
+          }
+          return manager;
+        };
+
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= 8; attempt += 1) {
+          try {
+            return await connectOnce(summary);
+          } catch (error) {
+            lastError = error;
+            if (attempt === 8) {
+              break;
+            }
+            await wait(700 * attempt);
+          }
+        }
+        throw lastError;
+      };
+
+      const bootstrapCloudSandbox =
+        async (): Promise<CloudSandboxBootstrap> => {
+          const exampleSlug = safeExampleId(exampleId || 'example');
+          const connection = await shellRuntime.launchRuntime({
+            environmentName: DEFAULT_CLOUD_RUNTIME_ENVIRONMENT,
+            givenName: `${exampleSlug}-sandbox`,
+            creditsLimit: 5,
+            type: 'notebook',
+          });
+          const agentId = `${exampleSlug}-cloud-agent`;
+          const agent = await shellRuntime.createAgent({
+            name: agentId,
+            description: `Cloud sandbox agent for ${exampleId}`,
+            agentLibrary: 'pydantic-ai',
+            protocol: 'ag-ui',
+            model: DEFAULT_MODEL,
+            systemPrompt: 'You are a helpful AI assistant.',
+          });
+          const runtimeEnvironment: RuntimeEnvironmentDetails = {
+            environmentName: connection.environmentName,
+          };
+
+          return {
+            agentBaseUrl: connection.agentBaseUrl,
+            agentId: agent.agentId || agentId,
+            ingress: connection.jupyterBaseUrl,
+            runtimeEnvironment,
+          };
+        };
+
       const activeSummary = agentSummaryStore.getState().active;
-      const selectedEntry = getExampleEntriesList().find(
-        entry => entry.id === selectedExample,
+      if (
+        activeSummary?.location === 'datalayer' &&
+        (activeSummary.sandboxBaseUrl || activeSummary.baseUrl)
+      ) {
+        try {
+          return await connectFromSummary({
+            baseUrl: activeSummary.baseUrl,
+            sandboxBaseUrl: activeSummary.sandboxBaseUrl,
+            agentId: activeSummary.agentId,
+            runtimeEnvironment: activeSummary.runtimeEnvironment,
+          });
+        } catch {
+          // The published sandbox is gone or unreachable. A fresh one is
+          // always allowed: an agent needs a runtime to run on, not a
+          // particular kind of example to run in.
+          showTopNotice(
+            'Existing cloud sandbox is unavailable. Launching a fresh sandbox...',
+            'warning',
+            3500,
+          );
+        }
+      }
+
+      showTopNotice('Starting a cloud agent sandbox...', 'info', 2600);
+      const launched = await bootstrapCloudSandbox();
+      agentSummaryStore.getState().setActive({
+        exampleId,
+        agentName: launched.agentId,
+        agentId: launched.agentId,
+        location: 'datalayer',
+        baseUrl: launched.agentBaseUrl,
+        sandboxBaseUrl: launched.ingress,
+        runtimeEnvironment: launched.runtimeEnvironment,
+        status: 'running',
+        isReady: true,
+      });
+      showTopNotice(
+        `Cloud sandbox ready. Connecting ${toSurfaceLabel(exampleId)} to it...`,
+        'success',
+        2600,
       );
-      const resolvedSpecId =
-        activeSummary?.exampleId === selectedExample
-          ? activeSummary.specId
-          : undefined;
-      const runtimeDescriptor =
-        resolvedSpecId || selectedEntry?.title || selectedExample;
-      const contextualRuntimeName = `Agent Runtime - ${runtimeDescriptor}`;
-      const manager = await createDatalayerServiceManager(
-        configuration.cpuEnvironment || 'python-3.11',
-        configuration.credits || 100,
-        contextualRuntimeName,
-      );
-      await manager.ready;
-      return manager;
+
+      return connectFromSummary({
+        baseUrl: launched.agentBaseUrl,
+        sandboxBaseUrl: launched.ingress,
+        agentId: launched.agentId,
+        runtimeEnvironment: launched.runtimeEnvironment,
+      });
     };
+
+  /**
+   * The service manager for a target.
+   *
+   * The single place that knows what each of the four positions means. The
+   * examples never see this: they read the target and what it offers, and the
+   * shell hands them a connected manager.
+   */
+  const createServiceManagerForTarget = useCallback(
+    async (target: ExampleRuntimeTarget): Promise<ServiceManager.IManager> => {
+      switch (target) {
+        case 'browser':
+          return createBrowserServiceManager();
+        case 'jupyter':
+          return createAnonymousJupyterServiceManager();
+        case 'datalayer':
+          return createCloudServiceManager();
+        case 'local':
+        default:
+          return createLocalServiceManager();
+      }
+    },
+    // The factories close over stable setters and store reads; re-creating this
+    // on every render would restart the sandbox on each keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   useEffect(() => {
     // Load configurations
@@ -671,43 +1184,46 @@ export const ExampleApp: React.FC = () => {
     const initializeApp = async () => {
       try {
         const runtimeTarget = runtimeTargetStore.getState().target;
+        const capabilities = runtimeTargetCapabilities(runtimeTarget);
 
-        // Only create a cloud Datalayer runtime when the user picked "cloud".
-        // In "local" mode we must never hit the cloud runtimes API.
-        if (runtimeTarget === 'cloud') {
-          try {
-            const manager = await createCloudServiceManager();
-            setServiceManager(manager);
-
-            // Load initial example
-            await loadExample(selectedExample, manager);
-          } catch (error) {
-            console.error('Failed to create DatalayerServiceManager:', error);
-            // Surface the failure in the UI, then fall back to local so the
-            // app stays usable.
-            setError(
-              `Cloud runtime unavailable, using local instead: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
-            );
-            const manager = await createLocalServiceManager();
-            setServiceManager(manager);
-
-            // Load initial example
-            await loadExample(selectedExample, manager);
-          }
-        } else {
-          // Local runtime target (or no token): use the local Jupyter server.
+        try {
+          const manager = await createServiceManagerForTarget(runtimeTarget);
+          setServiceManager(manager);
+          showTopNotice(
+            `Code sandbox connected successfully (${capabilities.label.toLowerCase()}).`,
+            'success',
+            2600,
+          );
+          await loadExample(selectedExample, manager);
+        } catch (error) {
+          console.error(
+            `Failed to create a service manager for ${runtimeTarget}:`,
+            error,
+          );
+          // Local is the fallback because it needs neither an account nor the
+          // network. Falling back to the target that just failed would only
+          // fail again.
+          showTopNotice(
+            `${capabilities.label} unavailable, using local instead: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            'warning',
+            5500,
+          );
+          setRuntimeTarget('local');
           const manager = await createLocalServiceManager();
           setServiceManager(manager);
-
-          // Load initial example
           await loadExample(selectedExample, manager);
         }
 
         setLoading(false);
       } catch (e) {
         console.error('Failed to initialize app:', e);
+        showTopNotice(
+          `Failed to initialize app: ${e instanceof Error ? e.message : String(e)}`,
+          'error',
+          6000,
+        );
         setError(`Failed to initialize app: ${e}`);
         setLoading(false);
       }
@@ -732,11 +1248,16 @@ export const ExampleApp: React.FC = () => {
 
     // 2) Tear down any server-side agents created by the previous example and
     //    wipe in-process agent state so the next example boots fresh.
-    const agentBaseUrl = resolveExampleAgentRuntimesUrl(
-      runtimeTargetStore.getState().target,
-    );
+    const currentTarget = runtimeTargetStore.getState().target;
+    const activeRuntime = agentSummaryStore.getState().active;
+    const agentBaseUrl =
+      activeRuntime?.location === currentTarget && activeRuntime.baseUrl
+        ? activeRuntime.baseUrl
+        : resolveExampleAgentRuntimesUrl(currentTarget);
     const token = useSimpleAuthStore.getState().token;
-    await teardownExampleAgents(agentBaseUrl, token ?? undefined);
+    if (targetHasAgent(currentTarget)) {
+      await teardownExampleAgents(agentBaseUrl, token ?? undefined);
+    }
 
     // 3) Load and mount the new example.
     setSelectedExample(newExample);
@@ -749,22 +1270,7 @@ export const ExampleApp: React.FC = () => {
   ): Promise<void> => {
     if (newTarget === runtimeTarget || !serviceManager) return;
 
-    let nextManager: ServiceManager.IManager;
-    try {
-      nextManager =
-        newTarget === 'cloud'
-          ? await createCloudServiceManager()
-          : await createLocalServiceManager();
-    } catch (switchError) {
-      setError(
-        `Failed to switch to ${newTarget}: ${
-          switchError instanceof Error
-            ? switchError.message
-            : String(switchError)
-        }`,
-      );
-      return;
-    }
+    const previousManager = serviceManager;
 
     // 1) Unmount the current example FIRST so its cleanup hooks run against the
     //    still-valid OLD runtime (AG-UI disconnect, abort fetches, sandboxes).
@@ -774,18 +1280,60 @@ export const ExampleApp: React.FC = () => {
       requestAnimationFrame(() => resolve());
     });
 
-    // 2) Tear down the agents created on the OLD target, then wipe state so a
-    //    brand-new runtime is launched for the new target.
-    const oldAgentBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    // 2) Tear down the agents created on the OLD target, then wipe in-process
+    //    agent state.
+    const activeRuntime = agentSummaryStore.getState().active;
+    const oldAgentBaseUrl =
+      activeRuntime?.location === runtimeTarget && activeRuntime.baseUrl
+        ? activeRuntime.baseUrl
+        : resolveExampleAgentRuntimesUrl(runtimeTarget);
     const token = useSimpleAuthStore.getState().token;
-    await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
+    if (targetHasAgent(runtimeTarget)) {
+      await teardownExampleAgents(oldAgentBaseUrl, token ?? undefined);
+    }
 
-    // 3) Switch the target and re-mount the example (its key includes the
-    //    target, so this launches/connects a fresh runtime).
+    /*
+     * 3) Only now build the new target's sandbox.
+     *
+     * The order matters and used to be the other way round. Creating the
+     * manager first meant that for the cloud target — where building one
+     * launches a runtime and registers an agent, writing them into the shared
+     * `agentRuntimeStore` — the teardown above then wiped the runtime that had
+     * just been created for the *new* target while cleaning up after the old
+     * one. The example mounted with no runtime connected, could not create its
+     * agent on one, and showed no chat at all.
+     */
+    let nextManager: ServiceManager.IManager;
+    try {
+      nextManager = await createServiceManagerForTarget(newTarget);
+    } catch (switchError) {
+      showTopNotice(
+        `Failed to switch to ${newTarget}: ${
+          switchError instanceof Error
+            ? switchError.message
+            : String(switchError)
+        }`,
+        'error',
+        6000,
+      );
+      // Put the person back where they were. The example is already unmounted
+      // and the old agents are gone, so the old target is re-entered from
+      // scratch rather than left half-torn-down.
+      await loadExample(selectedExample, previousManager);
+      return;
+    }
+
+    // 4) Switch the target and re-mount the example (its key includes the
+    //    target, so this connects to the runtime built above).
     setRuntimeTarget(newTarget);
     setServiceManager(nextManager);
     setError(null);
     await loadExample(selectedExample, nextManager);
+    showTopNotice(
+      `Code sandbox connected successfully (${newTarget}).`,
+      'success',
+      2600,
+    );
   };
 
   if (loading) {
@@ -839,8 +1387,11 @@ export const ExampleApp: React.FC = () => {
       exampleProps={exampleProps}
       serviceManager={serviceManager}
       onExampleChange={handleExampleChange}
+      anonymousExampleEntries={ANONYMOUS_EXAMPLE_ENTRIES}
       onRuntimeTargetChange={handleRuntimeTargetChange}
       availableExamples={getExampleEntriesList()}
+      topNotice={topNotice}
+      onDismissTopNotice={() => setTopNotice(null)}
     />
   );
 };
@@ -857,8 +1408,12 @@ const ExampleAppThemed: React.FC<{
   exampleProps: Record<string, unknown>;
   serviceManager: ServiceManager.IManager | null;
   onExampleChange: (name: string) => Promise<void>;
+  /** What the sign-in screen offers beside the form. */
+  anonymousExampleEntries: HomeExampleCardEntry[];
   onRuntimeTargetChange: (target: ExampleRuntimeTarget) => Promise<void>;
   availableExamples: ExampleEntry[];
+  topNotice: TopNotice | null;
+  onDismissTopNotice: () => void;
 }> = ({
   selectedExample,
   isChangingExample,
@@ -867,17 +1422,90 @@ const ExampleAppThemed: React.FC<{
   exampleProps,
   serviceManager,
   onExampleChange,
+  anonymousExampleEntries,
   onRuntimeTargetChange,
   availableExamples,
+  topNotice,
+  onDismissTopNotice,
 }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const runtimeTarget = useRuntimeTargetStore(state => state.target);
   const agentSummary = useAgentSummaryStore(state => state.active);
+  // Some examples bring their own sandbox switch — the LOOP workspace has one
+  // in its header. Two controls for one sandbox is one too many, and the
+  // second would not agree with the first.
+  const exampleOwnsSandboxControl = Boolean(
+    availableExamples
+      .find(entry => entry.id === selectedExample)
+      ?.tags?.includes('owns-sandbox-control'),
+  );
+  const isHome = selectedExample === 'HomeExample';
+  // The one example that describes its own agent — see the header below.
+  const isLoopWorkspace = selectedExample === 'LoopWorkspaceExample';
   const cfg = themeConfigs[themeVariant];
   const logoColors = getLogoColors(themeVariant, colorMode);
   const { token, setAuth, clearAuth } = useSimpleAuthStore();
   const [showSignIn, setShowSignIn] = useState(false);
-  const shouldShowAuthScreen = showSignIn && !token;
+  const [exampleSearch, setExampleSearch] = useState('');
+  /*
+   * The sign-in screen stands aside for an example that needs no account.
+   *
+   * Without this the screen offered the Loop workspace as a card and then
+   * stayed put when it was chosen: the example *was* selected, and nothing
+   * rendered it, because `showSignIn` knows only that nobody is signed in.
+   * Offering a way through and then not taking it is worse than not offering
+   * it.
+   */
+  const shouldShowAuthScreen =
+    showSignIn && !token && !ANONYMOUS_EXAMPLES.has(selectedExample);
+
+  const selectedExampleEntry = availableExamples.find(
+    example => example.id === selectedExample,
+  );
+  const exampleMenuGroups = useMemo(() => {
+    const groups = new Map<string, ExampleEntry[]>();
+    for (const example of availableExamples) {
+      if (example.id === 'HomeExample') continue;
+      const groupName = getExampleGroup(example.id);
+      const group = groups.get(groupName) ?? [];
+      group.push(example);
+      groups.set(groupName, group);
+    }
+    for (const [groupName, examples] of groups) {
+      examples.sort((left, right) => {
+        if (groupName === 'Loop') {
+          // The shells first, most naked first; then the loop that drives a
+          // notebook; then the library of specs behind them all.
+          const LOOP_ORDER = [
+            'LoopShellExample',
+            'LoopWorkspaceExample',
+            'AgentLoopExample',
+            'AgentspecsExample',
+          ];
+          const loopOrder = (id: string) => {
+            const index = LOOP_ORDER.indexOf(id);
+            return index === -1 ? LOOP_ORDER.length : index;
+          };
+          const order = loopOrder(left.id) - loopOrder(right.id);
+          if (order !== 0) return order;
+        }
+        return left.title.localeCompare(right.title);
+      });
+    }
+    return groups;
+  }, [availableExamples]);
+  const filteredExampleMenuGroups = useMemo(() => {
+    const query = exampleSearch.trim().toLowerCase();
+    if (!query) return exampleMenuGroups;
+    const filtered = new Map<string, ExampleEntry[]>();
+    for (const [groupName, examples] of exampleMenuGroups) {
+      const matches = examples.filter(example =>
+        example.title.toLowerCase().includes(query),
+      );
+      if (matches.length) filtered.set(groupName, matches);
+    }
+    return filtered;
+  }, [exampleMenuGroups, exampleSearch]);
 
   const syncTokenToIamStore = useCallback((newToken: string | undefined) => {
     import('../state/substates').then(({ iamStore: coreIamStore }) => {
@@ -886,9 +1514,11 @@ const ExampleAppThemed: React.FC<{
   }, []);
 
   useEffect(() => {
-    const baseUrl =
-      toAgentRuntimesBaseUrl(serviceManager?.serverSettings.baseUrl) ||
-      resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const jupyterSandboxBaseUrl = toAgentRuntimesBaseUrl(
+      serviceManager?.serverSettings.baseUrl,
+    );
+    const agentApiBaseUrl = resolveExampleAgentRuntimesUrl(runtimeTarget);
+    const sandboxOnly = isSandboxOnlyExample(selectedExample);
     // Seed a base summary for the selected example. Do NOT clobber a richer
     // summary that the mounted example already published (spec id, agent id,
     // readiness) for the same example + target — otherwise fast-settling local
@@ -908,7 +1538,8 @@ const ExampleAppThemed: React.FC<{
       exampleId: selectedExample,
       agentName: selectedExample,
       location: runtimeTarget,
-      baseUrl,
+      baseUrl: sandboxOnly ? '' : agentApiBaseUrl,
+      sandboxBaseUrl: sandboxOnly ? jupyterSandboxBaseUrl : undefined,
       status: isChangingExample ? 'switching' : 'selected',
     });
   }, [selectedExample, runtimeTarget, isChangingExample, serviceManager]);
@@ -974,7 +1605,7 @@ const ExampleAppThemed: React.FC<{
             justifyContent: 'space-between',
             gap: 3,
             height: '60px',
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
             borderBottom: '1px solid',
             borderColor: 'border.default',
           }}
@@ -983,7 +1614,13 @@ const ExampleAppThemed: React.FC<{
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box
               as="button"
-              onClick={() => void onExampleChange('HomeExample')}
+              onClick={() => {
+                // Also the way back out of the sign-in view, which nothing
+                // else dismisses: with the example chooser hidden behind it,
+                // a person who changed their mind would otherwise be stuck.
+                setShowSignIn(false);
+                void onExampleChange('HomeExample');
+              }}
               title="Home"
               aria-label="Go to examples home"
               sx={{
@@ -1003,182 +1640,139 @@ const ExampleAppThemed: React.FC<{
             >
               <HomeIcon size={16} />
             </Box>
-            <Box
-              as="select"
-              value={selectedExample}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                onExampleChange(e.target.value)
-              }
-              disabled={isChangingExample}
-              sx={{
-                px: 2,
-                py: '6px',
-                fontSize: 1,
-                fontFamily: 'mono',
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                color: 'fg.default',
-                cursor: isChangingExample ? 'not-allowed' : 'pointer',
-                minWidth: '250px',
-                outline: 'none',
-                '&:focus-visible': {
-                  boxShadow:
-                    '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
-                },
-              }}
-            >
-              {(() => {
-                const home = availableExamples.find(
-                  e => e.id === 'HomeExample',
-                );
-                const rest = availableExamples.filter(
-                  e => e.id !== 'HomeExample',
-                );
-
-                // Classify each example into a named group.
-                const groupOf = (id: string): string => {
-                  if (id === 'AgentspecsExample' || id === 'AgentLoopExample')
-                    return 'Personas';
-                  if (id.startsWith('A2Ui')) return 'A2UI';
-                  if (id.startsWith('AgUi')) return 'AG-UI';
-                  if (id.startsWith('CopilotKit')) return 'CopilotKit';
-                  if (id.startsWith('Agent')) return 'Agent';
-                  if (id.startsWith('Chat')) return 'Chat';
-                  if (id.startsWith('Lexical')) return 'Lexical';
-                  if (
-                    id.startsWith('Notebook') ||
-                    id === 'NotebookCollaborationExample'
-                  )
-                    return 'Notebook';
-                  return 'Cell';
-                };
-
-                const groupOrder = [
-                  'Personas',
-                  'A2UI',
-                  'AG-UI',
-                  'Agent',
-                  'Chat',
-                  'Lexical',
-                  'Notebook',
-                  'Cell',
-                  'CopilotKit',
-                ];
-
-                const grouped = new Map<string, typeof rest>();
-                for (const ex of rest) {
-                  const g = groupOf(ex.id);
-                  const group = grouped.get(g);
-                  if (group) {
-                    group.push(ex);
-                  } else {
-                    grouped.set(g, [ex]);
-                  }
-                }
-                for (const [groupName, list] of grouped.entries()) {
-                  if (groupName === 'Personas') {
-                    const personaOrder = (id: string): number => {
-                      if (id === 'AgentspecsExample') return 0;
-                      if (id === 'AgentLoopExample') return 1;
-                      return 2;
-                    };
-                    list.sort((a, b) => {
-                      const orderDelta =
-                        personaOrder(a.id) - personaOrder(b.id);
-                      if (orderDelta !== 0) return orderDelta;
-                      return a.title.localeCompare(b.title);
-                    });
-                  } else {
-                    list.sort((a, b) => a.title.localeCompare(b.title));
-                  }
-                }
-
-                const nodes: React.ReactNode[] = [];
-                if (home) {
-                  nodes.push(
-                    <option
-                      key={home.id}
-                      value={home.id}
-                      disabled={home.id === selectedExample}
-                    >
-                      {home.title}
-                    </option>,
-                  );
-                }
-
-                let sepIndex = 0;
-                for (const g of groupOrder) {
-                  const items = grouped.get(g);
-                  if (!items || items.length === 0) continue;
-                  nodes.push(
-                    <option
-                      key={`__sep_${sepIndex++}`}
-                      disabled
-                      value={`__sep_${sepIndex}`}
-                    >
-                      ────── {g} ──────
-                    </option>,
-                  );
-                  for (const example of items) {
-                    nodes.push(
-                      <option
-                        key={example.id}
-                        value={example.id}
-                        disabled={example.id === selectedExample}
+            {!shouldShowAuthScreen && (
+              <ActionMenu>
+                <ActionMenu.Button
+                  disabled={isChangingExample}
+                  aria-label="Select example"
+                  sx={{ minWidth: '250px', justifyContent: 'space-between' }}
+                  onClick={() => setExampleSearch('')}
+                >
+                  {selectedExampleEntry?.title ?? selectedExample}
+                </ActionMenu.Button>
+                <ActionMenu.Overlay
+                  width="large"
+                  sx={{
+                    maxHeight: 'calc(100vh - 72px)',
+                    overflowY: 'auto',
+                    overscrollBehavior: 'contain',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderBottom: '1px solid',
+                      borderColor: 'border.default',
+                    }}
+                  >
+                    <TextInput
+                      autoFocus
+                      block
+                      aria-label="Filter examples"
+                      placeholder="Filter examples..."
+                      value={exampleSearch}
+                      onChange={event => setExampleSearch(event.target.value)}
+                    />
+                  </Box>
+                  <ActionList selectionVariant="single">
+                    {availableExamples
+                      .filter(
+                        example =>
+                          example.id === 'HomeExample' &&
+                          (!exampleSearch.trim() ||
+                            example.title
+                              .toLowerCase()
+                              .includes(exampleSearch.trim().toLowerCase())),
+                      )
+                      .map(example => (
+                        <ActionList.Item
+                          key={example.id}
+                          selected={example.id === selectedExample}
+                          onSelect={() => void onExampleChange(example.id)}
+                        >
+                          {example.title}
+                        </ActionList.Item>
+                      ))}
+                    <ActionList.Divider />
+                    {EXAMPLE_GROUP_ORDER.map(groupName => {
+                      const examples = filteredExampleMenuGroups.get(groupName);
+                      if (!examples?.length) return null;
+                      return (
+                        <ActionList.Group key={groupName} title={groupName}>
+                          {examples.map(example => (
+                            <ActionList.Item
+                              key={example.id}
+                              selected={example.id === selectedExample}
+                              onSelect={() => void onExampleChange(example.id)}
+                            >
+                              {example.title}
+                            </ActionList.Item>
+                          ))}
+                        </ActionList.Group>
+                      );
+                    })}
+                  </ActionList>
+                </ActionMenu.Overlay>
+              </ActionMenu>
+            )}
+            {!shouldShowAuthScreen && !exampleOwnsSandboxControl && (
+              <Box
+                aria-label="Where the example runs"
+                sx={{
+                  minWidth: '320px',
+                  opacity: isHome || isChangingExample ? 0.6 : 1,
+                }}
+              >
+                <SegmentedControl
+                  aria-label="Where the example runs"
+                  fullWidth
+                  size="small"
+                >
+                  {RUNTIME_TARGETS.map(target => {
+                    const capabilities = runtimeTargetCapabilities(target);
+                    // Signing in is what the Datalayer target needs; saying so on
+                    // the button beats letting the switch fail and explaining
+                    // afterwards.
+                    const needsSignIn = capabilities.requiresAuth && !token;
+                    const unavailable = isHome || needsSignIn;
+                    return (
+                      <SegmentedControl.Button
+                        key={target}
+                        selected={runtimeTarget === target}
+                        disabled={unavailable}
+                        title={
+                          needsSignIn
+                            ? `${capabilities.hint} Sign in to use it.`
+                            : capabilities.hint
+                        }
+                        onClick={() => {
+                          if (!unavailable && !isChangingExample) {
+                            void onRuntimeTargetChange(target);
+                          }
+                        }}
                       >
-                        {example.title}
-                      </option>,
+                        {capabilities.label}
+                      </SegmentedControl.Button>
                     );
-                  }
-                }
+                  })}
+                </SegmentedControl>
+              </Box>
+            )}
+            {/*
+              Not for the Loop workspace, which draws its own.
 
-                return <>{nodes}</>;
-              })()}
-            </Box>
-            <Box
-              as="select"
-              value={runtimeTarget}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                void onRuntimeTargetChange(
-                  e.target.value as ExampleRuntimeTarget,
-                )
-              }
-              disabled={isChangingExample}
-              aria-label="Runtime target"
-              title="Runtime target"
-              sx={{
-                px: 2,
-                py: '6px',
-                fontSize: 1,
-                fontFamily: 'mono',
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                color: 'fg.default',
-                cursor: isChangingExample ? 'not-allowed' : 'pointer',
-                minWidth: '120px',
-                outline: 'none',
-                '&:focus-visible': {
-                  boxShadow:
-                    '0 0 0 2px var(--bgColor-accent-muted, rgba(9,105,218,0.3))',
-                },
-              }}
-            >
-              <option value="local">Local</option>
-              <option value="cloud">Cloud</option>
-            </Box>
-            <AgentSummary summary={agentSummary} />
+              This shell keeps one summary for the example on screen, which is
+              right while an example *is* an agent. The workspace is not: the
+              agent it addresses is chosen inside it and can change without
+              this page knowing, so the summary here described a session it
+              could not see — beside a header that described the real one.
+            */}
+            {!isHome && !shouldShowAuthScreen && !isLoopWorkspace && (
+              <AgentSummary summary={agentSummary} />
+            )}
             {isChangingExample && (
               <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
                 Loading…
-              </Box>
-            )}
-            {error && (
-              <Box as="span" sx={{ color: 'danger.fg', fontSize: 0 }}>
-                Error: {error}
               </Box>
             )}
           </Box>
@@ -1251,6 +1845,15 @@ const ExampleAppThemed: React.FC<{
           }}
         >
           {shouldShowAuthScreen ? (
+            /*
+              Signing in, beside what can be seen without it.
+              
+              A sign-in screen on its own says only "not yet". Most of these
+              examples do need an account — they allocate runtimes somebody
+              pays for — but the Loop workspace runs entirely in the page, so
+              putting it here turns a closed door into a choice: sign in for
+              the rest, or try this one now.
+            */
             <Box
               sx={{
                 width: '100%',
@@ -1260,7 +1863,19 @@ const ExampleAppThemed: React.FC<{
                 overflow: 'auto',
               }}
             >
-              <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  // Stacked on a narrow window, sign-in first: it is what the
+                  // reader came here for, and a column of cards above the form
+                  // would bury it.
+                  gridTemplateColumns: ['1fr', '1fr', '440px minmax(0, 1fr)'],
+                  gap: 4,
+                  maxWidth: 1400,
+                  mx: 'auto',
+                  alignItems: 'start',
+                }}
+              >
                 <SignInSimple
                   onSignIn={handleHeaderSignIn}
                   onApiKeySignIn={apiKey =>
@@ -1269,7 +1884,29 @@ const ExampleAppThemed: React.FC<{
                   title="Agent Runtimes Examples"
                   description="Sign in to run authenticated examples and tools."
                   leadingIcon={<HomeIcon size={24} />}
+                  // Level with the cards beside it. Left to itself the form
+                  // centres in `100vh`, which put it half a screen below the
+                  // column it shares a row with.
+                  fillHeight={false}
                 />
+                {/* The home page's own card grid, given a shorter list. Reused
+                    rather than reimplemented so an example added here looks
+                    the same on both sides of the sign-in. */}
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'border.default',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    bg: 'canvas.default',
+                  }}
+                >
+                  <HomeExample
+                    examples={anonymousExampleEntries}
+                    searchQuery=""
+                    onSelectExample={name => void onExampleChange(name)}
+                  />
+                </Box>
               </Box>
             </Box>
           ) : isChangingExample ? (
@@ -1288,6 +1925,18 @@ const ExampleAppThemed: React.FC<{
             </ExampleErrorBoundary>
           ) : null}
         </Box>
+        <SlidingPanel
+          isOpen={Boolean(topNotice)}
+          onDismiss={onDismissTopNotice}
+          position="north"
+          variant={topNotice?.tone ?? 'info'}
+          durationMs={topNotice?.durationMs ?? 0}
+          fullWidth={true}
+          offset={60}
+          zIndex={160}
+          message={topNotice?.message || ''}
+          details={topNotice?.details}
+        />
       </Box>
     </DatalayerThemeProvider>
   );

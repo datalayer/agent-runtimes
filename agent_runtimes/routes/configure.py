@@ -49,8 +49,21 @@ class SandboxStatus(BaseModel):
     the Jupyter kernel to call MCP tools via HTTP to the agent-runtimes container.
     """
 
-    variant: str  # "eval" or "jupyter"
+    variant: str  # "eval" or "jupyter-server"
     jupyter_url: str | None = None
+    #: The token that Jupyter server wants, when it wants one.
+    #:
+    #: Sent because the browser is meant to drive this sandbox: the notebook
+    #: and document editors connect to it directly, and a URL without its token
+    #: is refused at the first request — a cell that runs and produces nothing
+    #: rather than an error anybody can act on. The sandbox is the caller's own
+    #: and this endpoint already configures and restarts it, so the token is not
+    #: a wider disclosure than the channel it travels on.
+    jupyter_token: str | None = None
+    #: The kernel the agent is using, so an editor joins it rather than
+    #: starting a rival one and diverging from what the agent sees.
+    kernel_id: str | None = None
+    kernel_name: str | None = None
     jupyter_connected: bool = False
     jupyter_error: str | None = None
     sandbox_running: bool = False
@@ -211,6 +224,7 @@ def _bedrock_models_from_agentspecs() -> list[str]:
             _normalize(spec.id)
             for spec in list_models()
             if getattr(spec, "provider", None) == "bedrock"
+            and getattr(spec, "available", False)
         ]
     except Exception:  # noqa: BLE001
         pass
@@ -236,8 +250,13 @@ def _bedrock_models_from_agentspecs() -> list[str]:
                     data = yaml_module.safe_load(fh) or {}
             except Exception:  # noqa: BLE001
                 data = {}
-            if data.get("provider") == "bedrock" and isinstance(data.get("id"), str):
-                ids.append(_normalize(data["id"]))
+            if (
+                data.get("provider") != "bedrock"
+                or not data.get("available", False)
+                or not isinstance(data.get("id"), str)
+            ):
+                continue
+            ids.append(_normalize(data["id"]))
         return ids
     except Exception:  # noqa: BLE001
         return []
@@ -352,6 +371,168 @@ async def list_inference_models() -> dict[str, Any]:
         "provider": "datalayer",
         "models": _fallback_bedrock_models(),
     }
+
+
+@router.get("/models")
+async def list_catalog_models() -> dict[str, Any]:
+    """The model catalog, with readiness and — for local models — reachability.
+
+    The list comes from agentspecs: that is what decides which models are
+    *offerable*. Discovery only reports what is **reachable right now**, because
+    a local model is available when something is listening on a port, not when
+    an API key happens to be set.
+
+    A model installed locally with no spec is reported separately, as an
+    invitation to add a spec — never as a silent option.
+    """
+    from agent_runtimes.models.local import (
+        LOCAL_PROVIDERS,
+        capability_warning,
+        discover_installed_models,
+        split_model_id,
+    )
+    from agent_runtimes.specs.models import AI_MODEL_CATALOGUE
+
+    installed = discover_installed_models()
+
+    models: list[dict[str, Any]] = []
+    catalogued_local: set[tuple[str, str]] = set()
+
+    for model in AI_MODEL_CATALOGUE.values():
+        missing = [
+            name for name in model.required_env_vars if not os.getenv(name.split(":")[0])
+        ]
+        entry: dict[str, Any] = {
+            "id": model.id,
+            "name": model.name,
+            "description": model.description,
+            "provider": model.provider,
+            "default": model.default,
+            "tokens_limit": model.tokens_limit,
+            "local": model.local,
+            "capabilities": list(model.capabilities),
+            "required_env_vars": list(model.required_env_vars),
+            "missing_env_vars": missing,
+        }
+
+        if model.local:
+            provider_name, model_name = split_model_id(model.id)
+            catalogued_local.add((provider_name, model_name))
+            provider_models = installed.get(provider_name)
+            # Reachability is a three-state answer: installed, runtime is up but
+            # this model is not pulled, or the runtime is not running at all.
+            if provider_models is None:
+                entry["reachable"] = False
+                entry["reason"] = f"{provider_name} is not running"
+            elif model_name in provider_models:
+                entry["reachable"] = True
+            else:
+                entry["reachable"] = False
+                entry["reason"] = f"not installed in {provider_name}"
+            entry["warning"] = capability_warning(model)
+            entry["available"] = entry["reachable"]
+        else:
+            entry["reachable"] = None
+            entry["warning"] = None
+            # Two questions wear the same word here. The registry's `available`
+            # is entitlement — may this deployment call the model at all — and
+            # this key is readiness, whether the credentials are in place. Only
+            # readiness was being computed, and every Bedrock model shares one
+            # set of AWS credentials, so the whole family read as available and
+            # Bedrock answered `AccessDeniedException` when one was picked.
+            entitled = getattr(model, "available", True)
+            entry["available"] = bool(not missing and entitled)
+            if not entitled:
+                entry["reason"] = "Not enabled for this deployment"
+
+        models.append(entry)
+
+    uncatalogued = [
+        {"provider": provider_name, "name": name}
+        for provider_name, names in installed.items()
+        for name in names
+        if (provider_name, name) not in catalogued_local
+    ]
+
+    runtimes = {
+        name: {
+            "label": spec.label,
+            "base_url": spec.base_url(),
+            "reachable": name in installed,
+            "installed": list(installed.get(name, ())),
+        }
+        for name, spec in LOCAL_PROVIDERS.items()
+    }
+
+    return {
+        "models": models,
+        "local_runtimes": runtimes,
+        "uncatalogued_local": uncatalogued,
+    }
+
+
+@router.get("/skills")
+async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
+    """The skill catalog, with readiness — and, when a sandbox is up, what is live.
+
+    The catalogue is what *exists*, and it answers without a sandbox: someone
+    should be able to see what a skill is before paying for compute to run it.
+    Whether a skill is installed and active is a second question, answerable
+    only when something is running.
+    """
+    from agent_runtimes.specs.skills import list_skill_specs
+
+    skills: list[dict[str, Any]] = []
+    for spec in list_skill_specs():
+        # Env var refs are versioned (`TAVILY_API_KEY:0.0.1`); the variable is
+        # the part before the colon.
+        required = [ref.split(":")[0] for ref in (spec.envvars or [])]
+        # `optional_env_vars` and `enabled` are written in the YAML but are not
+        # fields on SkillSpec, so pydantic drops them: read them defensively
+        # rather than assuming either shape.
+        optional = [
+            str(ref).split(":")[0]
+            for ref in (getattr(spec, "optional_env_vars", None) or [])
+        ]
+        missing = [name for name in required if not os.getenv(name)]
+
+        skills.append(
+            {
+                "id": spec.id,
+                "version": spec.version,
+                "name": spec.name,
+                "description": spec.description,
+                "tags": list(spec.tags or []),
+                "icon": spec.icon,
+                "emoji": spec.emoji,
+                "enabled": bool(getattr(spec, "enabled", True)),
+                "dependencies": list(spec.dependencies or []),
+                "required_env_vars": required,
+                "optional_env_vars": optional,
+                "missing_env_vars": missing,
+                "ready": not missing,
+            }
+        )
+
+    active: list[str] = []
+    sandbox: dict[str, Any] = {}
+    try:
+        status = await get_codemode_status(agent_id=agent_id)  # type: ignore[call-arg]
+        if isinstance(status, dict):
+            sandbox = status.get("sandbox") or {}
+            active = [
+                str(entry.get("name"))
+                for entry in status.get("skills") or []
+                if isinstance(entry, dict) and entry.get("name")
+            ]
+    except Exception as error:  # noqa: BLE001
+        # No sandbox is not an error here: the catalogue still answers.
+        logger.debug("Codemode status unavailable while listing skills: %s", error)
+
+    for entry in skills:
+        entry["active"] = entry["id"] in active
+
+    return {"skills": skills, "active": active, "sandbox": sandbox}
 
 
 @router.get("", response_model=FrontendConfig)
@@ -869,6 +1050,9 @@ def _get_sandbox_status() -> SandboxStatus | None:
         sandbox_status = SandboxStatus(
             variant=status["variant"],
             jupyter_url=status.get("jupyter_url"),
+            jupyter_token=status.get("jupyter_token"),
+            kernel_id=status.get("kernel_id"),
+            kernel_name=status.get("kernel_name"),
             sandbox_running=status.get("sandbox_running", False),
             is_executing=False,
             jupyter_connected=False,
@@ -886,8 +1070,14 @@ def _get_sandbox_status() -> SandboxStatus | None:
         except Exception:
             pass
 
-        # If Jupyter variant, test the connection
-        if status["variant"] == "jupyter" and status.get("jupyter_url"):
+        # Both variants are reached over a Jupyter server, so both are worth
+        # testing. Only "jupyter-server" was, which left a Datalayer runtime
+        # reporting `jupyter_connected: False` however healthy it was — and a
+        # browser reading that concludes there is nothing to connect a notebook
+        # to.
+        if status["variant"] in ("jupyter-server", "datalayer") and status.get(
+            "jupyter_url"
+        ):
             jupyter_connected, jupyter_error = _test_jupyter_connection(
                 status["jupyter_url"], status.get("jupyter_token")
             )
@@ -1044,6 +1234,17 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
         is_executing = False
         variant = status["variant"]
         jupyter_url = status.get("jupyter_url")
+        # Carried with the URL, because a browser is a real client of this
+        # sandbox: the notebook and document editors connect to that Jupyter
+        # server directly. A URL without its token is refused at the first
+        # request, and Jupyter rejects a cross-origin call before attaching
+        # CORS headers — so the browser reports a missing
+        # `Access-Control-Allow-Origin` on a 403 and neither message names the
+        # cause. The kernel id is what lets an editor join the kernel the agent
+        # is using instead of starting a rival one beside it.
+        jupyter_token = status.get("jupyter_token")
+        kernel_id = status.get("kernel_id")
+        kernel_name = status.get("kernel_name")
 
         # If an agent_id is provided, prefer the agent codemode sandbox state.
         # This tracks the sandbox actually used for code execution.
@@ -1080,10 +1281,20 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
                         )
                 sandbox_cls = type(agent_sandbox).__name__.lower()
                 if "jupyter" in sandbox_cls:
-                    variant = "jupyter"
-                agent_url = getattr(agent_sandbox, "_server_url", None)
+                    variant = "jupyter-server"
+                # From the agent's own sandbox, all of it or none of it. This
+                # branch replaces the URL; taking the token and kernel from the
+                # global sandbox instead would describe two different servers
+                # in one message.
+                agent_details = manager.connection_details(agent_sandbox)
+                agent_url = agent_details["jupyter_url"] or getattr(
+                    agent_sandbox, "_server_url", None
+                )
                 if agent_url:
                     jupyter_url = str(agent_url)
+                    jupyter_token = agent_details["jupyter_token"]
+                    kernel_id = agent_details["kernel_id"]
+                    kernel_name = agent_details["kernel_name"]
         else:
             # Global fallback: inspect the existing sandbox instance without
             # triggering sandbox creation on every poll tick.
@@ -1096,6 +1307,9 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
             "sandbox_running": sandbox_running,
             "is_executing": is_executing,
             "jupyter_url": jupyter_url,
+            "jupyter_token": jupyter_token,
+            "kernel_id": kernel_id,
+            "kernel_name": kernel_name,
         }
     except ImportError:
         return {
@@ -1125,11 +1339,18 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
     Message format (server → client)::
 
         {
-            "variant": "eval" | "jupyter" | "unavailable",
+            "variant": "eval" | "jupyter-server" | "unavailable",
             "sandbox_running": true/false,
             "is_executing": true/false,
-            "jupyter_url": "..." | null
+            "jupyter_url": "..." | null,
+            "jupyter_token": "..." | null,
+            "kernel_id": "..." | null,
+            "kernel_name": "..." | null
         }
+
+    The token and kernel travel with the URL because the browser is a real
+    client of this sandbox: the workspace's editors connect to that Jupyter
+    server directly, and a URL on its own is an address they cannot use.
     """
     await websocket.accept()
     logger.debug("Sandbox status WebSocket connected")

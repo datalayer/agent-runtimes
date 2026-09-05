@@ -7,6 +7,7 @@ Generate Python and TypeScript code from YAML tool specifications.
 """
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -123,8 +124,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"{const_name} = ToolSpec(",
                 f'    id="{tool_id}",',
                 f'    version="{version}",',
-                f'    name="{spec["name"]}",',
-                f'    description="{spec.get("description", "")}",',
+                f"    name={json.dumps(spec['name'], ensure_ascii=False)},",
+                f"    description={json.dumps(spec.get('description', ''), ensure_ascii=False)},",
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    enabled={spec.get('enabled', True)},",
                 f'    approval="{spec.get("approval", "auto")}",',
@@ -229,8 +230,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"export const {const_name}: ToolSpec = {{",
                 f"  id: '{tool_id}',",
                 f"  version: '{version}',",
-                f"  name: '{spec['name']}',",
-                f"  description: '{spec.get('description', '')}',",
+                # JSON-escaped: an apostrophe in a description is not a syntax error.
+                f"  name: {json.dumps(spec['name'], ensure_ascii=False)},",
+                f"  description: {json.dumps(spec.get('description', ''), ensure_ascii=False)},",
                 f"  tags: {tags_json},",
                 f"  enabled: {str(spec.get('enabled', True)).lower()},",
                 f"  approval: '{spec.get('approval', 'auto')}',",

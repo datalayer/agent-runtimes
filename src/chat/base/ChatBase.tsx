@@ -24,7 +24,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Text, Spinner, IconButton } from '@primer/react';
+import { Box, Text, Spinner, IconButton } from '@primer/react';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -32,7 +32,6 @@ import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { notebookStore, JupyterReactTheme } from '@datalayer/jupyter-react';
 import {
-  Box,
   setupPrimerPortals,
   useThemeStore,
   getColorPalette,
@@ -61,7 +60,12 @@ import type {
   ToolCallMessage,
   Suggestion,
   EphemeralSurfaceMode,
+  ModelConfig,
 } from '../../types/chat';
+import { AgentDetails } from '../../agents/AgentDetails';
+import type { BuiltinTool } from '../../types/models';
+import { AI_MODEL_CATALOGUE } from '../../specs/models';
+import type { ContextSnapshotData } from '../../types/context';
 import type { FrontendToolDefinition } from '../../types/tools';
 import {
   internalQueryClient,
@@ -84,15 +88,22 @@ import {
   useAgentRuntimeStore,
   useAgentRuntimeWsState,
 } from '../../stores/agentRuntimeStore';
-import { ChatBaseHeader } from '../header/ChatHeaderBase';
+import {
+  ChatBaseHeader,
+  type ChatBaseHeaderProps,
+} from '../header/ChatHeaderBase';
+import { useChatAvailability } from './ChatAvailability';
 import { ChatEmptyState } from '../display/EmptyState';
+import { notebookToolSurfacesRenderer } from '../messages/NotebookToolSurfaces';
 import { FloatingBrandButton } from '../display/FloatingBrandButton';
 import { PoweredByTag } from '../display/PoweredByTag';
+import type { ToolbarItem } from '@datalayer/primer-addons';
+import { EphemeralSurfaceControl } from '../EphemeralSurfaceControl';
 import {
   ChatMessageList,
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
-import { InputToolbar } from '../prompt/InputFooter';
+import { InputPrompt } from '../prompt/InputPrompt';
 import {
   ToolApprovalBanner,
   ToolApprovalDialog,
@@ -120,6 +131,31 @@ const sentPendingPromptKeys = new Set<string>();
  * ephemeral notebook/document is not yet ready. Shown in place of the surface
  * content (never as an overlay) so structure appears as early as possible.
  */
+/**
+ * Whether a frontend tool declares any parameter.
+ *
+ * The empty-args guard around execution exists for AG-UI, which emits a
+ * first tool-call with `{}` and the real arguments in a later update. A
+ * tool that declares no parameters never gets that update — `{}` IS its
+ * full argument set — so waiting on it left the call executing forever.
+ */
+function frontendToolExpectsArgs(
+  tool: FrontendToolDefinition | undefined,
+): boolean {
+  const parameters = tool?.parameters;
+  if (!parameters) {
+    return false;
+  }
+  if (Array.isArray(parameters)) {
+    return parameters.length > 0;
+  }
+  const properties = (parameters as Record<string, unknown>).properties;
+  if (properties && typeof properties === 'object') {
+    return Object.keys(properties).length > 0;
+  }
+  return Object.keys(parameters).length > 0;
+}
+
 function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
   return (
     <Box
@@ -215,12 +251,22 @@ const ThemedJupyterReactTheme = JupyterReactTheme as unknown as React.FC<
  *   chat height/flex chain is preserved); CSS custom properties and inherited
  *   properties (color, font) still cascade through it.
  */
-function ThemedChatBoundary({ children }: React.PropsWithChildren<unknown>) {
-  const colorMode = useThemeStore(s => s.colorMode);
-  const themeVariant = useThemeStore(s => s.theme);
+function ThemedChatBoundary({
+  children,
+  themeVariant,
+  colorMode,
+}: React.PropsWithChildren<{
+  themeVariant?: string;
+  colorMode?: 'light' | 'dark' | 'auto';
+}>) {
+  const storeColorMode = useThemeStore(s => s.colorMode);
+  const storeThemeVariant = useThemeStore(s => s.theme);
+  const resolvedColorMode = colorMode ?? storeColorMode;
+  const resolvedThemeVariant = themeVariant ?? storeThemeVariant;
   const systemMode = useSystemColorMode();
-  const themeConfig = getThemeConfig(themeVariant);
-  const resolvedMode = colorMode === 'auto' ? systemMode : colorMode;
+  const themeConfig = getThemeConfig(resolvedThemeVariant as any);
+  const resolvedMode =
+    resolvedColorMode === 'auto' ? systemMode : resolvedColorMode;
   const modeStyles =
     resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
@@ -648,6 +694,8 @@ export function ChatBase(props: ChatBaseProps) {
     protocol: protocolProp,
     useStore: useStoreMode = true,
     disableInternalJupyterTheme = false,
+    themeVariant,
+    colorMode,
   } = props;
 
   // Resolve protocol: string Protocol overrides type in agentRuntimeConfig or
@@ -686,7 +734,9 @@ export function ChatBase(props: ChatBaseProps) {
   const wrappedContent = disableInternalJupyterTheme ? (
     content
   ) : (
-    <ThemedChatBoundary>{content}</ThemedChatBoundary>
+    <ThemedChatBoundary themeVariant={themeVariant} colorMode={colorMode}>
+      {content}
+    </ThemedChatBoundary>
   );
 
   if (!existingQueryClient) {
@@ -709,6 +759,7 @@ function ChatBaseInner({
   subtitle,
   showHeader = false,
   showTokenUsage = true,
+  showContextRing = false,
   showLoadingIndicator = true,
   showErrors = true,
   showInput = true,
@@ -716,6 +767,14 @@ function ChatBaseInner({
   showToolsMenu = true,
   showSkillsMenu = true,
   disableInputPrompt = false,
+  promptVariant,
+  mentionableAgents: mentionableAgentsProp,
+  showAgentsMenu = true,
+  agents: agentsProp,
+  selectedAgentId,
+  onSelectAgent,
+  disabled: disabledProp,
+  disableReason: disableReasonProp,
   overlay,
   launching = false,
   launchingMessage,
@@ -730,17 +789,23 @@ function ChatBaseInner({
   loadingState,
   headerActions,
   kernelIndicatorState,
+  kernelIndicatorPlacement = 'left',
   kernel,
   kernelEnvironmentName,
   kernelCpu,
   kernelMemory,
   kernelGpu,
+  themeVariant,
+  colorMode,
   chatViewMode,
   onChatViewModeChange,
   // Mode selection
   useStore: useStoreMode = true,
   protocol: protocolRaw,
   onSendMessage,
+  onSendReady,
+  onLoadingChange,
+  onContextSnapshot,
   enableStreaming = false,
   // Extended props
   brandIcon,
@@ -750,6 +815,9 @@ function ChatBaseInner({
   poweredByProps,
   emptyState,
   renderToolResult,
+  renderHeader,
+  showTurnFooter = true,
+  notebookToolSurfacesId,
   footerContent,
   showInformation = false,
   onInformationClick,
@@ -766,6 +834,8 @@ function ChatBaseInner({
   onNewChat,
   onClear,
   onMessagesChange,
+  onItemsChange,
+  onDisplayItemsChange,
   autoFocus = false,
   suggestions,
   submitOnSuggestionClick = true,
@@ -781,6 +851,12 @@ function ChatBaseInner({
   collapsed = false,
   onExpandFromCollapsed,
   ephemeralNotebookToolbar,
+  ephemeralNotebookToolbarExtraItems,
+  ephemeralDocumentToolbarExtraItems,
+  ephemeralNotebookCollaborationProvider,
+  ephemeralNotebookCollaborationDocumentId,
+  ephemeralDocumentCollaboration,
+  ephemeralRuntimeOverride,
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
@@ -805,6 +881,13 @@ function ChatBaseInner({
   useEffect(() => {
     setupPrimerPortals();
   }, []);
+
+  // Whether there is anything to talk to. The host usually knows — a browser
+  // sandbox has no agent beside it — and says so once for everything beneath
+  // it; an explicit prop still wins for one particular chat.
+  const ambientAvailability = useChatAvailability();
+  const disabled = disabledProp ?? ambientAvailability.disabled;
+  const disableReason = disableReasonProp ?? ambientAvailability.disableReason;
 
   const { theme } = useThemeStore();
   const assistantIconColor = getColorPalette(theme, 'dark').textLight;
@@ -838,9 +921,16 @@ function ChatBaseInner({
   // agent id. This keeps the persisted notebook model addressable by the same
   // key when navigating away from and back to the same runtime page.
   const notebookScopeId = runtimeId || protocolConfig?.agentId || activeAgentId;
-  const ephemeralNotebookId = notebookScopeId
-    ? `ephemeral-notebook-${notebookScopeId}`
-    : generatedNotebookIdRef.current;
+  // When an explicit collaboration document id is supplied (e.g. an Agent Node
+  // sharing a room with the SaaS UI), it becomes the notebook id directly so
+  // BOTH peers join the same collaborative room AND the agent's notebook tools
+  // (scoped by this same id) drive the shared notebook. Otherwise fall back to
+  // the derived, per-runtime in-memory id.
+  const ephemeralNotebookId =
+    ephemeralNotebookCollaborationDocumentId ||
+    (notebookScopeId
+      ? `ephemeral-notebook-${notebookScopeId}`
+      : generatedNotebookIdRef.current);
   const persistedEphemeralNbformat = useAgentRuntimeStore(s =>
     s.getEphemeralNotebookModel(ephemeralNotebookId),
   );
@@ -856,10 +946,15 @@ function ChatBaseInner({
 
   // ── Ephemeral document (in-memory Lexical) ──────────────────────────────
   // Scoped to the same stable runtime identity as the notebook so the persisted
-  // document survives navigation away from and back to the runtime page.
-  const ephemeralDocumentId = notebookScopeId
-    ? `ephemeral-document-${notebookScopeId}`
-    : `ephemeral-document-${generatedNotebookIdRef.current}`;
+  // document survives navigation away from and back to the runtime page. When a
+  // collaboration room is supplied it becomes the document id directly so BOTH
+  // peers join the same Loro room AND the agent's lexical tools (scoped by this
+  // same id) drive the shared document.
+  const ephemeralDocumentId =
+    ephemeralDocumentCollaboration?.roomId ||
+    (notebookScopeId
+      ? `ephemeral-document-${notebookScopeId}`
+      : `ephemeral-document-${generatedNotebookIdRef.current}`);
   const persistedEphemeralDocument = useAgentRuntimeStore(s =>
     s.getEphemeralDocumentModel(ephemeralDocumentId),
   );
@@ -895,8 +990,49 @@ function ChatBaseInner({
   const documentVisible =
     enableEphemeralDocument && ephemeralSurfaceMode === 'document';
   const surfaceVisible = notebookVisible || documentVisible;
-  const surfaceCollapsed =
-    surfaceVisible && collapsed && Boolean(onExpandFromCollapsed);
+  /*
+   * Collapsed means collapsed, whether or not there is a way back.
+   *
+   * Offering to reopen the conversation is what `onExpandFromCollapsed`
+   * decides, and the affordance below is guarded by it. Requiring it HERE
+   * meant a surface asked to collapse with nothing to expand into — a Code
+   * Sandbox, where nothing is listening — kept the conversation on screen
+   * instead.
+   */
+  const surfaceCollapsed = surfaceVisible && collapsed;
+
+  /*
+   * The switch between the notebook and the document, for a collapsed chat.
+   *
+   * It normally sits in the chat's header, which is exactly what a collapsed
+   * chat does not draw — so a page without a conversation opened whichever
+   * surface came first and could never leave it. On the surface's own toolbar
+   * it is reachable either way. "Chat only" is not among the choices here:
+   * closing the surface would leave nothing at all.
+   */
+  const collapsedSurfaceControl: ToolbarItem | null = surfaceCollapsed
+    ? {
+        key: 'ephemeral-surface',
+        type: 'custom',
+        // Last of the toolbar, away from what acts on the surface itself.
+        order: 900,
+        render: () => (
+          <EphemeralSurfaceControl
+            mode={ephemeralSurfaceMode}
+            onChange={handleEphemeralSurfaceModeChange}
+            enableNotebook={enableEphemeralNotebook}
+            enableDocument={enableEphemeralDocument}
+            enableChatOnly={false}
+          />
+        ),
+      }
+    : null;
+  const notebookToolbarItems = collapsedSurfaceControl
+    ? [...(ephemeralNotebookToolbarExtraItems ?? []), collapsedSurfaceControl]
+    : ephemeralNotebookToolbarExtraItems;
+  const documentToolbarItems = collapsedSurfaceControl
+    ? [...(ephemeralDocumentToolbarExtraItems ?? []), collapsedSurfaceControl]
+    : ephemeralDocumentToolbarExtraItems;
 
   // Track the ephemeral notebook's live kernel connection so the chat header
   // renders the same rich `KernelIndicator` details (kernel id, client id,
@@ -931,6 +1067,22 @@ function ChatBaseInner({
       unsubscribe();
     };
   }, [notebookVisible, ephemeralNotebookId]);
+  // Track the ephemeral document's live kernel connection the same way, so the
+  // header's kernel indicator reflects the real connected kernel while the
+  // document surface is active (instead of the "disconnected" placeholder).
+  const [documentKernel, setDocumentKernel] =
+    useState<IKernelConnection | null>(null);
+  const handleDocumentKernelChange = useCallback(
+    (next: IKernelConnection | null) => {
+      setDocumentKernel(prev => (prev?.id === next?.id ? prev : next));
+    },
+    [],
+  );
+  useEffect(() => {
+    if (!documentVisible) {
+      setDocumentKernel(null);
+    }
+  }, [documentVisible]);
   // When a companion surface is shown, the chat can be docked as a sidebar
   // (default) or floated over it, driven by the header view-mode toggle.
   const surfaceChatFloating =
@@ -1294,6 +1446,18 @@ function ChatBaseInner({
     ],
   );
 
+  // Assigned once `applyServerApprovalDecision` is defined below. A ref lets the
+  // ai-agents approval WS effect (declared earlier) drive the deferred-run
+  // continuation without re-subscribing when the callback identity changes.
+  const applyServerApprovalDecisionRef = useRef<
+    | ((
+        approval: AgentStreamToolApprovalPayload,
+        approved: boolean,
+        note?: string,
+      ) => boolean)
+    | null
+  >(null);
+
   const reconcileResolvedApprovalInStore = useCallback(
     (approval: AgentStreamToolApprovalPayload): void => {
       const state = agentRuntimeStore.getState();
@@ -1426,7 +1590,26 @@ function ChatBaseInner({
 
         const state = agentRuntimeStore.getState();
         for (const record of records) {
-          const approval = normalizeApprovalPayload(record);
+          let approval = normalizeApprovalPayload(record);
+          // SaaS-resolved events (tool_approval_approved/rejected) can arrive
+          // with only {approvalId, status} and no tool_name/tool_args. Recover
+          // the full envelope from the store (populated by the earlier pending
+          // event) so the card clears AND the deferred run can resume.
+          if (!approval) {
+            const rawId =
+              (typeof record.id === 'string' && record.id) ||
+              (typeof record.approval_id === 'string' && record.approval_id) ||
+              (typeof record.approvalId === 'string' && record.approvalId) ||
+              '';
+            const rawStatus =
+              (typeof record.status === 'string' && record.status) || '';
+            if (rawId && rawStatus && rawStatus !== 'pending') {
+              const stored = state.approvals.find(a => a.id === rawId);
+              if (stored) {
+                approval = { ...stored, status: rawStatus };
+              }
+            }
+          }
           if (!approval) {
             continue;
           }
@@ -1458,6 +1641,15 @@ function ChatBaseInner({
             state.upsertApproval(scopedApproval);
           } else {
             reconcileResolvedApprovalInStore(scopedApproval);
+            // Resume the deferred tool call when the decision was made on
+            // another surface (e.g. the SaaS Tool Approvals UI). Without this
+            // the pending card clears but pydantic-ai never receives the
+            // client continuation and the run stays parked.
+            applyServerApprovalDecisionRef.current?.(
+              scopedApproval,
+              scopedApproval.status === 'approved',
+              scopedApproval.note ?? undefined,
+            );
           }
         }
       } catch {
@@ -1507,6 +1699,24 @@ function ChatBaseInner({
 
   // ---- Component state ----
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
+  /*
+   * What the harness itself reported, for an agent with no server behind it.
+   *
+   * The last turn *and* the running session. Both, because the bar shows both
+   * — "· 12k ▲ 900 ▼" is the conversation so far and "· turn 800 ▲ 120 ▼" is
+   * what the last exchange cost — and a snapshot carrying only a total leaves
+   * those two lines out entirely.
+   */
+  const [localUsage, setLocalUsage] = useState<{
+    turnInput: number;
+    turnOutput: number;
+    sessionInput: number;
+    sessionOutput: number;
+    totalTokens: number;
+  } | null>(null);
+  /* Whether the (i) has been pressed. Its own state rather than a view mode:
+     it is a detour from the conversation, not a place the chat lives. */
+  const [showDetails, setShowDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [liveKernelStatus, setLiveKernelStatus] =
     useState<KernelMessage.Status>();
@@ -1672,13 +1882,275 @@ function ChatBaseInner({
     });
     return set;
   }, [localSkillApproval, skillsQuery.data]);
+  /*
+   * What the Tools menu lists.
+   *
+   * The server's builtin tools when there are any, and otherwise the tools
+   * this page gave the agent. An in-page agent has no config endpoint to ask
+   * — that is the whole point of it — so the menu was empty for the one kind
+   * of agent whose tools the browser already knows in full.
+   */
+  const builtinTools = useMemo<BuiltinTool[]>(() => {
+    /*
+     * Both lists, not one or the other.
+     *
+     * The server's builtin tools and the ones this page handed the agent are
+     * both things it can call, and a menu naming only the first was wrong for
+     * every agent given frontend tools — which is every notebook agent, whose
+     * ability to run a cell lives entirely on this side.
+     *
+     * Server first, because that is the order they were introduced in and a
+     * list that reorders itself as a request lands is one nobody can scan.
+     * De-duplicated by name: a tool implemented on both sides is one tool.
+     */
+    const fromConfig = configQuery.data?.builtinTools ?? [];
+
+    /*
+     * Including the tools this chat does *not* run.
+     *
+     * An in-page agent's tools are handed to the harness rather than to the
+     * chat — the SDK owns the loop and calls them directly, and giving them
+     * to both would run each one twice — so `frontendTools` is empty for
+     * exactly the agent whose tools live entirely in the page. The menu was
+     * therefore emptiest where the tools were most real.
+     *
+     * Executing a tool and listing it are different jobs. The protocol config
+     * names what the agent can call, which is the question this menu asks.
+     */
+    const inProtocol =
+      (protocol?.options as { frontendTools?: { name: string }[] } | undefined)
+        ?.frontendTools ?? [];
+
+    const seen = new Set(fromConfig.map(tool => tool.name));
+    const fromPage = [...(frontendTools ?? []), ...inProtocol]
+      .filter(tool => {
+        if (seen.has(tool.name)) {
+          return false;
+        }
+        seen.add(tool.name);
+        return true;
+      })
+      .map(tool => ({ id: tool.name, name: tool.name }));
+    return [...fromConfig, ...fromPage];
+  }, [configQuery.data?.builtinTools, frontendTools, protocol?.options]);
+
+  /*
+   * Who is answering, as one row when that is all there is.
+   *
+   * A host with a team passes its own list. Everything else gets the agent
+   * this chat is actually talking to — which the control states rather than
+   * switches, and which nothing else on screen said. It used to be omitted
+   * entirely, so the chip and the footer menu were both simply absent.
+   */
+  const footerAgents = useMemo(
+    () =>
+      agentsProp ??
+      (activeAgentId
+        ? [
+            {
+              id: activeAgentId,
+              name: title || activeAgentId,
+              /*
+                What this agent is for, beside its name.
+                
+                The menu renders a description when there is one and a bare
+                name when there is not, and a single-agent list built from the
+                id alone therefore opened onto one word. `subtitle` is what a
+                host writes to say what its chat does, which is the same
+                sentence a person clicking the agent control is asking for.
+              */
+              description: subtitle || description,
+            },
+          ]
+        : []),
+    [agentsProp, activeAgentId, title, subtitle, description],
+  );
+
+  /*
+   * The models on offer.
+   *
+   * An in-page agent has no config endpoint, and asking one for a catalogue is
+   * asking a page about itself. It does know the model it was built with — the
+   * protocol carries it — so the control names that rather than disappearing.
+   */
+  const browserModel =
+    typeof (protocol?.options as { model?: unknown } | undefined)?.model ===
+    'string'
+      ? ((protocol?.options as { model?: string }).model as string)
+      : undefined;
+  const offeredModels = useMemo<ModelConfig[]>(() => {
+    const fromConfig = availableModels || configQuery.data?.models;
+    if (fromConfig?.length) {
+      return fromConfig;
+    }
+    /*
+     * The catalogue, filtered to what is worth offering.
+     *
+     * A server tells the chat which models it can reach and that answer wins.
+     * Without one — an in-page agent, or a server that has not answered yet —
+     * this used to offer the single model the protocol was built with, which
+     * is a menu with nothing to choose.
+     *
+     * `available` is the filter, not the whole catalogue: twenty-six models,
+     * most of them superseded, is a list nobody reads. The specs say which
+     * four are current.
+     */
+    const catalogued = Object.values(AI_MODEL_CATALOGUE)
+      .filter(model => model.available)
+      .map(model => ({
+        id: model.id,
+        name: model.name,
+        provider: model.provider,
+      }));
+    if (catalogued.length > 0) {
+      return catalogued;
+    }
+    return browserModel
+      ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
+      : [];
+  }, [availableModels, configQuery.data?.models, browserModel]);
+
+  /*
+   * Who `@` may address.
+   *
+   * The same people the footer offers, unless a host supplies its own list.
+   * It used to be the host's or nothing, so a chat that had not been told
+   * about mentions had no menu at all — and the menu is also how a person
+   * *discovers* that agents can be addressed.
+   *
+   * The one being addressed is listed and disabled rather than dropped: a
+   * menu of one that hides its only row is a menu that looks broken, and
+   * "you are already talking to this one" is a useful thing to be told.
+   */
+  const mentionableAgents = useMemo(
+    () =>
+      mentionableAgentsProp ??
+      footerAgents.map(agent => ({
+        name: agent.name,
+        description: agent.description,
+        icon: agent.icon,
+        disabled: agent.id === (selectedAgentId ?? footerAgents[0]?.id),
+        disabledReason: `You are already talking to ${agent.name}`,
+      })),
+    [mentionableAgentsProp, footerAgents, selectedAgentId],
+  );
+
   const contextSnapshotQuery = useContextSnapshot(
     configQueriesEnabled && showTokenUsage,
     protocol?.configEndpoint,
     protocol?.agentId,
     protocol?.authToken,
   );
-  const agentUsage = externalContextSnapshot ?? contextSnapshotQuery.data;
+  /*
+   * The window, from whoever can account for it.
+   *
+   * A host's own snapshot first, then the server's, then what the harness
+   * reported as it finished. The last is a partial picture — it knows the
+   * turn's tokens and the model's window, not how they divide between the
+   * system prompt, the tools and the history — so the fields it cannot
+   * honestly fill are left at zero rather than guessed at.
+   */
+  const localSnapshot = useMemo<ContextSnapshotData | undefined>(() => {
+    /*
+     * Only for a harness that has no server keeping the account.
+     *
+     * `enableConfigQuery` is what says a runtime is reporting its own context
+     * over the socket; where one is, this must not shadow it with a partial
+     * picture assembled from turn totals.
+     */
+    if (protocol?.enableConfigQuery) {
+      return undefined;
+    }
+    /* A conservative window. The harness reports what a turn cost, not what
+       the model can hold, and 200k is the smaller of the sizes the models
+       this reaches actually offer — so the bar reads as fuller than the truth
+       rather than emptier, which is the safer way to be wrong about a
+       limit. */
+    const contextWindow = 200_000;
+    return {
+      totalTokens: localUsage?.totalTokens ?? 0,
+      contextWindow,
+      sumResponseInputTokens: localUsage?.sessionInput ?? 0,
+      sumResponseOutputTokens: localUsage?.sessionOutput ?? 0,
+      systemPromptTokens: 0,
+      userMessageTokens: 0,
+      assistantMessageTokens: 0,
+      toolTokens: 0,
+      toolCallTokens: 0,
+      toolReturnTokens: 0,
+      historyToolCallTokens: 0,
+      historyToolReturnTokens: 0,
+      currentToolCallTokens: 0,
+      currentToolReturnTokens: 0,
+      turnUsage: {
+        inputTokens: localUsage?.turnInput ?? 0,
+        outputTokens: localUsage?.turnOutput ?? 0,
+        // Not counted by the harness, and left at zero rather than invented:
+        // the bar reads these only for the numbers it prints beside the ring.
+        requests: 0,
+        toolCalls: 0,
+        toolNames: [],
+        durationSeconds: 0,
+      },
+      sessionUsage: {
+        inputTokens: localUsage?.sessionInput ?? 0,
+        outputTokens: localUsage?.sessionOutput ?? 0,
+        requests: 0,
+        toolCalls: 0,
+        turns: 0,
+        durationSeconds: 0,
+      },
+    } as ContextSnapshotData;
+  }, [localUsage, protocol?.enableConfigQuery]);
+
+  /*
+   * Nothing carried over from the agent before this one.
+   *
+   * The runtime store keeps one snapshot, not one per agent, so after a
+   * switch it still holds whatever the previous agent last reported — and the
+   * bar went on showing that conversation's numbers under a new agent's name
+   * until the new one answered. `localUsage` had the same problem from the
+   * other direction: it accumulates a session, and a session belongs to an
+   * agent.
+   *
+   * So the local tally is cleared on a switch, and the store's snapshot is
+   * ignored until it is replaced by a different object — which is the only
+   * signal available that it is the new agent's and not the old one's.
+   */
+  const seenAgent = useRef(activeAgentId);
+  const snapshotAtSwitch = useRef<ContextSnapshotData | null>(null);
+  const storeSnapshot = contextSnapshotQuery.data;
+  const storeSnapshotRef = useRef(storeSnapshot);
+  storeSnapshotRef.current = storeSnapshot;
+
+  useEffect(() => {
+    if (seenAgent.current === activeAgentId) {
+      return;
+    }
+    seenAgent.current = activeAgentId;
+    setLocalUsage(null);
+    snapshotAtSwitch.current = storeSnapshotRef.current ?? null;
+  }, [activeAgentId]);
+
+  const freshStoreSnapshot =
+    storeSnapshot && storeSnapshot !== snapshotAtSwitch.current
+      ? storeSnapshot
+      : undefined;
+
+  const agentUsage =
+    externalContextSnapshot ?? freshStoreSnapshot ?? localSnapshot;
+
+  /*
+   * Handed on to a host that draws its own prompt.
+   *
+   * The loop workspace is one: it renders the composer itself, so the usage
+   * bar beside it can only show what this component passes out. Without this
+   * an in-page agent — whose only account of the window is the totals the
+   * harness reports here — left that bar permanently empty.
+   */
+  useEffect(() => {
+    onContextSnapshot?.(agentUsage);
+  }, [agentUsage, onContextSnapshot]);
   const sandboxStatusQuery = useSandbox(
     configQueriesEnabled && showHeader,
     protocol?.configEndpoint,
@@ -1778,14 +2250,21 @@ function ChatBaseInner({
     },
     [activeAgentId],
   );
+  applyServerApprovalDecisionRef.current = applyServerApprovalDecision;
 
   // ---- Agent-runtime WebSocket (monitoring stream) ----
   // Derive the bare base URL from configEndpoint or protocol.endpoint.
+  const isAgentNodeTunnelAgUi = Boolean(
+    protocol?.endpoint &&
+    /\/api\/runtimes\/v1\/agent-nodes\/[^/]+\/ag-ui\/?$/.test(
+      protocol.endpoint,
+    ),
+  );
   const wsBaseUrl = protocol?.configEndpoint
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : (protocol?.endpoint?.replace(/\/api\/v1\/.*$/, '') ?? '');
   useAgentRuntimeWebSocket({
-    enabled: !!protocol && !!wsBaseUrl,
+    enabled: !!protocol && !!wsBaseUrl && !isAgentNodeTunnelAgUi,
     baseUrl: wsBaseUrl,
     authToken: protocol?.authToken,
     agentId: protocol?.agentId,
@@ -1883,8 +2362,17 @@ function ChatBaseInner({
 
   // ---- Initialize model and tools when config is available ----
   useEffect(() => {
-    if ((configQuery.data || availableModels) && !selectedModel) {
-      const modelsList = availableModels || configQuery.data?.models || [];
+    /*
+     * `offeredModels`, not the two sources it is built from.
+     *
+     * It also carries the model an in-page agent was built with, for the case
+     * where there is no config endpoint to ask — and this gate read the raw
+     * sources, so that model was offered by the menu and never selected. The
+     * menu draws nothing without a selection, so a browser agent had a model
+     * list of one and no model control at all.
+     */
+    if (offeredModels.length > 0 && !selectedModel) {
+      const modelsList = offeredModels;
       const preferredModel = initialModel || configQuery.data?.defaultModel;
       if (preferredModel) {
         const modelExists = modelsList.some(m => m.id === preferredModel);
@@ -1933,6 +2421,7 @@ function ChatBaseInner({
     }
   }, [
     configQuery.data,
+    offeredModels,
     selectedModel,
     initialModel,
     availableModels,
@@ -2488,6 +2977,21 @@ function ChatBaseInner({
     }
   }, [displayItems, messages, onMessagesChange]);
 
+  // Every change, streaming included — for a caller following the reply as
+  // it arrives rather than counting messages. See `onItemsChange`.
+  useEffect(() => {
+    onItemsChange?.(
+      displayItems.filter(
+        (item): item is ChatMessage => !isToolCallMessage(item),
+      ),
+    );
+  }, [displayItems, onItemsChange]);
+
+  // And everything, tool calls included — see `onDisplayItemsChange`.
+  useEffect(() => {
+    onDisplayItemsChange?.(displayItems);
+  }, [displayItems, onDisplayItemsChange]);
+
   const padding = compact ? 2 : 3;
 
   // Derive approval config from protocol for built-in tool approval support
@@ -2528,6 +3032,10 @@ function ChatBaseInner({
     // the runtime endpoint is still being created). The chat shell, companion
     // surface and launching overlay still render; we simply do not connect.
     if (!autoConnect) return;
+    // Nor when there is nothing to connect to. A browser sandbox has no agent
+    // behind it, and dialling one would only produce errors the person cannot
+    // act on — the header already says why the chat is off.
+    if (disabled) return;
 
     const adapter = createProtocolAdapter(protocol);
     if (!adapter) return;
@@ -2536,6 +3044,33 @@ function ChatBaseInner({
     setAdapterReady(true);
 
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
+      /*
+       * Nothing more from a turn the reader has stopped.
+       *
+       * Stopping aborts the request and asks the backend to cancel, and
+       * neither is instant: an SSE stream already in flight keeps delivering,
+       * and a model mid-sentence keeps being paid for tokens that are on the
+       * wire. Until this guard, every one of those still ran through the
+       * handler below — so the transcript went on typing itself for as long
+       * as the turn had left, which is the whole of the "I pressed stop and
+       * it kept going" report. `stoppedRef` was already set here and only two
+       * places downstream ever read it.
+       *
+       * `state-update` and `error` are still let through: they carry the
+       * connection's own condition rather than the turn's output, and a chat
+       * that stops listening to those after a stop is a chat that cannot tell
+       * you it has since disconnected. `done` too — it is what closes the
+       * turn out; suppressing it would leave the session believing a stopped
+       * turn is still running.
+       */
+      if (
+        stoppedRef.current &&
+        event.type !== 'state-update' &&
+        event.type !== 'error' &&
+        event.type !== 'done'
+      ) {
+        return;
+      }
       switch (event.type) {
         case 'message':
           if (event.usage) {
@@ -2679,6 +3214,14 @@ function ChatBaseInner({
             const toolCallId = event.toolCall.toolCallId || generateMessageId();
             const toolName = event.toolCall.toolName;
             const args = event.toolCall.args || {};
+            /*
+             * Whether these args are the full set, as the protocol tells it.
+             * Vercel's tool event is terminal — `{}` is an answer there,
+             * legal for a tool whose parameters are all optional. AG-UI
+             * streams the args after a first empty event and says so with
+             * `false`. Without the flag, the old heuristics decide.
+             */
+            const argsComplete = event.toolCall.argsComplete;
 
             if (toolCallsRef.current.has(toolCallId)) {
               const existingToolCall = toolCallsRef.current.get(toolCallId);
@@ -2703,7 +3246,7 @@ function ChatBaseInner({
                 if (
                   toolHandler &&
                   existingToolCall.status === 'executing' &&
-                  Object.keys(args).length > 0
+                  (argsComplete ?? Object.keys(args).length > 0)
                 ) {
                   pendingToolExecutionsRef.current++;
                   executeFrontendTool(toolHandler, updatedToolCall, toolCallId);
@@ -2732,12 +3275,19 @@ function ChatBaseInner({
                 t => t.name === toolName,
               );
               const toolHandler = frontendTool?.handler;
-              // Only execute when we have actual args. AG-UI emits an
-              // initial tool-call with empty args on TOOL_CALL_START;
-              // the real args arrive on TOOL_CALL_END. Skip execution
-              // here and let the update branch (above) handle it once
-              // the full args are available.
-              if (toolHandler && Object.keys(args).length > 0) {
+              // Execute when the args are complete. The protocol says so
+              // when it can (`argsComplete`); without the flag, fall back
+              // to the old heuristics — actual args present, or a tool
+              // that declares no parameters, for which `{}` is the full
+              // set and no update is ever coming. A protocol that streams
+              // its args (AG-UI start) says `false` and the update branch
+              // above executes once the full set has arrived.
+              if (
+                toolHandler &&
+                (argsComplete ??
+                  (Object.keys(args).length > 0 ||
+                    !frontendToolExpectsArgs(frontendTool)))
+              ) {
                 pendingToolExecutionsRef.current++;
                 executeFrontendTool(toolHandler, toolCallMsg, toolCallId);
               }
@@ -2885,6 +3435,34 @@ function ChatBaseInner({
           break;
 
         case 'done':
+          /*
+           * What the turn cost, when nobody else is counting.
+           *
+           * A server-side agent reports its context through
+           * `/configure/context`, and that answer wins. An in-page agent has
+           * no server to ask — so the usage the harness reports here was the
+           * only account of the window there was, and it was being dropped.
+           * The bar and its ring simply never appeared for a browser agent.
+           */
+          {
+            const turnInput = event.usage?.promptTokens ?? 0;
+            const turnOutput = event.usage?.completionTokens ?? 0;
+            // The parts sum to the total when the harness did not send one:
+            // keying on `totalTokens` alone dropped turns whose provider
+            // counted input and output but never totalled them.
+            const total = event.usage?.totalTokens ?? turnInput + turnOutput;
+            if (total > 0) {
+              setLocalUsage(previous => ({
+                turnInput,
+                turnOutput,
+                // Added up, not replaced: the session is every turn so far,
+                // and the harness reports one turn at a time.
+                sessionInput: (previous?.sessionInput ?? 0) + turnInput,
+                sessionOutput: (previous?.sessionOutput ?? 0) + turnOutput,
+                totalTokens: total,
+              }));
+            }
+          }
           // The adapter signals the entire multi-turn conversation
           // (including all continuations) has finished.
           if (
@@ -3264,7 +3842,11 @@ function ChatBaseInner({
       pendingPromptSentRef.current = pendingPromptKey;
       return;
     }
-    if (!historyLoaded) return;
+    // Do not block prompt replay forever when runtime history cannot be fetched
+    // (e.g. websocket not connected yet/anymore). In that case we fall back to
+    // submitting once the adapter is ready.
+    const canProceedWithoutHistory = !historyScopeId || wsState !== 'connected';
+    if (!historyLoaded && !canProceedWithoutHistory) return;
     if (!adapterReady && !onSendMessage) return;
     pendingPromptSentRef.current = pendingPromptKey ?? null;
     if (pendingPromptKey) {
@@ -3275,6 +3857,8 @@ function ChatBaseInner({
     pendingPrompt,
     pendingPromptKey,
     historyLoaded,
+    historyScopeId,
+    wsState,
     adapterReady,
     handleSend,
     onSendMessage,
@@ -3348,9 +3932,19 @@ function ChatBaseInner({
     // Also interrupt any code running in the sandbox (best-effort).
     sandboxStatusQuery.interrupt();
 
-    // Interrupt the connected notebook kernel as well (best-effort),
-    // matching the toolbar's stop/interrupt behavior.
-    if (kernel && kernel.status === 'busy') {
+    /*
+     * Interrupt the connected notebook kernel too, whatever it claims to be
+     * doing.
+     *
+     * This used to fire only when `kernel.status === 'busy'`, and that status
+     * is a value pushed from the server: a cell submitted a moment ago is
+     * running while the client still reads `idle`, which is precisely the
+     * window somebody hits Stop in. The check therefore skipped the interrupt
+     * exactly when it was wanted. Interrupting an idle kernel costs nothing —
+     * there is no execution to raise `KeyboardInterrupt` in — so the test was
+     * only ever able to do harm.
+     */
+    if (kernel) {
       void kernel.interrupt().catch(() => {});
     }
   }, [
@@ -3376,6 +3970,40 @@ function ChatBaseInner({
     headerButtons?.onNewChat?.();
   }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode, runtimeId]);
 
+  // Hand the send function to a host that owns the input box (the LOOP
+  // workspace). Withdrawn on unmount so nothing holds a stale sender.
+  useEffect(() => {
+    if (!onSendReady) return undefined;
+    if (!adapterReady && !onSendMessage) {
+      onSendReady(null);
+      return undefined;
+    }
+    onSendReady({
+      send: (message: string) => {
+        void handleSend(message);
+      },
+      stop: handleStop,
+      // The same reset the header's + performs, for a host whose controls
+      // live outside this component — the LOOP prompt's + reaches it here.
+      newChat: handleNewChat,
+    });
+    return () => {
+      onSendReady(null);
+    };
+  }, [
+    onSendReady,
+    adapterReady,
+    onSendMessage,
+    handleSend,
+    handleStop,
+    handleNewChat,
+  ]);
+
+  // Streaming state, for a host that draws the prompt.
+  useEffect(() => {
+    onLoadingChange?.(isLoading);
+  }, [onLoadingChange, isLoading]);
+
   // ---- handleClear ----
   const handleClear = useCallback(() => {
     if (window.confirm('Clear all messages?')) {
@@ -3388,6 +4016,19 @@ function ChatBaseInner({
       headerButtons?.onClear?.();
     }
   }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
+
+  // ---- Turn removal (the TurnFooter's remove action) ----
+  const handleRemoveItems = useCallback((ids: string[]) => {
+    const drop = new Set(ids);
+    setDisplayItems(prev => prev.filter(item => !drop.has(item.id)));
+    // The tool-call registry mirrors the transcript; a removed turn's calls
+    // must not linger there or a late protocol event would resurrect them.
+    for (const [toolCallId, toolCall] of toolCallsRef.current.entries()) {
+      if (drop.has(toolCall.id)) {
+        toolCallsRef.current.delete(toolCallId);
+      }
+    }
+  }, []);
 
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
@@ -3619,7 +4260,7 @@ function ChatBaseInner({
     [onRejectApproval],
   );
 
-  // ---- Compute data for InputToolbar ----
+  // ---- Compute data for the prompt ----
   // Merge real-time WebSocket MCP status into the cached config data so the
   // dropdown reflects live availability even when the config query was cached
   // before the MCP servers finished starting.
@@ -3692,6 +4333,22 @@ function ChatBaseInner({
   }, [configMcpServers, effectiveMcpStatusData, mcpServers]);
 
   // ---- Not ready ----
+  /*
+   * The transcript's tool renderer: the host's own, or — when a notebook was
+   * named — the built-in surfaces that show what each cell tool did. Baked
+   * in here rather than in any workspace, so every chat with a headless
+   * notebook gets the same transcript. Above the early return below, as
+   * every hook must be.
+   */
+  const effectiveRenderToolResult = useMemo(
+    () =>
+      renderToolResult ??
+      (notebookToolSurfacesId
+        ? notebookToolSurfacesRenderer(notebookToolSurfacesId)
+        : undefined),
+    [renderToolResult, notebookToolSurfacesId],
+  );
+
   if (!ready) {
     return (
       <Box
@@ -3727,9 +4384,22 @@ function ChatBaseInner({
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : undefined;
 
+  /*
+   * Whether the composer may be typed in.
+   *
+   * It waits for the config query because that is the round trip proving the
+   * agent is reachable. The condition has to mirror `configQueriesEnabled`
+   * exactly, though: a protocol that never runs the query has nothing to wait
+   * for, and waiting anyway leaves the input `readOnly` for good — selectable,
+   * focusable, and silently ignoring every keystroke.
+   *
+   * `=== false` was too narrow for that. A config that simply omits the flag —
+   * an in-page agent has no endpoint to ask — is equally never going to
+   * produce data.
+   */
   const connectionConfirmed =
     !protocol ||
-    protocol.enableConfigQuery === false ||
+    !protocol.enableConfigQuery ||
     !!configQuery.data ||
     !!skillsQuery.data;
 
@@ -3742,7 +4412,18 @@ function ChatBaseInner({
       ? suggestions
       : Array.isArray(serverSuggestions) && serverSuggestions.length > 0
         ? serverSuggestions
-            .map(item => String(item || '').trim())
+            /*
+              Either shape. A running agent may be older than the catalogue it
+              was built from, where a suggestion was a bare string —
+              `String(item)` on the mapping form yields "[object Object]",
+              which is a chip that sends nonsense rather than one that is
+              absent.
+            */
+            .map(item =>
+              typeof item === 'string'
+                ? item.trim()
+                : (item?.text ?? '').trim(),
+            )
             .filter(Boolean)
             .map(item => ({ title: item, message: item }))
         : undefined;
@@ -3755,6 +4436,17 @@ function ChatBaseInner({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
+        /*
+          A reading column, not a full-bleed sheet.
+
+          The transcript keeps a book-page width and centres itself; on a
+          narrow chat column the cap never binds and nothing changes. The
+          rows inside carry their own horizontal padding, which becomes the
+          margin once the cap does bind.
+        */
+        width: '100%',
+        maxWidth: 920,
+        mx: 'auto',
         bg: 'canvas.default',
       }}
     >
@@ -3766,10 +4458,13 @@ function ChatBaseInner({
         hideMessagesAfterToolUI={hideMessagesAfterToolUI}
         avatarConfig={defaultAvatarConfig}
         padding={padding}
-        renderToolResult={renderToolResult}
+        renderToolResult={effectiveRenderToolResult}
         approvalConfig={approvalConfig}
         messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
         onRespond={handleRespond}
+        showTurnFooters={showTurnFooter}
+        agentUsage={agentUsage}
+        onRemoveItems={handleRemoveItems}
         emptyContent={
           launching ? null : (
             <ChatEmptyState
@@ -3788,20 +4483,36 @@ function ChatBaseInner({
   );
 
   const inputToolbar = showInput ? (
-    <InputToolbar
+    <InputPrompt
       input={input}
       setInput={setInput}
       isLoading={isLoading}
       kernelStatus={liveKernelStatus}
       connectionConfirmed={connectionConfirmed}
       placeholder={placeholder}
+      /*
+        The same openers the empty state offers, typed into the box they would
+        be typed into.
+
+        `message` rather than `title`: the animation is meant to look like
+        somebody typing, and what they would have typed is the message the
+        chip sends, not the label on it.
+      */
+      typingSuggestions={resolvedSuggestions?.map(
+        item => item.message || item.title,
+      )}
       autoFocus={autoFocus}
       focusTrigger={focusTrigger}
       padding={padding}
       onSend={() => handleSend()}
       onStop={handleStop}
-      disableInputPrompt={disableInputPrompt || !!overlay || launching}
+      disableInputPrompt={
+        disableInputPrompt || disabled || !!overlay || launching
+      }
+      promptVariant={promptVariant}
+      mentionableAgents={mentionableAgents}
       showTokenUsage={showTokenUsage}
+      showContextRing={showContextRing}
       agentUsage={agentUsage}
       showModelSelector={showModelSelector}
       showToolsMenu={showToolsMenu}
@@ -3809,12 +4520,19 @@ function ChatBaseInner({
       codemodeEnabled={codemodeEnabled}
       onToggleCodemode={onToggleCodemode}
       isA2AProtocol={isA2AProtocol}
+      showAgentsMenu={showAgentsMenu}
+      agents={footerAgents}
+      selectedAgentId={selectedAgentId ?? footerAgents[0]?.id}
+      onSelectAgent={onSelectAgent}
       hasConfigData={!!configQuery.data}
       hasSkillsData={!!skillsQuery.data}
-      models={availableModels || configQuery.data?.models || []}
+      // So the bar can tell "not here yet" from "not coming": a chat whose
+      // agent has no config endpoint waits for ever otherwise.
+      configLoading={configQuery.isLoading}
+      models={offeredModels}
       selectedModel={selectedModel}
       onModelSelect={setSelectedModel}
-      availableTools={configQuery.data?.builtinTools || []}
+      availableTools={builtinTools}
       mcpServers={filteredMcpServers}
       enabledMcpTools={enabledMcpTools}
       enabledMcpToolCount={getEnabledMcpToolNames().length}
@@ -3839,37 +4557,61 @@ function ChatBaseInner({
   // no ephemeral notebook is shown) or INSIDE the chat body column (when the
   // notebook is visible) so the header always follows the chat body across all
   // view modes (docked sidebar, floating popup, floating-small).
+  //
+  // Assembled as a props object first: `renderHeader` lets a host take these
+  // exact props — kernel indicator, runtime status, actions, all of it — and
+  // draw the bar itself. The loop's chat-header plugin is that host: the
+  // header then *arrives as a plugin* without this component re-deriving any
+  // of what only it knows.
+  const chatHeaderProps: ChatBaseHeaderProps = {
+    title,
+    subtitle,
+    disableReason: disabled ? disableReason : undefined,
+    brandIcon,
+    headerContent,
+    headerActions,
+    showInformation,
+    /*
+      A default, so the button does something.
+
+      `showInformation` drew an (i) and then forwarded a click to whatever
+      the host supplied — and a host that supplied nothing got a button that
+      did nothing at all, which is worse than no button. `Chat` still passes
+      its own handler and keeps its own pane; everything else gets this one.
+    */
+    onInformationClick: onInformationClick ?? (() => setShowDetails(true)),
+    padding,
+    kernelIndicatorState,
+    kernelIndicatorPlacement,
+    runtimeStatus: sandboxStatusData ?? sandboxStatusQuery.data,
+    kernel: notebookVisible
+      ? (notebookKernel ?? kernel)
+      : documentVisible
+        ? (documentKernel ?? kernel)
+        : kernel,
+    kernelEnvironmentName,
+    kernelCpu,
+    kernelMemory,
+    kernelGpu,
+    headerButtons,
+    messageCount: messages.length,
+    onNewChat: handleNewChat,
+    onClear: handleClear,
+    chatViewMode,
+    onChatViewModeChange,
+    showEphemeralSurfaceControl:
+      enableEphemeralNotebook || enableEphemeralDocument,
+    enableEphemeralNotebookOption: enableEphemeralNotebook,
+    enableEphemeralDocumentOption: enableEphemeralDocument,
+    ephemeralSurfaceMode,
+    onEphemeralSurfaceModeChange: handleEphemeralSurfaceModeChange,
+  };
   const chatHeaderElement = showHeader ? (
-    <ChatBaseHeader
-      title={title}
-      subtitle={subtitle}
-      brandIcon={brandIcon}
-      headerContent={headerContent}
-      headerActions={headerActions}
-      showInformation={showInformation}
-      onInformationClick={onInformationClick}
-      padding={padding}
-      kernelIndicatorState={kernelIndicatorState}
-      runtimeStatus={sandboxStatusData ?? sandboxStatusQuery.data}
-      kernel={notebookVisible ? (notebookKernel ?? kernel) : kernel}
-      kernelEnvironmentName={kernelEnvironmentName}
-      kernelCpu={kernelCpu}
-      kernelMemory={kernelMemory}
-      kernelGpu={kernelGpu}
-      headerButtons={headerButtons}
-      messageCount={messages.length}
-      onNewChat={handleNewChat}
-      onClear={handleClear}
-      chatViewMode={chatViewMode}
-      onChatViewModeChange={onChatViewModeChange}
-      showEphemeralSurfaceControl={
-        enableEphemeralNotebook || enableEphemeralDocument
-      }
-      enableEphemeralNotebookOption={enableEphemeralNotebook}
-      enableEphemeralDocumentOption={enableEphemeralDocument}
-      ephemeralSurfaceMode={ephemeralSurfaceMode}
-      onEphemeralSurfaceModeChange={handleEphemeralSurfaceModeChange}
-    />
+    renderHeader ? (
+      renderHeader(chatHeaderProps)
+    ) : (
+      <ChatBaseHeader {...chatHeaderProps} />
+    )
   ) : null;
 
   // ========================================================================
@@ -3885,6 +4627,20 @@ function ChatBaseInner({
         height: '100%',
         maxHeight: '100%',
         minHeight: 0,
+        /*
+          As wide as the host, always.
+
+          The root set its height and said nothing about width, so mounted in
+          a flex row — which is how the LOOP chat mounts it — it was a
+          shrink-to-fit item: as wide as its widest line and no wider,
+          anchored to the left of a row it should have filled, and re-sizing
+          with every streamed chunk. That is what made the person's own
+          bubble drift while the agent answered. A chat fills the column it
+          is given; the column decides the width, not the transcript.
+        */
+        flex: '1 1 auto',
+        width: '100%',
+        minWidth: 0,
         bg: backgroundColor || 'canvas.default',
         borderRadius,
         border,
@@ -3897,6 +4653,48 @@ function ChatBaseInner({
           inside the chat body column (below) so it follows the chat across
           view modes instead of staying pinned to the top. */}
       {!surfaceVisible && chatHeaderElement}
+
+      {/*
+        The agent, described. Over the transcript rather than beside it: the
+        two answer different questions and a person reading one is not reading
+        the other, and covering it keeps every message exactly where it was
+        when they come back.
+      */}
+      {showDetails && (
+        /*
+          A column, not a row.
+       
+          This is a flex container holding one child, and `AgentDetails` sets a
+          height but no width — so in a row it was a flex item with `flex-basis:
+          auto` and no grow, which is to say it was as wide as its longest line
+          of text and no wider. On the LOOP workspace, where the chat column is
+          already narrow, that read as the panel occupying half the space it was
+          given, with the rest of the surface blank beside it.
+       
+          Turning the axis makes width the *cross* axis, and a flex item
+          stretches across that by default. `Chat.tsx` mounts the same component
+          the same way and has always looked right for exactly this reason.
+        */
+        <Box
+          sx={{
+            flex: '1 1 auto',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <AgentDetails
+            name={title || 'AI Agent'}
+            icon={brandIcon}
+            protocol={protocol?.type ?? 'unknown'}
+            url={protocol?.endpoint || ''}
+            messageCount={displayItems.length}
+            agentId={activeAgentId}
+            apiBase={protocol?.configEndpoint}
+            onBack={() => setShowDetails(false)}
+          />
+        </Box>
+      )}
 
       {/* Tool approval banner (top-of-chat) */}
       {showToolApprovalBanner &&
@@ -3964,19 +4762,30 @@ function ChatBaseInner({
             ) : notebookVisible ? (
               <EphemeralNotebook
                 notebookId={ephemeralNotebookId}
-                runtimePodName={runtimeId || activeAgentId}
+                runtimeName={runtimeId || activeAgentId}
+                runtimeOverride={ephemeralRuntimeOverride}
+                themeVariant={themeVariant}
+                colorMode={colorMode}
                 nbformat={persistedEphemeralNbformat ?? undefined}
                 onNbformatChange={handleEphemeralNotebookChange}
                 toolbarComponent={ephemeralNotebookToolbar}
+                toolbarExtraItems={notebookToolbarItems}
+                collaborationProvider={ephemeralNotebookCollaborationProvider}
               />
             ) : (
               <React.Suspense fallback={null}>
                 <EphemeralDocument
                   documentId={ephemeralDocumentId}
-                  runtimePodName={runtimeId || activeAgentId}
+                  runtimeName={runtimeId || activeAgentId}
+                  runtimeOverride={ephemeralRuntimeOverride}
+                  themeVariant={themeVariant}
+                  colorMode={colorMode}
                   content={persistedEphemeralDocument ?? undefined}
                   onContentChange={handleEphemeralDocumentChange}
                   onToolsReady={handleDocumentToolsReady}
+                  onKernelChange={handleDocumentKernelChange}
+                  collaboration={ephemeralDocumentCollaboration}
+                  toolbarExtraItems={documentToolbarItems}
                 />
               </React.Suspense>
             )}

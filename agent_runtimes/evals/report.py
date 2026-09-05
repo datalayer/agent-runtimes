@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Real evaluation and reporting logic for Datalayer evals.
 
 This module hosts the evals report engine and the helper functions used by the
@@ -418,7 +415,7 @@ def _failure_cause_detail_lines(cause: dict[str, Any]) -> list[str]:
     for key, label in (
         ("stage", "Stage"),
         ("type", "Type"),
-        ("runtime_pod_name", "Runtime pod"),
+        ("runtime_name", "Runtime pod"),
         ("runtime_id", "Runtime ID"),
         ("environment_name", "Environment"),
         ("execution_url", "Execution URL"),
@@ -439,7 +436,7 @@ def _failure_cause_detail_lines(cause: dict[str, Any]) -> list[str]:
     if isinstance(diagnostics, dict) and diagnostics:
         for key, label in (
             ("agent_runtimes_url", "Agent runtimes URL"),
-            ("datalayer_url", "Datalayer URL"),
+            ("iam_url", "Datalayer IAM URL"),
         ):
             diag_value = diagnostics.get(key)
             if diag_value:
@@ -2611,7 +2608,7 @@ def _run_detail_block_lines(
     lines.append(f"- Pass rate: {pass_text}")
     lines.append(f"- Created: {created}")
     summary_for_header = _as_dict(run.get("summary"))
-    runtime_pod = str(summary_for_header.get("runtime_pod_name") or "").strip()
+    runtime_pod = str(summary_for_header.get("runtime_name") or "").strip()
     if runtime_pod:
         lines.append(f"- Runtime: `{runtime_pod}`")
     runtime_id = str(summary_for_header.get("runtime_id") or "").strip()
@@ -2758,7 +2755,7 @@ def _run_detail_block_lines(
             "credits_consumed",
             "captured_at",
             "reservation_id",
-            "runtime_pod_name",
+            "runtime_name",
         ]
         usage_rows: list[list[str]] = []
         for key in preferred_keys:
@@ -3602,7 +3599,7 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
             if isinstance(diagnostics, dict):
                 for key, label in (
                     ("agent_runtimes_url", "agent runtimes url"),
-                    ("datalayer_url", "run url"),
+                    ("iam_url", "iam url"),
                 ):
                     diag_value = diagnostics.get(key)
                     if diag_value:

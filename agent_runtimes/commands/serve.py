@@ -164,6 +164,150 @@ class ServeError(Exception):
     pass
 
 
+def start_node_jupyter_server(host: str = "127.0.0.1") -> Optional["object"]:
+    """Start a local Jupyter server for Agent Node mode.
+
+    In Agent Node mode (e.g. the packaged Docker image), the ephemeral notebook
+    and Lexical document editors need a real kernel/contents backend. This spawns
+    a Jupyter server as a child process and exports ``AGENT_NODE_JUPYTER_URL`` /
+    ``AGENT_NODE_JUPYTER_TOKEN`` so the node kernel proxy can reach it.
+
+    If an external Jupyter server is already configured (via
+    ``AGENT_NODE_JUPYTER_URL``), this is a no-op.
+
+    Args:
+        host: Host the agent-runtimes server binds to (used only for logging).
+
+    Returns:
+        The spawned ``subprocess.Popen`` handle, or ``None`` if no server was
+        started (already configured, or Jupyter is not installed).
+    """
+    import atexit
+    import secrets
+    import subprocess
+    import sys
+
+    # Respect an externally provided Jupyter server.
+    if (os.environ.get("AGENT_NODE_JUPYTER_URL") or "").strip():
+        logger.info(
+            "Agent Node: using externally configured Jupyter server "
+            "(AGENT_NODE_JUPYTER_URL set); not starting a local one"
+        )
+        return None
+
+    base_url = os.environ.get("AGENT_NODE_JUPYTER_BASE_URL", "/api/jupyter-server/")
+    if not base_url.startswith("/"):
+        base_url = "/" + base_url
+    if not base_url.endswith("/"):
+        base_url = base_url + "/"
+
+    token = (os.environ.get("AGENT_NODE_JUPYTER_TOKEN") or "").strip()
+    if not token:
+        token = secrets.token_hex(32)
+
+    root_dir = os.environ.get("AGENT_NODE_JUPYTER_ROOT") or os.getcwd()
+
+    # Resolve a bindable port (default 8888, search forward if taken).
+    try:
+        desired_port = int(os.environ.get("AGENT_NODE_JUPYTER_PORT", "8888"))
+    except ValueError:
+        desired_port = 8888
+    jupyter_host = os.environ.get("AGENT_NODE_JUPYTER_HOST", "127.0.0.1")
+    if is_port_free(jupyter_host, desired_port):
+        jupyter_port = desired_port
+    else:
+        jupyter_port = find_free_port(jupyter_host, desired_port)
+        logger.info(
+            f"Agent Node: Jupyter port {desired_port} in use, using {jupyter_port}"
+        )
+
+    def _command(port: int) -> list[str]:
+        return [
+            sys.executable,
+            "-m",
+            "jupyter",
+            "server",
+            f"--ServerApp.ip={jupyter_host}",
+            f"--ServerApp.port={port}",
+            # Bind this port or exit. Jupyter otherwise walks forward on its own
+            # when the port is taken — and it was taken, in dev, by a second
+            # server that started between our probe above and its bind — which
+            # left the URL recorded below pointing at a server that was not
+            # ours, holding a token it did not know. Every kernel call the
+            # tunnel relayed came back 403 and the notebook stayed blank.
+            "--ServerApp.port_retries=0",
+            f"--ServerApp.base_url={base_url}",
+            f"--IdentityProvider.token={token}",
+            "--ServerApp.disable_check_xsrf=True",
+            "--ServerApp.allow_origin=*",
+            "--ServerApp.open_browser=False",
+            f"--ServerApp.root_dir={root_dir}",
+        ]
+
+    def _listening(port: int, proc: "subprocess.Popen[bytes]") -> bool:
+        """Wait for *our* process to own the port, or for it to give up."""
+        import time
+
+        deadline = time.monotonic() + 30.0
+        while time.monotonic() < deadline:
+            if proc.poll() is not None:
+                return False
+            if not is_port_free(jupyter_host, port):
+                return True
+            time.sleep(0.2)
+        return proc.poll() is None
+
+    proc = None
+    for attempt in range(5):
+        try:
+            proc = subprocess.Popen(_command(jupyter_port))  # noqa: S603
+        except FileNotFoundError:
+            logger.warning(
+                "Agent Node: Jupyter is not installed; ephemeral notebook/document "
+                "editors will not have a kernel backend"
+            )
+            return None
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Agent Node: failed to start Jupyter server: {exc}")
+            return None
+        if _listening(jupyter_port, proc):
+            break
+        # Lost the port to someone else between the probe and the bind: the
+        # process has exited. Take the next free one and try again, so the URL
+        # we record is the one the server we started actually answers on.
+        logger.info(
+            f"Agent Node: Jupyter could not bind port {jupyter_port}; trying the next"
+        )
+        jupyter_port = find_free_port(jupyter_host, jupyter_port + 1)
+        proc = None
+    if proc is None:
+        logger.warning(
+            "Agent Node: could not start a local Jupyter server on any port; "
+            "ephemeral notebook/document editors will not have a kernel backend"
+        )
+        return None
+
+    local_url = f"http://{jupyter_host}:{jupyter_port}{base_url.rstrip('/')}"
+    os.environ["AGENT_NODE_JUPYTER_URL"] = local_url
+    os.environ["AGENT_NODE_JUPYTER_TOKEN"] = token
+    logger.info(f"Agent Node: started local Jupyter server at {local_url}")
+
+    def _terminate() -> None:
+        if proc.poll() is not None:
+            return
+        try:
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+        except Exception:  # noqa: BLE001
+            pass
+
+    atexit.register(_terminate)
+    return proc
+
+
 def serve_server(
     host: str = "127.0.0.1",
     port: int = 0,
@@ -212,8 +356,14 @@ def serve_server(
                               with a shared volume, set to a path accessible by both containers.
         skills_folder: Folder for agent skills. When using Jupyter sandbox with a shared
                       volume, set to a path accessible by both containers.
-        sandbox_variant: Code sandbox variant to use ('eval' or 'jupyter'). When 'jupyter', a Jupyter server is started
-                           per agent via code_sandboxes.
+        sandbox_variant: Code sandbox variant to use. 'eval' runs the code
+                           in this process, 'jupyter-server' starts a
+                           Jupyter server per agent via code_sandboxes, and
+                           the name of a provider — 'docker', 'datalayer',
+                           'google-colab', 'kaggle', 'monty', 'modal',
+                           'daytona', 'cloudflare', 'coreweave', 'e2b' — runs
+                           it there, under the credentials this machine holds
+                           for that provider.
         protocol: Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
         find_free_port_flag: If True, find a free port starting from the given port
         node: Enable Agent Node mode (disabled by default)
@@ -332,6 +482,13 @@ def serve_server(
     os.environ["AGENT_RUNTIMES_NODE"] = "true" if node else "false"
     if node:
         logger.info("Agent Node mode enabled (--node)")
+        # Start a local Jupyter server so the ephemeral notebook / Lexical
+        # document editors have a real kernel + contents backend. Skipped when
+        # an external Jupyter server is already configured via
+        # AGENT_NODE_JUPYTER_URL, and when running under uvicorn's reload
+        # watcher (the reloader spawns a child that inherits this env).
+        if not reload:
+            start_node_jupyter_server(host)
 
     os.environ["AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS"] = (
         "true" if disable_tool_approvals else "false"
@@ -355,6 +512,12 @@ def serve_server(
         raise ServeError(
             "uvicorn is not installed. Install it with: pip install uvicorn"
         )
+
+    if node:
+        # Where the node reaches its own HTTP API — the AG-UI mount the tunnel
+        # relays runs to. Loopback whatever the bind address, which may be
+        # ``0.0.0.0``.
+        os.environ["AGENT_NODE_LOCAL_URL"] = f"http://127.0.0.1:{actual_port}"
 
     logger.info(f"Starting agent-runtimes server on {host}:{actual_port}")
     logger.info(f"API docs available at http://{host}:{actual_port}/docs")

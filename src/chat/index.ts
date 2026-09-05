@@ -56,10 +56,19 @@
 
 // Components - Chat elements
 export { ChatMessages, type ChatMessagesProps } from './messages/ChatMessages';
+export {
+  NotebookToolSurfaces,
+  notebookToolSurfacesRenderer,
+} from './messages/NotebookToolSurfaces';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';
-export { InputPrompt, type InputPromptProps } from './prompt';
+export {
+  InputPrompt,
+  type InputPromptProps,
+  InputPromptBase,
+  type InputPromptBaseProps,
+} from './prompt';
 export {
   McpStatusIndicator,
   type McpStatusIndicatorProps,
@@ -118,3 +127,4 @@ export {
   AgentRuntimeChat,
   type AgentRuntimeChatProps,
 } from '../agents/AgentRuntimeChat';
+export * from './EphemeralSurfaceControl';

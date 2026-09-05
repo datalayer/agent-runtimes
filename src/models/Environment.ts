@@ -91,7 +91,9 @@ export interface IDatalayerEnvironment {
   resources?: IResources;
 
   /**
-   * Environment contents.
+   * The contents the Environment selects, as `{uid, name, mount, permissions}`.
+   *
+   * Absent when the Environment selects none.
    */
   contents?: IContent[];
 }

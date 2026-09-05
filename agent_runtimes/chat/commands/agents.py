@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Slash command: /agents - List available agents."""
 
 from __future__ import annotations
@@ -16,13 +12,88 @@ import httpx
 if TYPE_CHECKING:
     from ..tux import CliTux
 
+from agent_runtimes.loop.commands import CommandArgSpec
+
 NAME = "agents"
-ALIASES: list[str] = []
-DESCRIPTION = "List available agents on the server"
+ALIASES: list[str] = ["agent"]
+DESCRIPTION = "List agents, and switch the one this session is using"
 SHORTCUT = "escape a"
 
 
-async def execute(tux: "CliTux") -> Optional[str]:
+def _agent_ids() -> list[str]:
+    """Agent ids for completion, from the catalogue rather than the network."""
+    try:
+        from agent_runtimes.specs.agents.agents import AGENTSPECS
+
+        return sorted(AGENTSPECS)
+    except Exception:  # noqa: BLE001
+        return []
+
+
+ARGS = (
+    CommandArgSpec(name="action", description="use", choices=("use",)),
+    CommandArgSpec(name="agent-id", description="Agent to switch to", choices=_agent_ids),
+)
+
+
+async def _use(tux: "CliTux", agent_id: str) -> None:
+    """Bind this session to another agent."""
+    from ..tux import STYLE_MUTED, STYLE_PRIMARY
+
+    session = getattr(tux, "loop_session", None)
+    session_id = (
+        getattr(session, "conversation_id", None)
+        or getattr(tux, "agent_id", "")
+        or "session"
+    )
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{tux.server_url}/api/v1/loop/sessions/{session_id}/agent",
+                json={"agent_id": agent_id},
+                timeout=120.0,
+            )
+            if response.status_code == 404:
+                tux.console.print(f"[red]Unknown agent: {agent_id}[/red]")
+                tux.console.print("  /agents to see what is available.", style=STYLE_MUTED)
+                return
+            response.raise_for_status()
+            payload = response.json()
+    except Exception as error:  # noqa: BLE001
+        tux.console.print(f"[red]Could not switch agent: {error}[/red]")
+        return
+
+    if session is not None:
+        session.agent_id = payload.get("agent_id", agent_id)
+        session.model = payload.get("model") or session.model
+    tux.agent_id = payload.get("agent_id", agent_id)
+
+    tux.console.print()
+    tux.console.print(f"● {payload.get('name', agent_id)}", style=STYLE_PRIMARY)
+    tux.console.print(f"  {payload.get('agent_id')}", style=STYLE_MUTED)
+    if payload.get("model"):
+        tux.console.print(f"  model: {payload['model']}", style=STYLE_MUTED)
+    if payload.get("sandbox_variant"):
+        tux.console.print(f"  sandbox: {payload['sandbox_variant']}", style=STYLE_MUTED)
+    tux.console.print()
+
+
+async def execute(tux: "CliTux", argv: str = "") -> Optional[str]:
+    """List agents, or switch to one."""
+    parts = (argv or "").split()
+    if parts and parts[0].lower() == "use":
+        if len(parts) < 2:
+            from ..tux import STYLE_MUTED
+
+            tux.console.print("  /agents use <agent-id>", style=STYLE_MUTED)
+            return None
+        await _use(tux, parts[1])
+        return None
+    return await _list(tux)
+
+
+async def _list(tux: "CliTux") -> Optional[str]:
     """List available agents with detailed information."""
     from ..tux import STYLE_ACCENT, STYLE_MUTED, STYLE_PRIMARY
 
@@ -101,4 +172,6 @@ async def execute(tux: "CliTux") -> Optional[str]:
             tux.console.print(f"    Skills: {skills_text}", style=STYLE_MUTED)
 
         tux.console.print()
+    tux.console.print("  /agents use <agent-id> to switch", style=STYLE_MUTED)
+    tux.console.print()
     return None

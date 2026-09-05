@@ -14,9 +14,11 @@ Provides a configurable FastAPI application with:
 
 import asyncio
 import contextlib
+import json
 import logging
 import multiprocessing as mp
 import os
+import re
 import sys
 import tempfile
 from contextlib import asynccontextmanager
@@ -24,10 +26,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
+from code_sandboxes import CodeSandboxClient
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
@@ -70,6 +73,8 @@ from .routes import (
     tool_approvals_ws_router,
     triggers_webhook_router,
     vercel_ai_router,
+    loop_router,
+    mcp_auth_router,
 )
 from .routes.agents import set_api_prefix
 from .specs.agents import get_agent_spec
@@ -162,9 +167,12 @@ async def _create_and_register_cli_agent(
         all_mcp_servers: All MCP servers (agent spec + CLI servers)
         api_prefix: API prefix for routes
         protocol: Transport protocol (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)
-        sandbox_variant: Code sandbox variant ('eval', 'jupyter', or
-            'jupyter'). When 'jupyter', a per-agent Jupyter server is
-            started via code_sandboxes.
+        sandbox_variant: Code sandbox variant. 'eval' runs the code in this
+            process, 'jupyter-server' starts a per-agent Jupyter server via
+            code_sandboxes, and the name of a provider — 'docker',
+            'datalayer', 'google-colab', 'kaggle', 'monty', 'modal',
+            'daytona', 'cloudflare', 'coreweave', 'e2b' — runs it at that
+            provider, under the credentials this process holds for it.
 
     Returns:
         A dictionary with startup information about the registered agent and
@@ -211,23 +219,23 @@ async def _create_and_register_cli_agent(
     effective_variant = (
         sandbox_variant
         or agent_spec.sandbox_variant
-        or ("jupyter" if jupyter_sandbox_url else "eval")
+        or ("jupyter-server" if jupyter_sandbox_url else "eval")
     )
 
     # In K8s sidecar mode (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), a Jupyter
     # container already runs in the same pod. Keep the effective variant as
-    # "jupyter" and defer sandbox creation until companion provides URL.
+    # "jupyter-server" and defer sandbox creation until companion provides URL.
     jupyter_sidecar = (
         os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
     )
     if jupyter_sidecar:
-        if effective_variant == "jupyter":
+        if effective_variant == "jupyter-server":
             logger.info(
                 "Jupyter sidecar detected (DATALAYER_RUNTIME_JUPYTER_SIDECAR=true), "
                 "using jupyter variant with deferred URL configuration"
             )
         elif effective_variant == "eval":
-            effective_variant = "jupyter"
+            effective_variant = "jupyter-server"
             logger.info(
                 "Jupyter sidecar detected, overriding eval → jupyter "
                 "(companion will provide jupyter URL)"
@@ -240,11 +248,11 @@ async def _create_and_register_cli_agent(
     need_shared_sandbox = (
         (enable_codemode and skills_enabled)
         or (enable_codemode and jupyter_sandbox_url)
-        or (enable_codemode and effective_variant == "jupyter")
+        or (enable_codemode and effective_variant == "jupyter-server")
     )
     if need_shared_sandbox:
         if (
-            effective_variant == "jupyter"
+            effective_variant == "jupyter-server"
             and jupyter_sidecar
             and not jupyter_sandbox_url
         ):
@@ -252,13 +260,13 @@ async def _create_and_register_cli_agent(
             from .services.code_sandbox_manager import get_code_sandbox_manager
 
             sandbox_manager = get_code_sandbox_manager()
-            sandbox_manager.configure(variant="jupyter")
+            sandbox_manager.configure(variant="jupyter-server")
             shared_sandbox = sandbox_manager.get_managed_sandbox()
             logger.info(
-                f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
+                f"Deferred sandbox for agent '{agent_id}': variant=jupyter-server, "
                 f"waiting for companion to provide jupyter URL"
             )
-        elif effective_variant == "jupyter":
+        elif effective_variant == "jupyter-server":
             # Delegate to code_sandboxes: create a per-agent sandbox.
             # When jupyter_sandbox_url is set (e.g. sidecar with env var),
             # pass it to configure() so _create_sandbox() can connect to the
@@ -268,12 +276,12 @@ async def _create_and_register_cli_agent(
 
                 sandbox_manager = get_code_sandbox_manager()
                 sandbox_manager.configure(
-                    variant="jupyter",
+                    variant="jupyter-server",
                     jupyter_url=jupyter_sandbox_url,
                 )
                 shared_sandbox = sandbox_manager.create_agent_sandbox(
                     agent_id=agent_id,
-                    variant="jupyter",
+                    variant="jupyter-server",
                 )
                 logger.info(
                     f"Created per-agent Jupyter sandbox for CLI agent '{agent_id}'"
@@ -288,7 +296,9 @@ async def _create_and_register_cli_agent(
                     f"Failed to create Jupyter sandbox for agent '{agent_id}': {e}"
                 ) from e
         else:
-            shared_sandbox = create_shared_sandbox(jupyter_sandbox_url)
+            shared_sandbox = create_shared_sandbox(
+                jupyter_sandbox_url, effective_variant
+            )
 
     # Add skills toolset if enabled
     if skills_enabled:
@@ -391,7 +401,7 @@ async def _create_and_register_cli_agent(
             # rebuild_codemode is called by configure-from-spec.
             sidecar_deferred = (
                 jupyter_sidecar
-                and effective_variant == "jupyter"
+                and effective_variant == "jupyter-server"
                 and not jupyter_sandbox_url
             )
             if sidecar_deferred:
@@ -441,6 +451,7 @@ async def _create_and_register_cli_agent(
     from .capabilities import (
         ToolApprovalConfig,
         ToolsGuardrailCapability,
+        apply_model_output_tokens_limit,
         build_capabilities_from_agent_spec,
         build_usage_limits_from_agent_spec,
     )
@@ -475,8 +486,11 @@ async def _create_and_register_cli_agent(
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
     tool_ids = list(agent_spec.tools or [])
-    capabilities = build_capabilities_from_agent_spec(agent_spec, agent_id=agent_id)
+    capabilities = build_capabilities_from_agent_spec(
+        agent_spec, agent_id=agent_id, model=model
+    )
     usage_limits = build_usage_limits_from_agent_spec(agent_spec)
+    usage_limits = apply_model_output_tokens_limit(usage_limits, model)
     tool_approvals_disabled = (
         os.environ.get("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "").lower() == "true"
     )
@@ -495,9 +509,7 @@ async def _create_and_register_cli_agent(
             )
         ]
     agent_kwargs: dict[str, Any] = {
-        "system_prompt": system_prompt,
-        # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
-        "builtin_tools": (),
+        "instructions": system_prompt,
     }
     if capabilities:
         agent_kwargs["capabilities"] = capabilities
@@ -745,7 +757,11 @@ async def _create_and_register_cli_agent(
                 new_codemode = CodemodeToolset(
                     registry=new_registry,
                     config=new_config,
-                    sandbox=fresh_sandbox,
+                    sandbox_client=(
+                        CodeSandboxClient(fresh_sandbox)
+                        if fresh_sandbox is not None
+                        else None
+                    ),
                     allow_discovery_tools=True,
                 )
 
@@ -883,6 +899,7 @@ async def _create_and_register_cli_agent(
 
             vercel_adapter = VercelAITransport(
                 agent,
+                usage_limits=usage_limits,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
                 approval_tool_ids=approval_tool_ids or [],
@@ -900,6 +917,7 @@ async def _create_and_register_cli_agent(
 
             vercel_adapter = VercelAITransport(
                 agent,
+                usage_limits=usage_limits,
                 agent_id=agent_id,
                 has_spec_frontend_tools=bool(agent_spec.frontend_tools),
                 approval_tool_ids=approval_tool_ids or [],
@@ -963,7 +981,7 @@ async def _create_and_register_cli_agent(
     }
 
     # Add Jupyter sandbox details when using the jupyter variant
-    if effective_variant == "jupyter" and shared_sandbox is not None:
+    if effective_variant == "jupyter-server" and shared_sandbox is not None:
         jupyter_host = getattr(shared_sandbox, "_host", None)
         jupyter_port = getattr(shared_sandbox, "_port", None)
         jupyter_server_url = getattr(shared_sandbox, "_server_url", None)
@@ -980,7 +998,7 @@ async def _create_and_register_cli_agent(
         startup_info["sandbox"]["jupyter_url"] = jupyter_server_url
         startup_info["sandbox"]["jupyter_token"] = jupyter_token
         startup_info["sandbox"]["kernel_id"] = kernel_id
-    elif effective_variant == "jupyter" and jupyter_sandbox_url:
+    elif effective_variant == "jupyter-server" and jupyter_sandbox_url:
         startup_info["sandbox"]["jupyter_url"] = jupyter_sandbox_url
 
     return startup_info
@@ -1411,9 +1429,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     if _node_enabled:
         app.include_router(agent_node_router, prefix=config.api_prefix)
     app.include_router(agents_router, prefix=config.api_prefix)
-    app.include_router(acp_router, prefix=config.api_prefix)
+    if acp_router is not None:
+        app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)
+    app.include_router(loop_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
+    app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)
     app.include_router(sandbox_router, prefix=config.api_prefix)
     app.include_router(tool_approvals_router, prefix=config.api_prefix)
@@ -1487,6 +1508,102 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # Fallback: check for a dist/ directory packaged inside the module
         _dist_dir = Path(__file__).resolve().parent / "static" / "dist"
     if _dist_dir.is_dir():
+        # Inject a `datalayer-config-data` script tag into the built agent HTML
+        # pages before serving them. Vite bakes no runtime config into these
+        # pages, so without this the frontend cannot discover the IAM URL and
+        # login falls back to the server origin (e.g. http://localhost:8765)
+        # instead of the configured IAM server (e.g. `plane local` on :9700).
+        #
+        # This mirrors how the `ui` project seeds `datalayer-config-data`
+        # (iamUrl, runtimesUrl, ...) in its served HTML for `make ai` vs
+        # `make ai-local`. Here the URLs are resolved at serve time from the
+        # DATALAYER_*_URL environment variables via DatalayerURLs.
+        _config_tag_re = re.compile(
+            r'<script id="datalayer-config-data"[^>]*>.*?</script>',
+            re.DOTALL,
+        )
+        _head_open_re = re.compile(r"<head[^>]*>")
+
+        def _build_datalayer_config() -> dict[str, Any]:
+            from datalayer_core.utils.urls import DatalayerURLs
+
+            urls = DatalayerURLs.from_environment()
+            return {
+                "iamUrl": urls.iam_url,
+                "runtimesUrl": urls.runtimes_url,
+                "spacerUrl": urls.spacer_url,
+                "libraryUrl": urls.library_url,
+                "aiAgentsUrl": urls.ai_agents_url,
+                "aiInferenceUrl": urls.ai_inference_url,
+                "jupyterMcpServerUrl": urls.jupyter_mcp_server_url,
+                "otelUrl": urls.otel_url,
+                "growthUrl": urls.growth_url,
+                "successUrl": urls.success_url,
+                "supportUrl": urls.support_url,
+                "loadConfigurationFromServer": False,
+            }
+
+        def _render_page_with_config(page_path: Path) -> str:
+            html = page_path.read_text(encoding="utf-8")
+            config_json = json.dumps(_build_datalayer_config(), indent=2)
+            script_tag = (
+                '<script id="datalayer-config-data" type="application/json">\n'
+                f"{config_json}\n"
+                "    </script>"
+            )
+            if _config_tag_re.search(html):
+                return _config_tag_re.sub(script_tag, html, count=1)
+            head_match = _head_open_re.search(html)
+            if head_match:
+                idx = head_match.end()
+                return f"{html[:idx]}\n    {script_tag}{html[idx:]}"
+            return f"{script_tag}\n{html}"
+
+        def _make_page_handler(page_name: str) -> Any:
+            async def _handler() -> HTMLResponse:
+                page_path = _dist_dir / page_name
+                if not page_path.is_file():
+                    return HTMLResponse(status_code=404, content="Not found")
+                return HTMLResponse(_render_page_with_config(page_path))
+
+            return _handler
+
+        # Explicit routes for the built agent HTML entry pages. Registered
+        # BEFORE the StaticFiles mounts so they take precedence for these
+        # specific files while the mounts keep serving JS/CSS/asset bundles.
+        for _page in (
+            "agent-node.html",
+            "agent.html",
+            "agent-notebook.html",
+            "agent-document.html",
+            "loop.html",
+            "loop-example.html",
+            "index.html",
+        ):
+            _page_handler = _make_page_handler(_page)
+            app.add_api_route(
+                f"/html/{_page}",
+                _page_handler,
+                methods=["GET"],
+                include_in_schema=False,
+            )
+            app.add_api_route(
+                f"/static/{_page}",
+                _page_handler,
+                methods=["GET"],
+                include_in_schema=False,
+            )
+
+        # `/loop` is the workspace's own address: `/browser` hands a session
+        # over by opening `/loop?handoff=<code>`, and that URL should read like
+        # a place rather than a file.
+        app.add_api_route(
+            "/loop",
+            _make_page_handler("loop.html"),
+            methods=["GET"],
+            include_in_schema=False,
+        )
+
         # Mount AFTER all API routes so it never shadows them.
         # html=True enables serving index.html for directory requests.
         app.mount(

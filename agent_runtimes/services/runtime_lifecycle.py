@@ -3,8 +3,9 @@
 
 """Shared runtime lifecycle helpers.
 
-This module centralizes runtime teardown behavior so invokers and routes can
-reuse the same logic.
+One teardown path, so invokers and routes stop a runtime the same way — and
+one word for it: `stop`, as in `code_sandboxes.lifecycle`, rather than the
+`terminate` this module used to say and nothing else did.
 """
 
 from __future__ import annotations
@@ -18,63 +19,62 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
-def _terminate_runtime_with_core(
+def _stop_runtime_with_core(
     runtime_id: str,
     runtime_base_url: str,
     token: str,
 ) -> bool:
-    """Terminate a cloud runtime via datalayer-core primitives."""
+    """Stop a cloud runtime via datalayer-core primitives."""
     from datalayer_core.utils.urls import DatalayerURLs
 
     from agent_runtimes.client import AgentClient
-    from agent_runtimes.utils.agent_utils import terminate_cloud_agent_runtime
+    from agent_runtimes.utils.agent_utils import stop_cloud_agent_runtime
 
     urls = DatalayerURLs.from_environment(
-        datalayer_url=runtime_base_url,
-        iam_url=runtime_base_url,
         runtimes_url=runtime_base_url,
+        iam_url=runtime_base_url,
     )
     client = AgentClient(urls=urls, api_key=token)
-    return terminate_cloud_agent_runtime(client, runtime_id)
+    return stop_cloud_agent_runtime(client, runtime_id)
 
 
-async def terminate_runtime_prefer_core(
+async def stop_runtime_prefer_core(
     runtime_id: str,
     runtime_base_url: str,
     token: str | None,
 ) -> bool:
-    """Terminate a runtime, preferring datalayer-core then API fallback.
+    """Stop a runtime, preferring datalayer-core then the API fallback.
 
-    Returns True when a termination request was issued successfully.
+    Returns True when a stop request was issued successfully.
     """
-    terminated_with_core = False
+    stopped_with_core = False
     if token:
         try:
-            terminated_with_core = await asyncio.to_thread(
-                _terminate_runtime_with_core,
+            stopped_with_core = await asyncio.to_thread(
+                _stop_runtime_with_core,
                 runtime_id,
                 runtime_base_url,
                 token,
             )
             logger.info(
-                "Platform runtime termination via datalayer-core for %s: %s",
+                "Platform runtime stop via datalayer-core for %s: %s",
                 runtime_id,
-                terminated_with_core,
+                stopped_with_core,
             )
         except Exception:
             logger.warning(
-                "datalayer-core runtime termination failed for %s: %s",
+                "datalayer-core runtime stop failed for %s: %s",
                 runtime_id,
                 traceback.format_exc(),
             )
 
-    if terminated_with_core:
+    if stopped_with_core:
         return True
 
     runtime_url = (
         f"{runtime_base_url.rstrip('/')}/api/runtimes/v1/runtimes/{runtime_id}"
     )
-    logger.info("Fallback runtime termination via platform API: DELETE %s", runtime_url)
+    logger.info("Fallback runtime stop via platform API: DELETE %s", runtime_url)
     headers = {}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -83,7 +83,7 @@ async def terminate_runtime_prefer_core(
         async with httpx.AsyncClient() as client:
             resp = await client.delete(runtime_url, headers=headers, timeout=30)
             logger.info(
-                "Fallback platform runtime termination for %s: %s %s",
+                "Fallback platform runtime stop for %s: %s %s",
                 runtime_id,
                 resp.status_code,
                 resp.text[:200],
@@ -91,25 +91,25 @@ async def terminate_runtime_prefer_core(
             return 200 <= resp.status_code < 300
     except Exception:
         logger.warning(
-            "Failed to terminate runtime via fallback platform API for %s: %s",
+            "Failed to stop runtime via fallback platform API for %s: %s",
             runtime_id,
             traceback.format_exc(),
         )
         return False
 
 
-async def terminate_runtime_and_local_agent(
+async def stop_runtime_and_local_agent(
     agent_id: str,
     runtime_id: str,
     runtime_base_url: str,
     token: str | None,
     local_server_base_url: str = "http://127.0.0.1:8765",
 ) -> None:
-    """Terminate a runtime and remove local agent registration.
+    """Stop a runtime and remove its local agent registration.
 
     1. Delete the local agent registration.
-    2. Prefer datalayer-core runtime termination.
-    3. Fallback to direct runtime API deletion.
+    2. Prefer the datalayer-core runtime stop.
+    3. Fall back to a direct runtime API delete.
     """
     url = f"{local_server_base_url.rstrip('/')}/api/v1/agents/{agent_id}"
     async with httpx.AsyncClient() as client:
@@ -121,7 +121,7 @@ async def terminate_runtime_and_local_agent(
             resp.text[:200],
         )
 
-    await terminate_runtime_prefer_core(
+    await stop_runtime_prefer_core(
         runtime_id=runtime_id,
         runtime_base_url=runtime_base_url,
         token=token,

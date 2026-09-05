@@ -18,13 +18,16 @@
  * and swap `<DatalayerThemeProvider>` → `<ThemedProvider>`.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
+  Box,
   DatalayerThemeProvider,
   type IDatalayerThemeProviderProps,
   themeConfigs,
+  useThemeStore as usePrimerThemeStore,
 } from '@datalayer/primer-addons';
-import { JupyterReactTheme } from '@datalayer/jupyter-react';
+// The lean `/core` entry: the theme without the component library.
+import { JupyterReactTheme } from '@datalayer/jupyter-react/core';
 import { useExampleThemeStore } from './themeStore';
 
 /**
@@ -38,6 +41,43 @@ export const ThemedProvider: React.FC<
 > = ({ children, ...rest }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const cfg = themeConfigs[themeVariant];
+
+  // <Chat> and other components read the shared primer-addons singleton
+  // `useThemeStore` (key 'datalayer-theme', which defaults to matrix/dark),
+  // not the examples' `useExampleThemeStore`. Mirror the selected theme into
+  // the singleton so the chat main view follows the picker.
+  useEffect(() => {
+    usePrimerThemeStore.setState({ theme: themeVariant, colorMode });
+  }, [themeVariant, colorMode]);
+
+  // And the other way round. The reactor's `theme.toggleColorMode` command —
+  // the palette, Mod+Alt+C — and any primer-addons consumer move the
+  // singleton, not the examples' store; with only the mirror above, the chat
+  // (which reads the singleton) changed and the provider around everything
+  // else kept the old mode. Following the singleton here brings the header,
+  // the sidebar and every editor along on the first call. Through the
+  // store's setters rather than `setState`, so the active variant's saved
+  // preference moves too. No loop: the mirror above then writes back the same
+  // values, and equal values are not a change.
+  useEffect(
+    () =>
+      usePrimerThemeStore.subscribe((state, previous) => {
+        if (
+          state.colorMode === previous.colorMode &&
+          state.theme === previous.theme
+        ) {
+          return;
+        }
+        const example = useExampleThemeStore.getState();
+        if (example.colorMode !== state.colorMode) {
+          example.setColorMode(state.colorMode);
+        }
+        if (example.theme !== state.theme) {
+          example.setTheme(state.theme);
+        }
+      }),
+    [],
+  );
 
   return (
     <DatalayerThemeProvider
@@ -74,9 +114,48 @@ export const useThemeBrandColor = (): string => {
   return themeConfigs[themeVariant].brandColor;
 };
 
+/**
+ * Give the notebook the container's height, however deep it sits.
+ *
+ * `DatalayerThemeProvider` renders Primer's `BaseStyles` and `JupyterReactTheme`
+ * renders a `div`, and neither has a height of its own. A `<Notebook
+ * height="100%">` inside them resolves against `auto` and collapses to nothing
+ * — present in the DOM, zero pixels tall, sitting at the bottom of the column.
+ *
+ * Sizing those wrappers by counting levels (`& > div > div`) was the first
+ * attempt and it is the wrong shape: it breaks the moment either provider adds
+ * or removes an element. Taking the notebook out of the flow instead makes the
+ * chain irrelevant — an absolutely positioned box resolves against the nearest
+ * *positioned* ancestor, which is the one wrapper here that is ours.
+ *
+ * `!important` because `Notebook` sets `position` and `height` in an inline
+ * `style`, which no stylesheet rule can otherwise outrank.
+ */
+const FILL_CONTAINER = {
+  position: 'relative',
+  height: '100%',
+  minHeight: 0,
+  '& #dla-Jupyter-Notebook': {
+    position: 'absolute !important',
+    top: '0 !important',
+    right: '0 !important',
+    bottom: '0 !important',
+    left: '0 !important',
+  },
+} as const;
+
 export const ThemedJupyterProvider: React.FC<
-  React.PropsWithChildren<{ useJupyterReactTheme?: boolean }>
-> = ({ children, useJupyterReactTheme = true }) => {
+  React.PropsWithChildren<{
+    useJupyterReactTheme?: boolean;
+    /**
+     * Make the notebook fill this provider's container.
+     *
+     * Needed by any example whose notebook is sized `height="100%"` and whose
+     * sizing container is outside this provider. See {@link FILL_CONTAINER}.
+     */
+    fullHeight?: boolean;
+  }>
+> = ({ children, useJupyterReactTheme = true, fullHeight = false }) => {
   const { colorMode, theme: themeVariant } = useExampleThemeStore();
   const cfg = themeConfigs[themeVariant];
 
@@ -98,12 +177,16 @@ export const ThemedJupyterProvider: React.FC<
     '--bgColor-default'
   ];
 
-  return (
+  const themed = (
     <ThemedProvider>
       {useJupyterReactTheme ? (
+        // `ThemedProvider` (DatalayerThemeProvider) already applies Primer
+        // BaseStyles with the branded theme font. Disable the inner BaseStyles
+        // so Jupyter examples inherit that font instead of Primer's default.
         <JupyterReactTheme
           colormode={colorMode}
           backgroundColor={backgroundColor}
+          useBaseStyles={false}
         >
           {children}
         </JupyterReactTheme>
@@ -112,4 +195,6 @@ export const ThemedJupyterProvider: React.FC<
       )}
     </ThemedProvider>
   );
+
+  return fullHeight ? <Box sx={FILL_CONTAINER}>{themed}</Box> : themed;
 };

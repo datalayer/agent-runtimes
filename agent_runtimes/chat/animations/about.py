@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """About/logo animation forLoop TUX."""
 
 import asyncio
@@ -108,7 +104,7 @@ async def about_animation(console: Console) -> None:
         return Panel(
             initial,
             border_style=STYLE_PRIMARY,
-            title=" LOOP ⟳ 0.0.2 ",
+            title=" ☰ LOOP ⟳ 0.0.2 ",
             subtitle="",
         )
 
@@ -137,7 +133,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -175,7 +171,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -198,7 +194,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -221,7 +217,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -244,7 +240,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" LOOP ⟳ 0.0.2 ",
+                            title=" ☰ LOOP ⟳ 0.0.2 ",
                             subtitle="",
                         )
                     )
@@ -322,7 +318,7 @@ async def about_animation(console: Console) -> None:
                             Panel(
                                 frame,
                                 border_style=STYLE_PRIMARY,
-                                title=" LOOP ⟳ 0.0.2 ",
+                                title=" ☰ LOOP ⟳ 0.0.2 ",
                                 subtitle="",
                             )
                         )

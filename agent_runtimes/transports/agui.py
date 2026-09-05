@@ -357,7 +357,12 @@ class AGUITransport(BaseTransport):
                     logger.info(
                         f"[AG-UI on_complete] Callback invoked for agent {agent_id}"
                     )
-                    usage = result.usage()
+                    usage_candidate = getattr(result, "usage", None)
+                    usage = (
+                        usage_candidate()
+                        if callable(usage_candidate)
+                        else usage_candidate
+                    )
                     logger.info(f"[AG-UI on_complete] Usage object: {usage}")
                     nonlocal usage_event_payload
                     usage_event_payload = {

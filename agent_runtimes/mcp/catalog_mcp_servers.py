@@ -59,6 +59,27 @@ CHART_MCP_SERVER_0_0_1 = MCPServer(
     required_env_vars=[],
 )
 
+DATALAYER_MCP_SERVER_0_0_1 = MCPServer(
+    id="datalayer",
+    version="0.0.1",
+    name="Datalayer",
+    description="Read, edit and run Jupyter notebooks on Datalayer, with sandboxes and data",
+    icon="notebook",
+    emoji="🚀",
+    command="npx",
+    args=[
+        "-y",
+        "mcp-remote",
+        "https://mcp.datalayer.run/mcp",
+        "--header",
+        "Authorization: Bearer ${DATALAYER_API_KEY}",
+    ],
+    transport="stdio",
+    enabled=False,
+    tools=[],
+    required_env_vars=["DATALAYER_API_KEY:0.0.1"],
+)
+
 EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
     id="earthdata",
     version="0.0.1",
@@ -107,7 +128,7 @@ FILESYSTEM_MCP_SERVER_0_0_1 = MCPServer(
     args=[
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        tempfile.gettempdir(),
+        "${TMPDIR}",
     ],
     transport="stdio",
     enabled=True,
@@ -121,7 +142,7 @@ GITHUB_MCP_SERVER_0_0_1 = MCPServer(
     name="GitHub",
     description="GitHub repository operations (issues, PRs, code search)",
     icon="mark-github",
-    emoji="🐙 - git - collaboration",
+    emoji="🐙",
     command="docker",
     args=[
         "run",
@@ -199,12 +220,12 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
         "mcp-remote",
         "https://www.kaggle.com/mcp",
         "--header",
-        "Authorization: Bearer ${KAGGLE_TOKEN}",
+        "Authorization: Bearer ${KAGGLE_API_TOKEN}",
     ],
     transport="stdio",
     enabled=True,
     tools=[],
-    required_env_vars=["KAGGLE_TOKEN:0.0.1"],
+    required_env_vars=["KAGGLE_API_TOKEN:0.0.1"],
 )
 
 ODOO_MCP_SERVER_0_0_1 = MCPServer(
@@ -310,6 +331,7 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
 MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "alphavantage": ALPHAVANTAGE_MCP_SERVER_0_0_1,
     "chart": CHART_MCP_SERVER_0_0_1,
+    "datalayer": DATALAYER_MCP_SERVER_0_0_1,
     "earthdata": EARTHDATA_MCP_SERVER_0_0_1,
     "eurus": EURUS_MCP_SERVER_0_0_1,
     "filesystem": FILESYSTEM_MCP_SERVER_0_0_1,

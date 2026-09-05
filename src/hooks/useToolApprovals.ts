@@ -37,8 +37,8 @@ export type ApprovalRecord = {
   id: string;
   agent_id: string;
   agentId: string;
-  pod_name: string;
-  podName: string;
+  runtime_name: string;
+  runtimeName: string;
   tool_name: string;
   toolName: string;
   tool_call_id?: string;
@@ -73,6 +73,13 @@ interface MutationResult {
   mutateAsync: (vars: { id: string; note?: string }) => Promise<void>;
 }
 
+type WSConnectionState = 'connecting' | 'connected' | 'closed';
+
+interface DecisionMutationResult extends MutationResult {
+  /** Live socket state so callers can tailor offline messaging. */
+  connectionState: WSConnectionState;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 const APPROVALS_ROOT_KEY = ['tool-approvals'] as const;
@@ -84,11 +91,12 @@ function str(value: unknown): string {
 function normalizeApproval(raw: unknown): ApprovalRecord | null {
   if (!raw || typeof raw !== 'object') return null;
   const rec = raw as Record<string, unknown>;
-  const id = typeof rec.id === 'string' ? rec.id : undefined;
+  const idSource = rec.id ?? rec.approval_id ?? rec.approvalId;
+  const id = typeof idSource === 'string' ? idSource : undefined;
   if (!id) return null;
 
   const agent = str(rec.agent_id ?? rec.agentId);
-  const pod = str(rec.pod_name ?? rec.podName);
+  const pod = str(rec.runtime_name ?? rec.runtimeName);
   const tool = str(rec.tool_name ?? rec.toolName ?? 'unknown');
   const toolCall = rec.tool_call_id ?? rec.toolCallId;
   const args =
@@ -114,8 +122,8 @@ function normalizeApproval(raw: unknown): ApprovalRecord | null {
     id,
     agent_id: agent,
     agentId: agent,
-    pod_name: pod,
-    podName: pod,
+    runtime_name: pod,
+    runtimeName: pod,
     tool_name: tool,
     toolName: tool,
     tool_call_id: typeof toolCall === 'string' ? toolCall : undefined,
@@ -359,8 +367,8 @@ export function usePendingApprovalCount() {
 }
 
 /** Build a mutation-style object that sends a WS decision. */
-function useDecisionMutation(approved: boolean): MutationResult {
-  const { send } = useApprovalsSocket();
+function useDecisionMutation(approved: boolean): DecisionMutationResult {
+  const { send, connectionState } = useApprovalsSocket();
   const [isPending, setIsPending] = useState(false);
 
   const mutateAsync = useCallback(
@@ -387,19 +395,21 @@ function useDecisionMutation(approved: boolean): MutationResult {
 
   const mutate = useCallback(
     (vars: { id: string; note?: string }) => {
-      void mutateAsync(vars);
+      void mutateAsync(vars).catch(err => {
+        console.warn('[tool-approval] decision was not sent', err);
+      });
     },
     [mutateAsync],
   );
 
-  return { isPending, mutate, mutateAsync };
+  return { isPending, mutate, mutateAsync, connectionState };
 }
 
-export function useApproveToolRequest(): MutationResult {
+export function useApproveToolRequest(): DecisionMutationResult {
   return useDecisionMutation(true);
 }
 
-export function useRejectToolRequest(): MutationResult {
+export function useRejectToolRequest(): DecisionMutationResult {
   return useDecisionMutation(false);
 }
 
@@ -492,7 +502,9 @@ export function useDeleteToolApproval(): MutationResult {
 
   const mutate = useCallback(
     (vars: { id: string; note?: string }) => {
-      void mutateAsync(vars);
+      void mutateAsync(vars).catch(err => {
+        console.warn('[tool-approval] delete was not sent', err);
+      });
     },
     [mutateAsync],
   );
@@ -520,6 +532,7 @@ export function useToolApprovals(filters?: ToolApprovalFilters) {
       markRead,
       markUnread,
       remove,
+      connectionState: approve.connectionState,
     }),
     [
       approvalsQuery,

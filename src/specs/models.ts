@@ -34,10 +34,16 @@ export const AIModels = {
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8: 'bedrock:us.anthropic.claude-opus-4-8',
   BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-opus-4-20250514-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5: 'bedrock:us.anthropic.claude-opus-5',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6:
+    'bedrock:us.anthropic.claude-sonnet-4-6',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
+  OLLAMA_GEMMA3_4B: 'ollama:gemma3:4b',
+  OLLAMA_LLAMA3_1_8B: 'ollama:llama3.1:8b',
+  OLLAMA_QWEN2_5_CODER_7B: 'ollama:qwen2.5-coder:7b',
   OPENAI_GPT_4_1_MINI: 'openai:gpt-4.1-mini',
   OPENAI_GPT_4_1_NANO: 'openai:gpt-4.1-nano',
   OPENAI_GPT_4_1: 'openai:gpt-4.1',
@@ -59,7 +65,9 @@ export const ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1: AIModel = {
   description: 'Claude Haiku 3.5 by Anthropic - fast and efficient',
   provider: 'anthropic',
   default: false,
+  available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 8192,
 };
 
 export const ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1: AIModel = {
@@ -69,7 +77,9 @@ export const ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1: AIModel = {
   description: 'Claude Opus 4 by Anthropic - highest capability model',
   provider: 'anthropic',
   default: false,
+  available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 32000,
 };
 
 export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
@@ -80,7 +90,9 @@ export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
     'Claude Sonnet 4.5 by Anthropic - balanced performance and speed',
   provider: 'anthropic',
   default: false,
+  available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 64000,
 };
 
 export const ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1: AIModel = {
@@ -90,7 +102,9 @@ export const ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1: AIModel = {
   description: 'Claude Sonnet 4 by Anthropic - strong reasoning and coding',
   provider: 'anthropic',
   default: false,
+  available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
+  tokensLimit: 64000,
 };
 
 export const AZURE_OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
@@ -100,7 +114,9 @@ export const AZURE_OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   description: 'GPT-4.1 Mini via Azure OpenAI - compact version',
   provider: 'azure-openai',
   default: false,
+  available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 32768,
 };
 
 export const AZURE_OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
@@ -110,7 +126,9 @@ export const AZURE_OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   description: 'GPT-4.1 Nano via Azure OpenAI - smallest and fastest',
   provider: 'azure-openai',
   default: false,
+  available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 32768,
 };
 
 export const AZURE_OPENAI_GPT_4_1_0_0_1: AIModel = {
@@ -120,7 +138,9 @@ export const AZURE_OPENAI_GPT_4_1_0_0_1: AIModel = {
   description: 'GPT-4.1 via Azure OpenAI - strong general purpose',
   provider: 'azure-openai',
   default: false,
+  available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 32768,
 };
 
 export const AZURE_OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
@@ -130,7 +150,9 @@ export const AZURE_OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   description: 'GPT-4o Mini via Azure OpenAI - compact enterprise deployment',
   provider: 'azure-openai',
   default: false,
+  available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 16384,
 };
 
 export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
@@ -140,7 +162,9 @@ export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
   description: 'GPT-4o via Azure OpenAI - enterprise deployment',
   provider: 'azure-openai',
   default: false,
+  available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
+  tokensLimit: 16384,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {
@@ -150,11 +174,13 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {
   description: 'Claude Fable 5 via AWS Bedrock',
   provider: 'bedrock',
   default: false,
+  available: false,
   requiredEnvVars: [
     'AWS_ACCESS_KEY_ID',
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 64000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
@@ -164,11 +190,13 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
   description: 'Claude Opus 4.6 via AWS Bedrock',
   provider: 'bedrock',
   default: false,
+  available: false,
   requiredEnvVars: [
     'AWS_ACCESS_KEY_ID',
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 32000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
@@ -178,11 +206,13 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
   description: 'Claude Opus 4.8 via AWS Bedrock',
   provider: 'bedrock',
   default: false,
+  available: false,
   requiredEnvVars: [
     'AWS_ACCESS_KEY_ID',
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 32000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
@@ -192,11 +222,29 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
   description: 'Claude Opus 4 via AWS Bedrock - highest capability',
   provider: 'bedrock',
   default: false,
+  available: false,
   requiredEnvVars: [
     'AWS_ACCESS_KEY_ID',
     'AWS_SECRET_ACCESS_KEY',
     'AWS_DEFAULT_REGION',
   ],
+  tokensLimit: 32000,
+};
+
+export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1: AIModel = {
+  id: 'bedrock:us.anthropic.claude-opus-5',
+  version: '0.0.1',
+  name: 'Bedrock Claude Opus 5',
+  description: 'Claude Opus 5 via AWS Bedrock - the current frontier model',
+  provider: 'bedrock',
+  default: false,
+  available: false,
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
+  tokensLimit: 32000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel =
@@ -207,12 +255,30 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel
     description: 'Claude Sonnet 4.5 via AWS Bedrock - balanced performance',
     provider: 'bedrock',
     default: true,
+    available: false,
     requiredEnvVars: [
       'AWS_ACCESS_KEY_ID',
       'AWS_SECRET_ACCESS_KEY',
       'AWS_DEFAULT_REGION',
     ],
+    tokensLimit: 64000,
   };
+
+export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
+  id: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  version: '0.0.1',
+  name: 'Bedrock Claude Sonnet 4.6',
+  description: 'Claude Sonnet 4.6 via AWS Bedrock - balanced performance',
+  provider: 'bedrock',
+  default: true,
+  available: true,
+  requiredEnvVars: [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'AWS_DEFAULT_REGION',
+  ],
+  tokensLimit: 64000,
+};
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
   {
@@ -222,12 +288,59 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
     description: 'Claude Sonnet 4 via AWS Bedrock - strong reasoning',
     provider: 'bedrock',
     default: false,
+    available: false,
     requiredEnvVars: [
       'AWS_ACCESS_KEY_ID',
       'AWS_SECRET_ACCESS_KEY',
       'AWS_DEFAULT_REGION',
     ],
+    tokensLimit: 64000,
   };
+
+export const OLLAMA_GEMMA3_4B_0_0_1: AIModel = {
+  id: 'ollama:gemma3:4b',
+  version: '0.0.1',
+  name: 'Gemma 3 4B (Ollama)',
+  description:
+    'Gemma 3 4B running locally through Ollama - small and fast, no tool calling',
+  provider: 'ollama',
+  default: false,
+  available: false,
+  requiredEnvVars: [],
+  tokensLimit: 4096,
+  local: true,
+  capabilities: ['chat'],
+};
+
+export const OLLAMA_LLAMA3_1_8B_0_0_1: AIModel = {
+  id: 'ollama:llama3.1:8b',
+  version: '0.0.1',
+  name: 'Llama 3.1 8B (Ollama)',
+  description:
+    'Meta Llama 3.1 8B running locally through Ollama - tool calling, no data leaves the machine',
+  provider: 'ollama',
+  default: false,
+  available: false,
+  requiredEnvVars: [],
+  tokensLimit: 4096,
+  local: true,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
+
+export const OLLAMA_QWEN2_5_CODER_7B_0_0_1: AIModel = {
+  id: 'ollama:qwen2.5-coder:7b',
+  version: '0.0.1',
+  name: 'Qwen2.5 Coder 7B (Ollama)',
+  description:
+    'Qwen2.5 Coder 7B running locally through Ollama - code-focused with tool calling',
+  provider: 'ollama',
+  default: false,
+  available: false,
+  requiredEnvVars: [],
+  tokensLimit: 4096,
+  local: true,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
 
 export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   id: 'openai:gpt-4.1-mini',
@@ -236,7 +349,9 @@ export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   description: 'GPT-4.1 Mini by OpenAI - compact version of GPT-4.1',
   provider: 'openai',
   default: false,
+  available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 32768,
 };
 
 export const OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
@@ -246,7 +361,9 @@ export const OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   description: 'GPT-4.1 Nano by OpenAI - smallest and fastest',
   provider: 'openai',
   default: false,
+  available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 32768,
 };
 
 export const OPENAI_GPT_4_1_0_0_1: AIModel = {
@@ -256,7 +373,9 @@ export const OPENAI_GPT_4_1_0_0_1: AIModel = {
   description: 'GPT-4.1 by OpenAI - strong general purpose model',
   provider: 'openai',
   default: false,
+  available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 32768,
 };
 
 export const OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
@@ -266,7 +385,9 @@ export const OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   description: 'GPT-4o Mini by OpenAI - compact and cost-effective',
   provider: 'openai',
   default: false,
+  available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 16384,
 };
 
 export const OPENAI_GPT_4O_0_0_1: AIModel = {
@@ -276,7 +397,9 @@ export const OPENAI_GPT_4O_0_0_1: AIModel = {
   description: 'GPT-4o by OpenAI - fast multimodal model',
   provider: 'openai',
   default: false,
+  available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 16384,
 };
 
 export const OPENAI_O3_MINI_0_0_1: AIModel = {
@@ -286,7 +409,9 @@ export const OPENAI_O3_MINI_0_0_1: AIModel = {
   description: 'o3 Mini by OpenAI - reasoning-focused compact model',
   provider: 'openai',
   default: false,
+  available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
+  tokensLimit: 100000,
 };
 
 // ============================================================================
@@ -314,10 +439,17 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1,
   'bedrock:us.anthropic.claude-opus-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-opus-5':
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
+  'bedrock:us.anthropic.claude-sonnet-4-6':
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
+  'ollama:gemma3:4b': OLLAMA_GEMMA3_4B_0_0_1,
+  'ollama:llama3.1:8b': OLLAMA_LLAMA3_1_8B_0_0_1,
+  'ollama:qwen2.5-coder:7b': OLLAMA_QWEN2_5_CODER_7B_0_0_1,
   'openai:gpt-4.1-mini': OPENAI_GPT_4_1_MINI_0_0_1,
   'openai:gpt-4.1-nano': OPENAI_GPT_4_1_NANO_0_0_1,
   'openai:gpt-4.1': OPENAI_GPT_4_1_0_0_1,

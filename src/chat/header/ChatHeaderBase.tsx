@@ -14,7 +14,14 @@
  */
 
 import { type ReactNode } from 'react';
-import { Heading, IconButton, Text, Tooltip, Truncate } from '@primer/react';
+import {
+  Heading,
+  IconButton,
+  Label,
+  Text,
+  Tooltip,
+  Truncate,
+} from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
@@ -26,9 +33,6 @@ import {
   DeviceMobileIcon,
   SidebarExpandIcon,
   InfoIcon,
-  RowsIcon,
-  FileIcon,
-  CircleSlashIcon,
 } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
@@ -39,6 +43,7 @@ import type {
 } from '../../types/chat';
 import type { SandboxStatusData } from '../../types/context';
 import type { SandboxWsStatus } from '../../types/sandbox';
+import { EphemeralSurfaceControl } from '../EphemeralSurfaceControl';
 
 type RuntimeStatus = SandboxStatusData | SandboxWsStatus;
 
@@ -82,6 +87,13 @@ export function toRuntimeExecutionState(
 export interface ChatBaseHeaderProps {
   title?: string;
   subtitle?: string;
+  /**
+   * Why the chat is off, shown beside the title.
+   *
+   * The header is where someone looks when a control does not respond, so the
+   * reason belongs here rather than in a tooltip they would have to find.
+   */
+  disableReason?: string;
   brandIcon?: ReactNode;
   headerContent?: ReactNode;
   headerActions?: ReactNode;
@@ -90,6 +102,8 @@ export interface ChatBaseHeaderProps {
   padding: number;
   /** Optional kernel indicator state override from notebook runtime. */
   kernelIndicatorState?: ExecutionState;
+  /** Horizontal placement for the kernel indicator in the title row. */
+  kernelIndicatorPlacement?: 'left' | 'center' | 'right';
   /**
    * Runtime status from agent-runtimes sandbox status stream.
    * Uses the same execution-state model as KernelIndicator.
@@ -141,6 +155,7 @@ export interface ChatBaseHeaderProps {
 export function ChatBaseHeader({
   title,
   subtitle,
+  disableReason,
   brandIcon,
   headerContent,
   headerActions,
@@ -148,6 +163,7 @@ export function ChatBaseHeader({
   onInformationClick,
   padding,
   kernelIndicatorState,
+  kernelIndicatorPlacement = 'left',
   runtimeStatus,
   kernel,
   kernelEnvironmentName,
@@ -168,12 +184,48 @@ export function ChatBaseHeader({
 }: ChatBaseHeaderProps) {
   const effectiveIndicatorState =
     kernelIndicatorState ?? toRuntimeExecutionState(runtimeStatus);
+  /*
+   * No indicator where there is nothing to indicate.
+   *
+   * It used to fall back to `'undefined'` with no kernel and no state, which
+   * draws a full control — dot, label and a details overlay reading
+   * "State: undefined, Kernel: unknown-kernel, Server: unknown-url" down to
+   * the last field. A reader cannot tell that apart from a runtime that has
+   * genuinely gone wrong, so a host that simply never wired the indicator up
+   * was reporting a broken sandbox on every page.
+   *
+   * A host with something to say passes a `kernel`, a state, or a runtime
+   * status. Passing none of the three is not a state; it is silence, and the
+   * honest rendering of silence is nothing at all.
+   */
+  const kernelIndicatorElement = kernel ? (
+    <KernelIndicator
+      kernel={kernel}
+      environmentName={kernelEnvironmentName}
+      cpu={kernelCpu}
+      memory={kernelMemory}
+      gpu={kernelGpu}
+      position="s"
+      bordered={false}
+    />
+  ) : effectiveIndicatorState ? (
+    <KernelIndicator
+      state={effectiveIndicatorState}
+      environmentName={kernelEnvironmentName}
+      cpu={kernelCpu}
+      memory={kernelMemory}
+      gpu={kernelGpu}
+      position="s"
+      bordered={false}
+    />
+  ) : null;
 
   return (
     <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
+        bg: 'canvas.default',
         borderBottom: '1px solid',
         borderColor: 'border.default',
       }}
@@ -196,29 +248,8 @@ export function ChatBaseHeader({
             flex: '1 1 auto',
           }}
         >
+          {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
           {brandIcon || <AiAgentIcon colored size={20} />}
-          {/* Runtime status indicator: shown between leading icon and title. */}
-          {kernel ? (
-            <KernelIndicator
-              kernel={kernel}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-              position="s"
-              bordered={false}
-            />
-          ) : (
-            <KernelIndicator
-              state={effectiveIndicatorState ?? 'undefined'}
-              environmentName={kernelEnvironmentName}
-              cpu={kernelCpu}
-              memory={kernelMemory}
-              gpu={kernelGpu}
-              position="s"
-              bordered={false}
-            />
-          )}
           {(title || subtitle) && (
             <Box
               sx={{
@@ -259,6 +290,13 @@ export function ChatBaseHeader({
               )}
             </Box>
           )}
+          {/* Why the chat is off, next to what it is. Said plainly rather
+              than implied by a dead input box. */}
+          {disableReason && (
+            <Label variant="attention" sx={{ flexShrink: 0 }}>
+              {disableReason}
+            </Label>
+          )}
           {/* Inline header content (e.g., protocol label) */}
           {headerContent}
           {showInformation && (
@@ -270,11 +308,13 @@ export function ChatBaseHeader({
               onClick={onInformationClick}
             />
           )}
+          {kernelIndicatorPlacement === 'center' && kernelIndicatorElement}
         </Box>
 
         <Box
           sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
         >
+          {kernelIndicatorPlacement === 'right' && kernelIndicatorElement}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (
             <IconButton
@@ -305,81 +345,12 @@ export function ChatBaseHeader({
           )}
           {/* Companion surface control (Chat only / Notebook / Document) */}
           {showEphemeralSurfaceControl && (
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                bg: 'neutral.muted',
-                borderRadius: '6px',
-                p: '2px',
-                gap: '1px',
-              }}
-            >
-              {(
-                [
-                  {
-                    mode: 'none' as const,
-                    icon: CircleSlashIcon,
-                    label: 'Chat only',
-                    enabled: true,
-                  },
-                  {
-                    mode: 'notebook' as const,
-                    icon: RowsIcon,
-                    label: 'Notebook',
-                    enabled: enableEphemeralNotebookOption,
-                  },
-                  {
-                    mode: 'document' as const,
-                    icon: FileIcon,
-                    label: 'Document',
-                    enabled: enableEphemeralDocumentOption,
-                  },
-                ] as const
-              )
-                .filter(({ enabled }) => enabled)
-                .map(({ mode, icon: ModeIcon, label }) => (
-                  <Tooltip key={mode} text={label} direction="n">
-                    <Box
-                      as="button"
-                      aria-label={label}
-                      onClick={() => onEphemeralSurfaceModeChange?.(mode)}
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 26,
-                        height: 24,
-                        borderRadius: '4px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        bg:
-                          ephemeralSurfaceMode === mode
-                            ? 'canvas.default'
-                            : 'transparent',
-                        boxShadow:
-                          ephemeralSurfaceMode === mode
-                            ? 'shadow.small'
-                            : 'none',
-                        color:
-                          ephemeralSurfaceMode === mode
-                            ? 'fg.default'
-                            : 'fg.muted',
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          color: 'fg.default',
-                          bg:
-                            ephemeralSurfaceMode === mode
-                              ? 'canvas.default'
-                              : 'neutral.subtle',
-                        },
-                      }}
-                    >
-                      <ModeIcon size={14} />
-                    </Box>
-                  </Tooltip>
-                ))}
-            </Box>
+            <EphemeralSurfaceControl
+              mode={ephemeralSurfaceMode}
+              onChange={onEphemeralSurfaceModeChange}
+              enableNotebook={enableEphemeralNotebookOption}
+              enableDocument={enableEphemeralDocumentOption}
+            />
           )}
           {/* View mode segmented toggle */}
           {chatViewMode && onChatViewModeChange && (

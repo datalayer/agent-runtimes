@@ -41,7 +41,11 @@ import {
 } from '../config/AgentConfiguration';
 import { MockFileBrowser, MainContent, Header } from './components';
 import { useChatStore } from '../stores';
-import { useAgentRuntimes } from '../hooks/useAgentRuntimes';
+import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
+import {
+  resolveExampleAgentRuntimesUrl,
+  useExampleAgentRuntimesUrl,
+} from './utils/useExampleAgentRuntimesUrl';
 import type {
   AgentLibrary,
   McpServerSelection,
@@ -112,7 +116,7 @@ function useJupyterSandboxStatus(
     }
 
     // Check if Jupyter variant is selected but not connected
-    if (sandbox.variant === 'jupyter' && !sandbox.jupyter_connected) {
+    if (sandbox.variant === 'jupyter-server' && !sandbox.jupyter_connected) {
       return {
         message: sandbox.jupyter_error
           ? `Jupyter Sandbox Error: ${sandbox.jupyter_error}`
@@ -158,8 +162,7 @@ function ChatWithJupyterStatus({
 // Note: Vercel AI connects to Jupyter server (8888), other protocols connect to agent-runtimes server (8765)
 const DEFAULT_WS_URL =
   import.meta.env.VITE_ACP_WS_URL || 'ws://localhost:8765/api/v1/acp/ws';
-const DEFAULT_BASE_URL =
-  import.meta.env.VITE_BASE_URL || 'http://localhost:8765';
+const DEFAULT_BASE_URL = resolveExampleAgentRuntimesUrl('local');
 const DEFAULT_AGENT_ID = 'example-agent';
 const DEFAULT_SYSTEM_PROMPT = 'You are a helpful AI assistant.';
 const RIGHT_PANE_WIDTH = {
@@ -177,7 +180,7 @@ const GITHUB_CLIENT_ID =
 // Kaggle API token - set via environment variable
 // Get your token at: https://www.kaggle.com/settings/account (API section)
 // Download kaggle.json and use the "key" value
-const KAGGLE_TOKEN = import.meta.env.VITE_KAGGLE_TOKEN || '';
+const KAGGLE_API_TOKEN = import.meta.env.VITE_KAGGLE_API_TOKEN || '';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -328,7 +331,7 @@ const resolveCloudRuntimeBaseUrlFromSpec = (
     'runtimeUrl',
     'runtimes_url',
     'runtime_url',
-    'datalayerUrl',
+    'aiAgentsUrl',
     'baseUrl',
     'endpoint',
   ];
@@ -459,11 +462,11 @@ const DEFAULT_IDENTITY_PROVIDERS: IdentityProvidersInput = {
         },
       }
     : {}),
-  ...(KAGGLE_TOKEN
+  ...(KAGGLE_API_TOKEN
     ? {
         kaggle: {
           type: 'token' as const,
-          token: KAGGLE_TOKEN,
+          token: KAGGLE_API_TOKEN,
           displayName: 'Kaggle',
           iconUrl: 'https://www.kaggle.com/static/images/favicon.ico',
         },
@@ -535,19 +538,25 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   const enableSkills = selectedSkills.length > 0;
   const { configuration } = useCoreStore();
   const { token } = useSimpleAuthStore();
+  const localAgentRuntimesBaseUrl = useExampleAgentRuntimesUrl();
 
   const cloudCatalogBaseUrl = useMemo(() => {
     const configured = normalizeHttpUrl(configuration?.runtimesUrl);
-    const envConfigured = normalizeHttpUrl(
-      import.meta.env.VITE_DATALAYER_AGENT_RUNTIMES_URL,
+    const resolvedCloudBaseUrl = normalizeHttpUrl(
+      resolveExampleAgentRuntimesUrl('datalayer'),
     );
     if (configured && !isLocalhostUrl(configured)) {
       return configured;
     }
-    return envConfigured || 'https://r1.datalayer.run';
+    return resolvedCloudBaseUrl || DEFAULT_BASE_URL;
   }, [configuration?.runtimesUrl]);
 
   const isCloudMode = isCloudSpecSelection(selectedAgentId);
+  useEffect(() => {
+    if (!isCloudMode) {
+      setBaseUrl(localAgentRuntimesBaseUrl);
+    }
+  }, [isCloudMode, localAgentRuntimesBaseUrl]);
   const selectedSpec = selectedCloudSpec || selectedLibrarySpec;
   const cloudRuntimeCreationBaseUrl = useMemo(() => {
     if (!isCloudMode) {
@@ -589,7 +598,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
   // Can be configured via VITE_JUPYTER_SANDBOX_URL environment variable
   const jupyterSandboxUrl =
     import.meta.env.VITE_JUPYTER_SANDBOX_URL ||
-    'http://localhost:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
+    'http://0.0.0.0:8888/api/jupyter-server?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
   const handleSelectedServersChange = React.useCallback(
     (newServers: McpServerSelection[]) => {
@@ -945,7 +954,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
         codemodeConfig?.enable_tool_reranker,
       ),
     );
-    setUseJupyterSandbox(spec.sandboxVariant === 'jupyter');
+    setUseJupyterSandbox(spec.sandboxVariant === 'jupyter-server');
   }, []);
 
   const mergedSpecForLaunch = useMemo(() => {
@@ -1185,6 +1194,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
 
           throw new Error(
             `Failed to delete existing agent '${agentName}' before retry: ${deleteResponse.status}`,
+            { cause: error },
           );
         }
 
@@ -1608,6 +1618,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                           title:
                             currentAgent?.name || agentName || 'AI Assistant',
                           brandIcon: <AgentIcon size={16} />,
+                          kernelIndicatorPlacement: 'right',
                           autoConnect: true,
                           autoFocus: true,
                           placeholder: 'Type your message to the agent...',

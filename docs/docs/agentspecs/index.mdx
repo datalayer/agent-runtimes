@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 16
 title: Agentspecs
 ---
 
@@ -37,21 +37,54 @@ If you already have agentspecs checked out elsewhere, copy or symlink it to
 
 ## Where Specs Are Used
 
-The generated catalogs are written to:
+The generated catalogs are written under `agent_runtimes/specs/` (Python) and
+`src/specs/` (TypeScript):
 
-- agent_runtimes/config/agents.py
-- agent_runtimes/config/skills.py
-- agent_runtimes/config/envvars.py
-- agent_runtimes/mcp/catalog_mcp_servers.py
-- src/config/agents.ts
-- src/config/skills.ts
-- src/config/envvars.ts
-- src/config/mcpServers.ts
+- agent_runtimes/specs/agents/ · src/specs/agents/ (agents, subfoldered)
+- agent_runtimes/specs/teams · src/specs/teams
+- agent_runtimes/specs/skills.py · src/specs/skills.ts
+- agent_runtimes/specs/tools.py · src/specs/tools.ts
+- agent_runtimes/specs/frontend_tools.py · src/specs/frontendTools.ts
+- agent_runtimes/specs/envvars.py · src/specs/envvars.ts
+- agent_runtimes/mcp/catalog_mcp_servers.py · src/specs/mcpServers.ts
+- plus models, memory, guardrails, evals, events, notifications, outputs,
+  personas, loops, triggers, benchmarks — one catalog each, same pattern
 
 ## What You Can Define in an Agent Spec
 
 Agent specs are not just static prompts. They define runtime behavior across UX,
 workflows, controls, programmatic tooling, and delivery.
+
+### A Plugin's Tools
+
+A [Reactor](https://reactor.datalayer.tech) plugin's tools are declared *by
+the plugin*, and none of them needs a spec in this repository — not the
+commands a person runs from the palette, and not the reading and writing of
+the plugin's data either.
+
+The plugin contributes one `AgentTools` bundle to the reactor it is mounted in
+([reactor.datalayer.tech/agent-tools](https://reactor.datalayer.tech/agent-tools)):
+one entry per command an agent may call, with the name the model uses, the
+command id, a description and the argument's JSON Schema. A command answers
+with a value, and that value is the tool's result — so "list the decks" is a
+command that returns the list, in the same registry as "next slide". The Loop
+reads every mounted plugin's bundle (`useAgentCommandTools`) and hands the
+agent one client tool per command, executed with `reactor.executeCommand` on
+the page the person is looking at; the plugin saves to its server when it was
+given one. The agent spec names nothing:
+
+```yaml
+# agentspecs/agents/worker-decks.yaml
+tools: []
+frontend_tools: []
+```
+
+The decks plugin is the worked example: `decks_list_decks`, `decks_get_deck`,
+`decks_create_deck`, the per-slide edits and `decks_delete_deck` are its
+commands as much as `decks_open` and `decks_present`, and its Python half
+serves the same bundle from `GET /plugins/agent-tools` so a server can learn
+them too. A plugin with a richer in-page implementation of a tool contributes
+it under the same name, and the chat lets it win.
 
 ### UX Patterns and Protocol-Oriented Agents
 

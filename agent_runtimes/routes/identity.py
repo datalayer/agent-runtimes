@@ -47,12 +47,12 @@ class TokenExchangeResponse(BaseModel):
 # Each provider has specific OAuth endpoint URLs
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-KAGGLE_TOKEN_URL = "https://www.kaggle.com/oauth/token"
+KAGGLE_API_TOKEN_URL = "https://www.kaggle.com/oauth/token"
 
 PROVIDER_TOKEN_URLS = {
     "github": GITHUB_TOKEN_URL,
     "google": GOOGLE_TOKEN_URL,
-    "kaggle": KAGGLE_TOKEN_URL,
+    "kaggle": KAGGLE_API_TOKEN_URL,
 }
 
 

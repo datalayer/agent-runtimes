@@ -17,7 +17,7 @@ from datalayer_core.utils.types import (
     CreditsPerSecond,
     Minutes,
 )
-from datalayer_core.utils.urls import DEFAULT_DATALAYER_URL
+from datalayer_core.utils.urls import DEFAULT_DATALAYER_RUNTIMES_URL
 from pydantic import BaseModel, Field
 
 
@@ -41,9 +41,9 @@ class RuntimeModel(BaseModel):
     )
 
     # Service URLs
-    datalayer_url: str = Field(
-        default=DEFAULT_DATALAYER_URL,
-        description="Runtime service URL (default: 'https://api.datalayer.run')",
+    runtimes_url: str = Field(
+        default=DEFAULT_DATALAYER_RUNTIMES_URL,
+        description="Runtimes service URL",
     )
     iam_url: Optional[str] = Field(default=None, description="IAM service URL")
 
@@ -54,7 +54,7 @@ class RuntimeModel(BaseModel):
     )
 
     # Runtime configuration fields
-    pod_name: Optional[str] = Field(
+    runtime_name: Optional[str] = Field(
         default=None, description="Name of the pod running the runtime"
     )
     ingress: Optional[str] = Field(
@@ -68,7 +68,7 @@ class RuntimeModel(BaseModel):
         default=None, description="Burning rate for the runtime"
     )
     jupyter_token: Optional[str] = Field(
-        default=None, description="Token for the kernel client"
+        default=None, description="Token for the code sandbox client"
     )
     started_at: Optional[str] = Field(
         default=None, description="Start time for the runtime"
@@ -81,8 +81,8 @@ class RuntimeModel(BaseModel):
     runtime: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Runtime configuration object"
     )
-    kernel_client: Optional[Any] = Field(
-        default=None, description="Kernel client instance"
+    sandbox_client: Optional[Any] = Field(
+        default=None, description="Variant-neutral code sandbox client instance"
     )
     kernel_id: Optional[str] = Field(default=None, description="Active kernel ID")
     executing: bool = Field(
@@ -91,8 +91,8 @@ class RuntimeModel(BaseModel):
 
     # Legacy compatibility (keeping for backward compatibility)
     url: str = Field(
-        default=DEFAULT_DATALAYER_URL,
-        description="Runtime service URL (alias for datalayer_url)",
+        default=DEFAULT_DATALAYER_RUNTIMES_URL,
+        description="Runtime service URL (alias for runtimes_url)",
     )
     credits_per_second: CreditsPerSecond = Field(
         default=1, description="Credits consumed per second of runtime (default: 1)"

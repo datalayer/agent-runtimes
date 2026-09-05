@@ -22,14 +22,16 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import DeferredToolRequests
 
 from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
 from ..capabilities import (
+    LLMContextUsageCapability,
     ToolApprovalConfig,
     ToolsGuardrailCapability,
+    apply_model_output_tokens_limit,
     build_capabilities_from_agent_spec,
     build_default_choice_guardrails,
     build_usage_limits_from_agent_spec,
@@ -40,12 +42,13 @@ from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
 from ..models.models import resolve_model_for_inference_provider
 from ..services import (
+    SandboxVariant,
     create_codemode_toolset,
     create_shared_sandbox,
     create_skills_toolset,
     initialize_codemode_toolset,
     register_agent_tools,
-    terminate_runtime_prefer_core,
+    stop_runtime_prefer_core,
     tools_requiring_approval_ids,
     wire_skills_into_codemode,
 )
@@ -392,11 +395,16 @@ async def _run_agent_hooks(
             if hasattr(sandbox_manager, "get_agent_sandbox"):
                 sandbox = sandbox_manager.get_agent_sandbox(agent_id)
             if sandbox is None:
-                if effective_variant in {"eval", "jupyter"}:
-                    sandbox_variant = cast(
-                        Literal["eval", "jupyter"], effective_variant
+                if effective_variant:
+                    # Whatever the agent asked for, not only the two variants
+                    # this branch used to admit. A hook installs packages and
+                    # sets variables the agent's code then reads, so it has to
+                    # run where that code runs; for a Kaggle, Modal, Daytona,
+                    # E2B, CoreWeave or Cloudflare agent it ran in whatever
+                    # sandbox the manager happened to be holding instead.
+                    sandbox_manager.configure(
+                        variant=cast(SandboxVariant, effective_variant)
                     )
-                    sandbox_manager.configure(variant=sandbox_variant)
                 sandbox = sandbox_manager.get_sandbox()
 
         loop = asyncio.get_running_loop()
@@ -612,6 +620,67 @@ def _test_jupyter_sandbox(jupyter_sandbox_url: str) -> tuple[bool, str | None]:
         return False, f"Connection error: {str(e)}"
 
 
+#: What the sandbox of each variant actually is, told to the model that will
+#: use it.
+#:
+#: This was a coin toss — a Jupyter kernel, or Python in this very process —
+#: and every variant that is neither came out as the second. An agent on
+#: Cloudflare was told its variables would still be there on the next call,
+#: when a Cloudflare snippet gets a process of its own and nothing survives
+#: it at all; a model that believes that writes code that cannot work. Where
+#: the provider is not known well enough to promise anything, the note
+#: promises nothing.
+_SANDBOX_VARIANT_NOTES: dict[str, str] = {
+    "jupyter-server": (
+        "The sandbox is a full Jupyter kernel — variables, imports, and "
+        "installed packages persist across calls."
+    ),
+    "eval": (
+        "The sandbox executes Python in-process — state persists within the "
+        "same session."
+    ),
+    "monty": (
+        "The sandbox executes Python in-process — state persists within the "
+        "same session."
+    ),
+    "e2b": (
+        "The sandbox is a Firecracker microVM on E2B running a Python "
+        "kernel — variables, imports, and installed packages persist across "
+        "calls, and results come back with their rich outputs."
+    ),
+    "coreweave": (
+        "The sandbox is a container on CoreWeave running a Python session — "
+        "variables, imports, and installed packages persist across calls."
+    ),
+    "daytona": (
+        "The sandbox is a Daytona sandbox running a Python interpreter — "
+        "variables, imports, and installed packages persist across calls."
+    ),
+    "cloudflare": (
+        "The sandbox is a container on Cloudflare's edge and it is "
+        "STATELESS: every snippet runs in a process of its own, so nothing "
+        "carries over between calls. Send each snippet whole, imports "
+        "included, and pass anything it needs through files or its own text."
+    ),
+}
+
+#: For a provider whose sandbox is not described above: say where it runs and
+#: claim nothing else.
+_DEFAULT_SANDBOX_VARIANT_NOTE = (
+    "The sandbox runs Python at its provider. Do not assume that state "
+    "carries over between calls unless a call proves that it does."
+)
+
+
+def _sandbox_variant_note(variant: str) -> str:
+    """What to tell the model about the sandbox it has been given.
+
+    Args:
+        variant: The effective sandbox variant.
+    """
+    return _SANDBOX_VARIANT_NOTES.get(variant, _DEFAULT_SANDBOX_VARIANT_NOTE)
+
+
 def _build_sandbox_only_system_prompt(variant: str) -> str:
     """
     Build a system-prompt section that tells the LLM it has a sandbox available
@@ -623,18 +692,12 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
     tools are disabled.
 
     Args:
-        variant: The effective sandbox variant ('eval' or 'jupyter').
+        variant: The effective sandbox variant.
 
     Returns:
         A Markdown string suitable for appending to the system prompt.
     """
-    variant_note = (
-        "The sandbox is a full Jupyter kernel — variables, imports, and installed "
-        "packages persist across calls."
-        if variant == "jupyter"
-        else "The sandbox executes Python in-process — state persists within the "
-        "same session."
-    )
+    variant_note = _sandbox_variant_note(variant)
     return (
         "## Sandbox\n"
         "\n"
@@ -658,18 +721,12 @@ def _build_codemode_system_prompt(variant: str) -> str:
     ``system_prompt_codemode_addons`` was provided in the spec.
 
     Args:
-        variant: The effective sandbox variant ('eval' or 'jupyter').
+        variant: The effective sandbox variant.
 
     Returns:
         A Markdown string suitable for appending to the system prompt.
     """
-    variant_note = (
-        "The sandbox is a full Jupyter kernel — variables, imports, and installed "
-        "packages persist across calls."
-        if variant == "jupyter"
-        else "The sandbox executes Python in-process — state persists within the "
-        "same session."
-    )
+    variant_note = _sandbox_variant_note(variant)
     return (
         "## Sandbox Access (Codemode)\n"
         "\n"
@@ -807,7 +864,7 @@ def _build_codemode_toolset(
 McpId = str
 
 # Type alias for MCP server origin
-McpOrigin = Literal["config", "catalog"]
+McpOrigin = Literal["config", "catalog", "contents"]
 
 
 class McpServerSelection(BaseModel):
@@ -815,17 +872,43 @@ class McpServerSelection(BaseModel):
     Selection of an MCP server with its origin.
 
     Attributes:
-        id: Unique identifier of the MCP server (McpId)
-        origin: Origin of the server - 'config' (from mcp.json) or 'catalog' (built-in)
+        id: Unique identifier of the MCP server (McpId). For a ``contents``
+            origin this is the Contents source uid — a label, not a server the
+            runtime starts.
+        origin: Origin of the server - 'config' (from mcp.json), 'catalog'
+            (built-in) or 'contents' (an MCP source of Datalayer Contents,
+            reached through a session; the runtime never holds the credential).
+        session_uid: The Contents MCP session the calls go through. Required
+            for, and meaningful only to, the ``contents`` origin: the session's
+            ``allowed_tools`` is the whole toolset, and every call carries the
+            caller's own token.
     """
 
     id: McpId = Field(..., description="The server identifier", alias="id")
     origin: McpOrigin = Field(
         default="config",
-        description="Origin of the server (config from mcp.json, catalog from built-in)",
+        description="Origin of the server (config from mcp.json, catalog from built-in, contents from a Contents MCP source)",
+    )
+    session_uid: str | None = Field(
+        default=None,
+        description="The Contents MCP session uid; required when origin is 'contents'",
     )
 
     model_config = {"populate_by_name": True}
+
+    @model_validator(mode="after")
+    def _contents_needs_a_session(self) -> "McpServerSelection":
+        if self.origin == "contents" and not self.session_uid:
+            raise ValueError(
+                "an MCP server selection of origin 'contents' needs a session_uid"
+            )
+        if self.origin != "contents" and self.session_uid:
+            raise ValueError("session_uid is only meaningful for origin 'contents'")
+        return self
+
+    @property
+    def is_contents(self) -> bool:
+        return self.origin == "contents"
 
 
 class CreateAgentRequest(BaseModel):
@@ -906,8 +989,11 @@ class CreateAgentRequest(BaseModel):
         description=(
             "Sandbox variant to use for this agent.  "
             "Accepted values: 'eval' (in-process Python exec, default), "
-            "'jupyter' (starts a Jupyter server per agent via code_sandboxes), "
-            "'jupyter' (connects to an existing Jupyter server — requires jupyter_sandbox URL)."
+            "'jupyter-server' (starts a Jupyter server per agent via "
+            "code_sandboxes, or connects to an existing one when "
+            "jupyter_sandbox names it), or a provider reached with its own "
+            "credentials — 'docker', 'datalayer', 'google-colab', 'kaggle', "
+            "'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'."
         ),
     )
     agent_spec_id: str | None = Field(
@@ -917,6 +1003,15 @@ class CreateAgentRequest(BaseModel):
     agent_spec: dict[str, Any] | None = Field(
         default=None,
         description="Optional complete agent spec payload forwarded by the UI. Used to prefill fields when creating from a library spec.",
+    )
+    memory: str | None = Field(
+        default=None,
+        description="Optional memory backend override (for example: 'ephemeral', 'sqlite', or 'mem0').",
+    )
+    memory_config: dict[str, Any] | None = Field(
+        default=None,
+        alias="memoryConfig",
+        description="Optional memory backend configuration override.",
     )
     pre_hooks: dict[str, Any] | None = Field(
         default=None,
@@ -941,6 +1036,15 @@ class CreateAgentRequest(BaseModel):
         default_factory=dict,
         alias="agentParameters",
         description="Launch-time parameter values validated against parameters JSON schema.",
+    )
+    compaction_max_tokens: int | None = Field(
+        default=None,
+        alias="compactionMaxTokens",
+        description=(
+            "Optional history-compaction token ceiling. Caps the compaction "
+            "budget below the model's tokens_limit so a smaller context window "
+            "can be exercised on demand (never raised above the model limit)."
+        ),
     )
 
 
@@ -1082,6 +1186,12 @@ async def create_agent(
                 request.disable_tool_approvals = bool(
                     getattr(library_spec, "disable_tool_approvals", False)
                 )
+            if request.memory is None and getattr(library_spec, "memory", None):
+                request.memory = library_spec.memory
+            if request.memory_config is None and getattr(
+                library_spec, "memory_config", None
+            ):
+                request.memory_config = library_spec.memory_config
             # Use the sandbox_variant from the spec if not set in the request
             if not request.sandbox_variant and library_spec.sandbox_variant:
                 request.sandbox_variant = library_spec.sandbox_variant
@@ -1182,6 +1292,14 @@ async def create_agent(
                 request.sandbox_variant = _spec_value(
                     "sandboxVariant", "sandbox_variant"
                 )
+            if request.memory is None:
+                memory_from_spec = _spec_value("memory")
+                if isinstance(memory_from_spec, str):
+                    request.memory = memory_from_spec
+            if request.memory_config is None:
+                memory_cfg_from_spec = _spec_value("memoryConfig", "memory_config")
+                if isinstance(memory_cfg_from_spec, dict):
+                    request.memory_config = memory_cfg_from_spec
             if request.transport == "ag-ui":
                 protocol = _spec_value("protocol")
                 if protocol in {"ag-ui", "vercel-ai", "acp", "a2a"}:
@@ -1195,14 +1313,29 @@ async def create_agent(
                         if isinstance(server, dict) and server.get("id"):
                             raw_origin = str(server.get("origin", "config"))
                             origin: McpOrigin = (
-                                "catalog" if raw_origin == "catalog" else "config"
+                                "catalog"
+                                if raw_origin == "catalog"
+                                else "contents"
+                                if raw_origin == "contents"
+                                else "config"
+                            )
+                            session_uid = server.get("session_uid") or server.get(
+                                "sessionUid"
                             )
                             selected_servers.append(
                                 McpServerSelection(
                                     id=str(server.get("id")),
                                     origin=origin,
+                                    session_uid=(
+                                        str(session_uid)
+                                        if origin == "contents" and session_uid
+                                        else None
+                                    ),
                                 )
                             )
+                            if origin == "contents":
+                                # Nothing to start: Contents holds the server.
+                                continue
                             # Register full config with mcp_manager if
                             # the dict contains enough info to start the
                             # server (command or url).
@@ -1331,7 +1464,7 @@ async def create_agent(
             for item in selected_mcp_servers:
                 server_id = item.id
                 is_config = item.origin == "config"
-                if not server_id:
+                if not server_id or item.origin == "contents":
                     continue
 
                 if not lifecycle_manager.is_server_running(
@@ -1425,25 +1558,25 @@ async def create_agent(
 
         # Determine the effective sandbox variant
         effective_variant = request.sandbox_variant or (
-            "jupyter" if request.jupyter_sandbox else "eval"
+            "jupyter-server" if request.jupyter_sandbox else "eval"
         )
 
         # In K8s sidecar mode, a Jupyter container already runs in the pod.
-        # "jupyter" variant means "start your own" — remap to "jupyter"
+        # "jupyter-server" variant means "start your own" — remap to "jupyter-server"
         # (connect to existing sidecar).  Never fallback to eval.
         jupyter_sidecar = (
             os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
         )
         if jupyter_sidecar:
-            if effective_variant == "jupyter":
-                effective_variant = "jupyter"
+            if effective_variant == "jupyter-server":
+                effective_variant = "jupyter-server"
                 logger.info(
                     "Jupyter sidecar detected, remapped sandbox variant "
                     "jupyter → jupyter for agent '%s'",
                     agent_id,
                 )
             elif effective_variant == "eval":
-                effective_variant = "jupyter"
+                effective_variant = "jupyter-server"
                 logger.info(
                     "Jupyter sidecar detected, overriding eval → jupyter "
                     "for agent '%s' (companion will provide jupyter URL)",
@@ -1473,23 +1606,23 @@ async def create_agent(
                 sandbox_manager = get_code_sandbox_manager()
 
                 if (
-                    effective_variant == "jupyter"
+                    effective_variant == "jupyter-server"
                     and not request.jupyter_sandbox
                     and jupyter_sidecar
                 ):
                     # Sidecar mode, Phase 1: companion will configure URL later.
-                    sandbox_manager.configure(variant="jupyter")
+                    sandbox_manager.configure(variant="jupyter-server")
                     logger.info(
                         "Deferred jupyter sandbox for '%s': "
                         "waiting for companion to provide jupyter URL",
                         agent_id,
                     )
-                elif effective_variant == "jupyter":
+                elif effective_variant == "jupyter-server":
                     # Prefer per-agent sandbox creation when available.
                     if hasattr(sandbox_manager, "create_agent_sandbox"):
                         sandbox_manager.create_agent_sandbox(
                             agent_id=agent_id,
-                            variant="jupyter",
+                            variant="jupyter-server",
                         )
                         logger.info(
                             "Eager-started per-agent jupyter sandbox for '%s'",
@@ -1503,10 +1636,17 @@ async def create_agent(
                         sandbox_manager.get_sandbox()
                         logger.info("Eager-started jupyter sandbox")
                 else:
-                    # eval
-                    sandbox_manager.configure(variant="eval")
+                    # Every other variant, eval included, is one the
+                    # code_sandboxes factory knows how to reach. Hard-coding
+                    # `eval` here gave an agent that asked for Kaggle, Modal,
+                    # Daytona, E2B, CoreWeave or Cloudflare a sandbox in this
+                    # very process — no isolation, none of the machine it
+                    # asked for, and no error to say that it had not got it.
+                    sandbox_manager.configure(
+                        variant=cast(SandboxVariant, effective_variant)
+                    )
                     sandbox_manager.get_sandbox()
-                    logger.info("Eager-started eval sandbox")
+                    logger.info("Eager-started %s sandbox", effective_variant)
             except HTTPException:
                 raise
             except ImportError as e:
@@ -1551,7 +1691,7 @@ async def create_agent(
         )
         if need_shared_sandbox:
             if (
-                effective_variant == "jupyter"
+                effective_variant == "jupyter-server"
                 and not request.jupyter_sandbox
                 and jupyter_sidecar
             ):
@@ -1560,13 +1700,13 @@ async def create_agent(
                 from ..services.code_sandbox_manager import get_code_sandbox_manager
 
                 sandbox_manager = get_code_sandbox_manager()
-                sandbox_manager.configure(variant="jupyter")
+                sandbox_manager.configure(variant="jupyter-server")
                 shared_sandbox = sandbox_manager.get_managed_sandbox()
                 logger.info(
-                    f"Deferred sandbox for agent '{agent_id}': variant=jupyter, "
+                    f"Deferred sandbox for agent '{agent_id}': variant=jupyter-server, "
                     f"waiting for companion to provide jupyter URL"
                 )
-            elif effective_variant == "jupyter":
+            elif effective_variant == "jupyter-server":
                 # Use the per-agent Jupyter sandbox for codemode/skills execution.
                 # The eager-start block above may have already created it (when
                 # sandbox_variant is explicitly set), so always check before creating
@@ -1584,7 +1724,7 @@ async def create_agent(
                         if hasattr(sandbox_manager, "create_agent_sandbox"):
                             shared_sandbox = sandbox_manager.create_agent_sandbox(
                                 agent_id=agent_id,
-                                variant="jupyter",
+                                variant="jupyter-server",
                             )
                             logger.info(
                                 f"Created per-agent Jupyter sandbox for '{agent_id}'"
@@ -1616,7 +1756,9 @@ async def create_agent(
                         detail=f"Failed to create Jupyter sandbox: {str(e)}",
                     )
             else:
-                shared_sandbox = create_shared_sandbox(request.jupyter_sandbox)
+                shared_sandbox = create_shared_sandbox(
+                    request.jupyter_sandbox, effective_variant
+                )
 
         await _run_agent_hooks(
             agent_id=agent_id,
@@ -1797,13 +1939,33 @@ async def create_agent(
                 spec_for_runtime_controls = get_library_agent_spec(
                     request.agent_spec_id
                 )
+                if spec_for_runtime_controls is not None:
+                    try:
+                        merged_payload = spec_for_runtime_controls.model_dump(
+                            by_alias=True
+                        )
+                        if request.memory is not None:
+                            merged_payload["memory"] = request.memory
+                        if request.memory_config is not None:
+                            merged_payload["memoryConfig"] = request.memory_config
+                        spec_for_runtime_controls = Agentspec.model_validate(
+                            merged_payload
+                        )
+                    except Exception as exc:
+                        logger.debug(
+                            "Failed to merge request memory overrides into runtime controls spec: %s",
+                            exc,
+                        )
 
             # Fallback: UI may send a full spec payload without a library ID.
             if spec_for_runtime_controls is None and request.agent_spec:
                 try:
-                    spec_for_runtime_controls = Agentspec.model_validate(
-                        request.agent_spec
-                    )
+                    merged_payload = dict(request.agent_spec)
+                    if request.memory is not None:
+                        merged_payload["memory"] = request.memory
+                    if request.memory_config is not None:
+                        merged_payload["memoryConfig"] = request.memory_config
+                    spec_for_runtime_controls = Agentspec.model_validate(merged_payload)
                 except Exception as exc:
                     logger.debug(
                         "Could not parse forwarded agent_spec for runtime controls: %s",
@@ -1814,6 +1976,8 @@ async def create_agent(
                 capabilities = build_capabilities_from_agent_spec(
                     spec_for_runtime_controls,
                     agent_id=agent_id,
+                    model=request.model,
+                    compaction_max_tokens=request.compaction_max_tokens,
                 )
                 usage_limits = build_usage_limits_from_agent_spec(
                     spec_for_runtime_controls
@@ -1842,10 +2006,32 @@ async def create_agent(
                 capabilities = []
             capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
 
+            # And always count what the runs cost.
+            #
+            # Everything above is built from a forwarded `agent_spec`, so an
+            # agent created without one — which is most of them; a create call
+            # naming an `agent_spec_id` and a library does not forward the spec
+            # itself — got no capabilities at all. That included the one that
+            # records token usage, so the tracker stayed empty for those agents
+            # and every context figure downstream read zero: the bar beside the
+            # prompt, the session and turn counts, the cost.
+            #
+            # It is added here rather than in `build_capabilities_from_agent_spec`
+            # because it needs no spec to do its job — an agent id is the whole
+            # of its configuration.
+            if not any(
+                isinstance(cap, LLMContextUsageCapability) for cap in capabilities
+            ):
+                capabilities.append(
+                    LLMContextUsageCapability(agent_id=agent_id, enabled=True)
+                )
+
+            # Raise the output-token ceiling to the selected model's capability
+            # (also enforced across delegated subagent runs).
+            usage_limits = apply_model_output_tokens_limit(usage_limits, request.model)
+
             agent_kwargs: dict[str, Any] = {
-                "system_prompt": final_system_prompt,
-                # Explicitly disable Pydantic AI built-in tools (e.g. CodeExecutionTool)
-                "builtin_tools": (),
+                "instructions": final_system_prompt,
                 # Don't pass toolsets here - they'll be dynamically provided at run time
             }
             if capabilities:
@@ -2079,6 +2265,9 @@ async def create_agent(
             id=agent_id,
             name=request.name,
             description=request.description,
+            # The transport the agent is registered on, so a listing says
+            # `a2a` for an A2A agent rather than the model's default.
+            protocol=request.transport,
             capabilities=AgentCapabilities(
                 streaming=True,
                 tool_calling=True,
@@ -2153,6 +2342,7 @@ async def create_agent(
             try:
                 vercel_adapter = VercelAITransport(
                     agent,
+                    usage_limits=usage_limits,
                     agent_id=agent_id,
                     has_spec_frontend_tools=has_spec_frontend_tools,
                     approval_tool_ids=approval_tool_ids or [],
@@ -2455,7 +2645,15 @@ def _get_agent_details(agent: Any, agent_id: str, info: Any) -> dict[str, Any]:
         "name": info.name,
         "description": info.description,
         "status": "running",
-        "protocol": getattr(info, "protocol", "ag-ui"),
+        # The transport the agent answers on. `protocol` is the older name for
+        # the same thing; both are given, and neither is guessed as ag-ui when
+        # the agent was created on another transport.
+        "protocol": getattr(info, "protocol", None)
+        or getattr(info, "transport", None)
+        or "ag-ui",
+        "transport": getattr(info, "transport", None)
+        or getattr(info, "protocol", None)
+        or "ag-ui",
         "model": model_name,
         "system_prompt": system_prompt,
         "capabilities": info.capabilities.model_dump() if info.capabilities else {},
@@ -2478,6 +2676,49 @@ async def list_agents() -> AgentListResponse:
         agents.append(agent_details)
 
     return AgentListResponse(agents=agents)
+
+
+@router.get("/{agent_id}/memory")
+async def list_agent_memory(agent_id: str) -> dict[str, Any]:
+    """List durable memories stored for an agent.
+
+    Returns an empty list when the agent has no durable memory backend, so the
+    UI can degrade gracefully.
+    """
+    from ..memory import get_memory_backend
+
+    backend = get_memory_backend(agent_id)
+    if backend is None:
+        return {"memories": []}
+    try:
+        memories = await backend.list_all()
+    except Exception as exc:
+        logger.warning("Failed to list memory for %s: %s", agent_id, exc)
+        memories = []
+    return {"memories": memories}
+
+
+@router.post("/{agent_id}/memory/search")
+async def search_agent_memory(agent_id: str, request: Request) -> dict[str, Any]:
+    """Search an agent's durable memory for a query string."""
+    from ..memory import get_memory_backend
+
+    backend = get_memory_backend(agent_id)
+    if backend is None:
+        return {"results": []}
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    query = str(payload.get("query", "")).strip() if isinstance(payload, dict) else ""
+    if not query:
+        return {"results": []}
+    try:
+        memories = await backend.search(query)
+    except Exception as exc:
+        logger.warning("Failed to search memory for %s: %s", agent_id, exc)
+        memories = []
+    return {"results": memories}
 
 
 @router.get("/{agent_id:path}")
@@ -2504,13 +2745,13 @@ async def get_agent(agent_id: str) -> dict[str, Any]:
 @router.delete("/{agent_id:path}")
 async def delete_agent(
     agent_id: str,
-    terminate_runtime: bool = Query(
+    stop_runtime: bool = Query(
         default=False,
-        description="When true, also terminate runtime via shared lifecycle helper.",
+        description="When true, also stop the runtime via the shared lifecycle helper.",
     ),
     runtime_id: str | None = Query(
         default=None,
-        description="Runtime identifier override for runtime termination.",
+        description="Runtime identifier override for stopping the runtime.",
     ),
 ) -> dict[str, str]:
     """
@@ -2587,23 +2828,25 @@ async def delete_agent(
 
     logger.info(f"Deleted agent: {agent_id}")
 
-    if terminate_runtime:
+    if stop_runtime:
         token = (os.environ.get("DATALAYER_API_KEY") or "").strip() or None
         runtimes_base_url = (
-            os.environ.get("DATALAYER_URL")
+            os.environ.get("DATALAYER_RUNTIMES_URL")
             or os.environ.get("RUNTIMES_URL")
             or "https://r1.datalayer.run"
         )
-        resolved_runtime_id = runtime_id or os.environ.get("HOSTNAME")
+        # The runtime's uid, which the Operator sets on the pod: what the
+        # platform knows this runtime by. The pod's own name is not it.
+        resolved_runtime_id = runtime_id or os.environ.get("DATALAYER_RUNTIME_ID")
         if resolved_runtime_id:
-            await terminate_runtime_prefer_core(
+            await stop_runtime_prefer_core(
                 runtime_id=resolved_runtime_id,
                 runtime_base_url=runtimes_base_url,
                 token=token,
             )
         else:
             logger.warning(
-                "delete_agent called with terminate_runtime=true but no runtime_id provided and HOSTNAME not set"
+                "delete_agent called with stop_runtime=true but no runtime_id provided and DATALAYER_RUNTIME_ID not set"
             )
 
     return {"message": f"Agent {agent_id} deleted successfully"}
@@ -2641,7 +2884,9 @@ async def update_agent_transport(
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
     agent, info = _agents[agent_id]
-    current_transport = getattr(info, "transport", None)
+    current_transport = getattr(info, "transport", None) or getattr(
+        info, "protocol", None
+    )
     new_transport = request.transport
 
     if current_transport == new_transport:
@@ -2723,8 +2968,14 @@ async def update_agent_transport(
             _has_approval = bool(tools_requiring_approval_ids(_stored_tools)) and (
                 not _is_tool_approvals_disabled(_stored_disable_approvals)
             )
+            # Raise the output-token ceiling to the stored model's capability so
+            # the transport does not fall back to its low default cap.
+            _switch_usage_limits = apply_model_output_tokens_limit(
+                None, stored_spec.get("model")
+            )
             vercel_adapter = VercelAITransport(
                 agent,
+                usage_limits=_switch_usage_limits,
                 agent_id=agent_id,
                 has_spec_frontend_tools=_has_ft,
                 has_approval_tools=_has_approval,
@@ -2738,6 +2989,7 @@ async def update_agent_transport(
             )
 
     # Update the stored info transport field
+    info.protocol = new_transport
     if hasattr(info, "transport"):
         info.transport = new_transport
 
@@ -2811,7 +3063,7 @@ async def update_agent_mcp_servers(
             for item in request.selected_mcp_servers:
                 server_id = item.id
                 is_config = item.origin == "config"
-                if not server_id:
+                if not server_id or item.origin == "contents":
                     continue
 
                 # Start logical check/start...
@@ -2881,18 +3133,25 @@ async def update_agent_mcp_servers(
 class ConfigureSandboxRequest(BaseModel):
     """Request to configure the code sandbox manager."""
 
-    variant: Literal["eval", "jupyter"] = Field(
+    # Every variant the manager can create, not the two this literal used to
+    # spell: the endpoint exists to switch the sandbox at runtime, and a
+    # request for a provider it can perfectly well reach — Kaggle, Modal,
+    # Daytona, E2B, CoreWeave, Cloudflare — was rejected before it arrived.
+    variant: SandboxVariant = Field(
         default="eval",
         description=(
-            "Sandbox variant to use: 'eval' (Python exec), "
-            "or 'jupyter' (Jupyter sandbox: managed local or existing URL)"
+            "Sandbox variant to use: 'eval' (Python exec), 'jupyter-server' "
+            "(Jupyter sandbox: managed local or existing URL), or a provider "
+            "code_sandboxes reaches with its own credentials — 'docker', "
+            "'datalayer', 'google-colab', 'kaggle', 'monty', 'modal', "
+            "'daytona', 'cloudflare', 'coreweave', 'e2b'."
         ),
     )
     jupyter_url: str | None = Field(
         default=None,
         description=(
             "Optional Jupyter server URL for existing server mode. "
-            "If omitted with variant='jupyter', a managed local Jupyter sandbox is used. "
+            "If omitted with variant='jupyter-server', a managed local Jupyter sandbox is used. "
             "Can include token as query param: http://localhost:8888?token=xxx"
         ),
     )
@@ -2938,15 +3197,64 @@ async def get_sandbox_status() -> SandboxStatusResponse:
         )
 
 
+@router.post("/{agent_id}/sandbox/ensure")
+async def ensure_agent_sandbox(agent_id: str) -> SandboxStatusResponse:
+    """
+    Guarantee this agent has a running sandbox, creating one if it does not.
+
+    Creating an agent with ``sandbox_variant="jupyter-server"`` already starts
+    its sandbox eagerly, so this exists for the case where the agent outlives
+    it: reconfiguring or restarting the manager stops the per-agent sandboxes,
+    because they were built under the previous configuration. Without a way to
+    ask for one back, a caller that selects an existing agent gets an agent
+    with nowhere to run — no kernel, no Jupyter URL, and a workspace that looks
+    dead for no visible reason.
+
+    Idempotent: an agent that already has a sandbox is left alone.
+
+    Args:
+        agent_id: The agent whose sandbox to guarantee.
+
+    Returns:
+        The sandbox status after the call.
+    """
+    try:
+        from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+        manager = get_code_sandbox_manager()
+        if manager.get_agent_sandbox(agent_id) is None:
+            manager.create_agent_sandbox(agent_id=agent_id, variant="jupyter-server")
+            logger.info("Started the sandbox for agent '%s' on request", agent_id)
+
+        try:
+            from .configure import notify_sandbox_status_change
+
+            await notify_sandbox_status_change(agent_id)
+        except Exception as exc:
+            logger.debug("Failed to notify agent sandbox change: %s", exc)
+
+        return SandboxStatusResponse(**manager.get_status())
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to ensure the sandbox for agent %s: %s", agent_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to ensure the sandbox for agent {agent_id}: {str(e)}",
+        )
+
+
 @router.post("/sandbox/configure")
 async def configure_sandbox(request: ConfigureSandboxRequest) -> SandboxStatusResponse:
     """
     Configure the code sandbox manager.
 
     This endpoint allows runtime configuration of the sandbox variant.
-    Use 'eval' for simple Python exec-based execution,
-    'jupyter' for a managed Jupyter sandbox, or
-    'jupyter' to connect to an existing Jupyter server.
+    Use 'eval' for simple Python exec-based execution, 'jupyter-server' for a
+    managed Jupyter sandbox or an existing server named by ``jupyter_url``,
+    and the name of a provider — 'kaggle', 'modal', 'daytona', 'e2b',
+    'coreweave', 'cloudflare', … — for a sandbox that provider runs under the
+    credentials this process holds for it.
 
     Note: If a sandbox is currently running with a different configuration,
     it will be stopped and recreated on next use.
@@ -3256,6 +3564,10 @@ async def _start_mcp_servers_for_agent(
 
     for selection in selected_servers:
         server_id = selection.id if hasattr(selection, "id") else str(selection)
+        if getattr(selection, "origin", None) == "contents":
+            # Reached through a Contents session; there is no process to start.
+            already_running.append(server_id)
+            continue
         is_config = getattr(selection, "origin", "catalog") == "config"
 
         # Check if already running
@@ -3359,18 +3671,8 @@ async def _start_mcp_servers_for_agent(
             new_codemode = adapter._codemode_builder(selected_servers)
             if new_codemode is not None:
                 # Log which sandbox the new toolset is using
-                if (
-                    hasattr(new_codemode, "_sandbox")
-                    and new_codemode._sandbox is not None
-                ):
-                    sandbox_type = type(new_codemode._sandbox).__name__
-                    logger.info(f"New codemode toolset has sandbox: {sandbox_type}")
-                elif (
-                    hasattr(new_codemode, "sandbox")
-                    and new_codemode.sandbox is not None
-                ):
-                    sandbox_type = type(new_codemode.sandbox).__name__
-                    logger.info(f"New codemode toolset has sandbox: {sandbox_type}")
+                if getattr(new_codemode, "sandbox_client", None) is not None:
+                    logger.info("New codemode toolset has a code sandbox client")
                 else:
                     logger.info("New codemode toolset has no sandbox attached")
 
@@ -3531,7 +3833,7 @@ def _emit_agent_assigned_event(
 ) -> None:
     """Emit agent-assigned lifecycle event for companion runtime assignment."""
     token = (user_token or "").strip()
-    runtime_id = (os.environ.get("HOSTNAME") or "").strip()
+    runtime_id = (os.environ.get("DATALAYER_RUNTIME_ID") or "").strip()
     if not token:
         logger.debug(
             "[mcp-servers/start] Skipping agent-assigned event for '%s': no auth token",
@@ -3540,7 +3842,7 @@ def _emit_agent_assigned_event(
         return
     if not runtime_id:
         logger.debug(
-            "[mcp-servers/start] Skipping agent-assigned event for '%s': missing HOSTNAME runtime id",
+            "[mcp-servers/start] Skipping agent-assigned event for '%s': DATALAYER_RUNTIME_ID not set",
             agent_name,
         )
         return
@@ -3548,7 +3850,6 @@ def _emit_agent_assigned_event(
     base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or os.environ.get("DATALAYER_URL")
         or "https://prod1.datalayer.run"
     )
     assigned_at = datetime.now(timezone.utc).isoformat()
@@ -3831,6 +4132,10 @@ async def _stop_mcp_servers_for_agent(
 
     for selection in selected_servers:
         server_id = selection.id if hasattr(selection, "id") else str(selection)
+        if getattr(selection, "origin", None) == "contents":
+            # Reached through a Contents session; there is no process to start.
+            already_running.append(server_id)
+            continue
         is_config = getattr(selection, "origin", "catalog") == "config"
 
         # Check if already stopped
@@ -4270,7 +4575,7 @@ async def configure_from_spec_endpoint(
                 if agent_sandbox is not None:
                     sandbox_manager._inject_env_vars_into(
                         agent_sandbox,
-                        "jupyter",
+                        "jupyter-server",
                         sandbox_env_vars,
                     )
                 else:
@@ -4378,15 +4683,14 @@ async def trigger_run(
     events_base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or os.environ.get("DATALAYER_URL")
         or "https://prod1.datalayer.run"
     )
     runtimes_base_url = (
-        os.environ.get("DATALAYER_URL")
+        os.environ.get("DATALAYER_RUNTIMES_URL")
         or os.environ.get("RUNTIMES_URL")
         or "https://r1.datalayer.run"
     )
-    runtime_id = os.environ.get("HOSTNAME")
+    runtime_id = os.environ.get("DATALAYER_RUNTIME_ID")
 
     import asyncio
 

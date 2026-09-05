@@ -58,7 +58,7 @@ async def wrap_agui_stream_with_approvals(
     approval_tool_ids: list[str],
     agent_id: str,
     user_jwt_token: str | None = None,
-    pod_name: str | None = None,
+    runtime_name: str | None = None,
 ) -> AsyncIterator[bytes]:
     """Wrap an AG-UI streaming body to create local approval records.
 
@@ -110,7 +110,7 @@ async def wrap_agui_stream_with_approvals(
                     "/api/ai-agents/v1/tool-approvals",
                     json={
                         "agent_id": agent_id,
-                        "pod_name": pod_name or "",
+                        "runtime_name": runtime_name or "",
                         "tool_name": tool_name,
                         "tool_args": tool_args,
                         "tool_call_id": tool_call_id,

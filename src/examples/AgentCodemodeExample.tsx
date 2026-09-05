@@ -22,7 +22,7 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
-import { Text, Spinner, Heading, Label, Flash } from '@primer/react';
+import { Text, Spinner, Heading, Flash } from '@primer/react';
 import { CodeIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import ReactECharts from 'echarts-for-react';
@@ -32,7 +32,12 @@ import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
 import { uniqueAgentId } from './utils/agentId';
 import { useAIAgentsWebSocket } from '../hooks';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import {
+  AgentCodemodePlugin,
+  AgentNoCodemodePlugin,
+} from '../loop/plugins/agent-codemode';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 import {
   ContextPanel,
   type ContextSnapshotResponse,
@@ -109,7 +114,7 @@ const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
     subtitle: 'Raw MCP tools without codemode conversion',
     suggestionMessage: NO_CODEMODE_SUGGESTION_MESSAGE,
     specId: 'example-no-codemode',
-    color: '#0969DA',
+    color: '#16A085',
     baseUrl: NO_CODEMODE_BASE_URL,
   },
   {
@@ -156,6 +161,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   const [hookError, setHookError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string>(runtimeName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
+  void isReconnectedAgent;
   const [selectedServerIds, setSelectedServerIds] = useState<string[]>([]);
   const [agentTools, setAgentTools] = useState<FullContextTool[]>([]);
   const [liveMcpStatus, setLiveMcpStatus] = useState<
@@ -494,6 +500,29 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
     [authFetch, agentId, config.baseUrl],
   );
 
+  // The pane's chat column is the shared loop on this pane's capacity plugin
+  // (codemode vs raw MCP). Its live codemode toggle and MCP/codemode status
+  // reach the footer through the chat-extras channel.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [
+      config.key === 'codemode' ? AgentCodemodePlugin : AgentNoCodemodePlugin,
+      extrasPlugin,
+    ],
+    [config.key, extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({
+      codemodeEnabled,
+      onToggleCodemode: handleToggleCodemode,
+      mcpStatusData: mcpStatusData ?? null,
+    });
+  }, [codemodeEnabled, handleToggleCodemode, mcpStatusData, setExtras]);
+  void codemodeStatusData;
+
   if (runtimeStatus === 'launching') {
     return (
       <Box
@@ -540,39 +569,13 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
       }}
     >
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        <Chat
-          protocol="vercel-ai"
-          baseUrl={config.baseUrl}
+        <LoopEmbed
+          serverUrl={config.baseUrl}
+          target="local"
           agentId={agentId}
-          authToken={token}
-          title={config.title}
-          brandIcon={<CodeIcon size={16} />}
-          subtitle={config.subtitle}
-          placeholder="Ask both agents the same request to compare behavior..."
-          description={config.subtitle}
-          showHeader={true}
-          headerActions={
-            isReconnectedAgent ? (
-              <Label size="small" variant="attention">
-                Reconnected
-              </Label>
-            ) : undefined
-          }
-          autoFocus={false}
-          height="100%"
-          runtimeId={agentId}
-          historyEndpoint={`${config.baseUrl}/api/v1/history`}
-          mcpStatusData={mcpStatusData}
-          codemodeStatusData={codemodeStatusData}
-          codemodeEnabled={codemodeEnabled}
-          onToggleCodemode={handleToggleCodemode}
-          suggestions={[
-            {
-              title: 'Datalayer extraction',
-              message: config.suggestionMessage,
-            },
-          ]}
-          submitOnSuggestionClick
+          defaultEditor="none"
+          showHeader
+          plugins={chatPlugins}
         />
       </Box>
     </Box>
@@ -668,7 +671,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
           emoji: '🤝',
           title: 'Tie',
           message: 'Both agents are tied on token usage.',
-          bg: 'canvas.subtle',
+          bg: 'canvas.default',
           borderColor: 'border.default',
           color: 'fg.default',
         };

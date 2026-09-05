@@ -11,7 +11,7 @@ Used by both app.py (CLI agents) and routes/agents.py (API agents).
 import logging
 import os
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,7 @@ def create_skills_toolset(
             AgentSkillsToolset,
             SandboxExecutor,
         )
+        from code_sandboxes import CodeSandboxClient
 
         if not PYDANTIC_AI_AVAILABLE:
             logger.warning("agent-skills pydantic-ai integration not available")
@@ -260,7 +261,7 @@ def create_skills_toolset(
 
         # Create executor - use shared sandbox if available
         if shared_sandbox is not None:
-            executor = SandboxExecutor(shared_sandbox)
+            executor = SandboxExecutor(CodeSandboxClient(shared_sandbox))
             logger.info("Using shared managed sandbox for skills executor")
         else:
             # Use CodeSandboxManager for skills-only sandbox
@@ -276,7 +277,7 @@ def create_skills_toolset(
                 sandbox_manager.configure(variant="eval")
 
             skills_sandbox = sandbox_manager.get_managed_sandbox()
-            executor = SandboxExecutor(skills_sandbox)
+            executor = SandboxExecutor(CodeSandboxClient(skills_sandbox))
 
         skills_toolset = AgentSkillsToolset(
             skills=selected_skills,
@@ -314,7 +315,9 @@ def create_codemode_toolset(
         shared_sandbox: Optional shared sandbox for state persistence
         mcp_proxy_url: Optional MCP proxy URL for Jupyter/remote execution
         enable_discovery_tools: Whether to enable discovery tools (default: True)
-        sandbox_variant: Sandbox variant ('eval', 'jupyter').
+        sandbox_variant: Sandbox variant — 'eval', 'jupyter-server', or a
+            provider: 'docker', 'datalayer', 'google-colab', 'kaggle',
+            'monty', 'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'.
             If None, reads from the CodeSandboxManager's current config.
 
     Returns:
@@ -330,6 +333,7 @@ def create_codemode_toolset(
             MCPServerConfig,
             ToolRegistry,
         )
+        from code_sandboxes import CodeSandboxClient
 
         if not CODEMODE_AVAILABLE:
             logger.warning("agent-codemode pydantic-ai integration not available")
@@ -432,7 +436,11 @@ def create_codemode_toolset(
         codemode_toolset = CodemodeToolset(
             registry=registry,
             config=codemode_config,
-            sandbox=shared_sandbox,
+            sandbox_client=(
+                CodeSandboxClient(shared_sandbox)
+                if shared_sandbox is not None
+                else None
+            ),
             allow_discovery_tools=enable_discovery_tools,
             status_change_callback=status_change_callback,
         )
@@ -484,6 +492,7 @@ async def initialize_codemode_toolset(codemode_toolset: Any) -> None:
 
 def create_shared_sandbox(
     jupyter_sandbox_url: str | None = None,
+    variant: str | None = None,
 ) -> Any | None:
     """
     Create a shared managed sandbox proxy.
@@ -494,12 +503,16 @@ def create_shared_sandbox(
 
     Args:
         jupyter_sandbox_url: Optional Jupyter server URL (with token)
+        variant: The variant the caller settled on. Without it this function
+            configured ``eval`` and nothing else, so an agent that asked for
+            Kaggle, Modal, Daytona, E2B, CoreWeave or Cloudflare had its
+            manager reset to a sandbox in this very process on the way past.
 
     Returns:
         ManagedSandbox proxy or None if code_sandboxes not available
     """
     try:
-        from .code_sandbox_manager import get_code_sandbox_manager
+        from .code_sandbox_manager import SandboxVariant, get_code_sandbox_manager
 
         sandbox_manager = get_code_sandbox_manager()
 
@@ -517,13 +530,16 @@ def create_shared_sandbox(
                 os.getenv("DATALAYER_RUNTIME_JUPYTER_SIDECAR", "").lower() == "true"
             )
             if jupyter_sidecar:
-                sandbox_manager.configure(variant="jupyter")
+                sandbox_manager.configure(variant="jupyter-server")
                 logger.info(
                     "Sidecar mode: configured sandbox as jupyter "
                     "(waiting for companion to provide jupyter URL)"
                 )
             else:
-                sandbox_manager.configure(variant="eval")
+                # What the caller settled on; `eval` only when nobody said.
+                sandbox_manager.configure(
+                    variant=cast(SandboxVariant, variant or "eval")
+                )
 
         shared_sandbox = sandbox_manager.get_managed_sandbox()
         logger.info(

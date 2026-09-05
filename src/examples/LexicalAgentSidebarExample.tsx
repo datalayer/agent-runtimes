@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Lexical Example - Next generation chat with Lexical editor.
+ * Lexical Example - Next generation chat with Lexical editor.
  *
  * This example demonstrates using the chat component with:
  * - Lexical editor integration
@@ -20,7 +20,7 @@
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { EditorState } from 'lexical';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
@@ -66,10 +66,7 @@ import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
 import { editorConfig } from './lexical/editorConfig';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
-import type { FrontendToolDefinition, ProtocolConfig } from '../types';
-import { DEFAULT_MODEL } from '../specs';
+import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import './lexical/lexical-theme.css';
@@ -80,32 +77,6 @@ const LEXICAL_ID = 'chat-lexical-example';
 // Default configuration
 const DEFAULT_AGENT_ID =
   import.meta.env.VITE_AGENT_ID || 'lexical-sidebar-agent-runtime-example';
-
-function getJupyterSandboxUrl(
-  serviceManager?: ServiceManager.IManager,
-): string | undefined {
-  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
-  if (!baseUrl) {
-    return undefined;
-  }
-
-  if (baseUrl.includes('token=')) {
-    return baseUrl;
-  }
-
-  const token = serviceManager?.serverSettings?.token;
-  if (!token) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
 
 /**
  * Lexical plugin for code highlighting
@@ -255,7 +226,7 @@ function LexicalEditor({ serviceManager, endpoint }: LexicalEditorProps) {
 }
 
 /**
- * Agent Runtime Lexical Sidebar Example with Simple integration
+ * Lexical Agent Sidebar Example with Simple integration
  */
 interface ChatLexicalAgentExampleProps {
   serviceManager?: ServiceManager.IManager;
@@ -264,67 +235,36 @@ interface ChatLexicalAgentExampleProps {
 export function ChatLexicalAgentExampleInner({
   serviceManager,
 }: ChatLexicalAgentExampleProps) {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
-  const [createRequested, setCreateRequested] = useState(false);
-  const jupyterSandboxUrl = useMemo(
-    () => getJupyterSandboxUrl(serviceManager),
-    [serviceManager],
-  );
-
-  const { agentId, isReady, status, error, createAgent } =
-    useExampleAgentRuntime({
-      exampleId: 'LexicalAgentSidebarExample',
-      agentName: DEFAULT_AGENT_ID,
-      autoCreateAgent: false,
-      agentConfig: {
-        name: DEFAULT_AGENT_ID,
-        description: 'Demo agent for lexical sidebar example',
-        protocol: 'vercel-ai',
-        model: DEFAULT_MODEL,
-        systemPrompt:
-          'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
-        enableCodemode: false,
-        sandboxVariant: 'jupyter',
-        jupyterSandbox: jupyterSandboxUrl,
-      },
-    });
-
-  useEffect(() => {
-    if (!jupyterSandboxUrl || createRequested || agentId) {
-      return;
-    }
-    setCreateRequested(true);
-    void createAgent({
-      name: DEFAULT_AGENT_ID,
-      description: 'Demo agent for lexical sidebar example',
-      protocol: 'vercel-ai',
-      model: DEFAULT_MODEL,
-      systemPrompt:
-        'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCode only for temporary inspection code that should not modify persisted document content.',
-      enableCodemode: false,
-      sandboxVariant: 'jupyter',
-      jupyterSandbox: jupyterSandboxUrl,
-    }).catch(() => {
-      setCreateRequested(false);
-    });
-  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
-
-  const effectiveReady = isReady || status === 'ready';
-
-  // Get lexical tools for ChatSidebar
+  // The tools. Which of the chat and the harness runs them depends on
+  // where the loop turns, and the hook decides that.
   const tools = useLexicalTools(LEXICAL_ID);
 
+  const {
+    agentReady,
+    protocol: protocolConfig,
+    chatFrontendTools,
+    error,
+    unavailableReason,
+  } = useExampleJupyterAgent({
+    exampleId: 'LexicalAgentSidebarExample',
+    agentName: DEFAULT_AGENT_ID,
+    description: 'Demo agent for lexical sidebar example',
+    systemPrompt:
+      'You are a helpful AI assistant that helps users work with lexical documents. For document operations, always use the lexical frontend tools so actions happen in the live document UI. Use executeCodeInDocument only for temporary inspection code that should not modify persisted document content.',
+    serviceManager,
+    frontendTools: tools,
+  });
+  // One failed attempt is reported, not retried — see
+  // `useExampleJupyterAgent`.
+  const chatError = error || unavailableReason;
+
+  // The example's own agent, not merely the runtime: on the cloud target the
+  // runtime is ready before this agent has been registered on it.
+  const effectiveReady = agentReady;
+
+  // Get lexical tools for ChatSidebar
+
   // Build Vercel AI protocol config
-  const protocolConfig = useMemo((): ProtocolConfig => {
-    return {
-      type: 'vercel-ai',
-      endpoint: vercelAiEndpoint,
-      agentId: DEFAULT_AGENT_ID,
-      enableConfigQuery: true,
-      configEndpoint: `${baseUrl}/api/v1/configure`,
-    };
-  }, [baseUrl, vercelAiEndpoint]);
 
   return (
     <>
@@ -351,11 +291,11 @@ export function ChatLexicalAgentExampleInner({
               p: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              bg: 'canvas.subtle',
+              bg: 'canvas.default',
             }}
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-              Agent Runtime Lexical Sidebar Example
+              Lexical Agent Sidebar Example
             </h1>
             <p style={{ margin: '8px 0 0', color: 'var(--fgColor-muted)' }}>
               Next generation chat with Lexical editor integration (NO
@@ -374,7 +314,7 @@ export function ChatLexicalAgentExampleInner({
           >
             <LexicalEditor
               serviceManager={serviceManager}
-              endpoint={vercelAiEndpoint}
+              endpoint={protocolConfig.endpoint}
             />
           </Box>
         </Box>
@@ -382,6 +322,7 @@ export function ChatLexicalAgentExampleInner({
         {/* Chat sidebar */}
         {effectiveReady && (
           <ChatSidebar
+            kernelIndicatorPlacement="right"
             title="AI Assistant"
             protocol={protocolConfig}
             position="right"
@@ -392,7 +333,7 @@ export function ChatLexicalAgentExampleInner({
             defaultOpen={true}
             panelProps={{
               protocol: protocolConfig,
-              frontendTools: tools as unknown as FrontendToolDefinition[],
+              frontendTools: chatFrontendTools,
               useStore: true,
               suggestions: [
                 {
@@ -417,7 +358,7 @@ export function ChatLexicalAgentExampleInner({
         )}
       </Box>
 
-      {error && (
+      {chatError && (
         <Box
           sx={{
             position: 'fixed',
@@ -430,7 +371,7 @@ export function ChatLexicalAgentExampleInner({
             maxWidth: 300,
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>Error:</strong> {chatError}
         </Box>
       )}
     </>

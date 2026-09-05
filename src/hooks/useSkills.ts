@@ -134,7 +134,10 @@ export function useSkillActions(agentId?: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Loaded skills (kept for backward compat with AgentSkillsExample sidebar)
+// Loaded skills
 // ---------------------------------------------------------------------------
-
-export { useAgentRuntimeLoadedSkills } from '../stores';
+//
+// Not re-exported here any more. It is a store selector, not a hook this
+// module defines, and forwarding it made `hooks/index.ts` the third link in a
+// re-export chain that webpack could not follow. Import it from `../stores`,
+// or as `useAgentLoadedSkills` from `../hooks`.

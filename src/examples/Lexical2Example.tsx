@@ -128,7 +128,7 @@ function CustomToolsRegistrar() {
     ],
     handler: async ({ name }: { name: string }) => {
       return {
-        greeting: `Hello, ${name}! Welcome to Agent Runtime Lexical Example.`,
+        greeting: `Hello, ${name}! Welcome to Lexical Example.`,
       };
     },
   });
@@ -337,7 +337,7 @@ export function ChatLexicalExampleInner({
             p: 3,
             borderBottom: '1px solid',
             borderColor: 'border.default',
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -392,6 +392,7 @@ export function ChatLexicalExampleInner({
 
       {/* Floating Chat */}
       <ChatFloating
+        kernelIndicatorPlacement="right"
         useStore={true}
         title="AI Assistant"
         position="bottom-right"

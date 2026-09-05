@@ -14,6 +14,10 @@ export { AGUIAdapter, type AGUIAdapterConfig } from './AGUIAdapter';
 export { A2AAdapter, type A2AAdapterConfig } from './A2AAdapter';
 export { VercelAIAdapter, type VercelAIAdapterConfig } from './VercelAIAdapter';
 export {
+  BrowserAgentAdapter,
+  type BrowserAgentAdapterConfig,
+} from './BrowserAgentAdapter';
+export {
   ACPAdapter,
   type ACPAdapterConfig,
   type ACPSession,

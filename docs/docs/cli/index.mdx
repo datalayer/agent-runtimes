@@ -1,8 +1,9 @@
 ---
-title: CLI
+sidebar_position: 8
+title: Loop CLI
 ---
 
-# CLI
+# Loop CLI
 
 The `agent-runtimes` package provides a command-line interface for starting and managing the Agent Runtimes server.
 
@@ -240,6 +241,22 @@ agent-runtimes --help
 # Or using the Python module directly
 python -m agent_runtimes --help
 ```
+
+## Extending, and Being an Extension
+
+The command line is wired into the reactor's extensible-CLI machinery in
+both directions:
+
+- **As an extension** — `agent_runtimes.reactor_extension` packages every
+  command group of this package as a reactor CLI plugin, advertised under
+  `datalayer.cli` (so the `datalayer` command carries `sandboxes`, `agents`,
+  `envs` and the rest) and under `datalayer.reactor.cli` (so the `reactor`
+  command does too). Nothing spawns another executable; the groups register
+  in-process at startup.
+- **As a host** — the interactive chat's slash commands sit in the reactor's
+  slash registry, and a distribution advertising a plugin under the
+  `loop.plugins` entry-point group adds its own commands to the session. See
+  the [Loop REPL](/loop-repl#slash-command-registry) page.
 
 ## Shell Autocomplete
 

@@ -31,8 +31,15 @@ import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+
+import { MentionNode } from './plugins/MentionNode';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { Box } from '@datalayer/primer-addons';
+import {
+  AgentMentionPlugin,
+  type MentionableAgent,
+} from './plugins/AgentMentionPlugin';
+import { CommandPlugin, PROMPT_COMMANDS } from './plugins/CommandPlugin';
 
 // ---- Lexical config (plain-text only) ------------------------------------
 
@@ -41,7 +48,9 @@ const EDITOR_CONFIG = {
   theme: {
     paragraph: 'input-prompt-lexical-p',
   },
-  nodes: [],
+  // The `@agent` chip. A node the editor does not know about is dropped on
+  // insert, silently — the mention would simply never appear.
+  nodes: [MentionNode],
   onError(error: Error) {
     console.error('[InputPromptLexical]', error);
   },
@@ -120,15 +129,74 @@ function SyncPlugin({
 
 // ---- Auto-focus plugin --------------------------------------------------
 
-function AutoFocusPlugin({ autoFocus }: { autoFocus?: boolean }) {
+function AutoFocusPlugin({
+  autoFocus,
+  focusSignal,
+}: {
+  autoFocus?: boolean;
+  /*
+   * Bumped to ask for the caret back — when a turn ends, say.
+   *
+   * A number rather than a callback, because what is worth repeating is the
+   * whole routine below and not just the `editor.focus()` at the centre of
+   * it: the same retries, and the same refusal to take focus from somebody
+   * who is typing elsewhere, apply whether the prompt is claiming the caret
+   * on mount or reclaiming it once the agent has finished.
+   */
+  focusSignal?: number;
+}) {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    if (autoFocus) {
-      const t = setTimeout(() => editor.focus(), 100);
-      return () => clearTimeout(t);
+    if (!autoFocus && !focusSignal) {
+      return undefined;
     }
-  }, [editor, autoFocus]);
+    /*
+     * Asked for repeatedly, briefly, rather than once after a guessed delay.
+     *
+     * One `setTimeout(100)` assumed the editor was mounted and focusable by
+     * then. In a workspace that arrives through a lazy chunk it often is not:
+     * the notebook mounts alongside and takes focus, or the contenteditable
+     * is not in the document yet, and the single attempt lands on nothing and
+     * is never retried — which is exactly the prompt that would not focus.
+     *
+     * So: try immediately, then keep trying for a second, and stop the moment
+     * it works or the moment the person clicks somewhere themselves. Giving
+     * up matters as much as retrying — stealing focus back from someone who
+     * has started typing in a cell would be worse than never taking it.
+     */
+    let cancelled = false;
+    const deadline = Date.now() + 1000;
+
+    const focused = () => {
+      const root = editor.getRootElement();
+      return !!root && document.activeElement === root;
+    };
+
+    const attempt = () => {
+      if (cancelled || focused()) {
+        return;
+      }
+      const active = document.activeElement;
+      const stolen =
+        active &&
+        active !== document.body &&
+        !editor.getRootElement()?.contains(active);
+      if (stolen) {
+        return;
+      }
+      editor.focus();
+      if (!focused() && Date.now() < deadline) {
+        timer = window.setTimeout(attempt, 50);
+      }
+    };
+
+    let timer = window.setTimeout(attempt, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [editor, autoFocus, focusSignal]);
 
   return null;
 }
@@ -160,6 +228,15 @@ export interface InputPromptLexicalProps {
   onSubmit?: () => void;
   /** Auto-focus the editor on mount */
   autoFocus?: boolean;
+  /** Bumped by the parent to ask for the caret back — see `AutoFocusPlugin`. */
+  focusSignal?: number;
+  /**
+   * Agents this prompt may address by typing `@`.
+   *
+   * Empty or absent means no menu: a workspace with one agent has nobody to
+   * choose between, and a menu on every `@` would be in the way.
+   */
+  mentionableAgents?: MentionableAgent[];
 }
 
 export function InputPromptLexical({
@@ -170,12 +247,38 @@ export function InputPromptLexical({
   readOnly = false,
   onSubmit,
   autoFocus = false,
+  focusSignal,
+  mentionableAgents,
 }: InputPromptLexicalProps) {
   return (
     <Box
       sx={{
+        /*
+          The placeholder is positioned against this box.
+          
+          It is `position: absolute` and this was `static`, so it resolved
+          against whatever ancestor happened to be positioned — which put
+          "Type a message..." up in the header, nowhere near the box it
+          describes. A containing block is the whole fix.
+        */
+        position: 'relative',
         px: 2,
-        py: 1,
+        // A little more above than the 2px it had: the text sat hard against
+        // the edge of the box, which reads as clipped rather than as tight.
+        // Still less than below, where the footer's own padding follows.
+        pt: '6px',
+        pb: 1,
+        /*
+         * Greyed while it cannot be typed in.
+         *
+         * `contenteditable=false` stops the caret and nothing else — the text
+         * kept the same weight and colour as a live prompt, so a person had to
+         * try typing to discover the box was inert. The colour is set on the
+         * container and inherited, because the editable element deliberately
+         * declares no colour of its own.
+         */
+        color: disabled || readOnly ? 'fg.subtle' : undefined,
+        cursor: disabled || readOnly ? 'not-allowed' : undefined,
         '& .input-prompt-lexical-p': {
           margin: 0,
         },
@@ -189,7 +292,7 @@ export function InputPromptLexical({
               aria-label="Message input"
               style={{
                 outline: 'none',
-                minHeight: 40,
+                minHeight: 32,
                 maxHeight: 120,
                 overflowY: 'auto',
                 fontSize: 14,
@@ -202,8 +305,17 @@ export function InputPromptLexical({
             <Box
               sx={{
                 position: 'absolute',
-                top: '11px',
-                left: '15px',
+                /*
+                  Level with the first line of typing.
+
+                  Relative to the box above, which establishes the containing
+                  block. The editor's own `padding: 2px 0` sits inside this
+                  box's `pt: 2px`, so the caret's first line starts 4px down —
+                  matching it here is what stops the placeholder floating
+                  above the text it stands in for.
+                */
+                top: '8px',
+                left: '8px',
                 color: 'fg.subtle',
                 fontSize: 1,
                 pointerEvents: 'none',
@@ -223,7 +335,14 @@ export function InputPromptLexical({
           disabled={disabled}
           readOnly={readOnly}
         />
-        <AutoFocusPlugin autoFocus={autoFocus} />
+        <AutoFocusPlugin autoFocus={autoFocus} focusSignal={focusSignal} />
+        {/* `/` for commands, beside `@` for agents. Always mounted: the list
+            is fixed, so unlike the mentions there is no host that might have
+            nothing to offer. */}
+        <CommandPlugin commands={PROMPT_COMMANDS} />
+        {mentionableAgents?.length ? (
+          <AgentMentionPlugin agents={mentionableAgents} />
+        ) : null}
       </LexicalComposer>
     </Box>
   );

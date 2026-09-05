@@ -92,6 +92,9 @@ class PydanticAIAdapter(BaseAgent):
         self._selected_mcp_servers = selected_mcp_servers or []
         self._non_mcp_toolsets = non_mcp_toolsets or []
         self._codemode_builder = codemode_builder
+        # Contents MCP toolsets, one per session uid, kept across runs so a
+        # session's record and tool schemas are read once.
+        self._contents_toolsets: dict[str, Any] = {}
         self._codemode_toolset_index: int | None = None
         self._sandbox_only_toolset_index: int | None = None
         self._refresh_codemode_indexes()
@@ -389,7 +392,8 @@ class PydanticAIAdapter(BaseAgent):
             lifecycle_manager = get_mcp_lifecycle_manager()
             for selection in self._selected_mcp_servers:
                 server_id = getattr(selection, "id", None)
-                if not server_id:
+                if not server_id or getattr(selection, "origin", None) == "contents":
+                    # A Contents session has no process here to wait for.
                     continue
                 logger.info(
                     f"PydanticAIAdapter [{self._name}]: ensuring MCP server '{server_id}' readiness"
@@ -402,6 +406,41 @@ class PydanticAIAdapter(BaseAgent):
                 )
 
         return self._get_runtime_toolsets()
+
+    def _contents_toolset(self, selection: Any) -> Any:
+        """
+        The toolset of a Contents MCP session, built once per session uid.
+
+        The selection's ``id`` is the Contents source uid and its
+        ``session_uid`` the session the calls go through. The toolset offers
+        the session's ``allowed_tools`` and forwards every call to Contents
+        with the caller's token; it is registered so the MCP proxy can serve
+        a sandbox's calls on the same session with the same settings.
+        """
+        session_uid = getattr(selection, "session_uid", None)
+        if not session_uid:
+            logger.warning(
+                f"PydanticAIAdapter [{self._name}]: Contents MCP selection "
+                f"'{getattr(selection, 'id', None)}' has no session_uid, skipping"
+            )
+            return None
+        toolset = self._contents_toolsets.get(session_uid)
+        if toolset is None:
+            from agent_runtimes.mcp.contents_toolset import (
+                ContentsMcpToolset,
+                register_contents_toolset,
+            )
+
+            toolset = ContentsMcpToolset(
+                session_uid=str(session_uid),
+                source_uid=getattr(selection, "id", None) or None,
+            )
+            register_contents_toolset(toolset)
+            self._contents_toolsets[session_uid] = toolset
+            logger.info(
+                f"PydanticAIAdapter [{self._name}]: Added Contents MCP session '{session_uid}' toolset"
+            )
+        return toolset
 
     def _get_runtime_toolsets(self) -> list[Any]:
         """
@@ -439,6 +478,11 @@ class PydanticAIAdapter(BaseAgent):
             for selection in self._selected_mcp_servers:
                 server_id = getattr(selection, "id", None)
                 origin = getattr(selection, "origin", None)
+                if origin == "contents":
+                    contents_toolset = self._contents_toolset(selection)
+                    if contents_toolset is not None:
+                        toolsets.append(contents_toolset)
+                    continue
                 if not server_id or origin not in {"config", "catalog"}:
                     continue
 
@@ -704,12 +748,18 @@ class PydanticAIAdapter(BaseAgent):
             # Detailed tracking is handled by LLMContextUsageCapability.
             usage = {}
             if hasattr(result, "usage"):
-                run_usage = result.usage()
-                usage = {
-                    "prompt_tokens": getattr(run_usage, "input_tokens", 0),
-                    "completion_tokens": getattr(run_usage, "output_tokens", 0),
-                    "total_tokens": getattr(run_usage, "total_tokens", 0),
-                }
+                run_usage_candidate = getattr(result, "usage", None)
+                run_usage = (
+                    run_usage_candidate()
+                    if callable(run_usage_candidate)
+                    else run_usage_candidate
+                )
+                if run_usage is not None:
+                    usage = {
+                        "prompt_tokens": getattr(run_usage, "input_tokens", 0),
+                        "completion_tokens": getattr(run_usage, "output_tokens", 0),
+                        "total_tokens": getattr(run_usage, "total_tokens", 0),
+                    }
 
             return AgentResponse(
                 content=content,

@@ -17,12 +17,55 @@ from agent_runtimes.types import FrontendToolSpec
 # Frontend Tool Definitions
 # ============================================================================
 
+JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="jupyter-notebook-edit",
+    version="0.0.1",
+    name="Jupyter Notebook (edit)",
+    description="Read and edit a notebook, and run cells — but never delete from it.",
+    tags=["frontend", "notebook", "edit"],
+    enabled=True,
+    toolset=[
+        "readCell",
+        "readAllCells",
+        "insertCell",
+        "updateCell",
+        "runCell",
+        "executeCode",
+    ],
+    icon="notebook",
+    emoji="📓",
+)
+
+JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="jupyter-notebook-propose",
+    version="0.0.1",
+    name="Jupyter Notebook (propose)",
+    description="Read a notebook and propose changes for a person to accept, never applying them.",
+    tags=["frontend", "notebook", "propose"],
+    enabled=True,
+    toolset=["readCell", "readAllCells", "proposeCellUpdate", "runCell"],
+    icon="notebook",
+    emoji="📓",
+)
+
+JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
+    id="jupyter-notebook-read",
+    version="0.0.1",
+    name="Jupyter Notebook (read only)",
+    description="Read a notebook without changing it — cells, outputs and errors.",
+    tags=["frontend", "notebook", "read"],
+    enabled=True,
+    toolset=["readCell", "readAllCells"],
+    icon="notebook",
+    emoji="📓",
+)
+
 JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
     id="jupyter-notebook",
     version="0.0.1",
     name="Jupyter Notebook",
     description="Frontend tools for interacting with Jupyter notebooks.",
-    tags=["frontend", "notebook", "jupyter"],
+    tags=["frontend", "notebook", "jupyter-server"],
     enabled=True,
     toolset="all",
     icon="notebook",
@@ -46,6 +89,9 @@ LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1 = FrontendToolSpec(
 # ============================================================================
 
 FRONTEND_TOOL_CATALOG: Dict[str, FrontendToolSpec] = {
+    "jupyter-notebook-edit": JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
+    "jupyter-notebook-propose": JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,
+    "jupyter-notebook-read": JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
     "jupyter-notebook": JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
     "lexical-document": LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
 }
