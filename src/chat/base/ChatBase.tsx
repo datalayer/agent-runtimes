@@ -3926,6 +3926,10 @@ function ChatBaseInner({
     setIsLoading(false);
     setIsStreaming(false);
     agentRuntimeStore.getState().requestRefresh(activeAgentId);
+    // The boxes under the delegation cards read the runtime store, not the
+    // tool calls above; without this they keep their dots until the server's
+    // own stop event arrives — if it ever does.
+    agentRuntimeStore.getState().stopSubagentActivity();
     suppressAssistantTextForToolOnlyRef.current = false;
     currentAssistantMessageRef.current = null;
 
@@ -4419,13 +4423,17 @@ function ChatBaseInner({
               which is a chip that sends nonsense rather than one that is
               absent.
             */
-            .map(item =>
-              typeof item === 'string'
-                ? item.trim()
-                : (item?.text ?? '').trim(),
-            )
-            .filter(Boolean)
-            .map(item => ({ title: item, message: item }))
+            .map(item => {
+              if (typeof item === 'string') {
+                const text = item.trim();
+                return { title: text, message: text };
+              }
+              const text = (item?.text ?? '').trim();
+              // The summary is the label when the spec gave one.
+              const summary = (item?.summary ?? '').trim();
+              return { title: summary || text, message: text };
+            })
+            .filter(item => item.message)
         : undefined;
 
   const messagesContent = children ? (

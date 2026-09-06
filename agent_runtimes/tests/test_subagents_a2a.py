@@ -333,6 +333,113 @@ class TestDelegation:
         assert all(event["subagentName"] == "researcher" for event in emitted)
 
 
+class TestStop:
+    @pytest.mark.asyncio
+    async def test_a_stopped_parent_run_says_so_on_the_transcript(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def fake_ensure(
+            name: str, description: str, target: A2ARemoteTarget
+        ) -> A2ARemoteAgent:
+            return A2ARemoteAgent(
+                name=name,
+                url="http://127.0.0.1:8765/api/v1/a2a/agents/a2a-researcher",
+                launch="local",
+            )
+
+        async def fake_relay(
+            remote: A2ARemoteAgent, task: str, *, context_id: str, emit: Any
+        ) -> str:
+            emit("text", text="half an ans")
+            raise asyncio.CancelledError()
+
+        monkeypatch.setattr(capability_module, "ensure_remote_agent", fake_ensure)
+        monkeypatch.setattr(capability_module, "relay_a2a_task", fake_relay)
+        emitted: list[dict[str, Any]] = []
+        from agent_runtimes import streams
+
+        original = streams.enqueue_stream_message
+        streams.enqueue_stream_message = lambda agent_id, message: emitted.append(  # type: ignore[assignment]
+            message.payload
+        )
+        try:
+            cap = SubagentsCapability(
+                subagents=[_remote()],
+                default_model=None,
+                include_general_purpose=False,
+                agent_id="parent",
+            )
+            toolset = cap.get_toolset()
+            assert toolset is not None
+            tool = toolset.tools["delegate_task"]
+            ctx = type("Ctx", (), {"tool_call_id": "call-9", "usage": None})()
+            with pytest.raises(asyncio.CancelledError):
+                await tool.function(ctx, "researcher", "look it up")
+        finally:
+            streams.enqueue_stream_message = original
+
+        last = emitted[-1]
+        assert last["phase"] == "error"
+        assert last["error"] == "Stopped."
+        assert last["transport"] == "a2a"
+        assert last["toolCallId"] == "call-9"
+
+    @pytest.mark.asyncio
+    async def test_a_cancelled_relay_tells_the_remote_to_stop(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import fasta2a.client as a2a_client
+        from agent_runtimes.subagents import a2a as a2a_module
+
+        class FakeClient:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            async def stream_message(self, message: Any):
+                yield {
+                    "jsonrpc": "2.0",
+                    "id": "1",
+                    "result": {
+                        "task": {
+                            "id": "t-42",
+                            "context_id": "c",
+                            "status": {"state": "submitted"},
+                        }
+                    },
+                }
+                raise asyncio.CancelledError()
+
+        cancelled: list[tuple[str, str | None]] = []
+
+        async def fake_cancel(remote: A2ARemoteAgent, task_id: str | None) -> None:
+            cancelled.append((remote.url, task_id))
+
+        monkeypatch.setattr(a2a_client, "A2AClient", FakeClient)
+        monkeypatch.setattr(a2a_module, "cancel_remote_task", fake_cancel)
+        remote = A2ARemoteAgent(
+            name="researcher",
+            url="http://127.0.0.1:8765/api/v1/a2a/agents/a2a-researcher",
+            launch="local",
+        )
+        with pytest.raises(asyncio.CancelledError):
+            await a2a_module.relay_a2a_task(
+                remote, "look", context_id="c", emit=lambda *a, **k: None
+            )
+        assert cancelled == [(remote.url, "t-42")]
+
+    def test_the_terminate_url_is_known_for_our_own_agents_only(self) -> None:
+        ours = A2ARemoteAgent(
+            name="r",
+            url="http://127.0.0.1:8765/api/v1/a2a/agents/a2a-researcher",
+            launch="local",
+        )
+        assert ours.terminate_url == "http://127.0.0.1:8765/api/v1/a2a/terminate"
+        theirs = A2ARemoteAgent(
+            name="r", url="https://agents.example.com/reviewer", launch="remote"
+        )
+        assert theirs.terminate_url is None
+
+
 class TestEnsureAgent:
     class _Response:
         def __init__(self, status: int, payload: Any) -> None:
@@ -591,3 +698,55 @@ class TestWorker:
         ]
         stored = await storage.load_task(task_id)
         assert stored is not None and stored["status"]["state"] == "failed"
+
+    @pytest.mark.asyncio
+    async def test_a_terminated_task_ends_canceled(self) -> None:
+        from agent_runtimes.adapters.base import StreamEvent
+        from agent_runtimes.transports.a2a import A2AWorker, TaskCancellation
+        from fasta2a.broker import InMemoryBroker
+        from fasta2a.storage import InMemoryStorage
+
+        events_registry: dict[str, asyncio.Event] = {}
+        cancellation = TaskCancellation(
+            register=lambda task_id: events_registry.setdefault(
+                task_id, asyncio.Event()
+            ),
+            unregister=lambda task_id: events_registry.pop(task_id, None) and None,
+            cancel=lambda task_id: bool(events_registry[task_id].set()) or True,
+        )
+
+        def stream_events():
+            yield StreamEvent(type="text", data="Star")
+            # Terminated from outside between two chunks.
+            for event in events_registry.values():
+                event.set()
+            yield StreamEvent(type="text", data="t of an answer")
+            yield StreamEvent(type="output", data="never sent")
+
+        agent = self._fake_agent(stream_events, [])
+        storage: InMemoryStorage[Any] = InMemoryStorage()
+        broker = InMemoryBroker()
+        worker = A2AWorker(
+            broker=broker, storage=storage, agent=agent, cancellation=cancellation
+        )
+        message = {
+            "role": "user",
+            "parts": [{"text": "hi"}],
+            "message_id": "m3",
+            "context_id": "c1",
+        }
+        task = await storage.submit_task("c1", message)  # type: ignore[arg-type]
+        params = {"id": task["id"], "context_id": "c1", "message": message}
+        events: list[Any] = []
+        async with broker, worker.run():
+            async with broker.event_bus.subscribe(task["id"]) as receive:
+                await broker.run_task(params)  # type: ignore[arg-type]
+                async for event in receive:
+                    events.append(event)
+
+        final = events[-1]["status_update"]["status"]
+        assert final["state"] == "canceled"
+        assert final["message"]["parts"][0]["text"] == "Stopped."
+        stored = await storage.load_task(task["id"])
+        assert stored is not None and stored["status"]["state"] == "canceled"
+        assert events_registry == {}, "the task was unregistered when it ended"

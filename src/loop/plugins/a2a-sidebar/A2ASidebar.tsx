@@ -17,7 +17,7 @@
  * @module loop/plugins/a2a-sidebar/A2ASidebar
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Heading, Label, Link, Text, Timeline } from '@primer/react';
 import {
   AlertIcon,
@@ -32,18 +32,22 @@ import { useContributions } from '@datalayer/reactor/react';
 import { LoopAgentBlueprint, type LoopWorkspaceContext } from '../../core';
 import { getAgentspecs } from '../../../specs/agents';
 import { SubagentChatPanel } from '../../../chat/messages/ChatMessageList';
+import { A2AAgentDialog } from '../../../chat/tools/A2AAgentDialog';
 import {
   useAgentRuntimeActiveSubagentToolCallId,
   useAgentRuntimeStore,
 } from '../../../stores/agentRuntimeStore';
-import type { AgentStreamSubagentPayload } from '../../../types/stream';
+import {
+  SUBAGENT_STOPPED,
+  type AgentStreamSubagentPayload,
+} from '../../../types/stream';
 import type { SubAgentspecConfig } from '../../../types/agentspecs';
 
 /** Fixed height (px) of the live run box. */
 export const A2A_ACTIVE_PANEL_HEIGHT = 280;
 
 export type A2ARemoteStatus =
-  'idle' | 'launching' | 'working' | 'done' | 'failed';
+  'idle' | 'launching' | 'working' | 'done' | 'stopped' | 'failed';
 
 /** One A2A agent as the sidebar shows it. */
 export interface A2ARemoteAgentView {
@@ -67,7 +71,13 @@ export function remoteStatusOf(
   events: readonly AgentStreamSubagentPayload[] | undefined,
 ): A2ARemoteStatus {
   if (!events || events.length === 0) return 'idle';
-  if (events.some(event => event.phase === 'error')) return 'failed';
+  if (events.some(event => event.phase === 'error')) {
+    return events.some(
+      event => event.phase === 'error' && event.error === SUBAGENT_STOPPED,
+    )
+      ? 'stopped'
+      : 'failed';
+  }
   if (events.some(event => event.phase === 'end')) return 'done';
   let state: string | undefined;
   for (const event of events) {
@@ -119,12 +129,16 @@ export function describeRemoteAgents(
 
 const STATUS_LABEL: Record<
   A2ARemoteStatus,
-  { text: string; variant: 'secondary' | 'accent' | 'success' | 'danger' }
+  {
+    text: string;
+    variant: 'secondary' | 'accent' | 'success' | 'attention' | 'danger';
+  }
 > = {
   idle: { text: 'idle', variant: 'secondary' },
   launching: { text: 'launching', variant: 'accent' },
   working: { text: 'working', variant: 'accent' },
   done: { text: 'done', variant: 'success' },
+  stopped: { text: 'stopped', variant: 'attention' },
   failed: { text: 'failed', variant: 'danger' },
 };
 
@@ -138,6 +152,12 @@ function StatusBadge({
       return (
         <Box sx={{ color: 'success.fg', display: 'flex' }}>
           <CheckCircleIcon />
+        </Box>
+      );
+    case 'stopped':
+      return (
+        <Box sx={{ color: 'attention.fg', display: 'flex' }}>
+          <AlertIcon />
         </Box>
       );
     case 'failed':
@@ -212,6 +232,8 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
     [declared, activity],
   );
   const activeKey = useAgentRuntimeActiveSubagentToolCallId();
+  // The agent whose details are open over the workspace, if any.
+  const [shown, setShown] = useState<A2ARemoteAgentView | null>(null);
   const activeOverA2A =
     activeKey !== null &&
     (activity[activeKey] ?? []).some(event => event.transport === 'a2a');
@@ -319,9 +341,10 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
                       ) : null}
                       {agent.url ? (
                         <Link
-                          href={`${agent.url}/.well-known/agent-card.json`}
-                          target="_blank"
-                          rel="noreferrer"
+                          as="button"
+                          type="button"
+                          data-a2a-card-button={agent.name}
+                          onClick={() => setShown(agent)}
                           sx={{
                             fontSize: 0,
                             fontFamily: 'mono',
@@ -329,8 +352,10 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             display: 'block',
+                            maxWidth: '100%',
+                            textAlign: 'left',
                           }}
-                          title={agent.url}
+                          title={`${agent.url} — open the agent's details`}
                         >
                           {agent.url}
                         </Link>
@@ -353,6 +378,23 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
           </Timeline>
         )}
       </Box>
+
+      {shown ? (
+        <A2AAgentDialog
+          details={{
+            name: shown.name,
+            url: shown.url,
+            launch: shown.launch,
+            state: shown.status,
+            taskId: shown.taskId,
+            runtimeUid: shown.runtimeUid,
+            card: shown.card,
+            ref: shown.ref,
+            description: shown.description,
+          }}
+          onClose={() => setShown(null)}
+        />
+      ) : null}
 
       <Box>
         <SectionHeading>How it works</SectionHeading>

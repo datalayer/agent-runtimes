@@ -753,17 +753,39 @@ export const JUPYTER_TEAM_SPEC_0_0_1: TeamSpec = {
   },
   routingInstructions: `Send anything about exploring, computing, plotting or extending the analysis — "analyze", "plot", "compute", "add a cell that…" — to the Jupyter Analyst. Send anything about checking, verifying, doubting or re-running — "find what is wrong", "check this", "is this right", "re-run" — to Jupyter Reviewer. Send anything about explaining, summarising, writing up or verifying the wording of a conclusion to Jupyter Writer. Send anything about slides, a deck or a presentation — "make a deck of this", "turn the findings into slides", "present this", "add a slide" — to Jupyter Decks, which builds the deck from what the cells show and opens it beside the conversation. Send anything about understanding or learning — "what does this do", "why did this fail", "teach me", a request for an exercise — to Jupyter Tutor. Send anything about the shape of the notebook — shortening it, merging cells, removing dead code or stale outputs — to Jupyter Compactor. When a request is two of these, the one that produces cells goes first and the one that reads them follows: the Analyst before the Writer or Decks ("analyze this and write it up", "analyze this and make a deck"), the Tutor before the Compactor ("clean this up and explain what you did"). Never let the Compactor rewrite a notebook the person is still learning from without saying what changed. When none fits, answer directly rather than forcing the request onto a specialist.`,
   suggestions: [
-    { text: 'Analyze the dataset', icon: 'graph', emoji: '🔎' },
-    { text: 'Find what is wrong', icon: 'checklist', emoji: '🧐' },
-    { text: 'Verify the conclusion', icon: 'pencil', emoji: '✍️' },
-    { text: 'Turn the findings into a deck', icon: 'project', emoji: '📊' },
+    {
+      text: 'Analyze the dataset',
+      summary: 'Analyze the dataset',
+      icon: 'graph',
+      emoji: '🔎',
+    },
+    {
+      text: 'Find what is wrong',
+      summary: 'Find what is wrong',
+      icon: 'checklist',
+      emoji: '🧐',
+    },
+    {
+      text: 'Verify the conclusion',
+      summary: 'Verify the conclusion',
+      icon: 'pencil',
+      emoji: '✍️',
+    },
+    {
+      text: 'Turn the findings into a deck',
+      summary: 'Findings into a deck',
+      icon: 'project',
+      emoji: '📊',
+    },
     {
       text: 'Explain this notebook cell by cell, as if I am new to Python',
+      summary: 'Cell by cell, for beginners',
       icon: 'book',
       emoji: '📖',
     },
     {
       text: 'Shorten this notebook without changing what it computes',
+      summary: 'Shorten the notebook',
       icon: 'fold',
       emoji: '✂️',
     },

@@ -88,9 +88,12 @@ emoji: "{emoji}"
 color: "#1F6FEB"
 
 suggestions:
-  - "Use execute_code to print('sandbox variant: {variant}')"
-  - "Use execute_code to compute sum(i*i for i in range(20))"
-  - "Use execute_code to load pandas and build a small DataFrame"
+  - text: "Use execute_code to print('sandbox variant: {variant}')"
+    summary: Print the variant
+  - text: "Use execute_code to compute sum(i*i for i in range(20))"
+    summary: Sum of squares
+  - text: "Use execute_code to load pandas and build a small DataFrame"
+    summary: Small DataFrame
 
 welcome_message: >-
   You're connected to the {variant} sandbox variant demo. Ask me to run

@@ -195,8 +195,9 @@ describe('A2ASidebar', () => {
     const row = container.querySelector('[data-a2a-agent="researcher"]');
     expect(row?.textContent).toContain('working');
     expect(row?.textContent).toContain('local');
+    // The URL opens the agent's details over the workspace, not a tab.
     expect(
-      row?.querySelector('a[href$="/.well-known/agent-card.json"]'),
+      row?.querySelector('button[data-a2a-card-button="researcher"]'),
     ).not.toBeNull();
 
     append(researcher({ phase: 'end', output: 'Notes.' }));

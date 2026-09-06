@@ -37,6 +37,8 @@ import { TurnFooter } from './TurnFooter';
 import { normalizeAssistantMarkdown } from './assistantMarkdown';
 
 import { isToolCallMessage, getMessageText } from '../../utils';
+import { A2AAgentDialog, a2aAgentDetails } from '../tools/A2AAgentDialog';
+import { SUBAGENT_STOPPED } from '../../types/stream';
 import {
   useAgentRuntimeStore,
   useAgentRuntimeSubagentActivity,
@@ -303,25 +305,24 @@ export function SubagentChatPanel({
     () => events.some(e => e.phase === 'error'),
     [events],
   );
+  // A stop is an error the person asked for: shown as stopped, not failed.
+  const isStopped = useMemo(
+    () => events.some(e => e.phase === 'error' && e.error === SUBAGENT_STOPPED),
+    [events],
+  );
   /*
    * A run over A2A is a separate agent's: the box says so, names where it
    * runs, links its card, and while the agent is still being launched says
    * that rather than "working".
    */
-  const remote = useMemo(() => {
-    let transport: AgentStreamSubagentPayload['transport'];
-    let url: string | undefined;
-    let launch: string | undefined;
-    let state: string | undefined;
-    for (const event of events) {
-      if (event.transport) transport = event.transport;
-      if (event.url) url = event.url;
-      if (event.launch && event.launch !== 'auto') launch = event.launch;
-      if (event.phase === 'status' && event.state) state = event.state;
-    }
-    return { transport, url, launch, state };
-  }, [events]);
-  const overA2A = remote.transport === 'a2a';
+  const remote = useMemo(
+    () => a2aAgentDetails(events, subagentNameHint),
+    [events, subagentNameHint],
+  );
+  const overA2A = remote !== null;
+  // "card" in the header opens the agent's details over the chat rather than
+  // a tab: the run's facts, the card fetched live, and the link out.
+  const [cardOpen, setCardOpen] = useState(false);
 
   // Forward inline tool-approval decisions to the shared monitoring socket.
   const handleRespond = useCallback(
@@ -356,18 +357,26 @@ export function SubagentChatPanel({
    * say so, so the box reads as a subagent's at a glance rather than as one
    * more grey card among the tool cards.
    */
-  const tone = hasError ? 'danger' : isDone ? 'success' : 'accent';
+  const tone = hasError
+    ? isStopped
+      ? 'attention'
+      : 'danger'
+    : isDone
+      ? 'success'
+      : 'accent';
   const progress = hasError
-    ? 'failed'
+    ? isStopped
+      ? 'stopped'
+      : 'failed'
     : isDone
       ? 'done'
-      : overA2A && remote.state === 'launching'
+      : overA2A && remote?.state === 'launching'
         ? 'launching\u2026'
         : 'working\u2026';
   return (
     <Box
       data-subagent-panel={subagentName}
-      data-subagent-transport={remote.transport ?? 'in-process'}
+      data-subagent-transport={overA2A ? 'a2a' : 'in-process'}
       sx={{
         mt: 2,
         display: 'flex',
@@ -403,16 +412,17 @@ export function SubagentChatPanel({
         <Text sx={{ fontSize: 0, fontWeight: 'bold', color: `${tone}.fg` }}>
           {subagentName}
         </Text>
-        {overA2A && remote.launch ? (
+        {remote?.launch ? (
           <Text sx={{ fontSize: 0, color: `${tone}.fg`, opacity: 0.8 }}>
             {remote.launch}
           </Text>
         ) : null}
-        {overA2A && remote.url ? (
+        {remote ? (
           <Link
-            href={`${remote.url}/.well-known/agent-card.json`}
-            target="_blank"
-            rel="noreferrer"
+            as="button"
+            type="button"
+            data-a2a-card-button
+            onClick={() => setCardOpen(true)}
             sx={{ fontSize: 0, ml: 1 }}
           >
             card
@@ -422,6 +432,10 @@ export function SubagentChatPanel({
           {progress}
         </Text>
       </Box>
+
+      {cardOpen && remote ? (
+        <A2AAgentDialog details={remote} onClose={() => setCardOpen(false)} />
+      ) : null}
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         <ChatMessageList

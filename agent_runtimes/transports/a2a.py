@@ -8,10 +8,11 @@ Implements the A2A protocol for agent-to-agent communication.
 Supports identity context for OAuth token propagation across agent boundaries.
 """
 
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
 
 from ..context.identities import IdentityContextManager
 from .base import BaseTransport
@@ -253,6 +254,23 @@ except ImportError:  # pragma: no cover - fasta2a is optional
 A2AContext = list[dict[str, Any]]
 """What the worker keeps per A2A context: the messages exchanged so far."""
 
+STOPPED = "Stopped."
+
+
+@dataclass(frozen=True)
+class TaskCancellation:
+    """How a running task can be told to stop from outside the worker.
+
+    fasta2a's worker takes operations one at a time, so a ``tasks/cancel``
+    queued behind a running task is only seen once that task is over. The
+    server's terminate endpoint sets an event instead; the worker registers
+    each task's event here and checks it as it streams.
+    """
+
+    register: Callable[[str], asyncio.Event]
+    unregister: Callable[[str], None]
+    cancel: Callable[[str], bool]
+
 
 def a2a_message_text(message: Any) -> str:
     """The text of an A2A message: its text parts joined, data parts as JSON."""
@@ -335,6 +353,7 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
     """
 
     agent: "BaseAgent" = None  # type: ignore[assignment]
+    cancellation: TaskCancellation | None = None
 
     async def run_task(self, params: "TaskSendParams") -> None:
         task = await self.storage.load_task(params["id"])
@@ -365,6 +384,20 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
     async def _run(
         self, task_id: str, context_id: str, params: "TaskSendParams"
     ) -> None:
+        cancel = self.cancellation.register(task_id) if self.cancellation else None
+        try:
+            await self._stream_run(task_id, context_id, params, cancel)
+        finally:
+            if self.cancellation:
+                self.cancellation.unregister(task_id)
+
+    async def _stream_run(
+        self,
+        task_id: str,
+        context_id: str,
+        params: "TaskSendParams",
+        cancel: "asyncio.Event | None",
+    ) -> None:
         await self.storage.update_task(task_id, state="working")
         await self.publish_status(task_id, context_id, "working")
 
@@ -389,7 +422,13 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         artifact_id = str(uuid.uuid4())
         text = ""
         final_output: str | None = None
+        canceled = False
         async for event in self.agent.stream(prompt, context):
+            if cancel is not None and cancel.is_set():
+                # Leaving the loop closes the adapter's stream, which stops the
+                # run underneath it.
+                canceled = True
+                break
             if event.type == "text":
                 delta = str(event.data or "")
                 if not delta:
@@ -429,6 +468,18 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             elif event.type == "error":
                 raise RuntimeError(str(event.data))
 
+        if canceled:
+            logger.info("A2A task %s for agent %s stopped", task_id, self.agent.name)
+            await self.storage.update_task(task_id, state="canceled")
+            await self.publish_status(
+                task_id,
+                context_id,
+                "canceled",
+                _agent_message(context_id, Part(text=STOPPED)),
+            )
+            await self.broker.event_bus.close(task_id)
+            return
+
         output = text or final_output or ""
         reply = _agent_message(context_id, Part(text=output))
         await self.storage.update_context(context_id, [*history, incoming, reply])
@@ -448,6 +499,8 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
 
     async def cancel_task(self, params: "TaskIdParams") -> None:
         logger.info("A2A cancel requested for task %s", params.get("id"))
+        if self.cancellation:
+            self.cancellation.cancel(params["id"])
 
     def build_message_history(self, history: list[Any]) -> list[dict[str, Any]]:
         return [

@@ -111,7 +111,8 @@ export function ChatEmptyState({
         <Label
           key={index}
           variant="accent"
-          title={suggestion.title}
+          // The whole request: the chip may show only its summary.
+          title={suggestion.message}
           sx={{
             cursor: 'pointer',
             display: 'inline-flex',
@@ -125,7 +126,7 @@ export function ChatEmptyState({
           onClick={() => handleSuggestionClick(suggestion)}
         >
           <Truncate
-            title={suggestion.title}
+            title={suggestion.message}
             maxWidth={SUGGESTION_CHIP_MAX_WIDTH}
           >
             {suggestion.title}

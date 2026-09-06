@@ -275,7 +275,9 @@ const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
             serverUrl={agentBaseUrl}
             target="local"
             agentId={agentId}
-            defaultEditor="none"
+            // The chat alone: delegation is the point here, and a notebook
+            // or a document beside it would only invite the wrong request.
+            editors={false}
             showHeader
             plugins={LOOP_PLUGINS_AGENTSUB}
           />

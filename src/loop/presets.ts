@@ -127,6 +127,16 @@ export type LoopPresetOptions = {
    */
   floatingPrompt?: boolean;
   /**
+   * Whether the notebook and document editors are mounted beside the chat.
+   *
+   * True by default. A host that wants the chat alone passes `false`: the
+   * two editor plugins, their toolbars and the surface strip all stay out,
+   * and the chat opens on no surface — rather than mounting editors and
+   * hiding the way to them, which leaves a workspace that still speaks of
+   * cells and documents.
+   */
+  editors?: boolean;
+  /**
    * The editor choice in the workspace header rather than above the chat.
    *
    * Mounts `EditorsPlugin` and switches the chat's own surface strip off —
@@ -182,6 +192,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     localAgentSpec,
     floatingPrompt = false,
     editorSelector = false,
+    editors = true,
     graph = false,
     commandPalette = false,
     pluginsPanel = false,
@@ -192,10 +203,11 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // The chat owns the editor beside it, so which one opens is its
     // configuration rather than the workspace's.
     configurePlugin(ChatPlugin, {
-      defaultSurface: defaultEditor,
+      defaultSurface: editors ? defaultEditor : 'none',
       // The chat's strip stands down when the header selector offers the
-      // same choice; see `editorSelector`.
-      showSurfaceSelector: showViewSelector && !editorSelector,
+      // same choice; see `editorSelector` — and when there is no editor
+      // to choose.
+      showSurfaceSelector: editors && showViewSelector && !editorSelector,
       hideHeader: hideChatHeader,
       promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
     }),
@@ -210,8 +222,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // contributed, so mounting these unconditionally costs an absent editor
     // nothing.
     ChatViewPlugin,
-    NotebookViewPlugin,
-    DocumentViewPlugin,
+    ...(editors ? [NotebookViewPlugin, DocumentViewPlugin] : []),
     configurePlugin(AgentsPlugin, {
       serverUrl,
       target,
@@ -234,8 +245,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     }),
     // Two extensions rather than four plugins: each delivers an editor and the
     // toolbar that reports on it. Every member is still switched individually.
-    NotebookExtension,
-    DocumentExtension,
+    ...(editors ? [NotebookExtension, DocumentExtension] : []),
     A2uiPlugin,
     AgentspecsPlugin,
     ModelsPlugin,
@@ -253,8 +263,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // happens to be on is a workspace with a trap in it. The selector itself
     // stays behind the old switch.
     configurePlugin(ShellPlugin, {
-      defaultEditor,
-      showSelector: editorSelector,
+      defaultEditor: editors ? defaultEditor : 'none',
+      showSelector: editors && editorSelector,
     }),
     ...(floatingPrompt ? [PromptPlugin] : []),
     ...(pageLayout

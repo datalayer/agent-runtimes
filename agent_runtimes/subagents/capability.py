@@ -20,6 +20,7 @@ Datalayer runtime — and the events say so with ``transport: "a2a"``.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -41,6 +42,9 @@ if TYPE_CHECKING:
     from pydantic_ai.models import Model
 
 logger = logging.getLogger(__name__)
+
+STOPPED = "Stopped."
+"""What a delegation says when the parent run was stopped under it."""
 
 _GENERAL_PURPOSE_INSTRUCTIONS = (
     "You are a capable general-purpose assistant. Complete the delegated task "
@@ -329,6 +333,18 @@ class SubagentsCapability(AbstractCapability[Any]):
                     output = await self._run_subagent_streaming(
                         agent, subagent_name, tool_call_id, task, ctx.usage
                     )
+            except asyncio.CancelledError:
+                # The parent run was stopped. Say so on the transcript, or the
+                # box under the tool card keeps its dots for good; then let
+                # the cancellation go where it was going.
+                self._emit_subagent_event(
+                    subagent_name,
+                    tool_call_id,
+                    "error",
+                    error=STOPPED,
+                    **self._transport_payload(subagent_name),
+                )
+                raise
             except Exception as exc:  # noqa: BLE001 - surface to the model
                 logger.exception("Subagent %r failed", subagent_name)
                 self._emit_subagent_event(
@@ -609,7 +625,9 @@ def build_subagents_capability(
                     ref,
                 )
                 continue
-            instructions = instructions or getattr(referenced, "system_prompt", "") or ""
+            instructions = (
+                instructions or getattr(referenced, "system_prompt", "") or ""
+            )
             model = model or getattr(referenced, "model", None)
 
         if not instructions:

@@ -71,6 +71,25 @@ describe('ChatEmptyState', () => {
     );
   });
 
+  it('shows the summary on the chip and the whole request in its tooltip', () => {
+    const { container } = render(
+      <ChatEmptyState
+        description="d"
+        suggestions={[
+          { title: 'Plot revenue', message: 'Plot revenue by region' },
+        ]}
+        onSuggestionSubmit={vi.fn()}
+      />,
+    );
+    // Hovering the chip says what will actually be sent; the chip itself
+    // shows the summary. Scoped to this render: the file's earlier renders
+    // are still in the document.
+    const chip = container.querySelector('[title="Plot revenue by region"]');
+    expect(chip).not.toBeNull();
+    expect(chip?.textContent).toContain('Plot revenue');
+    expect(chip?.textContent).not.toContain('by region');
+  });
+
   it('draws no heading when nothing is grouped', () => {
     const { container } = render(
       <ChatEmptyState description="d" suggestions={openers.slice(0, 2)} />,

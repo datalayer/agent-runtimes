@@ -44,7 +44,10 @@ import {
   type ToolSet,
 } from 'ai';
 
-import type { AgentStreamSubagentPayload } from '../../types/stream';
+import {
+  SUBAGENT_STOPPED,
+  type AgentStreamSubagentPayload,
+} from '../../types/stream';
 import type { TeamContextSharing } from '../../types/teams';
 import { createBrowserModel, type BrowserModelOptions } from './model';
 
@@ -272,7 +275,7 @@ export function subagentTools(options: SubagentToolsOptions): ToolSet {
 }
 
 /** What a delegation says when the person stopped it. */
-export const STOPPED = 'Stopped.';
+export const STOPPED = SUBAGENT_STOPPED;
 
 /** One signal for several, or the one there is. */
 function anySignal(

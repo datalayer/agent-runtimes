@@ -771,13 +771,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * The same openers in the shape the chat's empty state asks for.
    *
    * `Suggestion` is a title and a message — what a chip shows and what it
-   * sends. A spec's openers offer the whole request as the label, so the two
-   * are the same sentence; a contributed opener may split them.
+   * sends. A spec's opener with a `summary` shows that and sends its text;
+   * one without shows the whole request; a contributed opener may split the
+   * two its own way.
    */
   const chatSuggestions = useMemo(
     () =>
       suggestions.map(item => ({
-        title: item.text,
+        title: item.summary ?? item.text,
         message: (item as { message?: string }).message ?? item.text,
         group: item.group,
       })),
@@ -1846,6 +1847,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             key={item.title}
             as="button"
             type="button"
+            // The whole request, where the chip shows only its summary.
+            title={item.message}
             disabled={busy || chatDisabled}
             onClick={() => void handleSend(item.message)}
             sx={{

@@ -46,6 +46,12 @@ export interface AgentStreamCompactionPayload {
 }
 
 /**
+ * What a delegation's `error` says when the run was stopped rather than
+ * failed — by the person, from either side of the wire.
+ */
+export const SUBAGENT_STOPPED = 'Stopped.';
+
+/**
  * Phase of a streamed subagent interaction.
  *
  * `status` is the remote side of a delegation talking: an agent reached over

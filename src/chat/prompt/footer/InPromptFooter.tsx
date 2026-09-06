@@ -83,6 +83,9 @@ export function InPromptFooter({
             <IconButton
               icon={SquareCircleIcon}
               aria-label="Stop"
+              // A stable hook for tests and probes: the tooltip turns the
+              // label above into `aria-labelledby`.
+              data-prompt-action="stop"
               onClick={onStop}
               size="small"
               variant="invisible"

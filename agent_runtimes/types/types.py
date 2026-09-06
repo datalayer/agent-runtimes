@@ -198,7 +198,6 @@ class FrontendToolSpec(BaseModel):
     )
 
 
-
 class FrontendRenderToolSpec(BaseModel):
     """
     Specification binding a backend tool to a frontend renderer.
@@ -936,6 +935,13 @@ class AgentSuggestion(BaseModel):
         ...,
         description="What is sent when the suggestion is taken",
     )
+    summary: Optional[str] = Field(
+        default=None,
+        description=(
+            "A few words shown as the label where the text is too long for "
+            "one — a chip, a menu row; the text itself is then the tooltip"
+        ),
+    )
     icon: Optional[str] = Field(
         default=None,
         description="Octicon name to show beside it",
@@ -1506,7 +1512,9 @@ class TeamDelegationSpec(BaseModel):
     """How far members may hand work to each other, and to subagents."""
 
     max_depth: int = Field(
-        default=2, description="Levels of delegation allowed; 0 forbids it", alias="maxDepth"
+        default=2,
+        description="Levels of delegation allowed; 0 forbids it",
+        alias="maxDepth",
     )
     allow_peer_delegation: bool = Field(
         default=False,
@@ -1691,6 +1699,10 @@ class TeamSuggestionSpec(BaseModel):
     """
 
     text: str = Field(..., description="What is sent when the suggestion is taken")
+    summary: Optional[str] = Field(
+        default=None,
+        description="A few words shown as the label; the text is then the tooltip",
+    )
     icon: Optional[str] = Field(
         default=None, description="Octicon name to show beside it"
     )

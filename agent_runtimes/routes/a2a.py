@@ -187,7 +187,7 @@ def register_a2a_agent(
 
     agent_id = card.id
 
-    from ..transports.a2a import A2AWorker
+    from ..transports.a2a import A2AWorker, TaskCancellation
 
     try:
         # Convert skills to fasta2a Skill format if provided
@@ -212,7 +212,15 @@ def register_a2a_agent(
 
         a2a_broker = broker or InMemoryBroker()
         a2a_storage = storage or InMemoryStorage()
-        worker = A2AWorker(broker=a2a_broker, storage=a2a_storage, agent=agent)
+        worker = A2AWorker(
+            broker=a2a_broker,
+            storage=a2a_storage,
+            agent=agent,
+            # So `/a2a/terminate` interrupts a running task, not the next one.
+            cancellation=TaskCancellation(
+                register=register_task, unregister=unregister_task, cancel=cancel_task
+            ),
+        )
 
         @asynccontextmanager
         async def lifespan(app: Any) -> AsyncIterator[None]:

@@ -37,6 +37,11 @@ import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
 export interface AgentSuggestion {
   /** What is sent when the suggestion is taken. */
   text: string;
+  /**
+   * A few words shown as the label where the text is too long to be one — a
+   * chip, a menu row. The text itself is then the tooltip.
+   */
+  summary?: string;
   /** Octicon name to show beside it. */
   icon?: string;
   /** Unicode emoji to show beside it. */

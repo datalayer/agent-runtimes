@@ -59,6 +59,8 @@ def _suggestion_fields(item: Any) -> dict[str, Any]:
         return {"text": item}
     return {
         "text": item.get("text", ""),
+        # The label, when the text is too long to be one.
+        "summary": item.get("summary"),
         "icon": item.get("icon"),
         "emoji": item.get("emoji"),
     }
@@ -72,7 +74,7 @@ def _fmt_py_suggestions(items: list[Any]) -> str:
     for item in items:
         fields = _suggestion_fields(item)
         parts = [f"text={_fmt_py_literal(fields['text'])}"]
-        for key in ("icon", "emoji"):
+        for key in ("summary", "icon", "emoji"):
             if fields.get(key):
                 parts.append(f"{key}={_fmt_py_literal(fields[key])}")
         rendered.append(f"AgentSuggestion({', '.join(parts)})")
@@ -87,7 +89,7 @@ def _fmt_ts_suggestions(items: list[Any]) -> str:
     for item in items:
         fields = _suggestion_fields(item)
         parts = [f"text: {_fmt_ts_literal(fields['text'])}"]
-        for key in ("icon", "emoji"):
+        for key in ("summary", "icon", "emoji"):
             if fields.get(key):
                 parts.append(f"{key}: {_fmt_ts_literal(fields[key])}")
         rendered.append("{ " + ", ".join(parts) + " }")
@@ -451,6 +453,7 @@ from agent_runtimes.types import (
                             sa_fields.append(f"{opt_key}={_fmt_py_literal(opt_val)}")
                     sa_items.append("SubAgentspecConfig(" + ", ".join(sa_fields) + ")")
                 sa_list_str = "[" + ", ".join(sa_items) + "]"
+
                 # The specs are written in camelCase (`includeGeneralPurpose`),
                 # matching the TypeScript aliases, but only snake_case was read
                 # here — so `maxNestingDepth: 2` in a YAML silently generated

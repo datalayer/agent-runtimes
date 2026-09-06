@@ -718,7 +718,7 @@ export function AgentNode() {
     name?: string;
     description?: string;
     welcomeMessage?: string;
-    suggestions?: string[];
+    suggestions?: { text: string; summary?: string }[];
   } | null>(null);
   useEffect(() => {
     const agentId = String(selectedAgentId || '').trim();
@@ -766,14 +766,21 @@ export function AgentNode() {
            */
           suggestions: Array.isArray(spec.suggestions)
             ? (spec.suggestions as unknown[])
-                .map(item =>
-                  typeof item === 'string'
-                    ? item
-                    : ((item as { text?: unknown })?.text ?? ''),
-                )
-                .filter(
-                  (text): text is string => typeof text === 'string' && !!text,
-                )
+                .map(item => {
+                  if (typeof item === 'string') {
+                    return { text: item };
+                  }
+                  const entry = item as { text?: unknown; summary?: unknown };
+                  return {
+                    text: typeof entry?.text === 'string' ? entry.text : '',
+                    // The label, when the spec gave one shorter than the text.
+                    summary:
+                      typeof entry?.summary === 'string'
+                        ? entry.summary
+                        : undefined,
+                  };
+                })
+                .filter(entry => !!entry.text)
             : undefined,
         });
       } catch {
@@ -794,7 +801,10 @@ export function AgentNode() {
     'Node-local chat';
   const chatSuggestions: Suggestion[] | undefined =
     agentSpecInfo?.suggestions && agentSpecInfo.suggestions.length > 0
-      ? agentSpecInfo.suggestions.map(s => ({ title: s, message: s }))
+      ? agentSpecInfo.suggestions.map(s => ({
+          title: s.summary ?? s.text,
+          message: s.text,
+        }))
       : undefined;
 
   type BannerKind = 'success' | 'info' | 'warning' | 'error';

@@ -172,7 +172,11 @@ describe('a host that asked for no view chooser', () => {
     // the example to get its plugins: the chat's selector is configured where
     // the plugin list is built, and the shell's is still a prop of the example.
     const preset = readFileSync(join(__dirname, '..', 'presets.ts'), 'utf8');
-    expect(preset).toContain('showSurfaceSelector: showViewSelector');
+    // `editors && …`: with no editor beside the chat there is nothing to
+    // choose, so the strip stays down whatever the host said.
+    expect(preset).toContain(
+      'showSurfaceSelector: editors && showViewSelector',
+    );
 
     const example = readFileSync(
       join(__dirname, '..', '..', 'examples', 'LoopWorkspaceExample.tsx'),

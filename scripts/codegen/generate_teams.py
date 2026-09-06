@@ -32,6 +32,8 @@ def _suggestion_fields(item: Any) -> Dict[str, Any]:
         return {"text": item}
     return {
         "text": item.get("text", ""),
+        # The label, when the text is too long to be one.
+        "summary": item.get("summary"),
         "icon": item.get("icon"),
         "emoji": item.get("emoji"),
     }
@@ -154,7 +156,9 @@ def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
         rendered = ",\n                ".join(
             _generate_team_subagent_py(sub) for sub in subagents
         )
-        lines.append(f"            subagents=[\n                {rendered},\n            ],")
+        lines.append(
+            f"            subagents=[\n                {rendered},\n            ],"
+        )
     else:
         lines.append("            subagents=[],")
     lines.append(f'            model="{agent.get("model", "")}",')
@@ -315,7 +319,7 @@ from agent_runtimes.types import (
                     f'model="{sup_model}", goal="{sup_goal}", '
                     f'instructions="{sup_instructions}", '
                     f'approval="{supervisor.get("approval", "auto")}", '
-                    f'can_terminate={bool(supervisor.get("can_terminate", True))})'
+                    f"can_terminate={bool(supervisor.get('can_terminate', True))})"
                 )
             else:
                 supervisor_code = "None"
@@ -581,7 +585,10 @@ import type {{ TeamSpec }} from '{types_import_path}';
                 sup_model = supervisor.get("model", "")
                 sup_ref = supervisor.get("ref", "")
                 sup_goal = (
-                    supervisor.get("goal", "").replace("`", "\\`").replace("\n", " ").strip()
+                    supervisor.get("goal", "")
+                    .replace("`", "\\`")
+                    .replace("\n", " ")
+                    .strip()
                 )
                 sup_instructions = (
                     supervisor.get("instructions", "")
@@ -732,11 +739,7 @@ import type {{ TeamSpec }} from '{types_import_path}';
                 " },\n"
             )
             context = spec.get("context") or {}
-            code += (
-                "  context: { "
-                f"sharing: '{context.get('sharing', 'shared')}'"
-                " },\n"
-            )
+            code += f"  context: {{ sharing: '{context.get('sharing', 'shared')}' }},\n"
             code += f"  validation: {validation_ts},\n"
             code += f"  agents: {agents_ts},\n"
             if rr_ts is not None:

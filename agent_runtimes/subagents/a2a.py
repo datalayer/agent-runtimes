@@ -76,6 +76,18 @@ class A2ARemoteAgent:
     runtime_uid: str | None = None
     token: str | None = field(default=None, repr=False)
 
+    @property
+    def terminate_url(self) -> str | None:
+        """agent-runtimes' out-of-band stop for a task, when the agent is one of ours.
+
+        A2A's own ``tasks/cancel`` reaches a worker only between tasks; this
+        endpoint interrupts the running one.
+        """
+        marker = "/api/v1/a2a/agents/"
+        if marker not in self.url:
+            return None
+        return f"{self.url.split(marker, 1)[0]}/api/v1/a2a/terminate"
+
     def describe(self) -> dict[str, Any]:
         """What the transcript is told about this agent."""
         payload: dict[str, Any] = {
@@ -344,7 +356,9 @@ def _relay_message(message: dict[str, Any], emit: EmitFn) -> None:
             )
 
 
-async def relay_stream(responses: AsyncIterator[Any], emit: EmitFn) -> RelayOutcome:
+async def relay_stream(
+    responses: AsyncIterator[Any], emit: EmitFn, outcome: RelayOutcome | None = None
+) -> RelayOutcome:
     """Republish an A2A ``message/stream`` as subagent phases; return what it amounted to.
 
     Text parts and appended artifact chunks become ``text``; a data part
@@ -353,7 +367,9 @@ async def relay_stream(responses: AsyncIterator[Any], emit: EmitFn) -> RelayOutc
     task; a whole artifact (``append`` false) is kept as the final answer
     rather than repeated as text. Stops at a terminal state.
     """
-    outcome = RelayOutcome()
+    # The caller may hand the outcome in, to keep what was learnt — the task
+    # id above all — if the relay is cancelled midway.
+    outcome = outcome if outcome is not None else RelayOutcome()
     async for response in responses:
         error = response.get("error") if isinstance(response, dict) else None
         if error:
@@ -432,7 +448,14 @@ async def relay_a2a_task(
             message_id=str(uuid.uuid4()),
             context_id=context_id,
         )
-        outcome = await relay_stream(client.stream_message(message), emit)
+        outcome = RelayOutcome()
+        try:
+            await relay_stream(client.stream_message(message), emit, outcome)
+        except asyncio.CancelledError:
+            # Stopped from the parent's side: tell the remote agent, so it does
+            # not go on spending on an answer nobody will read.
+            await cancel_remote_task(remote, outcome.task_id)
+            raise
 
         if outcome.state in {"failed", "canceled", "rejected"}:
             reason = f": {outcome.detail}" if outcome.detail else ""
@@ -452,3 +475,40 @@ async def relay_a2a_task(
                     )
                 )
         return output
+
+
+async def cancel_remote_task(remote: A2ARemoteAgent, task_id: str | None) -> None:
+    """Ask the remote agent to stop a task; best effort, bounded, never raises.
+
+    Both ways it can be asked: agent-runtimes' terminate endpoint, which
+    interrupts a running task, and A2A's ``tasks/cancel``, which any A2A
+    server understands.
+    """
+    if not task_id:
+        return
+    import httpx
+
+    headers = {"Authorization": f"Bearer {remote.token}"} if remote.token else {}
+    try:
+        async with httpx.AsyncClient(headers=headers, timeout=5.0) as http:
+            if remote.terminate_url:
+                try:
+                    await http.post(remote.terminate_url, json={"task_id": task_id})
+                except Exception:  # noqa: BLE001 - best effort
+                    logger.debug("terminate failed for %s", task_id, exc_info=True)
+            try:
+                await http.post(
+                    remote.url.rstrip("/") + "/",
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": str(uuid.uuid4()),
+                        "method": "tasks/cancel",
+                        "params": {"id": task_id},
+                    },
+                )
+            except Exception:  # noqa: BLE001 - best effort
+                logger.debug("tasks/cancel failed for %s", task_id, exc_info=True)
+    except Exception:  # noqa: BLE001 - best effort
+        logger.debug(
+            "Could not reach %s to cancel %s", remote.url, task_id, exc_info=True
+        )

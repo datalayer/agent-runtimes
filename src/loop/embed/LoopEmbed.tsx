@@ -108,6 +108,7 @@ export function LoopEmbed({
       preset.localAgentSpec,
       preset.floatingPrompt,
       preset.editorSelector,
+      preset.editors,
       preset.graph,
       preset.commandPalette,
       preset.pluginsPanel,

@@ -44,6 +44,7 @@ import type {
   AgentStreamToolApprovalPayload,
   CodemodeStatusData,
 } from '../types/stream';
+import { SUBAGENT_STOPPED } from '../types/stream';
 import type { ContextSnapshotData } from '../types/context';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 import type { LoadedSkillInfo } from '../types/skills';
@@ -216,6 +217,8 @@ export interface AgentRuntimeStoreActions {
   applySnapshot: (payload: AgentStreamSnapshotPayload) => void;
   appendSubagentEvent: (event: AgentStreamSubagentPayload) => void;
   clearSubagentActivity: () => void;
+  /** Mark every delegation still running as stopped, as the person just did. */
+  stopSubagentActivity: () => void;
   setCompaction: (payload: AgentStreamCompactionPayload | null) => void;
   upsertApproval: (approval: AgentStreamToolApprovalPayload) => void;
   removeApproval: (approvalId: string) => void;
@@ -792,6 +795,17 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           set(state => {
             const key = event.toolCallId ?? event.subagentName;
             const existing = state.subagentActivity[key] ?? [];
+            // A run the person stopped is over. The server's last words —
+            // a delta in flight, its own "Stopped." — arrive a moment later
+            // and would read as a second ending under the first.
+            if (
+              existing.some(
+                entry =>
+                  entry.phase === 'error' && entry.error === SUBAGENT_STOPPED,
+              )
+            ) {
+              return {};
+            }
             return {
               subagentActivity: {
                 ...state.subagentActivity,
@@ -801,6 +815,35 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
           }),
 
         clearSubagentActivity: () => set({ subagentActivity: {} }),
+
+        stopSubagentActivity: () =>
+          set(state => {
+            let changed = false;
+            const next: typeof state.subagentActivity = {};
+            for (const [key, events] of Object.entries(
+              state.subagentActivity,
+            )) {
+              const over = events.some(
+                event => event.phase === 'end' || event.phase === 'error',
+              );
+              if (over || events.length === 0) {
+                next[key] = events;
+                continue;
+              }
+              changed = true;
+              next[key] = [
+                ...events,
+                {
+                  subagentName: events[0].subagentName,
+                  toolCallId: events[0].toolCallId ?? key,
+                  phase: 'error',
+                  error: SUBAGENT_STOPPED,
+                  transport: events[0].transport,
+                },
+              ];
+            }
+            return changed ? { subagentActivity: next } : {};
+          }),
 
         setCompaction: payload => set({ compaction: payload }),
 
