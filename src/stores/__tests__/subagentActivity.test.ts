@@ -8,7 +8,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { agentRuntimeStore } from '../agentRuntimeStore';
+import { agentRuntimeStore, runningSubagentNames } from '../agentRuntimeStore';
 import { SUBAGENT_STOPPED } from '../../types/stream';
 
 describe('subagent activity across resets', () => {
@@ -121,5 +121,67 @@ describe('subagent activity across resets', () => {
 
     const events = agentRuntimeStore.getState().subagentActivity['run-3'];
     expect(events.map(event => event.phase)).toEqual(['start', 'error']);
+  });
+});
+
+describe('who is running', () => {
+  beforeEach(() => {
+    agentRuntimeStore.getState().reset();
+  });
+
+  const names = () =>
+    runningSubagentNames(agentRuntimeStore.getState().subagentActivity);
+
+  it('names a subagent from its first event until its run ends', () => {
+    const store = agentRuntimeStore.getState();
+    expect(names()).toEqual([]);
+    store.appendSubagentEvent({
+      subagentName: 'researcher',
+      toolCallId: 'call-1',
+      phase: 'start',
+    });
+    store.appendSubagentEvent({
+      subagentName: 'researcher',
+      toolCallId: 'call-1',
+      phase: 'text',
+      text: 'Looking…',
+    });
+    expect(names()).toEqual(['researcher']);
+    store.appendSubagentEvent({
+      subagentName: 'researcher',
+      toolCallId: 'call-1',
+      phase: 'end',
+      output: 'Notes.',
+    });
+    expect(names()).toEqual([]);
+  });
+
+  it('drops a run that failed or was stopped, and names each subagent once', () => {
+    const store = agentRuntimeStore.getState();
+    store.appendSubagentEvent({
+      subagentName: 'writer',
+      toolCallId: 'call-2',
+      phase: 'start',
+    });
+    store.appendSubagentEvent({
+      subagentName: 'writer',
+      toolCallId: 'call-3',
+      phase: 'start',
+    });
+    store.appendSubagentEvent({
+      subagentName: 'researcher',
+      toolCallId: 'call-4',
+      phase: 'start',
+    });
+    store.appendSubagentEvent({
+      subagentName: 'researcher',
+      toolCallId: 'call-4',
+      phase: 'error',
+      error: 'boom',
+    });
+    expect(names()).toEqual(['writer']);
+
+    agentRuntimeStore.getState().stopSubagentActivity();
+    expect(names()).toEqual([]);
   });
 });

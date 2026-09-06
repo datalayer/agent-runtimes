@@ -6,54 +6,43 @@
 /**
  * AgentSubagentsExample
  *
- * Demonstrates multi-agent delegation using the in-repo subagents capability.
- * The parent agent orchestrates a researcher and a writer subagent,
- * delegating tasks and combining results for the user.
+ * Multi-agent delegation with the in-repo subagents capability. The
+ * orchestrator runs on the local agent-runtimes server, created there by the
+ * Loop from the `example-subagents` blueprint; its researcher and writer are
+ * subagents inside its process, each run in an isolated child run.
  *
- * - Creates an agent from the 'example-subagents' spec on the selected target
- * - Shows a Chat component for interacting with the orchestrator
- * - Sidebar displays subagent info and active task status
+ * - The chat is the demonstration: no notebook or document beside it
+ * - The sidebar keeps the live run in view and lists the subagents the spec
+ *   declares, badged "Running" while a delegation to one is going
  */
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { Text, Spinner, Heading, Label, Timeline } from '@primer/react';
 import { PeopleIcon, PersonIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { LoopEmbed } from '../loop';
 import { AgentSubagentsPlugin } from '../loop/plugins/agent-subagents';
 import { SubagentChatPanel } from '../chat/messages/ChatMessageList';
-import { useAgentRuntimeActiveSubagentToolCallId } from '../stores';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
+import {
+  useAgentRuntimeActiveSubagentToolCallId,
+  useAgentRuntimeRunningSubagentNames,
+} from '../stores';
+import { getAgentspecs } from '../specs/agents';
+import type { SubAgentspecConfig } from '../types/agentspecs';
 
 const LOOP_PLUGINS_AGENTSUB = [AgentSubagentsPlugin];
 
 const AGENT_NAME = 'subagents-example-agent';
 const AGENTSPEC_ID = 'example-subagents';
 
-interface SubagentInfo {
-  name: string;
-  description: string;
-}
-
-const SUBAGENTS: SubagentInfo[] = [
-  {
-    name: 'researcher',
-    description:
-      'Researches topics, gathers facts, and provides detailed analysis',
-  },
-  {
-    name: 'writer',
-    description:
-      'Writes clear, structured content based on research or instructions',
-  },
-];
+/** The subagents the orchestrator can delegate to, from its spec. */
+const declaredSubagents = (): readonly SubAgentspecConfig[] =>
+  getAgentspecs(AGENTSPEC_ID)?.subagents?.subagents ?? [];
 
 /** Fixed height (px) for the active-subagent chat viewport. */
 const ACTIVE_PANEL_HEIGHT = 280;
@@ -102,324 +91,208 @@ const ActiveSubagentPanel: React.FC = () => {
   );
 };
 
-const AgentSubagentsInner: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
-}) => {
-  const { token } = useSimpleAuthStore();
-  const runtimeTarget = useRuntimeTargetStore(state => state.target);
-  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
-  const [runtimeStatus, setRuntimeStatus] = useState<
-    'launching' | 'ready' | 'error'
-  >('launching');
-  const [isReady, setIsReady] = useState(false);
-  const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(agentName);
-  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
-
-  const agentBaseUrl = useExampleAgentRuntimesUrl();
-  const chatAuthToken: string | undefined = token === null ? undefined : token;
-  void chatAuthToken;
-
-  const authFetch = useCallback(
-    (url: string, opts: RequestInit = {}) =>
-      fetch(url, {
-        ...opts,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(opts.headers ?? {}),
-        },
-      }),
-    [token],
-  );
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const createAgentForTarget = async () => {
-      setRuntimeStatus('launching');
-      setIsReady(false);
-      setHookError(null);
-      setIsReconnectedAgent(false);
-
-      try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'Subagents example – multi-agent delegation with researcher and writer',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            memory: 'ephemeral',
-            enable_skills: true,
-            tools: [],
-          }),
-        });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
-        }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
-          );
-          setRuntimeStatus('error');
-        }
-      }
-    };
-
-    void createAgentForTarget();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [agentBaseUrl, authFetch, runtimeTarget]);
-
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-          bg: 'canvas.default',
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching subagents example agent ({runtimeTarget})...
-        </Text>
-      </Box>
-    );
-  }
-
-  if (runtimeStatus === 'error' || hookError) {
-    return <ErrorView error={hookError} onLogout={onLogout} />;
-  }
-
+/**
+ * The subagents the spec declares, each badged "Running" while a delegation
+ * to it is going, so the roster answers "who is working right now" without
+ * reading the active panel.
+ */
+const SubagentRoster: React.FC<{
+  subagents: readonly SubAgentspecConfig[];
+}> = ({ subagents }) => {
+  const running = useAgentRuntimeRunningSubagentNames();
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
-      >
-        <PeopleIcon size={16} />
-        <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Subagents Demo
-        </Heading>
-        {isReconnectedAgent && (
-          <Label variant="secondary" size="small">
-            Reconnected
-          </Label>
-        )}
-        <Label variant="accent">{runtimeTarget}</Label>
-        <Label variant="accent">{SUBAGENTS.length} subagents</Label>
-      </Box>
-
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <LoopEmbed
-            serverUrl={agentBaseUrl}
-            target="local"
-            agentId={agentId}
-            // The chat alone: delegation is the point here, and a notebook
-            // or a document beside it would only invite the wrong request.
-            editors={false}
-            showHeader
-            plugins={LOOP_PLUGINS_AGENTSUB}
-          />
-        </Box>
-
-        <Box
-          sx={{
-            width: 320,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
-          }}
-        >
-          <ActiveSubagentPanel />
-
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
+    <Timeline>
+      {subagents.map(sa => {
+        const isRunning = running.includes(sa.name);
+        return (
+          <Timeline.Item
+            key={sa.name}
+            data-subagent-roster={sa.name}
+            data-subagent-running={isRunning ? 'true' : undefined}
           >
-            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              Available Subagents
-            </Heading>
-            <Timeline>
-              {SUBAGENTS.map(sa => (
-                <Timeline.Item key={sa.name}>
-                  <Timeline.Badge>
-                    <PersonIcon />
-                  </Timeline.Badge>
-                  <Timeline.Body>
-                    <Box sx={{ mb: 1 }}>
-                      <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>
-                        {sa.name}
-                      </Text>
-                    </Box>
-                    <Text
-                      as="p"
-                      sx={{ fontSize: 0, color: 'fg.muted', mt: 0, mb: 1 }}
-                    >
-                      {sa.description}
-                    </Text>
-                  </Timeline.Body>
-                </Timeline.Item>
-              ))}
-            </Timeline>
-          </Box>
-
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
-            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              Delegation Tools
-            </Heading>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {[
-                {
-                  name: 'delegate_task',
-                  desc: 'Run a named subagent on a task and return its answer',
-                  icon: PeopleIcon,
-                },
-              ].map(tool => (
-                <Box
-                  key={tool.name}
-                  sx={{
-                    p: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                  }}
-                >
-                  <tool.icon size={14} />
-                  <Box>
-                    <Text
-                      sx={{
-                        fontSize: 1,
-                        fontWeight: 'bold',
-                        fontFamily: 'mono',
-                      }}
-                    >
-                      {tool.name}
-                    </Text>
-                    <Text
-                      as="p"
-                      sx={{ fontSize: 0, color: 'fg.muted', mt: 0, mb: 0 }}
-                    >
-                      {tool.desc}
-                    </Text>
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-
-          <Box sx={{ p: 3 }}>
-            <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
-              How It Works
-            </Heading>
-            <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
-              The orchestrator agent delegates tasks to specialised subagents
-              using the <code>delegate_task</code> tool. Each subagent runs in
-              an isolated child run with its own model and instructions.
-            </Text>
-            <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 0 }}>
-              Token and request usage from each delegation is forwarded to the
-              parent run, so budget limits stay accurate across delegation.
-            </Text>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+            <Timeline.Badge>
+              <PersonIcon />
+            </Timeline.Badge>
+            <Timeline.Body>
+              <Box
+                sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 2 }}
+              >
+                <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>{sa.name}</Text>
+                {isRunning ? (
+                  <>
+                    <Spinner size="small" />
+                    <Label variant="accent" size="small">
+                      Running
+                    </Label>
+                  </>
+                ) : null}
+              </Box>
+              <Text
+                as="p"
+                sx={{ fontSize: 0, color: 'fg.muted', mt: 0, mb: 1 }}
+              >
+                {sa.description}
+              </Text>
+            </Timeline.Body>
+          </Timeline.Item>
+        );
+      })}
+    </Timeline>
   );
 };
 
 const AgentSubagentsExample: React.FC = () => {
-  const { token, clearAuth } = useSimpleAuthStore();
-
-  const handleLogout = useCallback(() => {
-    clearAuth();
-  }, [clearAuth]);
-
-  if (!token) {
-    return (
-      <ThemedProvider>
-        <AuthRequiredView />
-      </ThemedProvider>
-    );
-  }
+  const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const subagents = useMemo(declaredSubagents, []);
 
   return (
     <ThemedProvider>
-      <AgentSubagentsInner onLogout={handleLogout} />
+      <Box
+        sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          bg: 'canvas.default',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            px: 3,
+            py: 2,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+            flexShrink: 0,
+          }}
+        >
+          <PeopleIcon size={16} />
+          <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
+            Subagents Demo
+          </Heading>
+          <Label variant="accent">local</Label>
+          <Label variant="accent">
+            {subagents.length} subagent{subagents.length === 1 ? '' : 's'}
+          </Label>
+        </Box>
+
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {/* The Loop creates the orchestrator on the Local target from the
+                capacity plugin's blueprint, the way the hooks and A2A examples
+                do; an agent made by hand for another transport answers the
+                Loop's AG-UI calls with Not Found. The agent-target switch
+                stays visible: with it hidden the Loop pins the agent to the
+                page, and delegation happens on the server. */}
+            <LoopEmbed
+              serverUrl={resolveExampleAgentRuntimesUrl('local')}
+              target="local"
+              showAgentVariants
+              agentId={agentName}
+              // The chat alone: delegation is the point here, and a notebook
+              // or a document beside it would only invite the wrong request.
+              editors={false}
+              showHeader
+              plugins={LOOP_PLUGINS_AGENTSUB}
+            />
+          </Box>
+
+          <Box
+            sx={{
+              width: 320,
+              borderLeft: '1px solid',
+              borderColor: 'border.default',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'auto',
+            }}
+          >
+            <ActiveSubagentPanel />
+
+            <Box
+              sx={{
+                p: 3,
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+                Available Subagents
+              </Heading>
+              <SubagentRoster subagents={subagents} />
+            </Box>
+
+            <Box
+              sx={{
+                p: 3,
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+                Delegation Tools
+              </Heading>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[
+                  {
+                    name: 'delegate_task',
+                    desc: 'Run a named subagent on a task and return its answer',
+                    icon: PeopleIcon,
+                  },
+                ].map(tool => (
+                  <Box
+                    key={tool.name}
+                    sx={{
+                      p: 2,
+                      border: '1px solid',
+                      borderColor: 'border.default',
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                    }}
+                  >
+                    <tool.icon size={14} />
+                    <Box>
+                      <Text
+                        sx={{
+                          fontSize: 1,
+                          fontWeight: 'bold',
+                          fontFamily: 'mono',
+                        }}
+                      >
+                        {tool.name}
+                      </Text>
+                      <Text
+                        as="p"
+                        sx={{ fontSize: 0, color: 'fg.muted', mt: 0, mb: 0 }}
+                      >
+                        {tool.desc}
+                      </Text>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+
+            <Box sx={{ p: 3 }}>
+              <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
+                How It Works
+              </Heading>
+              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
+                The orchestrator agent delegates tasks to specialised subagents
+                using the <code>delegate_task</code> tool. Each subagent runs in
+                an isolated child run with its own model and instructions.
+              </Text>
+              <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 0 }}>
+                Token and request usage from each delegation is forwarded to the
+                parent run, so budget limits stay accurate across delegation.
+              </Text>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
     </ThemedProvider>
   );
 };

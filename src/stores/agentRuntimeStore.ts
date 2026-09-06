@@ -23,6 +23,7 @@
 
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import {
   persist,
   createJSONStorage,
@@ -49,6 +50,30 @@ import type { ContextSnapshotData } from '../types/context';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 import type { LoadedSkillInfo } from '../types/skills';
 import type { EphemeralSurfaceMode } from '../types/chat';
+
+/** A subagent run is over once its events carry an `end` or an `error`. */
+export function isSubagentRunOver(
+  events: readonly AgentStreamSubagentPayload[],
+): boolean {
+  return events.some(event => event.phase === 'end' || event.phase === 'error');
+}
+
+/**
+ * The subagents with a run still going, by name and in the order their runs
+ * were opened — what a roster badges as running. A name appears once however
+ * many of its runs are open.
+ */
+export function runningSubagentNames(
+  activity: Record<string, readonly AgentStreamSubagentPayload[]>,
+): string[] {
+  const names: string[] = [];
+  for (const events of Object.values(activity)) {
+    const name = events[0]?.subagentName;
+    if (!name || names.includes(name) || isSubagentRunOver(events)) continue;
+    names.push(name);
+  }
+  return names;
+}
 
 // ---------------------------------------------------------------------------
 // Agent Registry types
@@ -823,10 +848,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             for (const [key, events] of Object.entries(
               state.subagentActivity,
             )) {
-              const over = events.some(
-                event => event.phase === 'end' || event.phase === 'error',
-              );
-              if (over || events.length === 0) {
+              if (events.length === 0 || isSubagentRunOver(events)) {
                 next[key] = events;
                 continue;
               }
@@ -1350,11 +1372,20 @@ export const useAgentRuntimeActiveSubagentToolCallId = (): string | null =>
     let activeKey: string | null = null;
     for (const [key, events] of Object.entries(s.subagentActivity)) {
       if (events.length === 0) continue;
-      const done = events.some(e => e.phase === 'end' || e.phase === 'error');
-      if (!done) activeKey = key;
+      if (!isSubagentRunOver(events)) activeKey = key;
     }
     return activeKey;
   });
+
+/**
+ * Names of the subagents with a run still going, for a roster to badge.
+ * Compared element by element, so a store update that changes nothing about
+ * who is running does not re-render the roster.
+ */
+export const useAgentRuntimeRunningSubagentNames = (): string[] =>
+  useAgentRuntimeStore(
+    useShallow(s => runningSubagentNames(s.subagentActivity)),
+  );
 
 /** Latest history-compaction activity for the connected agent. */
 export const useAgentRuntimeCompaction = () =>
