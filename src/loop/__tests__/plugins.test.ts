@@ -449,6 +449,64 @@ describe('moving the sandbox', () => {
     });
   });
 
+  it('creates the Local agent when the workspace opens there', async () => {
+    const asked: Array<{ url: string; method: string; body?: unknown }> = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      asked.push({
+        url: String(url),
+        method,
+        body:
+          typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+      });
+      if (method === 'GET') {
+        return { ok: false, status: 404, statusText: 'Not Found' };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    }) as never;
+
+    try {
+      const reactor = buildReactorFromPlugins([
+        configurePlugin(AgentsPlugin, {
+          serverUrl: 'http://server',
+          target: 'local',
+          localAgent: {
+            createPayload: {
+              agent_library: 'pydantic-ai',
+              agent_spec_id: 'example-simple',
+            },
+          },
+        }),
+      ]);
+      reactor.start();
+      const sandbox =
+        reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)!.sandbox;
+      const disconnect = sandbox.connect('loop-workspace');
+      // Starting there is not a switch, and used to create nothing: the
+      // header said running and the first message came back 404.
+      expect(sandbox.snapshot.peek().state).toBe('starting');
+      for (let i = 0; i < 5 && asked.length < 2; i += 1) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      disconnect();
+    } finally {
+      globalThis.fetch = original;
+    }
+
+    // The agent, and nothing about the sandbox: no previous target to move
+    // away from, and an existing agent's kernel is left alone.
+    expect(asked.map(call => `${call.method} ${call.url}`)).toEqual([
+      'GET http://server/api/v1/agents/loop-workspace',
+      'POST http://server/api/v1/agents',
+    ]);
+    expect(asked[1].body).toMatchObject({
+      name: 'loop-workspace',
+      transport: 'ag-ui',
+      agent_spec_id: 'example-simple',
+    });
+  });
+
   it('puts the sandbox back when the server refuses the switch', async () => {
     // A failed switch should cost the person the switch, not the sandbox they
     // already had — and it must not leave the control claiming otherwise.

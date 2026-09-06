@@ -24,7 +24,13 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Box, IconButton, SegmentedControl, Text } from '@primer/react';
+import {
+  Box,
+  IconButton,
+  SegmentedControl,
+  Text,
+  Truncate,
+} from '@primer/react';
 import { useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { signal } from '@datalayer/reactor';
@@ -38,6 +44,7 @@ import {
   useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
+import { SUGGESTION_CHIP_MAX_WIDTH } from '../../../chat/display/EmptyState';
 import { AnonymousKeyExpired } from '../../../components/anonymous/AnonymousKeyExpired';
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
@@ -729,15 +736,21 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * repeated.
    */
   const suggestionEntries = useContributions(LoopChatSuggestion);
+  const hiddenOpeners = chatExtras.hiddenOpeners;
   const suggestions = useMemo((): (AgentSuggestion & { group?: string })[] => {
+    // What the host took off this page, by the chip's words — the same key
+    // the two-group merge below uses to tell openers apart.
+    const hidden = new Set(hiddenOpeners ?? []);
+    const offered = <T extends { text: string }>(items: T[]): T[] =>
+      hidden.size === 0 ? items : items.filter(item => !hidden.has(item.text));
     const contributed = suggestionEntries.flatMap(
       entry => entry.value.suggestions,
     );
     if (contributed.length > 0) {
-      return contributed;
+      return offered(contributed);
     }
-    const own = spec?.suggestions ?? [];
-    const teams = team?.team.suggestions ?? [];
+    const own = offered(spec?.suggestions ?? []);
+    const teams = offered(team?.team.suggestions ?? []);
     if (teams.length === 0) {
       return own;
     }
@@ -752,7 +765,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         .filter(item => !listed.has(item.text))
         .map(item => ({ ...item, group: memberName })),
     ];
-  }, [suggestionEntries, team, spec, member, agentId]);
+  }, [suggestionEntries, team, spec, member, agentId, hiddenOpeners]);
 
   /*
    * The same openers in the shape the chat's empty state asks for.
@@ -1840,9 +1853,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               font: 'inherit',
               fontSize: 0,
               fontWeight: 'semibold',
-              lineHeight: 1,
+              // Room for descenders: the truncated span clips what falls
+              // below its line, and at a line-height of one that is the
+              // tail of every "y".
+              lineHeight: 1.25,
               px: '10px',
-              py: '6px',
+              py: '5px',
               borderRadius: '999px',
               border: '1px solid',
               borderColor: 'border.default',
@@ -1857,7 +1873,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               '&:disabled': { opacity: 0.5, cursor: 'default' },
             }}
           >
-            {item.title}
+            {/* Capped, with the whole request in the title: see the width. */}
+            <Truncate title={item.title} maxWidth={SUGGESTION_CHIP_MAX_WIDTH}>
+              {item.title}
+            </Truncate>
           </Box>
         ))}
       </Box>

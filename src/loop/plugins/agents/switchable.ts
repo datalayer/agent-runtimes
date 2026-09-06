@@ -470,8 +470,48 @@ export function createSwitchableSandboxService({
     },
     connect(id?: string) {
       agentId = id;
-      connectActive();
+      /*
+       * Starting on Local is a switch nobody made, and the agent still has to
+       * exist. A workspace that opens there with something to create it from
+       * — a capacity plugin's blueprint, or the host's own payload — used to
+       * connect straight to an agent nobody had created: the header said
+       * "running", and the first message came back 404. So the agent is
+       * ensured first, the way a switch to Local ensures it, and connected
+       * once it is there. Only the agent, not the sandbox reconfiguration a
+       * switch also does: at start there is no previous target to move away
+       * from, and restarting an existing agent's sandbox on every open would
+       * cost a reader the kernel they had.
+       */
+      const createPayload =
+        target.peek() === 'local' && id
+          ? (blueprint?.() ?? localAgent?.createPayload)
+          : undefined;
+      if (!createPayload) {
+        connectActive();
+        return () => {
+          disconnect?.();
+          disconnect = null;
+        };
+      }
+      let cancelled = false;
+      server.setState('starting');
+      void ensureLocalAgent(createPayload).then(
+        () => {
+          if (!cancelled) {
+            connectActive();
+          }
+        },
+        (error: unknown) => {
+          // No control to hand this back to at start: the sandbox says so
+          // instead, and the console has the reason.
+          if (!cancelled) {
+            server.setState('error');
+            console.error('[loop] Local agent could not be started:', error);
+          }
+        },
+      );
       return () => {
+        cancelled = true;
         disconnect?.();
         disconnect = null;
       };

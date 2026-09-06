@@ -82,7 +82,7 @@ inside the Datalayer app, and inside a JupyterLab panel.
 | `LoopChatSuggestion` | chat plugin | capacity plugins — openers shown ahead of the spec's own |
 | `LoopAgentBlueprint` | agents plugin | capacity plugins — which agent the Local target creates, from which spec |
 | `LoopChatLayout` | chat plugin | page-layout plugin — the chat view assembles its parts (editors, transcript, prompt, chips, picker) and a layout arranges them; the default is the split |
-| `LoopChatExtras` | chat plugin | a host, via `createChatExtrasPlugin()` — a *live* signal carrying an error banner, the codemode toggle, MCP status, a tool-result renderer, extra frontend tools, or `hidePrompt`, for a page composing panels around a `LoopEmbed` |
+| `LoopChatExtras` | chat plugin | a host, via `createChatExtrasPlugin()` — a *live* signal carrying an error banner, the codemode toggle, MCP status, a tool-result renderer, extra frontend tools, `hidePrompt`, or `hiddenOpeners` (the spec's chips a page does not offer, by their words), for a page composing panels around a `LoopEmbed` |
 | `LoopOpeningNotebook` | notebook plugin | a host — the notebook the editor opens on (several cells, outputs already in them) in place of the plugin's one cell, plus the code run to prime the sandbox |
 | `LoopOpeningDocument` | document plugin | a host — the document the editor opens on, as a serialised Lexical state, in place of the plugin's own (a heading, a paragraph and a cell that has already run) |
 | `LoopPromptPanel` | input-prompt plugin | page-layout plugin — a panel hung on the composer, `above` or `below` it, *inside* its card so a floating prompt carries it |

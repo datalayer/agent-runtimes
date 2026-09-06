@@ -635,6 +635,15 @@ export type LoopChatExtrasValue = {
    * because they answer questions a visitor is not asking.
    */
   showTokenUsage?: boolean;
+  /**
+   * Openers the host has taken off its page, by their words.
+   *
+   * A team's spec offers the requests its members answer; a page that
+   * mounts the team without one member's tools — a landing page with no
+   * decks plugin — would otherwise offer a chip that leads nowhere. Matched
+   * on the chip's text, which is how the chat tells openers apart already.
+   */
+  hiddenOpeners?: string[];
 };
 
 export type ChatExtrasContribution = {

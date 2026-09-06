@@ -1150,6 +1150,10 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             ephemeralNotebookModels: state.ephemeralNotebookModels,
             ephemeralDocumentModels: state.ephemeralDocumentModels,
             editorModeByRuntime: state.editorModeByRuntime,
+            // And the delegations already streamed: they are part of the
+            // transcript — the boxes under the tool cards — not of the socket
+            // session, and a reconnect used to blank every one of them.
+            subagentActivity: state.subagentActivity,
           }));
         },
       }),

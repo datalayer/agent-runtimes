@@ -422,15 +422,9 @@ class TestEnsureAgent:
 
 
 class TestWorker:
-    @pytest.mark.asyncio
-    async def test_the_worker_streams_the_adapter_and_completes_the_task(self) -> None:
-        from fasta2a.broker import InMemoryBroker
-        from fasta2a.storage import InMemoryStorage
-
-        from agent_runtimes.adapters.base import BaseAgent, StreamEvent, ToolCall
-        from agent_runtimes.transports.a2a import A2AWorker
-
-        seen: list[tuple[str, Any]] = []
+    @staticmethod
+    def _fake_agent(events_factory: Any, seen: list[tuple[str, Any]]) -> Any:
+        from agent_runtimes.adapters.base import BaseAgent
 
         class FakeAgent(BaseAgent):
             async def run(self, prompt: str, context: Any) -> Any:  # pragma: no cover
@@ -438,18 +432,8 @@ class TestWorker:
 
             async def stream(self, prompt: str, context: Any):
                 seen.append((prompt, context))
-                yield StreamEvent(type="text", data="Hel")
-                yield StreamEvent(
-                    type="tool_call",
-                    data=ToolCall(id="c1", name="search", arguments={"q": "x"}),
-                )
-                yield StreamEvent(
-                    type="tool_result",
-                    data={"tool_call_id": "c1", "name": "search", "result": "found"},
-                )
-                yield StreamEvent(type="text", data="lo")
-                yield StreamEvent(type="output", data="Hello")
-                yield StreamEvent(type="done", data=None)
+                for event in events_factory():
+                    yield event
 
             def get_tools(self) -> list[Any]:
                 return []
@@ -466,15 +450,21 @@ class TestWorker:
             def version(self) -> str:
                 return "0.0.0"
 
+        return FakeAgent()
+
+    @staticmethod
+    async def _run_through_the_broker(
+        agent: Any, message: dict[str, Any]
+    ) -> tuple[list[Any], Any, str]:
+        """Submit a task the way FastA2A does — worker loop, broker, event bus — and collect its stream."""
+        from fasta2a.broker import InMemoryBroker
+        from fasta2a.storage import InMemoryStorage
+
+        from agent_runtimes.transports.a2a import A2AWorker
+
         storage: InMemoryStorage[Any] = InMemoryStorage()
         broker = InMemoryBroker()
-        worker = A2AWorker(broker=broker, storage=storage, agent=FakeAgent())
-        message = {
-            "role": "user",
-            "parts": [{"text": "hi there"}],
-            "message_id": "m1",
-            "context_id": "c1",
-        }
+        worker = A2AWorker(broker=broker, storage=storage, agent=agent)
         task = await storage.submit_task("c1", message)  # type: ignore[arg-type]
         params = {
             "id": task["id"],
@@ -482,13 +472,43 @@ class TestWorker:
             "message": message,
             "metadata": {"a2a.activated_extensions": ["urn:x"]},
         }
-
         events: list[Any] = []
-        async with broker.event_bus.subscribe(task["id"]) as receive:
-            runner = asyncio.create_task(worker.run_task(params))  # type: ignore[arg-type]
-            async for event in receive:
-                events.append(event)
-            await runner
+        async with broker, worker.run():
+            async with broker.event_bus.subscribe(task["id"]) as receive:
+                await broker.run_task(params)  # type: ignore[arg-type]
+                async for event in receive:
+                    events.append(event)
+        return events, storage, task["id"]
+
+    @pytest.mark.asyncio
+    async def test_the_worker_streams_the_adapter_and_completes_the_task(self) -> None:
+        from agent_runtimes.adapters.base import StreamEvent, ToolCall
+
+        seen: list[tuple[str, Any]] = []
+        agent = self._fake_agent(
+            lambda: [
+                StreamEvent(type="text", data="Hel"),
+                StreamEvent(
+                    type="tool_call",
+                    data=ToolCall(id="c1", name="search", arguments={"q": "x"}),
+                ),
+                StreamEvent(
+                    type="tool_result",
+                    data={"tool_call_id": "c1", "name": "search", "result": "found"},
+                ),
+                StreamEvent(type="text", data="lo"),
+                StreamEvent(type="output", data="Hello"),
+                StreamEvent(type="done", data=None),
+            ],
+            seen,
+        )
+        message = {
+            "role": "user",
+            "parts": [{"text": "hi there"}],
+            "message_id": "m1",
+            "context_id": "c1",
+        }
+        events, storage, task_id = await self._run_through_the_broker(agent, message)
 
         kinds = [
             "artifact"
@@ -496,6 +516,7 @@ class TestWorker:
             else event["status_update"]["status"]["state"]
             for event in events
         ]
+        # The stream ended on its own: fasta2a published `completed` after the run.
         assert kinds == [
             "working",
             "artifact",
@@ -524,7 +545,7 @@ class TestWorker:
         assert tool_messages[0]["tool_call"]["name"] == "search"
         assert tool_messages[1]["tool_result"]["result"] == "found"
 
-        stored = await storage.load_task(task["id"])
+        stored = await storage.load_task(task_id)
         assert stored is not None
         assert stored["status"]["state"] == "completed"
         assert stored["artifacts"][0]["parts"][0]["text"] == "Hello"
@@ -536,3 +557,37 @@ class TestWorker:
         assert prompt == "hi there"
         assert agent_context.session_id == "c1"
         assert agent_context.metadata["a2a"]["activated_extensions"] == ["urn:x"]
+
+    @pytest.mark.asyncio
+    async def test_a_failing_run_ends_the_stream_with_the_reason(self) -> None:
+        from agent_runtimes.adapters.base import StreamEvent
+
+        agent = self._fake_agent(
+            lambda: [
+                StreamEvent(type="text", data="Star"),
+                StreamEvent(type="error", data="model went away"),
+            ],
+            [],
+        )
+        message = {
+            "role": "user",
+            "parts": [{"text": "hi"}],
+            "message_id": "m2",
+            "context_id": "c1",
+        }
+        events, storage, task_id = await self._run_through_the_broker(agent, message)
+
+        final = events[-1]["status_update"]["status"]
+        assert final["state"] == "failed"
+        assert final["message"]["parts"][0]["text"] == "RuntimeError: model went away"
+        # One failed status, not one from the worker and another from the base.
+        assert [
+            e["status_update"]["status"]["state"]
+            for e in events
+            if "status_update" in e
+        ] == [
+            "working",
+            "failed",
+        ]
+        stored = await storage.load_task(task_id)
+        assert stored is not None and stored["status"]["state"] == "failed"

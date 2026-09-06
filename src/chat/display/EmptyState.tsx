@@ -28,6 +28,19 @@ import { groupSuggestions } from './groupSuggestions';
 
 export { groupSuggestions } from './groupSuggestions';
 
+/**
+ * How wide a suggestion chip may grow, in pixels.
+ *
+ * An opener is a whole request in the words somebody would type, and some
+ * are a sentence long — "Explain this notebook cell by cell, as if I am new
+ * to Python". As a chip that is a line across the page. Past this width the
+ * chip shows an ellipsis and carries the whole sentence in its title, and a
+ * short opener — "Analyze the dataset" — stays as wide as its words. One
+ * number for every place that draws these chips: the empty state below and
+ * the page layout's row under the composer.
+ */
+export const SUGGESTION_CHIP_MAX_WIDTH = 200;
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -111,11 +124,12 @@ export function ChatEmptyState({
           }}
           onClick={() => handleSuggestionClick(suggestion)}
         >
-          <Box sx={{ width: 140, maxWidth: 140, minWidth: 140 }}>
-            <Truncate title={suggestion.title} maxWidth="100%">
-              {suggestion.title}
-            </Truncate>
-          </Box>
+          <Truncate
+            title={suggestion.title}
+            maxWidth={SUGGESTION_CHIP_MAX_WIDTH}
+          >
+            {suggestion.title}
+          </Truncate>
         </Label>
       ))}
     </LabelGroup>

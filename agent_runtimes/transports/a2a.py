@@ -241,17 +241,7 @@ class A2ATransport(BaseTransport):
 # ---------------------------------------------------------------------------
 
 try:
-    from fasta2a.schema import (
-        Artifact,
-        Message,
-        Part,
-        StreamResponse,
-        TaskArtifactUpdateEvent,
-        TaskIdParams,
-        TaskSendParams,
-        TaskStatus,
-        TaskStatusUpdateEvent,
-    )
+    from fasta2a.schema import Artifact, Message, Part, TaskIdParams, TaskSendParams
     from fasta2a.worker import Worker as _FastA2AWorker
 
     FASTA2A_AVAILABLE = True
@@ -262,8 +252,6 @@ except ImportError:  # pragma: no cover - fasta2a is optional
 
 A2AContext = list[dict[str, Any]]
 """What the worker keeps per A2A context: the messages exchanged so far."""
-
-TERMINAL_TASK_STATES = frozenset({"completed", "canceled", "failed", "rejected"})
 
 
 def a2a_message_text(message: Any) -> str:
@@ -286,12 +274,8 @@ def a2a_message_text(message: Any) -> str:
 
 def activated_extensions_of(params: Any) -> list[str]:
     """The A2A extensions the client and the agent agreed on for a task."""
-    try:
-        from fasta2a.extensions import activated_extensions
-    except ImportError:  # pragma: no cover - older fasta2a without extensions
-        metadata = params.get("metadata") or {}
-        value = metadata.get("a2a.activated_extensions")
-        return [str(v) for v in value] if isinstance(value, list) else []
+    from fasta2a.extensions import activated_extensions
+
     return activated_extensions(params)
 
 
@@ -336,17 +320,18 @@ def _short(value: Any, limit: int = 2000) -> str:
 class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
     """Runs a `BaseAgent` for the tasks a FastA2A app receives, streaming as it goes.
 
-    The A2A server side of agent-runtimes. Where the pydantic-ai bridge in
-    fasta2a runs a bare ``pydantic_ai.Agent`` and reports only when it is done,
-    this worker runs the agent *adapter* — so MCP servers, skills, codemode,
-    guardrails and approvals apply exactly as they do over the other transports
-    — and republishes the run while it happens: each text delta as an artifact
-    chunk (``append=True``), each tool call and result as a ``working`` status
-    carrying a data part, the whole answer once more as the last chunk, then
-    the final status.
+    The A2A server side of agent-runtimes. Where fasta2a's pydantic-ai bridge
+    runs a bare ``pydantic_ai.Agent``, this worker runs the agent *adapter* — so
+    MCP servers, skills, codemode, guardrails and approvals apply exactly as
+    they do over the other transports — and publishes the run as it happens:
+    each text delta as a chunk of the answer's artifact, each tool call and
+    result as a ``working`` status carrying a data part, the whole answer as
+    the last chunk. fasta2a's `Worker` then publishes the final state from
+    storage and ends the stream; when the run raises, the reason rides on the
+    ``failed`` status so the client learns it.
 
-    The parent's ``AgentContext.metadata["a2a"]`` names the task, the context
-    and the activated extensions, for tools that want to know.
+    The agent's ``AgentContext.metadata["a2a"]`` names the task, the context and
+    the activated extensions, for tools that want to know.
     """
 
     agent: "BaseAgent" = None  # type: ignore[assignment]
@@ -360,30 +345,28 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         try:
             await self._run(task_id, context_id, params)
         except Exception as exc:
-            # The base worker marks the task failed and ends the stream, but
-            # says nothing about why. Log it here, and put the reason on the
-            # failed status so the client learns it too.
+            # fasta2a marks the task failed and ends the stream, but says
+            # nothing about why. Log it, and put the reason on the failed
+            # status; closing here keeps the base's own failed status from
+            # following it.
             logger.exception(
                 "A2A task %s for agent %s failed", task_id, self.agent.name
             )
-            await self._emit_status(
+            await self.storage.update_task(task_id, state="failed")
+            await self.publish_status(
                 task_id,
                 context_id,
                 "failed",
-                Message(
-                    role="agent",
-                    parts=[Part(text=f"{type(exc).__name__}: {exc}")],
-                    message_id=str(uuid.uuid4()),
-                    context_id=context_id,
-                ),
+                _agent_message(context_id, Part(text=f"{type(exc).__name__}: {exc}")),
             )
+            await self.broker.event_bus.close(task_id)
             raise
 
     async def _run(
         self, task_id: str, context_id: str, params: "TaskSendParams"
     ) -> None:
         await self.storage.update_task(task_id, state="working")
-        await self._emit_status(task_id, context_id, "working")
+        await self.publish_status(task_id, context_id, "working")
 
         history: A2AContext = list(await self.storage.load_context(context_id) or [])
         incoming = params["message"]
@@ -412,33 +395,34 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                 if not delta:
                     continue
                 text += delta
-                await self._emit(
+                await self.publish_artifact(
                     task_id,
-                    StreamResponse(
-                        artifact_update=TaskArtifactUpdateEvent(
-                            task_id=task_id,
-                            context_id=context_id,
-                            artifact=Artifact(
-                                artifact_id=artifact_id,
-                                name="result",
-                                parts=[Part(text=delta)],
-                            ),
-                            append=True,
-                            last_chunk=False,
-                        )
+                    context_id,
+                    Artifact(
+                        artifact_id=artifact_id, name="result", parts=[Part(text=delta)]
                     ),
+                    append=True,
+                    last_chunk=False,
                 )
             elif event.type == "tool_call":
-                await self._emit_working_message(
+                await self.publish_status(
                     task_id,
                     context_id,
-                    Part(data={"tool_call": _tool_call_payload(event.data)}),
+                    "working",
+                    _agent_message(
+                        context_id,
+                        Part(data={"tool_call": _tool_call_payload(event.data)}),
+                    ),
                 )
             elif event.type == "tool_result":
-                await self._emit_working_message(
+                await self.publish_status(
                     task_id,
                     context_id,
-                    Part(data={"tool_result": _tool_result_payload(event.data)}),
+                    "working",
+                    _agent_message(
+                        context_id,
+                        Part(data={"tool_result": _tool_result_payload(event.data)}),
+                    ),
                 )
             elif event.type == "output":
                 final_output = str(event.data) if event.data is not None else None
@@ -446,12 +430,7 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                 raise RuntimeError(str(event.data))
 
         output = text or final_output or ""
-        reply = Message(
-            role="agent",
-            parts=[Part(text=output)],
-            message_id=str(uuid.uuid4()),
-            context_id=context_id,
-        )
+        reply = _agent_message(context_id, Part(text=output))
         await self.storage.update_context(context_id, [*history, incoming, reply])
         artifact = Artifact(
             artifact_id=artifact_id, name="result", parts=[Part(text=output)]
@@ -463,21 +442,9 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             new_messages=[reply],
         )
         # The whole result once more, as the last chunk: a client that does
-        # not assemble chunks, or joined late, still gets the answer.
-        await self._emit(
-            task_id,
-            StreamResponse(
-                artifact_update=TaskArtifactUpdateEvent(
-                    task_id=task_id,
-                    context_id=context_id,
-                    artifact=artifact,
-                    append=False,
-                    last_chunk=True,
-                )
-            ),
-        )
-        await self._emit_status(task_id, context_id, "completed")
-        await self.broker.event_bus.close(task_id)
+        # not assemble chunks, or joined late, still gets the answer. The
+        # `completed` status and the end of the stream come from the base.
+        await self.publish_artifact(task_id, context_id, artifact)
 
     async def cancel_task(self, params: "TaskIdParams") -> None:
         logger.info("A2A cancel requested for task %s", params.get("id"))
@@ -501,39 +468,11 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             )
         ]
 
-    async def _emit(self, task_id: str, event: "StreamResponse") -> None:
-        await self.broker.event_bus.emit(task_id, event)
 
-    async def _emit_status(
-        self,
-        task_id: str,
-        context_id: str,
-        state: str,
-        message: "Message | None" = None,
-    ) -> None:
-        status = TaskStatus(state=state)  # type: ignore[typeddict-item]
-        if message is not None:
-            status["message"] = message
-        await self._emit(
-            task_id,
-            StreamResponse(
-                status_update=TaskStatusUpdateEvent(
-                    task_id=task_id, context_id=context_id, status=status
-                )
-            ),
-        )
-
-    async def _emit_working_message(
-        self, task_id: str, context_id: str, part: "Part"
-    ) -> None:
-        await self._emit_status(
-            task_id,
-            context_id,
-            "working",
-            Message(
-                role="agent",
-                parts=[part],
-                message_id=str(uuid.uuid4()),
-                context_id=context_id,
-            ),
-        )
+def _agent_message(context_id: str, part: "Part") -> "Message":
+    return Message(
+        role="agent",
+        parts=[part],
+        message_id=str(uuid.uuid4()),
+        context_id=context_id,
+    )
