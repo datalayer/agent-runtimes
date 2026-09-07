@@ -20,6 +20,13 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from agent_runtimes.mcp.auth.cimd import (
+    CLIENT_DOCUMENT_PATH,
+    client_id_metadata_document,
+    public_base_url,
+    refuse_if_unpublishable,
+)
+from agent_runtimes.mcp.auth.oauth import CLIENT_NAME, CLIENT_URI
 from agent_runtimes.mcp.auth import (
     OAuthError,
     PendingFlow,
@@ -108,6 +115,39 @@ def _server_url(server_id: str, override: str = "") -> str:
         status_code=400,
         detail=f"No URL known for MCP server {server_id!r}; pass server_url",
     )
+
+
+@router.get("/client")
+async def client_id_metadata() -> dict:
+    """This client's own Client ID Metadata Document.
+
+    An authorization server fetches this URL to learn who is asking, and
+    validates that the `client_id` inside equals the URL it fetched — so the
+    document is built from this deployment's own public URL, the same one the
+    OAuth callback is built from, and is refused rather than served when the
+    deployment has not been told what that is. A guessed URL would not fail
+    closed; it would claim to be a different client.
+    """
+    base = public_base_url()
+    if base is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "This server does not know its own public URL, so it cannot say "
+                "which client it is. Set AGENT_RUNTIMES_PUBLIC_URL."
+            ),
+        )
+    document = client_id_metadata_document(
+        client_name=CLIENT_NAME,
+        client_uri=CLIENT_URI,
+        redirect_uris=(_callback_url(),),
+    )
+    if document is None:  # pragma: no cover - guarded by the check above
+        raise HTTPException(status_code=503, detail="No client document could be built.")
+    # Held to the rules an authorization server applies after publication, so
+    # a mistake is found here rather than on somebody's login.
+    refuse_if_unpublishable(document, f"{base}{CLIENT_DOCUMENT_PATH}")
+    return document
 
 
 @router.get("/servers/{server_id}/auth", response_model=AuthStatusResponse)

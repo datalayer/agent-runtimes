@@ -37,6 +37,8 @@ from agent_runtimes.mcp.auth.tokens import OAuthToken
 
 logger = logging.getLogger(__name__)
 
+from .cimd import client_id_metadata_url
+
 #: What the CLI calls itself when registering dynamically.
 CLIENT_NAME = "Datalayer LOOP"
 CLIENT_URI = "https://datalayer.io"
@@ -61,6 +63,10 @@ class ServerMetadata:
     scopes_supported: tuple[str, ...] = ()
     #: The MCP server this authorization server protects (RFC 8707 `resource`).
     resource: Optional[str] = None
+    #: Whether the server reads a Client ID Metadata Document, so a client
+    #: can be a URL instead of a registration. Advertised beside
+    #: `registration_endpoint`, which stays as the fallback.
+    client_id_metadata_document_supported: bool = False
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any], resource: Optional[str] = None) -> "ServerMetadata":
@@ -81,6 +87,9 @@ class ServerMetadata:
             revocation_endpoint=payload.get("revocation_endpoint"),
             scopes_supported=tuple(payload.get("scopes_supported") or ()),
             resource=resource,
+            client_id_metadata_document_supported=bool(
+                payload.get("client_id_metadata_document_supported")
+            ),
         )
 
 
@@ -169,6 +178,15 @@ async def register_client(
     pre-arranged anything with — the normal case for an MCP client that finds
     servers at runtime.
     """
+    published = client_id_metadata_url()
+    if metadata.client_id_metadata_document_supported and published:
+        # The client is the URL. Nothing is registered and nothing is minted:
+        # the server fetches the document this deployment serves and reads
+        # the registration out of it. Preferred over dynamic registration
+        # because a client id per authorization server says nothing about who
+        # the client is, and this one can be checked.
+        return published, None
+
     if not metadata.registration_endpoint:
         raise OAuthError(
             "This authorization server does not support dynamic client "
