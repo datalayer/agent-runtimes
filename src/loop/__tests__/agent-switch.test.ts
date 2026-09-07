@@ -125,8 +125,11 @@ describe('the prompt', () => {
     expect(chat()).toContain('showTokenUsage');
   });
 
-  it('takes focus, so the workspace opens ready to type', () => {
-    expect(chat()).toMatch(/\n\s+autoFocus: true,\n/);
+  it('takes focus by default, so the workspace opens ready to type', () => {
+    // Still true when nobody says otherwise. The host may turn it off:
+    // focusing an input on mount scrolls the browser to it, which is wrong
+    // when the loop is one section of a longer page.
+    expect(chat()).toMatch(/autoFocus: config\?\.autoFocusPrompt \?\? true,/);
   });
 });
 

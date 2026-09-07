@@ -70,6 +70,13 @@ export type LoopPresetOptions = {
   hideChatHeader?: boolean;
   /** Where the prompt sits. Passed through to the chat plugin. */
   promptPlacement?: ChatPluginConfig['promptPlacement'];
+  /**
+   * Whether the composer takes the caret when the workspace opens. True by
+   * default — the workspace is there to be typed into. A host that embeds the
+   * loop as one section of a longer page passes `false`, so that mounting it
+   * does not scroll the reader into the middle of the page.
+   */
+  autoFocusPrompt?: boolean;
   /** Whether a person may choose between agent variants. */
   showAgentVariants?: boolean;
   /**
@@ -180,6 +187,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     showViewSelector = true,
     hideChatHeader = false,
     promptPlacement,
+    autoFocusPrompt = true,
     showAgentVariants = false,
     agentSummary = true,
     teamId,
@@ -210,6 +218,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       showSurfaceSelector: editors && showViewSelector && !editorSelector,
       hideHeader: hideChatHeader,
       promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
+      autoFocusPrompt,
     }),
     // The composer and the title bar are plugins of their own: the chat
     // assembles their props, these render them. In the preset by default —

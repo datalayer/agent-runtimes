@@ -149,6 +149,18 @@ export type ChatPluginConfig = {
    * reader who has never seen the product knows what to type first.
    */
   promptPlacement: 'top' | 'bottom' | 'bottom-chat' | 'floating';
+
+  /**
+   * Whether the composer takes the caret when the workspace opens.
+   *
+   * True is right nearly everywhere: the workspace exists to be typed into,
+   * and a person who opened it should not have to click first. It is wrong
+   * where the loop is one section of a longer page — focusing an input on
+   * mount scrolls the browser to it, so a visitor who came for the top of the
+   * page is thrown into the middle of it, and a screen reader is moved with
+   * them. Such a host passes `false` and lets the reader arrive at the prompt.
+   */
+  autoFocusPrompt: boolean;
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
@@ -164,6 +176,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     hideHeader: false,
     hidePrompt: false,
     promptPlacement: 'bottom',
+    autoFocusPrompt: true,
   },
   displayName: 'Chat',
   description: 'The conversation, the prompt, and the point editors plug into.',

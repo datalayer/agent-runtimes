@@ -1389,7 +1389,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         ? 2
         : 3,
     promptVariant: 'lexical',
-    autoFocus: true,
+    // True unless the host asked otherwise: the workspace is there to be typed
+    // into. A page that embeds the loop as one section among many turns it off,
+    // because focusing an input on mount scrolls the browser to it.
+    autoFocus: config?.autoFocusPrompt ?? true,
     mentionableAgents: mentionable,
     headerContent:
       inpromptMenu.length > 0 ? (
