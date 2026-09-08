@@ -138,6 +138,25 @@ vi.mock('@datalayer/jupyter-react', () => ({
   // `AgentDocument` call it at module scope, so the mock has to answer even
   // for a test that never renders either.
   loadJupyterConfig: () => ({}),
+  /*
+   * What turns a tool definition into something callable.
+   *
+   * `createAgentRuntimesTool` builds one per tool, so any test that asks the
+   * adapters for a tool list constructs it — and a missing export here is not
+   * a mock returning nothing, it is a TypeError at construction. The real one
+   * calls the operation and formats the result; this does the first half and
+   * returns the result as it comes, which is what a test asserting on tool
+   * behaviour rather than on wire format wants.
+   */
+  OperationRunner: class OperationRunner {
+    async execute(
+      operation: { execute: (params: unknown, context: unknown) => unknown },
+      params: unknown,
+      context: unknown,
+    ) {
+      return operation.execute(params, context);
+    }
+  },
 }));
 
 vi.mock('@jupyter/web-components', () => ({}));

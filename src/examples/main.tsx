@@ -20,6 +20,7 @@ import {
   loadJupyterConfig,
   JupyterReactTheme,
   createServerSettings,
+  jupyterReactStore,
   setJupyterServerUrl,
   setJupyterServerToken,
   getJupyterServerUrl,
@@ -74,6 +75,7 @@ import {
   type ExampleRuntimeTarget,
 } from './utils/runtimeTargetStore';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { isLocalUrl } from './utils/localUrl';
 import { agentSummaryStore } from './utils/agentSummaryStore';
 import { isSandboxOnlyExample } from './utils/exampleSurfaces';
 import { useAgentSummaryStore } from './utils/agentSummaryStore';
@@ -250,41 +252,6 @@ const toAgentRuntimesBaseUrl = (value?: string | null): string | undefined => {
 };
 
 /**
- * Whether a URL names a Jupyter server on this machine.
- *
- * Asked this way round on purpose. The previous test was "is this prod1?",
- * which took every host it did not recognise for a local one — so once the
- * configured server moved to `r1`, Local mode accepted the cloud URL as its
- * own and the browser dialled it from `localhost`, where CORS refused it.
- *
- * The set of remote hosts is open — `prod1`, `r1`, whatever a deployment adds
- * next — while the set of local ones is not, so the closed set is the one
- * worth enumerating.
- */
-const isLocalJupyterServerUrl = (value?: string | null): boolean => {
-  if (!value) {
-    return false;
-  }
-  let host: string;
-  try {
-    host = new URL(value).hostname.toLowerCase();
-  } catch {
-    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(
-      value,
-    );
-  }
-  return (
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '0.0.0.0' ||
-    host === '::1' ||
-    host === '[::1]' ||
-    host.endsWith('.localhost') ||
-    host.endsWith('.local')
-  );
-};
-
-/**
  * The anonymous Jupyter server the `jupyter` target uses.
  *
  * The same one the jupyter-react examples point at: a real server, reachable
@@ -322,7 +289,7 @@ const resolveLocalJupyterServerUrl = (): string => {
   }
 
   const configured = getJupyterServerUrl();
-  if (configured && isLocalJupyterServerUrl(configured)) {
+  if (configured && isLocalUrl(configured)) {
     return normalizeLoopbackHost(configured);
   }
   return normalizeLoopbackHost(DEFAULT_LOCAL_JUPYTER_SERVER_URL);
@@ -1158,17 +1125,42 @@ export const ExampleApp: React.FC = () => {
    */
   const createServiceManagerForTarget = useCallback(
     async (target: ExampleRuntimeTarget): Promise<ServiceManager.IManager> => {
-      switch (target) {
-        case 'browser':
-          return createBrowserServiceManager();
-        case 'jupyter':
-          return createAnonymousJupyterServiceManager();
-        case 'datalayer':
-          return createCloudServiceManager();
-        case 'local':
-        default:
-          return createLocalServiceManager();
-      }
+      const manager = await (() => {
+        switch (target) {
+          case 'browser':
+            return createBrowserServiceManager();
+          case 'jupyter':
+            return createAnonymousJupyterServiceManager();
+          case 'datalayer':
+            return createCloudServiceManager();
+          case 'local':
+          default:
+            return createLocalServiceManager();
+        }
+      })();
+
+      /*
+       * Say out loud which manager this page is using.
+       *
+       * A component that calls `useJupyter()` without one of its own — and
+       * jupyter-react's `Output` is one, so any document holding a Jupyter
+       * output node reaches it — first looks for a manager published in the
+       * jupyter-react store, and builds its own from the page's
+       * `jupyter-config-data` only if it finds none. Nothing published one,
+       * so it built one; and that page config defaults to
+       * `<VITE_DATALAYER_RUNTIMES_URL>/api/jupyter-server`, which is the
+       * cloud. The Document Agent Sidebar was therefore opening a second
+       * service manager against `r1.datalayer.run` while the shell's own
+       * pointed at localhost — twenty-odd cross-origin requests, all refused,
+       * on the target whose whole meaning is "this machine".
+       *
+       * Publishing here is the mechanism the store already documents for
+       * exactly this ("adopt it rather than racing it with a second
+       * manager"), and it covers every target rather than the one that
+       * happened to show the symptom.
+       */
+      jupyterReactStore.getState().setServiceManager(manager);
+      return manager;
     },
     // The factories close over stable setters and store reads; re-creating this
     // on every render would restart the sandbox on each keystroke.

@@ -26,8 +26,8 @@ import type { ToolExecutionContext } from '@datalayer/jupyter-react';
 import {
   lexicalStore,
   DefaultExecutor as LexicalDefaultExecutor,
-  lexicalToolDefinitions,
-  lexicalToolOperations,
+  getLexicalTools,
+  useLexicalToolBundle,
 } from '@datalayer/jupyter-lexical';
 import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
 import type { FrontendToolDefinition } from '../../../types/tools';
@@ -79,16 +79,15 @@ export function createLexicalTools(
     documentId,
     lexicalStore.getState(),
   );
-  return createAllAgentRuntimesTools(
-    lexicalToolDefinitions,
-    lexicalToolOperations,
-    {
-      documentId,
-      executor,
-      format: 'toon',
-      ...contextOverrides,
-    },
-  );
+  // A snapshot: whichever plugins have mounted by now. The React hook below
+  // is the one that keeps up as they come and go.
+  const { definitions, operations } = getLexicalTools(documentId);
+  return createAllAgentRuntimesTools(definitions, operations, {
+    documentId,
+    executor,
+    format: 'toon',
+    ...contextOverrides,
+  });
 }
 
 export function useLexicalTools(
@@ -117,15 +116,28 @@ export function useLexicalTools(
     [documentId, executor, contextOverrides],
   );
 
+  /*
+   * The tools a document offers are not a constant.
+   *
+   * The block tools are — every Lexical document has blocks — but a plugin
+   * brings its own, and which plugins are mounted is the editor's business,
+   * not this hook's. `useLexicalToolBundle` watches the set of mounted
+   * plugins by name, so this recomputes when the editor gains or loses one
+   * and at no other time: the stability the comment above is about is
+   * preserved, because a block insertion does not change which plugins are
+   * mounted.
+   */
+  const bundle = useLexicalToolBundle(documentId);
+
   // Create and return tools (stable reference)
   return useMemo(
     () =>
       createAllAgentRuntimesTools(
-        lexicalToolDefinitions,
-        lexicalToolOperations,
+        bundle.definitions,
+        bundle.operations,
         context,
       ),
-    [context],
+    [bundle, context],
   );
 }
 

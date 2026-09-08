@@ -1280,6 +1280,139 @@ export const EXAMPLE_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const EXAMPLE_DOCUMENT_AGENT_SIDEBAR_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-document-agent-sidebar',
+  version: '0.0.1',
+  name: 'Example Document Agent Sidebar',
+  description: `Demonstration agent docked beside a Lexical document. Writes and edits the document through frontend tools so every change lands in the live editor, runs Jupyter cells embedded in it, and draws diagrams into it with Excalidraw.`,
+  tags: ['document', 'lexical', 'frontend-tools', 'drawing', 'sidebar'],
+  domain: undefined,
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [FRONTEND_TOOL_MAP['lexical-document:0.0.1']],
+  environmentName: 'ai-agents-env',
+  icon: 'file',
+  emoji: '📝',
+  color: '#1F6FEB',
+  suggestions: [
+    { text: 'Can you help me write a document?', summary: 'Help me write' },
+    {
+      text: 'Draw a flowchart of a three-stage data pipeline — ingest, transform, publish — with labelled arrows between the stages.',
+      summary: 'Draw a diagram',
+    },
+    {
+      text: 'Read the drawing in this document and add a box for a validation step between ingest and transform, wired into the existing arrows.',
+      summary: 'Edit the drawing',
+    },
+    {
+      text: 'Can you summarize the content in the editor?',
+      summary: 'Summarize text',
+    },
+  ],
+  welcomeMessage:
+    'Hi! I can help you write and edit this document. Ask me to draft a section, summarize what is here, or draw a diagram.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  systemPrompt: `You are a helpful assistant that works inside a Lexical document. For anything that changes the document, use the lexical frontend tools so the change happens in the live editor and the reader sees it appear. Diagrams are documents too: when this editor mounts the Excalidraw plugin the excalidraw* tools are in your tool list, and you should draw with them rather than describing a picture in prose or drawing it as ASCII art. Use excalidrawInsertNode to make one; to change an existing drawing, call excalidrawListDrawings for its block_id and excalidrawReadScene for its contents before editing it, because element ids only come from reading the scene. Use executeCodeInDocument only for temporary inspection code that should not become part of the document.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps and summarize what each one showed. Prefer reading the document with the frontend tools over re-deriving its contents.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: false },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
+export const EXAMPLE_DOCUMENT_AGENT_SPEC_0_0_1: Agentspec = {
+  id: 'example-document-agent',
+  version: '0.0.1',
+  name: 'Example Document Agent',
+  description: `Demonstration agent that writes and edits a Lexical document through frontend tools, so every change happens in the live editor rather than in a copy of the text. Runs Jupyter cells embedded in the document, and draws diagrams into it with Excalidraw.`,
+  tags: ['document', 'lexical', 'frontend-tools', 'drawing'],
+  domain: undefined,
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [FRONTEND_TOOL_MAP['lexical-document:0.0.1']],
+  environmentName: 'ai-agents-env',
+  icon: 'file',
+  emoji: '📝',
+  color: '#1F6FEB',
+  suggestions: [
+    {
+      text: 'Insert a heading that says "Welcome"',
+      summary: 'Insert a heading',
+    },
+    {
+      text: 'Add a Python code block with a hello world example',
+      summary: 'Add a code block',
+    },
+    {
+      text: 'Draw a flowchart of a three-stage data pipeline — ingest, transform, publish — with labelled arrows between the stages.',
+      summary: 'Draw a diagram',
+    },
+    {
+      text: 'Read the drawing in this document and add a box for a validation step between ingest and transform, wired into the existing arrows.',
+      summary: 'Edit the drawing',
+    },
+  ],
+  welcomeMessage:
+    'Hi! I can help you edit this document. Try "Insert a heading", "Add a code block", or ask me to draw a diagram.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  systemPrompt: `You are a helpful assistant that works inside a Lexical document. For anything that changes the document, use the lexical frontend tools so the change happens in the live editor and the reader sees it appear. Diagrams are documents too: when this editor mounts the Excalidraw plugin the excalidraw* tools are in your tool list, and you should draw with them rather than describing a picture in prose or drawing it as ASCII art. Use excalidrawInsertNode to make one; to change an existing drawing, call excalidrawListDrawings for its block_id and excalidrawReadScene for its contents before editing it, because element ids only come from reading the scene. Use executeCodeInDocument only for temporary inspection code that should not become part of the document.`,
+  systemPromptCodemodeAddons: `Compose focused execution steps and summarize what each one showed. Prefer reading the document with the frontend tools over re-deriving its contents.`,
+  goal: undefined,
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: { enabled: false },
+  output: undefined,
+  advanced: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-evals-nocodemode',
   version: '0.0.1',
@@ -12589,6 +12722,9 @@ export const AGENTSPECS: Record<string, Agentspec> = {
     EXAMPLE_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1,
   'example-cost-comparison-report':
     EXAMPLE_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1,
+  'example-document-agent-sidebar':
+    EXAMPLE_DOCUMENT_AGENT_SIDEBAR_AGENTSPEC_0_0_1,
+  'example-document-agent': EXAMPLE_DOCUMENT_AGENT_SPEC_0_0_1,
   'example-evals-nocodemode': EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1,
   'example-evals': EXAMPLE_EVALS_AGENTSPEC_0_0_1,
   'example-explore-sql-database': EXAMPLE_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1,

@@ -83,8 +83,9 @@ export const LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
   id: 'lexical-document',
   version: '0.0.1',
   name: 'Lexical Document',
-  description: 'Frontend tools for interacting with Lexical documents.',
-  tags: ['frontend', 'document', 'lexical'],
+  description:
+    'Frontend tools for interacting with Lexical documents: reading and writing blocks, running Jupyter cells in the page, and drawing diagrams into the document with Excalidraw.',
+  tags: ['frontend', 'document', 'lexical', 'drawing', 'diagram'],
   enabled: true,
   toolset: 'all',
   icon: 'file',

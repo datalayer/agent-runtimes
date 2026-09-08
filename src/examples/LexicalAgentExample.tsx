@@ -77,6 +77,9 @@ const LEXICAL_ID = 'agui-lexical-example';
 
 const AGENT_ID = 'lexical-agent-runtime-example';
 
+/** The agentspec this example's agent is built from. */
+const AGENTSPEC_ID = 'example-document-agent';
+
 /**
  * Hook to ensure the example-agent exists on the server.
  * Creates it if it doesn't exist.
@@ -349,6 +352,7 @@ function LexicalWithChat({
   } = useExampleJupyterAgent({
     exampleId: 'LexicalAgentExample',
     agentName: AGENT_ID,
+    specId: AGENTSPEC_ID,
     description: 'Demo agent for lexical example',
     systemPrompt:
       'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',

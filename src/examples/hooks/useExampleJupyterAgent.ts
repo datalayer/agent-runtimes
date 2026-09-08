@@ -73,6 +73,17 @@ export interface UseExampleJupyterAgentOptions {
   exampleId: string;
   /** The agent's name, which is also its id on the runtime. */
   agentName: string;
+  /**
+   * The agentspec this example's agent is built from, if it has one.
+   *
+   * Every example is meant to name one: it is what puts a real entry in the
+   * summary's `Spec:` field instead of a dash, and it is what lets the runtime
+   * build the agent from the catalogue — model, skills, tools, guardrails —
+   * rather than from whatever this hook's caller happened to inline. The
+   * inline `systemPrompt` and `model` below stay as the fallback for an
+   * example that has no spec yet, and as the local override for one that does.
+   */
+  specId?: string;
   /** One line about the agent, shown by the runtime. */
   description: string;
   /** The agent's instructions. */
@@ -148,6 +159,7 @@ export function useExampleJupyterAgent(
   const {
     exampleId,
     agentName,
+    specId,
     description,
     systemPrompt,
     serviceManager,
@@ -170,13 +182,18 @@ export function useExampleJupyterAgent(
       enableCodemode: false,
       sandboxVariant: 'jupyter-server',
       jupyterSandbox: jupyterSandboxUrl,
+      // Named here as well as passed below: `useExampleAgentRuntimes` only
+      // folds the spec id into the config on the local target, and the runtime
+      // needs it on every one.
+      ...(specId ? { agentSpecId: specId } : {}),
     }),
-    [agentName, description, model, systemPrompt, jupyterSandboxUrl],
+    [agentName, description, model, systemPrompt, jupyterSandboxUrl, specId],
   );
 
   const result = useExampleAgentRuntime({
     exampleId,
     agentName,
+    specId,
     autoCreateAgent: false,
     agentConfig,
   });
