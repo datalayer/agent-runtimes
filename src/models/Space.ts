@@ -87,6 +87,16 @@ export type IBaseSpace = {
   variant: ISpaceVariant;
   name: string;
   description: string;
+  /**
+   * The words its owner filed it under.
+   *
+   * Present on every space the API answers with — the mapper reads `tags_ss`
+   * — and searched for by the library, which is what makes them worth
+   * setting. They were missing from this type rather than from the data, so
+   * the publish dialog could not be handed a course's own tags without a
+   * cast, and would have offered to replace them with nothing.
+   */
+  tags?: string[];
   creationDate: Date;
   public: boolean;
   owner: IUser;
