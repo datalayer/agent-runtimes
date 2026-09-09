@@ -54,6 +54,72 @@ class RequestUsage:
     duration_ms: float = 0.0
 
 
+def serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
+    """Convert pydantic-ai ``ModelMessage`` objects to JSON-serializable dicts.
+
+    The form the usage tracker stores, the history route serves and a
+    conversation checkpoint snapshots: ``kind``, ``timestamp`` and ``parts``
+    with their kind, content and tool fields.
+    """
+    serialized: list[dict[str, Any]] = []
+    for msg in messages:
+        try:
+            # Handle pydantic-ai ModelMessage objects
+            msg_dict: dict[str, Any] = {}
+
+            # Get the message kind (request or response)
+            msg_kind = getattr(msg, "kind", None)
+            msg_dict["kind"] = msg_kind
+
+            # Get timestamp if available
+            timestamp = getattr(msg, "timestamp", None)
+            if timestamp:
+                msg_dict["timestamp"] = str(timestamp)
+
+            # Process parts
+            parts = getattr(msg, "parts", [])
+            serialized_parts: list[dict[str, Any]] = []
+            for part in parts:
+                part_dict: dict[str, Any] = {}
+                part_kind = getattr(part, "part_kind", None)
+                part_dict["part_kind"] = part_kind
+
+                # Extract content based on part type
+                if hasattr(part, "content"):
+                    content = part.content
+                    if isinstance(content, str):
+                        part_dict["content"] = content
+                    else:
+                        part_dict["content"] = str(content)
+                elif hasattr(part, "text"):
+                    part_dict["content"] = part.text or ""
+
+                # Tool-specific fields
+                if hasattr(part, "tool_name"):
+                    part_dict["tool_name"] = part.tool_name
+                if hasattr(part, "tool_call_id"):
+                    part_dict["tool_call_id"] = part.tool_call_id
+                if hasattr(part, "args"):
+                    try:
+                        import json
+
+                        part_dict["args"] = (
+                            json.dumps(part.args, default=str) if part.args else "{}"
+                        )
+                    except Exception:
+                        part_dict["args"] = str(part.args)
+
+                serialized_parts.append(part_dict)
+
+            msg_dict["parts"] = serialized_parts
+            serialized.append(msg_dict)
+        except Exception as e:
+            logger.debug(f"Could not serialize message: {e}")
+            continue
+
+    return serialized
+
+
 @dataclass
 class AgentUsageStats:
     """
@@ -175,64 +241,7 @@ class AgentUsageStats:
         Args:
             messages: List of pydantic-ai ModelMessage objects.
         """
-        serialized: list[dict[str, Any]] = []
-        for msg in messages:
-            try:
-                # Handle pydantic-ai ModelMessage objects
-                msg_dict: dict[str, Any] = {}
-
-                # Get the message kind (request or response)
-                msg_kind = getattr(msg, "kind", None)
-                msg_dict["kind"] = msg_kind
-
-                # Get timestamp if available
-                timestamp = getattr(msg, "timestamp", None)
-                if timestamp:
-                    msg_dict["timestamp"] = str(timestamp)
-
-                # Process parts
-                parts = getattr(msg, "parts", [])
-                serialized_parts: list[dict[str, Any]] = []
-                for part in parts:
-                    part_dict: dict[str, Any] = {}
-                    part_kind = getattr(part, "part_kind", None)
-                    part_dict["part_kind"] = part_kind
-
-                    # Extract content based on part type
-                    if hasattr(part, "content"):
-                        content = part.content
-                        if isinstance(content, str):
-                            part_dict["content"] = content
-                        else:
-                            part_dict["content"] = str(content)
-                    elif hasattr(part, "text"):
-                        part_dict["content"] = part.text or ""
-
-                    # Tool-specific fields
-                    if hasattr(part, "tool_name"):
-                        part_dict["tool_name"] = part.tool_name
-                    if hasattr(part, "tool_call_id"):
-                        part_dict["tool_call_id"] = part.tool_call_id
-                    if hasattr(part, "args"):
-                        try:
-                            import json
-
-                            part_dict["args"] = (
-                                json.dumps(part.args, default=str)
-                                if part.args
-                                else "{}"
-                            )
-                        except Exception:
-                            part_dict["args"] = str(part.args)
-
-                    serialized_parts.append(part_dict)
-
-                msg_dict["parts"] = serialized_parts
-                serialized.append(msg_dict)
-            except Exception as e:
-                logger.debug(f"Could not serialize message: {e}")
-                continue
-
+        serialized = serialize_messages(messages)
         self.message_history = serialized
         self.last_updated = datetime.now(timezone.utc)
         logger.debug(f"Stored {len(serialized)} messages for agent {self.agent_id}")

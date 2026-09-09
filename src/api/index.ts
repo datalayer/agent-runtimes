@@ -17,6 +17,7 @@
 // approval interactions flow over the websocket stream; see
 // `hooks/useToolApprovals` and `components/ToolApprovalBanner`.
 export * as agents from './agents';
+export * as conversationCheckpoints from './checkpoints';
 export * as context from './context';
 export * as evals from './evals';
 export * as events from './events';

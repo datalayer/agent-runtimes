@@ -12,6 +12,14 @@ Complementary to CRIU (container-level checkpoints) and DBOS
 strategic failures — wrong approach, dead-end reasoning.
 """
 
+from .capability import (
+    CheckpointsCapability,
+    apply_rewind,
+    build_checkpoints_capability,
+    get_checkpoints,
+    register_checkpoints,
+    unregister_checkpoints,
+)
 from .config import CheckpointConfig
 from .middleware import AutoCheckpointMiddleware
 from .store import (
@@ -29,6 +37,12 @@ from .tools import (
 
 __all__ = [
     "CheckpointConfig",
+    "CheckpointsCapability",
+    "apply_rewind",
+    "build_checkpoints_capability",
+    "get_checkpoints",
+    "register_checkpoints",
+    "unregister_checkpoints",
     "CheckpointStore",
     "ConversationCheckpoint",
     "FileCheckpointStore",

@@ -110,7 +110,7 @@ const EXAMPLE_GROUP_ORDER = [
   'A2UI',
   'A2A',
   'AG-UI',
-  'Agent',
+  'Capabilities',
   'Chat',
   'Document',
   'Notebook',
@@ -154,7 +154,9 @@ const getExampleGroup = (id: string): string => {
   if (id.startsWith('AgentA2A')) return 'A2A';
   if (id.startsWith('AgUi')) return 'AG-UI';
   if (id.startsWith('CopilotKit')) return 'CopilotKit';
-  if (id.startsWith('Agent')) return 'Agent';
+  // Each remaining Agent* example demonstrates one capability of the
+  // runtime: checkpoints, hooks, memory, guardrails…
+  if (id.startsWith('Agent')) return 'Capabilities';
   if (id.startsWith('Chat')) return 'Chat';
   // The document examples: the ones on the Lexical editor, and the page
   // with a document on it.

@@ -2796,6 +2796,13 @@ async def delete_agent(
         logger.warning(f"Could not unregister from AG-UI: {e}")
 
     try:
+        from ..checkpoints import unregister_checkpoints
+
+        unregister_checkpoints(agent_id)
+    except Exception as e:
+        logger.warning(f"Could not drop conversation checkpoints: {e}")
+
+    try:
         unregister_vercel_agent(agent_id)
     except Exception as e:
         logger.warning(f"Could not unregister from Vercel AI: {e}")

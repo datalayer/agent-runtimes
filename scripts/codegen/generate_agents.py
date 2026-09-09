@@ -407,6 +407,7 @@ from agent_runtimes.types import (
             codemode_val = spec.get("codemode")
             output_val = spec.get("output")
             advanced_val = spec.get("advanced")
+            checkpoints_val = spec.get("checkpoints")
             auth_policy = spec.get("authorization_policy")
             auth_policy_str = f'"{auth_policy}"' if auth_policy is not None else "None"
             notifs = spec.get("notifications")
@@ -516,6 +517,7 @@ from agent_runtimes.types import (
     codemode={_fmt_py_literal(codemode_val)},
     output={_fmt_py_literal(output_val)},
     advanced={_fmt_py_literal(advanced_val)},
+    checkpoints={_fmt_py_literal(checkpoints_val)},
     authorization_policy={auth_policy_str},
     notifications={_fmt_py_literal(notifs)},
     memory={memory_str},
@@ -1023,6 +1025,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             codemode_val = spec.get("codemode")
             output_val = spec.get("output")
             advanced_val = spec.get("advanced")
+            checkpoints_val = spec.get("checkpoints")
             auth_policy = spec.get("authorization_policy")
             auth_policy_ts = (
                 f"'{auth_policy}'" if auth_policy is not None else "undefined"
@@ -1080,6 +1083,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     codemode: {_fmt_ts_literal(codemode_val)},
     output: {_fmt_ts_literal(output_val)},
     advanced: {_fmt_ts_literal(advanced_val)},
+    checkpoints: {_fmt_ts_literal(checkpoints_val)},
     authorizationPolicy: {auth_policy_ts},
     notifications: {_fmt_ts_literal(notifs)},
     memory: {memory_ts},

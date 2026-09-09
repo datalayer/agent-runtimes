@@ -48,6 +48,23 @@ export interface AgentSuggestion {
   emoji?: string;
 }
 
+/**
+ * Conversation checkpoint configuration.
+ *
+ * Snapshots of the message history the agent (or the person) can rewind to.
+ * Complementary to runtime checkpoints (CRIU), which freeze the whole process.
+ */
+export interface AgentCheckpointsConfig {
+  /** Whether checkpointing is on for this agent. */
+  enabled?: boolean;
+  /** When a checkpoint is taken on its own. */
+  frequency?: 'every_turn' | 'every_tool' | 'manual_only';
+  /** Rolling window: the oldest checkpoint goes when this is exceeded. */
+  max_checkpoints?: number;
+  /** Where checkpoints are kept. */
+  store?: 'in_memory' | 'file';
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -132,6 +149,8 @@ export interface Agentspec {
   output?: AgentOutputConfig;
   /** Advanced settings (cost_limit, time_limit, max_iterations, validation) */
   advanced?: AgentAdvancedConfig;
+  /** Conversation checkpoints: auto-snapshots of the history, with tools to save, list and rewind. */
+  checkpoints?: AgentCheckpointsConfig;
   /** Authorization policy */
   authorizationPolicy?: string;
   /** Notification configuration (email, slack) */

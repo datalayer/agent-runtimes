@@ -812,6 +812,35 @@ def build_codemode_status(agent_id: str | None = None) -> dict[str, Any] | None:
 # ─── Monitoring payload assembly ──────────────────────────────────────
 
 
+def push_snapshot(agent_id: str) -> None:
+    """Push a fresh monitoring snapshot to whoever watches *agent_id*.
+
+    Best effort and fire-and-forget: scheduled on the running loop, and a
+    quiet no-op when there is none. For the moments the agent's state changes
+    outside a run — a rewind to a checkpoint, a history restore — so the
+    watching chat and sidebars do not wait for the next turn to learn it.
+    """
+
+    async def _push() -> None:
+        try:
+            snapshot = await build_monitoring_snapshot_payload(agent_id)
+            enqueue_stream_message(
+                agent_id,
+                AgentStreamMessage.create(
+                    type="agent.snapshot",
+                    payload=snapshot.model_dump(by_alias=True),
+                    agent_id=agent_id,
+                ),
+            )
+        except Exception:
+            logger.debug("Snapshot push failed for agent %s", agent_id, exc_info=True)
+
+    try:
+        asyncio.get_running_loop().create_task(_push())
+    except RuntimeError:
+        logger.debug("No running loop to push a snapshot for agent %s", agent_id)
+
+
 async def build_monitoring_snapshot_payload(
     agent_id: str | None,
     *,

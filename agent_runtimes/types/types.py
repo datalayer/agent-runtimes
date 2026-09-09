@@ -1377,6 +1377,14 @@ class Agentspec(BaseModel):
         default=None,
         description="Advanced settings (cost_limit, time_limit, max_iterations, validation)",
     )
+    checkpoints: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Conversation checkpoint configuration: enabled, frequency "
+            "(every_turn, every_tool, manual_only), max_checkpoints, store "
+            "(in_memory, file)."
+        ),
+    )
     authorization_policy: Optional[str] = Field(
         default=None,
         description="Authorization policy",

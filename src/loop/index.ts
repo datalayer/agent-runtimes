@@ -195,6 +195,11 @@ export {
 } from './plugins/agent-subagents';
 export { AgentA2APlugin, AGENT_A2A_PLUGIN_NAME } from './plugins/agent-a2a';
 export {
+  CheckpointsSidebarPlugin,
+  CHECKPOINTS_SIDEBAR_PLUGIN_NAME,
+  CheckpointsSidebar,
+} from './plugins/checkpoints-sidebar';
+export {
   A2ASidebarPlugin,
   A2ASidebar,
   A2A_SIDEBAR_PLUGIN_NAME,

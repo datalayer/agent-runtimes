@@ -6,9 +6,11 @@
 /**
  * `@datalayer/loop-plugin-agent-checkpoints` — checkpointing, as a capacity.
  *
- * Mounts the `monitor-sales-kpis` agent: a long-running monitor whose state
- * survives pause and resume through checkpoints. Cast from the shared
- * capacity mould.
+ * Mounts the `example-checkpoints` agent: its conversation is snapshotted
+ * after every turn, and it can save, list and rewind to checkpoints on
+ * request. Cast from the shared capacity mould; the openers are the spec's
+ * own. Pair it with the checkpoints sidebar to see and use the checkpoints
+ * from outside the chat.
  *
  * @module loop/plugins/agent-checkpoints
  */
@@ -21,14 +23,11 @@ export const AGENT_CHECKPOINTS_PLUGIN_NAME =
 export const AgentCheckpointsPlugin = defineAgentCapacityPlugin({
   key: 'checkpoints',
   displayName: 'Agent Checkpoints',
-  description: 'Monitor Sales KPI agent with pause/resume checkpointing.',
-  specId: 'monitor-sales-kpis',
+  description:
+    'Conversation checkpoints: taken every turn, saved on request, rewound to.',
+  specId: 'example-checkpoints',
   octicon: 'versions',
   emoji: '💾',
-  suggestions: [
-    { text: 'KPIs', message: "Show me today's sales KPI dashboard" },
-    { text: 'Trends', message: 'What are the current revenue trends?' },
-  ],
 });
 
 export default AgentCheckpointsPlugin;

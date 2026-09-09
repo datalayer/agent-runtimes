@@ -417,6 +417,18 @@ def build_capabilities_from_agent_spec(
         if memory_capability is not None:
             capabilities.append(memory_capability)
 
+    # Conversation checkpoints: snapshots of the history the agent or the
+    # person can rewind to, with the tools to take and use them.
+    checkpoints_config = getattr(agent_spec, "checkpoints", None)
+    if checkpoints_config:
+        from ..checkpoints import build_checkpoints_capability
+
+        checkpoints_capability = build_checkpoints_capability(
+            checkpoints_config, agent_id=agent_id
+        )
+        if checkpoints_capability is not None:
+            capabilities.append(checkpoints_capability)
+
     if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_COST_MONITORING", True) and agent_id:
         capabilities.append(
             CostMonitoringCapability(

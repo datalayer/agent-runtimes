@@ -12,8 +12,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .store import RewindRequested
-
 logger = logging.getLogger(__name__)
 
 
@@ -104,25 +102,23 @@ def list_checkpoints_tool_fn(middleware: Any) -> dict[str, Any]:
 def rewind_to_tool_fn(middleware: Any) -> dict[str, Any]:
     """Create a ``rewind_to`` tool bound to the middleware.
 
-    When the agent calls this tool, a ``RewindRequested`` exception
-    propagates out of the agent run loop. The controlling application
-    code catches this, restores the message history from the checkpoint,
-    and restarts the agent.
+    The rewind is not immediate: the middleware keeps it until the turn is
+    over, then the conversation is set back to the checkpoint — so the run
+    that asked can still finish, and the person hears about it.
     """
 
     async def rewind_to(checkpoint_id: str, reason: str = "") -> str:
         """Rewind the conversation to a previous checkpoint.
 
-        This discards all messages after the checkpoint and restarts
-        the agent loop. Use when the current approach has failed or
-        reached a dead end.
+        Everything after the checkpoint is discarded once this turn ends.
+        Use when the current approach has failed or reached a dead end.
 
         Args:
             checkpoint_id: The checkpoint ID to rewind to (from list_checkpoints).
             reason: Why you're rewinding (logged for observability).
 
         Returns:
-            Never returns — raises RewindRequested exception.
+            What will happen at the end of this turn.
         """
         checkpoint = await middleware.get_checkpoint(checkpoint_id)
         if checkpoint is None:
@@ -134,14 +130,20 @@ def rewind_to_tool_fn(middleware: Any) -> dict[str, Any]:
             checkpoint.turn,
             reason or "not specified",
         )
-        raise RewindRequested(checkpoint)
+        middleware.request_rewind(checkpoint)
+        return (
+            f"Rewinding to '{checkpoint.label}' (turn {checkpoint.turn}, "
+            f"{checkpoint.message_count} messages): everything after it is "
+            "discarded when this turn ends. Tell the person so in one line and "
+            "do nothing else this turn."
+        )
 
     return {
         "name": "rewind_to",
         "description": (
             "Rewind the conversation to a previous checkpoint, discarding "
-            "all messages after that point. Use when your current approach "
-            "has failed or you want to try a different strategy."
+            "all messages after that point once this turn ends. Use when your "
+            "current approach has failed or you want to try a different strategy."
         ),
         "function": rewind_to,
         "parameters": {
