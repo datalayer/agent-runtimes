@@ -375,6 +375,13 @@ class EvalSpec(BaseModel):
         ..., description="Case-level or report-level evaluator"
     )
     pydantic_class: str = Field(..., description="Pydantic evaluator class name")
+    executable: bool = Field(
+        default=False,
+        description=(
+            "Whether the platform can run this evaluator today. A catalogue "
+            "entry that is not executable is shown, never offered."
+        ),
+    )
     output_kind: Literal[
         "boolean",
         "boolean_with_reason",

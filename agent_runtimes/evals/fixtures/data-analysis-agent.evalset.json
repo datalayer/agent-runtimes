@@ -1,0 +1,99 @@
+{
+  "name": "Data Analysis Agent Benchmark",
+  "description": "The reference benchmark of the Datalayer plan (BENCHMARK.md, B0-13): a data analysis agent works a customer table that hides duplicate customers under distinct rows. Every case is answerable from customers.csv, which the preamble builds deterministically on the sandbox, so the same benchmark runs the same everywhere and its report is the golden file the test suites compare against.",
+  "run_environment": "sdk",
+  "kind": "batch",
+  "category": "data",
+  "tags": ["reference", "data-analysis", "duplicates", "benchmark"],
+  "metadata": {
+    "scenario": "customer-duplicates",
+    "agentspec_ids": ["jupyter-data-analyst"],
+    "comparison_mode": "same-evalset-multiple-agentspecs",
+    "dataset": {
+      "name": "customers.csv",
+      "rows": 2000,
+      "duplicate_customers": 157,
+      "duplicate_rows": 314,
+      "generator": "seeded numpy, seed 7"
+    },
+    "prime_code": "import numpy as np\nimport pandas as pd\nrng = np.random.default_rng(7)\nn = 2000\nids = [f\"C-{1000 + i}\" for i in range(n - 157)]\ntwice = [ids[i] for i in range(42, 42 + 157 * 11, 11)]\nframe = pd.DataFrame({\n    \"customer_id\": ids + twice,\n    \"signed_up\": pd.Timestamp(\"2026-01-05\") + pd.to_timedelta(rng.integers(0, 60 * 24 * 90, n), unit=\"m\"),\n    \"plan\": rng.choice([\"free\", \"team\", \"enterprise\"], n, p=[0.6, 0.3, 0.1]),\n    \"spend\": rng.gamma(2.0, 40.0, n).round(2),\n})\nframe.sample(frac=1, random_state=7).reset_index(drop=True).to_csv(\"customers.csv\", index=False)\n",
+    "prompt_preamble": "You are analysing customers.csv in the current working directory. If the file is missing, create it first by running exactly this Python code, then answer:\n\nimport numpy as np\nimport pandas as pd\nrng = np.random.default_rng(7)\nn = 2000\nids = [f\"C-{1000 + i}\" for i in range(n - 157)]\ntwice = [ids[i] for i in range(42, 42 + 157 * 11, 11)]\nframe = pd.DataFrame({\n    \"customer_id\": ids + twice,\n    \"signed_up\": pd.Timestamp(\"2026-01-05\") + pd.to_timedelta(rng.integers(0, 60 * 24 * 90, n), unit=\"m\"),\n    \"plan\": rng.choice([\"free\", \"team\", \"enterprise\"], n, p=[0.6, 0.3, 0.1]),\n    \"spend\": rng.gamma(2.0, 40.0, n).round(2),\n})\nframe.sample(frac=1, random_state=7).reset_index(drop=True).to_csv(\"customers.csv\", index=False)\n\nAnswer with the number or the word only, no explanation."
+  },
+  "schema": {
+    "schema_version": "1.0",
+    "kind": "batch",
+    "title": "Data Analysis Agent Benchmark",
+    "description": "Questions about a customer table with hidden duplicates.",
+    "input_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "AnalysisQuestion",
+      "type": "object",
+      "required": ["prompt"],
+      "properties": {
+        "prompt": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "enum": ["counting", "duplicates", "aggregation"] }
+      }
+    },
+    "output_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "AnalysisAnswer",
+      "type": "string"
+    },
+    "metadata_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] }
+      }
+    }
+  },
+  "evalset_evaluators": [
+    { "name": "pass_rate_threshold", "arguments": { "threshold": 0.6 } }
+  ],
+  "report_evaluators": [],
+  "cases": [
+    {
+      "name": "row-count",
+      "inputs": { "prompt": "How many customer records are in customers.csv?", "category": "counting" },
+      "expected_output": "2000",
+      "evaluators": [{ "name": "contains" }],
+      "metadata": { "category": "counting", "difficulty": "easy" }
+    },
+    {
+      "name": "exact-duplicate-rows",
+      "inputs": { "prompt": "How many rows of customers.csv are exact duplicates of another row across every column?", "category": "duplicates" },
+      "expected_output": "0",
+      "evaluators": [{ "name": "equals_expected" }],
+      "metadata": { "category": "duplicates", "difficulty": "easy" }
+    },
+    {
+      "name": "duplicate-customers",
+      "inputs": { "prompt": "How many distinct customer_id values appear more than once in customers.csv?", "category": "duplicates" },
+      "expected_output": "157",
+      "evaluators": [{ "name": "contains" }],
+      "metadata": { "category": "duplicates", "difficulty": "medium" }
+    },
+    {
+      "name": "duplicate-rows",
+      "inputs": { "prompt": "How many rows of customers.csv share their customer_id with at least one other row?", "category": "duplicates" },
+      "expected_output": "314",
+      "evaluators": [{ "name": "contains" }],
+      "metadata": { "category": "duplicates", "difficulty": "medium" }
+    },
+    {
+      "name": "largest-plan",
+      "inputs": { "prompt": "Which plan has the most customer records in customers.csv: free, team or enterprise?", "category": "aggregation" },
+      "expected_output": "free",
+      "evaluators": [{ "name": "contains" }],
+      "metadata": { "category": "aggregation", "difficulty": "easy" }
+    },
+    {
+      "name": "unique-customers",
+      "inputs": { "prompt": "How many distinct customers (unique customer_id values) are in customers.csv?", "category": "counting" },
+      "expected_output": "1843",
+      "evaluators": [{ "name": "contains" }],
+      "metadata": { "category": "counting", "difficulty": "medium" }
+    }
+  ]
+}

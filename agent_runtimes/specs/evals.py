@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from agent_runtimes.types import EvalSpec
 
+
 # ============================================================================
 # Eval Definitions
 # ============================================================================
@@ -26,6 +27,7 @@ CONFUSION_MATRIX_EVALUATOR_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="report",
     pydantic_class="ConfusionMatrixEvaluator",
     output_kind="report_table",
+    executable=False,
     cost_tier="free",
     latency="fast",
     requires=["expected_output"],
@@ -42,6 +44,7 @@ CONTAINS_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="case",
     pydantic_class="ContainsEvaluator",
     output_kind="boolean",
+    executable=True,
     cost_tier="free",
     latency="instant",
     requires=["expected_output"],
@@ -58,6 +61,7 @@ EQUALS_EXPECTED_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="case",
     pydantic_class="EqualsExpectedEvaluator",
     output_kind="boolean",
+    executable=True,
     cost_tier="free",
     latency="instant",
     requires=["expected_output"],
@@ -74,6 +78,7 @@ EQUALS_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="case",
     pydantic_class="EqualsEvaluator",
     output_kind="boolean",
+    executable=True,
     cost_tier="free",
     latency="instant",
     requires=["expected_output"],
@@ -90,6 +95,7 @@ HAS_MATCHING_SPAN_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="case",
     pydantic_class="HasMatchingSpanEvaluator",
     output_kind="boolean",
+    executable=False,
     cost_tier="free",
     latency="fast",
     requires=["trace"],
@@ -106,6 +112,7 @@ IS_INSTANCE_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="case",
     pydantic_class="IsInstanceEvaluator",
     output_kind="boolean",
+    executable=False,
     cost_tier="free",
     latency="instant",
     requires=["expected_type"],
@@ -122,11 +129,12 @@ LLM_JUDGE_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="case",
     pydantic_class="LLMJudgeEvaluator",
     output_kind="score_and_assertion",
+    executable=False,
     cost_tier="llm",
     latency="slow",
     requires=["model"],
     source="https://ai.pydantic.dev/evals/",
-    default_config={"threshold": 0.7},
+    default_config={'threshold': 0.7},
 )
 
 MAX_DURATION_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -138,11 +146,12 @@ MAX_DURATION_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="case",
     pydantic_class="MaxDurationEvaluator",
     output_kind="boolean_with_reason",
+    executable=False,
     cost_tier="free",
     latency="instant",
     requires=["duration_ms"],
     source="https://ai.pydantic.dev/evals/",
-    default_config={"max_duration_ms": 5000},
+    default_config={'max_duration_ms': 5000},
 )
 
 PRECISION_RECALL_EVALUATOR_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -154,6 +163,7 @@ PRECISION_RECALL_EVALUATOR_EVAL_SPEC_0_0_1 = EvalSpec(
     evaluator_type="report",
     pydantic_class="PrecisionRecallEvaluator",
     output_kind="report_curve",
+    executable=False,
     cost_tier="free",
     latency="fast",
     requires=["expected_output"],
@@ -183,8 +193,8 @@ def get_eval_spec(eval_id: str) -> EvalSpec | None:
     spec = EVAL_CATALOG.get(eval_id)
     if spec is not None:
         return spec
-    base, _, ver = eval_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = eval_id.rpartition(':')
+    if base and '.' in ver:
         return EVAL_CATALOG.get(base)
     return None
 

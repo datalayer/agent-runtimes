@@ -5,7 +5,16 @@
 
 from __future__ import annotations
 
-from a2ui.basic_catalog.provider import BasicCatalog
+import pytest
+
+# The SDK is an opt-in extra (`agent-runtimes[a2ui]`), because it drags in
+# google-adk and with it an OTEL ceiling for the whole environment. Where it is
+# installed, this file is what keeps the module's literal catalog id honest.
+_sdk = pytest.importorskip(
+    "a2ui.basic_catalog.provider",
+    reason="a2ui-agent-sdk is not installed; the catalog id falls back to its literal",
+)
+BasicCatalog = _sdk.BasicCatalog
 from a2ui.schema.constants import VERSION_0_9
 
 from agent_runtimes.a2ui import A2UI_VERSION, ExecutionResult, execution_to_a2ui

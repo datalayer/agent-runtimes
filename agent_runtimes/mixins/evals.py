@@ -112,53 +112,25 @@ class EvalsMixin:
         billing_entity_uid: Optional[str] = None,
         account_uid: Optional[str] = None,
     ) -> dict[str, Any]:
-        if not isinstance(spec, dict):
-            raise ValueError("spec must be a JSON object")
+        # One derivation of the body for every caller (the schema module is
+        # what the CLI, the action and the service's import share); the
+        # overrides given here replace the spec's own values.
+        from agent_runtimes.evals.spec_schema import evalset_payload_from_spec
 
-        resolved_name = str(
-            name if name is not None else spec.get("name") or ""
-        ).strip()
-        if not resolved_name:
+        payload = evalset_payload_from_spec(spec)
+        if name is not None:
+            payload["name"] = str(name).strip()
+        if description is not None:
+            payload["description"] = str(description)
+        if run_environment is not None:
+            payload["run_environment"] = str(run_environment)
+        if kind is not None:
+            payload["kind"] = str(kind)
+        if not payload["name"]:
             raise ValueError("spec.name is required when name is not provided")
 
-        resolved_description = str(
-            description if description is not None else spec.get("description") or ""
-        )
-        resolved_run_environment = str(
-            run_environment
-            if run_environment is not None
-            else spec.get("run_environment") or "sdk"
-        )
-        resolved_kind = str(kind if kind is not None else spec.get("kind") or "batch")
-
-        schema = spec.get("schema") if isinstance(spec.get("schema"), dict) else {}
-        metadata = (
-            spec.get("metadata") if isinstance(spec.get("metadata"), dict) else {}
-        )
-        tags = [str(tag) for tag in (spec.get("tags") or []) if str(tag).strip()]
-        evalset_evaluators = [
-            item
-            for item in (spec.get("evalset_evaluators") or [])
-            if isinstance(item, dict)
-        ]
-        report_evaluators = [
-            item
-            for item in (spec.get("report_evaluators") or [])
-            if isinstance(item, dict)
-        ]
-        cases = [item for item in (spec.get("cases") or []) if isinstance(item, dict)]
-
         return self.evals_create_eval(
-            name=resolved_name,
-            description=resolved_description,
-            run_environment=resolved_run_environment,
-            kind=resolved_kind,
-            schema=schema,
-            evalset_evaluators=evalset_evaluators,
-            report_evaluators=report_evaluators,
-            tags=tags,
-            metadata=metadata,
-            cases=cases,
+            **payload,
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )

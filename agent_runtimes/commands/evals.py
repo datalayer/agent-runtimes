@@ -31,6 +31,7 @@ from agent_runtimes.evals.remote.evals import (
     parse_json_value as _parse_json_value,
 )
 from agent_runtimes.evals.remote.evaluators import evaluate_evalset
+from agent_runtimes.evals.status import is_terminal_run_status
 from agent_runtimes.evals.report import (
     _now_iso,
     _parse_csv_values,
@@ -401,7 +402,7 @@ def evals_delete(
 def _render_report(
     evalset_id: Optional[str],
     run_limit: int = typer.Option(
-        50, "--run-limit", min=2, max=200, help="Runs fetched per experiment."
+        50, "--run-limit", min=1, max=200, help="Runs fetched per experiment."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     billing_entity_uid: Optional[str] = typer.Option(
@@ -488,7 +489,7 @@ def evals_report(
         None, help="Evalset ID to report. Defaults to latest updated evalset."
     ),
     run_limit: int = typer.Option(
-        50, "--run-limit", min=2, max=200, help="Runs fetched per experiment."
+        50, "--run-limit", min=1, max=200, help="Runs fetched per experiment."
     ),
     token: Optional[str] = typer.Option(None, "--api-key", help="API key."),
     billing_entity_uid: Optional[str] = typer.Option(
@@ -1011,7 +1012,7 @@ def runs_watch(
             )
             last_status = status
 
-        if status.lower() in {"completed", "failed", "cancelled", "error"}:
+        if is_terminal_run_status(status):
             return
 
         if time.time() - started >= timeout_seconds:

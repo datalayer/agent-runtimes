@@ -15,16 +15,8 @@ from datalayer_core.utils.urls import DatalayerURLs
 
 from agent_runtimes.client import AgentClient
 
-_TERMINAL_RUN_STATES = {
-    "completed",
-    "failed",
-    "error",
-    "cancelled",
-    "success",
-    "succeeded",
-    "passed",
-    "done",
-}
+from agent_runtimes.evals.status import is_terminal_run_status
+from agent_runtimes.evals.spec_schema import validate_evalset_spec
 
 
 def parse_json_value(raw: Optional[str], flag_name: str) -> dict[str, Any]:
@@ -95,10 +87,8 @@ def load_evalset_spec(
     if not path.exists():
         raise FileNotFoundError(f"Evalset spec file not found: {path}")
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Evalset spec must be a JSON object: {path}")
-    if not str(payload.get("name") or "").strip():
-        raise ValueError(f"Evalset spec is missing 'name': {path}")
+    # The schema says what an evalset spec is; a problem is named by path.
+    validate_evalset_spec(payload, source=str(path))
     if expected_kind is not None:
         kind = str(payload.get("kind") or "").strip().lower()
         if kind and kind != expected_kind:
@@ -143,7 +133,7 @@ def watch_runs(
             )
             statuses[run_id] = status
             counts[status] = counts.get(status, 0) + 1
-            if status not in _TERMINAL_RUN_STATES:
+            if not is_terminal_run_status(status):
                 pending.append(run_id)
         if verbose:
             elapsed = int(time.time() - started)

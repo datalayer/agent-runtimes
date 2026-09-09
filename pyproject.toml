@@ -45,12 +45,21 @@ dependencies = [
     # See https://py.sdk.modelcontextprotocol.io/v2/migration/
     "mcp>=2,<3",
     "fastmcp-slim[client]>=4.0.0b3,<5",
+    # OTEL: floors, and no ceiling below the next major.
+    #
+    # These six packages pin *each other* exactly — `opentelemetry-sdk 1.44.0`
+    # requires `opentelemetry-api == 1.44.0` and
+    # `opentelemetry-semantic-conventions == 0.65b0`, and each exporter
+    # requires `opentelemetry-sdk ~= its own version`. So a ceiling here does
+    # not narrow a range, it selects one release of the whole stack, and
+    # anything else in the environment with an opinion about OTEL then has
+    # nowhere to go. `<0.66` on the two 0.x packages was doing exactly that.
     "opentelemetry-api>=1.44.0,<2.0.0",
     "opentelemetry-sdk>=1.44.0,<2.0.0",
-    "opentelemetry-semantic-conventions>=0.65b0,<0.66",
+    "opentelemetry-semantic-conventions>=0.65b0,<1.0",
     "opentelemetry-exporter-otlp-proto-http>=1.44.0,<2.0.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.44.0,<2.0.0",
-    "opentelemetry-instrumentation>=0.65b0,<0.66",
+    "opentelemetry-instrumentation>=0.65b0,<1.0",
     "pydantic-ai-slim[mcp]>=2.35.0,<3",
     "pydantic-graph>=2.35.0,<3",
     "pydantic-settings>=2.14.2",
@@ -102,10 +111,30 @@ a2a = [
     "fasta2a>=2.0.0",
 ]
 ui = [
-    "a2ui-agent-sdk>=0.5.0",
     "ag-ui-protocol>=0.1.19",
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
+]
+# The A2UI reference SDK, opt-in — and out of `all` — because of what it costs
+# rather than what it does.
+#
+# It requires `google-adk`, and every google-adk release caps
+# `opentelemetry-api` and `-sdk` at `<=1.42.1`: not for itself, for the whole
+# environment. Left in `all` that made `agent-runtimes[all]` unsatisfiable
+# against the OTEL floor above — and pip does not report that as a conflict, it
+# backtracks through every version of google-adk, a2a-sdk and datalayer-core
+# hunting an escape that cannot exist.
+#
+# Nothing in the runtime needs it: the converter took one versioned
+# specification URL from it, which `agent_runtimes/a2ui/executions.py` now
+# carries as a literal it verifies against the SDK wherever the SDK is present.
+# What is left is the examples, which is what this extra is for. The OTEL
+# ceiling is restated here so that installing it resolves in seconds instead of
+# discovering the same cap through sixty google-adk releases.
+a2ui = [
+    "a2ui-agent-sdk>=0.5.0",
+    "opentelemetry-api<=1.42.1",
+    "opentelemetry-sdk<=1.42.1",
 ]
 memory = [
     "mem0ai>=2.0.1",

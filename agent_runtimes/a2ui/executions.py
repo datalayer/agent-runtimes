@@ -22,14 +22,31 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from a2ui.basic_catalog.provider import BasicCatalog
-from a2ui.schema.constants import VERSION_0_9
-
 #: A2UI protocol version these messages speak.
 A2UI_VERSION = "v0.9"
 
 #: Authoritative catalog id registered by the v0.9 client renderer.
-A2UI_BASIC_CATALOG_ID = BasicCatalog.get_catalog_id(VERSION_0_9)
+#:
+#: Read from `a2ui-agent-sdk` when it is installed, and otherwise the value that
+#: SDK computes — which is a versioned specification URL, fixed for as long as
+#: the version above is. `test_a2ui_executions.py` asserts the two agree
+#: wherever the SDK is present, so the literal cannot quietly drift.
+#:
+#: The fallback exists because of what the SDK costs to install rather than
+#: what it does: it requires `google-adk`, and every google-adk release caps
+#: `opentelemetry-api` and `-sdk` at `<=1.42.1` — for the whole environment,
+#: not for itself. Making one string the price of holding every OTEL package a
+#: release behind is a poor trade, so the SDK is an opt-in extra (`a2ui`) and
+#: this module works without it.
+A2UI_BASIC_CATALOG_ID = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+
+try:
+    from a2ui.basic_catalog.provider import BasicCatalog
+    from a2ui.schema.constants import VERSION_0_9
+
+    A2UI_BASIC_CATALOG_ID = BasicCatalog.get_catalog_id(VERSION_0_9)
+except ImportError:
+    pass
 
 #: Longest text block rendered before it is cut. A surface is a summary; the
 #: raw stream stays available where it always was.

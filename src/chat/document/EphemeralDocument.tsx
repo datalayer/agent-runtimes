@@ -65,7 +65,7 @@ import {
   useThemeStore,
   type ToolbarItem,
 } from '@datalayer/primer-addons';
-import { Box, Spinner, Text } from '@primer/react';
+import { Box } from '@primer/react';
 import {
   JupyterReactTheme,
   Kernel,
@@ -86,6 +86,7 @@ import {
   ToolbarPlugin,
   ToolbarContext,
   CommentsProvider,
+  DocumentSkeleton,
   commentTheme,
 } from '@datalayer/jupyter-lexical';
 import {
@@ -630,6 +631,18 @@ export function EphemeralDocument({
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null);
   const [, setIsLinkEditMode] = useState(false);
+  // A collaborative document is not here until its room has sent the first
+  // snapshot: an editor drawn before that is an empty page for a document
+  // that exists. Remembered per room, so another room waits again; without a
+  // room the content is local and known at mount.
+  const roomId = isCollaborative ? collaboration?.roomId : undefined;
+  const [initializedRoom, setInitializedRoom] = useState<string>();
+  const documentReady = roomId === undefined || initializedRoom === roomId;
+  const onRoomInitialization = useCallback(
+    (isInitialized: boolean) =>
+      setInitializedRoom(isInitialized ? roomId : undefined),
+    [roomId],
+  );
   const onAnchorRef = (elem: HTMLDivElement) => {
     if (elem !== null) {
       setFloatingAnchorElem(elem);
@@ -798,17 +811,22 @@ export function EphemeralDocument({
                                 username={collaborationName}
                                 cursorColor={collaborationColor}
                                 awarenessData={collaborationAwarenessData}
+                                onInitialization={onRoomInitialization}
                               />
                             ) : null}
                             <LexicalStatePlugin />
-                            <div className="editor-scroller">
-                              <div className="editor" ref={onAnchorRef}>
-                                <ContentEditable
-                                  className="editor-input"
-                                  aria-label="Ephemeral document editor"
-                                />
+                            {documentReady ? (
+                              <div className="editor-scroller">
+                                <div className="editor" ref={onAnchorRef}>
+                                  <ContentEditable
+                                    className="editor-input"
+                                    aria-label="Ephemeral document editor"
+                                  />
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              <DocumentSkeleton maxWidth="100%" />
+                            )}
                             {!isCollaborative && (
                               <OnChangePlugin onChange={handleChange} />
                             )}
@@ -848,21 +866,26 @@ export function EphemeralDocument({
           </JupyterReactTheme>
         </ThemeRoot>
       ) : isRuntimeStarting ? (
-        <Box
-          sx={{
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2,
-            color: 'fg.muted',
-          }}
+        // The document's shape while its runtime starts, where the document
+        // will be — not a wheel, which says nothing about what is coming.
+        <ThemeRoot
+          inherit={inheritTheme}
+          colorMode={effectiveColorMode}
+          themeConfig={themeConfig}
         >
-          <Spinner size="small" />
-          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-            Starting document...
-          </Text>
-        </Box>
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 2,
+              backgroundColor: themeBackground,
+            }}
+          >
+            <DocumentSkeleton label="Starting the document" maxWidth="100%" />
+          </Box>
+        </ThemeRoot>
       ) : null}
     </Box>
   );
