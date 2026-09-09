@@ -801,6 +801,7 @@ class AgentClient(
         api_key: Optional[str] = None,
         runtime_name: Optional[str] = None,
         content_attachment_uids: Optional[list[str]] = None,
+        from_snapshot_uid: Optional[str] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -822,6 +823,11 @@ class AgentClient(
             Contents attachments to mount, created for ``runtime_name`` before the
             runtime: a Home Folder attachment mounts the caller's home folders,
             a Volume attachment mounts its Volume.
+        from_snapshot_uid : Optional[str], optional
+            The uid of the snapshot to restore into the runtime, when the caller
+            holds the uid rather than the name (a benchmark task's sandbox is
+            restored from the snapshot its result names, BENCHMARK.md B3-05).
+            ``snapshot_name`` looks the uid up by name; this skips the lookup.
 
         Returns
         -------
@@ -855,18 +861,18 @@ class AgentClient(
         if api_key:
             client_for_request = _BaseDatalayerClient(urls=self._urls, api_key=api_key)
 
-        if snapshot_name is not None:
-            snapshots = self.list_snapshots()
-            snapshot_uid = None
-            for snapshot in snapshots:
-                if snapshot.name == snapshot_name:
-                    snapshot_uid = snapshot.uid
-                    break
-
+        if snapshot_name is not None or from_snapshot_uid:
+            snapshot_uid = from_snapshot_uid or None
             if snapshot_uid is None:
-                raise ValueError(
-                    f"Snapshot '{snapshot_name}' not found. Available snapshots: {[s.name for s in snapshots]}"
-                )
+                snapshots = self.list_snapshots()
+                for snapshot in snapshots:
+                    if snapshot.name == snapshot_name:
+                        snapshot_uid = snapshot.uid
+                        break
+                if snapshot_uid is None:
+                    raise ValueError(
+                        f"Snapshot '{snapshot_name}' not found. Available snapshots: {[s.name for s in snapshots]}"
+                    )
 
             response = client_for_request.runtimes.create(
                 given_name=name,

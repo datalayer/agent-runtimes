@@ -27,14 +27,13 @@ def test_every_executable_flag_matches_the_runner():
         )
 
 
-def test_the_four_that_run_and_the_five_that_do_not():
+def test_the_four_that_run_and_the_five_that_do_not():  # noqa: D103 - five run now, with the judge
     by_id = {spec.id: spec.executable for spec in list_eval_specs()}
-    assert {name for name, flag in by_id.items() if flag} == {"contains", "equals", "equals-expected"}
+    assert {name for name, flag in by_id.items() if flag} == {"contains", "equals", "equals-expected", "llm-judge"}
     assert {name for name, flag in by_id.items() if not flag} == {
         "confusion-matrix-evaluator",
         "has-matching-span",
         "is-instance",
-        "llm-judge",
         "max-duration",
         "precision-recall-evaluator",
     }

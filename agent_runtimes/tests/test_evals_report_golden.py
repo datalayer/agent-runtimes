@@ -242,3 +242,69 @@ def test_the_report_reads_the_fixture(frozen_report):
     assert csv_text.splitlines()[0].startswith("row_type")
     # The deep links the contract of B0-04 keeps.
     assert f"/evals/experiments/sdk/{EVALSET_ID}" in markdown
+
+
+# --- The report as a Lexical document (B3-03) --------------------------------
+
+
+LAUNCH = {"id": "launch-128", "number": 128, "status": "completed", "evalset_version": 3, "evalset_id": EVALSET_ID}
+EVALSET_WITH_DATASET = {**EVALSET, "version": 3, "category": "data", "dataset_ref": {"source_uid": "src-customers", "revision_uid": "rev-7"}}
+
+
+@pytest.fixture
+def lexical_document(frozen_report):
+    from agent_runtimes.evals.report import build_eval_report_lexical
+
+    report, _, _ = frozen_report
+    return build_eval_report_lexical(report, evalset=EVALSET_WITH_DATASET, launch=LAUNCH)
+
+
+def test_the_lexical_document_is_the_golden_fixture(lexical_document):
+    _check("evals-report.lexical.json", json.dumps(lexical_document, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+
+
+def test_the_document_reads_in_the_order_of_section_13(lexical_document):
+    from agent_runtimes.evals.lexical import REPORT_SECTIONS
+
+    headings = [
+        node["children"][0]["text"]
+        for node in lexical_document["root"]["children"]
+        if node.get("type") == "heading" and node.get("tag") == "h2"
+    ]
+    assert headings == [title for _, title in REPORT_SECTIONS]
+    first = lexical_document["root"]["children"][0]
+    assert first["type"] == "heading" and first["tag"] == "h1"
+    assert first["children"][0]["text"] == "Data Analysis Agent Benchmark — Run 128"
+
+
+def test_every_block_carries_its_provenance(lexical_document):
+    from agent_runtimes.evals.lexical import ANALYSIS_MIME
+
+    blocks = lexical_document["root"]["children"]
+    assert all(set(block["provenance"]) == {"evalset", "version", "launch", "experiment", "run", "case", "analysis"} for block in blocks)
+    assert all(block["provenance"]["evalset"] == EVALSET_ID and block["provenance"]["launch"] == "launch-128" and block["provenance"]["version"] == 3 for block in blocks)
+    # Tables are Lexical tables; lines and comparisons are Jupyter outputs carrying the analysis.
+    tables = [block for block in blocks if block["type"] == "table"]
+    outputs = [block for block in blocks if block["type"] == "jupyter-output"]
+    assert tables and outputs
+    assert all(ANALYSIS_MIME in output["outputs"][0]["data"] for output in outputs)
+    named = {output["provenance"]["analysis"] for output in outputs}
+    assert "Latest Pass Rate By Experiment" in named and "latest_two" in named
+    # The same report hydrates to the same uuids twice.
+    assert len({output["jupyterOutputNodeUuid"] for output in outputs}) == len(outputs)
+
+
+def test_a_run_document_narrows_to_its_experiment_and_reads_its_tasks(frozen_report):
+    from agent_runtimes.evals.report import build_eval_report_lexical
+
+    report, _, _ = frozen_report
+    run = {"id": "run-1-3", "experiment_id": "experiment-1", "launch_id": "launch-128", "status": "completed", "evalset_version": 3}
+    cases = [
+        {"name": "row-count", "category": "counting", "status": "passed", "score": 1.0, "explanation": ""},
+        {"name": "duplicate-customers", "category": "duplicates", "status": "failed", "score": 0.2, "explanation": "It answered 0; 157 customers repeat.", "failure_mode": "wrong_answer"},
+    ]
+    document = build_eval_report_lexical(report, evalset=EVALSET_WITH_DATASET, run=run, cases=cases)
+    text = json.dumps(document, ensure_ascii=False)
+    assert "wrong_answer · 1 task" in text and "It answered 0; 157 customers repeat." in text
+    assert "example-evals" not in text.split("Pairwise deltas")[0]
+    assert document["root"]["children"][0]["provenance"]["run"] == "run-1-3"

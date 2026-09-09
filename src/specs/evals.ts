@@ -134,7 +134,7 @@ export const LLM_JUDGE_EVAL_SPEC_0_0_1: EvalSpec = {
   evaluator_type: 'case',
   pydantic_class: 'LLMJudgeEvaluator',
   output_kind: 'score_and_assertion',
-  executable: false,
+  executable: true,
   cost_tier: 'llm',
   latency: 'slow',
   requires: ['model'],
