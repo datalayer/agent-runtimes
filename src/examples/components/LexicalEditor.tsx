@@ -7,42 +7,24 @@ import '@datalayer/jupyter-react/lib/css/PrismCss';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { $getRoot, $createParagraphNode, EditorState } from 'lexical';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { TRANSFORMERS } from '@lexical/markdown';
-import { registerCodeHighlighting } from '@lexical/code';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { JupyterReactTheme, useJupyter } from '@datalayer/jupyter-react';
 import {
   ComponentPickerMenuPlugin,
-  JupyterCellPlugin,
   JupyterInputOutputPlugin,
   DraggableBlockPlugin,
-  ImagesPlugin,
-  HorizontalRulePlugin,
-  EquationsPlugin,
-  YouTubePlugin,
-  AutoLinkPlugin,
-  AutoEmbedPlugin,
   LexicalConfigProvider,
   LexicalStatePlugin,
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
-  ListMaxIndentLevelPlugin,
 } from '@datalayer/jupyter-lexical';
 import type { ToolbarItem } from '@datalayer/primer-addons';
-import { editorConfig } from '../lexical/editorConfig';
+import { editorExtension } from '../lexical/editorConfig';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import '../lexical/lexical-theme.css';
@@ -92,19 +74,6 @@ function LoadContentPlugin({ content }: { content?: string }) {
 }
 
 /**
- * Lexical plugin for Simple code syntax highlighting.
- */
-function CodeHighlightPlugin() {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
-    return registerCodeHighlighting(editor);
-  }, [editor]);
-
-  return null;
-}
-
-/**
  * Wrapper component for kernel-dependent Simple plugins.
  */
 function SimpleKernelPluginsInner() {
@@ -123,7 +92,7 @@ export interface LexicalEditorProps {
   serviceManager?: ServiceManager.IManager;
   /** Optional extra toolbar items (e.g. AI actions from useChatInlineToolbarItems) */
   extraItems?: ToolbarItem[];
-  /** Optional additional children to render inside the LexicalComposer */
+  /** Optional additional children to render inside the composer */
   children?: React.ReactNode;
 }
 
@@ -167,35 +136,18 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
         lexicalId={LEXICAL_ID}
         serviceManager={serviceManager}
       >
-        <LexicalComposer initialConfig={editorConfig}>
+        <LexicalExtensionComposer
+          extension={editorExtension}
+          contentEditable={null}
+        >
           <div className="lexical-editor-inner" ref={onRef}>
             <LexicalStatePlugin />
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                  className="lexical-editor-content"
-                  aria-label="Lexical Editor"
-                />
-              }
-              ErrorBoundary={LexicalErrorBoundary}
+            <ContentEditable
+              className="lexical-editor-content"
+              aria-label="Lexical Editor"
             />
             <OnChangePlugin onChange={handleChange} />
-            <HistoryPlugin />
-            <AutoFocusPlugin />
-            <ListPlugin />
-            <CheckListPlugin />
-            <LinkPlugin />
-            <AutoLinkPlugin />
-            <ListMaxIndentLevelPlugin maxDepth={7} />
-            <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
             <LoadContentPlugin content={content} />
-            <CodeHighlightPlugin />
-            <ImagesPlugin captionsEnabled={false} />
-            <HorizontalRulePlugin />
-            <EquationsPlugin />
-            <YouTubePlugin />
-            <AutoEmbedPlugin />
-            <JupyterCellPlugin />
             <JupyterReactTheme useBaseStyles={false}>
               <SimpleKernelPluginsInner />
             </JupyterReactTheme>
@@ -212,7 +164,7 @@ export const LexicalEditor: React.FC<LexicalEditorProps> = ({
             )}
             {children}
           </div>
-        </LexicalComposer>
+        </LexicalExtensionComposer>
       </LexicalConfigProvider>
     </Box>
   );

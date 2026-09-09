@@ -45,21 +45,17 @@ import {
   $createParagraphNode,
   EditorState,
   type LexicalEditor,
+  defineExtension,
 } from 'lexical';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { TRANSFORMERS } from '@lexical/markdown';
-import { registerCodeHighlighting } from '@lexical/code';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
+import {
+  AutoFocusExtension,
+  getExtensionDependencyFromEditor,
+} from '@lexical/extension';
+import { HistoryExtension } from '@lexical/history';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
@@ -77,26 +73,16 @@ import {
 } from '@datalayer/jupyter-react';
 import {
   ComponentPickerMenuPlugin,
-  JupyterCellPlugin,
+  JupyterLexicalExtension,
   JupyterInputOutputPlugin,
   DraggableBlockPlugin,
-  ImagesPlugin,
-  ExcalidrawPlugin,
-  TablePlugin,
   TableCellResizerPlugin,
   TableActionMenuPlugin,
   TableHoverActionsV2Plugin,
-  CollapsiblePlugin,
-  HorizontalRulePlugin,
-  EquationsPlugin,
-  YouTubePlugin,
-  AutoLinkPlugin,
-  AutoEmbedPlugin,
   LexicalConfigProvider,
   LexicalStatePlugin,
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
-  ListMaxIndentLevelPlugin,
   ToolbarPlugin,
   ToolbarContext,
   CommentsProvider,
@@ -106,7 +92,6 @@ import {
   createWebsocketProvider,
   LoroCollaborationPlugin,
 } from '@datalayer/lexical-loro';
-import { editorConfig } from '../../examples/lexical/editorConfig';
 import { useLexicalTools } from '../../tools/adapters/agent-runtimes/lexicalHooks';
 import { useAgentsRuntimes } from '../../hooks/useAgentRuntimes';
 import { registerSandboxServiceManager } from '../../services/sandboxServiceManagers';
@@ -273,10 +258,21 @@ function LoadContentPlugin({ content }: { content?: string }) {
   return null;
 }
 
-/** Registers code syntax highlighting for code blocks. */
-function CodeHighlightPlugin() {
+/**
+ * Undo history follows the collaboration mode.
+ *
+ * The history is the bundled `HistoryExtension`'s. Its `disabled` signal is
+ * flipped here rather than set in the root extension, so that a change of
+ * mode does not rebuild the editor and lose the document with it.
+ */
+function HistoryTogglePlugin({ disabled }: { disabled: boolean }) {
   const [editor] = useLexicalComposerContext();
-  useEffect(() => registerCodeHighlighting(editor), [editor]);
+  useEffect(() => {
+    getExtensionDependencyFromEditor(
+      editor,
+      HistoryExtension,
+    ).output.disabled.value = disabled;
+  }, [editor, disabled]);
   return null;
 }
 
@@ -598,19 +594,23 @@ export function EphemeralDocument({
   );
   useProgressTask(`ephemeral-document-start-${documentId}`, isRuntimeStarting);
 
-  // Build the initial config once per documentId, without the demo content so
-  // the document starts empty and is either restored or filled by the agent.
-  const initialConfig = useMemo(() => {
-    // Drop the demo `editorState` and the examples `lexicalTheme`. Use the
-    // shared `commentTheme` (same as the document editor) so the Jupyter cell
-    // and rich-text nodes get the class names styled by jupyter-lexical CSS.
-    const { editorState: _ignored, theme: _theme, ...rest } = editorConfig;
-    return {
-      ...rest,
-      theme: commentTheme,
-      namespace: `ephemeral-document-${documentId}`,
-    };
-  }, [documentId]);
+  // The root extension, once per documentId: the shared Jupyter Lexical
+  // document with the `commentTheme` the jupyter-lexical stylesheet styles,
+  // focus on mount, and no content — the document starts empty and is either
+  // restored or filled by the agent (LoadContentPlugin) or by the room.
+  const extension = useMemo(
+    () =>
+      defineExtension({
+        name: '@datalayer/agent-runtimes/EphemeralDocument',
+        namespace: `ephemeral-document-${documentId}`,
+        theme: commentTheme,
+        dependencies: [JupyterLexicalExtension, AutoFocusExtension],
+        onError(error: Error) {
+          console.error('[EphemeralDocument]', error);
+        },
+      }),
+    [documentId],
+  );
 
   const handleChange = useCallback(
     (editorState: EditorState) => {
@@ -773,7 +773,10 @@ export function EphemeralDocument({
                 lexicalId={documentId}
                 serviceManager={activeServiceManager}
               >
-                <LexicalComposer initialConfig={initialConfig}>
+                <LexicalExtensionComposer
+                  extension={extension}
+                  contentEditable={null}
+                >
                   <CommentsProvider>
                     <ToolbarContext>
                       <div className="editor-shell">
@@ -798,48 +801,24 @@ export function EphemeralDocument({
                               />
                             ) : null}
                             <LexicalStatePlugin />
-                            <RichTextPlugin
-                              contentEditable={
-                                <div className="editor-scroller">
-                                  <div className="editor" ref={onAnchorRef}>
-                                    <ContentEditable
-                                      className="editor-input"
-                                      aria-label="Ephemeral document editor"
-                                    />
-                                  </div>
-                                </div>
-                              }
-                              ErrorBoundary={LexicalErrorBoundary}
-                            />
+                            <div className="editor-scroller">
+                              <div className="editor" ref={onAnchorRef}>
+                                <ContentEditable
+                                  className="editor-input"
+                                  aria-label="Ephemeral document editor"
+                                />
+                              </div>
+                            </div>
                             {!isCollaborative && (
                               <OnChangePlugin onChange={handleChange} />
                             )}
-                            {!isCollaborative && <HistoryPlugin />}
-                            <AutoFocusPlugin />
-                            <ListPlugin />
-                            <CheckListPlugin />
-                            <LinkPlugin />
-                            <AutoLinkPlugin />
-                            <ListMaxIndentLevelPlugin maxDepth={7} />
-                            <MarkdownShortcutPlugin
-                              transformers={TRANSFORMERS}
-                            />
+                            <HistoryTogglePlugin disabled={isCollaborative} />
                             {!isCollaborative && (
                               <LoadContentPlugin content={initialContent} />
                             )}
-                            <CodeHighlightPlugin />
-                            <ImagesPlugin captionsEnabled={false} />
-                            <ExcalidrawPlugin />
-                            <TablePlugin />
                             <TableCellResizerPlugin />
                             <TableActionMenuPlugin />
                             <TableHoverActionsV2Plugin />
-                            <CollapsiblePlugin />
-                            <HorizontalRulePlugin />
-                            <EquationsPlugin />
-                            <YouTubePlugin />
-                            <AutoEmbedPlugin />
-                            <JupyterCellPlugin />
                             <ComponentPickerMenuPlugin
                               kernel={documentKernel}
                             />
@@ -863,7 +842,7 @@ export function EphemeralDocument({
                       </div>
                     </ToolbarContext>
                   </CommentsProvider>
-                </LexicalComposer>
+                </LexicalExtensionComposer>
               </LexicalConfigProvider>
             </Box>
           </JupyterReactTheme>

@@ -15,6 +15,7 @@
  *   - FILE   → fenced block whose info string is a file extension and
  *              whose first line is `# filename: <name.ext>`
  *
+ * The Loop creates the agent from the plugin's blueprint when it connects.
  * We subscribe to the chat store, detect the output type of the latest
  * assistant message, auto-switch the sidebar tab, and render the payload
  * inline in the sidebar.
@@ -22,15 +23,9 @@
 
 /// <reference types="vite/client" />
 
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-} from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, Button, Spinner, Heading, Label } from '@primer/react';
+import { Text, Button, Heading, Label } from '@primer/react';
 import {
   TableIcon,
   FileIcon,
@@ -39,7 +34,7 @@ import {
   DownloadIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { AuthRequiredView, ErrorView } from './components';
+import { AuthRequiredView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
@@ -56,8 +51,6 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'outputs-example-agent';
-// Keep this aligned with the generated agentspec catalog (`example-output`).
-const AGENTSPEC_ID = 'example-output';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -385,112 +378,11 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
 
 // ─── Inner component (rendered after auth) ─────────────────────────────────
 
-const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
-}) => {
-  const { token } = useSimpleAuthStore();
+const AgentOutputsInner: React.FC = () => {
+  // The Loop creates the agent from the plugin's blueprint when it connects;
+  // a fresh id per page load keeps each visit on its own agent.
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
-
-  const [runtimeStatus, setRuntimeStatus] = useState<
-    'launching' | 'ready' | 'error'
-  >('launching');
-  const [isReady, setIsReady] = useState(false);
-  const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(agentName);
-  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
-
   const agentBaseUrl = useExampleAgentRuntimesUrl();
-  const chatAuthToken: string | undefined = token === null ? undefined : token;
-  void chatAuthToken;
-
-  const authFetch = useCallback(
-    (url: string, opts: RequestInit = {}) =>
-      fetch(url, {
-        ...opts,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(opts.headers ?? {}),
-        },
-      }),
-    [token],
-  );
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const createAgent = async () => {
-      setRuntimeStatus('launching');
-      setIsReady(false);
-      setHookError(null);
-      setIsReconnectedAgent(false);
-
-      try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'Agent with rich output rendering (table/JSON/chart/file)',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_skills: true,
-            tools: [],
-          }),
-        });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create agent: ${response.status}`,
-            );
-          }
-        }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
-          );
-          setRuntimeStatus('error');
-        }
-      }
-    };
-
-    void createAgent();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [agentBaseUrl, agentName, authFetch]);
 
   const [activeTab, setActiveTab] = useState<OutputTab>('table');
   const [detected, setDetected] = useState<DetectedOutput[]>([]);
@@ -527,34 +419,6 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
     return unsub;
   }, []);
 
-  // ── Loading / Error ───────────────────────────────────────────────────
-
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          {runtimeStatus === 'launching'
-            ? 'Launching outputs example agent...'
-            : 'Creating outputs example agent...'}
-        </Text>
-      </Box>
-    );
-  }
-
-  if (runtimeStatus === 'error' || hookError) {
-    return <ErrorView error={hookError} onLogout={onLogout} />;
-  }
-
   const filtered = detected.filter(d => d.tab === activeTab);
   const countByTab = (tab: OutputTab) =>
     detected.filter(d => d.tab === tab).length;
@@ -579,21 +443,6 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
         flexDirection: 'column',
       }}
     >
-      {isReconnectedAgent && (
-        <Box
-          sx={{
-            px: 3,
-            py: 1,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
-        >
-          <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-            Agent already running - reconnected.
-          </Text>
-        </Box>
-      )}
-
       {/* Toolbar */}
       <Box
         sx={{
@@ -619,8 +468,9 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
-            agentId={agentId}
-            defaultEditor="none"
+            showAgentVariants
+            agentId={agentName}
+            editors={false}
             showHeader
             plugins={LOOP_PLUGINS_AGENTOUT}
           />
@@ -689,9 +539,9 @@ const AgentOutputsInner: React.FC<{ onLogout: () => void }> = ({
 
             {filtered.length === 0 ? (
               <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-                No {activeTab} outputs yet. Use one of the suggestion buttons in
-                the chat to produce one — the side panel will switch to the
-                matching tab automatically.
+                No {activeTab} outputs yet. Use one of the openers in the chat
+                to produce one — the side panel will switch to the matching tab
+                automatically.
               </Text>
             ) : (
               filtered.map((d, idx) => (
@@ -797,7 +647,7 @@ const syncTokenToIamStore = (token: string) => {
 // ─── Main component with auth gate ─────────────────────────────────────────
 
 const AgentOutputsExample: React.FC = () => {
-  const { token, clearAuth } = useSimpleAuthStore();
+  const { token } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
   useEffect(() => {
@@ -806,14 +656,6 @@ const AgentOutputsExample: React.FC = () => {
       syncTokenToIamStore(token);
     }
   }, [token]);
-
-  const handleLogout = useCallback(() => {
-    clearAuth();
-    hasSynced.current = false;
-    import('../state/substates').then(({ iamStore }) => {
-      iamStore.setState({ token: undefined });
-    });
-  }, [clearAuth]);
 
   if (!token) {
     return (
@@ -826,7 +668,7 @@ const AgentOutputsExample: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemedProvider>
-        <AgentOutputsInner onLogout={handleLogout} />
+        <AgentOutputsInner />
       </ThemedProvider>
     </QueryClientProvider>
   );

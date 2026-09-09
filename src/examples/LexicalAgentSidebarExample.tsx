@@ -20,22 +20,11 @@
 
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { EditorState } from 'lexical';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { TRANSFORMERS } from '@lexical/markdown';
-import { registerCodeHighlighting } from '@lexical/code';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { useJupyter } from '@datalayer/jupyter-react';
@@ -43,31 +32,20 @@ import { ThemedProvider } from './utils/themedProvider';
 import { useExampleThemeStore } from './utils/themeStore';
 import {
   ComponentPickerMenuPlugin,
-  JupyterCellPlugin,
   JupyterInputOutputPlugin,
   DraggableBlockPlugin,
-  ImagesPlugin,
-  HorizontalRulePlugin,
-  EquationsPlugin,
-  YouTubePlugin,
-  ExcalidrawPlugin,
-  CollapsiblePlugin,
-  AutoLinkPlugin,
-  AutoEmbedPlugin,
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
-  ListMaxIndentLevelPlugin,
   LexicalConfigProvider,
   LexicalPrimerThemeProvider,
   LexicalStatePlugin,
   TableCellResizerPlugin,
-  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 import { ChatSidebar } from '../chat';
 import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
-import { editorConfig } from './lexical/editorConfig';
+import { editorExtension } from './lexical/editorConfig';
 import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import '@datalayer/jupyter-lexical/style/index.css';
@@ -112,19 +90,6 @@ function DocumentKernelPlugins({
       <JupyterInputOutputPlugin kernel={defaultKernel} />
     </>
   );
-}
-
-/**
- * Lexical plugin for code highlighting
- */
-function CodeHighlightingPlugin() {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
-    return registerCodeHighlighting(editor);
-  }, [editor]);
-
-  return null;
 }
 
 /**
@@ -177,7 +142,10 @@ function LexicalEditor({ serviceManager, endpoint }: LexicalEditorProps) {
         lexicalId={LEXICAL_ID}
         serviceManager={serviceManager}
       >
-        <LexicalComposer initialConfig={editorConfig}>
+        <LexicalExtensionComposer
+          extension={editorExtension}
+          contentEditable={null}
+        >
           {/* CRITICAL: LexicalStatePlugin registers the adapter in the store */}
           <LexicalStatePlugin />
           {/*
@@ -200,56 +168,34 @@ function LexicalEditor({ serviceManager, endpoint }: LexicalEditorProps) {
            * `ChatLexicalAgentExampleInner`.
            */}
           <Box sx={{ position: 'relative', width: '100%' }}>
-            <RichTextPlugin
-              contentEditable={
-                <div ref={onRef}>
-                  <ContentEditable
-                    className="lexical-editor-content"
-                    aria-label="Lexical Editor"
-                    style={{ padding: '24px', outline: 'none' }}
-                  />
-                </div>
-              }
-              placeholder={
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '24px',
-                    left: '24px',
-                    color: 'var(--fgColor-muted)',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  Start typing or use the chat to create content...
-                </div>
-              }
-              ErrorBoundary={LexicalErrorBoundary}
-            />
+            <div ref={onRef}>
+              <ContentEditable
+                placeholder={
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '24px',
+                      left: '24px',
+                      color: 'var(--fgColor-muted)',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    Start typing or use the chat to create content...
+                  </div>
+                }
+                aria-placeholder="Start typing or use the chat to create content..."
+                className="lexical-editor-content"
+                aria-label="Lexical Editor"
+                style={{ padding: '24px', outline: 'none' }}
+              />
+            </div>
 
             {/* Core plugins */}
-            <HistoryPlugin />
-            <AutoFocusPlugin />
             <OnChangePlugin onChange={onChange} />
-            <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-            <CodeHighlightingPlugin />
-            <ListPlugin />
-            <CheckListPlugin />
-            <LinkPlugin />
-            <TablePlugin />
             <TableCellResizerPlugin />
 
             {/* Simple Lexical plugins */}
-            <JupyterCellPlugin />
             <DocumentKernelPlugins serviceManager={serviceManager} />
-            <ImagesPlugin />
-            <HorizontalRulePlugin />
-            <EquationsPlugin />
-            <YouTubePlugin />
-            <ExcalidrawPlugin />
-            <CollapsiblePlugin />
-            <AutoLinkPlugin />
-            <AutoEmbedPlugin />
-            <ListMaxIndentLevelPlugin maxDepth={7} />
 
             {/* Toolbar plugins */}
             {floatingAnchorElem && (
@@ -276,7 +222,7 @@ function LexicalEditor({ serviceManager, endpoint }: LexicalEditorProps) {
               onPendingPromptConsumed={clearPendingPrompt}
             />
           </Box>
-        </LexicalComposer>
+        </LexicalExtensionComposer>
       </LexicalConfigProvider>
     </LexicalPrimerThemeProvider>
   );

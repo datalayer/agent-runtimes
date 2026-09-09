@@ -2972,44 +2972,49 @@ EXAMPLE_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
     id="example-output",
     version="0.0.1",
     name="Example Output Agent",
-    description="Demonstrates structured response rendering (table, json, chart, and file) for the AgentOutputsExample sidebar output parser.",
+    description="Demonstrates structured response rendering (table, json, chart, and file) for the AgentOutputsExample side panel, which detects the block in each answer and renders it.",
     tags=["workflow", "visualization", "automation"],
     domain=None,
     enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-6",
     inference_provider=None,
     mcp_servers=[],
-    skills=["events:0.0.1"],
-    tools=["runtime-echo:0.0.1"],
-    frontend_tools=["jupyter-notebook:0.0.1", "lexical-document:0.0.1"],
+    skills=[],
+    tools=[],
+    disable_tool_approvals=True,
+    frontend_tools=[],
     environment_name="ai-agents-env",
     icon="table",
     emoji="📦",
     color="#7C3AED",
     suggestions=[
         AgentSuggestion(
-            text="Return a TABLE of quarterly revenue by region",
-            summary="Revenue table",
+            text="Return a Markdown table of the top 5 US cities by population, with the columns City, State and Population.",
+            summary="Population table",
         ),
         AgentSuggestion(
-            text="Return JSON for a KPI summary object", summary="KPI JSON"
+            text="Return a JSON object describing a product catalog with 3 items, each with an id, a name, a price and tags.",
+            summary="Catalog JSON",
         ),
         AgentSuggestion(
-            text="Return a CHART payload for monthly conversions",
-            summary="Conversions chart",
+            text="Produce an ECharts bar chart of monthly sales from January to June, as a ```json fenced block whose first line is `// chart`.",
+            summary="Sales chart",
         ),
         AgentSuggestion(
-            text="Return a FILE named report.md with highlights", summary="Report file"
+            text="Create a CSV file named sales.csv with sample sales for the last 7 days, in a ```csv fenced block whose first line is `# filename: sales.csv`.",
+            summary="CSV file",
         ),
     ],
-    welcome_message="Example output agent ready. Ask for TABLE, JSON, CHART, or FILE formats and I will respond with exactly one structured output block.",
+    welcome_message="Example output agent ready. Ask for a TABLE, JSON, a CHART or a FILE and I will answer with exactly one structured output block.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="jupyter-server",
     harness="pydantic-ai",
     system_prompt="""You are the Example Output Agent.
-The user may request one of exactly four output modes: TABLE, JSON, CHART, or FILE. For each response, emit exactly one mode and no extra prose.
-Formatting rules: - TABLE: Return one GitHub-flavored markdown table. - JSON: Return exactly one fenced ```json code block. - CHART: Return exactly one fenced ```json code block whose first line is
+The user may request one of exactly four output modes: TABLE, JSON, CHART, or FILE. For each response, emit exactly one mode and nothing else: no prose before or after the block. Answer from what you know: do not run code or call tools to produce the block.
+Formatting rules: - TABLE: Return one GitHub-flavored markdown table, one row per line,
+  never several rows joined on a single line.
+- JSON: Return exactly one fenced ```json code block. - CHART: Return exactly one fenced ```json code block whose first line is
   "// chart" and whose remaining body is valid ECharts option JSON.
 - FILE: Return exactly one fenced code block whose info string is a file
   extension, and whose first line is "# filename: <name.ext>".

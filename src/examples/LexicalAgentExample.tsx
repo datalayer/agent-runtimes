@@ -21,44 +21,23 @@ import '@datalayer/jupyter-react/lib/css/PrismCss';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { $getRoot, $createParagraphNode, EditorState } from 'lexical';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { TRANSFORMERS } from '@lexical/markdown';
-import { registerCodeHighlighting } from '@lexical/code';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { useJupyter } from '@datalayer/jupyter-react';
 import { ThemedJupyterProvider } from './utils/themedProvider';
 import {
   ComponentPickerMenuPlugin,
-  JupyterCellPlugin,
   JupyterInputOutputPlugin,
   DraggableBlockPlugin,
-  ImagesPlugin,
-  HorizontalRulePlugin,
-  EquationsPlugin,
-  YouTubePlugin,
-  ExcalidrawPlugin,
-  CollapsiblePlugin,
-  AutoLinkPlugin,
-  AutoEmbedPlugin,
   LexicalConfigProvider,
   LexicalStatePlugin,
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
-  ListMaxIndentLevelPlugin,
   TableCellResizerPlugin,
-  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 
 // Agent-runtimes imports
@@ -66,7 +45,7 @@ import { ChatFloating } from '../chat';
 import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
-import { editorConfig } from './lexical/editorConfig';
+import { editorExtension } from './lexical/editorConfig';
 import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import '@datalayer/jupyter-lexical/style/index.css';
@@ -130,19 +109,6 @@ function LoadContentPlugin({ content }: { content?: string }) {
 }
 
 /**
- * Lexical plugin for Simple code syntax highlighting.
- */
-function CodeHighlightPlugin() {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
-    return registerCodeHighlighting(editor);
-  }, [editor]);
-
-  return null;
-}
-
-/**
  * Wrapper component for kernel-dependent Simple plugins.
  * Accepts a serviceManager so it can initialise a Jupyter kernel
  * (mirrors how the Notebook component bootstraps its runtime).
@@ -184,7 +150,7 @@ function LexicalToolsPlugin({
 }
 
 /**
- * Lexical UI component with full LexicalComposer setup.
+ * Lexical UI component with full extension composer setup.
  * Accepts onToolsReady callback to provide tools to parent component.
  */
 interface LexicalUIProps {
@@ -259,40 +225,20 @@ const LexicalUI = React.memo(function LexicalUI({
         >
           {/* LexicalToolsPlugin captures tools from context and passes to parent */}
           <LexicalToolsPlugin onToolsReady={onToolsReady} />
-          <LexicalComposer initialConfig={editorConfig}>
+          <LexicalExtensionComposer
+            extension={editorExtension}
+            contentEditable={null}
+          >
             <div className="lexical-editor-inner" ref={onRef}>
               {/* CRITICAL: LexicalStatePlugin registers the adapter in the store */}
               <LexicalStatePlugin />
-              <RichTextPlugin
-                contentEditable={
-                  <ContentEditable
-                    className="lexical-editor-content"
-                    aria-label="Lexical Editor"
-                  />
-                }
-                ErrorBoundary={LexicalErrorBoundary}
+              <ContentEditable
+                className="lexical-editor-content"
+                aria-label="Lexical Editor"
               />
               <OnChangePlugin onChange={handleChange} />
-              <HistoryPlugin />
-              <AutoFocusPlugin />
-              <ListPlugin />
-              <CheckListPlugin />
-              <LinkPlugin />
-              <AutoLinkPlugin />
-              <ListMaxIndentLevelPlugin maxDepth={7} />
-              <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
               <LoadContentPlugin content={content} />
-              <CodeHighlightPlugin />
-              <ImagesPlugin captionsEnabled={false} />
-              <HorizontalRulePlugin />
-              <EquationsPlugin />
-              <YouTubePlugin />
-              <ExcalidrawPlugin />
-              <CollapsiblePlugin />
-              <AutoEmbedPlugin />
-              <TablePlugin />
               <TableCellResizerPlugin />
-              <JupyterCellPlugin />
               {/* Wrap kernel plugins with Simple provider */}
               <ThemedJupyterProvider>
                 <SimpleKernelPluginsInner serviceManager={serviceManager} />
@@ -320,7 +266,7 @@ const LexicalUI = React.memo(function LexicalUI({
                 onPendingPromptConsumed={clearPendingPrompt}
               />
             </div>
-          </LexicalComposer>
+          </LexicalExtensionComposer>
         </LexicalConfigProvider>
       </Box>
     </Box>

@@ -10,7 +10,7 @@
  * to the plain textarea.  Enter-to-submit and Shift+Enter for newline
  * are handled via a custom Lexical plugin.
  *
- * IMPORTANT: This file imports from `@lexical/react` only — it does NOT
+ * IMPORTANT: This file imports from the light `@lexical/*` packages only — it does NOT
  * import from `@datalayer/jupyter-lexical` to avoid pulling in heavy
  * Lumino / Jupyter dependencies (see separated-hook-files pattern in CLAUDE.md).
  *
@@ -24,16 +24,16 @@ import {
   $createTextNode,
   KEY_ENTER_COMMAND,
   COMMAND_PRIORITY_HIGH,
+  defineExtension,
 } from 'lexical';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
+import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { HistoryExtension } from '@lexical/history';
+import { PlainTextExtension } from '@lexical/plain-text';
 
 import { MentionNode } from './plugins/MentionNode';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { Box } from '@datalayer/primer-addons';
 import {
   AgentMentionPlugin,
@@ -41,20 +41,24 @@ import {
 } from './plugins/AgentMentionPlugin';
 import { CommandPlugin, PROMPT_COMMANDS } from './plugins/CommandPlugin';
 
-// ---- Lexical config (plain-text only) ------------------------------------
+// ---- Lexical extension (plain-text only) ---------------------------------
 
-const EDITOR_CONFIG = {
+// Module scope on purpose: the composer rebuilds the editor whenever this
+// reference changes.
+const EDITOR_EXTENSION = defineExtension({
+  name: '@datalayer/agent-runtimes/InputPrompt',
   namespace: 'InputPromptLexical',
   theme: {
     paragraph: 'input-prompt-lexical-p',
   },
   // The `@agent` chip. A node the editor does not know about is dropped on
   // insert, silently — the mention would simply never appear.
-  nodes: [MentionNode],
+  nodes: () => [MentionNode],
+  dependencies: [PlainTextExtension, HistoryExtension],
   onError(error: Error) {
     console.error('[InputPromptLexical]', error);
   },
-};
+});
 
 // ---- Enter-to-submit plugin ---------------------------------------------
 
@@ -284,23 +288,11 @@ export function InputPromptLexical({
         },
       }}
     >
-      <LexicalComposer initialConfig={EDITOR_CONFIG}>
-        <PlainTextPlugin
-          contentEditable={
-            <ContentEditable
-              className="input-prompt-lexical-content"
-              aria-label="Message input"
-              style={{
-                outline: 'none',
-                minHeight: 32,
-                maxHeight: 120,
-                overflowY: 'auto',
-                fontSize: 14,
-                lineHeight: '1.5',
-                padding: '2px 0',
-              }}
-            />
-          }
+      <LexicalExtensionComposer
+        extension={EDITOR_EXTENSION}
+        contentEditable={null}
+      >
+        <ContentEditable
           placeholder={
             <Box
               sx={{
@@ -325,9 +317,19 @@ export function InputPromptLexical({
               {placeholder}
             </Box>
           }
-          ErrorBoundary={LexicalErrorBoundary}
+          aria-placeholder={placeholder}
+          className="input-prompt-lexical-content"
+          aria-label="Message input"
+          style={{
+            outline: 'none',
+            minHeight: 32,
+            maxHeight: 120,
+            overflowY: 'auto',
+            fontSize: 14,
+            lineHeight: '1.5',
+            padding: '2px 0',
+          }}
         />
-        <HistoryPlugin />
         <SyncPlugin value={value} onChange={onChange} />
         <ReadOnlyPlugin readOnly={readOnly || disabled} />
         <EnterSubmitPlugin
@@ -343,7 +345,7 @@ export function InputPromptLexical({
         {mentionableAgents?.length ? (
           <AgentMentionPlugin agents={mentionableAgents} />
         ) : null}
-      </LexicalComposer>
+      </LexicalExtensionComposer>
     </Box>
   );
 }
