@@ -9,6 +9,8 @@
  * Mounts the `example-mcp` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `loop/plugins/agent-capacity`.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-mcp
  */
 
@@ -23,28 +25,6 @@ export const AgentMcpPlugin = defineAgentCapacityPlugin({
   specId: 'example-mcp',
   octicon: 'plug',
   emoji: '🔌',
-  suggestions: [
-    {
-      text: '🔍 Search the web',
-      message: 'Search the web for recent news about AI agents.',
-    },
-    {
-      text: '🐙 GitHub repos',
-      message: 'Find trending open-source Python projects on GitHub.',
-    },
-    {
-      text: '📚 Research topic',
-      message: 'Research best practices for building RAG applications.',
-    },
-    {
-      text: '⚡ Compare frameworks',
-      message: 'Compare popular JavaScript frameworks in 2024.',
-    },
-    {
-      text: '😄 Tell me a joke',
-      message: 'Use your jokes skill to tell me a random joke.',
-    },
-  ],
 });
 
 export default AgentMcpPlugin;

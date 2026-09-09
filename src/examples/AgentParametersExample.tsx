@@ -160,7 +160,7 @@ const AgentParametersExample: React.FC = () => {
     specId: AGENTSPEC_ID,
     autoCreateAgent: false,
     agentConfig: {
-      protocol: 'vercel-ai',
+      protocol: 'ag-ui',
       agentSpecId: AGENTSPEC_ID,
     },
   });
@@ -214,7 +214,7 @@ const AgentParametersExample: React.FC = () => {
     try {
       await createAgent({
         name: agentName,
-        protocol: 'vercel-ai',
+        protocol: 'ag-ui',
         agentSpecId: AGENTSPEC_ID,
         createPayload: {
           agent_parameters: formData,
@@ -391,8 +391,9 @@ const AgentParametersExample: React.FC = () => {
     <LoopEmbed
       serverUrl={baseUrl}
       target="local"
+      showAgentVariants
       agentId={agentId}
-      defaultEditor="none"
+      editors={false}
       showHeader
       plugins={LOOP_PLUGINS_AGENTPAR}
     />

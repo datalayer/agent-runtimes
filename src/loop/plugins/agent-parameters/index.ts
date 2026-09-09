@@ -9,6 +9,8 @@
  * Mounts the `example-parameters` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `loop/plugins/agent-capacity`.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-parameters
  */
 
@@ -24,18 +26,6 @@ export const AgentParametersPlugin = defineAgentCapacityPlugin({
   specId: 'example-parameters',
   octicon: 'sliders',
   emoji: '🎚️',
-  suggestions: [
-    {
-      text: 'Print demo_params',
-      message:
-        'Use execute_code to print(demo_params) from the sandbox, then explain what it is.',
-    },
-    {
-      text: 'Inspect demo_params',
-      message:
-        "Use execute_code to print('demo_params =', demo_params) and confirm its type.",
-    },
-  ],
 });
 
 export default AgentParametersPlugin;

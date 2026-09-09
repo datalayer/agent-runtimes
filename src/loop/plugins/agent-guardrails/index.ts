@@ -9,6 +9,8 @@
  * Mounts the `example-guardrails` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `loop/plugins/agent-capacity`.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-guardrails
  */
 
@@ -25,27 +27,6 @@ export const AgentGuardrailsPlugin = defineAgentCapacityPlugin({
   specId: 'example-guardrails',
   octicon: 'shield-lock',
   emoji: '🚧',
-  suggestions: [
-    {
-      text: 'Update CRM',
-      message: 'Update the CRM records for Q3',
-    },
-    {
-      text: 'Trigger before_tool_execute',
-      message:
-        "Call runtime_sensitive_echo with text 'hello' and reason 'audit', then explain the before_tool_execute authorization decision.",
-    },
-    {
-      text: 'Trigger deny policy',
-      message:
-        "Call runtime_sensitive_echo with text 'danger' and reason 'delete CRM rows', then explain why policy denied it.",
-    },
-    {
-      text: 'Explain deferred flow',
-      message:
-        'Explain how deferred_tool_calls and manual approvals interact in this guardrails run.',
-    },
-  ],
 });
 
 export default AgentGuardrailsPlugin;

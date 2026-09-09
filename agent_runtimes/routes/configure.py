@@ -400,7 +400,9 @@ async def list_catalog_models() -> dict[str, Any]:
 
     for model in AI_MODEL_CATALOGUE.values():
         missing = [
-            name for name in model.required_env_vars if not os.getenv(name.split(":")[0])
+            name
+            for name in model.required_env_vars
+            if not os.getenv(name.split(":")[0])
         ]
         entry: dict[str, Any] = {
             "id": model.id,
@@ -1004,20 +1006,7 @@ async def interrupt_sandbox(agent_id: str | None = None) -> dict[str, Any]:
         Result of the interrupt request.
     """
     try:
-        from agent_runtimes.services.code_sandbox_manager import (
-            get_code_sandbox_manager,
-        )
-
-        sandbox = None
-        if agent_id:
-            codemode_toolset = _get_agent_codemode_toolset(agent_id)
-            if codemode_toolset is not None:
-                sandbox = getattr(codemode_toolset, "_sandbox", None)
-                if sandbox is None:
-                    sandbox = getattr(codemode_toolset, "sandbox", None)
-        if sandbox is None:
-            manager = get_code_sandbox_manager()
-            sandbox = manager.get_managed_sandbox()
+        sandbox = _sandbox_to_interrupt(agent_id)
 
         if not sandbox.is_executing:
             return {"interrupted": False, "reason": "No code is currently executing"}
@@ -1195,6 +1184,32 @@ async def notify_sandbox_status_change(agent_id: str | None = None) -> None:
             queue.put_nowait(None)
 
 
+def _sandbox_to_interrupt(agent_id: str | None) -> Any:
+    """The sandbox a person's interrupt should reach.
+
+    The agent's own sandbox first — the one its code runs in — then the one
+    its codemode toolset holds, then the global sandbox. It used to start at
+    the toolset, whose proxy may resolve to the global sandbox: an interrupt
+    pressed while the agent's sandbox ran a loop was answered with "nothing
+    is executing".
+    """
+    from agent_runtimes.services.code_sandbox_manager import get_code_sandbox_manager
+
+    manager = get_code_sandbox_manager()
+    if agent_id:
+        own = manager.get_agent_sandbox(agent_id)
+        if own is not None:
+            return own
+        codemode_toolset = _get_agent_codemode_toolset(agent_id)
+        if codemode_toolset is not None:
+            sandbox = getattr(codemode_toolset, "_sandbox", None)
+            if sandbox is None:
+                sandbox = getattr(codemode_toolset, "sandbox", None)
+            if sandbox is not None:
+                return sandbox
+    return manager.get_managed_sandbox()
+
+
 def _get_agent_codemode_toolset(agent_id: str) -> Any | None:
     """Return the codemode toolset for an agent when available."""
     try:
@@ -1250,16 +1265,18 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
         # This tracks the sandbox actually used for code execution.
         if agent_id:
             codemode_toolset = _get_agent_codemode_toolset(agent_id)
-            agent_sandbox = None
-            if codemode_toolset is not None:
+            # The agent's own sandbox first: it is the one that says which
+            # variant runs and where. The toolset's is a proxy that may stand
+            # for it, or for the global sandbox.
+            agent_sandbox = (
+                manager.get_agent_sandbox(agent_id)
+                if hasattr(manager, "get_agent_sandbox")
+                else None
+            )
+            if agent_sandbox is None and codemode_toolset is not None:
                 agent_sandbox = getattr(codemode_toolset, "_sandbox", None)
                 if agent_sandbox is None:
                     agent_sandbox = getattr(codemode_toolset, "sandbox", None)
-
-            # Fall back to the per-agent sandbox created via create_agent_sandbox
-            # (used when codemode is not enabled but sandbox_variant is set).
-            if agent_sandbox is None and hasattr(manager, "get_agent_sandbox"):
-                agent_sandbox = manager.get_agent_sandbox(agent_id)
 
             if agent_sandbox is not None:
                 sandbox_running = True
@@ -1280,7 +1297,18 @@ def _build_sandbox_ws_status(agent_id: str | None = None) -> dict[str, Any]:
                             getattr(agent_sandbox, "is_executing", False)
                         )
                 sandbox_cls = type(agent_sandbox).__name__.lower()
-                if "jupyter" in sandbox_cls:
+                # The agent's own sandbox says which variant it runs — an
+                # eval sandbox beside a global Jupyter one used to be reported
+                # as Jupyter. Not asked of the managed proxy: its attributes
+                # reach through to the global sandbox, creating it if need be.
+                own_variant = (
+                    getattr(agent_sandbox, "variant", None)
+                    if sandbox_cls != "managedsandbox"
+                    else None
+                )
+                if own_variant:
+                    variant = str(own_variant)
+                elif "jupyter" in sandbox_cls:
                     variant = "jupyter-server"
                 # From the agent's own sandbox, all of it or none of it. This
                 # branch replaces the URL; taking the token and kernel from the
@@ -1392,24 +1420,7 @@ async def sandbox_status_ws(websocket: WebSocket, agent_id: str | None = None) -
                     if msg.get("action") == "interrupt":
                         logger.info("Sandbox interrupt requested via WebSocket")
                         try:
-                            sandbox = None
-                            if agent_id:
-                                codemode_toolset = _get_agent_codemode_toolset(agent_id)
-                                if codemode_toolset is not None:
-                                    sandbox = getattr(
-                                        codemode_toolset, "_sandbox", None
-                                    )
-                                    if sandbox is None:
-                                        sandbox = getattr(
-                                            codemode_toolset, "sandbox", None
-                                        )
-                            if sandbox is None:
-                                from agent_runtimes.services.code_sandbox_manager import (
-                                    get_code_sandbox_manager,
-                                )
-
-                                mgr = get_code_sandbox_manager()
-                                sandbox = mgr.get_managed_sandbox()
+                            sandbox = _sandbox_to_interrupt(agent_id)
                             success = (
                                 sandbox.interrupt() if sandbox.is_executing else False
                             )

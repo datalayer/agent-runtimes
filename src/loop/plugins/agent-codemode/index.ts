@@ -13,6 +13,9 @@
  * `example-no-codemode`, the same tools raw. The codemode example mounts
  * both side by side and hands each pane the same task.
  *
+ * The openers are the specs' own — the same first task on both sides, so
+ * the example's two panes compare like with like.
+ *
  * @module loop/plugins/agent-codemode
  */
 
@@ -31,13 +34,6 @@ export const AgentCodemodePlugin = defineAgentCapacityPlugin({
   octicon: 'code-square',
   emoji: '🧑‍💻',
   codemode: true,
-  suggestions: [
-    {
-      text: 'Datalayer extraction',
-      message:
-        'Extract information from the https://datalayer.ai website and assign it to the variable "about_datalayer", all in one step using the sandbox',
-    },
-  ],
 });
 
 export const AgentNoCodemodePlugin = defineAgentCapacityPlugin({
@@ -48,13 +44,6 @@ export const AgentNoCodemodePlugin = defineAgentCapacityPlugin({
   octicon: 'tools',
   emoji: '🔧',
   codemode: false,
-  suggestions: [
-    {
-      text: 'Datalayer extraction',
-      message:
-        'Use the MCP extract tool to extract information from https://datalayer.ai, then use your sandbox to persist that information in a variable named "about_datalayer".',
-    },
-  ],
 });
 
 export default AgentCodemodePlugin;

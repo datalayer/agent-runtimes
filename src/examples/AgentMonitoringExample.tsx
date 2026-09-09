@@ -24,12 +24,13 @@ import React, {
   useMemo,
 } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, Spinner, Heading, Label } from '@primer/react';
+import { Text, Heading, Label } from '@primer/react';
 import { GraphIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { waitForAgent } from './utils/waitForAgent';
 import {
   ContextPanel,
   type ContextSnapshotResponse,
@@ -55,7 +56,6 @@ import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-example-agent';
-const AGENTSPEC_ID = 'example-monitoring';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
 // Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
 // read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
@@ -149,6 +149,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const createLocalAgent = async () => {
       setRuntimeStatus('launching');
@@ -157,55 +158,21 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'MCP monitoring example – web crawling via Tavily with live cost/token metrics',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_skills: true,
-            tools: [],
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint as
+        // it mounts; the page only waits until the server has it, so its own
+        // sockets and reads address an agent that exists.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
+        setAgentId(agentName);
+        setIsReady(true);
+        setRuntimeStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setHookError(
@@ -220,6 +187,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [agentBaseUrl, agentName, authFetch]);
 
@@ -385,26 +353,6 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     setAlerts([]);
   }, [isReady, agentId]);
 
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching local monitoring example agent...
-        </Text>
-      </Box>
-    );
-  }
-
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
@@ -557,8 +505,9 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
+            showAgentVariants
             agentId={agentId}
-            defaultEditor="none"
+            editors={false}
             showHeader
             plugins={chatPlugins}
           />

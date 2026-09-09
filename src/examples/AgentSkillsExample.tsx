@@ -20,7 +20,6 @@ import {
   Dialog,
   Heading,
   Label,
-  Spinner,
   Text,
   Token as PrimerToken,
 } from '@primer/react';
@@ -200,7 +199,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     agentConfig: {
       description:
         'Agent with skills example - module, package and file based skills',
-      protocol: 'vercel-ai',
+      protocol: 'ag-ui',
       agentSpecId: AGENTSPEC_ID,
       enableSkills: true,
       tools: [],
@@ -246,26 +245,6 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const packageBasedSkills = skills.filter(s => s.source_variant === 'package');
   const moduleBasedSkills = skills.filter(s => s.source_variant === 'module');
 
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching skills example agent...
-        </Text>
-      </Box>
-    );
-  }
-
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
@@ -283,8 +262,9 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
+            showAgentVariants
             agentId={agentId}
-            defaultEditor="none"
+            editors={false}
             showHeader
             plugins={LOOP_PLUGINS_AGENTSKI}
           />

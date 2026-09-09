@@ -28,7 +28,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
   Button,
-  Spinner,
   Heading,
   Label,
   Flash,
@@ -46,6 +45,7 @@ import { useCoreStore } from '../state/substates';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { waitForAgent } from './utils/waitForAgent';
 import type {
   AgentStreamSnapshotPayload,
   AgentStreamToolApprovalPayload,
@@ -60,6 +60,7 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { LoopEmbed } from '../loop';
+import { agentRuntimeStore } from '../stores';
 import { AgentGuardrailsPlugin } from '../loop/plugins/agent-guardrails';
 import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 
@@ -376,6 +377,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const createLocalAgent = async () => {
       setRuntimeStatus('launching');
@@ -384,54 +386,22 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description: 'Agent with cost budget and tool approval guardrails',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_skills: true,
-            tools: [],
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint as
+        // it mounts; the page only waits until the server has it, so its own
+        // sockets and reads address an agent that exists.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
+        setAgentId(agentName);
+        setIsReconnectedAgent(false);
+        setIsReady(true);
+        setRuntimeStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setHookError(
@@ -446,6 +416,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [agentBaseUrl, agentName, authFetch]);
 
@@ -559,68 +530,34 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
   // ── Approve / Reject ─────────────────────────────────────────────────────
 
-  const handleApprove = useCallback(
-    async (requestId: string) => {
-      if (!agentBaseUrl) return;
+  // The banner's buttons answer the run the way the chat's own card does:
+  // the decision goes through the chat, which continues the held tool call.
+  // (The `/tool-approvals/{id}/approve` route only records a decision for
+  // the websocket approvals; a tool held by the guardrail waits on the run.)
+  const decide = useCallback(
+    (requestId: string, approved: boolean) => {
       setApprovalLoading(requestId);
-      try {
-        await authFetch(
-          `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/approve`,
-          { method: 'POST' },
-        );
-        setApprovals(prev => prev.filter(a => a.id !== requestId));
-      } catch {
-        /* ok */
-      } finally {
-        setApprovalLoading(null);
-      }
+      const approval = approvals.find(a => a.id === requestId);
+      agentRuntimeStore.getState().requestToolDecision({
+        approvalId: requestId,
+        approved,
+        toolName: approval?.tool_name,
+      });
+      setApprovals(prev => prev.filter(a => a.id !== requestId));
+      setApprovalLoading(null);
     },
-    [agentBaseUrl, authFetch],
+    [approvals],
   );
-
+  const handleApprove = useCallback(
+    (requestId: string) => decide(requestId, true),
+    [decide],
+  );
   const handleReject = useCallback(
-    async (requestId: string) => {
-      if (!agentBaseUrl) return;
-      setApprovalLoading(requestId);
-      try {
-        await authFetch(
-          `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/reject`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ reason: 'User rejected' }),
-          },
-        );
-        setApprovals(prev => prev.filter(a => a.id !== requestId));
-      } catch {
-        /* ok */
-      } finally {
-        setApprovalLoading(null);
-      }
-    },
-    [agentBaseUrl, authFetch],
+    (requestId: string) => decide(requestId, false),
+    [decide],
   );
 
   // ── Loading / Error ──────────────────────────────────────────────────────
-
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching guardrails example agent...
-        </Text>
-      </Box>
-    );
-  }
 
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
@@ -826,8 +763,9 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         <LoopEmbed
           serverUrl={agentBaseUrl}
           target="local"
+          showAgentVariants
           agentId={agentId}
-          defaultEditor="none"
+          editors={false}
           showHeader
           plugins={chatPlugins}
         />

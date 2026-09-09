@@ -27,7 +27,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
   Button,
-  Spinner,
   Heading,
   Label,
   TextInput,
@@ -48,6 +47,7 @@ import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { LoopEmbed } from '../loop';
+import { useAgentRuntimeStore } from '../stores';
 import { AgentNotificationsPlugin } from '../loop/plugins/agent-notifications';
 
 const queryClient = new QueryClient();
@@ -68,6 +68,11 @@ interface NotificationRecord {
   body: string;
   timestamp: string;
   read: boolean;
+  /** How the channel took it: stored, sent, failed or unconfigured. */
+  delivery?: 'stored' | 'sent' | 'failed' | 'unconfigured';
+  /** A word on the delivery, when there is one. */
+  detail?: string | null;
+  level?: 'info' | 'warning' | 'critical';
 }
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
@@ -110,7 +115,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
     specId: AGENTSPEC_ID,
     agentConfig: {
       description: 'Agent with multi-channel notification support',
-      protocol: 'vercel-ai',
+      protocol: 'ag-ui',
       agentSpecId: AGENTSPEC_ID,
       enableSkills: true,
       tools: [],
@@ -128,6 +133,8 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
   const [flash, setFlash] = useState<string | null>(null);
 
   const runtimeName = isReady ? `local:${agentId}` : '(launching…)';
+  // A new snapshot means a turn ended: the poll above runs again on it.
+  const fullContext = useAgentRuntimeStore(state => state.fullContext);
   const plugins = useMemo(() => [AgentNotificationsPlugin], []);
 
   // Authenticated fetch helper
@@ -174,9 +181,11 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
       }
     };
     poll();
-    const interval = setInterval(poll, 10_000);
+    // Often enough to feel live, and again as soon as a turn ends: the
+    // agent's notification should be in the panel by the time it says so.
+    const interval = setInterval(poll, 3_000);
     return () => clearInterval(interval);
-  }, [isReady, agentBaseUrl, agentId, authFetch]);
+  }, [isReady, agentBaseUrl, agentId, authFetch, fullContext]);
 
   // ── Toggle / save channel ─────────────────────────────────────────────
 
@@ -220,6 +229,27 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
     [agentBaseUrl, agentId, channels, editTargets, authFetch],
   );
 
+  // ── Mark one read ─────────────────────────────────────────────────────
+  const handleMarkRead = useCallback(
+    async (id: string) => {
+      if (!agentBaseUrl) return;
+      try {
+        const res = await authFetch(
+          `${agentBaseUrl}/api/v1/agents/${agentId}/notifications/${id}/read`,
+          { method: 'POST' },
+        );
+        if (res.ok) {
+          setNotifications(prev =>
+            prev.map(n => (n.id === id ? { ...n, read: true } : n)),
+          );
+        }
+      } catch {
+        /* ok */
+      }
+    },
+    [agentBaseUrl, agentId, authFetch],
+  );
+
   // ── Send test notification ────────────────────────────────────────────
 
   const handleTestNotification = useCallback(async () => {
@@ -242,37 +272,21 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
 
   // ── Loading / Error ───────────────────────────────────────────────────
 
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching local notification agent…
-        </Text>
-      </Box>
-    );
-  }
-
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
   const unreadCount = notifications.filter(n => !n.read).length;
-  const recentAlerts: AlertRecord[] = notifications.slice(0, 10).map(n => ({
-    id: n.id,
-    title: n.title,
-    severity: n.read ? 'info' : 'warning',
-    timestamp: n.timestamp,
-  }));
+  // Alerts are the notifications the agent marked as more than information.
+  const recentAlerts: AlertRecord[] = notifications
+    .filter(n => n.level === 'warning' || n.level === 'critical')
+    .slice(0, 10)
+    .map(n => ({
+      id: n.id,
+      title: n.title,
+      severity: n.level === 'critical' ? 'critical' : 'warning',
+      timestamp: n.timestamp,
+    }));
 
   const channelIcon = (ch: NotificationChannel) => {
     switch (ch) {
@@ -325,8 +339,9 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
+            showAgentVariants
             agentId={agentId}
-            defaultEditor="none"
+            editors={false}
             showHeader
             plugins={plugins}
           />
@@ -513,8 +528,14 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
             ) : (
               <Timeline>
                 {notifications.slice(0, 25).map(n => (
-                  <Timeline.Item key={n.id}>
-                    <Timeline.Badge>
+                  <Timeline.Item key={n.id} data-notification={n.id}>
+                    <Timeline.Badge
+                      sx={{ cursor: n.read ? 'default' : 'pointer' }}
+                      onClick={() => {
+                        if (!n.read) void handleMarkRead(n.id);
+                      }}
+                      title={n.read ? 'Read' : 'Mark as read'}
+                    >
                       {n.read ? <CheckCircleIcon /> : <BellIcon />}
                     </Timeline.Badge>
                     <Timeline.Body>
@@ -536,7 +557,22 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
                         {new Date(n.timestamp).toLocaleString()} via{' '}
                         <Label size="small" variant="secondary">
                           {n.channel}
-                        </Label>
+                        </Label>{' '}
+                        {n.delivery ? (
+                          <Label
+                            size="small"
+                            variant={
+                              n.delivery === 'sent' || n.delivery === 'stored'
+                                ? 'success'
+                                : n.delivery === 'failed'
+                                  ? 'danger'
+                                  : 'attention'
+                            }
+                            title={n.detail ?? undefined}
+                          >
+                            {n.delivery}
+                          </Label>
+                        ) : null}
                       </Text>
                     </Timeline.Body>
                   </Timeline.Item>

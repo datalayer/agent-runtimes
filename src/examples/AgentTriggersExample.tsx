@@ -52,6 +52,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { LoopEmbed } from '../loop';
 import { AgentTriggersPlugin } from '../loop/plugins/agent-triggers';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { waitForAgent } from './utils/waitForAgent';
 import { useConnectedIdentities } from '../identity';
 import {
   ToolApprovalBanner,
@@ -67,7 +68,7 @@ import {
 } from '../hooks';
 import type { AgentEvent } from '../types';
 import { type AgentStreamToolApprovalPayload } from '../types/stream';
-import { VercelAIAdapter } from '../protocols';
+import { AGUIAdapter, VercelAIAdapter } from '../protocols';
 import { createUserMessage } from '../types/messages';
 
 const LOOP_PLUGINS_AGENTTRI = [AgentTriggersPlugin];
@@ -77,7 +78,6 @@ const queryClient = new QueryClient();
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const AGENT_NAME = 'trigger-example-agent';
-const AGENTSPEC_ID = 'example-one-trigger';
 const APPROVAL_AGENT_NAME = 'trigger-approval-agent';
 const APPROVAL_AGENTSPEC_ID = 'example-tool-approvals';
 const ONCE_TRIGGER_PROMPT =
@@ -225,6 +225,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       createdAt?: string;
     }>
   >([]);
+  // The approval agent's live stream, kept open while a tool waits: that
+  // agent speaks Vercel AI, whose adapter knows the deferred tool call.
   const approvalStreamRef = useRef<{
     adapter: VercelAIAdapter;
     unsubscribe: () => void;
@@ -371,62 +373,24 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   // ── Create agent on demand (no startup on initial page load) ────────────
 
   const createAgent = useCallback(async (): Promise<boolean> => {
-    setRuntimeStatus('launching');
-    setIsReady(false);
     setHookError(null);
-
-    try {
-      const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: agentName,
-          description: 'Agent with cron, webhook, event, and manual triggers',
-          agent_library: 'pydantic-ai',
-          transport: 'vercel-ai',
-          agent_spec_id: AGENTSPEC_ID,
-        }),
-      });
-
-      let resolvedAgentId = agentName;
-
-      if (response.ok) {
-        const data = await response.json();
-        resolvedAgentId = data?.id || agentName;
-      } else {
-        const contentType = response.headers.get('content-type') || '';
-        let detail = '';
-
-        if (contentType.includes('application/json')) {
-          const data = await response.json().catch(() => null);
-          detail =
-            (typeof data?.detail === 'string' && data.detail) ||
-            (typeof data?.message === 'string' && data.message) ||
-            '';
-        } else {
-          detail = await response.text();
-        }
-
-        if (response.status === 409 || /already exists/i.test(detail || '')) {
-          // Agent already running — reuse it
-        } else {
-          throw new Error(
-            detail || `Failed to create agent: ${response.status}`,
-          );
-        }
-      }
-
-      setAgentId(resolvedAgentId);
-      setIsReady(true);
-      setRuntimeStatus('ready');
-      return true;
-    } catch (error) {
+    // Mounting the Loop is what creates the agent: it builds it from the
+    // triggers capacity plugin's blueprint — so the page is "ready" at once,
+    // and only waits for the server to have the agent before it fires
+    // triggers at it.
+    setAgentId(agentName);
+    setIsReady(true);
+    setRuntimeStatus('ready');
+    const found = await waitForAgent(agentBaseUrl, agentName);
+    if (!found) {
       setHookError(
-        error instanceof Error ? error.message : 'Agent failed to start',
+        `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
       );
       setRuntimeStatus('error');
       return false;
     }
-  }, [agentBaseUrl, authFetch, agentName]);
+    return true;
+  }, [agentBaseUrl, agentName]);
 
   const ensureRuntimeReady = useCallback(async (): Promise<boolean> => {
     if (isReady) {
@@ -493,18 +457,30 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
       finalAssistantText: string | null;
       pendingApproval: boolean;
     }> => {
-      const endpoint = `${agentBaseUrl}/api/v1/vercel-ai/${encodeURIComponent(targetAgentId)}`;
+      // Two agents, two doors: the trigger agent is the Loop's and speaks
+      // AG-UI; the approval agent the page makes itself speaks Vercel AI,
+      // whose adapter can carry a deferred tool call through an approval.
+      const viaVercel = targetAgentId === approvalAgentName;
+      const endpoint = viaVercel
+        ? `${agentBaseUrl}/api/v1/vercel-ai/${encodeURIComponent(targetAgentId)}`
+        : `${agentBaseUrl}/api/v1/ag-ui/${encodeURIComponent(targetAgentId)}/`;
       if (options?.keepAliveForApproval && approvalStreamRef.current) {
         approvalStreamRef.current.unsubscribe();
         approvalStreamRef.current.adapter.disconnect();
         approvalStreamRef.current = null;
       }
-      const adapter = new VercelAIAdapter({
-        protocol: 'vercel-ai',
-        baseUrl: endpoint,
-        agentId: targetAgentId,
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
+      const adapter: VercelAIAdapter | AGUIAdapter = viaVercel
+        ? new VercelAIAdapter({
+            protocol: 'vercel-ai',
+            baseUrl: endpoint,
+            agentId: targetAgentId,
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          })
+        : new AGUIAdapter({
+            protocol: 'ag-ui',
+            baseUrl: endpoint,
+            agentId: targetAgentId,
+          });
       let latestAssistantText: string | null = null;
       let pendingApproval = false;
 
@@ -568,7 +544,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         );
         throw error;
       } finally {
-        if (options?.keepAliveForApproval) {
+        if (
+          options?.keepAliveForApproval &&
+          adapter instanceof VercelAIAdapter
+        ) {
           approvalStreamRef.current = { adapter, unsubscribe };
         } else {
           unsubscribe();
@@ -1106,7 +1085,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
-  const triggerRunCurl = `curl -N -X POST '${agentBaseUrl}/api/v1/vercel-ai/${agentId}' -H 'Content-Type: application/json' -H 'Accept: text/event-stream'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"messages":[{"role":"user","parts":[{"type":"text","text":"${ONCE_TRIGGER_PROMPT.replace(/"/g, '\\"')}"}]}],"trigger":"submit-message","sdkVersion":6}'`;
+  const triggerRunCurl = `curl -X POST '${agentBaseUrl}/api/v1/agents/${agentId}/trigger/run' -H 'Content-Type: application/json'${token ? " -H 'Authorization: Bearer <TOKEN>'" : ''} --data '{"source":"once"}'`;
 
   const isAgentLaunching = isLaunchingOnce || isLaunchingApproval;
 
@@ -1219,8 +1198,9 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
               <LoopEmbed
                 serverUrl={agentBaseUrl}
                 target="local"
+                showAgentVariants
                 agentId={agentId}
-                defaultEditor="none"
+                editors={false}
                 showHeader
                 plugins={LOOP_PLUGINS_AGENTTRI}
               />

@@ -10,6 +10,8 @@
  * by cron schedules, webhooks and event subscriptions rather than only by a
  * person typing. Cast from the shared capacity mould.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-triggers
  */
 
@@ -26,17 +28,6 @@ export const AgentTriggersPlugin = defineAgentCapacityPlugin({
   specId: 'example-one-trigger',
   octicon: 'clock',
   emoji: '⏰',
-  suggestions: [
-    {
-      text: 'Latest trigger run',
-      message: 'Show me the output of the most recent triggered run.',
-    },
-    {
-      text: 'Configured triggers',
-      message:
-        'Which triggers are configured for this agent — cron, webhook, events — and when does each fire?',
-    },
-  ],
 });
 
 export default AgentTriggersPlugin;

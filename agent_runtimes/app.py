@@ -54,8 +54,9 @@ from .routes import (
     acp_router,
     agent_node_router,
     agents_router,
-    checkpoints_router,
     agui_router,
+    checkpoints_router,
+    notifications_router,
     configure_router,
     evals_router,
     get_a2a_mounts,
@@ -1429,8 +1430,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(identity_router)  # No prefix - uses /api/v1/identity internally
     if _node_enabled:
         app.include_router(agent_node_router, prefix=config.api_prefix)
-    app.include_router(agents_router, prefix=config.api_prefix)
+    # Before the agents router: its catch-all `/agents/{agent_id:path}` would
+    # otherwise take `/agents/{id}/checkpoints` for an agent named so.
     app.include_router(checkpoints_router, prefix=config.api_prefix)
+    app.include_router(notifications_router, prefix=config.api_prefix)
+    app.include_router(agents_router, prefix=config.api_prefix)
     if acp_router is not None:
         app.include_router(acp_router, prefix=config.api_prefix)
     app.include_router(configure_router, prefix=config.api_prefix)

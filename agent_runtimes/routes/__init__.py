@@ -52,6 +52,7 @@ from .agui import (
     unregister_thread as unregister_agui_thread,
 )
 from .checkpoints import router as checkpoints_router
+from .notifications import router as notifications_router
 from .configure import router as configure_router
 from .health import router as health_router
 from .history import router as history_router
@@ -88,6 +89,7 @@ __all__ = [
     "cancel_agui_thread",
     "cancel_agui_threads",
     "checkpoints_router",
+    "notifications_router",
     "configure_router",
     "evals_router",
     "get_a2a_agents",

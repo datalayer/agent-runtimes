@@ -45,7 +45,7 @@ const AgentHooksExample: React.FC = () => {
           showAgentVariants
           agentId={agentName}
           // The conversation is the demonstration; no editor beside it.
-          defaultEditor="none"
+          editors={false}
           showHeader
           plugins={plugins}
         />

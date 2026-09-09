@@ -4,10 +4,11 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-compaction` — the capacity, as a plugin.
+ * `@datalayer/loop-plugin-agent-compaction` — history compaction, as a capacity.
  *
- * Mounts the `example-monitoring` agent and offers what it is worth asking. Cast
- * from the shared capacity mould; see `loop/plugins/agent-capacity`.
+ * Mounts the `example-compaction` agent, a long-winded one, under a context
+ * token budget: once the history grows past it, older turns are summarized.
+ * Cast from the shared capacity mould; the openers are the spec's own.
  *
  * @module loop/plugins/agent-compaction
  */
@@ -17,30 +18,27 @@ import { defineAgentCapacityPlugin } from '../agent-capacity';
 export const AGENT_COMPACTION_PLUGIN_NAME =
   '@datalayer/loop-plugin-agent-compaction';
 
-export const AgentCompactionPlugin = defineAgentCapacityPlugin({
-  key: 'compaction',
-  displayName: 'Agent Compaction',
-  description: 'History summarization under a token budget',
-  specId: 'example-monitoring',
-  octicon: 'fold',
-  emoji: '🗜️',
-  suggestions: [
-    {
-      text: 'Fill the context',
-      message:
-        'Write a detailed, multi-paragraph essay on the history of computing, covering hardware, software, and networking eras.',
-    },
-    {
-      text: 'Keep going',
-      message:
-        'Now expand each section with more detail and concrete examples, adding at least three paragraphs per era.',
-    },
-    {
-      text: 'Recall earlier',
-      message:
-        'Summarize everything we have discussed so far in this conversation.',
-    },
-  ],
-});
+/** The budget the plain plugin mounts the agent under, in tokens. */
+export const DEFAULT_COMPACTION_MAX_TOKENS = 8000;
+
+/**
+ * The capacity for a given budget: what a page that lets the person pick the
+ * budget builds once the choice is made.
+ */
+export function createAgentCompactionPlugin(maxTokens: number) {
+  return defineAgentCapacityPlugin({
+    key: 'compaction',
+    displayName: 'Agent Compaction',
+    description: `History compaction under a ${maxTokens.toLocaleString()} token budget.`,
+    specId: 'example-compaction',
+    octicon: 'history',
+    emoji: '🗜️',
+    createPayload: { compactionMaxTokens: maxTokens },
+  });
+}
+
+export const AgentCompactionPlugin = createAgentCompactionPlugin(
+  DEFAULT_COMPACTION_MAX_TOKENS,
+);
 
 export default AgentCompactionPlugin;

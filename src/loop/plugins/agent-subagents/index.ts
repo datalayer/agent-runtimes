@@ -9,6 +9,8 @@
  * Mounts the `example-subagents` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `loop/plugins/agent-capacity`.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-subagents
  */
 
@@ -24,22 +26,6 @@ export const AgentSubagentsPlugin = defineAgentCapacityPlugin({
   specId: 'example-subagents',
   octicon: 'people',
   emoji: '👥',
-  suggestions: [
-    {
-      text: 'Research & write',
-      message:
-        'Research the pros and cons of Python async patterns and write a summary.',
-    },
-    {
-      text: 'Research only',
-      message:
-        'Find recent advances in LLM fine-tuning and provide a detailed analysis.',
-    },
-    {
-      text: 'Write only',
-      message: 'Write a concise guide on REST API design best practices.',
-    },
-  ],
 });
 
 export default AgentSubagentsPlugin;

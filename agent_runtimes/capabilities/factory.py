@@ -429,6 +429,18 @@ def build_capabilities_from_agent_spec(
         if checkpoints_capability is not None:
             capabilities.append(checkpoints_capability)
 
+    # Notifications: channels the agent can notify through, with the tools
+    # to do so; the page that shows them configures the channels.
+    notifications_config = getattr(agent_spec, "notifications", None)
+    if notifications_config is not None:
+        from ..notifications import build_notifications_capability
+
+        notifications_capability = build_notifications_capability(
+            notifications_config, agent_id=agent_id
+        )
+        if notifications_capability is not None:
+            capabilities.append(notifications_capability)
+
     if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_COST_MONITORING", True) and agent_id:
         capabilities.append(
             CostMonitoringCapability(

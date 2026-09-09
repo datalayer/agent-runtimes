@@ -13,6 +13,9 @@
  * example offers the whole family behind a chooser; a host that wants
  * exactly one mounts exactly one.
  *
+ * The openers are each spec's own: the same three on every variant, the
+ * first of which asks the code where it ran.
+ *
  * @module loop/plugins/agent-code-sandboxes
  */
 
@@ -80,18 +83,6 @@ export const SANDBOX_CAPACITIES: SandboxCapacity[] = [
   },
 ];
 
-const openers = (capacity: SandboxCapacity) => [
-  {
-    text: 'Run a quick sum',
-    message:
-      'Use your sandbox to compute the sum of the squares of 1..10 and show the result.',
-  },
-  {
-    text: 'Describe this sandbox',
-    message: `You run on the ${capacity.displayName.toLowerCase()} — explain where the code executes and what that means for isolation.`,
-  },
-];
-
 /** The plugins, keyed by capacity key — one per sandbox variant. */
 export const SandboxCapacityPlugins = Object.fromEntries(
   SANDBOX_CAPACITIES.map(capacity => [
@@ -104,7 +95,6 @@ export const SandboxCapacityPlugins = Object.fromEntries(
       octicon: 'codespaces',
       emoji: '📦',
       createPayload: { sandbox_variant: capacity.variant },
-      suggestions: openers(capacity),
     }),
   ]),
 );

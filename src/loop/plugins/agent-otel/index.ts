@@ -9,6 +9,8 @@
  * Mounts the `example-otel` agent: a conversation over the workspace's own
  * traces, logs and metrics. Cast from the shared capacity mould.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-otel
  */
 
@@ -24,24 +26,6 @@ export const AgentOtelPlugin = defineAgentCapacityPlugin({
   specId: 'example-otel',
   octicon: 'telescope',
   emoji: '🔭',
-  suggestions: [
-    {
-      text: '🔍 Recent traces',
-      message: 'What do the most recent traces show?',
-    },
-    {
-      text: '⚠️ Errors',
-      message: 'Are there any errors or anomalies in the telemetry?',
-    },
-    {
-      text: '📊 Metrics summary',
-      message: 'Give me a summary of the current metrics.',
-    },
-    {
-      text: '🕵️ Root cause',
-      message: 'Help me find the root cause of slow requests.',
-    },
-  ],
 });
 
 export default AgentOtelPlugin;

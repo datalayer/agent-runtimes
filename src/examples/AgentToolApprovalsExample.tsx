@@ -15,16 +15,15 @@ import React, {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
-import { Spinner, Text } from '@primer/react';
+import { Text } from '@primer/react';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { waitForAgent } from './utils/waitForAgent';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { LoopEmbed } from '../loop';
-import { AgentToolApprovalsPlugin } from '../loop/plugins/agent-tool-approvals';
+import { createAgentToolApprovalsPlugin } from '../loop/plugins/agent-tool-approvals';
 import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
-
-const LOOP_PLUGINS_AGENTTOO = [AgentToolApprovalsPlugin];
 
 const queryClient = new QueryClient();
 const AGENT_NAME_PREFIX = 'tool-approval-example-agent';
@@ -96,11 +95,24 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       ),
     [selectedSpecId, disableToolApprovals],
   );
+  // The capacity for the choice: the Loop creates the agent from its
+  // blueprint, spec and approvals switch included.
+  const plugins = useMemo(
+    () => [
+      createAgentToolApprovalsPlugin({
+        specId: selectedSpecId,
+        disableToolApprovals,
+      }),
+    ],
+    [selectedSpecId, disableToolApprovals],
+  );
 
   const [runtimeStatus, setRuntimeStatus] = useState<
     'launching' | 'ready' | 'error'
   >('launching');
   const [isReady, setIsReady] = useState(false);
+  // Kept for the effect's bookkeeping; the Loop mounts regardless.
+  void isReady;
   const [hookError, setHookError] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
@@ -147,7 +159,7 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     }
     createAttemptedRef.current = true;
     let isCancelled = false;
-
+    const controller = new AbortController();
     const createLocalAgent = async () => {
       setRuntimeStatus('launching');
       setIsReady(false);
@@ -155,56 +167,22 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description: 'Agent with runtime tool approvals',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: selectedSpecId,
-            enable_skills: false,
-            skills: [],
-            tools: ['runtime-echo', 'runtime-sensitive-echo'],
-            disableToolApprovals: disableToolApprovals,
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint —
+        // spec, tools and the approvals switch included — as it mounts; the
+        // page waits until the server has it.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
+        setAgentId(agentName);
+        setIsReconnectedAgent(false);
+        setIsReady(true);
+        setRuntimeStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setHookError(
@@ -216,9 +194,9 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     };
 
     void createLocalAgent();
-
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [
     agentBaseUrl,
@@ -227,26 +205,6 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
     disableToolApprovals,
     selectedSpecId,
   ]);
-
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching tool approvals example agent...
-        </Text>
-      </Box>
-    );
-  }
 
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
@@ -279,12 +237,14 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <LoopEmbed
+            key={agentName}
             serverUrl={agentBaseUrl}
             target="local"
+            showAgentVariants
             agentId={agentId}
-            defaultEditor="none"
+            editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTTOO}
+            plugins={plugins}
           />
         </Box>
       </Box>

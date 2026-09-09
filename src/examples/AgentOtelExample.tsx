@@ -45,8 +45,8 @@ import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
 import { LoopEmbed } from '../loop';
+import { uniqueAgentId } from './utils/agentId';
 import { AgentOtelPlugin } from '../loop/plugins/agent-otel';
-import type { AgentLibrary } from '../types';
 import { Protocol } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
@@ -60,7 +60,6 @@ const OTEL_IN_BASE_URL_ENV: string =
 const OTEL_URL_ENV: string = import.meta.env.VITE_DATALAYER_OTEL_URL ?? '';
 
 const DEFAULT_AGENT_PROTOCOL: Protocol = 'vercel-ai';
-const DEFAULT_AGENT_LIBRARY: AgentLibrary = 'pydantic-ai';
 
 /** Spec id this example always launches. */
 const AGENTSPEC_ID = 'example-otel';
@@ -96,39 +95,9 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
 
     try {
       const transport: Protocol = DEFAULT_AGENT_PROTOCOL;
-
-      const res = await fetch(`${baseUrl}/api/v1/agents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: AGENTSPEC_ID,
-          description: `Launched from AgentOtelExample`,
-          agent_library: DEFAULT_AGENT_LIBRARY,
-          transport,
-          agent_spec_id: AGENTSPEC_ID,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
-        const detail =
-          typeof err?.detail === 'string' ? err.detail : 'Unknown error';
-
-        // Reuse existing agent when backend reports duplicate creation.
-        if (res.status === 409 || /already exists/i.test(detail)) {
-          const idMatch = detail.match(
-            /Agent with ID '([^']+)' already exists/i,
-          );
-          const existingId = idMatch?.[1] || AGENTSPEC_ID;
-          onConnected(existingId, transport);
-          return;
-        }
-
-        throw new Error(detail || `Failed to create agent: ${res.status}`);
-      }
-
-      const data = await res.json();
-      onConnected(data.id, transport);
+      // The Loop creates the agent from the otel capacity plugin's blueprint
+      // once it mounts on this id; the launcher only picks the id.
+      onConnected(uniqueAgentId(AGENTSPEC_ID), transport);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to launch agent');
       console.warn('[AgentOtelExample] Failed to launch agent:', e);
@@ -423,10 +392,12 @@ const AgentOtelExampleInner: React.FC<{
           <Box sx={{ flex: 1, minHeight: 0 }}>
             {connectedAgentId ? (
               <LoopEmbed
+                key={connectedAgentId}
                 serverUrl={agentBaseUrl}
                 target="local"
+                showAgentVariants
                 agentId={connectedAgentId}
-                defaultEditor="none"
+                editors={false}
                 plugins={otelPlugins}
               />
             ) : (

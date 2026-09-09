@@ -118,6 +118,27 @@ def _agent_node_inference_provider_override() -> str | None:
     return None
 
 
+_APPROVAL_CAPABILITY_NAMES = frozenset(
+    {
+        "ToolsGuardrailCapability",
+        "MCPToolsGuardrailCapability",
+        "SkillsGuardrailCapability",
+    }
+)
+
+
+def _without_approval_capabilities(capabilities: list[Any]) -> list[Any]:
+    """The capabilities minus every one that would ask a person to approve a tool."""
+    return [
+        cap
+        for cap in capabilities
+        if (
+            not isinstance(cap, ToolsGuardrailCapability)
+            and cap.__class__.__name__ not in _APPROVAL_CAPABILITY_NAMES
+        )
+    ]
+
+
 def _is_tool_approvals_disabled(request_value: bool | None = None) -> bool:
     """Resolve tool-approvals disable state from request override or runtime config."""
     if isinstance(request_value, bool):
@@ -744,6 +765,84 @@ def _build_codemode_system_prompt(variant: str) -> str:
     )
 
 
+def _binding_function_name(tool_name: str) -> str:
+    """The Python name a generated binding goes by: ``server__tool-name`` → ``tool_name``."""
+    return tool_name.split("__")[-1].replace("-", "_")
+
+
+def _binding_signature(tool: Any, limit: int = 6) -> str:
+    """``query, max_results?, …``: required parameters first, optional ones marked."""
+    schema = getattr(tool, "input_schema", None) or {}
+    properties = schema.get("properties") if isinstance(schema, dict) else None
+    if not isinstance(properties, dict) or not properties:
+        return ""
+    required = set(schema.get("required") or [])
+    names = [name for name in properties if name in required] + [
+        f"{name}?" for name in properties if name not in required
+    ]
+    shown = names[:limit]
+    if len(names) > limit:
+        shown.append("…")
+    return ", ".join(shown)
+
+
+def _first_sentence(text: str | None, limit: int = 140) -> str:
+    """The first sentence of a description, on one line, no longer than *limit*."""
+    flat = " ".join((text or "").split())
+    cut = flat.find(". ")
+    sentence = flat if cut < 0 else flat[: cut + 1]
+    return sentence if len(sentence) <= limit else sentence[: limit - 1].rstrip() + "…"
+
+
+def _build_codemode_bindings_prompt(codemode_toolset: Any) -> str:
+    """The generated bindings, named for the model: import line, signatures, meaning.
+
+    What a codemode agent used to discover by trial — a wrong import, then a
+    module listing, then a result it took for JSON — is written down once, at
+    creation, from the tools the registry discovered. Empty when there is no
+    registry or nothing in it.
+    """
+    registry = getattr(codemode_toolset, "registry", None)
+    if registry is None:
+        return ""
+    try:
+        tools = list(registry.list_tools(include_deferred=True))
+    except Exception:  # noqa: BLE001 - a prompt section is never worth a failed creation
+        logger.debug("Could not list codemode tools for the prompt", exc_info=True)
+        return ""
+    by_server: dict[str, list[Any]] = {}
+    for tool in tools:
+        server = getattr(tool, "server_name", "") or "unknown"
+        by_server.setdefault(server, []).append(tool)
+    if not by_server:
+        return ""
+    lines = [
+        "## Codemode bindings",
+        "",
+        "The MCP tools are Python functions in the sandbox: import them and call "
+        "them from **execute_code**. Every binding is async — `await` it — and "
+        "returns the tool's result as text (a string): keep it in a variable, "
+        "parse or slice it in the sandbox, and print only what the person needs. "
+        "Call bindings one after another, never concurrently (no "
+        "`asyncio.gather`): they share one connection, and a concurrent call "
+        "comes back as a dict with an `error` key instead of text. A failed "
+        "call raises; catch it and go on.",
+        "",
+    ]
+    for server, entries in sorted(by_server.items()):
+        names = [_binding_function_name(getattr(tool, "name", "")) for tool in entries]
+        lines.append(f"`from generated.mcp.{server} import {', '.join(names)}`")
+        lines.append("")
+        for tool, name in zip(entries, names):
+            signature = _binding_signature(tool)
+            meaning = _first_sentence(getattr(tool, "description", ""))
+            lines.append(
+                f"- `await {name}({signature})`" + (f" — {meaning}" if meaning else "")
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
 def _build_codemode_toolset(
     request: "CreateAgentRequest",
     http_request: Request,
@@ -1175,8 +1274,12 @@ async def create_agent(
                 request.enable_skills = True
             if not request.description and library_spec.description:
                 request.description = library_spec.description
-            # Use the model from the spec if the request still has the default
-            if request.model == DEFAULT_MODEL.value and library_spec.model:
+            # Use the model from the spec if the request still has the default,
+            # or none at all: a caller that sends `model: ''` means the spec's
+            # model, not a model named ''.
+            if (
+                not request.model or request.model == DEFAULT_MODEL.value
+            ) and library_spec.model:
                 request.model = library_spec.model
             if request.inference_provider == "local" and getattr(
                 library_spec, "inference_provider", None
@@ -1740,6 +1843,13 @@ async def create_agent(
                         logger.info(
                             f"Reusing existing Jupyter sandbox for '{agent_id}'"
                         )
+                    # The toolset holds a proxy to the agent's sandbox, not the
+                    # sandbox itself: switched to another variant or restarted,
+                    # the agent keeps executing in whatever it has now.
+                    if hasattr(sandbox_manager, "get_agent_managed_sandbox"):
+                        shared_sandbox = sandbox_manager.get_agent_managed_sandbox(
+                            agent_id
+                        )
                 except ImportError as e:
                     raise HTTPException(
                         status_code=500,
@@ -1919,6 +2029,26 @@ async def create_agent(
             final_system_prompt = (
                 request.system_prompt + "\n\n" + request.system_prompt_codemode_addons
             )
+        # Codemode: the bindings by name, so the model does not have to guess
+        # the import line, the signatures, or what comes back.
+        if request.enable_codemode:
+            bindings_section = _build_codemode_bindings_prompt(
+                next(
+                    (
+                        t
+                        for t in non_mcp_toolsets
+                        if type(t).__name__ == "CodemodeToolset"
+                    ),
+                    None,
+                )
+            )
+            if bindings_section:
+                final_system_prompt = final_system_prompt + "\n\n" + bindings_section
+                logger.info(
+                    "Codemode bindings described in the system prompt for '%s' (%d chars)",
+                    agent_id,
+                    len(bindings_section),
+                )
         # Append dynamic skills section so the LLM has visibility into
         # installed skills, their scripts, parameters, and usage.
         if skills_prompt_section:
@@ -1986,25 +2116,16 @@ async def create_agent(
             tool_approvals_disabled = _is_tool_approvals_disabled(
                 request.disable_tool_approvals
             )
-            if tool_approvals_disabled and capabilities:
-                approval_capability_names = {
-                    "ToolsGuardrailCapability",
-                    "MCPToolsGuardrailCapability",
-                    "SkillsGuardrailCapability",
-                }
-                capabilities = [
-                    cap
-                    for cap in capabilities
-                    if (
-                        not isinstance(cap, ToolsGuardrailCapability)
-                        and cap.__class__.__name__ not in approval_capability_names
-                    )
-                ]
 
             # Always apply runtime selection guardrails, even when no spec is provided.
             if capabilities is None:
                 capabilities = []
             capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
+            # After the defaults, not before: they carry the MCP and skills
+            # approval guardrails too, and an agent that asked for no
+            # approvals used to get them back from here.
+            if tool_approvals_disabled:
+                capabilities = _without_approval_capabilities(capabilities)
 
             # And always count what the runs cost.
             #
@@ -2803,6 +2924,13 @@ async def delete_agent(
         logger.warning(f"Could not drop conversation checkpoints: {e}")
 
     try:
+        from ..notifications import drop_notification_store
+
+        drop_notification_store(agent_id)
+    except Exception as e:
+        logger.warning(f"Could not drop notifications: {e}")
+
+    try:
         unregister_vercel_agent(agent_id)
     except Exception as e:
         logger.warning(f"Could not unregister from Vercel AI: {e}")
@@ -3204,8 +3332,32 @@ async def get_sandbox_status() -> SandboxStatusResponse:
         )
 
 
+class EnsureAgentSandboxRequest(BaseModel):
+    """What an agent's sandbox should be, when the caller has a say."""
+
+    variant: Literal["eval", "jupyter-server"] | None = Field(
+        default=None,
+        description=(
+            "The variant the agent's sandbox should run. A sandbox of another "
+            "variant is stopped and one of this variant started in its place."
+        ),
+    )
+    restart: bool = Field(
+        default=False,
+        description="Stop the agent's sandbox and start a fresh one even if the variant matches.",
+    )
+
+
+def _agent_sandbox_variant(sandbox: Any) -> str | None:
+    """The variant a per-agent sandbox runs, as the sandbox itself reports it."""
+    variant = getattr(sandbox, "variant", None)
+    return str(variant) if variant else None
+
+
 @router.post("/{agent_id}/sandbox/ensure")
-async def ensure_agent_sandbox(agent_id: str) -> SandboxStatusResponse:
+async def ensure_agent_sandbox(
+    agent_id: str, body: EnsureAgentSandboxRequest | None = None
+) -> SandboxStatusResponse:
     """
     Guarantee this agent has a running sandbox, creating one if it does not.
 
@@ -3217,10 +3369,15 @@ async def ensure_agent_sandbox(agent_id: str) -> SandboxStatusResponse:
     with nowhere to run — no kernel, no Jupyter URL, and a workspace that looks
     dead for no visible reason.
 
-    Idempotent: an agent that already has a sandbox is left alone.
+    Idempotent without a body: an agent that already has a sandbox is left
+    alone. With a ``variant``, the agent's sandbox is switched to it — the one
+    it has is stopped and one of the asked variant started — which is how a
+    page moves *this agent's* code between eval and a Jupyter kernel without
+    touching the server's global sandbox.
 
     Args:
         agent_id: The agent whose sandbox to guarantee.
+        body: The variant wanted, or a restart, when the caller has a say.
 
     Returns:
         The sandbox status after the call.
@@ -3229,9 +3386,24 @@ async def ensure_agent_sandbox(agent_id: str) -> SandboxStatusResponse:
         from ..services.code_sandbox_manager import get_code_sandbox_manager
 
         manager = get_code_sandbox_manager()
-        if manager.get_agent_sandbox(agent_id) is None:
-            manager.create_agent_sandbox(agent_id=agent_id, variant="jupyter-server")
-            logger.info("Started the sandbox for agent '%s' on request", agent_id)
+        wanted = (body.variant if body else None) or "jupyter-server"
+        existing = manager.get_agent_sandbox(agent_id)
+        if existing is not None and body is not None:
+            current = _agent_sandbox_variant(existing)
+            if body.restart or (body.variant and current != body.variant):
+                manager.stop_agent_sandbox(agent_id)
+                logger.info(
+                    "Stopped the %s sandbox of agent '%s' to start a %s one",
+                    current or "?",
+                    agent_id,
+                    wanted,
+                )
+                existing = None
+        if existing is None:
+            manager.create_agent_sandbox(agent_id=agent_id, variant=wanted)
+            logger.info(
+                "Started the %s sandbox for agent '%s' on request", wanted, agent_id
+            )
 
         try:
             from .configure import notify_sandbox_status_change

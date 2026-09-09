@@ -44,6 +44,7 @@ import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { waitForAgent } from './utils/waitForAgent';
 import {
   resolveExampleAgentRuntimesUrl,
   useExampleAgentRuntimesUrl,
@@ -151,7 +152,7 @@ const AgentEvalsInner: React.FC<{
     agentConfig: {
       name: agentName,
       model: 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-      protocol: 'vercel-ai',
+      protocol: 'ag-ui',
       description: 'Agent with evaluation and quality scoring',
     },
   });
@@ -254,55 +255,26 @@ const AgentEvalsInner: React.FC<{
     }
 
     let isCancelled = false;
-
+    const controller = new AbortController();
     const createLocalAgent = async () => {
       setLocalStatus('launching');
       setLocalError(null);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description: 'Agent with evaluation and quality scoring',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_skills: true,
-            tools: [],
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint as
+        // it mounts; the page waits until the server has it before it talks
+        // to the eval API about it.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        if (response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          resolvedAgentId = payload?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-          if (contentType.includes('application/json')) {
-            const payload = await response.json().catch(() => null);
-            detail =
-              (typeof payload?.detail === 'string' && payload.detail) ||
-              (typeof payload?.message === 'string' && payload.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-          if (
-            response.status !== 409 &&
-            !/already exists/i.test(detail || '')
-          ) {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setLocalAgentId(resolvedAgentId);
-          setLocalStatus('ready');
-        }
+        setLocalAgentId(agentName);
+        setLocalStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setLocalError(
@@ -317,8 +289,9 @@ const AgentEvalsInner: React.FC<{
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
-  }, [executionTarget, agentBaseUrl, agentName, authFetch]);
+  }, [executionTarget, agentBaseUrl, agentName]);
 
   useEffect(() => {
     if (!isAgentReady || !controlPlaneBaseUrl) return;
@@ -488,7 +461,8 @@ const AgentEvalsInner: React.FC<{
 
   // ── Loading / Error ───────────────────────────────────────────────────
 
-  if (!isAgentReady && agentStatus !== 'error') {
+  // Local: the Loop must mount to create the agent, so no waiting screen.
+  if (executionTarget !== 'local' && !isAgentReady && agentStatus !== 'error') {
     return (
       <Box
         sx={{
@@ -503,9 +477,7 @@ const AgentEvalsInner: React.FC<{
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
           {agentStatus === 'launching'
-            ? executionTarget === 'local'
-              ? 'Launching local eval example agent…'
-              : 'Launching runtime for eval agent…'
+            ? 'Launching runtime for eval agent…'
             : 'Creating eval example agent…'}
         </Text>
       </Box>
@@ -590,8 +562,9 @@ const AgentEvalsInner: React.FC<{
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
+            showAgentVariants
             agentId={agentId}
-            defaultEditor="none"
+            editors={false}
             showHeader
             plugins={LOOP_PLUGINS_AGENTEVA}
           />

@@ -6,18 +6,17 @@
 /**
  * AgentCheckpointsExample
  *
- * Demonstrates launching a agent in the Datalayer cloud,
- * with pause/resume (checkpoint) and lifecycle controls.
+ * Checkpoints, at the two levels the runtime offers them.
  *
- * Uses the `useAgent` hook which:
- *   1. Creates a cloud agent runtime via the Datalayer Runtimes API
- *      (environment: 'ai-agents-env')
- *   2. Deploys an agent on the runtime's agent-runtimes sidecar
- *   3. Provides pause/resume/terminate lifecycle backed by CRIU
+ * On the Local target (and any sandbox), the capability is the agent's own
+ * conversation checkpoints: the `example-checkpoints` agent snapshots its
+ * conversation after every turn, saves a named checkpoint on request, lists
+ * them and rewinds to one — and the checkpoints sidebar shows them, saves one
+ * between turns and rewinds the chat.
  *
- * Prerequisites:
- *   - Datalayer core configuration (runtimesUrl, aiAgentsUrl)
- *   - Valid IAM token (set via SignInSimple or iamStore)
+ * On the Datalayer target the runtime itself is the thing checkpointed:
+ * the console below launches a cloud agent runtime and pauses and resumes it
+ * (light, or CRIU) with lifecycle controls.
  */
 
 /// <reference types="vite/client" />
@@ -58,6 +57,7 @@ import {
   SidebarExpandIcon,
   SyncIcon,
   AgentIcon,
+  VersionsIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
@@ -65,6 +65,10 @@ import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { LoopEmbed } from '../loop';
 import { AgentCheckpointsPlugin } from '../loop/plugins/agent-checkpoints';
+import { CheckpointsSidebarPlugin } from '../loop/plugins/checkpoints-sidebar';
+import { uniqueAgentId } from './utils/agentId';
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 import {
   useAgentsRuntimes,
   useAgentRuntimesQuery,
@@ -1081,9 +1085,9 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   );
 };
 
-// ─── Main component with auth gate ─────────────────────────────────────────
+// ─── Runtime checkpoints: the cloud console, behind its auth gate ─────────
 
-const AgentCheckpointsExample: React.FC = () => {
+const RuntimeCheckpointsExample: React.FC = () => {
   const { token, clearAuth } = useSimpleAuthStore();
   const hasSynced = useRef(false);
 
@@ -1122,6 +1126,79 @@ const AgentCheckpointsExample: React.FC = () => {
         <AgentCheckpointsInner onLogout={handleLogout} />
       </QueryClientProvider>
     </ThemedProvider>
+  );
+};
+
+// ─── Conversation checkpoints: the Loop, the capacity and its sidebar ───────
+
+const LOCAL_AGENT_NAME = 'checkpoints-example-agent';
+
+const ConversationCheckpointsExample: React.FC = () => {
+  const agentName = useMemo(() => uniqueAgentId(LOCAL_AGENT_NAME), []);
+  const plugins = useMemo(
+    () => [AgentCheckpointsPlugin, CheckpointsSidebarPlugin],
+    [],
+  );
+  return (
+    <ThemedProvider>
+      <Box
+        sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          bg: 'canvas.default',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            px: 3,
+            py: 2,
+            borderBottom: '1px solid',
+            borderColor: 'border.default',
+            flexShrink: 0,
+          }}
+        >
+          <VersionsIcon size={16} />
+          <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
+            Checkpoints Demo
+          </Heading>
+          <Label variant="accent">local</Label>
+          <Label variant="accent">conversation checkpoints</Label>
+        </Box>
+        {/* The Loop creates the agent on the Local target from the capacity
+            plugin's blueprint; the variants stay visible so the agent is not
+            pinned to the page. The sidebar is a Loop plugin and renders in
+            the workspace's own sidebar column. */}
+        <Box sx={{ flex: 1, minHeight: 0 }}>
+          <LoopEmbed
+            serverUrl={resolveExampleAgentRuntimesUrl('local')}
+            target="local"
+            showAgentVariants
+            agentId={agentName}
+            editors={false}
+            showHeader
+            plugins={plugins}
+          />
+        </Box>
+      </Box>
+    </ThemedProvider>
+  );
+};
+
+// ─── The example: one capability, at the level the target offers it ─────────
+
+const AgentCheckpointsExample: React.FC = () => {
+  const target = useRuntimeTargetStore(state => state.target);
+  // Runtime checkpoints exist only where a runtime does — the Datalayer
+  // target. Everywhere else the agent's own conversation checkpoints are
+  // the capability on show.
+  return target === 'datalayer' ? (
+    <RuntimeCheckpointsExample />
+  ) : (
+    <ConversationCheckpointsExample />
   );
 };
 

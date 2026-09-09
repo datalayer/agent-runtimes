@@ -4,10 +4,11 @@
  */
 
 /**
- * `@datalayer/loop-plugin-agent-tool-approvals` — the capacity, as a plugin.
+ * `@datalayer/loop-plugin-agent-tool-approvals` — tool approvals, as a capacity.
  *
- * Mounts the `example-tool-approvals` agent and offers what it is worth asking. Cast
- * from the shared capacity mould; see `loop/plugins/agent-capacity`.
+ * Mounts the `example-tool-approvals` agent: two echo tools, one of which is
+ * held for a person's approval before it runs. Cast from the shared capacity
+ * mould; the openers are the spec's own.
  *
  * @module loop/plugins/agent-tool-approvals
  */
@@ -17,44 +18,37 @@ import { defineAgentCapacityPlugin } from '../agent-capacity';
 export const AGENT_TOOL_APPROVALS_PLUGIN_NAME =
   '@datalayer/loop-plugin-agent-tool-approvals';
 
-export const AgentToolApprovalsPlugin = defineAgentCapacityPlugin({
-  key: 'tool-approvals',
-  displayName: 'Agent Tool Approvals',
-  description: 'Agent Tool Approvals',
-  specId: 'example-tool-approvals',
-  octicon: 'shield-check',
-  emoji: '🛡️',
-  suggestions: [
-    {
-      text: 'List your tools',
-      message: 'list your tools',
+export interface ToolApprovalsCapacityOptions {
+  /** The agentspec to mount; the example lets a person pick another. */
+  specId?: string;
+  /** Create the agent with approvals switched off, to compare. */
+  disableToolApprovals?: boolean;
+}
+
+/** The capacity for a spec and an approvals setting: what a page that offers both builds per choice. */
+export function createAgentToolApprovalsPlugin(
+  options: ToolApprovalsCapacityOptions = {},
+) {
+  const specId = options.specId ?? 'example-tool-approvals';
+  const disableToolApprovals = options.disableToolApprovals ?? false;
+  return defineAgentCapacityPlugin({
+    key: 'tool-approvals',
+    displayName: 'Agent Tool Approvals',
+    description: disableToolApprovals
+      ? 'Runtime tools with approvals switched off, to compare.'
+      : 'Runtime tools, the sensitive one held for a person to approve.',
+    specId,
+    octicon: 'shield-check',
+    emoji: '🛡️',
+    createPayload: {
+      enable_skills: false,
+      skills: [],
+      tools: ['runtime-echo', 'runtime-sensitive-echo'],
+      disableToolApprovals,
     },
-    {
-      text: 'Sensitive tool with delegated allow',
-      message:
-        "Call the runtime_sensitive_echo tool with text 'hello' and reason 'audit', then explain the before_tool_execute decision and reply with the tool result.",
-    },
-    {
-      text: 'Sensitive tool denied by Python hook',
-      message:
-        "Call the runtime_sensitive_echo tool with text 'danger' and reason 'delete project', then explain why it was denied.",
-    },
-    {
-      text: 'Non-sensitive tool baseline',
-      message:
-        "Call the runtime_echo tool with text 'hello world', then reply with the tool result.",
-    },
-    {
-      text: 'Inspect audit entries',
-      message:
-        'Use execute_code to print the latest entries from /tmp/agent_runtimes_tool_approvals_audit.jsonl and summarize decision + execution status.',
-    },
-    {
-      text: 'Explain deferred approvals hook',
-      message:
-        'Explain how deferred_tool_calls resolves approval-required tool requests inline when a decision is already available.',
-    },
-  ],
-});
+  });
+}
+
+export const AgentToolApprovalsPlugin = createAgentToolApprovalsPlugin();
 
 export default AgentToolApprovalsPlugin;

@@ -110,10 +110,16 @@ class ManagedSandbox:
     (``CodemodeToolset``, ``SandboxExecutor``, etc.).
     """
 
-    def __init__(self, manager: CodeSandboxManager) -> None:
+    def __init__(
+        self, manager: CodeSandboxManager, agent_id: str | None = None
+    ) -> None:
         # Use object.__setattr__ to avoid triggering our __setattr__ override
         # before _manager is available.
         object.__setattr__(self, "_manager", manager)
+        # Bound to one agent's sandbox rather than the global one: the proxy
+        # then follows that agent's sandbox across a variant switch or a
+        # restart, the way the global proxy follows a reconfiguration.
+        object.__setattr__(self, "_agent_id", agent_id)
 
     # -- Transparent attribute forwarding --------------------------------
 
@@ -138,7 +144,7 @@ class ManagedSandbox:
         Attributes that belong to the proxy itself (``_manager``) are stored
         on the proxy; everything else is forwarded.
         """
-        if name == "_manager":
+        if name in ("_manager", "_agent_id"):
             object.__setattr__(self, name, value)
         else:
             setattr(self._sandbox(), name, value)
@@ -146,7 +152,17 @@ class ManagedSandbox:
     # -- helpers ---------------------------------------------------------
 
     def _sandbox(self) -> Sandbox:
-        """Return the manager's current (started) sandbox."""
+        """Return the current (started) sandbox: the agent's own, or the global one."""
+        agent_id = self._agent_id
+        if agent_id:
+            sandbox = self._manager.get_agent_sandbox(agent_id)
+            if sandbox is None:
+                # Gone with a restart or a switch: made again on demand, of
+                # the variant the manager is configured for.
+                sandbox = self._manager.create_agent_sandbox(
+                    agent_id=agent_id, variant=self._manager.variant
+                )
+            return sandbox
         return self._manager.get_sandbox()
 
     # -- Sandbox interface -----------------------------------------------
@@ -712,6 +728,19 @@ class CodeSandboxManager:
             A ``ManagedSandbox`` proxy that is safe to hold indefinitely.
         """
         return ManagedSandbox(self)
+
+    def get_agent_managed_sandbox(self, agent_id: str) -> ManagedSandbox:
+        """
+        Return a :class:`ManagedSandbox` proxy bound to *agent_id*'s sandbox.
+
+        What a long-lived consumer of a per-agent sandbox — the agent's
+        codemode toolset — should hold: the raw sandbox handed out at creation
+        went stale the moment the agent's sandbox was switched to another
+        variant or restarted, and the toolset kept executing in the old one.
+        The proxy resolves the agent's current sandbox on every call, and has
+        one made when there is none.
+        """
+        return ManagedSandbox(self, agent_id=agent_id)
 
     def _inject_env_vars(self, sandbox: Sandbox) -> None:
         """

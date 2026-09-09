@@ -6,14 +6,14 @@
 /**
  * AgentCodeSandboxExample
  *
- * Demonstrates sandbox variant switching (eval / jupyter) with a live
- * sidebar that streams WebSocket messages to and from the
- * `/configure/sandbox/ws` endpoint.
+ * The code sandbox: the agent runs Python through `execute_code` in a sandbox
+ * the server manages, and the page shows that sandbox.
  *
- * - Creates a local agent (spec: example-full) with codemode enabled
- * - SegmentedControl toggles between "eval" and "jupyter" variants
- * - Sidebar shows live sandbox status, WebSocket event log, and an
- *   interrupt button
+ * - The Loop creates the `example-code-sandbox` agent on the Local target
+ * - A control above the chat switches this agent's sandbox variant (eval /
+ *   jupyter) live, through `/agents/{id}/sandbox/ensure`
+ * - A sidebar follows the sandbox over `/configure/sandbox/ws`: its variant,
+ *   whether it runs and executes, the raw messages, and an interrupt button
  *
  * @module examples/AgentCodeSandboxExample
  */
@@ -27,9 +27,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@datalayer/primer-addons';
-import { AuthRequiredView, ErrorView } from './components';
 import {
   Button,
   Flash,
@@ -39,11 +37,15 @@ import {
   Spinner,
   Text,
 } from '@primer/react';
-import { CodeIcon, StopIcon, TerminalIcon } from '@primer/octicons-react';
-import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import {
+  CodeIcon,
+  CodespacesIcon,
+  StopIcon,
+  TerminalIcon,
+} from '@primer/octicons-react';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { LoopEmbed } from '../loop';
 import { AgentCodeSandboxPlugin } from '../loop/plugins/agent-code-sandbox';
 import type { SandboxWsStatus } from '../types/sandbox';
@@ -52,13 +54,11 @@ import type { SandboxAggregateStatus } from '../types/sandbox';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const queryClient = new QueryClient();
-const AGENT_NAME = 'sandbox-example-agent';
-const AGENTSPEC_ID = 'example-full';
+const AGENT_NAME = 'code-sandbox-example-agent';
 
 type SandboxVariant = 'eval' | 'jupyter-server';
 
-// ─── WebSocket log entry ───────────────────────────────────────────────────
+const VARIANTS: readonly SandboxVariant[] = ['eval', 'jupyter-server'];
 
 interface WsLogEntry {
   id: number;
@@ -74,63 +74,44 @@ interface LastSwitchInfo {
 
 let _logId = 0;
 
-function tsNow(): string {
-  return new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm
+const tsNow = () => new Date().toLocaleTimeString([], { hour12: false });
+
+function formatSwitchTime(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleTimeString();
 }
 
-function formatSwitchTime(isoTs: string): string {
-  const d = new Date(isoTs);
-  return d.toLocaleTimeString();
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
+/** The one word the sidebar's dot and label say about the sandbox. */
 function deriveAggregate(
   status: SandboxWsStatus | null,
 ): SandboxAggregateStatus {
-  if (
-    !status ||
-    status.variant === 'unavailable' ||
-    status.variant === 'error'
-  ) {
-    return 'unavailable';
-  }
+  if (!status) return 'unavailable';
+  if (status.error) return 'unavailable';
   if (!status.sandbox_running) return 'stopped';
   if (status.is_executing) return 'executing';
   return 'idle';
 }
 
-function apiVariantFromUi(variant: SandboxVariant): 'eval' | 'jupyter-server' {
-  return variant;
-}
+// ─── The example ───────────────────────────────────────────────────────────
 
-// ─── Inner component (after auth) ──────────────────────────────────────────
-
-const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
-}) => {
-  const { token } = useSimpleAuthStore();
-  const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
-  const chatAuthToken: string | undefined = token === null ? undefined : token;
-  void chatAuthToken;
+const AgentCodeSandboxInner: React.FC = () => {
+  const agentId = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  const agentBaseUrl = useMemo(
+    () => resolveExampleAgentRuntimesUrl('local'),
+    [],
+  );
   const chatPlugins = useMemo(() => [AgentCodeSandboxPlugin], []);
-  const agentBaseUrl = useExampleAgentRuntimesUrl();
 
-  // ── Agent lifecycle ──
-  const [runtimeStatus, setRuntimeStatus] = useState<
-    'launching' | 'ready' | 'error'
-  >('launching');
-  const [isReady, setIsReady] = useState(false);
-  const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(agentName);
-  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
-
-  // ── Sandbox variant toggle ──
-  const [variant, setVariant] = useState<SandboxVariant>('eval');
+  // ── Sandbox variant switch ──
   const [pendingVariant, setPendingVariant] = useState<SandboxVariant | null>(
     null,
   );
-  const [variantSwitching, setVariantSwitching] = useState(false);
+  // The variant a switch chose, held until the socket reports it: the status
+  // stream says the old variant until the new sandbox has actually been used.
+  const [chosenVariant, setChosenVariant] = useState<SandboxVariant | null>(
+    null,
+  );
+  const [switchError, setSwitchError] = useState<string | null>(null);
   const [lastSwitch, setLastSwitch] = useState<LastSwitchInfo | null>(null);
 
   // ── WebSocket state ──
@@ -154,264 +135,48 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
     });
   }, []);
 
-  // ── Auth fetch helper ──
-  const authFetch = useCallback(
-    (url: string, opts: RequestInit = {}) =>
-      fetch(url, {
-        ...opts,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(opts.headers ?? {}),
-        },
-      }),
-    [token],
-  );
-
-  // ── Create local agent ──
-  useEffect(() => {
-    let isCancelled = false;
-
-    const createLocalAgent = async () => {
-      setRuntimeStatus('launching');
-      setIsReady(false);
-      setHookError(null);
-      setIsReconnectedAgent(false);
-
-      try {
-        // Always delete any existing agent with this name first so we
-        // recreate it with the latest configuration (system prompt, toolsets).
-        await authFetch(`${agentBaseUrl}/api/v1/agents/${agentName}`, {
-          method: 'DELETE',
-        }).catch(() => {
-          /* ignore 404 / not-found */
-        });
-
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description: 'Agent with sandbox code execution',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            system_prompt:
-              'You are a helpful AI assistant with a Python execution sandbox. ' +
-              'When asked to run code, count, loop, assign variables, compute, or ' +
-              'perform any programming task, use the execute_code tool to run ' +
-              'Python code in the sandbox. Always use execute_code for Python computation.',
-            enable_skills: false,
-            skills: [],
-            tools: [],
-            selected_mcp_servers: [],
-            enable_codemode: true,
-            sandbox_variant: 'eval',
-          }),
-        });
-
-        let resolvedAgentId = agentName;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          throw new Error(
-            detail || `Failed to create local agent: ${response.status}`,
-          );
-        }
-
-        if (!isCancelled) {
-          // Ensure codemode is active and sandbox is initialized.
-          addLog('sent', 'POST /configure/codemode/toggle {enabled:true}');
-          const toggleResp = await authFetch(
-            `${agentBaseUrl}/api/v1/configure/codemode/toggle`,
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                enabled: true,
-              }),
-            },
-          );
-          addLog(
-            'recv',
-            `HTTP ${toggleResp.status} /configure/codemode/toggle`,
-          );
-          if (!toggleResp.ok) {
-            const text = await toggleResp.text().catch(() => '');
-            throw new Error(
-              text || `Failed to activate codemode (${toggleResp.status})`,
-            );
-          }
-
-          addLog('sent', 'POST /agents/sandbox/configure {variant:eval}');
-          const configureResp = await authFetch(
-            `${agentBaseUrl}/api/v1/agents/sandbox/configure`,
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                variant: 'eval',
-              }),
-            },
-          );
-          addLog(
-            'recv',
-            `HTTP ${configureResp.status} /agents/sandbox/configure`,
-          );
-          if (!configureResp.ok) {
-            const text = await configureResp.text().catch(() => '');
-            throw new Error(
-              text ||
-                `Failed to configure initial sandbox (${configureResp.status})`,
-            );
-          }
-          const configureData = await configureResp.json().catch(() => null);
-
-          addLog('sent', 'POST /agents/sandbox/restart');
-          const restartResp = await authFetch(
-            `${agentBaseUrl}/api/v1/agents/sandbox/restart`,
-            {
-              method: 'POST',
-            },
-          );
-          addLog('recv', `HTTP ${restartResp.status} /agents/sandbox/restart`);
-          if (!restartResp.ok) {
-            const text = await restartResp.text().catch(() => '');
-            throw new Error(
-              text || `Failed to restart sandbox (${restartResp.status})`,
-            );
-          }
-          await restartResp.json().catch(() => null);
-
-          setLastSwitch({
-            variant: String(configureData?.variant || 'eval'),
-            switchedAt: new Date().toISOString(),
-          });
-
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(false);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
-          );
-          setRuntimeStatus('error');
-        }
-      }
-    };
-
-    void createLocalAgent();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [agentBaseUrl, authFetch]);
-
-  // ── Handle variant switch ──
+  // ── Switch the variant of this agent's sandbox: the server stops the one it
+  //    has and starts one of the asked variant in its place. ──
   const switchVariant = useCallback(
     async (newVariant: SandboxVariant) => {
-      if (newVariant === variant) return;
-      setVariantSwitching(true);
       setPendingVariant(newVariant);
+      setSwitchError(null);
+      const path = `/agents/${agentId}/sandbox/ensure`;
       try {
-        // Keep codemode active, then reconfigure sandbox manager variant.
-        addLog('sent', 'POST /configure/codemode/toggle {enabled:true}');
-        const toggleResp = await authFetch(
-          `${agentBaseUrl}/api/v1/configure/codemode/toggle`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              enabled: true,
-            }),
-          },
-        );
-        addLog('recv', `HTTP ${toggleResp.status} /configure/codemode/toggle`);
-        if (!toggleResp.ok) {
-          const text = await toggleResp.text().catch(() => '');
+        addLog('sent', `POST ${path} {variant:${newVariant}}`);
+        const response = await fetch(`${agentBaseUrl}/api/v1${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ variant: newVariant }),
+        });
+        addLog('recv', `HTTP ${response.status} ${path}`);
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
           throw new Error(
-            text || `Failed to keep codemode enabled (${toggleResp.status})`,
+            text || `Failed to switch the sandbox (${response.status})`,
           );
         }
-
-        addLog(
-          'sent',
-          `POST /agents/sandbox/configure {variant:${apiVariantFromUi(newVariant)}}`,
-        );
-        const configureResp = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/sandbox/configure`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              variant: apiVariantFromUi(newVariant),
-            }),
-          },
-        );
-        addLog(
-          'recv',
-          `HTTP ${configureResp.status} /agents/sandbox/configure`,
-        );
-        if (!configureResp.ok) {
-          const text = await configureResp.text().catch(() => '');
-          throw new Error(
-            text || `Failed to switch variant (${configureResp.status})`,
-          );
-        }
-        const configureData = await configureResp.json().catch(() => null);
-
-        addLog('sent', 'POST /agents/sandbox/restart');
-        const restartResp = await authFetch(
-          `${agentBaseUrl}/api/v1/agents/sandbox/restart`,
-          {
-            method: 'POST',
-          },
-        );
-        addLog('recv', `HTTP ${restartResp.status} /agents/sandbox/restart`);
-        if (!restartResp.ok) {
-          const text = await restartResp.text().catch(() => '');
-          throw new Error(
-            text || `Failed to restart sandbox (${restartResp.status})`,
-          );
-        }
-        await restartResp.json().catch(() => null);
-
-        setVariant(newVariant);
+        await response.json().catch(() => null);
         setLastSwitch({
-          variant: String(
-            configureData?.variant || apiVariantFromUi(newVariant),
-          ),
+          variant: newVariant,
           switchedAt: new Date().toISOString(),
         });
+        setChosenVariant(newVariant);
       } catch (error) {
-        setHookError(
+        setSwitchError(
           error instanceof Error ? error.message : 'Failed to switch variant',
         );
       } finally {
         setPendingVariant(null);
-        setVariantSwitching(false);
       }
     },
-    [variant, agentBaseUrl, authFetch],
+    [agentBaseUrl, agentId, addLog],
   );
 
-  // ── WebSocket lifecycle ──
+  // ── WebSocket lifecycle: follows the sandbox from the start; the server
+  //    admits the socket once the Loop has created the agent, and until then
+  //    the reconnect loop simply tries again. ──
   useEffect(() => {
-    if (!isReady) return;
-
     let disposed = false;
 
     const wsBase = agentBaseUrl.replace(/^http/, 'ws');
@@ -466,7 +231,7 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
       wsRef.current = null;
       setWsState('closed');
     };
-  }, [isReady, agentBaseUrl, agentId, addLog]);
+  }, [agentBaseUrl, agentId, addLog]);
 
   // ── Send interrupt via WS ──
   const sendInterrupt = useCallback(() => {
@@ -478,61 +243,31 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
     }
   }, [addLog]);
 
+  useEffect(() => {
+    if (chosenVariant && sandboxStatus?.variant === chosenVariant) {
+      setChosenVariant(null);
+    }
+  }, [chosenVariant, sandboxStatus?.variant]);
+
   // ── Derived display ──
   const aggregate = useMemo(
     () => deriveAggregate(sandboxStatus),
     [sandboxStatus],
   );
-  const displayedVariant = pendingVariant ?? variant;
-  const isTransitionLocked = variantSwitching;
-  // Always use the example's authoritative variant (pending or confirmed)
-  // merged with the live WebSocket execution data.  The WS status may lag
-  // behind after a configure+restart, so we never rely on its `variant` field.
-  const chatSandboxStatus = useMemo<SandboxWsStatus | null>(() => {
-    if (sandboxStatus) {
-      return {
-        ...sandboxStatus,
-        variant: displayedVariant,
-      };
-    }
-    // No WS status yet — construct an optimistic placeholder.
-    return {
-      variant: displayedVariant,
-      sandbox_running: true,
-      is_executing: false,
-    };
-  }, [displayedVariant, sandboxStatus]);
-  void chatSandboxStatus;
+  // The variant on the control is the sandbox's own, as the socket reports
+  // it, except while a switch is under way.
+  const liveVariant = sandboxStatus?.variant ?? null;
+  const displayedVariant = pendingVariant ?? chosenVariant ?? liveVariant;
+  const isTransitionLocked = pendingVariant !== null;
   const statusColor = SANDBOX_STATUS_COLORS[aggregate];
   const statusLabel = SANDBOX_STATUS_LABELS[aggregate];
-
-  // ── Loading state ──
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching sandbox demo…</Text>
-      </Box>
-    );
-  }
-
-  // ── Error state ──
-  if (runtimeStatus === 'error' || hookError) {
-    return <ErrorView error={hookError} onLogout={onLogout} />;
-  }
 
   // ── Sidebar ──
   const sidebar = (
     <Box
+      data-sandbox-sidebar
+      data-sandbox-aggregate={aggregate}
+      data-sandbox-variant={liveVariant ?? undefined}
       sx={{
         width: 360,
         minWidth: 300,
@@ -589,7 +324,7 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{statusLabel}</Text>
         </Box>
         <Text sx={{ fontSize: 0, color: 'fg.muted', mt: 1, display: 'block' }}>
-          Active variant: {displayedVariant}
+          Active variant: {displayedVariant ?? '—'}
           {pendingVariant ? ' (switching...)' : ''}
         </Text>
         <Text sx={{ fontSize: 0, color: 'fg.muted', mt: 1, display: 'block' }}>
@@ -599,6 +334,12 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
             : 'n/a'}
         </Text>
       </Box>
+
+      {switchError && (
+        <Flash variant="danger" sx={{ mx: 2, mt: 2, fontSize: 0, p: 2 }}>
+          {switchError}
+        </Flash>
+      )}
 
       {/* ── Status detail card ── */}
       {sandboxStatus && (
@@ -617,9 +358,7 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
         >
           <Box sx={{ mb: 1 }}>
             <Text sx={{ fontWeight: 600 }}>variant: </Text>
-            <Text>
-              {pendingVariant ? displayedVariant : sandboxStatus.variant}
-            </Text>
+            <Text>{sandboxStatus.variant}</Text>
           </Box>
           <Box sx={{ mb: 1 }}>
             <Text sx={{ fontWeight: 600 }}>sandbox_running: </Text>
@@ -658,6 +397,7 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
           onClick={sendInterrupt}
           leadingVisual={StopIcon}
           block
+          data-sandbox-interrupt
         >
           Interrupt Execution
         </Button>
@@ -704,6 +444,7 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
           </Button>
         </Box>
         <Box
+          data-sandbox-ws-log
           sx={{
             overflow: 'auto',
             flex: 1,
@@ -768,22 +509,28 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
+        bg: 'canvas.default',
       }}
     >
-      {isReconnectedAgent && (
-        <Box
-          sx={{
-            px: 3,
-            py: 1,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
-        >
-          <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-            Agent already running — reconnected.
-          </Text>
-        </Box>
-      )}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          px: 3,
+          py: 2,
+          borderBottom: '1px solid',
+          borderColor: 'border.default',
+          flexShrink: 0,
+        }}
+      >
+        <CodespacesIcon size={16} />
+        <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
+          Code Sandbox Demo
+        </Heading>
+        <Label variant="accent">local</Label>
+        <Label variant="accent">{VARIANTS.length} sandbox variants</Label>
+      </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -811,13 +558,17 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
                   size="small"
                   onChange={index => {
                     if (isTransitionLocked) return;
-                    void switchVariant(index === 0 ? 'eval' : 'jupyter-server');
+                    const next = VARIANTS[index];
+                    if (next && next !== displayedVariant) {
+                      void switchVariant(next);
+                    }
                   }}
                 >
                   <SegmentedControl.Button
                     selected={displayedVariant === 'eval'}
                     leadingIcon={TerminalIcon}
                     disabled={isTransitionLocked}
+                    data-sandbox-variant-button="eval"
                   >
                     eval
                   </SegmentedControl.Button>
@@ -825,18 +576,23 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
                     selected={displayedVariant === 'jupyter-server'}
                     leadingIcon={CodeIcon}
                     disabled={isTransitionLocked}
+                    data-sandbox-variant-button="jupyter-server"
                   >
                     jupyter
                   </SegmentedControl.Button>
                 </SegmentedControl>
-                {variantSwitching && <Spinner size="small" />}
+                {pendingVariant && <Spinner size="small" />}
               </Box>
+              {/* The Loop creates the agent on the Local target from the
+                  capacity plugin's blueprint; the variants stay visible so
+                  the agent is not pinned to the page. */}
               <Box sx={{ flex: 1, minHeight: 0 }}>
                 <LoopEmbed
                   serverUrl={agentBaseUrl}
                   target="local"
+                  showAgentVariants
                   agentId={agentId}
-                  defaultEditor="none"
+                  editors={false}
                   showHeader
                   plugins={chatPlugins}
                 />
@@ -864,48 +620,10 @@ const AgentCodeSandboxInner: React.FC<{ onLogout: () => void }> = ({
   );
 };
 
-// ─── Auth wrapper ──────────────────────────────────────────────────────────
-
-const syncTokenToIamStore = (newToken: string) => {
-  import('../state/substates').then(({ iamStore }) => {
-    iamStore.setState({ token: newToken });
-  });
-};
-
-const AgentCodeSandboxExample: React.FC = () => {
-  const { token, clearAuth } = useSimpleAuthStore();
-  const hasSynced = useRef(false);
-
-  useEffect(() => {
-    if (token && !hasSynced.current) {
-      hasSynced.current = true;
-      syncTokenToIamStore(token);
-    }
-  }, [token]);
-
-  const handleLogout = useCallback(() => {
-    clearAuth();
-    hasSynced.current = false;
-    import('../state/substates').then(({ iamStore }) => {
-      iamStore.setState({ token: undefined });
-    });
-  }, [clearAuth]);
-
-  if (!token) {
-    return (
-      <ThemedProvider>
-        <AuthRequiredView />
-      </ThemedProvider>
-    );
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ThemedProvider>
-        <AgentCodeSandboxInner onLogout={handleLogout} />
-      </ThemedProvider>
-    </QueryClientProvider>
-  );
-};
+const AgentCodeSandboxExample: React.FC = () => (
+  <ThemedProvider>
+    <AgentCodeSandboxInner />
+  </ThemedProvider>
+);
 
 export default AgentCodeSandboxExample;

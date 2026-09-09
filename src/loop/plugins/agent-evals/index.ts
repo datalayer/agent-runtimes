@@ -9,6 +9,8 @@
  * Mounts the `example-evals` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `loop/plugins/agent-capacity`.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-evals
  */
 
@@ -23,16 +25,6 @@ export const AgentEvalsPlugin = defineAgentCapacityPlugin({
   specId: 'example-evals',
   octicon: 'beaker',
   emoji: '🧪',
-  suggestions: [
-    {
-      text: 'Summarize KPIs',
-      message: 'Summarize the latest KPI data',
-    },
-    {
-      text: 'Run eval',
-      message: 'Evaluate your last 10 responses',
-    },
-  ],
 });
 
 export default AgentEvalsPlugin;

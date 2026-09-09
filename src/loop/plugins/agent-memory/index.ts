@@ -9,6 +9,8 @@
  * Mounts the `example-memory` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `loop/plugins/agent-capacity`.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-memory
  */
 
@@ -23,20 +25,6 @@ export const AgentMemoryPlugin = defineAgentCapacityPlugin({
   specId: 'example-memory',
   octicon: 'database',
   emoji: '🧠',
-  suggestions: [
-    {
-      text: 'Remember',
-      message: 'My favourite colour is midnight blue.',
-    },
-    {
-      text: 'Recall',
-      message: 'What is my favourite colour?',
-    },
-    {
-      text: 'Preference',
-      message: 'I prefer reports in bullet-point format.',
-    },
-  ],
 });
 
 export default AgentMemoryPlugin;

@@ -896,6 +896,8 @@ function ChatBaseInner({
   // When the parent doesn't supply the `pendingApprovals` prop, derive them
   // from the shared store so the banner works out-of-the-box.
   const storeApprovals = useAgentRuntimeStore(s => s.approvals);
+  // Bumped when the transcript changed on the server outside a run.
+  const historyVersion = useAgentRuntimeStore(s => s.historyVersion);
   const storeMcpStatus = useAgentRuntimeStore(s => s.mcpStatus);
   const effectiveMcpStatusData = mcpStatusData ?? storeMcpStatus;
   const protocolConfig =
@@ -2193,6 +2195,45 @@ function ChatBaseInner({
     ((toolCallId: string, result: unknown) => Promise<void>) | null
   >(null);
 
+  // A decision made outside the chat — a host page's own approval banner —
+  // is answered exactly as the tool card's buttons answer it: through the
+  // run's continuation, addressed to the tool call the approval belongs to.
+  useEffect(() => {
+    let lastSeq = agentRuntimeStore.getState().toolDecisionRequest?.seq ?? 0;
+    return agentRuntimeStore.subscribe(
+      state => state.toolDecisionRequest,
+      request => {
+        if (!request || request.seq === lastSeq) return;
+        lastSeq = request.seq;
+        const respond = handleRespondRef.current;
+        if (!respond) return;
+        const normalize = (name?: string) =>
+          (name ?? '').toLowerCase().replace(/[-_]/g, '');
+        const calls = Array.from(toolCallsRef.current.values());
+        // By the approval id the tool result carries, else by the tool
+        // name of a call still waiting — the same two matches the card makes.
+        const call =
+          calls.find(
+            entry =>
+              (entry.result as { approvalId?: string } | undefined)
+                ?.approvalId === request.approvalId,
+          ) ??
+          calls.find(
+            entry =>
+              normalize(entry.toolName) === normalize(request.toolName) &&
+              (entry.status === 'executing' || entry.status === 'inProgress'),
+          );
+        if (!call) return;
+        void respond(call.toolCallId, {
+          type: 'tool-approval-decision',
+          approved: request.approved,
+          approvalId: request.approvalId,
+          toolName: call.toolName,
+        });
+      },
+    );
+  }, []);
+
   const applyServerApprovalDecision = useCallback(
     (
       approval: AgentStreamToolApprovalPayload,
@@ -2790,6 +2831,10 @@ function ChatBaseInner({
 
   // ---- Conversation history loading ----
   const prevHistoryScopeRef = useRef<string | undefined>(undefined);
+  const historyVersionRef = useRef(0);
+  // Set when the next load must come from a fresh snapshot, not the one in
+  // the store: what the store holds is the transcript before the change.
+  const freshSnapshotRef = useRef(false);
 
   useEffect(() => {
     if (historyScopeId !== prevHistoryScopeRef.current) {
@@ -2803,6 +2848,19 @@ function ChatBaseInner({
     }
 
     if (!historyScopeId) return;
+
+    if (historyVersion !== historyVersionRef.current) {
+      historyVersionRef.current = historyVersion;
+      if (historyVersion > 0) {
+        // The transcript changed on the server outside a run — a rewind to a
+        // checkpoint. Forget what is shown and load what the agent now has.
+        useConversationStore.getState().clearMessages(historyScopeId);
+        setDisplayItems([]);
+        toolCallsRef.current.clear();
+        historyRetryAttemptsRef.current.set(historyScopeId, 0);
+        freshSnapshotRef.current = true;
+      }
+    }
 
     const store = useConversationStore.getState();
     const currentlyFetching = store.isFetching(historyScopeId);
@@ -2845,7 +2903,10 @@ function ChatBaseInner({
       setHistoryLoaded(true);
     };
 
-    const existingMessages = fullContextToMessages();
+    const existingMessages = freshSnapshotRef.current
+      ? []
+      : fullContextToMessages();
+    freshSnapshotRef.current = false;
     if (existingMessages.length > 0) {
       applyMessages(existingMessages);
       return;
@@ -2946,6 +3007,7 @@ function ChatBaseInner({
     wsState,
     activeAgentId,
     historyRefreshTick,
+    historyVersion,
   ]);
 
   // Keep in-memory store in sync with displayItems

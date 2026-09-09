@@ -15,7 +15,7 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   Text,
   Spinner,
@@ -32,22 +32,17 @@ import {
   StackIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { LoopEmbed } from '../loop';
-import { AgentCompactionPlugin } from '../loop/plugins/agent-compaction';
+import { createAgentCompactionPlugin } from '../loop/plugins/agent-compaction';
 import { useAgentRuntimeCompaction, agentRuntimeStore } from '../stores';
 import { getAgentspecs } from '../specs/agents';
 import { AI_MODEL_CATALOGUE } from '../specs';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
-
-const LOOP_PLUGINS_AGENTCOM = [AgentCompactionPlugin];
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const AGENT_NAME = 'compaction-example-agent';
-const AGENTSPEC_ID = 'example-monitoring';
+const AGENTSPEC_ID = 'example-compaction';
 const MIN_MAX_TOKENS = 1000;
 const DEFAULT_MAX_TOKENS = 4000;
 
@@ -188,13 +183,13 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
   );
 };
 
-const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
-}) => {
-  const { token } = useSimpleAuthStore();
-  const runtimeTarget = useRuntimeTargetStore(state => state.target);
+const AgentCompactionInner: React.FC = () => {
   const agentName = useRef(uniqueAgentId(AGENT_NAME)).current;
   const tokenLimit = useRef(resolveAgentspecTokenLimit()).current;
+  const agentBaseUrl = useMemo(
+    () => resolveExampleAgentRuntimesUrl('local'),
+    [],
+  );
 
   const [maxTokensInput, setMaxTokensInput] = useState<number>(
     Math.min(DEFAULT_MAX_TOKENS, tokenLimit),
@@ -202,111 +197,16 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
   const [launchedMaxTokens, setLaunchedMaxTokens] = useState<number | null>(
     null,
   );
-  const [runtimeStatus, setRuntimeStatus] = useState<
-    'idle' | 'launching' | 'ready' | 'error'
-  >('idle');
-  const [isReady, setIsReady] = useState(false);
-  const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(agentName);
-  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
 
-  const agentBaseUrl = useExampleAgentRuntimesUrl();
-  const chatAuthToken: string | undefined = token === null ? undefined : token;
-  void chatAuthToken;
-
-  const authFetch = useCallback(
-    (url: string, opts: RequestInit = {}) =>
-      fetch(url, {
-        ...opts,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(opts.headers ?? {}),
-        },
-      }),
-    [token],
+  // The capacity for the chosen budget: the Loop creates the agent from its
+  // blueprint, compaction budget included, once the budget is picked.
+  const plugins = useMemo(
+    () =>
+      launchedMaxTokens === null
+        ? []
+        : [createAgentCompactionPlugin(launchedMaxTokens)],
+    [launchedMaxTokens],
   );
-
-  useEffect(() => {
-    if (launchedMaxTokens === null) return;
-    let isCancelled = false;
-
-    const createAgentForTarget = async () => {
-      setRuntimeStatus('launching');
-      setIsReady(false);
-      setHookError(null);
-      setIsReconnectedAgent(false);
-      // Clear any prior compaction status from a previous stream.
-      agentRuntimeStore.getState().setCompaction(null);
-
-      try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'Compaction example – history summarization under a token budget',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            memory: 'ephemeral',
-            enable_skills: true,
-            tools: [],
-            compactionMaxTokens: launchedMaxTokens,
-          }),
-        });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
-        }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          setHookError(
-            error instanceof Error ? error.message : 'Agent failed to start',
-          );
-          setRuntimeStatus('error');
-        }
-      }
-    };
-
-    void createAgentForTarget();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [agentBaseUrl, authFetch, runtimeTarget, launchedMaxTokens, agentName]);
 
   // Setup phase: choose the compaction token budget before launching.
   if (launchedMaxTokens === null) {
@@ -367,7 +267,12 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
             <Button
               variant="primary"
               leadingVisual={HistoryIcon}
-              onClick={() => setLaunchedMaxTokens(maxTokensInput)}
+              data-compaction-launch
+              onClick={() => {
+                // Clear any prior compaction status from a previous stream.
+                agentRuntimeStore.getState().setCompaction(null);
+                setLaunchedMaxTokens(maxTokensInput);
+              }}
             >
               Launch agent
             </Button>
@@ -375,31 +280,6 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
         </Box>
       </Box>
     );
-  }
-
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-          bg: 'canvas.default',
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching compaction example agent ({runtimeTarget})...
-        </Text>
-      </Box>
-    );
-  }
-
-  if (runtimeStatus === 'error' || hookError) {
-    return <ErrorView error={hookError} onLogout={onLogout} />;
   }
 
   return (
@@ -427,12 +307,7 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Compaction Demo
         </Heading>
-        {isReconnectedAgent && (
-          <Label variant="secondary" size="small">
-            Reconnected
-          </Label>
-        )}
-        <Label variant="accent">{runtimeTarget}</Label>
+        <Label variant="accent">local</Label>
         <Label variant="accent">
           {numberFmt.format(launchedMaxTokens)} tok budget
         </Label>
@@ -440,13 +315,17 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* The variants stay visible: hidden, the Loop pins the agent to
+              the page, and compaction happens in the server-side loop. */}
           <LoopEmbed
+            key={launchedMaxTokens}
             serverUrl={agentBaseUrl}
             target="local"
-            agentId={agentId}
-            defaultEditor="none"
+            showAgentVariants
+            agentId={agentName}
+            editors={false}
             showHeader
-            plugins={LOOP_PLUGINS_AGENTCOM}
+            plugins={plugins}
           />
         </Box>
 
@@ -485,26 +364,10 @@ const AgentCompactionInner: React.FC<{ onLogout: () => void }> = ({
   );
 };
 
-const AgentCompactionExample: React.FC = () => {
-  const { token, clearAuth } = useSimpleAuthStore();
-
-  const handleLogout = useCallback(() => {
-    clearAuth();
-  }, [clearAuth]);
-
-  if (!token) {
-    return (
-      <ThemedProvider>
-        <AuthRequiredView />
-      </ThemedProvider>
-    );
-  }
-
-  return (
-    <ThemedProvider>
-      <AgentCompactionInner onLogout={handleLogout} />
-    </ThemedProvider>
-  );
-};
+const AgentCompactionExample: React.FC = () => (
+  <ThemedProvider>
+    <AgentCompactionInner />
+  </ThemedProvider>
+);
 
 export default AgentCompactionExample;

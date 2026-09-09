@@ -166,6 +166,22 @@ export interface AgentRuntimeStoreState {
   mcpStatus: McpToolsetsStatusResponse | null;
   codemodeStatus: CodemodeStatusData | null;
   fullContext: Record<string, unknown> | null;
+  /**
+   * Bumped when the transcript changed on the server outside a run — a
+   * rewind to a checkpoint, a restore — so the chat reloads what it shows.
+   */
+  historyVersion: number;
+  /**
+   * A decision on a held tool call made outside the chat — a host page's own
+   * approval banner. The chat picks it up and answers the run with it, the
+   * way its own card would; `seq` tells one request from the next.
+   */
+  toolDecisionRequest: {
+    seq: number;
+    approvalId: string;
+    approved: boolean;
+    toolName?: string;
+  } | null;
   monitoringCache: Record<string, MonitoringCacheEntry>;
   loadedSkillsByAgentId: Record<string, LoadedSkillInfo[]>;
   ephemeralNotebookModels: Record<string, INotebookContent>;
@@ -244,6 +260,14 @@ export interface AgentRuntimeStoreActions {
   clearSubagentActivity: () => void;
   /** Mark every delegation still running as stopped, as the person just did. */
   stopSubagentActivity: () => void;
+  /** Ask the chat to reload its transcript from the server's next snapshot. */
+  requestHistoryReload: () => void;
+  /** Decide a held tool call from outside the chat: approve or deny it. */
+  requestToolDecision: (decision: {
+    approvalId: string;
+    approved: boolean;
+    toolName?: string;
+  }) => void;
   setCompaction: (payload: AgentStreamCompactionPayload | null) => void;
   upsertApproval: (approval: AgentStreamToolApprovalPayload) => void;
   removeApproval: (approvalId: string) => void;
@@ -424,12 +448,19 @@ async function createAgentOnRuntime(
 
 const initialRuntimeState: Pick<
   AgentRuntimeStoreState,
-  'runtime' | 'status' | 'error' | 'isLaunching'
+  | 'runtime'
+  | 'status'
+  | 'error'
+  | 'isLaunching'
+  | 'historyVersion'
+  | 'toolDecisionRequest'
 > = {
   runtime: null,
   status: 'idle',
   error: null,
   isLaunching: false,
+  historyVersion: 0,
+  toolDecisionRequest: null,
 };
 
 const initialWsState: Pick<
@@ -866,6 +897,17 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             }
             return changed ? { subagentActivity: next } : {};
           }),
+
+        requestHistoryReload: () =>
+          set(state => ({ historyVersion: state.historyVersion + 1 })),
+
+        requestToolDecision: decision =>
+          set(state => ({
+            toolDecisionRequest: {
+              seq: (state.toolDecisionRequest?.seq ?? 0) + 1,
+              ...decision,
+            },
+          })),
 
         setCompaction: payload => set({ compaction: payload }),
 
@@ -1386,6 +1428,10 @@ export const useAgentRuntimeRunningSubagentNames = (): string[] =>
   useAgentRuntimeStore(
     useShallow(s => runningSubagentNames(s.subagentActivity)),
   );
+
+/** Bumped each time the chat is asked to reload its transcript. */
+export const useAgentRuntimeHistoryVersion = () =>
+  useAgentRuntimeStore(s => s.historyVersion);
 
 /** Latest history-compaction activity for the connected agent. */
 export const useAgentRuntimeCompaction = () =>

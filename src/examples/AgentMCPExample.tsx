@@ -32,6 +32,7 @@ import {
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { waitForAgent } from './utils/waitForAgent';
 import { LoopEmbed } from '../loop';
 import { AgentMcpPlugin } from '../loop/plugins/agent-mcp';
 import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
@@ -50,7 +51,6 @@ import { MCP_SERVER_LIBRARY } from '../specs/mcpServers';
 const queryClient = new QueryClient();
 const AGENT_NAME = 'mcp-example-agent';
 // Must match agentspecs/agentspecs/agents/example-mcp.yaml `id`.
-const AGENTSPEC_ID = 'example-mcp';
 
 /** A tool discovered from a running MCP server. */
 interface McpToolInfo {
@@ -325,6 +325,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   // ── Create agent ──────────────────────────────────────
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const createAgent = async () => {
       setRuntimeStatus('launching');
@@ -333,57 +334,22 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setIsReconnectedAgent(false);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'MCP example agent – web crawling and research via Tavily',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_codemode: false,
-            enable_skills: true,
-            tools: [],
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint as
+        // it mounts; the page only waits until the server has it, so its own
+        // sockets and reads address an agent that exists.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
+        setAgentId(agentName);
+        setIsReconnectedAgent(false);
+        setIsReady(true);
+        setRuntimeStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setHookError(
@@ -398,6 +364,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [agentBaseUrl, agentName, authFetch]);
 
@@ -607,24 +574,6 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     setExtras({ mcpStatusData: mcpStatusData ?? null });
   }, [mcpStatusData, setExtras]);
 
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching MCP example agent...</Text>
-      </Box>
-    );
-  }
-
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
@@ -657,8 +606,9 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
+            showAgentVariants
             agentId={agentId}
-            defaultEditor="none"
+            editors={false}
             showHeader
             plugins={chatPlugins}
           />

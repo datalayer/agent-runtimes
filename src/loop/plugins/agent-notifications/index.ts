@@ -9,6 +9,8 @@
  * Mounts the `example-notifications` agent and offers what it is worth asking. Cast
  * from the shared capacity mould; see `loop/plugins/agent-capacity`.
  *
+ * The openers are the spec's own.
+ *
  * @module loop/plugins/agent-notifications
  */
 
@@ -24,16 +26,6 @@ export const AgentNotificationsPlugin = defineAgentCapacityPlugin({
   specId: 'example-notifications',
   octicon: 'bell',
   emoji: '🔔',
-  suggestions: [
-    {
-      text: 'Alert me',
-      message: 'Notify me when KPIs drop below threshold',
-    },
-    {
-      text: 'Daily digest',
-      message: 'Set up a daily email digest of KPI summaries',
-    },
-  ],
 });
 
 export default AgentNotificationsPlugin;

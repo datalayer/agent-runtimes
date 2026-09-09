@@ -6,11 +6,16 @@
 /**
  * AgentCodemodeExample
  *
- * Compares two tooling modes side-by-side:
+ * Compares two tooling modes on the same task:
  * - MCP tools without codemode conversion
  * - MCP tools with codemode conversion
  *
- * A sidebar gauge tracks consumed tokens for each agent in real time.
+ * Each side is its own agent on its own agent-runtimes server, and a gauge
+ * on each side tracks the tokens it consumed in real time. The chat shows
+ * one side at a time, with a switch in the header: the reactor a Loop runs
+ * on is published to a page-global store, so a page hosts one Loop — a
+ * second one would take the first one's place. Both gauges keep counting
+ * whichever side is on screen.
  */
 
 /// <reference types="vite/client" />
@@ -22,7 +27,7 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
-import { Text, Spinner, Heading, Flash } from '@primer/react';
+import { Text, Heading, SegmentedControl } from '@primer/react';
 import { CodeIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import ReactECharts from 'echarts-for-react';
@@ -89,19 +94,10 @@ const NO_CODEMODE_BASE_URL =
 const CODEMODE_BASE_URL =
   import.meta.env.VITE_BASE_URL_CODEMODE || 'http://localhost:8766';
 
-const NO_CODEMODE_SUGGESTION_MESSAGE =
-  'Use the MCP extract tool to extract information from https://datalayer.ai, then use your sandbox to persist that information in a variable named "about_datalayer".';
-
-const CODEMODE_SUGGESTION_MESSAGE =
-  'Extract information from the https://datalayer.ai website and assign it to the variable "about_datalayer", all in one step using the sandbox';
-
-type RuntimeStatus = 'launching' | 'ready' | 'error';
-
 interface DemoAgentConfig {
   key: string;
   title: string;
   subtitle: string;
-  suggestionMessage: string;
   specId: string;
   color: string;
   baseUrl: string;
@@ -112,7 +108,6 @@ const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
     key: 'no-codemode',
     title: 'MCP Tools (No Codemode)',
     subtitle: 'Raw MCP tools without codemode conversion',
-    suggestionMessage: NO_CODEMODE_SUGGESTION_MESSAGE,
     specId: 'example-no-codemode',
     color: '#16A085',
     baseUrl: NO_CODEMODE_BASE_URL,
@@ -121,7 +116,6 @@ const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
     key: 'codemode',
     title: 'Codemode Tools',
     subtitle: 'MCP tools converted into programmatic tools',
-    suggestionMessage: CODEMODE_SUGGESTION_MESSAGE,
     specId: 'example-codemode',
     color: '#8250DF',
     baseUrl: CODEMODE_BASE_URL,
@@ -130,6 +124,8 @@ const DEMO_AGENT_CONFIGS: DemoAgentConfig[] = [
 
 interface AgentRuntimePaneProps {
   config: DemoAgentConfig;
+  /** Whether this side's chat is the one on screen; its gauge counts either way. */
+  active: boolean;
   token: string;
   onTokenConsumed: (agentKey: string, tokens: number) => void;
   onAgentIdChange?: (agentKey: string, agentId: string) => void;
@@ -150,18 +146,16 @@ function extractConsumedTokens(payload: AgentStreamSnapshotPayload): number {
 
 const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   config,
+  active,
   token,
   onTokenConsumed,
   onAgentIdChange,
   onContextSnapshot,
 }) => {
   const runtimeName = useRef(uniqueAgentId(`codemode-${config.key}`)).current;
-  const [runtimeStatus, setRuntimeStatus] =
-    useState<RuntimeStatus>('launching');
-  const [hookError, setHookError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string>(runtimeName);
-  const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
-  void isReconnectedAgent;
+  // The Loop creates the agent on this pane's server from the capacity
+  // plugin's blueprint, under this name; the pane only has to know it.
+  const agentId = runtimeName;
   const [selectedServerIds, setSelectedServerIds] = useState<string[]>([]);
   const [agentTools, setAgentTools] = useState<FullContextTool[]>([]);
   const [liveMcpStatus, setLiveMcpStatus] = useState<
@@ -185,92 +179,8 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   );
 
   useEffect(() => {
-    let cancelled = false;
-    const launchTimeoutMs = 20_000;
-
-    const createLocalAgent = async () => {
-      setRuntimeStatus('launching');
-      setHookError(null);
-      setIsReconnectedAgent(false);
-
-      try {
-        const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => {
-          controller.abort();
-        }, launchTimeoutMs);
-
-        const response = await authFetch(`${config.baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          signal: controller.signal,
-          body: JSON.stringify({
-            name: runtimeName,
-            description: config.subtitle,
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: config.specId,
-            enable_skills: true,
-            tools: [],
-          }),
-        });
-        window.clearTimeout(timeoutId);
-
-        let resolvedAgentId = runtimeName;
-        let alreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || runtimeName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            alreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
-        }
-
-        if (!cancelled) {
-          setAgentId(resolvedAgentId);
-          onAgentIdChange?.(config.key, resolvedAgentId);
-          setIsReconnectedAgent(alreadyRunning);
-          setRuntimeStatus('ready');
-        }
-      } catch (error) {
-        if (!cancelled) {
-          const isAbortError =
-            error instanceof DOMException && error.name === 'AbortError';
-          setHookError(
-            isAbortError
-              ? `Timed out after ${Math.round(launchTimeoutMs / 1000)}s while creating '${config.specId}' at ${config.baseUrl}. Ensure the no-codemode endpoint is reachable.`
-              : error instanceof Error
-                ? `${error.message} (endpoint: ${config.baseUrl}, spec: ${config.specId})`
-                : `Agent failed to start (endpoint: ${config.baseUrl}, spec: ${config.specId})`,
-          );
-          setRuntimeStatus('error');
-        }
-      }
-    };
-
-    void createLocalAgent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authFetch, config.specId, config.subtitle, config.baseUrl, runtimeName]);
+    onAgentIdChange?.(config.key, agentId);
+  }, [agentId, config.key, onAgentIdChange]);
 
   const handleStreamMessage = useCallback(
     (message: { raw?: unknown }) => {
@@ -313,7 +223,7 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   );
 
   useAIAgentsWebSocket({
-    enabled: runtimeStatus === 'ready',
+    enabled: true,
     baseUrl: config.baseUrl,
     path: '/api/v1/tool-approvals/ws',
     queryParams: { agent_id: agentId },
@@ -323,32 +233,41 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   });
 
   // Fetch creation spec to get selected MCP server IDs (for the MCP indicator).
+  // The Loop is creating the agent meanwhile, so ask again until it is there.
   useEffect(() => {
-    if (runtimeStatus !== 'ready') return;
     let cancelled = false;
+    let attempts = 0;
+    let timer: number | undefined;
     const fetchSpec = async () => {
       try {
         const res = await authFetch(
           `${config.baseUrl}/api/v1/configure/agents/${agentId}/spec`,
         );
-        if (!res.ok) return;
-        const spec: Record<string, unknown> = await res.json();
-        const servers = (spec?.selected_mcp_servers ?? []) as Array<{
-          id: string;
-          origin?: string;
-        }>;
-        if (!cancelled) {
-          setSelectedServerIds(servers.map(s => s.id));
+        if (res.ok) {
+          const spec: Record<string, unknown> = await res.json();
+          const servers = (spec?.selected_mcp_servers ?? []) as Array<{
+            id: string;
+            origin?: string;
+          }>;
+          if (!cancelled) {
+            setSelectedServerIds(servers.map(s => s.id));
+          }
+          return;
         }
       } catch {
-        // Non-fatal.
+        // Not there yet, or not reachable: try again below.
+      }
+      attempts += 1;
+      if (!cancelled && attempts < 60) {
+        timer = window.setTimeout(() => void fetchSpec(), 2000);
       }
     };
     void fetchSpec();
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, [runtimeStatus, agentId, authFetch, config.baseUrl]);
+  }, [agentId, authFetch, config.baseUrl]);
 
   // Build McpServerInfo[] from selected servers + catalog + WS tools.
   const mcpServers = useMemo<McpServerInfo[]>(() => {
@@ -523,37 +442,10 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
   }, [codemodeEnabled, handleToggleCodemode, mcpStatusData, setExtras]);
   void codemodeStatusData;
 
-  if (runtimeStatus === 'launching') {
-    return (
-      <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          p: 3,
-          minHeight: 220,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        <Spinner size="small" />
-        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-          Launching {config.title}...
-        </Text>
-        <Text sx={{ fontSize: 0, color: 'fg.subtle' }}>{config.baseUrl}</Text>
-      </Box>
-    );
-  }
-
-  if (runtimeStatus === 'error' || hookError) {
-    return (
-      <Flash variant="danger" sx={{ borderRadius: 2 }}>
-        {config.title}: {hookError || 'Failed to start'}
-      </Flash>
-    );
+  // Mounted for its websocket and gauge whichever side is on screen; only
+  // the side on screen mounts a Loop, there being one per page.
+  if (!active) {
+    return null;
   }
 
   return (
@@ -569,11 +461,14 @@ const AgentRuntimePane: React.FC<AgentRuntimePaneProps> = ({
       }}
     >
       <Box sx={{ flex: 1, minHeight: 0 }}>
+        {/* The variants stay visible: hidden, the Loop pins the agent to the
+            page, and this pane's whole point is the server it runs on. */}
         <LoopEmbed
           serverUrl={config.baseUrl}
           target="local"
+          showAgentVariants
           agentId={agentId}
-          defaultEditor="none"
+          editors={false}
           showHeader
           plugins={chatPlugins}
         />
@@ -593,6 +488,8 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
     codemode: 0,
   });
   const [agentIdByKey, setAgentIdByKey] = useState<Record<string, string>>({});
+  const [activeKey, setActiveKey] =
+    useState<DemoAgentConfig['key']>('no-codemode');
   const [contextSnapshotByKey, setContextSnapshotByKey] = useState<
     Record<string, ContextSnapshotResponse>
   >({});
@@ -799,6 +696,23 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Codemode — MCP Tools vs Codemode Tools
         </Heading>
+        <SegmentedControl
+          aria-label="Side on screen"
+          size="small"
+          onChange={index =>
+            setActiveKey(DEMO_AGENT_CONFIGS[index]?.key ?? 'no-codemode')
+          }
+        >
+          {DEMO_AGENT_CONFIGS.map(config => (
+            <SegmentedControl.Button
+              key={config.key}
+              selected={config.key === activeKey}
+              data-codemode-side={config.key}
+            >
+              {config.key === 'codemode' ? 'Codemode tools' : 'MCP tools'}
+            </SegmentedControl.Button>
+          ))}
+        </SegmentedControl>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -929,9 +843,8 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
             flex: 1,
             minWidth: 0,
             p: 3,
-            display: 'grid',
-            gridTemplateColumns: ['1fr', null, '1fr 1fr'],
-            gap: 3,
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'auto',
           }}
         >
@@ -939,6 +852,7 @@ const AgentCodemodeInner: React.FC<{ onLogout: () => void }> = ({
             <AgentRuntimePane
               key={config.key}
               config={config}
+              active={config.key === activeKey}
               token={token}
               onTokenConsumed={handleTokenConsumed}
               onAgentIdChange={handleAgentIdChange}

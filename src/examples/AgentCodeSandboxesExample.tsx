@@ -3,215 +3,64 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+/**
+ * AgentCodeSandboxesExample
+ *
+ * The code sandbox variants, one agent each: choose where Python should run
+ * — in-process eval, a Jupyter kernel, a container, a cloud runtime — and the
+ * Loop creates an agent on that sandbox from the variant's capacity plugin.
+ * Its first opener asks the code where it ran, which is the proof.
+ *
+ * @module examples/AgentCodeSandboxesExample
+ */
+
 /// <reference types="vite/client" />
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { Button, Heading, Label, Spinner, Text } from '@primer/react';
-import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
+import { Button, Heading, Label, Text } from '@primer/react';
+import { CodespacesIcon, SyncIcon } from '@primer/octicons-react';
 import { ThemedProvider } from './utils/themedProvider';
-import { AuthRequiredView, ErrorView } from './components';
 import { uniqueAgentId } from './utils/agentId';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { LoopEmbed } from '../loop';
-import { defineAgentCapacityPlugin } from '../loop/plugins/agent-capacity';
+import {
+  SANDBOX_CAPACITIES,
+  SandboxCapacityPlugins,
+} from '../loop/plugins/agent-code-sandboxes';
 
-type SandboxVariant =
-  | 'eval'
-  | 'jupyter-server'
-  | 'docker'
-  | 'datalayer'
-  | 'google-colab'
-  | 'kaggle'
-  | 'monty'
-  | 'modal';
-
-interface SandboxSpecOption {
-  variant: SandboxVariant;
-  specId: string;
-  title: string;
-  description: string;
+/** A variant launched: the capacity behind it and the agent made for it. */
+interface LaunchedSandbox {
+  key: string;
+  agentId: string;
 }
 
-const SANDBOX_SPEC_OPTIONS: SandboxSpecOption[] = [
-  {
-    variant: 'eval',
-    specId: 'example-sandbox-eval',
-    title: 'Eval Sandbox',
-    description: 'In-process Python execution for quick local iteration.',
-  },
-  {
-    variant: 'jupyter-server',
-    specId: 'example-sandbox-jupyter',
-    title: 'Jupyter Sandbox',
-    description: 'Kernel-backed execution with notebook-compatible behavior.',
-  },
-  {
-    variant: 'docker',
-    specId: 'example-sandbox-docker',
-    title: 'Docker Sandbox',
-    description: 'Containerized execution for stronger process isolation.',
-  },
-  {
-    variant: 'datalayer',
-    specId: 'example-sandbox-datalayer',
-    title: 'Datalayer Sandbox',
-    description: 'Cloud sandbox runtime powered by Datalayer environments.',
-  },
-  {
-    variant: 'google-colab',
-    specId: 'example-sandbox-colab',
-    title: 'Colab Sandbox',
-    description:
-      'Google Colab runtime connector (reuse an already-running kernel).',
-  },
-  {
-    variant: 'kaggle',
-    specId: 'example-sandbox-kaggle',
-    title: 'Kaggle Sandbox',
-    description:
-      'Kaggle runtime connector (create kernel with API token or attach existing).',
-  },
-  {
-    variant: 'monty',
-    specId: 'example-sandbox-monty',
-    title: 'Monty Sandbox',
-    description: 'Secure in-process interpreter focused on safe snippets.',
-  },
-  {
-    variant: 'modal',
-    specId: 'example-sandbox-modal',
-    title: 'Modal Sandbox',
-    description: 'Modal cloud sandbox for scalable remote code execution.',
-  },
-];
-
-const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
-}) => {
-  const { token } = useSimpleAuthStore();
-  const baseUrl = useExampleAgentRuntimesUrl();
-
-  const [selectedSpecId, setSelectedSpecId] = useState<string>(
-    SANDBOX_SPEC_OPTIONS[0].specId,
+const AgentCodeSandboxesInner: React.FC = () => {
+  const serverUrl = useMemo(() => resolveExampleAgentRuntimesUrl('local'), []);
+  const [selectedKey, setSelectedKey] = useState<string>(
+    SANDBOX_CAPACITIES[0].key,
   );
-  const [agentId, setAgentId] = useState<string | null>(null);
-  const [activeSpecId, setActiveSpecId] = useState<string | null>(null);
-  const [isLaunching, setIsLaunching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [launched, setLaunched] = useState<LaunchedSandbox | null>(null);
 
-  const selectedOption = useMemo(
-    () =>
-      SANDBOX_SPEC_OPTIONS.find(option => option.specId === selectedSpecId) ??
-      SANDBOX_SPEC_OPTIONS[0],
-    [selectedSpecId],
+  const selected =
+    SANDBOX_CAPACITIES.find(capacity => capacity.key === selectedKey) ??
+    SANDBOX_CAPACITIES[0];
+  const active = launched
+    ? (SANDBOX_CAPACITIES.find(capacity => capacity.key === launched.key) ??
+      selected)
+    : selected;
+
+  // One plugin per launch: the variant's capacity, whose blueprint pins the
+  // sandbox_variant the agent is created with.
+  const plugins = useMemo(
+    () => (launched ? [SandboxCapacityPlugins[launched.key]] : []),
+    [launched],
   );
 
-  const activeOption = useMemo(
-    () =>
-      SANDBOX_SPEC_OPTIONS.find(option => option.specId === activeSpecId) ??
-      selectedOption,
-    [activeSpecId, selectedOption],
-  );
-
-  // The chat column is the shared loop; the capacity plugin is built from the
-  // selected sandbox variant so its blueprint pins the right sandbox_variant.
-  const chatPlugins = useMemo(
-    () => [
-      defineAgentCapacityPlugin({
-        key: `sandbox-${activeOption.variant}`,
-        displayName: activeOption.title,
-        description: activeOption.description,
-        specId: activeOption.specId,
-        octicon: 'codespaces',
-        createPayload: { sandbox_variant: activeOption.variant },
-        suggestions: [
-          {
-            text: 'Identify sandbox variant',
-            message:
-              'Use execute_code to print(os.getenv("DATALAYER_CODE_SANDBOX_VARIANT")) and summarize the result.',
-          },
-        ],
-      }),
-    ],
-    [activeOption],
-  );
-
-  const authFetch = useCallback(
-    (url: string, opts: RequestInit = {}) =>
-      fetch(url, {
-        ...opts,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(opts.headers ?? {}),
-        },
-      }),
-    [token],
-  );
-
-  const launchAgent = useCallback(async () => {
-    setIsLaunching(true);
-    setError(null);
-
-    try {
-      if (agentId) {
-        await authFetch(`${baseUrl}/api/v1/agents/${agentId}`, {
-          method: 'DELETE',
-        }).catch(() => {
-          // Ignore teardown errors while switching specs.
-        });
-      }
-
-      const agentName = uniqueAgentId(`code-sandbox-${selectedOption.variant}`);
-
-      const response = await authFetch(`${baseUrl}/api/v1/agents`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: agentName,
-          description: `Code sandbox demo (${selectedOption.variant})`,
-          agent_library: 'pydantic-ai',
-          transport: 'vercel-ai',
-          agent_spec_id: selectedOption.specId,
-          enable_codemode: true,
-          enable_skills: true,
-          tools: [],
-        }),
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type') || '';
-        let detail = '';
-        if (contentType.includes('application/json')) {
-          const payload = await response.json().catch(() => null);
-          detail =
-            (typeof payload?.detail === 'string' && payload.detail) ||
-            (typeof payload?.message === 'string' && payload.message) ||
-            '';
-        } else {
-          detail = await response.text().catch(() => '');
-        }
-
-        throw new Error(
-          detail || `Failed to create agent (${response.status})`,
-        );
-      }
-
-      const payload = await response.json();
-      const createdAgentId = payload?.id || agentName;
-
-      setAgentId(createdAgentId);
-      setActiveSpecId(selectedOption.specId);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to launch agent');
-    } finally {
-      setIsLaunching(false);
-    }
-  }, [agentId, authFetch, baseUrl, selectedOption]);
-
-  if (!agentId) {
+  if (!launched) {
     return (
       <Box
+        data-sandboxes-chooser
         sx={{
           maxWidth: 840,
           mx: 'auto',
@@ -234,23 +83,21 @@ const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
           Agent Code Sandboxes
         </Heading>
         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-          Choose a sandbox variant-backed spec, launch the agent, then run code
-          from chat to compare behavior across sandboxes.
+          Choose where the agent&apos;s Python should run, launch it, then ask
+          the code where it ran to compare the sandboxes.
         </Text>
 
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Label variant="accent">Spec: {selectedOption.specId}</Label>
-          <Label variant="secondary">Variant: {selectedOption.variant}</Label>
-          <Label variant="success">Codemode: enabled</Label>
+          <Label variant="accent">Spec: {selected.specId}</Label>
+          <Label variant="secondary">Variant: {selected.variant}</Label>
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Text sx={{ fontSize: 1, fontWeight: 600 }}>Sandbox Variant</Text>
           <select
-            value={selectedSpecId}
-            onChange={event => {
-              setSelectedSpecId(event.target.value);
-            }}
+            value={selectedKey}
+            data-sandboxes-select
+            onChange={event => setSelectedKey(event.target.value)}
             style={{
               width: '100%',
               maxWidth: 420,
@@ -261,68 +108,98 @@ const AgentCodeSandboxesInner: React.FC<{ onLogout: () => void }> = ({
               color: 'var(--fgColor-default)',
             }}
           >
-            {SANDBOX_SPEC_OPTIONS.map(option => (
-              <option key={option.specId} value={option.specId}>
-                {option.title} ({option.variant})
+            {SANDBOX_CAPACITIES.map(capacity => (
+              <option key={capacity.key} value={capacity.key}>
+                {capacity.displayName} ({capacity.variant})
               </option>
             ))}
           </select>
           <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-            {selectedOption.description}
+            {selected.description}
           </Text>
         </Box>
 
         <Button
           variant="primary"
-          onClick={() => {
-            void launchAgent();
-          }}
-          disabled={isLaunching}
+          data-sandboxes-launch
+          onClick={() =>
+            setLaunched({
+              key: selected.key,
+              agentId: uniqueAgentId(`code-sandbox-${selected.variant}`),
+            })
+          }
           sx={{ width: '100%', maxWidth: 420 }}
         >
-          {isLaunching ? (
-            <>
-              <Spinner size="small" /> Launching...
-            </>
-          ) : (
-            `Launch ${selectedOption.title}`
-          )}
+          Launch {selected.displayName}
         </Button>
-
-        {error && <ErrorView error={error} onLogout={onLogout} />}
       </Box>
     );
   }
 
   return (
-    <LoopEmbed
-      key={agentId}
-      serverUrl={baseUrl}
-      target="local"
-      agentId={agentId}
-      defaultEditor="none"
-      showHeader
-      plugins={chatPlugins}
-    />
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'canvas.default',
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          px: 3,
+          py: 2,
+          borderBottom: '1px solid',
+          borderColor: 'border.default',
+          flexShrink: 0,
+        }}
+      >
+        <CodespacesIcon size={16} />
+        <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
+          Code Sandboxes Demo
+        </Heading>
+        <Label variant="accent">local</Label>
+        <Label variant="accent" data-sandboxes-active={active.variant}>
+          {active.displayName} · {active.variant}
+        </Label>
+        <Button
+          size="small"
+          leadingVisual={SyncIcon}
+          data-sandboxes-change
+          onClick={() => {
+            setSelectedKey(active.key);
+            setLaunched(null);
+          }}
+        >
+          Change sandbox
+        </Button>
+      </Box>
+      {/* The Loop creates the agent on the Local target from the variant's
+          capacity plugin; a new launch is a new agent, hence the key. The
+          variants stay visible so the agent is not pinned to the page. */}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <LoopEmbed
+          key={launched.agentId}
+          serverUrl={serverUrl}
+          target="local"
+          showAgentVariants
+          agentId={launched.agentId}
+          editors={false}
+          showHeader
+          plugins={plugins}
+        />
+      </Box>
+    </Box>
   );
 };
 
-const AgentCodeSandboxesExample: React.FC = () => {
-  const { token, clearAuth } = useSimpleAuthStore();
-
-  const handleLogout = useCallback(() => {
-    clearAuth();
-  }, [clearAuth]);
-
-  if (!token) {
-    return <AuthRequiredView />;
-  }
-
-  return (
-    <ThemedProvider>
-      <AgentCodeSandboxesInner onLogout={handleLogout} />
-    </ThemedProvider>
-  );
-};
+const AgentCodeSandboxesExample: React.FC = () => (
+  <ThemedProvider>
+    <AgentCodeSandboxesInner />
+  </ThemedProvider>
+);
 
 export default AgentCodeSandboxesExample;

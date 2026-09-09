@@ -32,6 +32,7 @@ export {
   useAgentRuntimeSubagentActivity,
   useAgentRuntimeSubagentActivityByToolCall,
   useAgentRuntimeCompaction,
+  useAgentRuntimeHistoryVersion,
   getAgentRuntimeState,
   subscribeToAgentRuntime,
   type AgentRegistryEntry,

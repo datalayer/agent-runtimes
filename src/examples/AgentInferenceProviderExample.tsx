@@ -26,10 +26,8 @@ import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { LoopEmbed } from '../loop';
-import { AgentInferencePlugin } from '../loop/plugins/agent-inference';
+import { createAgentInferencePlugin } from '../loop/plugins/agent-inference';
 import { useAIAgentsWebSocket } from '../hooks';
-
-const LOOP_PLUGINS_AGENTINF = [AgentInferencePlugin];
 
 const AGENTSPEC_ID = 'example-inference';
 const AGENT_NAME = 'inference-provider-example-agent';
@@ -169,7 +167,6 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             body: JSON.stringify({ provider: nextProvider }),
           },
         );
-
         appendProviderEvent(
           'configure.provider',
           `Configured runtime inference provider to ${nextProvider}`,
@@ -178,36 +175,15 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             provider: nextProvider,
           },
         );
-
-        const name = uniqueAgentId(`${AGENT_NAME}-${nextProvider}`);
-        const createResponse = await authFetch(`${baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name,
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            inferenceProvider: nextProvider,
-          }),
-        });
-
-        if (!createResponse.ok) {
-          const detail = await createResponse.text();
-          throw new Error(
-            detail || `Failed to create agent (${createResponse.status})`,
-          );
-        }
-
-        const payload = (await createResponse.json()) as { id?: string };
-        const nextAgentId = payload.id || name;
-
+        // A new agent for the provider: the Loop creates it from the
+        // capacity plugin's blueprint, provider included, when it mounts.
+        const nextAgentId = uniqueAgentId(`${AGENT_NAME}-${nextProvider}`);
         if (requestEpoch !== requestEpochRef.current) {
           return;
         }
-
         currentAgentRef.current = nextAgentId;
         setAgentId(nextAgentId);
-
-        appendProviderEvent('agent.created', 'Launched local agent runtime', {
+        appendProviderEvent('agent.launched', 'Agent launched by the Loop', {
           agentId: nextAgentId,
           agentSpecId: AGENTSPEC_ID,
           inferenceProvider: nextProvider,
@@ -249,6 +225,10 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
   const onProviderChange = useCallback((next: InferenceProviderKind) => {
     setProvider(next);
   }, []);
+  const plugins = useMemo(
+    () => [createAgentInferencePlugin(provider)],
+    [provider],
+  );
 
   useAIAgentsWebSocket({
     enabled: Boolean(agentId) && !isLaunching,
@@ -406,12 +386,14 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
           >
             {agentId && !isLaunching ? (
               <LoopEmbed
+                key={agentId}
                 serverUrl={baseUrl}
                 target="local"
+                showAgentVariants
                 agentId={agentId}
-                defaultEditor="none"
+                editors={false}
                 showHeader
-                plugins={LOOP_PLUGINS_AGENTINF}
+                plugins={plugins}
               />
             ) : (
               <Box

@@ -46,12 +46,20 @@ export interface NotificationChannelSpec {
 /**
  * Notification configuration for an agent spec.
  */
+/**
+ * One channel in an agentspec's `notifications` section: a target string,
+ * an on/off flag, or the two spelled out.
+ */
+export type AgentNotificationChannelConfig =
+  string | boolean | { enabled?: boolean; target?: string | null };
+
 export interface AgentNotificationConfig {
-  email?: string;
-  slack?: string;
-  teams?: string;
-  webhook?: string;
-  [key: string]: string | number | boolean | undefined;
+  'in-app'?: AgentNotificationChannelConfig;
+  email?: AgentNotificationChannelConfig;
+  slack?: AgentNotificationChannelConfig;
+  teams?: AgentNotificationChannelConfig;
+  webhook?: AgentNotificationChannelConfig;
+  [key: string]: AgentNotificationChannelConfig | number | undefined;
 }
 
 // ---- Agent Notifications ----
