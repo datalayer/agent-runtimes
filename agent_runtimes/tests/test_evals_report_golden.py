@@ -112,6 +112,8 @@ def _run(experiment_index: int, run_index: int, outcomes: list[bool], agent_spec
     return {
         "id": f"run-{experiment_index}-{run_index}",
         "experiment_id": f"experiment-{experiment_index}",
+        # Every run belongs to a launch, and its link goes through it (B4-08).
+        "launch_id": f"launch-12{run_index}",
         "owner_uid": "user-1",
         "status": "completed",
         "started_at": f"2026-09-0{run_index}T10:00:00Z",
@@ -196,6 +198,8 @@ class FakeStoreClient:
 @pytest.fixture
 def frozen_report(monkeypatch, tmp_path):
     monkeypatch.setattr(report_module, "_now_iso", lambda: FROZEN_NOW)
+    # The links point at Datalayer's own app unless a deployment is named (B4-08).
+    monkeypatch.delenv("DATALAYER_UI_URL", raising=False)
     report = build_eval_report(FakeStoreClient(), EVALSET_ID, run_limit=10)
     markdown = render_eval_report_markdown(report, run_limit=10)
     csv_path = write_eval_report_csv(report, tmp_path / "report.csv")
@@ -227,6 +231,28 @@ def test_the_markdown_is_the_golden_markdown(frozen_report):
     _check("evals-report.md", markdown)
 
 
+def test_the_decisions_are_the_last_section_of_the_markdown(frozen_report):
+    """What was decided follows the result, in the order it was decided
+    (B4-03); a report nobody decided anything about has no such section."""
+    report, markdown, _ = frozen_report
+    assert "## Decisions" not in markdown
+    decisions = [
+        {
+            "decided_at": "2026-09-10T09:00:00Z", "kind": "accepted_regression", "outcome": "accepted_with_limitations",
+            "scope": "case", "scope_ref": "duplicate-customers", "decided_by_uid": "reviewer-1", "note": "Misses 3 of 157 | known gap",
+        },
+        {
+            "decided_at": "2026-09-10T10:00:00Z", "kind": "evaluator_issue", "outcome": "blocked",
+            "scope": "run", "scope_ref": "run-1-3", "decided_by_uid": "reviewer-2", "note": "",
+        },
+    ]
+    decided = render_eval_report_markdown(report, run_limit=10, decisions=decisions)
+    assert decided.startswith(markdown.rstrip())
+    appendix = decided.split("## Decisions", 1)[1]
+    assert "| 2026-09-10 | Accepted regression | Accepted with limitations | case duplicate-customers | reviewer-1 | Misses 3 of 157 \\| known gap |" in appendix
+    assert appendix.index("Accepted regression") < appendix.index("Evaluator issue")
+
+
 def test_the_csv_is_the_golden_csv(frozen_report):
     _, _, csv_text = frozen_report
     _check("evals-report.csv", csv_text)
@@ -240,8 +266,12 @@ def test_the_report_reads_the_fixture(frozen_report):
     assert report["generated_at"] == FROZEN_NOW
     assert "## Comparison Combinations" in markdown
     assert csv_text.splitlines()[0].startswith("row_type")
-    # The deep links the contract of B0-04 keeps.
-    assert f"/evals/experiments/sdk/{EVALSET_ID}" in markdown
+    # The links point at the benchmark's page on Datalayer's own app when no
+    # deployment is named, and at no host written into the code (B4-08).
+    from agent_runtimes.evals.links import DEFAULT_UI_URL
+
+    assert f"{DEFAULT_UI_URL}/benchmarks/{EVALSET_ID}" in markdown
+    assert "datalayer.ai/evals" not in markdown and "datalayer.ai/evals" not in csv_text
 
 
 # --- The report as a Lexical document (B3-03) --------------------------------
@@ -281,14 +311,20 @@ def test_every_block_carries_its_provenance(lexical_document):
     from agent_runtimes.evals.lexical import ANALYSIS_MIME
 
     blocks = lexical_document["root"]["children"]
-    assert all(set(block["provenance"]) == {"evalset", "version", "launch", "experiment", "run", "case", "analysis"} for block in blocks)
-    assert all(block["provenance"]["evalset"] == EVALSET_ID and block["provenance"]["launch"] == "launch-128" and block["provenance"]["version"] == 3 for block in blocks)
+    # In the node state, which Lexical keeps: a key beside `type` is dropped
+    # the first time the document is opened (B4-04).
+    assert not any("provenance" in block for block in blocks)
+    evidence = [block["$"]["evidence"] for block in blocks]
+    assert all(set(mark) == {"evalset", "version", "launch", "experiment", "run", "case", "analysis", "block"} for mark in evidence)
+    # Each block has its own anchor, in document order (B4-07).
+    assert [mark["block"] for mark in evidence] == [f"block-{index}" for index in range(1, len(blocks) + 1)]
+    assert all(mark["evalset"] == EVALSET_ID and mark["launch"] == "launch-128" and mark["version"] == 3 for mark in evidence)
     # Tables are Lexical tables; lines and comparisons are Jupyter outputs carrying the analysis.
     tables = [block for block in blocks if block["type"] == "table"]
     outputs = [block for block in blocks if block["type"] == "jupyter-output"]
     assert tables and outputs
     assert all(ANALYSIS_MIME in output["outputs"][0]["data"] for output in outputs)
-    named = {output["provenance"]["analysis"] for output in outputs}
+    named = {output["$"]["evidence"]["analysis"] for output in outputs}
     assert "Latest Pass Rate By Experiment" in named and "latest_two" in named
     # The same report hydrates to the same uuids twice.
     assert len({output["jupyterOutputNodeUuid"] for output in outputs}) == len(outputs)
@@ -307,7 +343,7 @@ def test_a_run_document_narrows_to_its_experiment_and_reads_its_tasks(frozen_rep
     text = json.dumps(document, ensure_ascii=False)
     assert "wrong_answer · 1 task" in text and "It answered 0; 157 customers repeat." in text
     assert "example-evals" not in text.split("Pairwise deltas")[0]
-    assert document["root"]["children"][0]["provenance"]["run"] == "run-1-3"
+    assert document["root"]["children"][0]["$"]["evidence"]["run"] == "run-1-3"
 
 
 def test_the_comparisons_are_components_with_the_direction_written_down(frozen_report):

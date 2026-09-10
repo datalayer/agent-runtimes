@@ -7,16 +7,16 @@
 - Evalset evaluators: 1
 - Report evaluators: 0
 - Run window per experiment: 10
-- Evalset run details: [Open in Datalayer](https://datalayer.ai/evals/experiments/sdk/evalset-reference)
+- Evalset run details: [Open in Datalayer](https://datalayer.app/benchmarks/evalset-reference)
 
 > The body summarises results (evaluators, per-case outcomes, drift, and comparisons). Full configuration, cases, heatmaps, per-experiment timelines, and per-run details are in the appendices at the end.
 
 ## Agentspec Coverage
 
-| Agentspec ID         | Agentspec            | Model | Version | Experiments | Runs | Details                                                               |
-| :------------------- | :------------------- | :---- | :------ | ----------: | ---: | :-------------------------------------------------------------------- |
-| jupyter-data-analyst | jupyter-data-analyst | -     | -       |           1 |    3 | [Open](https://datalayer.ai/settings/agentspecs/jupyter-data-analyst) |
-| example-evals        | example-evals        | -     | -       |           1 |    2 | [Open](https://datalayer.ai/settings/agentspecs/example-evals)        |
+| Agentspec ID         | Agentspec            | Model | Version | Experiments | Runs | Details                                                                |
+| :------------------- | :------------------- | :---- | :------ | ----------: | ---: | :--------------------------------------------------------------------- |
+| jupyter-data-analyst | jupyter-data-analyst | -     | -       |           1 |    3 | [Open](https://datalayer.app/settings/agentspecs/jupyter-data-analyst) |
+| example-evals        | example-evals        | -     | -       |           1 |    2 | [Open](https://datalayer.app/settings/agentspecs/example-evals)        |
 
 
 ## Evaluator Results
@@ -170,14 +170,14 @@ Full configuration, cases, heatmaps, per-experiment timelines, and per-run detai
 - ID: `jupyter-data-analyst`
 - Experiments (1): jupyter-data-analyst
 - Runs analysed: 3
-- Details: [Open in Datalayer](https://datalayer.ai/settings/agentspecs/jupyter-data-analyst)
+- Details: [Open in Datalayer](https://datalayer.app/settings/agentspecs/jupyter-data-analyst)
 
 ### example-evals
 
 - ID: `example-evals`
 - Experiments (1): example-evals
 - Runs analysed: 2
-- Details: [Open in Datalayer](https://datalayer.ai/settings/agentspecs/example-evals)
+- Details: [Open in Datalayer](https://datalayer.app/settings/agentspecs/example-evals)
 
 ## Appendix: Evaluator Configuration
 
@@ -351,16 +351,16 @@ Legend: dNN are consecutive deltas (A-B), sign shows direction, magnitude uses '
 
 ### jupyter-data-analyst
 
-Agentspec: [jupyter-data-analyst](https://datalayer.ai/settings/agentspecs/jupyter-data-analyst)
-Evalset run details: [Open run page](https://datalayer.ai/evals/experiments/sdk/evalset-reference)
+Agentspec: [jupyter-data-analyst](https://datalayer.app/settings/agentspecs/jupyter-data-analyst)
+Evalset run details: [Open run page](https://datalayer.app/benchmarks/evalset-reference)
 
 #### Run Timeline
 
-| # | Run ID                                                                              | Status    | Pass Rate | Total Tokens | ASCII Trend                    | Failure Cause |
-| --: | :---------------------------------------------------------------------------------- | :-------- | --------: | -----------: | :----------------------------- | :------------ |
-| 1 | [run-1-3](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-1-3) | completed |     83.3% |        9,000 | `███████████████████████░░░░░` | -             |
-| 2 | [run-1-2](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-1-2) | completed |     66.7% |        9,000 | `███████████████████░░░░░░░░░` | -             |
-| 3 | [run-1-1](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-1-1) | completed |     50.0% |        9,000 | `██████████████░░░░░░░░░░░░░░` | -             |
+| # | Run ID                                                               | Status    | Pass Rate | Total Tokens | ASCII Trend                    | Failure Cause |
+| --: | :------------------------------------------------------------------- | :-------- | --------: | -----------: | :----------------------------- | :------------ |
+| 1 | [run-1-3](https://datalayer.app/runs/launch-123/experiments/run-1-3) | completed |     83.3% |        9,000 | `███████████████████████░░░░░` | -             |
+| 2 | [run-1-2](https://datalayer.app/runs/launch-122/experiments/run-1-2) | completed |     66.7% |        9,000 | `███████████████████░░░░░░░░░` | -             |
+| 3 | [run-1-1](https://datalayer.app/runs/launch-121/experiments/run-1-1) | completed |     50.0% |        9,000 | `██████████████░░░░░░░░░░░░░░` | -             |
 
 Pass-rate sparkline: `█▄▁`
 Token usage sparkline: `▇▇▇`
@@ -374,15 +374,15 @@ Token usage sparkline: `▇▇▇`
 
 ### example-evals
 
-Agentspec: [example-evals](https://datalayer.ai/settings/agentspecs/example-evals)
-Evalset run details: [Open run page](https://datalayer.ai/evals/experiments/sdk/evalset-reference)
+Agentspec: [example-evals](https://datalayer.app/settings/agentspecs/example-evals)
+Evalset run details: [Open run page](https://datalayer.app/benchmarks/evalset-reference)
 
 #### Run Timeline
 
-| # | Run ID                                                                              | Status    | Pass Rate | Total Tokens | ASCII Trend                    | Failure Cause |
-| --: | :---------------------------------------------------------------------------------- | :-------- | --------: | -----------: | :----------------------------- | :------------ |
-| 1 | [run-2-2](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-2-2) | completed |     33.3% |        9,000 | `█████████░░░░░░░░░░░░░░░░░░░` | -             |
-| 2 | [run-2-1](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-2-1) | completed |     50.0% |        9,000 | `██████████████░░░░░░░░░░░░░░` | -             |
+| # | Run ID                                                               | Status    | Pass Rate | Total Tokens | ASCII Trend                    | Failure Cause |
+| --: | :------------------------------------------------------------------- | :-------- | --------: | -----------: | :----------------------------- | :------------ |
+| 1 | [run-2-2](https://datalayer.app/runs/launch-122/experiments/run-2-2) | completed |     33.3% |        9,000 | `█████████░░░░░░░░░░░░░░░░░░░` | -             |
+| 2 | [run-2-1](https://datalayer.app/runs/launch-121/experiments/run-2-1) | completed |     50.0% |        9,000 | `██████████████░░░░░░░░░░░░░░` | -             |
 
 Pass-rate sparkline: `▁█`
 Token usage sparkline: `▇▇`
@@ -401,11 +401,11 @@ Per-run detail for every run fetched in the window above. Each Run ID opens the 
 
 Agentspec: jupyter-data-analyst
 
-| # | Run ID                                                                              | Status    | Pass Rate | Cases (pass/total) | Avg Score | Total Tokens | Credits | Created              | Failure Cause |
-| --: | :---------------------------------------------------------------------------------- | :-------- | --------: | -----------------: | --------: | -----------: | ------: | :------------------- | :------------ |
-| 1 | [run-1-3](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-1-3) | completed |     83.3% |                5/6 |     0.833 |         9000 |     3.2 | 2026-09-03T10:18:24Z | -             |
-| 2 | [run-1-2](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-1-2) | completed |     66.7% |                4/6 |     0.667 |         9000 |     3.2 | 2026-09-02T10:18:24Z | -             |
-| 3 | [run-1-1](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-1-1) | completed |     50.0% |                3/6 |     0.500 |         9000 |     3.2 | 2026-09-01T10:18:24Z | -             |
+| # | Run ID                                                               | Status    | Pass Rate | Cases (pass/total) | Avg Score | Total Tokens | Credits | Created              | Failure Cause |
+| --: | :------------------------------------------------------------------- | :-------- | --------: | -----------------: | --------: | -----------: | ------: | :------------------- | :------------ |
+| 1 | [run-1-3](https://datalayer.app/runs/launch-123/experiments/run-1-3) | completed |     83.3% |                5/6 |     0.833 |         9000 |     3.2 | 2026-09-03T10:18:24Z | -             |
+| 2 | [run-1-2](https://datalayer.app/runs/launch-122/experiments/run-1-2) | completed |     66.7% |                4/6 |     0.667 |         9000 |     3.2 | 2026-09-02T10:18:24Z | -             |
+| 3 | [run-1-1](https://datalayer.app/runs/launch-121/experiments/run-1-1) | completed |     50.0% |                3/6 |     0.500 |         9000 |     3.2 | 2026-09-01T10:18:24Z | -             |
 
 #### Full Run Detail (as shown in the UI)
 
@@ -1541,10 +1541,10 @@ Raw usage payload:
 
 Agentspec: example-evals
 
-| # | Run ID                                                                              | Status    | Pass Rate | Cases (pass/total) | Avg Score | Total Tokens | Credits | Created              | Failure Cause |
-| --: | :---------------------------------------------------------------------------------- | :-------- | --------: | -----------------: | --------: | -----------: | ------: | :------------------- | :------------ |
-| 1 | [run-2-2](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-2-2) | completed |     33.3% |                2/6 |     0.333 |         9000 |     3.2 | 2026-09-02T10:18:24Z | -             |
-| 2 | [run-2-1](https://datalayer.ai/evals/experiments/sdk/evalset-reference?run=run-2-1) | completed |     50.0% |                3/6 |     0.500 |         9000 |     3.2 | 2026-09-01T10:18:24Z | -             |
+| # | Run ID                                                               | Status    | Pass Rate | Cases (pass/total) | Avg Score | Total Tokens | Credits | Created              | Failure Cause |
+| --: | :------------------------------------------------------------------- | :-------- | --------: | -----------------: | --------: | -----------: | ------: | :------------------- | :------------ |
+| 1 | [run-2-2](https://datalayer.app/runs/launch-122/experiments/run-2-2) | completed |     33.3% |                2/6 |     0.333 |         9000 |     3.2 | 2026-09-02T10:18:24Z | -             |
+| 2 | [run-2-1](https://datalayer.app/runs/launch-121/experiments/run-2-1) | completed |     50.0% |                3/6 |     0.500 |         9000 |     3.2 | 2026-09-01T10:18:24Z | -             |
 
 #### Full Run Detail (as shown in the UI)
 

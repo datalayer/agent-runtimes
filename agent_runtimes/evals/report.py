@@ -18,7 +18,6 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, cast
-from urllib.parse import quote
 
 import typer
 from rich.console import Console
@@ -28,7 +27,7 @@ from agent_runtimes.client import AgentClient
 
 console = Console()
 
-WEB_APP_BASE_URL = "https://datalayer.ai"
+from agent_runtimes.evals.links import agentspec_url, benchmark_url, run_url  # noqa: E402 — the product's addresses (B4-08)
 
 
 def _now_iso() -> str:
@@ -123,42 +122,6 @@ def _parse_evaluator_specs(
             parsed = {**parsed, "arguments": {}}
         evaluators.append(parsed)
     return evaluators
-
-
-def _agentspec_details_url(agent_spec_id: str) -> str:
-    value = str(agent_spec_id or "").strip()
-    if not value:
-        return ""
-    return f"{WEB_APP_BASE_URL}/settings/agentspecs/{quote(value, safe='')}"
-
-
-def _evalset_runs_url(evalset_id: str, run_environment: str) -> str:
-    evalset_value = str(evalset_id or "").strip()
-    if not evalset_value:
-        return ""
-    encoded_evalset_id = quote(evalset_value, safe="")
-    env_value = str(run_environment or "").strip()
-    if env_value:
-        encoded_env = quote(env_value, safe="")
-        return (
-            f"{WEB_APP_BASE_URL}/evals/experiments/{encoded_env}/{encoded_evalset_id}"
-        )
-    return f"{WEB_APP_BASE_URL}/evals/experiments?evalset_id={encoded_evalset_id}"
-
-
-def _run_overlay_url(evalset_runs_url: str, run_id: str) -> str:
-    """Build a deep link that opens the run-details overlay directly.
-
-    The experiments page reads the ``run`` query parameter and opens the
-    run-details dialog for that run, so the same overlay shown by the in-app
-    "Details" button is reachable straight from the CLI report.
-    """
-    base = str(evalset_runs_url or "").strip()
-    run_value = str(run_id or "").strip()
-    if not base or not run_value:
-        return base
-    separator = "&" if "?" in base else "?"
-    return f"{base}{separator}run={quote(run_value, safe='')}"
 
 
 def _style_text(value: str, style: str | None, colorize: bool) -> str:
@@ -597,6 +560,8 @@ def _run_detail_record(run: dict[str, Any]) -> dict[str, Any]:
     usage = _extract_run_usage(run)
     return {
         "id": str(run.get("id", "")),
+        # The launch a run belongs to is where its page is (B4-08).
+        "launch_id": str(run.get("launch_id", "") or ""),
         "status": str(run.get("status", "")),
         "created_at": str(run.get("created_at", "")),
         "updated_at": str(run.get("updated_at", "")),
@@ -1631,7 +1596,6 @@ def _report_markdown(
     report: dict[str, Any], run_limit: int, *, colorize: bool = False
 ) -> str:
     evalset_id = str(report.get("evalset_id", ""))
-    run_environment = str(report.get("run_environment") or "")
     generated_at = str(report.get("generated_at", ""))
     experiments = [
         item for item in (report.get("experiments") or []) if isinstance(item, dict)
@@ -1650,7 +1614,7 @@ def _report_markdown(
             representative_case_name = name
         if name not in case_by_name:
             case_by_name[name] = case
-    evalset_runs_url = _evalset_runs_url(evalset_id, run_environment)
+    evalset_runs_url = benchmark_url(evalset_id)
 
     lines: list[str] = []
     # Verbose, drill-down content is collected here and emitted under a single
@@ -1685,7 +1649,7 @@ def _report_markdown(
         agentspec_rows: list[list[str]] = []
         for item in agentspecs:
             agent_spec_id = str(item.get("id") or "")
-            agent_spec_link = _agentspec_details_url(agent_spec_id)
+            agent_spec_link = agentspec_url(agent_spec_id)
             agentspec_rows.append(
                 [
                     agent_spec_id,
@@ -1717,7 +1681,7 @@ def _report_markdown(
         appendix_lines.append("")
         for item in agentspecs:
             agent_spec_id = str(item.get("id") or "")
-            agent_spec_link = _agentspec_details_url(agent_spec_id)
+            agent_spec_link = agentspec_url(agent_spec_id)
             display_name = str(item.get("name") or agent_spec_id or "-")
             emoji = str(item.get("emoji") or "").strip()
             heading = f"{emoji} {display_name}".strip()
@@ -2331,7 +2295,7 @@ def _report_markdown(
         agent_spec_label = str(
             experiment.get("agent_spec_name") or agent_spec_id or "-"
         )
-        agent_spec_link = _agentspec_details_url(agent_spec_id)
+        agent_spec_link = agentspec_url(agent_spec_id)
         if agent_spec_link:
             appendix_lines.append(f"Agentspec: [{agent_spec_label}]({agent_spec_link})")
         else:
@@ -2357,7 +2321,7 @@ def _report_markdown(
                 token_timeline_values.append(float(total_tokens))
             cause_text = _format_failure_cause(run.get("failure_cause"))
             run_id = str(run.get("id", ""))
-            run_link = _run_overlay_url(evalset_runs_url, run_id)
+            run_link = run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
             run_rows.append(
                 [
                     str(idx),
@@ -3104,7 +3068,7 @@ def _report_appendix_lines(
             metrics = _as_dict(run.get("metrics"))
             usage = _extract_run_usage(run)
             run_id = str(run.get("id", ""))
-            run_link = _run_overlay_url(evalset_runs_url, run_id)
+            run_link = run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
             pass_rate = run.get("pass_rate")
             passed = _appendix_metric_int(metrics, "passed", "passed_cases")
             total = _appendix_metric_int(metrics, "total_cases", "total", "cases")
@@ -3265,8 +3229,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
         writer = csv.DictWriter(stream, fieldnames=fieldnames)
         writer.writeheader()
         evalset_id = str(report.get("evalset_id", ""))
-        run_environment = str(report.get("run_environment") or "")
-        evalset_runs_url = _evalset_runs_url(evalset_id, run_environment)
+        evalset_runs_url = benchmark_url(evalset_id)
         for experiment in experiments:
             agent_spec_id = str(experiment.get("agent_spec_id", ""))
             writer.writerow(
@@ -3276,7 +3239,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                     "evalset_runs_url": evalset_runs_url,
                     "agent_spec_id": agent_spec_id,
                     "agent_spec_name": str(experiment.get("agent_spec_name", "")),
-                    "agent_spec_url": _agentspec_details_url(agent_spec_id),
+                    "agent_spec_url": agentspec_url(agent_spec_id),
                     "experiment_id": str(experiment.get("id", "")),
                     "experiment_name": str(experiment.get("name", "")),
                     "run_index": "",
@@ -3322,7 +3285,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                         "evalset_runs_url": evalset_runs_url,
                         "agent_spec_id": agent_spec_id,
                         "agent_spec_name": str(experiment.get("agent_spec_name", "")),
-                        "agent_spec_url": _agentspec_details_url(agent_spec_id),
+                        "agent_spec_url": agentspec_url(agent_spec_id),
                         "experiment_id": str(experiment.get("id", "")),
                         "experiment_name": str(experiment.get("name", "")),
                         "run_index": idx,
@@ -3359,7 +3322,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                                 "agent_spec_name": str(
                                     experiment.get("agent_spec_name", "")
                                 ),
-                                "agent_spec_url": _agentspec_details_url(agent_spec_id),
+                                "agent_spec_url": agentspec_url(agent_spec_id),
                                 "experiment_id": str(experiment.get("id", "")),
                                 "experiment_name": str(experiment.get("name", "")),
                                 "run_index": idx,
@@ -3417,7 +3380,6 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
 
 def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     evalset_id = str(report.get("evalset_id", ""))
-    run_environment = str(report.get("run_environment") or "")
     generated_at = str(report.get("generated_at", ""))
     experiments = [
         item for item in (report.get("experiments") or []) if isinstance(item, dict)
@@ -3425,7 +3387,7 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     agentspecs = [
         item for item in (report.get("agentspecs") or []) if isinstance(item, dict)
     ]
-    evalset_runs_url = _evalset_runs_url(evalset_id, run_environment)
+    evalset_runs_url = benchmark_url(evalset_id)
 
     console.rule(f"[bold cyan]Evals Report[/bold cyan] {evalset_id}")
     console.print(f"Generated at: {generated_at}")
@@ -3889,14 +3851,68 @@ def build_eval_report_lexical(
     return _build(report, evalset=evalset, launch=launch, run=run, cases=cases)
 
 
+#: What a review decision is called in a report (BENCHMARK.md, B4-03).
+DECISION_KIND_LABELS = {
+    "accepted_regression": "Accepted regression",
+    "expected_change": "Expected change",
+    "evaluator_issue": "Evaluator issue",
+    "data_issue": "Data issue",
+    "action_required": "Action required",
+}
+DECISION_OUTCOME_LABELS = {
+    "approved": "Approved",
+    "blocked": "Blocked",
+    "accepted_with_limitations": "Accepted with limitations",
+}
+
+
+def _decision_cell(value: Any) -> str:
+    return str(value or "").replace("|", "\\|").replace("\n", " ").strip()
+
+
+def render_decisions_markdown(decisions: list[dict[str, Any]]) -> str:
+    """The "Decisions" appendix of a report (B4-03).
+
+    What was decided about which part of the result, by whom and when, in
+    the order it was decided. Empty when nothing was, so a report nobody has
+    reviewed carries no empty section.
+    """
+    if not decisions:
+        return ""
+    lines = [
+        "## Decisions",
+        "",
+        "| Decided | Kind | Outcome | About | By | Note |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for decision in decisions:
+        kind = str(decision.get("kind") or "")
+        outcome = str(decision.get("outcome") or "")
+        about = f"{decision.get('scope') or ''} {decision.get('scope_ref') or ''}".strip()
+        cells = (
+            str(decision.get("decided_at") or "")[:10],
+            DECISION_KIND_LABELS.get(kind, kind),
+            DECISION_OUTCOME_LABELS.get(outcome, outcome),
+            about,
+            decision.get("decided_by_uid"),
+            decision.get("note"),
+        )
+        lines.append("| " + " | ".join(_decision_cell(cell) for cell in cells) + " |")
+    return "\n".join(lines) + "\n"
+
+
 def render_eval_report_markdown(
     report: dict[str, Any],
     *,
     run_limit: int = 50,
     colorize: bool = False,
+    decisions: list[dict[str, Any]] | None = None,
 ) -> str:
-    """Render a structured eval report as markdown."""
-    return _report_markdown(report, run_limit=run_limit, colorize=colorize)
+    """Render a structured eval report as markdown, with the decisions made
+    about it as its last section when there are any."""
+    markdown = _report_markdown(report, run_limit=run_limit, colorize=colorize)
+    appendix = render_decisions_markdown(decisions or [])
+    return f"{markdown.rstrip()}\n\n{appendix}" if appendix else markdown
 
 
 def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Path:
@@ -3904,6 +3920,78 @@ def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Pa
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     _write_report_csv(report, path)
+    return path
+
+
+#: The columns a report object's CSV adds after the CLI's own (B4-08).
+REPORT_OBJECT_COLUMNS = [
+    "block_index",
+    "block_type",
+    "block_is_evidence",
+    "block_text",
+    "decision_kind",
+    "decision_outcome",
+    "decision_scope",
+    "decision_scope_ref",
+    "decided_by_uid",
+    "decided_at",
+    "decision_note",
+]
+
+
+def write_report_object_csv(
+    report: dict[str, Any],
+    output_path: str | Path,
+    *,
+    narrative: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+) -> Path:
+    """The CSV of a report object (B4-08).
+
+    The rows of the report over its runs, exactly as the CLI writes them,
+    then a `narrative` row per block of its document and a `decision` row per
+    decision. The added fields are added columns, after the CLI's, so a
+    reader of the CLI's CSV reads the same columns in the same places.
+    """
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    runs_path = path.with_name(f"{path.stem}.runs{path.suffix}")
+    _write_report_csv(report, runs_path)
+    with runs_path.open("r", encoding="utf-8", newline="") as stream:
+        reader = csv.DictReader(stream)
+        fieldnames = list(reader.fieldnames or [])
+        rows = list(reader)
+    runs_path.unlink()
+    evalset_id = str(report.get("evalset_id", ""))
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fieldnames + REPORT_OBJECT_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+        for index, block in enumerate(narrative):
+            writer.writerow(
+                {
+                    "row_type": "narrative",
+                    "evalset_id": evalset_id,
+                    "block_index": index,
+                    "block_type": block.get("type", ""),
+                    "block_is_evidence": "true" if block.get("evidence") else "false",
+                    "block_text": block.get("text", ""),
+                }
+            )
+        for decision in decisions:
+            writer.writerow(
+                {
+                    "row_type": "decision",
+                    "evalset_id": evalset_id,
+                    "decision_kind": decision.get("kind", ""),
+                    "decision_outcome": decision.get("outcome", ""),
+                    "decision_scope": decision.get("scope", ""),
+                    "decision_scope_ref": decision.get("scope_ref", ""),
+                    "decided_by_uid": decision.get("decided_by_uid", ""),
+                    "decided_at": decision.get("decided_at", "") or "",
+                    "decision_note": decision.get("note", ""),
+                }
+            )
     return path
 
 

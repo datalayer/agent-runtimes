@@ -13,9 +13,11 @@ duration, limitations, and the reproduction command.
 Scalars become text, tables become Lexical tables, and the line analyses
 and the comparison families become Jupyter output nodes carrying the
 analysis JSON under one mime type, for a renderer that draws them. Every
-block carries a `provenance` naming the evalset, its version, the launch,
-the experiment, the run, the task and the analysis it came from, so a
-sentence in a report can be traced back to the record it summarises.
+block carries, in its `evidence` node state, the provenance naming the
+evalset, its version, the launch, the experiment, the run, the task and the
+analysis it came from, so a sentence in a report can be traced back to the
+record it summarises — and so the editor keeps what people write around it
+editable while the evidence itself stays as the runs said it.
 
 Markdown and CSV are untouched: this reads the same report they render.
 """
@@ -30,6 +32,8 @@ __all__ = [
     "ANALYSIS_MIME",
     "REPORT_SECTIONS",
     "build_eval_report_lexical",
+    "lexical_blocks",
+    "lexical_markdown",
 ]
 
 #: The mime type the analysis JSON travels under inside a Jupyter output.
@@ -66,8 +70,20 @@ def _text(content: str, fmt: int = 0) -> dict[str, Any]:
     return {"detail": 0, "format": fmt, "mode": "normal", "style": "", "text": content, "type": "text", "version": 1}
 
 
+def _evidence(provenance: dict[str, Any]) -> dict[str, Any]:
+    """The node state a generated block carries: where it came from.
+
+    Under `$`, which Lexical keeps through a load, a save and the
+    collaboration binding even for a key it does not know, so the mark stays
+    on the block, and the report editor locks the blocks that have it
+    (B4-04). A field beside `type` would be dropped the first time the
+    document is opened.
+    """
+    return {"evidence": provenance}
+
+
 def _block(kind: str, children: list[dict[str, Any]], provenance: dict[str, Any], **extra: Any) -> dict[str, Any]:
-    return {"children": children, "direction": "ltr", "format": "", "indent": 0, "type": kind, "version": 1, "provenance": provenance, **extra}
+    return {"children": children, "direction": "ltr", "format": "", "indent": 0, "type": kind, "version": 1, "$": _evidence(provenance), **extra}
 
 
 def _heading(words: str, tag: str, provenance: dict[str, Any]) -> dict[str, Any]:
@@ -109,7 +125,7 @@ def _analysis_output(analysis: dict[str, Any], provenance: dict[str, Any]) -> di
         "outputs": [{"output_type": "display_data", "data": {ANALYSIS_MIME: analysis, "text/plain": summary}, "metadata": {}}],
         "jupyterInputNodeUuid": f"in-{digest[:12]}",
         "jupyterOutputNodeUuid": f"out-{digest[12:24]}",
-        "provenance": provenance,
+        "$": _evidence(provenance),
     }
 
 
@@ -501,4 +517,163 @@ def build_eval_report_lexical(
     experiment_flags = " ".join(f"--experiment-id {item.get('id')}" for item in ranked[:1]) or "--experiment-id <experiment>"
     children.append(_paragraph(f"datalayer evals runs launch {experiment_flags} --run-mode batch", on(), IS_CODE))
 
+    # A stable anchor on every block, kept in its node state with the rest of
+    # its provenance: a link names the block (`?block=`) and opens the report
+    # on it wherever narrative has since been written around it (B4-07).
+    for index, child in enumerate(children, start=1):
+        child["$"]["evidence"]["block"] = f"block-{index}"
     return {"root": {"children": children, "direction": "ltr", "format": "", "indent": 0, "type": "root", "version": 1}}
+
+
+# ---------------------------------------------------------------------------
+# The document back out (B4-08)
+# ---------------------------------------------------------------------------
+
+IS_BOLD = 1
+
+
+def _cell_markdown(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ").strip()
+
+
+def _inline(children: Any) -> str:
+    """The text of inline nodes, with the formats Markdown has."""
+    parts: list[str] = []
+    for child in children or []:
+        if not isinstance(child, dict):
+            continue
+        kind = child.get("type")
+        if kind == "text":
+            text = str(child.get("text") or "")
+            fmt = int(child.get("format") or 0)
+            if text and fmt & IS_CODE:
+                text = f"`{text}`"
+            elif text:
+                if fmt & IS_BOLD:
+                    text = f"**{text}**"
+                if fmt & IS_ITALIC:
+                    text = f"*{text}*"
+            parts.append(text)
+        elif kind == "linebreak":
+            parts.append("  \n")
+        elif kind in {"link", "autolink"}:
+            parts.append(f"[{_inline(child.get('children'))}]({child.get('url') or ''})")
+        elif isinstance(child.get("children"), list):
+            parts.append(_inline(child["children"]))
+    return "".join(parts)
+
+
+def _plain(node: Any) -> str:
+    """Every word under a node, for a reader that wants no Markdown."""
+    if not isinstance(node, dict):
+        return ""
+    if node.get("type") == "text":
+        return str(node.get("text") or "")
+    if node.get("type") in {"jupyter-output", "report-evidence"}:
+        return _outputs_text(node.get("outputs"))
+    return " ".join(part for part in (_plain(child) for child in node.get("children") or []) if part)
+
+
+def _outputs_text(outputs: Any) -> str:
+    texts: list[str] = []
+    for output in outputs or []:
+        if not isinstance(output, dict):
+            continue
+        data = output.get("data") if isinstance(output.get("data"), dict) else {}
+        value = data.get("text/plain", output.get("text"))
+        if isinstance(value, list):
+            value = "".join(str(item) for item in value)
+        if value:
+            texts.append(str(value))
+    return "\n".join(texts)
+
+
+def _list_markdown(node: dict[str, Any], depth: int = 0) -> str:
+    ordered = node.get("listType") == "number"
+    lines: list[str] = []
+    for index, item in enumerate(node.get("children") or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        nested = [child for child in item.get("children") or [] if isinstance(child, dict) and child.get("type") == "list"]
+        words = _inline([child for child in item.get("children") or [] if not (isinstance(child, dict) and child.get("type") == "list")])
+        if words:
+            lines.append(f"{'  ' * depth}{f'{index}.' if ordered else '-'} {words}")
+        lines.extend(_list_markdown(child, depth + 1) for child in nested)
+    return "\n".join(line for line in lines if line)
+
+
+def _table_markdown(node: dict[str, Any]) -> str:
+    rows = [
+        [_cell_markdown(_inline(cell.get("children"))) for cell in row.get("children") or [] if isinstance(cell, dict)]
+        for row in node.get("children") or []
+        if isinstance(row, dict)
+    ]
+    rows = [row for row in rows if row]
+    if not rows:
+        return ""
+    width = max(len(row) for row in rows)
+    rows = [row + [""] * (width - len(row)) for row in rows]
+    lines = ["| " + " | ".join(rows[0]) + " |", "| " + " | ".join(["---"] * width) + " |"]
+    lines.extend("| " + " | ".join(row) + " |" for row in rows[1:])
+    return "\n".join(lines)
+
+
+def _block_markdown(node: dict[str, Any]) -> str:
+    kind = node.get("type")
+    children = node.get("children")
+    if kind == "heading":
+        tag = str(node.get("tag") or "h2")
+        level = int(tag[1:]) if tag[1:].isdigit() else 2
+        words = _inline(children)
+        return f"{'#' * level} {words}" if words else ""
+    if kind == "quote":
+        words = _inline(children)
+        return f"> {words}" if words else ""
+    if kind == "list":
+        return _list_markdown(node)
+    if kind == "table":
+        return _table_markdown(node)
+    if kind == "code":
+        return f"```{node.get('language') or ''}\n{_plain(node)}\n```"
+    if kind == "horizontalrule":
+        return "---"
+    if kind == "jupyter-output":
+        text = _outputs_text(node.get("outputs"))
+        return f"```\n{text}\n```" if text else ""
+    if kind == "report-evidence":
+        parts = []
+        if node.get("source"):
+            parts.append(f"```python\n{node['source']}\n```")
+        text = _outputs_text(node.get("outputs"))
+        if text:
+            parts.append(f"```\n{text}\n```")
+        if node.get("caption"):
+            parts.append(f"*{node['caption']}*")
+        return "\n\n".join(parts)
+    return _inline(children)
+
+
+def _is_evidence(node: dict[str, Any]) -> bool:
+    state = node.get("$") if isinstance(node.get("$"), dict) else {}
+    return bool(state.get("evidence")) or node.get("type") == "report-evidence"
+
+
+def lexical_blocks(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """The blocks of a document in their order: each one's type, its Markdown,
+    its plain words, and whether it is evidence the runs produced or pinned
+    rather than narrative people wrote. Blocks with nothing in them are left out."""
+    root = state.get("root") if isinstance(state, dict) and isinstance(state.get("root"), dict) else {}
+    blocks: list[dict[str, Any]] = []
+    for node in root.get("children") or []:
+        if not isinstance(node, dict):
+            continue
+        markdown = _block_markdown(node)
+        if not markdown.strip():
+            continue
+        blocks.append({"type": str(node.get("type") or ""), "markdown": markdown, "text": _plain(node), "evidence": _is_evidence(node)})
+    return blocks
+
+
+def lexical_markdown(state: dict[str, Any]) -> str:
+    """A document as Markdown, narrative and evidence in the order they are in."""
+    return "\n\n".join(block["markdown"] for block in lexical_blocks(state)) + "\n"

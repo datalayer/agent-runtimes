@@ -30,6 +30,7 @@ from agent_runtimes.evals.remote.evals import (
 from agent_runtimes.evals.remote.evals import (
     parse_json_value as _parse_json_value,
 )
+from agent_runtimes.evals.links import benchmark_report_url, launch_url
 from agent_runtimes.evals.remote.evaluators import evaluate_evalset
 from agent_runtimes.evals.remote.runner import (
     launch_outcome_lines,
@@ -41,7 +42,6 @@ from agent_runtimes.evals.remote.runner import (
     ensure_experiments,
     execute_evalset_spec,
     launch_config,
-    launch_url,
     resolve_evalset,
     submit_launch,
     watch_launch,
@@ -500,6 +500,8 @@ def _render_report(
         output_path.write_text(markdown_report + "\n", encoding="utf-8")
         console.print(f"[green]Report written:[/green] {output_path}")
     _print_report_console(report, run_limit=run_limit)
+    # Where the same results are read, worked on and shared (B4-08).
+    console.print(f"Live report: {benchmark_report_url(resolved_evalset_id)}")
 
 
 @app.command(name="report")

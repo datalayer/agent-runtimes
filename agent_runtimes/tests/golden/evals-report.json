@@ -183,6 +183,7 @@
           "created_at": "2026-09-03T10:18:24Z",
           "failure_cause": null,
           "id": "run-1-3",
+          "launch_id": "launch-123",
           "metrics": {
             "avg_score": 0.8333333333333334,
             "case_results": [
@@ -333,6 +334,7 @@
           "created_at": "2026-09-02T10:18:24Z",
           "failure_cause": null,
           "id": "run-1-2",
+          "launch_id": "launch-122",
           "metrics": {
             "avg_score": 0.6666666666666666,
             "case_results": [
@@ -605,6 +607,7 @@
           "created_at": "2026-09-03T10:18:24Z",
           "failure_cause": null,
           "id": "run-1-3",
+          "launch_id": "launch-123",
           "metrics": {
             "avg_score": 0.8333333333333334,
             "case_results": [
@@ -755,6 +758,7 @@
           "created_at": "2026-09-02T10:18:24Z",
           "failure_cause": null,
           "id": "run-1-2",
+          "launch_id": "launch-122",
           "metrics": {
             "avg_score": 0.6666666666666666,
             "case_results": [
@@ -905,6 +909,7 @@
           "created_at": "2026-09-01T10:18:24Z",
           "failure_cause": null,
           "id": "run-1-1",
+          "launch_id": "launch-121",
           "metrics": {
             "avg_score": 0.5,
             "case_results": [
@@ -1080,6 +1085,7 @@
           "created_at": "2026-09-02T10:18:24Z",
           "failure_cause": null,
           "id": "run-2-2",
+          "launch_id": "launch-122",
           "metrics": {
             "avg_score": 0.3333333333333333,
             "case_results": [
@@ -1230,6 +1236,7 @@
           "created_at": "2026-09-01T10:18:24Z",
           "failure_cause": null,
           "id": "run-2-1",
+          "launch_id": "launch-121",
           "metrics": {
             "avg_score": 0.5,
             "case_results": [
@@ -1487,6 +1494,7 @@
           "created_at": "2026-09-02T10:18:24Z",
           "failure_cause": null,
           "id": "run-2-2",
+          "launch_id": "launch-122",
           "metrics": {
             "avg_score": 0.3333333333333333,
             "case_results": [
@@ -1637,6 +1645,7 @@
           "created_at": "2026-09-01T10:18:24Z",
           "failure_cause": null,
           "id": "run-2-1",
+          "launch_id": "launch-121",
           "metrics": {
             "avg_score": 0.5,
             "case_results": [

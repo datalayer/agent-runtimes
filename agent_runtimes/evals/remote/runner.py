@@ -12,7 +12,6 @@ grade outputs -> persist runs -> teardown runtimes).
 
 from __future__ import annotations
 
-import os
 import time
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -38,6 +37,7 @@ from agent_runtimes.evals.remote.evals import (
     timestamp_slug,
     write_eval_reports,
 )
+from agent_runtimes.evals.links import benchmark_url, launch_url
 from agent_runtimes.evals.remote.evaluators import evaluate_evalset
 from agent_runtimes.utils.agent_utils import teardown_agent_execution_resources
 
@@ -68,21 +68,6 @@ LAUNCH_SETTLED_STATUSES = frozenset({"completed", "failed", "cancelled", "blocke
 
 def is_settled_launch_status(value: Any) -> bool:
     return str(value or "").strip().lower() in LAUNCH_SETTLED_STATUSES
-
-
-def ui_base_url() -> str:
-    """Where the product is, for the addresses the runner prints."""
-    return str(os.environ.get("DATALAYER_UI_URL") or "https://datalayer.app").strip().rstrip("/")
-
-
-def launch_url(launch_id: str) -> str:
-    """The launch's page: its runs, and the live report of each."""
-    return f"{ui_base_url()}/runs/{launch_id}"
-
-
-def benchmark_url(evalset_id: str) -> str:
-    """The benchmark's page, which is what the product calls an evalset."""
-    return f"{ui_base_url()}/benchmarks/{evalset_id}"
 
 
 def resolve_evalset(
