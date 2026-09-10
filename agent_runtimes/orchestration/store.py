@@ -485,7 +485,18 @@ class ExecutionStore(ABC):
             raise ExecutionConflict(
                 f"Execution '{execution.execution_id}' already exists."
             )
-        await self.save(execution, idempotency_key=idempotency_key)
+        try:
+            await self.save(execution, idempotency_key=idempotency_key)
+        except ExecutionConflict:
+            # Two deliveries of one command raced past the lookup above: a
+            # store that claims the key atomically refuses the second. That
+            # one finds the execution the first made, as it would have had
+            # it arrived a moment later.
+            if idempotency_key:
+                existing = await self.find_by_idempotency_key(idempotency_key)
+                if existing is not None and _same_intent(existing, execution):
+                    return existing
+            raise
         await self._append(
             event_for(
                 execution,

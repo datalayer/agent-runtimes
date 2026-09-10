@@ -6,9 +6,13 @@
 /**
  * Agent notifications API functions.
  *
- * Provides CRUD operations for agent-generated notifications.
- * Agents emit notifications for guardrail events, budget warnings,
- * task completions, and other notable events.
+ * The caller's inbox on the AI Agents service: agents emit notifications for
+ * guardrail events, budget warnings and task completions, and benchmark runs,
+ * approvals and investigations leave theirs too. Every route answers for the
+ * caller's own notifications only.
+ *
+ * The service answers snake case records inside an envelope; these functions
+ * return `AgentNotification`s, so a caller never reads the wire shape.
  *
  * @module api/notifications
  */
@@ -19,10 +23,43 @@ import {
   DEFAULT_SERVICE_URLS,
 } from '@datalayer/core/lib/api/constants';
 import { validateToken } from '@datalayer/core/lib/api/utils/validation';
-import type { AgentNotification, NotificationFilters } from '../types';
+import type {
+  AgentNotification,
+  NotificationFilters,
+  NotificationLevel,
+} from '../types';
+
+/** One notification as the service answers it. */
+interface NotificationRecord {
+  id: string;
+  agent_id?: string;
+  level?: string;
+  category?: string;
+  title?: string;
+  message?: string;
+  read?: boolean;
+  created_at?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+/** A record of the service as the notification this client returns. */
+export const toAgentNotification = (
+  record: NotificationRecord,
+): AgentNotification => ({
+  id: record.id,
+  agentId: record.agent_id ?? '',
+  runtimeName: '',
+  level: (record.level ?? 'info') as NotificationLevel,
+  title: record.title ?? '',
+  body: record.message ?? '',
+  read: Boolean(record.read),
+  createdAt: record.created_at ?? '',
+  category: record.category ?? 'general',
+  metadata: record.metadata ?? {},
+});
 
 /**
- * List agent notifications with optional filters.
+ * List the caller's notifications with optional filters.
  * @param token - Authentication token
  * @param filters - Optional filters (agentId, level, unreadOnly, category, limit, offset)
  * @param baseUrl - Base URL
@@ -45,15 +82,18 @@ export const getNotifications = async (
 
   const query = params.toString() ? `?${params.toString()}` : '';
 
-  return requestDatalayerAPI<AgentNotification[]>({
+  const answer = await requestDatalayerAPI<{
+    notifications?: NotificationRecord[];
+  }>({
     url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/notifications${query}`,
     method: 'GET',
     token,
   });
+  return (answer?.notifications ?? []).map(toAgentNotification);
 };
 
 /**
- * Get a specific notification by ID.
+ * Get one of the caller's notifications by ID.
  * @param token - Authentication token
  * @param id - Notification ID
  * @param baseUrl - Base URL
@@ -64,11 +104,12 @@ export const getNotification = async (
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<AgentNotification> => {
   validateToken(token);
-  return requestDatalayerAPI<AgentNotification>({
+  const record = await requestDatalayerAPI<NotificationRecord>({
     url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/notifications/${encodeURIComponent(id)}`,
     method: 'GET',
     token,
   });
+  return toAgentNotification(record);
 };
 
 /**
@@ -91,28 +132,27 @@ export const markNotificationRead = async (
 };
 
 /**
- * Mark all notifications as read.
+ * Mark the caller's notifications as read: the ones named, or all of them.
  * @param token - Authentication token
- * @param agentId - Optional: only for a specific agent
+ * @param notificationIds - Optional: only these notifications
  * @param baseUrl - Base URL
  */
 export const markAllRead = async (
   token: string,
-  agentId?: string,
+  notificationIds?: string[],
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<void> => {
   validateToken(token);
-  const body = agentId ? { agent_id: agentId } : {};
   await requestDatalayerAPI<void>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/notifications/read-all`,
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/notifications/mark-all-read`,
     method: 'POST',
-    body,
+    body: notificationIds?.length ? { notification_ids: notificationIds } : {},
     token,
   });
 };
 
 /**
- * Get count of unread notifications.
+ * Get the count of the caller's unread notifications.
  * @param token - Authentication token
  * @param baseUrl - Base URL
  * @returns Promise resolving to unread count

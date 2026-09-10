@@ -464,6 +464,13 @@ def evaluate_run(
                 passed_cases += 1
             scores.append(float(single.get("score", 0.0)) if ok else 0.0)
         mean_score = round(sum(scores) / len(scores), 4) if scores else None
+        if applicable_cases == 0:
+            # Every case declares its own evaluators, so this evalset default
+            # graded nothing and its verdict is in the per-case results.
+            # Reported as a result it read "0/0 cases passed" and counted as
+            # a failed run in every report of a benchmark whose cases all
+            # passed (2026-09-10).
+            continue
         evaluator_results.append(
             {
                 "name": name,
