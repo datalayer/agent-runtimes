@@ -214,6 +214,47 @@ def _analysis_line(name: str, x: list[Any], y: list[float]) -> dict[str, Any]:
     }
 
 
+def _analysis_heatmap(
+    name: str, rows: list[str], columns: list[str], values: list[list[float | None]]
+) -> dict[str, Any]:
+    """A grid of pass rates: one row per experiment, one column per run.
+
+    `BENCHMARK.md` section 12.2 asks for "recent-run heatmaps" beside the
+    pairwise deltas, and a heatmap is the one shape that shows a regression
+    that only some experiments had — a column that darkens across every row is
+    the benchmark, a cell that darkens alone is that experiment.
+
+    A run an experiment does not have is `None` rather than 0: an experiment
+    that ran four times where another ran six has a gap, and drawing the gap as
+    a zero would read as a total failure.
+    """
+    return {
+        "kind": "heatmap",
+        "name": name,
+        "rows": rows,
+        "columns": columns,
+        "values": values,
+    }
+
+
+def _analysis_pairwise(name: str, pairs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Every experiment against every other, as candidate against baseline.
+
+    Section 12.2 fixes the direction and it is not a detail: **A is the
+    candidate, B is the baseline, and the delta is `A - B`**. A positive delta
+    is the candidate ahead. Two readers who disagree about the sign of a delta
+    are two readers who disagree about whether a change helped, so the
+    convention is written into the payload rather than left to whoever draws
+    it.
+    """
+    return {
+        "kind": "pairwise",
+        "name": name,
+        "convention": "delta = candidate - baseline",
+        "pairs": pairs,
+    }
+
+
 def _build_experiment_report_analyses(
     runs: list[dict[str, Any]],
     consecutive_comparisons: list[dict[str, Any]],
@@ -321,7 +362,77 @@ def _build_evalset_report_analyses(
             latest_rows,
         ),
         _analysis_line("Latest Pass Rate By Experiment", latest_names, latest_values),
+        _recent_run_heatmap(experiments),
+        _pairwise_deltas(experiments),
     ]
+
+
+#: How many of an experiment's runs the heatmap shows. Enough to see a trend,
+#: few enough that the grid stays readable in a report somebody scrolls.
+HEATMAP_RUNS = 6
+
+
+def _recent_run_heatmap(experiments: list[dict[str, Any]]) -> dict[str, Any]:
+    """The last few runs of every experiment, as one grid (B3-10).
+
+    The columns are positions rather than run identifiers: two experiments'
+    fourth runs are comparable as "the fourth", and no two experiments share a
+    run id to line up on.
+    """
+    rows: list[str] = []
+    values: list[list[float | None]] = []
+    for experiment in experiments:
+        runs = [run for run in (experiment.get("runs") or []) if isinstance(run, dict)]
+        recent = runs[-HEATMAP_RUNS:]
+        row: list[float | None] = []
+        for run in recent:
+            pass_rate = run.get("pass_rate")
+            row.append(float(pass_rate) if isinstance(pass_rate, (int, float)) else None)
+        # Left-padded, so the last column is every experiment's latest run and
+        # a column reads down as "the most recent", not as "the fourth of
+        # however many this one happened to have".
+        row = [None] * (HEATMAP_RUNS - len(row)) + row
+        rows.append(str(experiment.get("name") or experiment.get("id") or ""))
+        values.append(row)
+    columns = [f"-{HEATMAP_RUNS - index - 1}" for index in range(HEATMAP_RUNS)]
+    columns[-1] = "latest"
+    return _analysis_heatmap("Recent Runs", rows, columns, values)
+
+
+def _pairwise_deltas(experiments: list[dict[str, Any]]) -> dict[str, Any]:
+    """Every experiment against every other, candidate minus baseline (B3-10).
+
+    Both directions of a pair, because which one is the candidate is the
+    reader's question and not the report's: somebody comparing a new agent
+    against the incumbent and somebody comparing the incumbent against the new
+    agent are asking different things, and a table with one row per unordered
+    pair answers only one of them.
+    """
+    named = [
+        (str(item.get("name") or item.get("id") or ""), item.get("latest_pass_rate"))
+        for item in experiments
+    ]
+    pairs: list[dict[str, Any]] = []
+    for candidate, candidate_rate in named:
+        for baseline, baseline_rate in named:
+            if candidate == baseline:
+                continue
+            delta = (
+                float(candidate_rate) - float(baseline_rate)
+                if isinstance(candidate_rate, (int, float))
+                and isinstance(baseline_rate, (int, float))
+                else None
+            )
+            pairs.append(
+                {
+                    "candidate": candidate,
+                    "baseline": baseline,
+                    "candidate_pass_rate": candidate_rate,
+                    "baseline_pass_rate": baseline_rate,
+                    "delta_pass_rate": delta,
+                }
+            )
+    return _analysis_pairwise("Pairwise Deltas", pairs)
 
 
 def _classify_legacy_failure(message: str) -> dict[str, Any]:

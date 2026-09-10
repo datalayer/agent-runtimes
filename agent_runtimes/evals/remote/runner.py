@@ -13,7 +13,8 @@ grade outputs -> persist runs -> teardown runtimes).
 from __future__ import annotations
 
 import os
-import uuid
+import time
+from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import urlparse
 
@@ -21,9 +22,7 @@ from agent_runtimes.client import AgentClient
 from agent_runtimes.client.agent_client import (
     LocalAgentRuntime,
     ensure_local_agent,
-    run_cloud_agent_chat,
     run_local_agent_chat,
-    runtime_route_candidates,
     start_local_agent_runtime,
     wait_for_local_runtime,
 )
@@ -34,17 +33,13 @@ from agent_runtimes.evals.common import (
     merge_run_usage,
 )
 from agent_runtimes.evals.remote.evals import (
+    load_evalset_spec,
     now_iso,
     timestamp_slug,
     write_eval_reports,
 )
 from agent_runtimes.evals.remote.evaluators import evaluate_evalset
-from agent_runtimes.utils.agent_utils import (
-    compute_time_reservation_minutes,
-    create_cloud_agent_runtime,
-    resolve_environment_burning_rate,
-    teardown_agent_execution_resources,
-)
+from agent_runtimes.utils.agent_utils import teardown_agent_execution_resources
 
 DEFAULT_ENVIRONMENT_NAME = "ai-agents-env"
 DEFAULT_AGENT_NAME = "default"
@@ -54,6 +49,385 @@ DEFAULT_LOCAL_AGENT_BASE_URL = "http://localhost:8765"
 # aborted, the case is marked failed, execution continues, and the enclosing
 # runner always tears down its cloud runtimes before returning.
 DEFAULT_REQUEST_TIMEOUT_SECONDS = 180
+DEFAULT_CONCURRENCY = 4
+DEFAULT_TIME_RESERVATION_MINUTES = 60.0
+DEFAULT_WATCH_TIMEOUT_SECONDS = 3600
+DEFAULT_POLL_INTERVAL_SECONDS = 5.0
+#: How long a launch may stay `queued` — nothing started, no task counted —
+#: before the watch gives up on it. A run takes an hour; being *taken* takes
+#: seconds, and a launch still queued after this long has no executor behind
+#: it. Waiting the full watch timeout for that is what read as a hang.
+DEFAULT_QUEUED_TIMEOUT_SECONDS = 180
+#: How often the watch says it is still waiting when nothing has changed.
+DEFAULT_HEARTBEAT_SECONDS = 30.0
+
+#: A launch that will not move on its own: over, or `blocked` — waiting on
+#: credits, compute or an approval a person has to provide (B2-06).
+LAUNCH_SETTLED_STATUSES = frozenset({"completed", "failed", "cancelled", "blocked"})
+
+
+def is_settled_launch_status(value: Any) -> bool:
+    return str(value or "").strip().lower() in LAUNCH_SETTLED_STATUSES
+
+
+def ui_base_url() -> str:
+    """Where the product is, for the addresses the runner prints."""
+    return str(os.environ.get("DATALAYER_UI_URL") or "https://datalayer.app").strip().rstrip("/")
+
+
+def launch_url(launch_id: str) -> str:
+    """The launch's page: its runs, and the live report of each."""
+    return f"{ui_base_url()}/runs/{launch_id}"
+
+
+def benchmark_url(evalset_id: str) -> str:
+    """The benchmark's page, which is what the product calls an evalset."""
+    return f"{ui_base_url()}/benchmarks/{evalset_id}"
+
+
+def resolve_evalset(
+    client: AgentClient,
+    spec_or_id: str | Path | dict[str, Any],
+    *,
+    run_environment: str = "sdk",
+    name: Optional[str] = None,
+    billing_entity_uid: Optional[str] = None,
+    account_uid: Optional[str] = None,
+    log: Optional[Callable[[str], None]] = print,
+) -> dict[str, Any]:
+    """An evalset on the platform: imported from a spec (a file path or the
+    loaded dict) through the service's import route — the one the wizard
+    uses — or found by id.
+
+    Returns ``{evalset_id, evalset, imported, unsupported_evaluators}``. The
+    evaluators the platform cannot run are dropped by the import and named
+    here, so a benchmark never claims a grade it will not compute (B0-11).
+    """
+    spec: Optional[dict[str, Any]] = None
+    if isinstance(spec_or_id, dict):
+        spec = dict(spec_or_id)
+    else:
+        path = Path(str(spec_or_id))
+        if path.is_file():
+            spec = load_evalset_spec(path, require_cases=True)
+    if spec is None:
+        evalset_id = str(spec_or_id).strip()
+        if not evalset_id:
+            raise ValueError("Provide an evalset spec file or an evalset id.")
+        return {
+            "evalset_id": evalset_id,
+            "evalset": None,
+            "imported": False,
+            "unsupported_evaluators": [],
+        }
+    if name:
+        spec["name"] = str(name)
+    payload = client.evals_import_eval(
+        spec=spec,
+        run_environment=run_environment,
+        billing_entity_uid=billing_entity_uid,
+        account_uid=account_uid,
+    )
+    evalset = payload.get("evalset") if isinstance(payload.get("evalset"), dict) else {}
+    evalset_id = str(evalset.get("id") or "").strip()
+    if not evalset_id:
+        raise RuntimeError(
+            f"Unable to import the evalset: {payload.get('message') or payload}"
+        )
+    unsupported = [str(item) for item in (payload.get("unsupported_evaluators") or [])]
+    if log is not None:
+        log(
+            f"Imported evalset: {evalset_id} ({evalset.get('name') or spec.get('name') or ''})"
+        )
+        if unsupported:
+            log("Dropped evaluators the platform cannot run: " + ", ".join(unsupported))
+    return {
+        "evalset_id": evalset_id,
+        "evalset": evalset,
+        "imported": True,
+        "unsupported_evaluators": unsupported,
+    }
+
+
+def subject_of_experiment(experiment: dict[str, Any]) -> dict[str, str]:
+    """The kind and ref an experiment runs, from its record or its config."""
+    subject = (
+        experiment.get("subject") if isinstance(experiment.get("subject"), dict) else {}
+    )
+    config = (
+        experiment.get("config") if isinstance(experiment.get("config"), dict) else {}
+    )
+    if not subject and isinstance(config.get("subject"), dict):
+        subject = config["subject"]
+    if not subject and config.get("agent_spec_id"):
+        subject = {"kind": "agentspec", "ref": str(config.get("agent_spec_id"))}
+    return {
+        "kind": str(subject.get("kind") or ""),
+        "ref": str(subject.get("ref") or subject.get("model") or ""),
+    }
+
+
+def ensure_experiments(
+    client: AgentClient,
+    *,
+    evalset_id: str,
+    subjects: list[dict[str, Any]],
+    run_mode: str = "batch",
+    launch_source: str = "datalayer-core",
+    billing_entity_uid: Optional[str] = None,
+    account_uid: Optional[str] = None,
+    log: Optional[Callable[[str], None]] = print,
+) -> list[str]:
+    """One experiment per subject on the evalset: the existing one that runs
+    that subject, else a new one (B2-11). Experiments are the durable objects
+    runs compare across, so a second launch of the same agent lands on the
+    same experiment rather than a fresh one."""
+    listing = client.evals_list_experiments(
+        evalset_id=evalset_id,
+        limit=200,
+        billing_entity_uid=billing_entity_uid,
+        account_uid=account_uid,
+    )
+    existing = [
+        item for item in (listing.get("experiments") or []) if isinstance(item, dict)
+    ]
+    experiment_ids: list[str] = []
+    for subject in subjects:
+        wanted = {
+            "kind": str(subject.get("kind") or ""),
+            "ref": str(subject.get("ref") or ""),
+        }
+        if not wanted["kind"] or not wanted["ref"]:
+            raise ValueError(f"A subject needs a kind and a ref: {subject!r}")
+        found = next(
+            (
+                item
+                for item in existing
+                if subject_of_experiment(item) == wanted and not item.get("archived")
+            ),
+            None,
+        )
+        if found is not None:
+            experiment_ids.append(str(found["id"]))
+            continue
+        config: dict[str, Any] = {
+            "run_mode": run_mode,
+            "execution_target": "cloud",
+            "subject": dict(subject),
+        }
+        if wanted["kind"] == "agentspec":
+            config["agent_spec_id"] = wanted["ref"]
+        payload = client.evals_create_experiment(
+            name=wanted["ref"],
+            evalset_id=evalset_id,
+            description=f"{wanted['kind']} {wanted['ref']}",
+            status="draft",
+            config=config,
+            summary={
+                "launch_source": launch_source,
+                "agent_spec_id": wanted["ref"] if wanted["kind"] == "agentspec" else "",
+            },
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+        experiment_id = str((payload.get("experiment") or {}).get("id") or "")
+        if not experiment_id:
+            raise RuntimeError(
+                f"Unable to create the experiment for {wanted['kind']} {wanted['ref']}: {payload.get('message') or payload}"
+            )
+        if log is not None:
+            log(
+                f"Created experiment {experiment_id} for {wanted['kind']} {wanted['ref']}"
+            )
+        experiment_ids.append(experiment_id)
+    return experiment_ids
+
+
+def launch_config(
+    *,
+    concurrency: int = DEFAULT_CONCURRENCY,
+    environment: str = DEFAULT_ENVIRONMENT_NAME,
+    time_reservation: float = DEFAULT_TIME_RESERVATION_MINUTES,
+    request_timeout_seconds: int = DEFAULT_REQUEST_TIMEOUT_SECONDS,
+    budget: Optional[float] = None,
+    retention: str = "snapshots",
+    git: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """The launch's configuration, the keys the service reads (B2-03, B2-06).
+
+    `git` is where the launch came from when CI made it (BENCHMARK.md,
+    B6-02): the commit, the ref, the pull request, the action run and the
+    repository. Kept on the launch, indexed by the service, shown on the
+    launch's page and in the report's methodology. Empty values are dropped,
+    so a launch made by hand carries no `git` at all.
+    """
+    config: dict[str, Any] = {
+        "concurrency": max(1, int(concurrency)),
+        "environment": str(environment or DEFAULT_ENVIRONMENT_NAME),
+        "time_reservation": float(time_reservation),
+        "request_timeout_seconds": max(1, int(request_timeout_seconds)),
+        "retention": str(retention or "snapshots"),
+    }
+    if budget is not None:
+        config["budget"] = float(budget)
+    context = {key: str(value) for key, value in (git or {}).items() if value not in (None, "")}
+    if context:
+        config["git"] = context
+    return config
+
+
+def submit_launch(
+    client: AgentClient,
+    *,
+    evalset_id: str,
+    experiment_ids: list[str],
+    run_mode: str = "batch",
+    config: Optional[dict[str, Any]] = None,
+    billing_entity_uid: Optional[str] = None,
+    account_uid: Optional[str] = None,
+) -> dict[str, Any]:
+    """Submit the launch; the answer carries the launch and its queued runs.
+
+    A deployment on which nothing executes launches is refused here: a run
+    that would sit `queued` forever is not a run.
+    """
+    payload = client.evals_create_launch(
+        evalset_id,
+        experiment_ids=experiment_ids,
+        run_mode=run_mode,
+        config=config or launch_config(),
+        billing_entity_uid=billing_entity_uid,
+        account_uid=account_uid,
+    )
+    launch = payload.get("launch") if isinstance(payload.get("launch"), dict) else {}
+    if not launch.get("id"):
+        raise RuntimeError(
+            f"Unable to create the launch: {payload.get('message') or payload}"
+        )
+    if payload.get("executes") is False:
+        raise RuntimeError(
+            "Nothing is executing this launch: either ai-agents is not configured with the "
+            "durable service, or the durable service did not take the runs. "
+            f"The launch {launch['id']} is recorded and will stay queued: {launch_url(launch['id'])}"
+        )
+    return payload
+
+
+def launch_outcome_lines(payload: dict[str, Any]) -> list[str]:
+    """What to say about a settled launch, beyond its status: one line per
+    run that did not complete, with why (BENCHMARK.md, 25.13).
+
+    "Launch 1 failed" alone sent people to the page to learn that every run
+    was refused at its first step; the run's failure cause is in the answer
+    already, so it is said here.
+    """
+    launch = payload.get("launch") if isinstance(payload.get("launch"), dict) else {}
+    lines: list[str] = []
+    reason = str(launch.get("blocked_reason") or "")
+    if reason:
+        lines.append(f"Blocked: {reason}")
+    for run in payload.get("runs") or []:
+        if not isinstance(run, dict):
+            continue
+        status = str(run.get("status") or "")
+        if status in {"completed", "running", "queued"}:
+            continue
+        summary = run.get("summary") if isinstance(run.get("summary"), dict) else {}
+        cause = summary.get("failure_cause") if isinstance(summary.get("failure_cause"), dict) else {}
+        subject = str(summary.get("agent_spec_id") or (summary.get("subject") or {}).get("model") or run.get("experiment_id") or "")
+        where = f" ({summary.get('agent_spec_id') and 'agentspec ' or 'experiment '}{subject})" if subject else ""
+        why = ""
+        if cause:
+            why = f": {cause.get('stage') or 'failure'} — {cause.get('message') or ''}".rstrip(" —")
+        # A blocked run says why on itself: `no_compute` when no sandbox of
+        # its pool came up, `budget_reached` when it stopped taking tasks.
+        blocked = str(run.get("blocked_reason") or summary.get("blocked_reason") or "")
+        if not why and blocked:
+            why = f": {blocked}"
+        lines.append(f"  run {run.get('id')}{where} {status}{why}")
+    return lines
+
+
+def watch_launch(
+    client: AgentClient,
+    launch_id: str,
+    *,
+    timeout_seconds: int = DEFAULT_WATCH_TIMEOUT_SECONDS,
+    interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
+    queued_timeout_seconds: int = DEFAULT_QUEUED_TIMEOUT_SECONDS,
+    heartbeat_seconds: float = DEFAULT_HEARTBEAT_SECONDS,
+    billing_entity_uid: Optional[str] = None,
+    account_uid: Optional[str] = None,
+    log: Optional[Callable[[str], None]] = print,
+) -> dict[str, Any]:
+    """Follow the launch until it is settled; the last answer read.
+
+    A line per change of status, with the tasks done over the total and the
+    credits consumed so far; `blocked` ends the watch as `failed` does, since
+    neither moves without a person.
+
+    Two things it refuses to do silently. While nothing changes it says so
+    every ``heartbeat_seconds``, with how long it has been waiting, because
+    a watch that prints nothing for an hour is indistinguishable from a hang.
+    And a launch still ``queued`` after ``queued_timeout_seconds`` — no run
+    started, no task counted — is given up on with the reason named: being
+    taken by the executor is a matter of seconds, and a launch nobody takes
+    will not be taken by waiting longer.
+    """
+    started = time.time()
+    last_line = ""
+    last_said = started
+    while True:
+        payload = client.evals_get_launch(
+            launch_id, billing_entity_uid=billing_entity_uid, account_uid=account_uid
+        )
+        launch = (
+            payload.get("launch") if isinstance(payload.get("launch"), dict) else {}
+        )
+        status = str(launch.get("status") or "unknown").lower()
+        progress = (
+            launch.get("progress") if isinstance(launch.get("progress"), dict) else {}
+        )
+        waited = int(time.time() - started)
+        total = int(progress.get("total_cases") or 0)
+        # Taken means a task has started, finished or failed. The total is
+        # known from the benchmark at creation and says nothing about that.
+        taken = any(
+            int(progress.get(key) or 0)
+            for key in ("running_cases", "completed_cases", "failed_cases")
+        )
+        untaken = status == "queued" and not taken
+        if untaken:
+            detail = f"tasks=0/{total}, waiting for the executor to take it"
+        else:
+            detail = (
+                f"tasks={progress.get('completed_cases', 0)}/{total} "
+                f"failed={progress.get('failed_cases', 0)} "
+                f"credits={float(progress.get('cost_credits') or 0.0):.2f}"
+            )
+        line = f"{status} {detail}"
+        name = launch.get("number") or launch_id
+        if line != last_line:
+            if log is not None:
+                log(f"Launch {name}: {line} (t+{waited}s)")
+            last_line = line
+            last_said = time.time()
+        elif log is not None and time.time() - last_said >= heartbeat_seconds:
+            log(f"Launch {name}: still {status}, {waited}s so far")
+            last_said = time.time()
+        if is_settled_launch_status(status):
+            return payload
+        if untaken and waited >= queued_timeout_seconds:
+            raise RuntimeError(
+                f"The launch {launch_id} is still queued after {waited}s: nothing has taken it. "
+                "The durable service behind ai-agents is not running the workflow. "
+                f"The launch stays recorded at {launch_url(launch_id)} and will run when it is."
+            )
+        if time.time() - started >= timeout_seconds:
+            raise TimeoutError(
+                f"the launch {launch_id} is still {status} after {timeout_seconds}s"
+            )
+        time.sleep(interval_seconds)
 
 
 def execute_evalset_spec(
@@ -68,7 +442,7 @@ def execute_evalset_spec(
     environment_name: str = DEFAULT_ENVIRONMENT_NAME,
     billing_entity_uid: Optional[str] = None,
     account_uid: Optional[str] = None,
-    credits_limit: float = 100.0,
+    credits_limit: Optional[float] = None,
     evalset_name: Optional[str] = None,
     backend_run_environment: str = "sdk",
     launch_source: str = "datalayer-core",
@@ -78,16 +452,23 @@ def execute_evalset_spec(
     auto_start_local_agent_runtime: bool = False,
     local_agent_log_level: str = "info",
     request_timeout_seconds: int = DEFAULT_REQUEST_TIMEOUT_SECONDS,
+    concurrency: int = DEFAULT_CONCURRENCY,
+    time_reservation_minutes: float = DEFAULT_TIME_RESERVATION_MINUTES,
+    watch_timeout_seconds: int = DEFAULT_WATCH_TIMEOUT_SECONDS,
+    poll_interval_seconds: float = DEFAULT_POLL_INTERVAL_SECONDS,
+    git: Optional[dict[str, Any]] = None,
     log: Optional[Callable[[str], None]] = print,
 ) -> dict[str, Any]:
     """Execute an evalset spec against one or more agentspecs and persist runs.
 
-    Creates an evalset from ``spec``, runs every case through each agentspec
-    ``run_limit`` times against either a cloud runtime (one per agentspec) or a
-    local ``agent-runtimes`` server, grades the outputs with the evals API, and
-    stores one run record per execution. Execution resources (cloud runtimes or
-    the local agent registration/server) are always torn down before returning,
-    including on error.
+    Imports the evalset from ``spec`` (through the service's import route),
+    then, ``run_limit`` times, either submits a **launch** the platform
+    executes on a pool of ``concurrency`` sandboxes per agentspec and watches
+    it to its end (``execution_target='cloud'``, BENCHMARK.md B2-03 and
+    B2-15), or runs every case through a local ``agent-runtimes`` server,
+    grades the outputs with the evals API and stores one run record per
+    execution (``execution_target='local'``). Local execution resources are
+    always torn down before returning, including on error.
 
     Parameters
     ----------
@@ -114,8 +495,9 @@ def execute_evalset_spec(
         Optional billing entity UID context.
     account_uid : Optional[str]
         Optional account UID context.
-    credits_limit : float
-        Target credits budget used to size each cloud runtime reservation.
+    credits_limit : float, optional
+        Credits a cloud launch may spend; it ends ``blocked`` when reached
+        (B2-06). No cap when omitted.
     evalset_name : Optional[str]
         Optional explicit evalset name. Defaults to a timestamped name derived
         from the spec name.
@@ -203,25 +585,18 @@ def execute_evalset_spec(
         evalset_name
         or f"{str(spec.get('name') or 'evalset')}-{run_environment}-{timestamp_slug(now_iso())}"
     )
-    evalset_payload = client.evals_create_eval_from_spec(
-        spec=spec,
-        name=resolved_name,
+    resolved = resolve_evalset(
+        client,
+        {**spec, "kind": run_mode},
         run_environment=backend_run_environment,
-        kind=run_mode,
+        name=resolved_name,
         billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
+        log=_emit,
     )
-    evalset_id = str((evalset_payload.get("evalset") or {}).get("id") or "")
-    if not evalset_id:
-        raise RuntimeError(f"Unable to create evalset from spec: {evalset_payload}")
-    _emit(f"Created evalset: {evalset_id} ({resolved_name})")
+    evalset_id = str(resolved["evalset_id"])
 
-    ui_base = (
-        str(os.environ.get("DATALAYER_UI_URL") or "http://localhost:3063")
-        .strip()
-        .rstrip("/")
-    )
-    view_url = f"{ui_base}/evals/experiments/{run_environment}/{evalset_id}"
+    view_url = benchmark_url(evalset_id)
 
     result: dict[str, Any] = {
         "evalset_id": evalset_id,
@@ -247,35 +622,94 @@ def execute_evalset_spec(
 
     experiment_ids: list[str] = []
     run_ids: list[str] = []
-    runtimes_by_spec: dict[str, Any] = {}
+
+    if target == "cloud":
+        # A cloud run is a launch (B2-03, B2-15): the platform executes it on
+        # a pool of sandboxes as the person and grades it; this process
+        # submits and watches. The runtimes this branch used to create and
+        # the per-case loop it used to drive are the durable workflow's now.
+        experiment_ids = ensure_experiments(
+            client,
+            evalset_id=evalset_id,
+            subjects=[
+                {"kind": "agentspec", "ref": spec_id} for spec_id in normalized_specs
+            ],
+            run_mode=run_mode,
+            launch_source=launch_source,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+            log=_emit,
+        )
+        config = launch_config(
+            concurrency=concurrency,
+            environment=environment_name,
+            time_reservation=time_reservation_minutes,
+            request_timeout_seconds=case_request_timeout,
+            budget=credits_limit,
+            git=git,
+        )
+        launch_ids: list[str] = []
+        launch_statuses: dict[str, str] = {}
+        for run_index in range(run_limit):
+            submitted = submit_launch(
+                client,
+                evalset_id=evalset_id,
+                experiment_ids=experiment_ids,
+                run_mode=run_mode,
+                config=config,
+                billing_entity_uid=billing_entity_uid,
+                account_uid=account_uid,
+            )
+            launch = submitted["launch"]
+            launch_id = str(launch["id"])
+            launch_ids.append(launch_id)
+            _emit(
+                f"Launch {launch.get('number') or launch_id} submitted ({run_index + 1}/{run_limit}): {launch_url(launch_id)}"
+            )
+            watched = watch_launch(
+                client,
+                launch_id,
+                timeout_seconds=watch_timeout_seconds,
+                interval_seconds=poll_interval_seconds,
+                billing_entity_uid=billing_entity_uid,
+                account_uid=account_uid,
+                log=_emit,
+            )
+            final = (
+                watched.get("launch") if isinstance(watched.get("launch"), dict) else {}
+            )
+            status = str(final.get("status") or "unknown")
+            launch_statuses[launch_id] = status
+            run_ids.extend(
+                str(run.get("id"))
+                for run in (watched.get("runs") or [])
+                if isinstance(run, dict) and run.get("id")
+            )
+            _emit(f"Launch {launch.get('number') or launch_id} {status}")
+            for line in launch_outcome_lines(watched):
+                _emit(line)
+        result["experiment_ids"] = experiment_ids
+        result["run_ids"] = run_ids
+        result["launch_ids"] = launch_ids
+        result["launch_statuses"] = launch_statuses
+        result["view_url"] = launch_url(launch_ids[-1]) if launch_ids else view_url
+        if bool(create_report):
+            reports = write_eval_reports(
+                client,
+                evalset_id,
+                billing_entity_uid=billing_entity_uid,
+                account_uid=account_uid,
+            )
+            result["report_markdown_path"] = str(reports.get("markdown_path") or "")
+            if reports.get("csv_path") is not None:
+                result["report_csv_path"] = str(reports.get("csv_path") or "")
+        return result
+
     local_runtime: Optional[LocalAgentRuntime] = None
     local_base_url = str(local_agent_base_url or DEFAULT_LOCAL_AGENT_BASE_URL)
     token = str(client._get_api_key() or "")
     try:
-        if target == "cloud":
-            for spec_id in normalized_specs:
-                burning_rate = resolve_environment_burning_rate(
-                    client, environment_name
-                )
-                reservation_minutes = compute_time_reservation_minutes(
-                    credits_limit=credits_limit,
-                    burning_rate=burning_rate,
-                )
-                runtime = create_cloud_agent_runtime(
-                    client,
-                    environment_name=environment_name,
-                    name=f"evals-{spec_id}-{uuid.uuid4().hex[:8]}",
-                    agent_spec_id=spec_id,
-                    time_reservation=reservation_minutes,
-                    billing_entity_uid=billing_entity_uid,
-                )
-                runtimes_by_spec[spec_id] = runtime
-                _emit(
-                    f"Launched runtime for agentspec {spec_id}: "
-                    f"pod={getattr(runtime, 'runtime_name', '')} "
-                    f"runtime_id={getattr(runtime, 'uid', '')}"
-                )
-        elif target == "local":
+        if target == "local":
             local_host = urlparse(local_base_url).hostname or "127.0.0.1"
             should_start_local_runtime = bool(auto_start_local_agent_runtime)
             if not should_start_local_runtime:
@@ -325,30 +759,17 @@ def execute_evalset_spec(
                 raise RuntimeError(f"Unable to create experiment: {experiment_payload}")
             experiment_ids.append(experiment_id)
 
-            ingress = ""
-            runtime_name = ""
-            runtime_id = ""
-            if target == "cloud":
-                runtime = runtimes_by_spec[spec_id]
-                ingress = str(getattr(runtime, "ingress", "") or "").strip()
-                runtime_name = str(getattr(runtime, "runtime_name", "") or "").strip()
-                runtime_id = str(getattr(runtime, "uid", "") or "").strip()
-                if not ingress or not runtime_name:
-                    raise RuntimeError(
-                        f"Runtime missing ingress/pod for agentspec {spec_id}"
-                    )
-            else:
-                ensure_local_agent(
-                    base_url=local_base_url,
-                    agent_name=agent_name,
-                    token=token,
-                    agent_spec_id=spec_id,
-                    disable_tool_approvals=True,
-                )
-                _emit(
-                    f"Using local agent execution at {local_base_url.rstrip('/')} "
-                    f"(agent: {agent_name}, agentspec: {spec_id})."
-                )
+            ensure_local_agent(
+                base_url=local_base_url,
+                agent_name=agent_name,
+                token=token,
+                agent_spec_id=spec_id,
+                disable_tool_approvals=True,
+            )
+            _emit(
+                f"Using local agent execution at {local_base_url.rstrip('/')} "
+                f"(agent: {agent_name}, agentspec: {spec_id})."
+            )
 
             for run_index in range(run_limit):
                 outputs: list[dict[str, Any]] = []
@@ -362,26 +783,13 @@ def execute_evalset_spec(
                 for case in cases:
                     prompt = compose_case_prompt(case, preamble=prompt_preamble)
                     case_prompts.append(prompt)
-                    if target == "cloud":
-                        chat_result = run_cloud_agent_chat(
-                            ingress=ingress,
-                            token=token,
-                            prompt=prompt,
-                            route_candidates=runtime_route_candidates(
-                                agent_name=agent_name,
-                                agent_spec_id=spec_id,
-                                runtime_name=runtime_name,
-                            ),
-                            timeout=case_request_timeout,
-                        )
-                    else:
-                        chat_result = run_local_agent_chat(
-                            base_url=local_base_url,
-                            agent_name=agent_name,
-                            token=token,
-                            prompt=prompt,
-                            timeout=case_request_timeout,
-                        )
+                    chat_result = run_local_agent_chat(
+                        base_url=local_base_url,
+                        agent_name=agent_name,
+                        token=token,
+                        prompt=prompt,
+                        timeout=case_request_timeout,
+                    )
                     status = (
                         str(chat_result.get("status") or "completed").strip().lower()
                     )
@@ -433,15 +841,6 @@ def execute_evalset_spec(
                 ]
 
                 run_status = "failed" if failed_cases > 0 else "completed"
-                if target == "cloud":
-                    # Surface the runtime pod name and runtime id on every
-                    # failure cause so the report's failure-cause block (and UI)
-                    # can show which runtime produced the failure for easier
-                    # debugging.
-                    for cause in failure_causes:
-                        cause.setdefault("runtime_name", runtime_name)
-                        if runtime_id:
-                            cause.setdefault("runtime_id", runtime_id)
                 summary: dict[str, Any] = {
                     "launch_source": launch_source,
                     "run_mode": run_mode,
@@ -453,13 +852,8 @@ def execute_evalset_spec(
                     "agent_prompt": [item["prompt"] for item in interaction],
                     "agent_output": [item["output"] for item in interaction],
                 }
-                if target == "cloud":
-                    summary["runtime_name"] = runtime_name
-                    if runtime_id:
-                        summary["runtime_id"] = runtime_id
-                else:
-                    summary["local_agent_base_url"] = local_base_url
-                    summary["local_agent_id"] = agent_name
+                summary["local_agent_base_url"] = local_base_url
+                summary["local_agent_id"] = agent_name
                 if failure_causes:
                     summary["failure_cause"] = failure_causes[0]
                 report: dict[str, Any] = {
@@ -474,13 +868,8 @@ def execute_evalset_spec(
                     }
                     summary["usage"] = {"pydantic_ai_usage": aggregated_usage}
                     report["usage"] = {"pydantic_ai_usage": aggregated_usage}
-                if target == "cloud":
-                    report["runtime_name"] = runtime_name
-                    if runtime_id:
-                        report["runtime_id"] = runtime_id
-                else:
-                    report["local_agent_base_url"] = local_base_url
-                    report["local_agent_id"] = agent_name
+                report["local_agent_base_url"] = local_base_url
+                report["local_agent_id"] = agent_name
 
                 run_payload = client.evals_create_run(
                     experiment_id,
@@ -515,32 +904,15 @@ def execute_evalset_spec(
                 result["report_csv_path"] = str(reports.get("csv_path") or "")
         return result
     finally:
-        if target == "cloud":
-            for spec_id, runtime in runtimes_by_spec.items():
-                runtime_name = str(getattr(runtime, "runtime_name", "") or "").strip()
-                cleanup = teardown_agent_execution_resources(
-                    client,
-                    execution_target="cloud",
-                    cloud_runtime_or_runtime_name=runtime_name,
-                    token=token,
-                )
-                if cleanup.get("cloud_runtime_terminated"):
-                    _emit(f"Terminated runtime for agentspec {spec_id}: {runtime_name}")
-                else:
-                    _emit(
-                        "Warning: runtime termination unconfirmed for agentspec "
-                        f"{spec_id}: {runtime_name}"
-                    )
-        else:
-            cleanup = teardown_agent_execution_resources(
-                client,
-                execution_target="local",
-                local_base_url=local_base_url,
-                local_agent_name=agent_name,
-                token=token,
-                local_runtime=local_runtime,
-            )
-            if cleanup.get("local_agent_deleted"):
-                _emit(f"Terminated local agent registration: {agent_name}")
-            if cleanup.get("local_runtime_terminated"):
-                _emit("Stopped auto-started local agent-runtimes server.")
+        cleanup = teardown_agent_execution_resources(
+            client,
+            execution_target="local",
+            local_base_url=local_base_url,
+            local_agent_name=agent_name,
+            token=token,
+            local_runtime=local_runtime,
+        )
+        if cleanup.get("local_agent_deleted"):
+            _emit(f"Terminated local agent registration: {agent_name}")
+        if cleanup.get("local_runtime_terminated"):
+            _emit("Stopped auto-started local agent-runtimes server.")

@@ -23,6 +23,7 @@ Markdown and CSV are untouched: this reads the same report they render.
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import Any
 
 __all__ = [
@@ -32,6 +33,9 @@ __all__ = [
 ]
 
 #: The mime type the analysis JSON travels under inside a Jupyter output.
+
+logger = logging.getLogger(__name__)
+
 ANALYSIS_MIME = "application/vnd.datalayer.evals.analysis+json"
 
 #: The reading order of section 13.0, and the headings the document uses.
@@ -114,6 +118,26 @@ def _analysis_output(analysis: dict[str, Any], provenance: dict[str, Any]) -> di
 # ---------------------------------------------------------------------------
 
 
+def _from_ci(launch: dict[str, Any]) -> str:
+    """Where a launch made by CI came from (B6-02), or nothing."""
+    config = launch.get("config") if isinstance(launch.get("config"), dict) else {}
+    git = config.get("git") if isinstance(config.get("git"), dict) else {}
+    if not git:
+        return ""
+    parts: list[str] = []
+    if git.get("sha"):
+        parts.append(f"commit {str(git['sha'])[:12]}")
+    if git.get("ref"):
+        parts.append(f"on {git['ref']}")
+    if git.get("pr_number"):
+        parts.append(f"pull request #{git['pr_number']}")
+    if git.get("repository"):
+        parts.append(f"of {git['repository']}")
+    if git.get("run_id"):
+        parts.append(f"action run {git['run_id']}")
+    return "From CI: " + ", ".join(parts) if parts else ""
+
+
 def _pct(value: Any) -> str:
     try:
         return f"{float(value) * 100:.1f}%"
@@ -163,6 +187,16 @@ def _case_rows(experiment: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in (metrics.get("case_results") or []) if isinstance(row, dict)]
 
 
+#: The analysis kinds that are drawn rather than written out (B3-10).
+#:
+#: A heatmap and a pairwise table are grids a reader compares across; flattened
+#: into prose or a plain table they stop being comparisons. They reach the
+#: document as a Jupyter output carrying the analysis, which is what the
+#: interactive renderer picks up — the same route `line` already took, named
+#: here so a new kind is a decision rather than a fall-through.
+COMPONENT_ANALYSES = ("line", "heatmap", "pairwise", "comparison")
+
+
 def _analysis_block(analysis: dict[str, Any], provenance: dict[str, Any]) -> dict[str, Any]:
     kind = str(analysis.get("kind") or "")
     named = {**provenance, "analysis": analysis.get("metric") or analysis.get("name")}
@@ -176,6 +210,11 @@ def _analysis_block(analysis: dict[str, Any], provenance: dict[str, Any]) -> dic
         columns = [str(column) for column in (analysis.get("columns") or [])]
         rows = [[_cell_text(value) for value in row] for row in (analysis.get("rows") or []) if isinstance(row, (list, tuple))]
         return _table(columns, rows, named)
+    if kind not in COMPONENT_ANALYSES:
+        # An unknown kind is still shown rather than dropped, but it is worth
+        # noticing: a report is the record of a run, and a silent hole in it is
+        # worse than an unrecognised block.
+        logger.info("The report has an analysis of an unknown kind: %s", kind or "(none)")
     return _analysis_output(analysis, named)
 
 
@@ -389,7 +428,8 @@ def build_eval_report_lexical(
                 f"Category: {evalset.get('category') or 'unset'}",
                 f"Tasks: {total_cases}",
             ]
-            + ([f"Launch: Run {number} ({launch.get('id')})"] if number else []),
+            + ([f"Launch: Run {number} ({launch.get('id')})"] if number else [])
+            + ([_from_ci(launch)] if _from_ci(launch) else []),
             on(),
         )
     )

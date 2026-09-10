@@ -48,10 +48,10 @@
       }
     }
   },
-  "evalset_evaluators": [
+  "evalset_evaluators": [],
+  "report_evaluators": [
     { "name": "pass_rate_threshold", "arguments": { "threshold": 0.6 } }
   ],
-  "report_evaluators": [],
   "cases": [
     {
       "name": "row-count",

@@ -25,16 +25,22 @@ logger = logging.getLogger(__name__)
 
 class A2ATransport(BaseTransport):
     """
-    A2A (Agent-to-Agent) protocol adapter.
+    Serve one agent over A2A: the worker side of the protocol.
 
-    Implements the A2A protocol for inter-agent communication.
-    This protocol enables agents to communicate and collaborate.
+    This runs a task an A2A client sent, streams what the agent produces
+    back as A2A events, cancels a running task, and turns a result into A2A
+    artifacts — `run_task`, `cancel_task`, `build_message_history` and
+    `build_artifacts` are the whole of it. OAuth identity is propagated
+    across the agent boundary through the identity context.
 
-    Protocol Features:
-    - Standardized message format for agent communication
-    - Task delegation support
-    - Result aggregation
-    - Capability negotiation
+    It is deliberately not an orchestrator. It does not choose a worker,
+    delegate to one, aggregate results across several, or negotiate
+    capabilities: those are the orchestration control plane's, and the
+    canonical model they will speak lives in `datalayer_core.orchestration`
+    (PLAN_ORCHESTRATOR.md). This docstring used to claim task delegation,
+    result aggregation and capability negotiation, none of which the class
+    has ever done, and a docstring that describes a design rather than a
+    class is how somebody comes to depend on a feature that is not there.
 
     Example:
         ```python

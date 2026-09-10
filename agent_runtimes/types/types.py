@@ -1743,9 +1743,22 @@ class TeamSpec(BaseModel):
         description="ID of the associated agent spec",
         alias="agentSpecId",
     )
-    orchestration_protocol: str = Field(
+    #: How the team is meant to be coordinated once teams execute.
+    #:
+    #: Every value here names a protocol for which no adapter is registered
+    #: yet: `datalayer` is the durable control plane of
+    #: PLAN_ORCHESTRATOR.md O1-01, `a2a` and `acp` its two adapters (O0-06,
+    #: O0-07). The field is an intention until one of them lands, and the
+    #: literal type is what keeps it from naming a protocol nobody is
+    #: building — it used to be a free string defaulting to `datalayer`,
+    #: which read as a protocol that exists (O0-15).
+    orchestration_protocol: Literal["datalayer", "a2a", "acp"] = Field(
         default="datalayer",
-        description="Orchestration protocol (e.g., 'datalayer')",
+        description=(
+            "Orchestration protocol a team is meant to be coordinated by. "
+            "No adapter is registered for any of these yet, so a team is a "
+            "definition and this is an intention."
+        ),
         alias="orchestrationProtocol",
     )
     execution_mode: str = Field(

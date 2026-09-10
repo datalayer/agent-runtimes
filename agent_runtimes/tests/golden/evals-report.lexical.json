@@ -2038,6 +2038,111 @@
         "version": 1
       },
       {
+        "jupyterInputNodeUuid": "in-70772671381e",
+        "jupyterOutputNodeUuid": "out-261d95de5cb9",
+        "outputs": [
+          {
+            "data": {
+              "application/vnd.datalayer.evals.analysis+json": {
+                "columns": [
+                  "-5",
+                  "-4",
+                  "-3",
+                  "-2",
+                  "-1",
+                  "latest"
+                ],
+                "kind": "heatmap",
+                "name": "Recent Runs",
+                "rows": [
+                  "jupyter-data-analyst",
+                  "example-evals"
+                ],
+                "values": [
+                  [
+                    null,
+                    null,
+                    null,
+                    0.8333333333333334,
+                    0.6666666666666666,
+                    0.5
+                  ],
+                  [
+                    null,
+                    null,
+                    null,
+                    null,
+                    0.3333333333333333,
+                    0.5
+                  ]
+                ]
+              },
+              "text/plain": "Recent Runs"
+            },
+            "metadata": {},
+            "output_type": "display_data"
+          }
+        ],
+        "provenance": {
+          "analysis": "Recent Runs",
+          "case": null,
+          "evalset": "evalset-reference",
+          "experiment": null,
+          "launch": "launch-128",
+          "run": null,
+          "version": 3
+        },
+        "source": "",
+        "type": "jupyter-output",
+        "version": 1
+      },
+      {
+        "jupyterInputNodeUuid": "in-6a1b4485c430",
+        "jupyterOutputNodeUuid": "out-2a262cbe6fe2",
+        "outputs": [
+          {
+            "data": {
+              "application/vnd.datalayer.evals.analysis+json": {
+                "convention": "delta = candidate - baseline",
+                "kind": "pairwise",
+                "name": "Pairwise Deltas",
+                "pairs": [
+                  {
+                    "baseline": "example-evals",
+                    "baseline_pass_rate": 0.5,
+                    "candidate": "jupyter-data-analyst",
+                    "candidate_pass_rate": 0.5,
+                    "delta_pass_rate": 0.0
+                  },
+                  {
+                    "baseline": "jupyter-data-analyst",
+                    "baseline_pass_rate": 0.5,
+                    "candidate": "example-evals",
+                    "candidate_pass_rate": 0.5,
+                    "delta_pass_rate": 0.0
+                  }
+                ]
+              },
+              "text/plain": "Pairwise Deltas"
+            },
+            "metadata": {},
+            "output_type": "display_data"
+          }
+        ],
+        "provenance": {
+          "analysis": "Pairwise Deltas",
+          "case": null,
+          "evalset": "evalset-reference",
+          "experiment": null,
+          "launch": "launch-128",
+          "run": null,
+          "version": 3
+        },
+        "source": "",
+        "type": "jupyter-output",
+        "version": 1
+      },
+      {
         "children": [
           {
             "detail": 0,

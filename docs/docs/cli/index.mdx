@@ -227,7 +227,7 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `checkpoints` | Runtime checkpoint commands |
 | `console` | Runtime console commands |
 | `envs` | Environment management commands |
-| `evals` | Evalset/experiment/run commands |
+| `evals` | Benchmarks: `evals run <spec|evalset_id> --agent-spec-ids … [--models …] [--budget …]` imports, validates, launches and follows a benchmark on the platform — a line per change, a heartbeat while nothing changes, and a launch still `queued` with no task after 3 minutes is given up on naming the executor rather than waited on for an hour; `evals launches ls|get|cancel`, `evals subjects`, and the evalset, experiment, run and report commands |
 | `exec` | Execute Python files or notebooks on a runtime |
 | `pools` | Runtime pool administration commands |
 | `sandbox-snapshots` | Runtime snapshot commands |

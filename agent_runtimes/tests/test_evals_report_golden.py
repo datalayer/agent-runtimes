@@ -308,3 +308,65 @@ def test_a_run_document_narrows_to_its_experiment_and_reads_its_tasks(frozen_rep
     assert "wrong_answer · 1 task" in text and "It answered 0; 157 customers repeat." in text
     assert "example-evals" not in text.split("Pairwise deltas")[0]
     assert document["root"]["children"][0]["provenance"]["run"] == "run-1-3"
+
+
+def test_the_comparisons_are_components_with_the_direction_written_down(frozen_report):
+    """Heatmaps and pairwise deltas render as components, and A - B is fixed.
+
+    `BENCHMARK.md` section 12.2 fixes the direction and B3-10 asks for these
+    two kinds: **A is the candidate, B is the baseline, delta is `A - B`**. Two
+    readers who disagree about the sign of a delta disagree about whether a
+    change helped, so the convention travels in the payload rather than in
+    whoever draws it.
+    """
+    report, _, _ = frozen_report
+    analyses = {item["kind"]: item for item in report["report_analyses"]}
+    assert "heatmap" in analyses and "pairwise" in analyses
+
+    heatmap = analyses["heatmap"]
+    # The last column is every experiment's latest run, whatever number of runs
+    # each one has, so a column reads down as "the most recent".
+    assert heatmap["columns"][-1] == "latest"
+    assert len(heatmap["rows"]) == len(heatmap["values"])
+    for row in heatmap["values"]:
+        assert len(row) == len(heatmap["columns"])
+        # A run an experiment does not have is absent, not zero: a gap drawn as
+        # a zero reads as a total failure.
+        assert all(value is None or isinstance(value, float) for value in row)
+
+    pairwise = analyses["pairwise"]
+    assert pairwise["convention"] == "delta = candidate - baseline"
+    for pair in pairwise["pairs"]:
+        assert pair["candidate"] != pair["baseline"]
+        if pair["delta_pass_rate"] is not None:
+            assert pair["delta_pass_rate"] == pytest.approx(
+                pair["candidate_pass_rate"] - pair["baseline_pass_rate"]
+            )
+    # Both directions, because which one is the candidate is the reader's
+    # question and not the report's.
+    directions = {(pair["candidate"], pair["baseline"]) for pair in pairwise["pairs"]}
+    assert all((b, a) in directions for a, b in directions)
+
+
+def test_a_comparison_reaches_the_document_as_a_component(lexical_document):
+    """Flattened into a table, a heatmap stops being a comparison."""
+    from agent_runtimes.evals.lexical import ANALYSIS_MIME, COMPONENT_ANALYSES
+
+    found: list[str] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            if node.get("type") == "jupyter-output":
+                for output in node.get("outputs") or []:
+                    payload = (output.get("data") or {}).get(ANALYSIS_MIME)
+                    if isinstance(payload, dict) and payload.get("kind"):
+                        found.append(str(payload["kind"]))
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(lexical_document)
+    assert "heatmap" in found and "pairwise" in found
+    assert set(found) <= set(COMPONENT_ANALYSES)

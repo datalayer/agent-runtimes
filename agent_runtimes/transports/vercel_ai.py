@@ -110,8 +110,17 @@ def _is_live_eval_emission_enabled() -> bool:
 
 
 def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
+    experiment_id, evalset_id, _ = _extract_eval_binding(prompt)
+    return experiment_id, evalset_id
+
+
+def _extract_eval_binding(prompt: str) -> tuple[str | None, str | None, str | None]:
+    """The experiment, evalset and case a prompt names on its own lines
+    (`experiment_id=`, `evalset_id=`, `case_id=`): what binds the live event
+    to the experiment the platform evaluates it for (BENCHMARK.md, B2-13)."""
     experiment_id: str | None = None
     evalset_id: str | None = None
+    case_id: str | None = None
     for raw_line in str(prompt or "").splitlines():
         line = raw_line.strip()
         if line.startswith("experiment_id="):
@@ -120,7 +129,10 @@ def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
         elif line.startswith("evalset_id="):
             value = line.partition("=")[2].strip()
             evalset_id = value or None
-    return experiment_id, evalset_id
+        elif line.startswith("case_id="):
+            value = line.partition("=")[2].strip()
+            case_id = value or None
+    return experiment_id, evalset_id, case_id
 
 
 def _extract_first_json_object(text: str) -> dict[str, Any] | None:
@@ -157,7 +169,7 @@ async def _emit_interactive_live_eval_event(
     if not _is_live_eval_emission_enabled():
         return
 
-    experiment_id, evalset_id = _extract_eval_identifiers(prompt)
+    experiment_id, evalset_id, case_id = _extract_eval_binding(prompt)
     if not experiment_id:
         return
 
@@ -212,6 +224,12 @@ async def _emit_interactive_live_eval_event(
     payload: dict[str, Any] = {
         "target_id": experiment_id,
         "target_type": "experiment",
+        # The binding the platform grades the event for, with the
+        # experiment's own evaluators (B2-13); the emitter's own measure
+        # stays beside it as `interactive-pass-rate`.
+        "experiment_id": experiment_id,
+        "evalset_id": evalset_id,
+        "case_id": case_id,
         "evaluator_name": "interactive-pass-rate",
         "metric_name": "pass_rate",
         "value_num": pass_rate,

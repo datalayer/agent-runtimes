@@ -135,6 +135,61 @@ class EvalsMixin:
             account_uid=account_uid,
         )
 
+    def evals_import_eval(
+        self,
+        *,
+        spec: dict[str, Any],
+        run_environment: Optional[str] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Import an ``*.evalset.json`` spec through the service's own import
+        route — the one the wizard uses — so the derivation from the spec
+        happens once, server-side. The answer carries the evalset and the
+        ``unsupported_evaluators`` the platform dropped."""
+        body: dict[str, Any] = {"spec": spec}
+        if run_environment:
+            body["run_environment"] = str(run_environment)
+        return self._evals_request(
+            "/evalsets/import",
+            method="POST",
+            json_body=body,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_export_eval(
+        self,
+        evalset_id: str,
+        *,
+        format: str = "json",
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The evalset as a spec (``json``) or as a pydantic-evals dataset."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/export",
+            method="GET",
+            params={"format": format},
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_list_subjects(
+        self,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """What an experiment can run: the subject kinds, which execute, and
+        the models AI Inference offers (BENCHMARK.md, B2-11)."""
+        return self._evals_request(
+            "/subjects",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
     def evals_delete_eval(
         self,
         evalset_id: str,
@@ -400,6 +455,127 @@ class EvalsMixin:
             "/live/events",
             method="GET",
             params=params,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    # --- Launches (BENCHMARK.md, B2-03, B2-07, B2-15) ---
+
+    def _launch_body(
+        self,
+        *,
+        experiment_ids: list[str],
+        run_mode: str,
+        config: Optional[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return {
+            "experiment_ids": [
+                str(item) for item in experiment_ids if str(item or "").strip()
+            ],
+            "run_mode": str(run_mode or "batch"),
+            "config": dict(config or {}),
+        }
+
+    def evals_validate_launch(
+        self,
+        evalset_id: str,
+        *,
+        experiment_ids: list[str],
+        run_mode: str = "batch",
+        config: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The plan of a launch before it is made: estimated duration and
+        cost, the compute, and the problems that would stop it. Nothing is
+        created."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/launches/validate",
+            method="POST",
+            json_body=self._launch_body(
+                experiment_ids=experiment_ids, run_mode=run_mode, config=config
+            ),
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_create_launch(
+        self,
+        evalset_id: str,
+        *,
+        experiment_ids: list[str],
+        run_mode: str = "batch",
+        config: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """One submission of a benchmark across its experiments: one queued
+        run per experiment, executed by the platform. ``config`` carries
+        ``concurrency``, ``environment``, ``time_reservation`` (minutes),
+        ``request_timeout_seconds``, ``budget`` (credits) and ``retention``."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/launches",
+            method="POST",
+            json_body=self._launch_body(
+                experiment_ids=experiment_ids, run_mode=run_mode, config=config
+            ),
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_list_launches(
+        self,
+        *,
+        evalset_id: Optional[str] = None,
+        status: Optional[str] = None,
+        include_archived: bool = False,
+        limit: int = 50,
+        offset: int = 0,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "limit": limit,
+            "offset": offset,
+            "include_archived": include_archived,
+        }
+        if evalset_id:
+            params["evalset_id"] = evalset_id
+        if status:
+            params["status"] = status
+        return self._evals_request(
+            "/launches",
+            method="GET",
+            params=params,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_get_launch(
+        self,
+        launch_id: str,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The launch and its runs."""
+        return self._evals_request(
+            f"/launches/{launch_id}",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_cancel_launch(
+        self,
+        launch_id: str,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        return self._evals_request(
+            f"/launches/{launch_id}/cancel",
+            method="POST",
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
