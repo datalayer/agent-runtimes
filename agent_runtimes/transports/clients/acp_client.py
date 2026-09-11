@@ -32,6 +32,7 @@ from acp import (
     PROTOCOL_VERSION,
     InitializeRequest,
     InitializeResponse,
+    LoadSessionRequest,
     NewSessionRequest,
     NewSessionResponse,
     PromptRequest,
@@ -220,6 +221,22 @@ class ACPClient:
             return session_response.session_id
 
         raise ACPClientError("Failed to create session")
+
+    async def load_session(self, session_id: str, cwd: str = ".") -> None:
+        """
+        Load a session the agent kept, to go on with it (``session/load``).
+
+        What the session said so far is replayed as updates before the load
+        is answered, and an agent that keeps its sessions still has them
+        after a restart (O1-11).
+
+        Args:
+            session_id: The session to load.
+            cwd: Current working directory for the session.
+        """
+        request = LoadSessionRequest(session_id=session_id, cwd=cwd, mcp_servers=[])
+        await self._send_request(AGENT_METHODS["session_load"], _wire(request))
+        self._session_id = session_id
 
     async def run(
         self,

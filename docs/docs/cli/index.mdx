@@ -362,6 +362,7 @@ agent-runtimes serve [OPTIONS]
 | `--log-level` | `-l` | `info` | `AGENT_RUNTIMES_LOG_LEVEL` | Log level (`debug`, `info`, `warning`, `error`, `critical`) |
 | `--agent-id` | `-a` | - | `AGENT_RUNTIMES_DEFAULT_AGENT` | Agent spec ID from the library to start |
 | `--agent-name` | `-n` | `default` | `AGENT_RUNTIMES_AGENT_NAME` | Custom name for the agent (requires `--agent-id`) |
+| `--orchestrator-root` | - | - | `AGENT_RUNTIMES_ORCHESTRATOR_ROOT` | Register the orchestrator as the ACP agent `orchestrator`, delegating each turn to this agent: an agentspec ID, or an A2A (`http`) or ACP (`ws`) endpoint |
 | `--protocol` | `-t` | `ag-ui` | `AGENT_RUNTIMES_PROTOCOL` | Transport protocol (`ag-ui`, `vercel-ai`, `vercel-ai-jupyter`, `a2a`) |
 | `--no-config-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | Skip starting config MCP servers from `~/.datalayer/mcp.json` |
 | `--no-catalog-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS` | Skip starting catalog MCP servers defined in the agent spec (requires `--agent-id`) |

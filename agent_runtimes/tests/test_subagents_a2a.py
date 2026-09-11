@@ -48,6 +48,9 @@ class TestDefinitions:
 
     def test_the_spec_id_drops_the_version(self) -> None:
         assert spec_id_of("example-a2a-researcher:0.0.1") == "example-a2a-researcher"
+        assert spec_id_of("example-a2a-researcher") == "example-a2a-researcher"
+        # A team's seat has a colon that is no version (O2-09).
+        assert spec_id_of("team:jupyter/reviewer") == "team:jupyter/reviewer"
         assert spec_id_of(None) is None
 
     def test_the_launched_agent_name_is_a_slug(self) -> None:
@@ -425,6 +428,7 @@ class TestStop:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import fasta2a.client as a2a_client
+
         from agent_runtimes.subagents import a2a as a2a_module
 
         class FakeClient:
@@ -774,10 +778,11 @@ class TestWorker:
 
     @pytest.mark.asyncio
     async def test_a_terminated_task_ends_canceled(self) -> None:
-        from agent_runtimes.adapters.base import StreamEvent
-        from agent_runtimes.transports.a2a import A2AWorker, TaskCancellation
         from fasta2a.broker import InMemoryBroker
         from fasta2a.storage import InMemoryStorage
+
+        from agent_runtimes.adapters.base import StreamEvent
+        from agent_runtimes.transports.a2a import A2AWorker, TaskCancellation
 
         events_registry: dict[str, asyncio.Event] = {}
         cancellation = TaskCancellation(

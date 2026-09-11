@@ -384,3 +384,20 @@ def test_the_proxy_refuses_a_revoked_session(proxy: Any) -> None:
 
     assert response.status_code == 403
     assert "revoked" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_stopping_an_agent_whose_source_is_reached_through_contents_stops_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Contents source has no process on this side: stopping the agent's MCP
+    servers counts it as already stopped, rather than failing on it."""
+    from agent_runtimes.routes import acp as acp_routes
+    from agent_runtimes.routes.agents import _stop_mcp_servers_for_agent
+
+    class Adapter:
+        _selected_mcp_servers = [McpServerSelection(id="earthdata", origin="contents", session_uid=SESSION)]
+
+    monkeypatch.setitem(acp_routes._agents, "agent-contents", (Adapter(), object()))
+
+    assert await _stop_mcp_servers_for_agent("agent-contents") == ([], ["earthdata"], [])

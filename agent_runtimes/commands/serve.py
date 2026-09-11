@@ -330,6 +330,7 @@ def serve_server(
     find_free_port_flag: bool = False,
     node: bool = False,
     disable_tool_approvals: bool = False,
+    orchestrator_root: Optional[str] = None,
 ) -> int:
     """
     Start the agent-runtimes server.
@@ -368,6 +369,9 @@ def serve_server(
         find_free_port_flag: If True, find a free port starting from the given port
         node: Enable Agent Node mode (disabled by default)
         disable_tool_approvals: Disable tool approval flows for all agents
+        orchestrator_root: Register the orchestrator as an ACP agent, delegating
+                           each turn to this agent: an agentspec ID, or an A2A
+                           (http) or ACP (ws) endpoint. Unset, none is registered.
 
     Returns:
         The actual port the server is running on
@@ -424,6 +428,17 @@ def serve_server(
             f"Will start with agent: {agent_spec.name} "
             f"(registered as '{effective_name}')"
         )
+
+    # Validate the agent the orchestrator delegates to, if one is named (O2-08)
+    if orchestrator_root:
+        from agent_runtimes.orchestration.orchestrator import root_binding
+
+        try:
+            root_binding(orchestrator_root)
+        except ValueError as error:
+            raise ServeError(str(error)) from error
+        os.environ["AGENT_RUNTIMES_ORCHESTRATOR_ROOT"] = orchestrator_root
+        logger.info(f"Will register the orchestrator, delegating to: {orchestrator_root}")
 
     # Ensure env vars are set for uvicorn (which loads app.py in separate context)
     if no_config_mcp_servers:

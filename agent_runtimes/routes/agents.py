@@ -63,7 +63,7 @@ except Exception:  # pragma: no cover - compatibility fallback during regen drif
 from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
-from ..types import Agentspec, MCPServer
+from ..types import Agentspec, MCPServer, SubAgentsConfig
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -137,6 +137,36 @@ def _without_approval_capabilities(capabilities: list[Any]) -> list[Any]:
             and cap.__class__.__name__ not in _APPROVAL_CAPABILITY_NAMES
         )
     ]
+
+
+def _with_subagents(
+    spec: Agentspec | None, request: "CreateAgentRequest", agent_id: str
+) -> Agentspec | None:
+    """
+    The spec an agent's capabilities are built from, with the subagents the request names.
+
+    A request's subagents replace the spec's rather than add to them: a team's
+    supervisor is given exactly its members (O2-09). An agent created with no
+    spec at all is given one holding only its name and those subagents.
+
+    Parameters
+    ----------
+    spec : Agentspec | None
+        The spec the agent was created from, if any.
+    request : CreateAgentRequest
+        The creation request.
+    agent_id : str
+        The agent being created.
+
+    Returns
+    -------
+    Agentspec | None
+        The spec to build capabilities from.
+    """
+    if request.subagents is None:
+        return spec
+    base = spec or Agentspec(id=agent_id, name=request.name, description=request.description)
+    return base.model_copy(update={"subagents": request.subagents})
 
 
 def _is_tool_approvals_disabled(request_value: bool | None = None) -> bool:
@@ -1102,6 +1132,14 @@ class CreateAgentRequest(BaseModel):
     agent_spec: dict[str, Any] | None = Field(
         default=None,
         description="Optional complete agent spec payload forwarded by the UI. Used to prefill fields when creating from a library spec.",
+    )
+    subagents: SubAgentsConfig | None = Field(
+        default=None,
+        description=(
+            "Subagents for this agent, in place of its agentspec's: how a team's "
+            "supervisor is given its members, each a seat it asks the "
+            "orchestration control plane for (O2-09)."
+        ),
     )
     memory: str | None = Field(
         default=None,
@@ -2102,6 +2140,11 @@ async def create_agent(
                         exc,
                     )
 
+            # The subagents a caller names replace the spec's: how a team's
+            # supervisor is given its members (O2-09).
+            spec_for_runtime_controls = _with_subagents(
+                spec_for_runtime_controls, request, agent_id
+            )
             if spec_for_runtime_controls is not None:
                 capabilities = build_capabilities_from_agent_spec(
                     spec_for_runtime_controls,
@@ -4312,8 +4355,8 @@ async def _stop_mcp_servers_for_agent(
     for selection in selected_servers:
         server_id = selection.id if hasattr(selection, "id") else str(selection)
         if getattr(selection, "origin", None) == "contents":
-            # Reached through a Contents session; there is no process to start.
-            already_running.append(server_id)
+            # Reached through a Contents session: there is no process to stop.
+            already_stopped.append(server_id)
             continue
         is_config = getattr(selection, "origin", "catalog") == "config"
 

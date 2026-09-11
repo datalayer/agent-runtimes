@@ -127,6 +127,18 @@ Specs can represent single agents or orchestrated teams.
 
 - Team/orchestrator specs coordinate specialized workers.
 - Collaboration is surfaced through runtime protocols (especially ACP/A2A).
+- A sequential or parallel team runs as an orchestration. Delegating it
+  (`executions.delegate`, with the team's id as the agent and `datalayer` as
+  the protocol) roots a tree on its supervisor, runs each member as a child in
+  the order `depends_on` gives, and has the supervisor answer from what they
+  produced. Each seat is named `team:<team>/<seat>`. A seat that references an
+  agentspec runs on it; one that does not runs on an agentspec built from its
+  own goal, model, tools and MCP server (`agent_runtimes.orchestration.teams`).
+  In a team whose supervisor routes the work, the supervisor is registered with
+  the members as its A2A subagents, each a seat it asks the control plane for,
+  and is told the team's routing instructions. An agent can be created with
+  such subagents in place of its agentspec's (`subagents` on the create
+  request).
 
 ## Minimal Example Fragments
 

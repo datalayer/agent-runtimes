@@ -33,11 +33,11 @@ from agent_runtimes.mixins.environments import EnvironmentsMixin
 from agent_runtimes.mixins.evals import EvalsMixin
 from agent_runtimes.mixins.events import EventsMixin
 from agent_runtimes.mixins.ray import RayMixin
-from agent_runtimes.runtimes.client import RuntimesMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
 from agent_runtimes.models.environment import EnvironmentModel
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
 from agent_runtimes.runtimes import RuntimeService
+from agent_runtimes.runtimes.client import RuntimesMixin
 from agent_runtimes.sandboxes.code_sandbox_snapshots import (
     as_code_sandbox_snapshots,
     create_snapshot,
@@ -227,7 +227,8 @@ def ensure_local_agent(
     base_url: str,
     agent_name: str,
     token: str,
-    agent_spec_id: str,
+    agent_spec_id: str | None = None,
+    fields: Optional[dict] = None,
     agent_library: str = "pydantic-ai",
     transport: str = DEFAULT_LOCAL_PROTOCOL,
     enable_skills: bool = True,
@@ -240,6 +241,10 @@ def ensure_local_agent(
     The server may be the local one or the one on a cloud runtime; only its
     base URL differs. An agent of that name already answering on ``transport``
     is kept; one on another transport is replaced. Returns the agent's id.
+
+    An agent an agentspec defines is registered by its id. One defined inline
+    is registered from ``fields``: its system prompt, model, tools and MCP
+    servers (a team's seat, O2-09).
     """
     base = base_url.rstrip("/")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -285,6 +290,7 @@ def ensure_local_agent(
         "enable_skills": enable_skills,
         "tools": [],
         "disableToolApprovals": disable_tool_approvals,
+        **(fields or {}),
     }
     try:
         response = requests.post(

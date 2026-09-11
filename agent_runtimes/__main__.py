@@ -632,6 +632,15 @@ def serve(
             help="Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)",
         ),
     ] = Protocol.ag_ui,
+    orchestrator_root: Annotated[
+        Optional[str],
+        typer.Option(
+            "--orchestrator-root",
+            envvar="AGENT_RUNTIMES_ORCHESTRATOR_ROOT",
+            help="Register the orchestrator as an ACP agent, delegating each turn to this agent: "
+            "an agentspec ID, or an A2A (http) or ACP (ws) endpoint",
+        ),
+    ] = None,
     find_free_port: Annotated[
         bool,
         typer.Option(
@@ -741,6 +750,7 @@ def serve(
             find_free_port_flag=find_free_port,
             node=node,
             disable_tool_approvals=disable_tool_approvals,
+            orchestrator_root=orchestrator_root,
         )
     except ServeError as e:
         logger.error(str(e))

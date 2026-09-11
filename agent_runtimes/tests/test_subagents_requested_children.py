@@ -38,6 +38,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from agent_runtimes.context import delegation
 from agent_runtimes.context.identities import set_request_user_jwt
 from agent_runtimes.orchestration import InMemoryExecutionStore
+from agent_runtimes.orchestration import following as following_module
 from agent_runtimes.orchestration.adapter import Observation, answer_artifact, now
 from agent_runtimes.orchestration.budget import delegation_meta
 from agent_runtimes.subagents import (
@@ -46,7 +47,6 @@ from agent_runtimes.subagents import (
     SubagentDefinition,
     SubagentsCapability,
 )
-from agent_runtimes.subagents import a2a as a2a_module
 from agent_runtimes.subagents.a2a import (
     ChildNotRequested,
     child_slot,
@@ -136,7 +136,7 @@ def plane(monkeypatch: pytest.MonkeyPatch) -> FakePlane:
         fake.tokens.append(token)
         return fake
 
-    monkeypatch.setattr(a2a_module, "_orchestration_client", client)
+    monkeypatch.setattr(following_module, "orchestration_client", client)
     return fake
 
 

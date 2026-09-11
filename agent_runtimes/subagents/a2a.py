@@ -25,7 +25,6 @@ itself is refused (``ChildNotRequested``).
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import hashlib
 import logging
 import os
@@ -209,15 +208,6 @@ def child_slot(name: str, task: str) -> str:
     return f"{stem}:{hashlib.sha256(task.encode()).hexdigest()[:12]}"
 
 
-def _orchestration_client(token: str) -> Any:
-    """The client a worker asks the control plane with, as its execution."""
-    from datalayer_core.utils.urls import DatalayerURLs
-
-    from ..client.agent_client import AgentClient
-
-    return AgentClient(urls=DatalayerURLs.from_environment(), api_key=token)
-
-
 async def request_child(
     execution: Mapping[str, Any],
     name: str,
@@ -266,13 +256,12 @@ async def request_child(
     from datalayer_core.orchestration import (
         ExecutionEventType,
         ExecutionsCancel,
-        ExecutionsCollect,
         ExecutionsDelegate,
-        ExecutionState,
         Objective,
     )
 
     from ..context.identities import get_request_user_jwt
+    from ..orchestration import following
 
     parent = str(execution.get("executionId") or "")
     token = get_request_user_jwt()
@@ -283,7 +272,7 @@ async def request_child(
         )
     account_uid = str(execution.get("accountUid") or "") or None
     slot = child_slot(name, task)
-    client = _orchestration_client(token)
+    client = following.orchestration_client(token)
     receipt = await asyncio.to_thread(
         client.delegate_execution,
         ExecutionsDelegate(
@@ -298,60 +287,25 @@ async def request_child(
     child = receipt.execution.execution_id
     emit("status", state="requested", executionId=child)
 
-    loop = asyncio.get_running_loop()
-    events: asyncio.Queue[Any] = asyncio.Queue()
+    def relay(event: Any) -> None:
+        data = dict(event.data or {})
+        if event.type is ExecutionEventType.STATE_CHANGED and event.state is not None:
+            emit("status", state=event.state.value, executionId=child)
+        elif event.type is ExecutionEventType.PROGRESS and isinstance(data.get("phase"), str):
+            # A relayed phase of the child's worker, told as its own.
+            emit(data.pop("phase"), **data)
 
-    def follow() -> None:
-        try:
-            for event, _ in client.subscribe_execution(
-                child, include_children=False, account_uid=account_uid
-            ):
-                loop.call_soon_threadsafe(events.put_nowait, event)
-        finally:
-            loop.call_soon_threadsafe(events.put_nowait, None)
-
-    following = asyncio.ensure_future(asyncio.to_thread(follow))
-    state = receipt.execution.status
-    error = receipt.execution.error
-    bodies: dict[tuple[str, str], str] = {}
-    try:
-        while (event := await events.get()) is not None:
-            data = dict(event.data or {})
-            if event.type is ExecutionEventType.STATE_CHANGED and event.state is not None:
-                state, error = event.state, event.error or error
-                emit("status", state=state.value, executionId=child)
-            elif event.type is ExecutionEventType.ARTIFACT_REGISTERED and event.artifact:
-                produced_by = event.artifact.provenance[-1].attempt_id if event.artifact.provenance else ""
-                if isinstance(data.get("text"), str):
-                    bodies[(event.artifact.artifact_id, produced_by)] = data["text"]
-            elif event.type is ExecutionEventType.PROGRESS and isinstance(data.get("phase"), str):
-                # A relayed phase of the child's worker, told as its own.
-                emit(data.pop("phase"), **data)
-        await following
-    except asyncio.CancelledError:
-        # The parent stopped, and so does the child it asked for.
-        with contextlib.suppress(Exception):
-            await asyncio.to_thread(
-                client.cancel_execution,
-                ExecutionsCancel(
-                    idempotency_key=f"{parent}:{slot}:cancel",
-                    execution_id=child,
-                    reason="Its parent's run stopped.",
-                ),
-                account_uid=account_uid,
-            )
-        raise
-    if state is not ExecutionState.COMPLETED:
-        said = f": {error.message}" if error is not None else "."
-        raise RuntimeError(f"Child execution '{child}' ended {state.value}{said}")
-    collected = await asyncio.to_thread(
-        client.collect_execution, ExecutionsCollect(execution_id=child), account_uid=account_uid
-    )
-    completing = collected.execution.current_attempt_id or ""
-    return "\n\n".join(
-        bodies[key]
-        for key in ((artifact.artifact_id, completing) for artifact in collected.artifacts)
-        if key in bodies
+    # A parent that stops cancels the child it asked for.
+    return await following.follow_execution(
+        client,
+        receipt.execution,
+        account_uid=account_uid,
+        on_event=relay,
+        cancel=ExecutionsCancel(
+            idempotency_key=f"{parent}:{slot}:cancel",
+            execution_id=child,
+            reason="Its parent's run stopped.",
+        ),
     )
 
 
@@ -360,11 +314,35 @@ def a2a_agent_url(base_url: str, agent_id: str) -> str:
     return f"{base_url.rstrip('/')}/api/v1/a2a/agents/{agent_id}"
 
 
+#: A version at the end of a reference, as ``get_team_spec`` reads one.
+_VERSION = re.compile(r"\d+(\.\d+)*([.+-][0-9A-Za-z.-]+)?")
+
+
 def spec_id_of(ref: str | None) -> str | None:
-    """The agentspec id in a ``<id>:<version>`` reference."""
+    """
+    The agentspec id in a reference: ``<id>``, or ``<id>:<version>``.
+
+    Only a trailing version is dropped: what follows the last colon when it is
+    a version, such as ``0.0.1``. A team's seat, ``team:<team>/<seat>``,
+    carries a colon that is not one, and stays whole (O2-09).
+
+    Parameters
+    ----------
+    ref : str | None
+        The reference.
+
+    Returns
+    -------
+    str | None
+        The id, or none for an empty reference.
+    """
     if not ref:
         return None
-    return ref.split(":", 1)[0].strip() or None
+    ref = ref.strip()
+    base, colon, version = ref.rpartition(":")
+    if colon and base and _VERSION.fullmatch(version):
+        return base
+    return ref or None
 
 
 def agent_name_for(subagent_name: str) -> str:
@@ -479,13 +457,14 @@ async def ensure_remote_agent(
 async def serve_agentspec(
     name: str,
     description: str,
-    spec_id: str,
+    spec_id: str | None,
     base_url: str,
     token: str | None,
     *,
     launch: str,
     runtime_uid: str | None = None,
     wait: bool = False,
+    fields: dict[str, Any] | None = None,
 ) -> A2ARemoteAgent:
     """
     Register an agentspec on an agent-runtimes server over A2A, and answer the agent it serves.
@@ -500,8 +479,8 @@ async def serve_agentspec(
         The agent's name, which its registration is derived from.
     description : str
         What it is for.
-    spec_id : str
-        The agentspec.
+    spec_id : str | None
+        The agentspec, or none for an agent ``fields`` defines.
     base_url : str
         The agent-runtimes server to register it on.
     token : str | None
@@ -513,6 +492,10 @@ async def serve_agentspec(
     wait : bool
         Whether the server may still be starting, as a runtime just
         provisioned is.
+    fields : dict[str, Any] | None
+        What an agent defined inline is registered with, or overrides of the
+        agentspec's: a system prompt, a model, tools, MCP servers (a team's
+        seat, O2-09).
 
     Returns
     -------
@@ -536,10 +519,11 @@ async def serve_agentspec(
         agent_name=agent_name,
         token=token or "",
         agent_spec_id=spec_id,
+        fields=fields,
         transport="a2a",
         # Skills only when the spec has some: an empty skills toolset is an
         # invitation for the model to call a skill that does not exist.
-        enable_skills=spec_declares_skills(spec_id),
+        enable_skills=spec_id is not None and spec_declares_skills(spec_id),
         description=description or f"A2A agent '{name}'",
     )
     remote = A2ARemoteAgent(

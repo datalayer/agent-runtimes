@@ -221,6 +221,21 @@ cd examples/orchestration && python orchestrate.py
 The gaps this turned up in both protocols, and the extension fields each one
 maps to, are in `research/orchestration-protocols/docs/` (from `index.md`, the gap table in `gaps.md`).
 
+The same runtime can put that whole arrangement behind one ACP agent. Started
+with `--orchestrator-root`, it registers `orchestrator` on its ACP route. Each
+`session/prompt` becomes a root execution, delegated as the person the
+connection's token names to the agent the option names: an agentspec ID, or
+an A2A (`http(s)`) or ACP (`ws(s)`) endpoint. That agent's worker asks the
+control plane for whatever children it needs. The client sees one agent: the
+tree's progress arrives as thought chunks, and what the root produced as the
+agent's message. A turn is keyed on its session and its prompt, so the same
+prompt in a session loaded after the runtime restarted is answered from the
+same tree, and cancelling the turn cancels the tree.
+
+```bash
+agent-runtimes serve --orchestrator-root http://127.0.0.1:8765/api/v1/a2a/agents/researcher
+```
+
 ## Choosing a Protocol
 
 | Requirement | Recommended Protocol |

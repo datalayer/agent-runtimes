@@ -56,16 +56,18 @@ from .routes import (
     agents_router,
     agui_router,
     checkpoints_router,
-    notifications_router,
     configure_router,
     evals_router,
     get_a2a_mounts,
     get_agui_mounts,
     health_router,
     identity_router,
+    loop_router,
+    mcp_auth_router,
     mcp_proxy_router,
     mcp_router,
     mcp_ui_router,
+    notifications_router,
     sandbox_router,
     set_a2a_app,
     start_a2a_task_managers,
@@ -75,8 +77,6 @@ from .routes import (
     tool_approvals_ws_router,
     triggers_webhook_router,
     vercel_ai_router,
-    loop_router,
-    mcp_auth_router,
 )
 from .routes.agents import set_api_prefix
 from .specs.agents import get_agent_spec
@@ -1287,6 +1287,35 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 logger.warning(
                     f"Default agent '{default_agent_id}' not found in library"
                 )
+
+        # The orchestrator as one ACP agent, with a tree of executions behind it
+        # (--orchestrator-root, O2-08).
+        orchestrator_root = os.environ.get("AGENT_RUNTIMES_ORCHESTRATOR_ROOT")
+        if orchestrator_root:
+            from .orchestration.orchestrator import (
+                ORCHESTRATOR_AGENT_ID,
+                OrchestratorAgent,
+                root_binding,
+            )
+            from .routes.acp import AgentCapabilities, AgentInfo
+            from .routes.acp import register_agent as register_acp_agent
+
+            orchestrator = OrchestratorAgent(root_binding(orchestrator_root))
+            register_acp_agent(
+                orchestrator,
+                AgentInfo(
+                    id=ORCHESTRATOR_AGENT_ID,
+                    name=orchestrator.name,
+                    description=orchestrator.description,
+                    capabilities=AgentCapabilities(
+                        tool_calling=False, code_execution=False
+                    ),
+                    protocol="acp",
+                ),
+            )
+            logger.info(
+                f"Registered the orchestrator with ACP, delegating each turn to '{orchestrator_root}'"
+            )
 
         # Demo agent auto-registration disabled - use the UI to create agents dynamically
         # To manually register the demo agent, run: python -m agent_runtimes.examples.demo.demo_agent
