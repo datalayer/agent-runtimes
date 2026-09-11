@@ -743,42 +743,79 @@ class AgentClient(
     """
 
     @lru_cache
-    def list_environments(self) -> list[EnvironmentModel]:
+    def list_environments(
+        self,
+        owner: Optional[str] = None,
+        origin: Optional[str] = None,
+        variant: Optional[str] = None,
+        q: Optional[str] = None,
+    ) -> list[EnvironmentModel]:
         """
         List all available environments.
+
+        The platform's, then the user environments of the caller and of its
+        organizations (PLAN_ENV.md, E1-01), every page of them.
+
+        Parameters
+        ----------
+        owner : Optional[str]
+            Only one owner's: an account uid, or a platform entry's owner such
+            as ``datalayer``.
+        origin : Optional[str]
+            Only ``platform`` or only ``user`` environments.
+        variant : Optional[str]
+            Only the environments offered on this variant.
+        q : Optional[str]
+            Only the environments whose name or title holds this.
 
         Returns
         -------
         list[Environment]
             A list of available environments.
         """
-        response = self._list_environments()
-
-        # Some API failures return payloads without an `environments` key.
-        # Surface a clear runtime error instead of raising KeyError.
-        if not response.get("success", True):
-            raise RuntimeError(
-                f"Failed to list environments: {response.get('message', 'Unknown error')}"
+        environments_raw: list[Any] = []
+        cursor: Optional[str] = None
+        cursors_read: set[str] = set()
+        while True:
+            response = self._list_environments(
+                owner=owner, origin=origin, variant=variant, q=q, cursor=cursor
             )
 
-        environments_raw = response.get("environments")
-        if environments_raw is None:
-            raise RuntimeError(
-                "Failed to list environments: missing 'environments' field in response"
-            )
+            # Some API failures return payloads without an `environments` key.
+            # Surface a clear runtime error instead of raising KeyError.
+            if not response.get("success", True):
+                raise RuntimeError(
+                    f"Failed to list environments: {response.get('message', 'Unknown error')}"
+                )
 
-        if not isinstance(environments_raw, list):
-            raise RuntimeError(
-                "Failed to list environments: invalid 'environments' field type"
-            )
+            page = response.get("environments")
+            if page is None:
+                raise RuntimeError(
+                    "Failed to list environments: missing 'environments' field in response"
+                )
 
-        self._available_environments = environments_raw
-        self._available_environments_names = []
+            if not isinstance(page, list):
+                raise RuntimeError(
+                    "Failed to list environments: invalid 'environments' field type"
+                )
+
+            environments_raw.extend(page)
+            cursor = response.get("nextCursor")
+            if not cursor or cursor in cursors_read:
+                break
+            cursors_read.add(cursor)
+
+        # `create_runtime` checks a name against the whole list, never a filtered one.
+        unfiltered = not (owner or origin or variant or q)
+        if unfiltered:
+            self._available_environments = environments_raw
+            self._available_environments_names = []
         env_objs = []
-        for env in self._available_environments:
+        for env in environments_raw:
             if not isinstance(env, dict):
                 continue
-            self._available_environments_names.append(env.get("name"))
+            if unfiltered:
+                self._available_environments_names.append(env.get("name"))
             env_data = dict(env)
             env_objs.append(
                 EnvironmentModel(
@@ -788,6 +825,10 @@ class AgentClient(
                     language=env_data.pop("language"),
                     owner=env_data.pop("owner"),
                     visibility=env_data.pop("visibility"),
+                    uid=env_data.pop("uid", None),
+                    origin=env_data.pop("origin", None),
+                    promoted_version=env_data.pop("promotedVersion", None),
+                    variants=env_data.pop("variants", None),
                     metadata=env_data,
                 )
             )

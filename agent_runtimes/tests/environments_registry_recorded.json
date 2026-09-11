@@ -1,0 +1,1281 @@
+{
+  "calls": {
+    "archive_environment": {
+      "body": {
+        "archivedAt": "2026-09-11T17:00:41Z",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "",
+        "etag": "\"106\"",
+        "name": "other",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": null,
+        "title": "other",
+        "uid": "01M28PM3A6S51CZ28RAE5G0MR7",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "visibility": "private"
+      },
+      "headers": null,
+      "json": null,
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM3A6S51CZ28RAE5G0MR7/archive",
+      "status": 200
+    },
+    "cancel_build": {
+      "body": {
+        "attempt": 1,
+        "cacheHit": false,
+        "cancelledBy": "01J9ENVPERSON0000000000000",
+        "correlationId": "trace-2",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+        "errorCode": "",
+        "errorDetail": "",
+        "etag": "\"106\"",
+        "finishedAt": "2026-09-11T17:00:41Z",
+        "idempotencyKey": "build-1:datalayer:r1",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "region": "r1",
+        "requestedBy": "01J9ENVPERSON0000000000000",
+        "startedAt": null,
+        "status": "cancelled",
+        "uid": "01M28PM3955P23VDGB42HGD9BV",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "variant": "datalayer",
+        "versionUid": "01M28PM38J6VRXRW6AC2KX0HSG"
+      },
+      "headers": null,
+      "json": null,
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-builds/01M28PM3955P23VDGB42HGD9BV/cancel",
+      "status": 200
+    },
+    "create_builds": {
+      "body": {
+        "builds": [
+          {
+            "attempt": 1,
+            "cacheHit": false,
+            "cancelledBy": "",
+            "correlationId": "trace-2",
+            "createdAt": "2026-09-11T17:00:41Z",
+            "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+            "errorCode": "",
+            "errorDetail": "",
+            "etag": "\"101\"",
+            "finishedAt": null,
+            "idempotencyKey": "build-1:datalayer:r1",
+            "ownerUid": "01J9ENVPERSON0000000000000",
+            "region": "r1",
+            "requestedBy": "01J9ENVPERSON0000000000000",
+            "startedAt": null,
+            "status": "queued",
+            "uid": "01M28PM3955P23VDGB42HGD9BV",
+            "updatedAt": "2026-09-11T17:00:41Z",
+            "variant": "datalayer",
+            "versionUid": "01M28PM38J6VRXRW6AC2KX0HSG"
+          }
+        ]
+      },
+      "headers": {
+        "Idempotency-Key": "build-1",
+        "X-Correlation-Id": "trace-2"
+      },
+      "json": {
+        "force": false,
+        "regions": [
+          "r1"
+        ],
+        "requiredVariants": [
+          "datalayer"
+        ],
+        "variants": [
+          "datalayer"
+        ]
+      },
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38J6VRXRW6AC2KX0HSG/builds",
+      "status": 201
+    },
+    "create_environment": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "Geospatial",
+        "etag": "\"101\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": null,
+        "title": "Geo",
+        "uid": "01M28PM382W8640FXVM22D72Z7",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "visibility": "private"
+      },
+      "headers": {
+        "Idempotency-Key": "env-1",
+        "X-Correlation-Id": "trace-1"
+      },
+      "json": {
+        "description": "Geospatial",
+        "name": "geo",
+        "title": "Geo"
+      },
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environments",
+      "status": 201
+    },
+    "create_version": {
+      "body": {
+        "contractVersion": "sandbox-contract/v1",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deprecatedAt": null,
+        "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+        "etag": "\"101\"",
+        "failureCode": "",
+        "label": "first",
+        "lockDigest": "",
+        "optionalVariants": [
+          "e2b"
+        ],
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedAt": null,
+        "requiredVariants": [
+          "datalayer"
+        ],
+        "resolvedBases": {},
+        "sourceArchiveDigest": "",
+        "sourceArchiveRef": "",
+        "sourceFormat": "",
+        "sourceType": "packages",
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "labels": {},
+            "name": "geo",
+            "title": null
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "build": {
+              "source": "packages"
+            },
+            "buildSecrets": [],
+            "commands": {
+              "postInstall": []
+            },
+            "compatibility": {
+              "regions": [],
+              "variants": {
+                "optional": [
+                  "e2b"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "contract": "sandbox-contract/v1",
+            "env": {},
+            "files": [],
+            "language": {
+              "name": "python",
+              "version": "3.13"
+            },
+            "packages": {
+              "python": {
+                "constraints": [],
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ],
+                "indexes": [
+                  "https://pypi.org/simple"
+                ],
+                "manager": "uv"
+              },
+              "system": {
+                "apt": []
+              }
+            },
+            "platform": {
+              "architecture": "linux/amd64"
+            },
+            "resources": {
+              "accelerator": "none",
+              "hints": {
+                "cpu": null,
+                "diskGi": null,
+                "memoryGi": null
+              },
+              "sizeClass": "small"
+            }
+          }
+        },
+        "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+        "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+        "status": "draft",
+        "uid": "01M28PM38J6VRXRW6AC2KX0HSG",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "validationSummary": {},
+        "version": 1
+      },
+      "headers": {
+        "Idempotency-Key": "v-1"
+      },
+      "json": {
+        "label": "first",
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "name": "geo"
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "compatibility": {
+              "variants": {
+                "optional": [
+                  "e2b"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "language": {
+              "name": "python",
+              "version": "3.13"
+            },
+            "packages": {
+              "python": {
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7/versions",
+      "status": 201
+    },
+    "create_version_invalid": {
+      "body": {
+        "code": "DL_ENV_SPEC_INVALID",
+        "correlationId": "01M28PM3AFRJ8FNA6E45C0H0TK",
+        "detail": {
+          "findings": [
+            {
+              "code": "DL_ENV_SPEC_INVALID",
+              "field": "spec.language.version",
+              "message": "Python 3.9 is not what `datalayer/python-cpu` provides (3.13); it is validated against the base, not replaced"
+            }
+          ]
+        },
+        "field": "spec.language.version",
+        "message": "spec.language.version: Python 3.9 is not what `datalayer/python-cpu` provides (3.13); it is validated against the base, not replaced",
+        "retryable": false,
+        "userAction": "Fix the highlighted field"
+      },
+      "headers": null,
+      "json": {
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "name": "geo"
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "compatibility": {
+              "variants": {
+                "optional": [
+                  "e2b"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "language": {
+              "name": "python",
+              "version": "3.9"
+            },
+            "packages": {
+              "python": {
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7/versions",
+      "status": 422
+    },
+    "delete_environment": {
+      "body": null,
+      "headers": null,
+      "json": null,
+      "method": "DELETE",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM3AAHED80MHYGC1724A0",
+      "status": 204
+    },
+    "deprecate_version": {
+      "body": {
+        "contractVersion": "sandbox-contract/v1",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deprecatedAt": "2026-09-11T17:00:41Z",
+        "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+        "etag": "\"106\"",
+        "failureCode": "",
+        "label": "ready",
+        "lockDigest": "",
+        "optionalVariants": [
+          "e2b"
+        ],
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedAt": "2026-09-11T17:00:41Z",
+        "requiredVariants": [
+          "datalayer"
+        ],
+        "resolvedBases": {},
+        "sourceArchiveDigest": "",
+        "sourceArchiveRef": "",
+        "sourceFormat": "",
+        "sourceType": "packages",
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "labels": {},
+            "name": "geo",
+            "title": null
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "build": {
+              "source": "packages"
+            },
+            "buildSecrets": [],
+            "commands": {
+              "postInstall": []
+            },
+            "compatibility": {
+              "regions": [],
+              "variants": {
+                "optional": [
+                  "e2b"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "contract": "sandbox-contract/v1",
+            "env": {},
+            "files": [],
+            "language": {
+              "name": "python",
+              "version": "3.13"
+            },
+            "packages": {
+              "python": {
+                "constraints": [],
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ],
+                "indexes": [
+                  "https://pypi.org/simple"
+                ],
+                "manager": "uv"
+              },
+              "system": {
+                "apt": []
+              }
+            },
+            "platform": {
+              "architecture": "linux/amd64"
+            },
+            "resources": {
+              "accelerator": "none",
+              "hints": {
+                "cpu": null,
+                "diskGi": null,
+                "memoryGi": null
+              },
+              "sizeClass": "small"
+            }
+          }
+        },
+        "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+        "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+        "status": "deprecated",
+        "uid": "01M28PM38NVPEFBTDC1JVFANQS",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "validationSummary": {},
+        "version": 2
+      },
+      "headers": null,
+      "json": null,
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38NVPEFBTDC1JVFANQS/deprecate",
+      "status": 200
+    },
+    "follow_build_log": {
+      "body": {
+        "detail": "Following a build's log as SSE is PLAN_ENV.md E1-16, which is not built yet."
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": {
+        "follow": "true"
+      },
+      "path": "/api/runtimes/v1/environment-builds/01M28PM3955P23VDGB42HGD9BV/logs",
+      "status": 501
+    },
+    "get_build": {
+      "body": {
+        "attempt": 1,
+        "cacheHit": false,
+        "cancelledBy": "",
+        "correlationId": "trace-2",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+        "errorCode": "",
+        "errorDetail": "",
+        "etag": "\"101\"",
+        "finishedAt": null,
+        "idempotencyKey": "build-1:datalayer:r1",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "region": "r1",
+        "requestedBy": "01J9ENVPERSON0000000000000",
+        "startedAt": null,
+        "status": "queued",
+        "uid": "01M28PM3955P23VDGB42HGD9BV",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "variant": "datalayer",
+        "versionUid": "01M28PM38J6VRXRW6AC2KX0HSG"
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-builds/01M28PM3955P23VDGB42HGD9BV",
+      "status": 200
+    },
+    "get_environment": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "Geospatial",
+        "etag": "\"101\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": null,
+        "title": "Geo",
+        "uid": "01M28PM382W8640FXVM22D72Z7",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "visibility": "private"
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7",
+      "status": 200
+    },
+    "get_environment_missing": {
+      "body": {
+        "code": "DL_ENV_NOT_FOUND",
+        "correlationId": "trace-9",
+        "message": "No environment 01M28PM382W8640FXVM22D72Z7"
+      },
+      "headers": {
+        "X-Correlation-Id": "trace-9"
+      },
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7",
+      "status": 404
+    },
+    "get_version": {
+      "body": {
+        "contractVersion": "sandbox-contract/v1",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deprecatedAt": null,
+        "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+        "etag": "\"101\"",
+        "failureCode": "",
+        "label": "first",
+        "lockDigest": "",
+        "optionalVariants": [
+          "e2b"
+        ],
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedAt": null,
+        "requiredVariants": [
+          "datalayer"
+        ],
+        "resolvedBases": {},
+        "sourceArchiveDigest": "",
+        "sourceArchiveRef": "",
+        "sourceFormat": "",
+        "sourceType": "packages",
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "labels": {},
+            "name": "geo",
+            "title": null
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "build": {
+              "source": "packages"
+            },
+            "buildSecrets": [],
+            "commands": {
+              "postInstall": []
+            },
+            "compatibility": {
+              "regions": [],
+              "variants": {
+                "optional": [
+                  "e2b"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "contract": "sandbox-contract/v1",
+            "env": {},
+            "files": [],
+            "language": {
+              "name": "python",
+              "version": "3.13"
+            },
+            "packages": {
+              "python": {
+                "constraints": [],
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ],
+                "indexes": [
+                  "https://pypi.org/simple"
+                ],
+                "manager": "uv"
+              },
+              "system": {
+                "apt": []
+              }
+            },
+            "platform": {
+              "architecture": "linux/amd64"
+            },
+            "resources": {
+              "accelerator": "none",
+              "hints": {
+                "cpu": null,
+                "diskGi": null,
+                "memoryGi": null
+              },
+              "sizeClass": "small"
+            }
+          }
+        },
+        "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+        "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+        "status": "draft",
+        "uid": "01M28PM38J6VRXRW6AC2KX0HSG",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "validationSummary": {},
+        "version": 1
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38J6VRXRW6AC2KX0HSG",
+      "status": 200
+    },
+    "list_artifacts": {
+      "body": {
+        "artifacts": [
+          {
+            "architecture": "amd64",
+            "baseDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "buildFinishedAt": null,
+            "buildStartedAt": null,
+            "contractVersion": "",
+            "createdAt": "2026-09-11T17:00:41Z",
+            "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+            "etag": "\"101\"",
+            "immutableReference": "",
+            "lastUsedAt": "2026-09-11T17:00:41Z",
+            "lockDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "mutableAlias": "",
+            "ownerUid": "01J9ENVPERSON0000000000000",
+            "provenanceRef": "",
+            "providerAccount": "",
+            "providerArtifactId": "",
+            "providerNamespace": "",
+            "providerVerifiedAt": null,
+            "referenceCount": 0,
+            "region": "r1",
+            "retentionState": "retained",
+            "runtimeMetadata": {},
+            "sbomRef": "",
+            "scanSummary": {},
+            "signatureRef": "",
+            "sizeBytes": 0,
+            "specDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "status": "ready",
+            "uid": "01M28PM39ANWJVHP4FC8F7XD0D",
+            "updatedAt": "2026-09-11T17:00:41Z",
+            "variant": "datalayer",
+            "versionUid": "01M28PM38NVPEFBTDC1JVFANQS"
+          }
+        ],
+        "nextCursor": null
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38NVPEFBTDC1JVFANQS/artifacts",
+      "status": 200
+    },
+    "list_builds": {
+      "body": {
+        "builds": [
+          {
+            "attempt": 1,
+            "cacheHit": false,
+            "cancelledBy": "",
+            "correlationId": "trace-2",
+            "createdAt": "2026-09-11T17:00:41Z",
+            "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+            "errorCode": "",
+            "errorDetail": "",
+            "etag": "\"101\"",
+            "finishedAt": null,
+            "idempotencyKey": "build-1:datalayer:r1",
+            "ownerUid": "01J9ENVPERSON0000000000000",
+            "region": "r1",
+            "requestedBy": "01J9ENVPERSON0000000000000",
+            "startedAt": null,
+            "status": "queued",
+            "uid": "01M28PM3955P23VDGB42HGD9BV",
+            "updatedAt": "2026-09-11T17:00:41Z",
+            "variant": "datalayer",
+            "versionUid": "01M28PM38J6VRXRW6AC2KX0HSG"
+          }
+        ],
+        "nextCursor": null
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": {
+        "limit": 10
+      },
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38J6VRXRW6AC2KX0HSG/builds",
+      "status": 200
+    },
+    "list_environments": {
+      "body": {
+        "environments": [
+          {
+            "description": "Geospatial",
+            "language": "python",
+            "name": "ada/geo",
+            "origin": "user",
+            "owner": "01J9ENVPERSON0000000000000",
+            "promotedVersion": {
+              "status": "ready",
+              "uid": "01M28PM38NVPEFBTDC1JVFANQS",
+              "version": 2
+            },
+            "title": "Geospatial",
+            "uid": "01M28PM382W8640FXVM22D72Z7",
+            "variants": [
+              "datalayer",
+              "e2b"
+            ],
+            "visibility": "private"
+          }
+        ],
+        "message": "",
+        "nextCursor": "eyJhY2NvdW50IjoiMDFKOUVOVlBFUlNPTjAwMDAwMDAwMDAwMDAiLCJtYXJrIjoiV3lJeU1ESTJMVEE1TFRFeFZERTNPakF3T2pReFdpSXNJQ0psYm5acGNtOXViV1Z1ZEMwM09XSTFZbU14Wm1Gak5UaG1aR1U1TVRjMk0ySmpNamRpWVRWak1tWTFNakF3TURZeVlqRTJZV1F4Tm1GbU5tTXdNbVU0TXpVM1pUYzNPR1k0T1RBNUlsMD0ifQ==",
+        "success": true
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": {
+        "limit": 1,
+        "origin": "user"
+      },
+      "path": "/api/runtimes/v1/environments",
+      "status": 200
+    },
+    "list_environments_all": {
+      "body": {
+        "environments": [
+          {
+            "burning_rate": 0.008,
+            "capabilities": null,
+            "contents": null,
+            "contents_build": null,
+            "description": null,
+            "dockerImage": "jupyter-python:0.2.0",
+            "env": null,
+            "example": null,
+            "home": null,
+            "icon": null,
+            "language": "python",
+            "name": "python-cpu-env",
+            "owner": "datalayer",
+            "resources": null,
+            "resourcesRanges": null,
+            "runtime": null,
+            "sizeClass": null,
+            "snippets": null,
+            "title": "Python CPU",
+            "visibility": "public"
+          },
+          {
+            "burning_rate": 0.0,
+            "capabilities": null,
+            "contents": null,
+            "contents_build": null,
+            "description": null,
+            "dockerImage": "external",
+            "env": null,
+            "example": null,
+            "home": null,
+            "icon": null,
+            "language": "python",
+            "name": "e2b-code-interpreter",
+            "owner": "e2b",
+            "resources": null,
+            "resourcesRanges": null,
+            "runtime": null,
+            "sizeClass": null,
+            "snippets": null,
+            "title": "E2B code interpreter",
+            "visibility": "public"
+          },
+          {
+            "description": "Geospatial",
+            "language": "python",
+            "name": "ada/geo",
+            "origin": "user",
+            "owner": "01J9ENVPERSON0000000000000",
+            "promotedVersion": {
+              "status": "ready",
+              "uid": "01M28PM38NVPEFBTDC1JVFANQS",
+              "version": 2
+            },
+            "title": "Geospatial",
+            "uid": "01M28PM382W8640FXVM22D72Z7",
+            "variants": [
+              "datalayer",
+              "e2b"
+            ],
+            "visibility": "private"
+          }
+        ],
+        "message": "",
+        "success": true
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environments",
+      "status": 200
+    },
+    "list_versions": {
+      "body": {
+        "nextCursor": "WyIyIiwgIjAxTTI4UE0zODJXODY0MEZYVk0yMkQ3Mlo3OjIiXQ==",
+        "versions": [
+          {
+            "contractVersion": "sandbox-contract/v1",
+            "createdAt": "2026-09-11T17:00:41Z",
+            "createdBy": "01J9ENVPERSON0000000000000",
+            "deprecatedAt": null,
+            "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+            "etag": "\"103\"",
+            "failureCode": "",
+            "label": "ready",
+            "lockDigest": "",
+            "optionalVariants": [
+              "e2b"
+            ],
+            "ownerUid": "01J9ENVPERSON0000000000000",
+            "promotedAt": null,
+            "requiredVariants": [
+              "datalayer"
+            ],
+            "resolvedBases": {},
+            "sourceArchiveDigest": "",
+            "sourceArchiveRef": "",
+            "sourceFormat": "",
+            "sourceType": "packages",
+            "spec": {
+              "apiVersion": "environments.datalayer.io/v1alpha1",
+              "kind": "Environment",
+              "metadata": {
+                "labels": {},
+                "name": "geo",
+                "title": null
+              },
+              "spec": {
+                "base": {
+                  "channel": "2026.09",
+                  "ref": "datalayer/python-cpu"
+                },
+                "build": {
+                  "source": "packages"
+                },
+                "buildSecrets": [],
+                "commands": {
+                  "postInstall": []
+                },
+                "compatibility": {
+                  "regions": [],
+                  "variants": {
+                    "optional": [
+                      "e2b"
+                    ],
+                    "required": [
+                      "datalayer"
+                    ]
+                  }
+                },
+                "contract": "sandbox-contract/v1",
+                "env": {},
+                "files": [],
+                "language": {
+                  "name": "python",
+                  "version": "3.13"
+                },
+                "packages": {
+                  "python": {
+                    "constraints": [],
+                    "dependencies": [
+                      "geopandas==1.1.1"
+                    ],
+                    "indexes": [
+                      "https://pypi.org/simple"
+                    ],
+                    "manager": "uv"
+                  },
+                  "system": {
+                    "apt": []
+                  }
+                },
+                "platform": {
+                  "architecture": "linux/amd64"
+                },
+                "resources": {
+                  "accelerator": "none",
+                  "hints": {
+                    "cpu": null,
+                    "diskGi": null,
+                    "memoryGi": null
+                  },
+                  "sizeClass": "small"
+                }
+              }
+            },
+            "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+            "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+            "status": "ready",
+            "uid": "01M28PM38NVPEFBTDC1JVFANQS",
+            "updatedAt": "2026-09-11T17:00:41Z",
+            "validationSummary": {},
+            "version": 2
+          }
+        ]
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": {
+        "limit": 1
+      },
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7/versions",
+      "status": 200
+    },
+    "promote_version": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "Geospatial",
+        "etag": "\"103\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": "01M28PM38NVPEFBTDC1JVFANQS",
+        "title": "Geospatial",
+        "uid": "01M28PM382W8640FXVM22D72Z7",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "visibility": "private"
+      },
+      "headers": {
+        "If-Match": "\"102\""
+      },
+      "json": {
+        "acknowledgeUnavailableVariants": [],
+        "versionUid": "01M28PM38NVPEFBTDC1JVFANQS"
+      },
+      "method": "PUT",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7/promoted-version",
+      "status": 200
+    },
+    "read_build_log": {
+      "body": {
+        "chunks": [
+          {
+            "createdAt": "2026-09-11T17:00:41Z",
+            "sequence": 1,
+            "size": 7,
+            "text": "step 1\n"
+          }
+        ],
+        "complete": false,
+        "nextCursor": "1"
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": {
+        "cursor": "0",
+        "limit": 10
+      },
+      "path": "/api/runtimes/v1/environment-builds/01M28PM3955P23VDGB42HGD9BV/logs",
+      "status": 200
+    },
+    "resolve_version": {
+      "body": {
+        "detail": "Resolving a version into a lock is PLAN_ENV.md E1-04, which is not built yet."
+      },
+      "headers": null,
+      "json": null,
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38J6VRXRW6AC2KX0HSG/resolve",
+      "status": 501
+    },
+    "retry_build": {
+      "body": {
+        "attempt": 2,
+        "cacheHit": false,
+        "cancelledBy": "",
+        "correlationId": "01M28PM39NG0G0XN6GDZVVV1H1",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+        "errorCode": "",
+        "errorDetail": "",
+        "etag": "\"107\"",
+        "finishedAt": null,
+        "idempotencyKey": "retry:01M28PM399KTTNBFEMX6ZYVD32",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "region": "r1",
+        "requestedBy": "01J9ENVPERSON0000000000000",
+        "startedAt": null,
+        "status": "queued",
+        "uid": "01M28PM39PMWWT6PACGGHTJ0G0",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "variant": "datalayer",
+        "versionUid": "01M28PM38NVPEFBTDC1JVFANQS"
+      },
+      "headers": null,
+      "json": null,
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-builds/01M28PM399KTTNBFEMX6ZYVD32/retry",
+      "status": 201
+    },
+    "trial_version": {
+      "body": {
+        "detail": "A trial sandbox is PLAN_ENV.md E1-14, which is not built yet."
+      },
+      "headers": null,
+      "json": null,
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38NVPEFBTDC1JVFANQS/trial",
+      "status": 501
+    },
+    "unpromote_version": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "Geospatial",
+        "etag": "\"104\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": null,
+        "title": "Geospatial",
+        "uid": "01M28PM382W8640FXVM22D72Z7",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "visibility": "private"
+      },
+      "headers": {
+        "If-Match": "\"103\""
+      },
+      "json": {
+        "versionUid": null
+      },
+      "method": "PUT",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7/promoted-version",
+      "status": 200
+    },
+    "update_environment": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "Geospatial",
+        "etag": "\"102\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": null,
+        "title": "Geospatial",
+        "uid": "01M28PM382W8640FXVM22D72Z7",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "visibility": "private"
+      },
+      "headers": {
+        "If-Match": "\"101\""
+      },
+      "json": {
+        "title": "Geospatial"
+      },
+      "method": "PATCH",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7",
+      "status": 200
+    },
+    "update_environment_stale": {
+      "body": {
+        "code": "DL_ENV_PRECONDITION_FAILED",
+        "correlationId": "01M28PM3887AVCWS8XJH76AQ0W",
+        "detail": {
+          "etag": "\"102\""
+        },
+        "message": "The record changed since the version If-Match names"
+      },
+      "headers": {
+        "If-Match": "\"101\""
+      },
+      "json": {
+        "title": "Stale"
+      },
+      "method": "PATCH",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7",
+      "status": 412
+    },
+    "update_version": {
+      "body": {
+        "contractVersion": "sandbox-contract/v1",
+        "createdAt": "2026-09-11T17:00:41Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deprecatedAt": null,
+        "environmentUid": "01M28PM382W8640FXVM22D72Z7",
+        "etag": "\"104\"",
+        "failureCode": "",
+        "label": "renamed",
+        "lockDigest": "",
+        "optionalVariants": [
+          "e2b"
+        ],
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedAt": null,
+        "requiredVariants": [
+          "datalayer"
+        ],
+        "resolvedBases": {},
+        "sourceArchiveDigest": "",
+        "sourceArchiveRef": "",
+        "sourceFormat": "",
+        "sourceType": "packages",
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "labels": {},
+            "name": "geo",
+            "title": null
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "build": {
+              "source": "packages"
+            },
+            "buildSecrets": [],
+            "commands": {
+              "postInstall": []
+            },
+            "compatibility": {
+              "regions": [],
+              "variants": {
+                "optional": [
+                  "e2b"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "contract": "sandbox-contract/v1",
+            "env": {},
+            "files": [],
+            "language": {
+              "name": "python",
+              "version": "3.13"
+            },
+            "packages": {
+              "python": {
+                "constraints": [],
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ],
+                "indexes": [
+                  "https://pypi.org/simple"
+                ],
+                "manager": "uv"
+              },
+              "system": {
+                "apt": []
+              }
+            },
+            "platform": {
+              "architecture": "linux/amd64"
+            },
+            "resources": {
+              "accelerator": "none",
+              "hints": {
+                "cpu": null,
+                "diskGi": null,
+                "memoryGi": null
+              },
+              "sizeClass": "small"
+            }
+          }
+        },
+        "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+        "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+        "status": "draft",
+        "uid": "01M28PM38J6VRXRW6AC2KX0HSG",
+        "updatedAt": "2026-09-11T17:00:41Z",
+        "validationSummary": {},
+        "version": 1
+      },
+      "headers": {
+        "If-Match": "\"101\""
+      },
+      "json": {
+        "label": "renamed"
+      },
+      "method": "PATCH",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38J6VRXRW6AC2KX0HSG",
+      "status": 200
+    },
+    "validate_version": {
+      "body": {
+        "reports": [
+          {
+            "findings": [
+              {
+                "code": "DL_ENV_CAPABILITY_UNSUPPORTED",
+                "message": "the datalayer Environment builder is not available in this release"
+              }
+            ],
+            "supported": false,
+            "variant": "datalayer"
+          }
+        ],
+        "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+        "supported": false,
+        "versionUid": "01M28PM38J6VRXRW6AC2KX0HSG"
+      },
+      "headers": null,
+      "json": {
+        "variants": [
+          "datalayer"
+        ]
+      },
+      "method": "POST",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M28PM38J6VRXRW6AC2KX0HSG/validate",
+      "status": 200
+    }
+  },
+  "source": "What each E1-01 route of Runtimes was sent and answered (PLAN_ENV.md, section 9), recorded from the in-memory app of services runtimes/datalayer_runtimes/tests/test_environments_registry.py at services b4181e3f."
+}
