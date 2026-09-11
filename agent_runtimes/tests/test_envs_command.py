@@ -6,12 +6,15 @@
 The fake is ``AgentClient`` over a fake ``_fetch``. Each route answers what
 E1-01's routes answered in ``environments_registry_recorded.json``, so a
 command is held to the requests its client calls really send, among them the
-``If-Match`` taken from the record it has just read. The routes E1-04, E1-14
-and E1-16 have not built answer their recorded 501s.
+``If-Match`` taken from the record it has just read. The routes E1-04 and
+E1-14 have not built answer their recorded 501s.
 
-No log stream could be recorded before E1-16 builds the route; ``BUILD_LOG``
-is framed the way E1-18's reader takes one, each event's id the chunk's
-sequence and ``event: end`` once the build is terminal.
+A build's log is what E1-16's routes answered for a build of its own, recorded
+from Runtimes' in-memory app (see the JSON's ``source``): the stream
+``logs?follow=true`` sent is ``environments_build_logs_recorded.sse``, byte for
+byte, beside the polling answer and the build as it ended. ``build --follow``
+and ``logs --follow`` read that stream through ``AgentClient``'s own reader,
+over a ``requests.Response`` whose body arrives a few bytes at a time.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any
 
 import pytest
 import requests
@@ -54,6 +57,17 @@ READY = RECORDED["list_versions"]["body"]["versions"][0]
 QUEUED = RECORDED["create_builds"]["body"]["builds"][0]
 SPEC = RECORDED["create_version"]["json"]["spec"]
 
+#: E1-16's routes, recorded on a build of their own.
+FOLLOWED = RECORDED["follow_build_log"]
+#: The bytes ``logs?follow=true`` sent, ``event: end`` included.
+STREAM = (HERE / FOLLOWED["stream"]).read_bytes()
+#: That build as it ended: succeeded.
+LOGGED = RECORDED["get_followed_build"]["body"]
+LOGGED_UID = LOGGED["uid"]
+LOGGED_VERSION_UID = LOGGED["versionUid"]
+#: Its chunks as the polling route answered them once the build had ended.
+STORED = RECORDED["read_followed_build_log"]["body"]["chunks"]
+
 ENV_UID = ENVIRONMENT["uid"]
 DRAFT_UID = DRAFT["uid"]
 READY_UID = READY["uid"]
@@ -77,13 +91,8 @@ COMMANDS = {
     "archive",
 }
 
-#: What a Datalayer build writes, one chunk per step.
-BUILD_LOG = [
-    "#1 [internal] load build definition from Dockerfile\n",
-    "#5 [2/4] RUN uv pip sync --require-hashes /opt/datalayer/lock.txt\n",
-    "#5 2.31 Installed 184 packages in 2.31s\n",
-    "#8 exporting to image\n",
-]
+#: What the recorded build wrote, a text per chunk, as the route stored it.
+BUILD_LOG = [chunk["text"] for chunk in STORED]
 
 runner = CliRunner(env={"NO_COLOR": "1", "TERM": "dumb", "COLUMNS": "240"})
 
@@ -93,24 +102,29 @@ def record(base: dict[str, Any], **changes: Any) -> dict[str, Any]:
 
 
 class _Response:
-    def __init__(
-        self, status_code: int = 200, payload: Any = None, lines: Iterable[str] = ()
-    ) -> None:
+    def __init__(self, status_code: int = 200, payload: Any = None) -> None:
         self.status_code = status_code
         self._payload = payload
-        self._lines = list(lines)
-        self.closed = False
 
     def json(self) -> Any:
         if self._payload is None:
             raise ValueError("no body")
         return self._payload
 
-    def iter_lines(self, decode_unicode: bool = False) -> Iterator[str]:
-        yield from self._lines
+
+class _Arriving:
+    """A response body that arrives ``size`` bytes at a time, as a network hands it over."""
+
+    def __init__(self, data: bytes, size: int) -> None:
+        self._data, self._size, self._position = data, size, 0
+
+    def read(self, amount: int | None = None) -> bytes:
+        piece = self._data[self._position : self._position + self._size]
+        self._position += len(piece)
+        return piece
 
     def close(self) -> None:
-        self.closed = True
+        self._position = len(self._data)
 
 
 def refused(url: str, status: int, body: Any) -> RuntimeError:
@@ -139,27 +153,14 @@ def answered(name: str) -> tuple[int, Any]:
     return RECORDED[name]["status"], RECORDED[name]["body"]
 
 
-def chunk(sequence: int) -> dict[str, Any]:
-    text = BUILD_LOG[sequence]
-    return {
-        "sequence": sequence,
-        "text": text,
-        "size": len(text.encode()),
-        "createdAt": "2026-09-11T17:00:41Z",
-    }
-
-
-def build_log_stream() -> _Response:
-    """``BUILD_LOG`` as the ``logs?follow=true`` route streams it."""
-    lines = [": connected", ""]
-    for sequence in range(len(BUILD_LOG)):
-        lines += [
-            f"id: {sequence}",
-            "event: chunk",
-            f"data: {json.dumps(chunk(sequence))}",
-            "",
-        ]
-    return _Response(200, lines=[*lines, "event: end", "data: {}", ""])
+def recorded_stream(size: int = 64) -> requests.Response:
+    """``logs?follow=true`` as E1-16's route answered it: its status, its headers and its bytes."""
+    response = requests.Response()
+    response.status_code = FOLLOWED["status"]
+    response.headers.update(FOLLOWED["responseHeaders"])
+    response.encoding = requests.utils.get_encoding_from_headers(response.headers)
+    response.raw = _Arriving(STREAM, size)
+    return response
 
 
 class Registry:
@@ -180,8 +181,9 @@ class Registry:
         if not answers:
             raise AssertionError(f"nothing answers {method} {path}")
         answer = answers.pop(0) if len(answers) > 1 else answers[0]
-        if isinstance(answer, _Response):
-            return answer
+        if callable(answer):
+            # A stream is read once: each request is answered a new one.
+            return answer()
         status, body = answer
         if status >= 400:
             raise refused(url, status, body)
@@ -791,13 +793,27 @@ def test_versions_are_ordered_as_versions_not_as_text() -> None:
 # -- build and logs ---------------------------------------------------------------------------
 
 
-def follow_routes(registry: Registry, status: str, **changes: Any) -> None:
+LOGS = f"/environment-builds/{LOGGED_UID}/logs"
+
+
+def follow_routes(registry: Registry, size: int = 64, **changes: Any) -> None:
+    """E1-16's recorded answers: the build queued, its log's stream, and the build as it ended, with ``changes``."""
     registry.on(
-        "POST", f"/environment-versions/{DRAFT_UID}/builds", answered("create_builds")
+        "POST",
+        f"/environment-versions/{LOGGED_VERSION_UID}/builds",
+        answered("create_followed_build"),
     )
-    registry.on("GET", f"/environment-builds/{BUILD_UID}/logs", build_log_stream())
-    ended = record(QUEUED, status=status, finishedAt="2026-09-11T17:03:12Z", **changes)
-    registry.on("GET", f"/environment-builds/{BUILD_UID}", ok(ended))
+    registry.on("GET", LOGS, lambda: recorded_stream(size))
+    registry.on(
+        "GET", f"/environment-builds/{LOGGED_UID}", ok(record(LOGGED, **changes))
+    )
+
+
+def build_follow(*options: str) -> Result:
+    """``build --follow`` of the recorded build's version, on the variant it was recorded on."""
+    return invoke(
+        "build", LOGGED_VERSION_UID, "--variant", "datalayer", "--follow", *options
+    )
 
 
 def test_build_queues_a_build_per_variant(registry: Registry) -> None:
@@ -816,20 +832,40 @@ def test_build_queues_a_build_per_variant(registry: Registry) -> None:
     assert [item["uid"] for item in listed] == [BUILD_UID]
 
 
-def test_build_follow_renders_the_log_and_exits_0_when_the_build_succeeded(
-    registry: Registry,
+@pytest.mark.parametrize("size", [1, 7, 64, len(STREAM)])
+def test_build_follow_renders_the_recorded_log_and_exits_0_when_the_build_succeeded(
+    registry: Registry, size: int
 ) -> None:
-    follow_routes(registry, "succeeded")
-    result = invoke("build", DRAFT_UID, "--follow")
+    follow_routes(registry, size)
+    result = build_follow()
     assert result.exit_code == 0, result.output
     log = "".join(BUILD_LOG)
     assert log in result.stdout
     queued, outcome = result.stdout.split(log)
-    assert BUILD_UID in queued and "queued" in queued
-    assert BUILD_UID in outcome and "succeeded" in outcome
+    assert LOGGED_UID in queued and "queued" in queued
+    # The last chunk ends mid-line, so the outcome starts on a line of its own.
+    assert outcome.startswith("\n")
+    assert LOGGED_UID in outcome and "succeeded" in outcome
     assert result.stderr == ""
-    (stream,) = registry.sent("GET", f"/environment-builds/{BUILD_UID}/logs")
-    assert stream["params"] == {"follow": "true"} and stream["stream"] is True
+
+    # The chunk that echoed credentials renders as the route stored it.
+    assert "+ export GITHUB_TOKEN=[REDACTED]\n" in result.stdout
+    assert (
+        "Looking in indexes: https://build:[REDACTED]@pypi.example/simple\n"
+        in result.stdout
+    )
+    assert "geopandas 1.1.1 ✓\n" in result.stdout
+
+    (post,) = registry.sent(
+        "POST", f"/environment-versions/{LOGGED_VERSION_UID}/builds"
+    )
+    assert post["json"] == RECORDED["create_followed_build"]["json"]
+    (stream,) = registry.sent("GET", LOGS)
+    assert (stream["params"], stream["headers"], stream["stream"]) == (
+        FOLLOWED["params"],
+        FOLLOWED["headers"],
+        True,
+    )
 
 
 @pytest.mark.parametrize(
@@ -839,11 +875,11 @@ def test_build_follow_renders_the_log_and_exits_0_when_the_build_succeeded(
 def test_build_follow_exits_1_when_the_build_did_not_succeed(
     registry: Registry, status: str, error_code: str, detail: str
 ) -> None:
-    follow_routes(registry, status, errorCode=error_code, errorDetail=detail)
-    result = invoke("build", DRAFT_UID, "--follow")
+    follow_routes(registry, status=status, errorCode=error_code, errorDetail=detail)
+    result = build_follow()
     assert result.exit_code == 1
     assert "".join(BUILD_LOG) in result.stdout
-    words = f"Build {BUILD_UID} (datalayer, r1) ended {status}"
+    words = f"Build {LOGGED_UID} (datalayer, r1) ended {status}"
     assert result.stderr.strip() == (
         f"{words}: {error_code} {detail}" if error_code else words
     )
@@ -852,69 +888,83 @@ def test_build_follow_exits_1_when_the_build_did_not_succeed(
 def test_build_follow_as_json_lines_a_record_per_build_chunk_and_outcome(
     registry: Registry,
 ) -> None:
-    follow_routes(registry, "succeeded", cacheHit=True)
-    result = invoke("build", DRAFT_UID, "--follow", "-o", "json")
+    follow_routes(registry)
+    result = build_follow("-o", "json")
     assert result.exit_code == 0, result.output
-    records = [json.loads(line) for line in result.stdout.splitlines()]
+    records = [json.loads(line) for line in result.stdout.split("\n") if line]
     assert records[0]["build"]["status"] == "queued"
-    assert [item["chunk"]["text"] for item in records[1:-1]] == BUILD_LOG
-    assert {item["buildUid"] for item in records[1:-1]} == {BUILD_UID}
-    assert (records[-1]["build"]["status"], records[-1]["build"]["cacheHit"]) == (
+    # Each chunk as the route stored it, its redacted text included.
+    assert [item["chunk"] for item in records[1:-1]] == STORED
+    assert {item["buildUid"] for item in records[1:-1]} == {LOGGED_UID}
+    assert (records[-1]["build"]["status"], records[-1]["build"]["finishedAt"]) == (
         "succeeded",
-        True,
+        LOGGED["finishedAt"],
     )
 
 
-def test_build_follow_prints_the_501_until_e1_16_builds_the_stream(
+def test_build_follow_prints_the_refusal_of_a_log_it_may_not_read(
     registry: Registry,
 ) -> None:
-    registry.on(
-        "POST", f"/environment-versions/{DRAFT_UID}/builds", answered("create_builds")
-    )
-    registry.on(
-        "GET", f"/environment-builds/{BUILD_UID}/logs", answered("follow_build_log")
-    )
-    result = invoke("build", DRAFT_UID, "--follow")
+    follow_routes(registry)
+    registry.on("GET", LOGS, answered("follow_build_log_missing"))
+    missing = RECORDED["follow_build_log_missing"]["body"]
+    result = build_follow()
     assert result.exit_code == 1
-    assert BUILD_UID in result.stdout
-    assert result.stderr.startswith("HTTP 501: ") and "E1-16" in result.stderr
-    assert len(registry.sent("GET", f"/environment-builds/{BUILD_UID}/logs")) == 1
+    assert LOGGED_UID in result.stdout
+    assert result.stderr.splitlines() == [
+        f"DL_ENV_NOT_FOUND: {missing['message']}",
+        f"  correlation id: {missing['correlationId']}",
+    ]
+    assert len(registry.sent("GET", LOGS)) == 1
 
 
-def test_logs_reads_every_stored_chunk(registry: Registry) -> None:
+def test_logs_prints_the_stored_log_as_the_route_answered_it(
+    registry: Registry,
+) -> None:
+    registry.on("GET", LOGS, answered("read_followed_build_log"))
+    result = invoke("logs", LOGGED_UID)
+    assert result.exit_code == 0, result.output
+    assert result.stdout == "".join(BUILD_LOG)
+    (page,) = registry.sent("GET", LOGS)
+    assert page.get("params") == RECORDED["read_followed_build_log"]["params"]
+
+    answer = json.loads(invoke("logs", LOGGED_UID, "-o", "json").stdout)
+    assert answer == {"buildUid": LOGGED_UID, "chunks": STORED, "complete": True}
+
+
+def test_logs_reads_every_page(registry: Registry) -> None:
     registry.on(
         "GET",
-        f"/environment-builds/{BUILD_UID}/logs",
-        ok({"chunks": [chunk(0), chunk(1)], "nextCursor": "1", "complete": False}),
-        ok({"chunks": [chunk(2)], "nextCursor": "2", "complete": True}),
+        LOGS,
+        ok({"chunks": STORED[:2], "nextCursor": "1", "complete": False}),
+        ok({"chunks": STORED[2:3], "nextCursor": "2", "complete": True}),
     )
-    result = invoke("logs", BUILD_UID)
+    result = invoke("logs", LOGGED_UID)
     assert result.exit_code == 0, result.output
     assert result.stdout == "".join(BUILD_LOG[:3])
-    pages = registry.sent("GET", f"/environment-builds/{BUILD_UID}/logs")
+    pages = registry.sent("GET", LOGS)
     assert [page.get("params") for page in pages] == [None, {"cursor": "1"}]
-
-    registry.on(
-        "GET",
-        f"/environment-builds/{BUILD_UID}/logs",
-        ok({"chunks": [chunk(0)], "nextCursor": "0", "complete": True}),
-    )
-    answer = json.loads(invoke("logs", BUILD_UID, "-o", "json").stdout)
-    assert answer["buildUid"] == BUILD_UID and answer["complete"] is True
-    assert [item["text"] for item in answer["chunks"]] == BUILD_LOG[:1]
 
 
 @pytest.mark.parametrize(("status", "exit_code"), [("succeeded", 0), ("failed", 1)])
-def test_logs_follow_exits_with_the_builds_outcome(
+def test_logs_follow_renders_the_recorded_log_and_exits_with_the_builds_outcome(
     registry: Registry, status: str, exit_code: int
 ) -> None:
-    registry.on("GET", f"/environment-builds/{BUILD_UID}/logs", build_log_stream())
+    registry.on("GET", LOGS, recorded_stream)
     registry.on(
-        "GET", f"/environment-builds/{BUILD_UID}", ok(record(QUEUED, status=status))
+        "GET", f"/environment-builds/{LOGGED_UID}", ok(record(LOGGED, status=status))
     )
-    result = invoke("logs", BUILD_UID, "--follow")
+    result = invoke("logs", LOGGED_UID, "--follow")
     assert result.exit_code == exit_code, result.output
-    assert "".join(BUILD_LOG) in result.stdout
+    assert result.stdout.startswith("".join(BUILD_LOG) + "\n")
+    assert "+ export GITHUB_TOKEN=[REDACTED]\n" in result.stdout
+    assert registry.writes() == []
+
+    as_yaml = invoke("logs", LOGGED_UID, "--follow", "-o", "yaml")
+    assert as_yaml.exit_code == exit_code
+    documents = [item for item in yaml.safe_load_all(as_yaml.stdout) if item]
+    assert [item["chunk"] for item in documents[:-1]] == STORED
+    assert documents[-1]["build"]["status"] == status
 
 
 # -- promote, rollback, deprecate, archive -------------------------------------------------

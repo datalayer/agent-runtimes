@@ -7,7 +7,8 @@
 was sent and answered, recorded from the service's own in-memory app. A
 client whose ``_fetch`` records each request and replays those answers is held
 to the request each route takes, and its typed answers to the canonical models
-of ``code_sandboxes.environments``.
+of ``code_sandboxes.environments``. The build log calls were recorded the same
+way from E1-16's routes; ``test_envs_command.py`` replays the stream itself.
 """
 
 from __future__ import annotations
@@ -75,11 +76,14 @@ class _Response:
         payload: Any = None,
         lines: Iterable[str] = (),
         breaks: bool = False,
+        body: bytes = b"",
+        piece: int | None = None,
     ) -> None:
         self.status_code = status_code
         self._payload = payload
-        self._lines = list(lines)
+        self._body = body or "".join(f"{line}\n" for line in lines).encode()
         self._breaks = breaks
+        self._piece = piece
         self.closed = False
 
     def json(self) -> Any:
@@ -87,8 +91,10 @@ class _Response:
             raise ValueError("no body")
         return self._payload
 
-    def iter_lines(self, decode_unicode: bool = False) -> Iterator[str]:
-        yield from self._lines
+    def iter_content(self, chunk_size: int | None = 1) -> Iterator[bytes]:
+        size = self._piece or chunk_size or len(self._body) or 1
+        for start in range(0, len(self._body), size):
+            yield self._body[start : start + size]
         if self._breaks:
             raise requests.exceptions.ChunkedEncodingError("connection broken")
 
@@ -562,14 +568,51 @@ def test_following_a_log_resumes_after_the_last_chunk_and_receives_each_once() -
     assert first.closed and second.closed
 
 
-def test_following_a_log_is_refused_with_the_501_and_not_retried() -> None:
-    record = RECORDED["follow_build_log"]
-    client = _Recorded(record)
-    with pytest.raises(EnvironmentsRequestError) as raised:
-        list(client.follow_environment_build_logs(QUEUED, reconnect_delay=0))
-    assert raised.value.status == 501 and "E1-16" in str(raised.value)
+@pytest.mark.parametrize("line_end", ["\n", "\r\n", "\r"], ids=["lf", "crlf", "cr"])
+def test_a_chunk_holding_a_unicode_line_separator_arrives_whole(line_end: str) -> None:
+    """
+    Runtimes frames a chunk as one line of JSON written with ``ensure_ascii=False``.
+
+    U+0085, U+2028 and U+2029 stay unescaped inside that line, where
+    ``str.splitlines`` would cut it: only CRLF, LF and CR end a line of the
+    stream. The body arrives a byte at a time, so each multi-byte character and
+    each CRLF is split across two pieces.
+    """
+    texts = [
+        "Summary: fast\u2028geometry\n",
+        "next\u0085line\n",
+        "one\u2029two \u2713\n",
+    ]
+    lines = []
+    for sequence, text in enumerate(texts):
+        chunk = {
+            "sequence": sequence,
+            "text": text,
+            "size": len(text.encode()),
+            "createdAt": "2026-09-11T18:44:21Z",
+        }
+        data = json.dumps(chunk, separators=(",", ":"), ensure_ascii=False)
+        lines += [f"id: {sequence}", "event: chunk", f"data: {data}", ""]
+    lines += ["event: end", "data: {}", ""]
+    body = "".join(line + line_end for line in lines).encode()
+    client = _Recorded(_Response(200, body=body, piece=1))
+    chunks = list(client.follow_environment_build_logs(QUEUED, reconnect_delay=0))
+    assert [chunk.text for chunk in chunks] == texts
     assert len(client.calls) == 1
-    assert client.calls[0]["params"] == record["params"]
+
+
+def test_following_a_log_the_caller_may_not_read_is_refused_and_not_retried() -> None:
+    client, record = replaying("follow_build_log_missing")
+    with pytest.raises(EnvironmentsRequestError) as raised:
+        list(
+            client.follow_environment_build_logs(
+                uid_in("follow_build_log_missing", -2), reconnect_delay=0
+            )
+        )
+    assert_sent(client.calls[0], record)
+    assert (raised.value.status, raised.value.code) == (404, "DL_ENV_NOT_FOUND")
+    assert str(raised.value) == record["body"]["message"]
+    assert len(client.calls) == 1
 
 
 def test_following_a_log_gives_up_after_its_reconnects() -> None:

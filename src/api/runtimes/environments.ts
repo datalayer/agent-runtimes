@@ -898,9 +898,11 @@ const pause = (milliseconds: number, signal?: AbortSignal): Promise<void> =>
  * event's id is the sequence of its chunk. A connection that drops, before the
  * service answered or in the middle of the stream, is resumed with the last id
  * received as `Last-Event-ID`, so no chunk is repeated; after `maxReconnects`
- * drops in a row with no chunk between them, `done` rejects. A refusal is not
- * retried: `done` rejects with `BuildLogSubscriptionRefused`, as the service's
- * 501 does until E1-16. An abort ends the subscription quietly.
+ * drops in a row with no chunk between them, `done` rejects. The stream ends
+ * with `end` once the build is terminal and every chunk is sent (E1-16). A
+ * refusal is not retried: `done` rejects with `BuildLogSubscriptionRefused`,
+ * such as the 404 a caller who may not read the build is answered before the
+ * stream opens. An abort ends the subscription quietly.
  *
  * @param token - Authentication token
  * @param buildUid - The build's uid

@@ -21,7 +21,9 @@ refusal answers with it: a refusal raises :class:`EnvironmentsRequestError`, a
 
 from __future__ import annotations
 
+import codecs
 import json
+import re
 import time
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any, Optional, Union
@@ -48,6 +50,13 @@ RUNTIMES_API_PATH = "/api/runtimes/v1"
 #: The event a followed log ends with, once the build is terminal and every
 #: chunk is sent.
 BUILD_LOG_END_EVENT = "end"
+
+#: What ends a line of a Server-Sent Events stream: CRLF, LF or CR, and nothing else.
+_EVENT_STREAM_LINE_END = re.compile(r"\r\n|\r|\n")
+
+#: How much of a followed log is read at a time. A chunked response hands over
+#: each piece as it arrives, without waiting for this many bytes.
+_EVENT_STREAM_READ_BYTES = 512
 
 #: A specification: the canonical model, or a document or YAML/JSON text of one.
 SpecDocument = Union[Environment, Mapping[str, Any], str]
@@ -139,6 +148,47 @@ def _spec_document(spec: SpecDocument) -> dict[str, Any]:
 def _given(**fields: Any) -> dict[str, Any]:
     """The fields that were given: None is not sent."""
     return {name: value for name, value in fields.items() if value is not None}
+
+
+def _event_stream_lines(pieces: Iterable[bytes]) -> Iterator[str]:
+    """
+    The lines of a Server-Sent Events stream, from its body in the pieces it arrives in.
+
+    The stream is UTF-8 whatever its content type says, and a line ends at
+    CRLF, LF or CR only. ``requests``' ``iter_lines`` does neither: it decodes
+    with the content type's charset, ISO-8859-1 when it names none, and splits
+    with ``str.splitlines``, which also ends a line at U+0085, U+2028 and
+    U+2029. Runtimes writes a chunk's JSON with those unescaped, so a data line
+    holding one arrived in two halves that did not parse.
+
+    Parameters
+    ----------
+    pieces : Iterable[bytes]
+        The body, as it arrives.
+
+    Yields
+    ------
+    str
+        Each complete line, without its line end. An unfinished last line is dropped.
+    """
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    parts: list[str] = []
+    after_carriage_return = False
+    for piece in pieces:
+        text = decoder.decode(piece)
+        if not text:
+            continue
+        if after_carriage_return and text.startswith("\n"):
+            # The LF of a CRLF whose CR ended the previous piece.
+            text = text[1:]
+        after_carriage_return = text.endswith("\r")
+        start = 0
+        for line_end in _EVENT_STREAM_LINE_END.finditer(text):
+            parts.append(text[start : line_end.start()])
+            yield "".join(parts)
+            parts = []
+            start = line_end.end()
+        parts.append(text[start:])
 
 
 def _server_sent_events(lines: Iterable[Union[str, bytes]]) -> Iterator[dict[str, str]]:
@@ -972,12 +1022,14 @@ class EnvironmentsListMixin:
         """
         Yield each chunk of a build's log as it is written, until the build is terminal.
 
-        The stream is Server-Sent Events (D-15), each event's id the sequence
-        of its chunk. A dropped connection is resumed with ``Last-Event-ID``,
-        so no chunk is repeated; after ``max_reconnects`` drops in a row with
-        no chunk between them, it gives up. A refusal is not retried: it
-        raises :class:`EnvironmentsRequestError`, as the service's 501 does
-        until E1-16.
+        The stream is Server-Sent Events (D-15, E1-16): each chunk an event
+        whose id is its sequence, then ``end`` once the build is terminal and
+        every chunk is sent. A dropped connection is resumed with
+        ``Last-Event-ID``, so no chunk is repeated; after ``max_reconnects``
+        drops in a row with no chunk between them, it gives up. A refusal is
+        not retried: it raises :class:`EnvironmentsRequestError`, such as the
+        404 a caller who may not read the build is answered before the stream
+        opens.
 
         Parameters
         ----------
@@ -1028,7 +1080,9 @@ class EnvironmentsListMixin:
             if response is not None:
                 try:
                     for event in _server_sent_events(
-                        response.iter_lines(decode_unicode=True)
+                        _event_stream_lines(
+                            response.iter_content(chunk_size=_EVENT_STREAM_READ_BYTES)
+                        )
                     ):
                         if event["event"] == BUILD_LOG_END_EVENT:
                             ended = True

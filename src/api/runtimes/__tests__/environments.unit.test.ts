@@ -7,9 +7,13 @@
  * Every call of the environments API: its method, its URL, its body, and the
  * headers a conditional or keyed write carries, held to the routes of
  * PLAN_ENV.md section 9 as Runtimes serves them (E1-01). Following a build's
- * log runs against a mocked stream, since the service answers 501 until E1-16.
+ * log runs on the stream E1-16's route sent, recorded in
+ * `agent_runtimes/tests/environments_build_logs_recorded.sse`, and on streams
+ * written to break where a network would.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { environments } from '..';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
@@ -452,6 +456,28 @@ describe('Runtimes Environments API', () => {
 
 const encoder = new TextEncoder();
 
+/** What E1-16's routes answered for one build, recorded from Runtimes' in-memory app. */
+const FIXTURES = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  'agent_runtimes',
+  'tests',
+);
+const RECORDED = JSON.parse(
+  readFileSync(join(FIXTURES, 'environments_registry_recorded.json'), 'utf-8'),
+).calls;
+/** The bytes `logs?follow=true` sent, `event: end` included. */
+const RECORDED_STREAM = Uint8Array.from(
+  readFileSync(join(FIXTURES, RECORDED.follow_build_log.stream)),
+);
+/** The build's chunks, as the polling route answered them once it had ended. */
+const STORED_CHUNKS: Array<{ sequence: number; text: string }> =
+  RECORDED.read_followed_build_log.body.chunks;
+const LOGGED_BUILD: string = RECORDED.get_followed_build.body.uid;
+
 const framed = (sequence: number) =>
   `id: ${sequence}\nevent: chunk\ndata: ${JSON.stringify({
     sequence,
@@ -461,7 +487,10 @@ const framed = (sequence: number) =>
   })}\n\n`;
 
 /** A response whose body sends these pieces, then ends or breaks. */
-const answer = (pieces: string[], ending: 'end' | 'break') => {
+const answer = (
+  pieces: Array<string | Uint8Array>,
+  ending: 'end' | 'break',
+) => {
   let index = 0;
   return {
     ok: true,
@@ -470,7 +499,10 @@ const answer = (pieces: string[], ending: 'end' | 'break') => {
     body: new ReadableStream<Uint8Array>({
       pull(controller) {
         if (index < pieces.length) {
-          controller.enqueue(encoder.encode(pieces[index++]));
+          const piece = pieces[index++];
+          controller.enqueue(
+            typeof piece === 'string' ? encoder.encode(piece) : piece,
+          );
           return;
         }
         if (ending === 'break') {
@@ -484,6 +516,80 @@ const answer = (pieces: string[], ending: 'end' | 'break') => {
 };
 
 describe('subscribeToBuildLogs', () => {
+  it.each([1, 3, 7, 64, RECORDED_STREAM.length])(
+    'reads the stream the route sent, %i bytes at a time, and ends on its end event',
+    async size => {
+      const pieces: Uint8Array[] = [];
+      for (let start = 0; start < RECORDED_STREAM.length; start += size) {
+        pieces.push(RECORDED_STREAM.slice(start, start + size));
+      }
+      const fetcher = vi.fn(async () => answer(pieces, 'end'));
+      const received: unknown[] = [];
+      let ended = false;
+      const subscription = environments.subscribeToBuildLogs(
+        token,
+        LOGGED_BUILD,
+        {
+          onChunk: chunk => received.push(chunk),
+          onEnd: () => {
+            ended = true;
+          },
+          reconnectDelayMs: 0,
+          fetch: fetcher,
+        },
+        BASE,
+      );
+      await subscription.done;
+
+      expect(received).toEqual(STORED_CHUNKS);
+      expect(ended).toBe(true);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(subscription.lastEventId()).toBe(
+        String(STORED_CHUNKS[STORED_CHUNKS.length - 1].sequence),
+      );
+      // The chunk that echoed credentials arrives as the route redacted it.
+      const log = STORED_CHUNKS.map(chunk => chunk.text).join('');
+      expect(log).toContain('+ export GITHUB_TOKEN=[REDACTED]\n');
+      expect(log).toContain('https://build:[REDACTED]@pypi.example/simple');
+    },
+  );
+
+  it('resumes the recorded stream after it breaks, from the last id received, with nothing repeated', async () => {
+    const events = new TextDecoder()
+      .decode(RECORDED_STREAM)
+      .split('\n\n')
+      .filter(block => block !== '')
+      .map(block => `${block}\n\n`);
+    const asked: Array<string | undefined> = [];
+    const fetcher = vi.fn(async (_url: string, init: RequestInit) => {
+      const lastEventId = (init.headers as Record<string, string>)[
+        'Last-Event-ID'
+      ];
+      asked.push(lastEventId);
+      if (lastEventId === undefined) {
+        // Three chunks and half of the fourth, then the connection breaks.
+        const half = events[3].slice(0, Math.floor(events[3].length / 2));
+        return answer([...events.slice(0, 3), half], 'break');
+      }
+      // The route resumes after the id it is sent.
+      return answer(events.slice(Number(lastEventId) + 1), 'end');
+    });
+    const received: number[] = [];
+    await environments.subscribeToBuildLogs(
+      token,
+      LOGGED_BUILD,
+      {
+        onChunk: chunk => received.push(chunk.sequence),
+        reconnectDelayMs: 0,
+        fetch: fetcher,
+      },
+      BASE,
+    ).done;
+
+    expect(received).toEqual(STORED_CHUNKS.map(chunk => chunk.sequence));
+    expect(asked).toEqual([undefined, '2']);
+  });
+
   it('streams with the bearer token, resumes a dropped connection after the last chunk, and receives each chunk once', async () => {
     const sequences = [0, 1, 2, 3, 4];
     const asked: Array<{ url: string; headers: Record<string, string> }> = [];
@@ -562,25 +668,24 @@ describe('subscribeToBuildLogs', () => {
     expect(received).toEqual([3]);
   });
 
-  it('rejects with the refusal and does not retry, as the 501 before E1-16', async () => {
-    const detail =
-      "Following a build's log as SSE is PLAN_ENV.md E1-16, which is not built yet.";
+  it('rejects with the refusal and does not retry, as the 404 of a build the caller may not read', async () => {
+    const missing = RECORDED.follow_build_log_missing;
     const fetcher = vi.fn(async () => ({
       ok: false,
-      status: 501,
+      status: missing.status,
       body: null,
-      text: async () => JSON.stringify({ detail }),
+      text: async () => JSON.stringify(missing.body),
     }));
     const done = environments.subscribeToBuildLogs(
       token,
-      BUILD,
+      LOGGED_BUILD,
       { onChunk: () => undefined, reconnectDelayMs: 0, fetch: fetcher },
       BASE,
     ).done;
     const refusal = await done.catch(error => error);
     expect(refusal).toBeInstanceOf(environments.BuildLogSubscriptionRefused);
-    expect(refusal.status).toBe(501);
-    expect(refusal.detail).toContain('E1-16');
+    expect(refusal.status).toBe(404);
+    expect(JSON.parse(refusal.detail).code).toBe('DL_ENV_NOT_FOUND');
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
