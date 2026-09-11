@@ -855,6 +855,15 @@ card with its routes as params, and at ACP `initialize` under
   `_datalayer/steer {sessionId, instructions}`, adds instructions to a running
   turn: they join its next model request. A run that is not working receives
   nothing, and the A2A route answers `success: false`.
+- Each turn answers with what it spent, `datalayer.usage: {inputTokens,
+  outputTokens, cost, currency}`: in the ACP prompt response's `_meta`, beside
+  `datalayer.paused` or `datalayer.error` when the turn paused or its budget
+  stopped it, and in the `metadata` of the A2A task's final status message,
+  which the worker sends itself for every ending — `completed` with the answer,
+  `canceled` and `failed` alike. The tokens are the model's own count when the
+  run reports one, and otherwise what the agent's usage counters grew by during
+  the turn; `cost` is there only when the agent's cost monitor priced a run
+  during it. A turn that counted nothing sends no `usage`.
 - A run whose delegation names its execution is that execution's worker, and
   `datalayer.execution.accountUid` names the account the execution belongs to.
   Such a run does not take a child itself. `delegate_task` to a subagent

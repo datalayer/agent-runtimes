@@ -13,8 +13,15 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from datalayer_core.orchestration import Usage
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, ToolCallPart, UserPromptPart
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    TextPart,
+    ToolCallPart,
+    UserPromptPart,
+)
 from pydantic_ai.models import ModelRequestContext, ModelRequestParameters
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
@@ -27,11 +34,14 @@ from agent_runtimes.context.delegation import (
     deliver_steer,
     execution_of,
     forget_pause,
+    merged_meta,
     open_steering,
     pause_requested,
     paused_at,
     paused_meta,
     request_pause,
+    spent_meta,
+    spent_of,
     take_steers,
 )
 
@@ -48,6 +58,21 @@ class TestWhatADelegationNames:
     def test_a_paused_worker_answers_with_its_checkpoint(self) -> None:
         assert paused_at(paused_meta("ckpt_9")) == "ckpt_9"
         assert paused_at({"datalayer": {"budget": {}}}) is None
+
+    def test_a_worker_answers_with_what_its_turn_spent(self) -> None:
+        # O2-10: beside the checkpoint it paused at, when it paused.
+        spent = Usage(input_tokens=1200, output_tokens=340, cost=0.0123)
+        answered = merged_meta(paused_meta("ckpt_9"), spent_meta(spent))
+        assert (paused_at(answered), spent_of(answered)) == ("ckpt_9", spent)
+        assert spent_meta(None) is None
+        assert merged_meta(None, {}) is None
+
+    @pytest.mark.parametrize(
+        "meta",
+        (None, {"datalayer": {}}, {"datalayer": {"usage": "lots"}}, {"datalayer": {"usage": {"inputTokens": "many"}}}),
+    )
+    def test_nothing_is_spent_when_a_worker_says_nothing_readable(self, meta: Any) -> None:
+        assert spent_of(meta) is None
 
 
 class TestAPause:

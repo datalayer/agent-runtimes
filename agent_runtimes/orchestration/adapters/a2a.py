@@ -81,7 +81,7 @@ from datalayer_core.orchestration import (
     WorkerOperation,
 )
 
-from agent_runtimes.context.delegation import EXTENSION_URI, paused_at
+from agent_runtimes.context.delegation import EXTENSION_URI, paused_at, spent_of
 from agent_runtimes.monitoring.otel import attempt_span
 from agent_runtimes.orchestration.adapter import (
     AdapterCapabilities,
@@ -473,6 +473,8 @@ class A2AWorkerAdapter(WorkerAdapter):
                 LifecycleEvent.COMPLETE,
                 message=seen.state or "completed",
                 protocol_task_id=seen.task_id,
+                # What the worker says the task spent, on its final status (O2-10).
+                usage=spent_of(seen.metadata),
             )
             yield Observation.acknowledged(
                 AcknowledgementKind.COMPLETED,
@@ -910,9 +912,11 @@ class A2AWorkerAdapter(WorkerAdapter):
         -------
         list[Observation]
             The terminal move, with the error when there is one; or the pause
-            and the checkpoint it kept.
+            and the checkpoint it kept. The move carries what the worker says
+            the task spent, when it says so (O2-10).
         """
         state = seen.state or ""
+        spent = spent_of(seen.metadata)
         checkpoint_id = (
             paused_at(seen.metadata) if seen.extended and state == "canceled" else None
         )
@@ -922,6 +926,7 @@ class A2AWorkerAdapter(WorkerAdapter):
                     LifecycleEvent.PAUSE,
                     message=f"Paused at checkpoint '{checkpoint_id}'.",
                     protocol_task_id=seen.task_id,
+                    usage=spent,
                 ),
                 Observation.acknowledged(
                     AcknowledgementKind.CHECKPOINTED,
@@ -944,6 +949,7 @@ class A2AWorkerAdapter(WorkerAdapter):
                     message=refused.message,
                     error=refused,
                     protocol_task_id=seen.task_id,
+                    usage=spent,
                 )
             ]
         event, code, retryable = A2A_ENDINGS.get(
@@ -965,6 +971,7 @@ class A2AWorkerAdapter(WorkerAdapter):
                 message=detail or state or None,
                 error=error,
                 protocol_task_id=seen.task_id,
+                usage=spent,
             )
         ]
 

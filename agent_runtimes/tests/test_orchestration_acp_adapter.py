@@ -34,6 +34,7 @@ from datalayer_core.orchestration import (
     ExecutionState,
     LifecycleEvent,
     Trace,
+    Usage,
     WorkerOperation,
 )
 
@@ -103,6 +104,7 @@ class FakeChannel(ACPChannel):
         script: list[Mapping[str, Any]] | None = None,
         stop_reason: str = "end_turn",
         capabilities: AgentCapabilities | None = None,
+        meta: Mapping[str, Any] | None = None,
     ) -> None:
         """
         Hold the script and what the agent declares.
@@ -115,9 +117,12 @@ class FakeChannel(ACPChannel):
             Why the turn stops.
         capabilities : AgentCapabilities | None
             What the agent declared at initialize.
+        meta : Mapping[str, Any] | None
+            The ``_meta`` the turn's answer carries.
         """
         self.script = list(script or [])
         self.stop_reason = stop_reason
+        self.meta = dict(meta) if meta else None
         self._capabilities = capabilities
         self.requests: list[tuple[str, Mapping[str, Any]]] = []
         self.notifications: list[tuple[str, Mapping[str, Any]]] = []
@@ -156,7 +161,7 @@ class FakeChannel(ACPChannel):
             for message in self.script:
                 for handler in list(self._handlers):
                     handler(dict(message))
-            return {"stopReason": self.stop_reason}
+            return {"stopReason": self.stop_reason, **({"_meta": self.meta} if self.meta else {})}
         return {}
 
     async def notify(self, method, params):
@@ -374,6 +379,18 @@ class TestDelegation:
 
         (artifact,) = await store.artifacts(execution.execution_id)
         assert artifact.summary == "The notebook runs clean."
+
+    @pytest.mark.asyncio
+    async def test_the_attempt_keeps_what_the_agent_says_the_turn_spent(self):
+        # O2-10: in the answer's `_meta`, as agent-runtimes' ACP route sends it.
+        spent = {"inputTokens": 21, "outputTokens": 8, "cost": None, "currency": "USD"}
+        channel = FakeChannel(script=SPEC_UPDATES, meta={"datalayer": {"usage": spent}})
+        store = InMemoryExecutionStore()
+
+        execution, _, _ = await _dispatch(_adapter(channel), store)
+
+        (attempt,) = await store.attempts(execution.execution_id)
+        assert attempt.usage == Usage(input_tokens=21, output_tokens=8)
 
     @pytest.mark.asyncio
     async def test_an_update_outside_the_schema_carries_no_answer(self):

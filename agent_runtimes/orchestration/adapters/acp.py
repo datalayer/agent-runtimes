@@ -96,6 +96,7 @@ from agent_runtimes.context.delegation import (
     STEER_METHOD,
     pause_meta,
     paused_at,
+    spent_of,
 )
 from agent_runtimes.mcp.tracing import with_trace
 from agent_runtimes.monitoring.otel import attempt_span
@@ -1428,9 +1429,12 @@ class ACPWorkerAdapter(WorkerAdapter):
         Returns
         -------
         list[Observation]
-            The artifact, the move, and the milestone when there is one.
+            The artifact, the move, and the milestone when there is one. The
+            move carries what the agent says the turn spent, when it says so
+            in the response's ``_meta`` (O2-10).
         """
         reason = _stop_reason(response)
+        spent = spent_of((response or {}).get("_meta"))
         checkpoint_id = (
             paused_at((response or {}).get("_meta"))
             if extended and reason == "cancelled"
@@ -1442,6 +1446,7 @@ class ACPWorkerAdapter(WorkerAdapter):
                     LifecycleEvent.PAUSE,
                     message=f"Paused at checkpoint '{checkpoint_id}'.",
                     session_id=session_id,
+                    usage=spent,
                 ),
                 Observation.acknowledged(
                     AcknowledgementKind.CHECKPOINTED,
@@ -1488,7 +1493,9 @@ class ACPWorkerAdapter(WorkerAdapter):
                 },
             )
         observations.append(
-            Observation.moved(event, message=reason, error=error, session_id=session_id)
+            Observation.moved(
+                event, message=reason, error=error, session_id=session_id, usage=spent
+            )
         )
         if event is LifecycleEvent.COMPLETE:
             observations.append(

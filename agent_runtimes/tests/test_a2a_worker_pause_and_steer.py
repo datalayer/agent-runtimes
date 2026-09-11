@@ -15,10 +15,11 @@ from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 import pytest
+from datalayer_core.orchestration import Usage
 
 from agent_runtimes.adapters.base import BaseAgent, StreamEvent
 from agent_runtimes.checkpoints.protocol_state import ProtocolStateCheckpointStore
-from agent_runtimes.context.delegation import paused_at, take_steers
+from agent_runtimes.context.delegation import paused_at, spent_of, take_steers
 from agent_runtimes.protocol_state import store as state_store
 from agent_runtimes.protocol_state.a2a import DurableStorage
 from agent_runtimes.protocol_state.store import SqliteProtocolStateStore
@@ -153,6 +154,19 @@ async def test_a_delegation_naming_the_checkpoint_resumes_from_it(state: Any) ->
     _, events = await _run(state, _agent(script), _message("Carry on", checkpoint={"checkpointId": kept.id}))
     assert _final_status(events)["state"] == "completed"
     assert (seen["history"], seen["prompt"]) == (CONVERSATION, "Carry on")
+
+
+@pytest.mark.asyncio
+async def test_a_finished_task_says_what_it_spent(state: Any) -> None:
+    # O2-10: on the status that ends the task, where the control plane reads it.
+    async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
+        yield StreamEvent(type="output", data="Done")
+        yield StreamEvent(type="done", data={"usage": {"input_tokens": 12, "output_tokens": 5}})
+
+    _, events = await _run(state, _agent(script), _message("Profile the notebook"))
+    final = _final_status(events)
+    assert final["state"] == "completed"
+    assert spent_of(final["message"]["metadata"]) == Usage(input_tokens=12, output_tokens=5)
 
 
 @pytest.mark.asyncio

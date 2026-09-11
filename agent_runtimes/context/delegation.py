@@ -20,6 +20,11 @@ kept under; it can be asked to pause, and answers with the checkpoint it
 paused at (``datalayer.paused``); a delegation naming that checkpoint
 (``datalayer.checkpoint``) resumes from it; and a steer delivered while it
 works is added to its run before the next model request (``SteerCapability``).
+
+**What a turn spent.** A worker answers each turn with the tokens it used and
+the cost of its model, where it could price it (``datalayer.usage``, O2-10):
+the control plane records it on the attempt the turn ended, and nothing else
+would know what one execution of a tree spent.
 """
 
 from __future__ import annotations
@@ -30,6 +35,8 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
+from datalayer_core.orchestration import Usage
+from pydantic import ValidationError
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelRequest, UserPromptPart
 
@@ -42,6 +49,7 @@ __all__ = [
     "EXTENSION_URI",
     "PAUSED_FIELD",
     "PAUSE_FIELD",
+    "SPENT_FIELD",
     "STEER_METHOD",
     "WITHHELD",
     "CredentialLost",
@@ -53,6 +61,7 @@ __all__ = [
     "execution_of",
     "forget_pause",
     "hold",
+    "merged_meta",
     "open_steering",
     "pause_asked",
     "pause_meta",
@@ -62,6 +71,8 @@ __all__ = [
     "release",
     "request_pause",
     "run_execution",
+    "spent_meta",
+    "spent_of",
     "take_credential",
     "take_steers",
     "was_delegated",
@@ -83,6 +94,8 @@ PAUSED_FIELD = "paused"
 PAUSE_FIELD = "pause"
 #: The ACP notification that steers a running turn: ``{sessionId, instructions}``.
 STEER_METHOD = "_datalayer/steer"
+#: What a worker answers a turn with about what the turn spent: ``{inputTokens, outputTokens, cost, currency}``.
+SPENT_FIELD = "usage"
 
 #: What the message keeps in the credential's place: that one was sent, and not what it was.
 WITHHELD = "withheld"
@@ -293,6 +306,69 @@ def paused_at(meta: Any) -> str | None:
     paused = ours.get(PAUSED_FIELD) if ours is not None else None
     checkpoint_id = paused.get("checkpointId") if isinstance(paused, Mapping) else None
     return checkpoint_id if isinstance(checkpoint_id, str) and checkpoint_id else None
+
+
+def spent_meta(usage: Usage | None) -> dict[str, Any] | None:
+    """
+    What a worker answers a turn with about what the turn spent (O2-10).
+
+    Parameters
+    ----------
+    usage : Usage | None
+        The turn's tokens and cost, when any were counted.
+
+    Returns
+    -------
+    dict[str, Any] | None
+        The A2A status message's ``metadata``, or the ACP response's ``_meta``;
+        nothing when nothing was counted.
+    """
+    return {DELEGATION_META_KEY: {SPENT_FIELD: usage.to_wire()}} if usage is not None else None
+
+
+def spent_of(meta: Any) -> Usage | None:
+    """
+    What a worker says its turn spent.
+
+    Parameters
+    ----------
+    meta : Any
+        The A2A status message's ``metadata`` or the ACP response's ``_meta``.
+
+    Returns
+    -------
+    Usage | None
+        The usage; ``None`` when the worker reported none, or something that is
+        not one — a worker's numbers are shown, and cannot break a move (section 9).
+    """
+    ours = _ours(meta)
+    spent = ours.get(SPENT_FIELD) if ours is not None else None
+    if not isinstance(spent, Mapping):
+        return None
+    try:
+        return Usage.from_wire(dict(spent))
+    except ValidationError:
+        return None
+
+
+def merged_meta(*metas: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """
+    Several things a worker answers with, as the one ``datalayer`` entry they share.
+
+    Parameters
+    ----------
+    *metas : Mapping[str, Any] | None
+        Each a ``{datalayer: {...}}`` of its own, or nothing.
+
+    Returns
+    -------
+    dict[str, Any] | None
+        One ``{datalayer: {...}}`` holding every field; nothing when none had any.
+    """
+    merged: dict[str, Any] = {}
+    for meta in metas:
+        merged.update(_ours(meta) or {})
+    return {DELEGATION_META_KEY: merged} if merged else None
 
 
 def pause_meta() -> dict[str, Any]:

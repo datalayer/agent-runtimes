@@ -9,9 +9,14 @@ to provide real-time context usage information.
 """
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+
+from datalayer_core.orchestration import Usage
+
+from agent_runtimes.context.costs import get_cost_store
 
 logger = logging.getLogger(__name__)
 
@@ -577,3 +582,126 @@ def get_usage_tracker() -> AgentUsageTracker:
     if _usage_tracker is None:
         _usage_tracker = AgentUsageTracker()
     return _usage_tracker
+
+
+def _counted(*values: Any) -> int | None:
+    """The first of several spellings of a count that is a number, as an int."""
+    for value in values:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return int(value)
+    return None
+
+
+@dataclass
+class TurnSpend:
+    """
+    What one turn of an agent spent, for the answer that ends it (O2-10).
+
+    The tokens are the run's own count when the end of the run reports one,
+    and otherwise what the agent's usage history grew by during the turn. The
+    cost is what the agent's cost monitor priced during the turn, and there is
+    none when nothing priced it: a model without a price is not free. Both are
+    read from the agent's counters, so two turns of one agent at once share
+    what they spent between them.
+    """
+
+    agent_id: str | None
+    requests_before: int = 0
+    priced_runs_before: int = 0
+    cost_before: float = 0.0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    reported_total_tokens: int | None = None
+
+    @classmethod
+    def begin(cls, agent_id: str | None) -> "TurnSpend":
+        """
+        Start counting a turn.
+
+        Parameters
+        ----------
+        agent_id : str | None
+            The agent whose counters the turn moves; without one, only what
+            the run reports is counted.
+
+        Returns
+        -------
+        TurnSpend
+            The count, as the turn starts.
+        """
+        if not agent_id:
+            return cls(agent_id=None)
+        stats = get_usage_tracker().get_agent_stats(agent_id)
+        costs = get_cost_store().get_agent_usage(agent_id)
+        return cls(
+            agent_id=agent_id,
+            requests_before=len(stats.request_usage_history) if stats else 0,
+            priced_runs_before=costs.request_count if costs else 0,
+            cost_before=costs.cumulative_cost_usd if costs else 0.0,
+        )
+
+    def reported(self, usage: Any) -> None:
+        """
+        Take the run's own count, as the end of the run reports it.
+
+        Parameters
+        ----------
+        usage : Any
+            ``input_tokens`` or ``prompt_tokens``, ``output_tokens`` or
+            ``completion_tokens``, and ``total_tokens``; anything that is not a
+            mapping reports nothing.
+        """
+        if not isinstance(usage, Mapping):
+            return
+        counted_input = _counted(usage.get("input_tokens"), usage.get("prompt_tokens"))
+        counted_output = _counted(
+            usage.get("output_tokens"), usage.get("completion_tokens")
+        )
+        counted_total = _counted(usage.get("total_tokens"))
+        if counted_input is not None:
+            self.input_tokens = counted_input
+        if counted_output is not None:
+            self.output_tokens = counted_output
+        if counted_total is not None:
+            self.reported_total_tokens = counted_total
+
+    @property
+    def total_tokens(self) -> int | None:
+        """The run's total when it reported one, the sum of what was counted otherwise."""
+        if self.reported_total_tokens is not None:
+            return self.reported_total_tokens
+        if self.input_tokens is None and self.output_tokens is None:
+            return None
+        return max((self.input_tokens or 0) + (self.output_tokens or 0), 0)
+
+    def settle(self) -> Usage | None:
+        """
+        What the turn has spent, filling what the run did not report from the counters.
+
+        Returns
+        -------
+        Usage | None
+            The usage; ``None`` when nothing was counted at all.
+        """
+        if self.agent_id and (self.input_tokens is None or self.output_tokens is None):
+            stats = get_usage_tracker().get_agent_stats(self.agent_id)
+            grown = stats.request_usage_history[self.requests_before :] if stats else []
+            if grown:
+                if self.input_tokens is None:
+                    self.input_tokens = sum(item.input_tokens for item in grown)
+                if self.output_tokens is None:
+                    self.output_tokens = sum(item.output_tokens for item in grown)
+        cost: float | None = None
+        costs = get_cost_store().get_agent_usage(self.agent_id) if self.agent_id else None
+        if (
+            costs is not None
+            and costs.request_count > self.priced_runs_before
+            and costs.runs
+            and costs.runs[-1].pricing_resolved
+        ):
+            cost = max(costs.cumulative_cost_usd - self.cost_before, 0.0)
+        if self.input_tokens is None and self.output_tokens is None and cost is None:
+            return None
+        return Usage(
+            input_tokens=self.input_tokens, output_tokens=self.output_tokens, cost=cost
+        )

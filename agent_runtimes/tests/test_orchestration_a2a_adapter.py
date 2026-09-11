@@ -21,6 +21,7 @@ from datalayer_core.orchestration import (
     ExecutionEventType,
     ExecutionState,
     LifecycleEvent,
+    Usage,
     WorkerOperation,
 )
 
@@ -227,6 +228,23 @@ class TestDelegation:
         assert artifact.summary == "The notebook runs clean."
         (provenance,) = artifact.provenance
         assert provenance.attempt_id == attempt.attempt_id
+
+    @pytest.mark.asyncio
+    async def test_the_attempt_keeps_what_the_worker_says_it_spent(self, monkeypatch):
+        # O2-10: the status that ends the task says what the task spent.
+        spent = {"inputTokens": 1200, "outputTokens": 340, "cost": 0.0123, "currency": "USD"}
+        ended = (
+            "status",
+            {"taskId": "task-1", "state": "completed", "metadata": {"datalayer": {"usage": spent}}},
+        )
+        _relay(monkeypatch, [*GOOD_RUN[:-1], ended])
+        _no_task_lookup(monkeypatch)
+        store = InMemoryExecutionStore()
+
+        execution, _, _ = await _dispatch(A2AWorkerAdapter(), store)
+
+        (attempt,) = await store.attempts(execution.execution_id)
+        assert attempt.usage == Usage(input_tokens=1200, output_tokens=340, cost=0.0123)
 
     @pytest.mark.asyncio
     async def test_the_workers_own_a2a_artifacts_are_the_ones_registered(

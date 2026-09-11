@@ -33,7 +33,9 @@ dependencies = [
     # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0.
     "code-sandboxes>=1.5.0",
     "croniter",
-    "datalayer-core>=1.1.57",
+    # `datalayer_core.orchestration.Usage`, what an attempt spent as its worker
+    # reported it, arrived in 1.2.2.
+    "datalayer-core>=1.2.2",
     "fastapi",
     "filelock>=3.20.3",
     "httpx",

@@ -221,6 +221,8 @@ def register_a2a_agent(
             broker=a2a_broker,
             storage=a2a_storage,
             agent=agent,
+            # What a task spent is counted under the id the agent is served under.
+            agent_id=agent_id,
             # So `/a2a/terminate` interrupts a running task, not the next one.
             cancellation=TaskCancellation(
                 register=register_task, unregister=unregister_task, cancel=cancel_task

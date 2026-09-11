@@ -19,6 +19,7 @@ from .base import BaseTransport
 
 if TYPE_CHECKING:
     from ..adapters.base import BaseAgent
+    from ..context.usage import TurnSpend
 
 logger = logging.getLogger(__name__)
 
@@ -350,9 +351,10 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
     they do over the other transports — and publishes the run as it happens:
     each text delta as a chunk of the answer's artifact, each tool call and
     result as a ``working`` status carrying a data part, the whole answer as
-    the last chunk. fasta2a's `Worker` then publishes the final state from
-    storage and ends the stream; when the run raises, the reason rides on the
-    ``failed`` status so the client learns it.
+    the last chunk. It then publishes the final state itself and ends the
+    stream, the status carrying what the run spent (``datalayer.usage``); when
+    the run raises, the reason rides on the ``failed`` status so the client
+    learns it.
 
     The agent's ``AgentContext.metadata["a2a"]`` names the task, the context and
     the activated extensions, for tools that want to know.
@@ -360,6 +362,9 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
 
     agent: "BaseAgent" = None  # type: ignore[assignment]
     cancellation: TaskCancellation | None = None
+    #: The id the agent is served under, which its usage and cost are counted
+    #: under: what a task spent is on the status that ends it (O2-10).
+    agent_id: str | None = None
 
     async def run_task(self, params: "TaskSendParams") -> None:
         task = await self.storage.load_task(params["id"])
@@ -367,8 +372,12 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             raise ValueError(f"Task {params['id']} not found")
         task_id = task["id"]
         context_id = task["context_id"]
+        from ..context.delegation import merged_meta, spent_meta
+        from ..context.usage import TurnSpend
+
+        turn = TurnSpend.begin(self.agent_id)
         try:
-            await self._run(task_id, context_id, params)
+            await self._run(task_id, context_id, params, turn)
         except Exception as exc:
             # fasta2a marks the task failed and ends the stream, but says
             # nothing about why. Log it, and put the reason on the failed
@@ -383,20 +392,30 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             message = _agent_message(
                 context_id, Part(text=f"{type(exc).__name__}: {exc}")
             )
-            if isinstance(exc, ModelBudgetExceeded):
-                # Which limit of the budget the delegation set stopped the run,
-                # where the delegation put the budget (O1-07).
-                message["metadata"] = refusal_meta(exc.reached)
+            # Which limit of the budget the delegation set stopped the run,
+            # where the delegation put the budget (O1-07), and what it spent.
+            ended = merged_meta(
+                refusal_meta(exc.reached)
+                if isinstance(exc, ModelBudgetExceeded)
+                else None,
+                spent_meta(turn.settle()),
+            )
+            if ended:
+                message["metadata"] = ended
             await self.publish_status(task_id, context_id, "failed", message)
             await self.broker.event_bus.close(task_id)
             raise
 
     async def _run(
-        self, task_id: str, context_id: str, params: "TaskSendParams"
+        self,
+        task_id: str,
+        context_id: str,
+        params: "TaskSendParams",
+        turn: "TurnSpend",
     ) -> None:
         cancel = self.cancellation.register(task_id) if self.cancellation else None
         try:
-            await self._stream_run(task_id, context_id, params, cancel)
+            await self._stream_run(task_id, context_id, params, cancel, turn)
         finally:
             if self.cancellation:
                 self.cancellation.unregister(task_id)
@@ -407,6 +426,7 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         context_id: str,
         params: "TaskSendParams",
         cancel: "asyncio.Event | None",
+        turn: "TurnSpend",
     ) -> None:
         await self.storage.update_task(task_id, state="working")
         await self.publish_status(task_id, context_id, "working")
@@ -424,10 +444,12 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             enter_execution,
             execution_of,
             forget_pause,
+            merged_meta,
             open_steering,
             pause_requested,
             paused_meta,
             release,
+            spent_meta,
             was_delegated,
         )
         from ..context.identities import set_request_user_jwt
@@ -536,6 +558,10 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                     )
                 elif event.type == "output":
                     final_output = str(event.data) if event.data is not None else None
+                elif event.type == "done":
+                    turn.reported(
+                        event.data.get("usage") if isinstance(event.data, dict) else None
+                    )
                 elif event.type == "error":
                     from ..guardrails.model_budget import (
                         ModelBudgetExceeded,
@@ -562,7 +588,9 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                 logger.info("A2A task %s for agent %s paused at %s", task_id, self.agent.name, checkpoint.id)
                 await self.storage.update_task(task_id, state="canceled")
                 stopped = _agent_message(context_id, Part(text="Paused."))
-                stopped["metadata"] = paused_meta(checkpoint.id)
+                kept = merged_meta(paused_meta(checkpoint.id), spent_meta(turn.settle()))
+                if kept:
+                    stopped["metadata"] = kept
                 await self.publish_status(task_id, context_id, "canceled", stopped)
                 await self.broker.event_bus.close(task_id)
                 return
@@ -575,12 +603,11 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         if canceled:
             logger.info("A2A task %s for agent %s stopped", task_id, self.agent.name)
             await self.storage.update_task(task_id, state="canceled")
-            await self.publish_status(
-                task_id,
-                context_id,
-                "canceled",
-                _agent_message(context_id, Part(text=STOPPED)),
-            )
+            halted = _agent_message(context_id, Part(text=STOPPED))
+            spent = spent_meta(turn.settle())
+            if spent:
+                halted["metadata"] = spent
+            await self.publish_status(task_id, context_id, "canceled", halted)
             await self.broker.event_bus.close(task_id)
             return
 
@@ -597,9 +624,17 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             new_messages=[reply],
         )
         # The whole result once more, as the last chunk: a client that does
-        # not assemble chunks, or joined late, still gets the answer. The
-        # `completed` status and the end of the stream come from the base.
+        # not assemble chunks, or joined late, still gets the answer.
         await self.publish_artifact(task_id, context_id, artifact)
+        # The `completed` status says what the run spent (O2-10), so it is sent
+        # and the stream ended here rather than by the base, whose final status
+        # carries no message.
+        finished = _agent_message(context_id, Part(text=output))
+        spent = spent_meta(turn.settle())
+        if spent:
+            finished["metadata"] = spent
+        await self.publish_status(task_id, context_id, "completed", finished)
+        await self.broker.event_bus.close(task_id)
 
     async def cancel_task(self, params: "TaskIdParams") -> None:
         logger.info("A2A cancel requested for task %s", params.get("id"))

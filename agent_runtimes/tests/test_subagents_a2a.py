@@ -663,7 +663,8 @@ class TestWorker:
             else event["status_update"]["status"]["state"]
             for event in events
         ]
-        # The stream ended on its own: fasta2a published `completed` after the run.
+        # The worker ends the stream with its own `completed`, which carries the
+        # answer and what the run spent (O2-10).
         assert kinds == [
             "working",
             "artifact",
@@ -683,14 +684,20 @@ class TestWorker:
         ]
         assert [c["append"] for c in chunks] == [True, True, False]
         assert chunks[-1]["last_chunk"] is True
-        tool_messages = [
-            event["status_update"]["status"]["message"]["parts"][0]["data"]
+        statuses = [
+            event["status_update"]["status"]
             for event in events
-            if "status_update" in event
-            and "message" in event["status_update"]["status"]
+            if "status_update" in event and "message" in event["status_update"]["status"]
+        ]
+        tool_messages = [
+            status["message"]["parts"][0]["data"]
+            for status in statuses
+            if status["state"] == "working"
         ]
         assert tool_messages[0]["tool_call"]["name"] == "search"
         assert tool_messages[1]["tool_result"]["result"] == "found"
+        assert statuses[-1]["state"] == "completed"
+        assert statuses[-1]["message"]["parts"][0]["text"] == "Hello"
 
         stored = await storage.load_task(task_id)
         assert stored is not None

@@ -18,13 +18,19 @@ from contextlib import contextmanager
 from typing import Any
 
 import pytest
+from datalayer_core.orchestration import Usage
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from agent_runtimes.adapters.base import AgentContext, BaseAgent, StreamEvent
 from agent_runtimes.checkpoints.protocol_state import ProtocolStateCheckpointStore
 from agent_runtimes.context import delegation
-from agent_runtimes.context.delegation import EXTENSION_URI, paused_at, take_steers
+from agent_runtimes.context.delegation import (
+    EXTENSION_URI,
+    paused_at,
+    spent_of,
+    take_steers,
+)
 from agent_runtimes.protocol_state import store as state_store
 from agent_runtimes.protocol_state.store import SqliteProtocolStateStore
 from agent_runtimes.routes.acp import AgentInfo, register_agent
@@ -157,6 +163,22 @@ def test_a_plain_cancel_does_not_pause(client: TestClient) -> None:
         wire.notify("session/cancel", {"sessionId": session_id})
         _, answered = wire.answer(prompted)
     assert answered["result"] == {"stopReason": "cancelled"}
+
+
+class SpendingAgent(GatedAgent):
+    """Answers at once, and says at the end of its run what the run spent."""
+
+    async def stream(self, prompt: str, context: AgentContext) -> AsyncIterator[StreamEvent]:  # type: ignore[override]
+        yield StreamEvent(type="text", data="Counted. ")
+        yield StreamEvent(type="done", data={"usage": {"input_tokens": 21, "output_tokens": 8}})
+
+
+def test_a_turn_answers_with_what_it_spent(client: TestClient) -> None:
+    # O2-10: in the answer's `_meta`, which the ACP adapter records on the attempt.
+    with session(client, "spending", SpendingAgent()) as (wire, session_id, _):
+        _, answered = wire.request("session/prompt", _prompt(session_id, "Profile the notebook"))
+    assert answered["result"]["stopReason"] == "end_turn"
+    assert spent_of(answered["result"]["_meta"]) == Usage(input_tokens=21, output_tokens=8)
 
 
 def test_a_steer_reaches_the_running_turn(client: TestClient) -> None:

@@ -69,6 +69,7 @@ from datalayer_core.orchestration import (
     ExecutionEventType,
     LifecycleEvent,
     OrchestrationError,
+    Usage,
     WorkerOperation,
 )
 
@@ -578,6 +579,9 @@ class Observation:
     #: The checkpoint a ``checkpointed`` milestone names, which is what a
     #: resume names (O2-05).
     checkpoint_id: str | None = None
+    #: What the worker says the attempt spent, on the move that ends the
+    #: attempt (O2-10).
+    usage: Usage | None = None
 
     def __post_init__(self) -> None:
         """
@@ -608,6 +612,8 @@ class Observation:
             and self.acknowledgement is not AcknowledgementKind.CHECKPOINTED
         ):
             raise ValueError("Only a 'checkpointed' milestone names a checkpoint.")
+        if self.usage is not None and self.type is not ExecutionEventType.STATE_CHANGED:
+            raise ValueError("Only a move carries what the attempt spent.")
 
     @classmethod
     def progress(
@@ -654,6 +660,7 @@ class Observation:
         error: OrchestrationError | None = None,
         session_id: str | None = None,
         protocol_task_id: str | None = None,
+        usage: Usage | None = None,
     ) -> "Observation":
         """
         The worker did something the lifecycle may have a state for.
@@ -670,6 +677,8 @@ class Observation:
             The protocol session, when this is where it became known.
         protocol_task_id : str | None
             The protocol task, when this is where it became known.
+        usage : Usage | None
+            What the worker says the attempt spent, when this move ends it.
 
         Returns
         -------
@@ -683,6 +692,7 @@ class Observation:
             error=error,
             session_id=session_id,
             protocol_task_id=protocol_task_id,
+            usage=usage,
         )
 
     @classmethod

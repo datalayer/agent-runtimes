@@ -41,7 +41,7 @@ from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_seri
 from ..adapters.base import BaseAgent
 from ..context.delegation import STEER_METHOD
 from ..context.identities import set_request_user_jwt
-from ..context.usage import get_usage_tracker
+from ..context.usage import TurnSpend
 from ..otel.prompt_turn_metrics import (
     extract_identity_hints,
     extract_jwt_token,
@@ -844,9 +844,6 @@ async def _handle_prompt(
     stop_reason = "end_turn"
     start_time = time.perf_counter()
     tool_call_count = 0
-    input_tokens: int | None = None
-    output_tokens: int | None = None
-    total_tokens: int | None = None
     response_chunks: list[str] = []
     completed_without_error = False
     session = await sessions.load_session(session_id)
@@ -854,37 +851,9 @@ async def _handle_prompt(
     # was asked on `session/load`.
     await sessions.append_turn(session_id, "user", prompt)
     session_agent_id = session.agent_id if session else None
-    usage_tracker = get_usage_tracker()
-    usage_history_len_before = 0
-    if session_agent_id:
-        stats_before = usage_tracker.get_agent_stats(session_agent_id)
-        if stats_before:
-            usage_history_len_before = len(stats_before.request_usage_history)
-
-    def _parse_usage_tokens(usage: Any) -> tuple[int | None, int | None, int | None]:
-        if not isinstance(usage, dict):
-            return None, None, None
-
-        raw_input = usage.get("input_tokens")
-        if raw_input is None:
-            raw_input = usage.get("prompt_tokens")
-        raw_output = usage.get("output_tokens")
-        if raw_output is None:
-            raw_output = usage.get("completion_tokens")
-        raw_total = usage.get("total_tokens")
-
-        parsed_input = int(raw_input) if isinstance(raw_input, (int, float)) else None
-        parsed_output = (
-            int(raw_output) if isinstance(raw_output, (int, float)) else None
-        )
-        parsed_total = int(raw_total) if isinstance(raw_total, (int, float)) else None
-
-        if parsed_total is None and (
-            parsed_input is not None or parsed_output is not None
-        ):
-            parsed_total = max((parsed_input or 0) + (parsed_output or 0), 0)
-
-        return parsed_input, parsed_output, parsed_total
+    # What the turn spends, counted from here: answered with the turn, so the
+    # control plane knows what its attempt cost (O2-10), and kept in the metrics.
+    turn = TurnSpend.begin(session_agent_id)
 
     session_user_id = session.context.user_id if session and session.context else None
     metric_user_provider = "acp-session"
@@ -990,20 +959,11 @@ async def _handle_prompt(
                     elif event_type == "tool_call":
                         tool_call_count += 1
                     elif event_type == "done":
-                        done_usage = (
+                        turn.reported(
                             event_data.get("usage")
                             if isinstance(event_data, dict)
                             else None
                         )
-                        parsed_input, parsed_output, parsed_total = _parse_usage_tokens(
-                            done_usage
-                        )
-                        if parsed_input is not None:
-                            input_tokens = parsed_input
-                        if parsed_output is not None:
-                            output_tokens = parsed_output
-                        if parsed_total is not None:
-                            total_tokens = parsed_total
 
                     event_count += 1
                     update_params = _convert_event_to_session_update(session_id, event)
@@ -1028,7 +988,13 @@ async def _handle_prompt(
                         pass
                 close_steering(session_id)
 
-            from ..context.delegation import forget_pause, pause_requested, paused_meta
+            from ..context.delegation import (
+                forget_pause,
+                merged_meta,
+                pause_requested,
+                paused_meta,
+                spent_meta,
+            )
 
             paused: dict[str, Any] | None = None
             if stop_reason == "cancelled" and pause_requested(session_id):
@@ -1056,8 +1022,8 @@ async def _handle_prompt(
                     session_id, "agent", "".join(response_chunks)
                 )
             logger.info(f"Stream complete, received {event_count} events")
-            # Send final response with stopReason
-            answer_meta = budget_meta or paused
+            # Send final response with stopReason, and what the turn spent.
+            answer_meta = merged_meta(budget_meta, paused, spent_meta(turn.settle()))
             await websocket.send_json(
                 ACPMessage(
                     jsonrpc=ACP_JSONRPC_VERSION,
@@ -1075,18 +1041,11 @@ async def _handle_prompt(
             response_content = response.content if response else ""
             if response and response.tool_calls:
                 tool_call_count = len(response.tool_calls)
-            response_usage = response.usage if response else None
-            parsed_input, parsed_output, parsed_total = _parse_usage_tokens(
-                response_usage
-            )
-            if parsed_input is not None:
-                input_tokens = parsed_input
-            if parsed_output is not None:
-                output_tokens = parsed_output
-            if parsed_total is not None:
-                total_tokens = parsed_total
+            turn.reported(response.usage if response else None)
             response_chunks.append(response_content)
+            from ..context.delegation import spent_meta
 
+            spent = spent_meta(turn.settle())
             await websocket.send_json(
                 ACPMessage(
                     jsonrpc=ACP_JSONRPC_VERSION,
@@ -1094,6 +1053,7 @@ async def _handle_prompt(
                     result={
                         "stopReason": stop_reason,
                         "output": response_content,
+                        **({"_meta": spent} if spent else {}),
                     },
                 ).model_dump()
             )
@@ -1111,24 +1071,7 @@ async def _handle_prompt(
         # Always unregister the prompt when done
         unregister_prompt(session_id)
 
-        if session_agent_id and (input_tokens is None or output_tokens is None):
-            stats_after = usage_tracker.get_agent_stats(session_agent_id)
-            if (
-                stats_after
-                and len(stats_after.request_usage_history) > usage_history_len_before
-            ):
-                delta_history = stats_after.request_usage_history[
-                    usage_history_len_before:
-                ]
-                if input_tokens is None:
-                    input_tokens = sum(item.input_tokens for item in delta_history)
-                if output_tokens is None:
-                    output_tokens = sum(item.output_tokens for item in delta_history)
-
-        if total_tokens is None and (
-            input_tokens is not None or output_tokens is not None
-        ):
-            total_tokens = max((input_tokens or 0) + (output_tokens or 0), 0)
+        turn.settle()
 
         duration_ms = (time.perf_counter() - start_time) * 1000.0
         record_prompt_turn_completion(
@@ -1140,9 +1083,9 @@ async def _handle_prompt(
             success=completed_without_error,
             model=model if isinstance(model, str) else None,
             tool_call_count=tool_call_count,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
+            input_tokens=turn.input_tokens,
+            output_tokens=turn.output_tokens,
+            total_tokens=turn.total_tokens,
             user_id=str(session_user_id) if session_user_id else None,
             user_provider=metric_user_provider,
             identities_count=None,

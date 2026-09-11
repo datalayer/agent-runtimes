@@ -53,6 +53,7 @@ from datalayer_core.orchestration import (
     InvalidTransition,
     LifecycleEvent,
     OrchestrationError,
+    Usage,
     is_terminal,
     transition,
 )
@@ -854,6 +855,7 @@ class ExecutionStore(ABC):
                     attempt_id=attempt_id,
                     message=observation.message,
                     error=observation.error,
+                    usage=observation.usage,
                 )
             except InvalidTransition as refused:
                 return await self._append(
@@ -917,6 +919,7 @@ class ExecutionStore(ABC):
         message: str | None,
         error: OrchestrationError | None,
         approval_uid: str | None = None,
+        usage: Usage | None = None,
     ) -> tuple[Execution, ExecutionEvent]:
         """
         Transition, store, keep the attempt in step, and say what happened.
@@ -935,6 +938,8 @@ class ExecutionStore(ABC):
             The failure, when this is one.
         approval_uid : str | None
             The platform approval the move waits on or was decided by.
+        usage : Usage | None
+            What the worker says the attempt spent, when it said so.
 
         Returns
         -------
@@ -957,7 +962,7 @@ class ExecutionStore(ABC):
             updates["error"] = error
         moved = execution.model_copy(update=updates)
         await self.save(moved)
-        await self._move_attempt(moved, attempt_id, state, error)
+        await self._move_attempt(moved, attempt_id, state, error, usage)
         event = await self._append(
             event_for(
                 moved,
@@ -981,13 +986,16 @@ class ExecutionStore(ABC):
         attempt_id: str | None,
         state: ExecutionState,
         error: OrchestrationError | None,
+        usage: Usage | None = None,
     ) -> None:
         """
         Carry a state change onto the attempt it was observed on.
 
         An attempt whose state disagrees with its execution's is unreadable
         six weeks later, when the question is which of three attempts
-        produced the artifact somebody is looking at.
+        produced the artifact somebody is looking at. What the attempt spent
+        goes with the move that reports it, which is the only place a tree's
+        spend per execution is kept (O2-10).
 
         Parameters
         ----------
@@ -999,6 +1007,8 @@ class ExecutionStore(ABC):
             The state the execution reached.
         error : OrchestrationError | None
             The failure, when this is one.
+        usage : Usage | None
+            What the worker says the attempt spent, when it said so.
         """
         if attempt_id is None:
             return
@@ -1012,6 +1022,8 @@ class ExecutionStore(ABC):
                 updates["ended_at"] = now()
             if error is not None:
                 updates["error"] = error
+            if usage is not None:
+                updates["usage"] = usage
             await self.save_attempt(attempt.model_copy(update=updates))
             return
 
