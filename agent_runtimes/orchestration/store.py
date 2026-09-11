@@ -882,6 +882,7 @@ class ExecutionStore(ABC):
                     execution_id=execution.execution_id,
                     attempt_id=attempt_id,
                     acknowledged_at=now(),
+                    checkpoint_id=observation.checkpoint_id,
                     detail=observation.message,
                 ),
             )

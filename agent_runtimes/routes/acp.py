@@ -36,9 +36,10 @@ from acp import (
     PROTOCOL_VERSION as ACP_PROTOCOL_VERSION,
 )
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
 from ..adapters.base import BaseAgent
+from ..context.delegation import STEER_METHOD
 from ..context.identities import set_request_user_jwt
 from ..context.usage import get_usage_tracker
 from ..otel.prompt_turn_metrics import (
@@ -104,6 +105,13 @@ class ACPMessage(BaseModel):
     Base ACP message format.
 
     Per JSON-RPC 2.0 spec, id can be a string, number, or null.
+
+    What it is written as is exactly one JSON-RPC message: a request or a
+    notification carries its method, and its id and params when it has them;
+    a response carries its id and either its result or its error. Never both,
+    and never the other member as null — a conforming client reads an
+    ``error`` member as a failure whatever its value, which is how the
+    repository's own ACP client came to refuse every answer of this route.
     """
 
     jsonrpc: str = "2.0"
@@ -112,6 +120,18 @@ class ACPMessage(BaseModel):
     params: dict[str, Any] | None = None
     result: Any | None = None
     error: dict[str, Any] | None = None
+
+    @model_serializer(mode="wrap")
+    def _json_rpc(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        dumped = handler(self)
+        if self.method is not None:
+            return {
+                key: dumped[key]
+                for key in ("jsonrpc", "id", "method", "params")
+                if dumped.get(key) is not None
+            }
+        member = "error" if self.error is not None else "result"
+        return {"jsonrpc": dumped["jsonrpc"], "id": dumped["id"], member: dumped[member]}
 
 
 class ACPError(BaseModel):
@@ -525,7 +545,28 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
             elif message.method == "session/cancel":
                 cancelled_session_id = (message.params or {}).get("sessionId")
                 if cancelled_session_id:
+                    from ..context.delegation import pause_asked, request_pause
+
+                    # A cancel that asks to pause (the Datalayer orchestration
+                    # extension, O2-05): the turn keeps a checkpoint of its
+                    # conversation and answers with it, rather than only stopping.
+                    if pause_asked((message.params or {}).get("_meta")):
+                        request_pause(cancelled_session_id)
                     cancel_prompt(cancelled_session_id)
+
+            # The Datalayer orchestration extension's steer (O2-05), a
+            # notification: the instructions reach the session's running turn
+            # before its next model request, and a session not working drops
+            # them.
+            elif message.method == STEER_METHOD:
+                from ..context.delegation import deliver_steer
+
+                steered = message.params or {}
+                steered_session_id = steered.get("sessionId")
+                instructions = steered.get("instructions")
+                if steered_session_id and isinstance(instructions, str) and instructions:
+                    if not deliver_steer(steered_session_id, instructions):
+                        logger.info("ACP session %s is not working; its steer was dropped", steered_session_id)
 
             elif message.method == "acp.permission.respond":
                 # Handle permission response
@@ -604,10 +645,17 @@ async def _handle_initialize(
     )
     await sessions.save_session(session)
 
+    from ..context.delegation import EXTENSION_URI
+
     # Build ACP-compliant response
     result = {
         "protocolVersion": ACP_PROTOCOL_VERSION,
         "agentCapabilities": {
+            # The Datalayer orchestration extension (O2-05): a prompt may name
+            # its execution and resume from a checkpoint, a `session/cancel`
+            # may ask to pause at one, and `_datalayer/steer` reaches the
+            # running turn.
+            "_meta": {"datalayer": {"extensions": [EXTENSION_URI]}},
             # A session outlives this process, and its conversation is
             # replayed on `session/load` (O1-11).
             "loadSession": True,
@@ -745,16 +793,51 @@ async def _handle_prompt(
         context_metadata["budget"] = budget
     # The execution's token, taken out of `_meta` before anything keeps the
     # prompt: the turn's identity, and its Datalayer MCP toolset's (O1-17).
-    from ..context.delegation import take_credential
+    from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
+    from ..context.delegation import (
+        checkpoint_of,
+        enter_execution,
+        execution_of,
+        take_credential,
+    )
 
     delegated_credential = take_credential(params.get("_meta"))
     if delegated_credential:
         context_metadata["user_token"] = delegated_credential
     budget_meta: dict[str, Any] | None = None
 
+    # The execution this turn is for, whose checkpoints it keeps, and the one
+    # it resumes from when it was paused (O2-05); what is steered into it while
+    # it works reaches its model within the turn.
+    execution_id = execution_of(params.get("_meta"))
+    # On the turn, where its tools read it: an orchestrated turn asks the
+    # control plane for its children rather than taking them (O2-06).
+    enter_execution(params.get("_meta"))
+    # The conversation before this prompt — none, or the checkpoint's. The
+    # prompt is not part of it: the adapter is given the prompt once, as such.
+    history: list[dict[str, Any]] = []
+    resumed_from = checkpoint_of(params.get("_meta"))
+    if resumed_from:
+        checkpoint = (
+            await ProtocolStateCheckpointStore(execution_id).get(resumed_from)
+            if execution_id
+            else None
+        )
+        if checkpoint is None:
+            await _send_error(
+                websocket,
+                message.id,
+                ACPErrorCode.INVALID_PARAMS,
+                f"Checkpoint '{resumed_from}' of execution '{execution_id}' is not kept by this "
+                "runtime, so the turn cannot resume from it.",
+            )
+            return
+        history = [dict(one) for one in checkpoint.messages]
+    context_metadata["steer_run"] = session_id
+
     context = AgentContext(
         session_id=session_id,
-        conversation_history=[{"role": "user", "content": prompt}],
+        conversation_history=history,
         metadata=context_metadata,
     )
 
@@ -834,6 +917,11 @@ async def _handle_prompt(
         if hasattr(agent, "stream"):
             logger.info(f"Using streaming for agent {agent}, prompt: {prompt[:50]}...")
             event_count = 0
+            from ..context.delegation import close_steering, open_steering
+
+            # Steerable while it works: what arrives on `_datalayer/steer` for
+            # this session reaches its model before the next request (O2-05).
+            open_steering(session_id)
             stream = agent.stream(prompt, context).__aiter__()
             cancelled = asyncio.ensure_future(cancel_event.wait())
             try:
@@ -938,6 +1026,30 @@ async def _handle_prompt(
                         await closing()
                     except Exception:  # noqa: BLE001 - the stream is over either way
                         pass
+                close_steering(session_id)
+
+            from ..context.delegation import forget_pause, pause_requested, paused_meta
+
+            paused: dict[str, Any] | None = None
+            if stop_reason == "cancelled" and pause_requested(session_id):
+                forget_pause(session_id)
+                if execution_id:
+                    # Paused, not cancelled: the turn's conversation so far is
+                    # kept where a resume finds it, in whichever process (O2-05).
+                    kept = [*history, {"role": "user", "content": prompt}]
+                    if response_chunks:
+                        kept.append({"role": "assistant", "content": "".join(response_chunks)})
+                    checkpoint = await ProtocolStateCheckpointStore(execution_id).create_checkpoint(
+                        "paused", turn=len(kept), messages=kept, metadata={"session_id": session_id}
+                    )
+                    paused = paused_meta(checkpoint.id)
+                    logger.info("ACP session %s paused at %s", session_id, checkpoint.id)
+                else:
+                    logger.warning(
+                        "ACP session %s was asked to pause and names no execution to keep a "
+                        "checkpoint under; it is stopped instead",
+                        session_id,
+                    )
 
             if response_chunks:
                 await sessions.append_turn(
@@ -945,13 +1057,14 @@ async def _handle_prompt(
                 )
             logger.info(f"Stream complete, received {event_count} events")
             # Send final response with stopReason
+            answer_meta = budget_meta or paused
             await websocket.send_json(
                 ACPMessage(
                     jsonrpc=ACP_JSONRPC_VERSION,
                     id=message.id,
                     result={
                         "stopReason": stop_reason,
-                        **({"_meta": budget_meta} if budget_meta else {}),
+                        **({"_meta": answer_meta} if answer_meta else {}),
                     },
                 ).model_dump()
             )
@@ -1178,18 +1291,18 @@ async def _handle_run(
                 }
             )
 
+    # The prompt is the last user message, and what came before it is the
+    # conversation the adapter is given: the prompt is not part of that.
+    last = max(
+        (index for index, msg in enumerate(messages) if msg.get("role") == "user"),
+        default=None,
+    )
+    prompt = messages[last].get("content", "") if last is not None else ""
     context = AgentContext(
         session_id=session_id,
-        conversation_history=messages,
+        conversation_history=messages[:last] if last is not None else messages,
         metadata=params.get("metadata", {}),
     )
-
-    # Extract prompt from the last user message
-    prompt = ""
-    for msg in reversed(messages):
-        if msg.get("role") == "user":
-            prompt = msg.get("content", "")
-            break
 
     try:
         if stream and hasattr(agent, "stream"):

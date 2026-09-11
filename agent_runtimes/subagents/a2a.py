@@ -14,17 +14,28 @@ Launching reuses the client this package already has (`ensure_local_agent`,
 the remote run is republished on the parent's monitoring stream through the
 same ``agent.subagent`` events an in-process subagent produces, with
 ``transport: "a2a"`` on them so a reader can tell the two apart.
+
+A run the orchestration control plane dispatched takes no child this way
+(ORCHESTRATOR.md, 19.8 decision 2, O2-06): it asks the control plane for one
+(``request_child``), which resolves, authorizes and dispatches it inside the
+tree's budget and depth, and resolving, launching or relaying to an agent
+itself is refused (``ChildNotRequested``).
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import hashlib
 import logging
 import os
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable, Literal
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Literal, Mapping
+
+if TYPE_CHECKING:
+    from datalayer_core.orchestration import AgentBinding
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +152,209 @@ def caller_token() -> str | None:
     return token or (os.environ.get("DATALAYER_API_KEY") or "").strip() or None
 
 
+class ChildNotRequested(PermissionError):
+    """A worker reaching or starting a child itself, rather than asking the control plane for it (O2-06)."""
+
+
+def refuse_in_an_orchestrated_run(what: str) -> None:
+    """
+    Refuse, inside a run the control plane dispatched, what only it may do.
+
+    Such a run asks for its children (``request_child``). An agent it
+    resolved, launched or relayed to itself would be a child the tree's
+    budget and depth never saw (19.8, decision 2).
+
+    Parameters
+    ----------
+    what : str
+        What was attempted, in the words of the refusal.
+
+    Raises
+    ------
+    ChildNotRequested
+        When the current run works on an execution.
+    """
+    from ..context.delegation import run_execution
+
+    execution = run_execution()
+    if execution is not None:
+        raise ChildNotRequested(
+            f"The worker of execution '{execution.get('executionId')}' does not {what} "
+            "itself: it asks the control plane for a child execution."
+        )
+
+
+def child_slot(name: str, task: str) -> str:
+    """
+    A requested child's place under its parent: the subagent, and the task it was given.
+
+    The same task to the same subagent is the same child, so a run replayed
+    after its worker restarted finds the child it asked for rather than
+    starting a second (O2-01); another task is another child.
+
+    Parameters
+    ----------
+    name : str
+        The subagent.
+    task : str
+        The task it is given.
+
+    Returns
+    -------
+    str
+        A slot the control plane takes: a letter or a digit, then at most 63
+        letters, digits, ``.``, ``_``, ``:`` or ``-``.
+    """
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-._")[:48] or "subagent"
+    return f"{stem}:{hashlib.sha256(task.encode()).hexdigest()[:12]}"
+
+
+def _orchestration_client(token: str) -> Any:
+    """The client a worker asks the control plane with, as its execution."""
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    from ..client.agent_client import AgentClient
+
+    return AgentClient(urls=DatalayerURLs.from_environment(), api_key=token)
+
+
+async def request_child(
+    execution: Mapping[str, Any],
+    name: str,
+    agent: AgentBinding,
+    task: str,
+    *,
+    emit: EmitFn,
+) -> str:
+    """
+    Ask the control plane for a child execution, follow it, and answer with what it produced.
+
+    Asked with the run's own token, which the control plane holds to the
+    run's execution (O2-06). The child is resolved, authorized, dispatched,
+    watched and committed as any execution is, over whichever protocol its
+    agent speaks: the control plane places an A2A child and an ACP child
+    under the same parent alike. What it does reaches the parent's stream as
+    the phases a relayed subagent's run produces, and a parent that stops
+    cancels it.
+
+    Parameters
+    ----------
+    execution : Mapping[str, Any]
+        The run's execution, as its delegation named it.
+    name : str
+        The child's name under its parent: with the task, its slot.
+    agent : AgentBinding
+        The agent it is delegated to: an A2A subagent's URL or agentspec, or
+        an ACP agent's endpoint.
+    task : str
+        The task it is given.
+    emit : EmitFn
+        Where the child's progress is republished.
+
+    Returns
+    -------
+    str
+        The text of what the child's completing attempt produced.
+
+    Raises
+    ------
+    ChildNotRequested
+        When the run holds no token of its execution's to ask with.
+    RuntimeError
+        When the child did not complete, saying how it ended.
+    """
+    from datalayer_core.orchestration import (
+        ExecutionEventType,
+        ExecutionsCancel,
+        ExecutionsCollect,
+        ExecutionsDelegate,
+        ExecutionState,
+        Objective,
+    )
+
+    from ..context.identities import get_request_user_jwt
+
+    parent = str(execution.get("executionId") or "")
+    token = get_request_user_jwt()
+    if not token:
+        raise ChildNotRequested(
+            f"The worker of execution '{parent}' holds no token of its execution's, "
+            "so it cannot ask the control plane for a child."
+        )
+    account_uid = str(execution.get("accountUid") or "") or None
+    slot = child_slot(name, task)
+    client = _orchestration_client(token)
+    receipt = await asyncio.to_thread(
+        client.delegate_execution,
+        ExecutionsDelegate(
+            idempotency_key=f"{parent}:{slot}",
+            parent_execution_id=parent,
+            slot=slot,
+            agent=agent,
+            objective=Objective(goal=task),
+        ),
+        account_uid=account_uid,
+    )
+    child = receipt.execution.execution_id
+    emit("status", state="requested", executionId=child)
+
+    loop = asyncio.get_running_loop()
+    events: asyncio.Queue[Any] = asyncio.Queue()
+
+    def follow() -> None:
+        try:
+            for event, _ in client.subscribe_execution(
+                child, include_children=False, account_uid=account_uid
+            ):
+                loop.call_soon_threadsafe(events.put_nowait, event)
+        finally:
+            loop.call_soon_threadsafe(events.put_nowait, None)
+
+    following = asyncio.ensure_future(asyncio.to_thread(follow))
+    state = receipt.execution.status
+    error = receipt.execution.error
+    bodies: dict[tuple[str, str], str] = {}
+    try:
+        while (event := await events.get()) is not None:
+            data = dict(event.data or {})
+            if event.type is ExecutionEventType.STATE_CHANGED and event.state is not None:
+                state, error = event.state, event.error or error
+                emit("status", state=state.value, executionId=child)
+            elif event.type is ExecutionEventType.ARTIFACT_REGISTERED and event.artifact:
+                produced_by = event.artifact.provenance[-1].attempt_id if event.artifact.provenance else ""
+                if isinstance(data.get("text"), str):
+                    bodies[(event.artifact.artifact_id, produced_by)] = data["text"]
+            elif event.type is ExecutionEventType.PROGRESS and isinstance(data.get("phase"), str):
+                # A relayed phase of the child's worker, told as its own.
+                emit(data.pop("phase"), **data)
+        await following
+    except asyncio.CancelledError:
+        # The parent stopped, and so does the child it asked for.
+        with contextlib.suppress(Exception):
+            await asyncio.to_thread(
+                client.cancel_execution,
+                ExecutionsCancel(
+                    idempotency_key=f"{parent}:{slot}:cancel",
+                    execution_id=child,
+                    reason="Its parent's run stopped.",
+                ),
+                account_uid=account_uid,
+            )
+        raise
+    if state is not ExecutionState.COMPLETED:
+        said = f": {error.message}" if error is not None else "."
+        raise RuntimeError(f"Child execution '{child}' ended {state.value}{said}")
+    collected = await asyncio.to_thread(
+        client.collect_execution, ExecutionsCollect(execution_id=child), account_uid=account_uid
+    )
+    completing = collected.execution.current_attempt_id or ""
+    return "\n\n".join(
+        bodies[key]
+        for key in ((artifact.artifact_id, completing) for artifact in collected.artifacts)
+        if key in bodies
+    )
+
+
 def a2a_agent_url(base_url: str, agent_id: str) -> str:
     """Where agent-runtimes mounts an agent's A2A endpoint."""
     return f"{base_url.rstrip('/')}/api/v1/a2a/agents/{agent_id}"
@@ -228,7 +442,11 @@ async def ensure_remote_agent(
     calls the CLI and the evals use: `ensure_local_agent` against this server
     for a local launch, `AgentClient.create_runtime` and then the same
     registration against the new runtime for a cloud one.
+
+    Refused inside a run the control plane dispatched, which asks for its
+    children instead (O2-06).
     """
+    refuse_in_an_orchestrated_run("resolve or launch an agent")
     token = caller_token()
     if target.url:
         remote = A2ARemoteAgent(
@@ -243,26 +461,85 @@ async def ensure_remote_agent(
         base_url, runtime_uid = await asyncio.to_thread(
             _launch_cloud_runtime, target, token
         )
-        # Provisioned is not answering yet: wait for the runtime's server.
-        from ..client.agent_client import wait_for_local_runtime
-
-        await asyncio.to_thread(wait_for_local_runtime, base_url, 180)
     else:
         base_url = local_agent_runtimes_url()
+    return await serve_agentspec(
+        name,
+        description,
+        str(target.spec_id),
+        base_url,
+        token,
+        launch=launch,
+        runtime_uid=runtime_uid,
+        # Provisioned is not answering yet: wait for the runtime's server.
+        wait=launch == "cloud",
+    )
 
-    from ..client.agent_client import ensure_local_agent
 
+async def serve_agentspec(
+    name: str,
+    description: str,
+    spec_id: str,
+    base_url: str,
+    token: str | None,
+    *,
+    launch: str,
+    runtime_uid: str | None = None,
+    wait: bool = False,
+) -> A2ARemoteAgent:
+    """
+    Register an agentspec on an agent-runtimes server over A2A, and answer the agent it serves.
+
+    What launching an agent comes down to once there is a server to launch it
+    on: this server, a Datalayer runtime this module launched, or the runtime
+    the orchestration control plane brought up for an execution (O2-06).
+
+    Parameters
+    ----------
+    name : str
+        The agent's name, which its registration is derived from.
+    description : str
+        What it is for.
+    spec_id : str
+        The agentspec.
+    base_url : str
+        The agent-runtimes server to register it on.
+    token : str | None
+        Who registers it, and calls it.
+    launch : str
+        Where it was launched, for the transcript.
+    runtime_uid : str | None
+        The runtime it runs on, when it has one of its own.
+    wait : bool
+        Whether the server may still be starting, as a runtime just
+        provisioned is.
+
+    Returns
+    -------
+    A2ARemoteAgent
+        The agent, with its card.
+
+    Raises
+    ------
+    ChildNotRequested
+        Inside a run the control plane dispatched.
+    """
+    refuse_in_an_orchestrated_run("launch an agent")
+    from ..client.agent_client import ensure_local_agent, wait_for_local_runtime
+
+    if wait:
+        await asyncio.to_thread(wait_for_local_runtime, base_url, 180)
     agent_name = agent_name_for(name)
     agent_id = await asyncio.to_thread(
         ensure_local_agent,
         base_url=base_url,
         agent_name=agent_name,
         token=token or "",
-        agent_spec_id=str(target.spec_id),
+        agent_spec_id=spec_id,
         transport="a2a",
         # Skills only when the spec has some: an empty skills toolset is an
         # invitation for the model to call a skill that does not exist.
-        enable_skills=spec_declares_skills(str(target.spec_id)),
+        enable_skills=spec_declares_skills(spec_id),
         description=description or f"A2A agent '{name}'",
     )
     remote = A2ARemoteAgent(
@@ -445,7 +722,11 @@ async def relay_a2a_task(
 
     ``metadata`` goes on the message: what an orchestrated delegation carries
     beside the objective, its model budget (ORCHESTRATOR.md, O1-07).
+
+    Refused inside a run the control plane dispatched, which asks for its
+    children instead (O2-06).
     """
+    refuse_in_an_orchestrated_run("delegate a task to an agent")
     import httpx
     from fasta2a.client import A2AClient
     from fasta2a.schema import Message, Part

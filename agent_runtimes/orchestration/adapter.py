@@ -36,6 +36,12 @@ checkpoint is the control plane persisting what it already holds; neither
 A2A nor ACP has a worker-side equivalent. They are still declared in the
 capability report — unsupported, with that reason — because a report with a
 hole in it is how a later reader concludes the hole was an oversight.
+
+A worker that speaks the Datalayer orchestration extension is resolved with
+more (``AdapterCapabilities.extended``, O2-05): it is steered within its turn,
+paused at a checkpoint it reports, and resumed by a new attempt that names
+that checkpoint (``Attempt.resumed_from``). It checkpoints as it pauses, not
+on request, so ``checkpoint`` stays refused for it too, with that reason.
 """
 
 from __future__ import annotations
@@ -59,13 +65,18 @@ from datalayer_core.orchestration import (
     ContextReference,
     ErrorCode,
     Execution,
+    ExecutionEvent,
     ExecutionEventType,
     LifecycleEvent,
     OrchestrationError,
     WorkerOperation,
 )
 
+from agent_runtimes.context.delegation import EXTENSION_URI
+
 __all__ = [
+    "CAPABILITY_REPORT_KEY",
+    "EXTENSION_OPERATIONS",
     "AdapterCapabilities",
     "Observation",
     "OperationOutcome",
@@ -77,6 +88,9 @@ __all__ = [
     "capability_report",
     "now",
     "objective_prompt",
+    "recorded_capabilities",
+    "resume_in_a_new_attempt",
+    "resumed_without_the_extension",
     "trace_id_of",
 ]
 
@@ -97,7 +111,15 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def objective_prompt(execution: Execution) -> str:
+#: What an attempt that resumes from a checkpoint is told before its
+#: objective (O2-05): its worker has the conversation it paused in back.
+RESUMING = (
+    "Carry on from where you were paused: the conversation so far is restored "
+    "from the checkpoint. Do not start again, and do not repeat what is done."
+)
+
+
+def objective_prompt(execution: Execution, attempt: Attempt | None = None) -> str:
     """
     The objective as text, for the protocols that carry text.
 
@@ -113,10 +135,17 @@ def objective_prompt(execution: Execution) -> str:
     The references are named, never resolved: section 2 asks for context to
     be passed by reference, and resolving them is O0-09's.
 
+    An attempt that resumes from a checkpoint (``Attempt.resumed_from``) is
+    told so first. Its worker has the conversation it paused in back, and a
+    prompt that only repeated the objective would read as being asked again
+    from the start.
+
     Parameters
     ----------
     execution : Execution
         The execution being dispatched.
+    attempt : Attempt | None
+        The attempt being dispatched.
 
     Returns
     -------
@@ -138,7 +167,10 @@ def objective_prompt(execution: Execution) -> str:
             f"{'required' if reference.required else 'optional'})"
             for reference in execution.context.references
         ]
-    return "\n".join(lines)
+    objective = "\n".join(lines)
+    if attempt is not None and attempt.resumed_from:
+        return f"{RESUMING}\n\nThe objective, as it was given:\n{objective}"
+    return objective
 
 
 def answer_artifact(
@@ -294,6 +326,21 @@ class Performed:
 #: What every optional operation answers: it was done, or it was refused.
 OperationOutcome = Union[Performed, Unsupported]
 
+#: What a worker that speaks the Datalayer orchestration extension can be
+#: asked besides what its protocol gives (O2-05).
+EXTENSION_OPERATIONS: frozenset[WorkerOperation] = frozenset(
+    {WorkerOperation.STEER, WorkerOperation.PAUSE, WorkerOperation.RESUME}
+)
+
+#: Where a capability report sits in the data of the event that records it.
+CAPABILITY_REPORT_KEY = "adapterCapabilities"
+
+#: Why ``checkpoint`` stays refused for a worker that speaks the extension.
+CHECKPOINTS_AS_IT_PAUSES = (
+    "a worker speaking the orchestration extension keeps a checkpoint as it "
+    "pauses (executions.pause), and takes none while it goes on working"
+)
+
 
 @dataclass(frozen=True)
 class AdapterCapabilities:
@@ -314,6 +361,11 @@ class AdapterCapabilities:
 
     ``reductions`` is everything else that is smaller than the canonical
     model promises, in plain words, for a person reading the execution.
+
+    ``extensions`` are the protocol extensions the worker speaks, which is
+    what the report was widened by (``extended``); the control plane reads
+    the report recorded on the execution rather than its protocol's, so a
+    worker is asked only for what it said it does.
     """
 
     protocol: AgentProtocol
@@ -321,6 +373,7 @@ class AdapterCapabilities:
     unsupported: tuple[Unsupported, ...] = ()
     acknowledgements: frozenset[AcknowledgementKind] = frozenset()
     reductions: tuple[str, ...] = ()
+    extensions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """
@@ -415,6 +468,53 @@ class AdapterCapabilities:
             unsupported=self.unsupported,
             acknowledgements=self.acknowledgements,
             reductions=(*self.reductions, *reductions),
+            extensions=self.extensions,
+        )
+
+    def extended(
+        self, *, without: tuple[str, ...] = (), reductions: tuple[str, ...] = ()
+    ) -> "AdapterCapabilities":
+        """
+        The report for a worker that speaks the Datalayer orchestration extension (O2-05).
+
+        The same for either protocol: the worker is steered within its turn,
+        paused, and resumed from the checkpoint it paused at, which it
+        reports as ``checkpointed``. ``checkpoint`` stays refused, with the
+        reason that is true of such a worker.
+
+        Parameters
+        ----------
+        without : tuple[str, ...]
+            The reductions of the protocol's report the extension answers.
+        reductions : tuple[str, ...]
+            What is still reduced, or newly so, in plain words.
+
+        Returns
+        -------
+        AdapterCapabilities
+            A new report, naming the extension.
+        """
+        return AdapterCapabilities(
+            protocol=self.protocol,
+            supported=self.supported | EXTENSION_OPERATIONS,
+            unsupported=tuple(
+                Unsupported(
+                    operation=entry.operation,
+                    protocol=self.protocol,
+                    reason=CHECKPOINTS_AS_IT_PAUSES,
+                )
+                if entry.operation is WorkerOperation.CHECKPOINT
+                else entry
+                for entry in self.unsupported
+                if entry.operation not in EXTENSION_OPERATIONS
+            ),
+            acknowledgements=self.acknowledgements
+            | {AcknowledgementKind.CHECKPOINTED},
+            reductions=(
+                *(reduction for reduction in self.reductions if reduction not in without),
+                *reductions,
+            ),
+            extensions=(*self.extensions, EXTENSION_URI),
         )
 
     def to_wire(self) -> dict[str, Any]:
@@ -437,6 +537,7 @@ class AdapterCapabilities:
                 if kind in self.acknowledgements
             ],
             "reductions": list(self.reductions),
+            "extensions": list(self.extensions),
         }
 
 
@@ -474,6 +575,9 @@ class Observation:
     # session — and recorded on the attempt so a later step can re-attach.
     session_id: str | None = None
     protocol_task_id: str | None = None
+    #: The checkpoint a ``checkpointed`` milestone names, which is what a
+    #: resume names (O2-05).
+    checkpoint_id: str | None = None
 
     def __post_init__(self) -> None:
         """
@@ -499,6 +603,11 @@ class Observation:
                 )
         if self.type is ExecutionEventType.PROGRESS and not (self.message or self.data):
             raise ValueError("Progress with neither a message nor data says nothing.")
+        if (
+            self.checkpoint_id is not None
+            and self.acknowledgement is not AcknowledgementKind.CHECKPOINTED
+        ):
+            raise ValueError("Only a 'checkpointed' milestone names a checkpoint.")
 
     @classmethod
     def progress(
@@ -584,6 +693,7 @@ class Observation:
         message: str | None = None,
         protocol_task_id: str | None = None,
         session_id: str | None = None,
+        checkpoint_id: str | None = None,
     ) -> "Observation":
         """
         One of the five milestones of section 6.3 was reached.
@@ -598,6 +708,8 @@ class Observation:
             The protocol task, when this is where it became known.
         session_id : str | None
             The protocol session, when this is where it became known.
+        checkpoint_id : str | None
+            The checkpoint a ``checkpointed`` milestone kept.
 
         Returns
         -------
@@ -610,6 +722,7 @@ class Observation:
             message=message,
             protocol_task_id=protocol_task_id,
             session_id=session_id,
+            checkpoint_id=checkpoint_id,
         )
 
     @classmethod
@@ -705,8 +818,34 @@ def capability_report(capabilities: AdapterCapabilities) -> Observation:
         f"Dispatching over {capabilities.protocol.value} without: {refused}."
         if refused
         else f"Dispatching over {capabilities.protocol.value}.",
-        data={"adapterCapabilities": capabilities.to_wire()},
+        data={CAPABILITY_REPORT_KEY: capabilities.to_wire()},
     )
+
+
+def recorded_capabilities(events: Sequence[ExecutionEvent]) -> Mapping[str, Any] | None:
+    """
+    The capability report a dispatch recorded on its execution, the newest.
+
+    What the worker was found to do, rather than what its protocol does: a
+    worker that speaks the orchestration extension is asked for a pause
+    its protocol has no word for (O2-05), and one that does not is refused.
+
+    Parameters
+    ----------
+    events : Sequence[ExecutionEvent]
+        The execution's events.
+
+    Returns
+    -------
+    Mapping[str, Any] | None
+        The report as ``AdapterCapabilities.to_wire`` wrote it, or ``None``
+        before anything was dispatched.
+    """
+    for event in reversed(events):
+        report = (event.data or {}).get(CAPABILITY_REPORT_KEY)
+        if isinstance(report, Mapping):
+            return report
+    return None
 
 
 @dataclass
@@ -730,6 +869,91 @@ class ResolvedWorker:
     endpoint: str | None = None
     details: dict[str, Any] = field(default_factory=dict)
     handle: Any = field(default=None, repr=False)
+
+
+def resume_in_a_new_attempt(
+    worker: ResolvedWorker, checkpoint_id: str | None, *, next_attempt: str
+) -> OperationOutcome:
+    """
+    How a worker that speaks the orchestration extension is resumed (O2-05).
+
+    Not in place: the work it paused has ended, and the next attempt is
+    dispatched with a delegation that names the checkpoint. What is decided
+    here is whether this worker can be resumed at all, from what it declared
+    when it was resolved, and whether there is a checkpoint to name.
+
+    Parameters
+    ----------
+    worker : ResolvedWorker
+        The worker, whose report decides.
+    checkpoint_id : str | None
+        The checkpoint to resume from.
+    next_attempt : str
+        What the next attempt is on the worker's protocol, in plain words.
+
+    Returns
+    -------
+    OperationOutcome
+        How it resumes, or why it cannot.
+    """
+    refused = worker.capabilities.refusal(WorkerOperation.RESUME)
+    if refused is not None:
+        return refused
+    if not checkpoint_id:
+        return Unsupported(
+            operation=WorkerOperation.RESUME,
+            protocol=worker.capabilities.protocol,
+            reason=(
+                "a worker speaking the orchestration extension resumes from the "
+                "checkpoint it paused at, and none is known"
+            ),
+        )
+    return Performed(
+        operation=WorkerOperation.RESUME,
+        detail=(
+            f"Resumed by {next_attempt} whose delegation names checkpoint "
+            f"'{checkpoint_id}'."
+        ),
+    )
+
+
+def resumed_without_the_extension(
+    worker: ResolvedWorker, attempt: Attempt
+) -> OrchestrationError | None:
+    """
+    Why an attempt that resumes from a checkpoint cannot be sent to this worker.
+
+    Only a worker speaking the orchestration extension reads the checkpoint a
+    delegation names. One resolved without it — redeployed since the
+    execution paused, say — would start again from the objective, which is a
+    second piece of work under the paused one's name; the attempt fails
+    saying so instead.
+
+    Parameters
+    ----------
+    worker : ResolvedWorker
+        The worker, as resolved for this dispatch.
+    attempt : Attempt
+        The attempt being dispatched.
+
+    Returns
+    -------
+    OrchestrationError | None
+        The refusal, not retryable, or ``None`` when the attempt may be sent.
+    """
+    if attempt.resumed_from is None or EXTENSION_URI in worker.capabilities.extensions:
+        return None
+    return OrchestrationError(
+        code=ErrorCode.UNSUPPORTED_OPERATION,
+        message=(
+            f"Attempt {attempt.number} resumes from checkpoint "
+            f"'{attempt.resumed_from}', and its worker no longer declares the "
+            "orchestration extension, so nothing it could be sent says where "
+            "to resume."
+        ),
+        retryable=False,
+        source=f"adapter:{worker.capabilities.protocol.value}",
+    )
 
 
 class WorkerAdapter(ABC):
@@ -925,6 +1149,12 @@ class WorkerAdapter(ABC):
     ) -> OperationOutcome:
         """
         Resume from where the work stopped, or from a checkpoint.
+
+        A protocol that resumes work in place does it here. A worker that
+        speaks the Datalayer orchestration extension resumes in a new attempt
+        whose delegation names the checkpoint (``Attempt.resumed_from``),
+        which the caller records and dispatches; this answers whether this
+        worker can be resumed from it, and says how.
 
         Parameters
         ----------

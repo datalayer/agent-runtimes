@@ -99,6 +99,7 @@ def an_attempt(
     number: int = 1,
     session_id: str | None = None,
     protocol_task_id: str | None = None,
+    resumed_from: str | None = None,
 ) -> Attempt:
     """
     One dispatch of an execution to a worker.
@@ -115,6 +116,8 @@ def an_attempt(
         The protocol session, when the attempt already has one.
     protocol_task_id : str | None
         The protocol task, when the attempt already has one.
+    resumed_from : str | None
+        The checkpoint the attempt resumes from, when a resume sent it.
 
     Returns
     -------
@@ -129,4 +132,5 @@ def an_attempt(
         protocol=execution.agent.protocol,
         session_id=session_id,
         protocol_task_id=protocol_task_id,
+        resumed_from=resumed_from,
     )

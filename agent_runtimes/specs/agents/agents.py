@@ -424,7 +424,7 @@ EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/finance/transactions_q1.csv and run a critic loop: first produce a reconciliation analysis, then critique it for gaps and publish a corrected final report.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/finance/transactions_q1.csv and run a critic loop: first produce a reconciliation analysis, then critique it for gaps and publish a corrected final report.",
             summary="Critic loop on transactions",
         ),
     ],
@@ -598,7 +598,7 @@ EXAMPLE_AI_CREATES_DASHBOARDS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a dashboard-style notebook with funnel metrics, regional split, and one executive summary cell.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a dashboard-style notebook with funnel metrics, regional split, and one executive summary cell.",
             summary="Sales pipeline dashboard",
         ),
     ],
@@ -651,7 +651,7 @@ EXAMPLE_AI_EXPLAINS_NOTEBOOK_OUTPUT_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv to build and run a notebook, then explain each output cell in plain language.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv to build and run a notebook, then explain each output cell in plain language.",
             summary="Explain each output",
         ),
     ],
@@ -704,7 +704,7 @@ EXAMPLE_AI_WRITES_PANDAS_CODE_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv and write pandas code that cleans, aggregates by month and region, and highlights growth trends.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sales/sales_history.csv and write pandas code that cleans, aggregates by month and region, and highlights growth trends.",
             summary="Pandas code for trends",
         ),
     ],
@@ -757,7 +757,7 @@ EXAMPLE_ANALYZE_EXCEL_SPREADSHEET_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then produce a 3-cell notebook: schema+missing values, survival breakdown, and one chart with a concise summary.",
+            text="Load /home/datalayer/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then produce a 3-cell notebook: schema+missing values, survival breakdown, and one chart with a concise summary.",
             summary="Titanic in three cells",
         ),
     ],
@@ -878,7 +878,7 @@ EXAMPLE_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and generate a complete analysis notebook from one prompt, including conclusions.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and generate a complete analysis notebook from one prompt, including conclusions.",
             summary="Notebook from one prompt",
         ),
     ],
@@ -1184,7 +1184,7 @@ EXAMPLE_COMPARE_TWO_SPREADSHEETS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Compare /home/jovyan/datasets/datalayer-nfs/titanic/titanic_baseline.csv and /home/jovyan/datasets/datalayer-nfs/titanic/titanic_candidate.csv, then summarize schema and value-level differences.",
+            text="Compare /home/datalayer/datasets/datalayer-nfs/titanic/titanic_baseline.csv and /home/datalayer/datasets/datalayer-nfs/titanic/titanic_candidate.csv, then summarize schema and value-level differences.",
             summary="Compare two CSVs",
         ),
     ],
@@ -1237,7 +1237,7 @@ EXAMPLE_COST_COMPARISON_REPORT_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/cost/cloud_costs.csv to produce a month-over-month cost comparison report with major cost drivers.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/cost/cloud_costs.csv to produce a month-over-month cost comparison report with major cost drivers.",
             summary="Month-over-month costs",
         ),
     ],
@@ -1542,7 +1542,7 @@ EXAMPLE_EXPLORE_SQL_DATABASE_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql as a starting workload, profile query intent, and propose executable SQL exploration steps.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sql/query_workload.sql as a starting workload, profile query intent, and propose executable SQL exploration steps.",
             summary="Explore the SQL workload",
         ),
     ],
@@ -1595,7 +1595,7 @@ EXAMPLE_FIVE_AI_AGENTS_ANALYZE_CSV_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv and split the analysis across five agents, then merge their findings into one final brief.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/churn/customer_churn.csv and split the analysis across five agents, then merge their findings into one final brief.",
             summary="Five agents on churn",
         ),
     ],
@@ -1648,7 +1648,7 @@ EXAMPLE_FIVE_NOTEBOOKS_IN_PARALLEL_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/notebooks/parallel_tasks.csv to plan and execute five notebook tasks in parallel with a combined status summary.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/notebooks/parallel_tasks.csv to plan and execute five notebook tasks in parallel with a combined status summary.",
             summary="Five notebooks in parallel",
         ),
     ],
@@ -1787,7 +1787,7 @@ EXAMPLE_GPT_AND_CLAUDE_COLLABORATE_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv and orchestrate a two-agent collaboration where one analyzes and one critiques.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/marketing/campaign_performance.csv and orchestrate a two-agent collaboration where one analyzes and one critiques.",
             summary="Analyst and critic",
         ),
     ],
@@ -2147,7 +2147,7 @@ EXAMPLE_HUMAN_APPROVED_AUTOMATION_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/compliance/approval_queue.csv to propose automation actions and require explicit human approval before execution.",
             summary="Approval-gated automation",
         ),
     ],
@@ -2333,7 +2333,7 @@ EXAMPLE_LONG_RUNNING_AGENT_OVERNIGHT_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/etl/daily_events.csv to run an overnight-style batch analysis and provide a completion summary with checkpoints.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/etl/daily_events.csv to run an overnight-style batch analysis and provide a completion summary with checkpoints.",
             summary="Overnight batch analysis",
         ),
     ],
@@ -2574,7 +2574,7 @@ EXAMPLE_MULTI_AGENT_DATA_CLEANING_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/quality/dirty_customers.csv and coordinate multiple agents to deduplicate and clean the dataset.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/quality/dirty_customers.csv and coordinate multiple agents to deduplicate and clean the dataset.",
             summary="Multi-agent data cleaning",
         ),
     ],
@@ -2627,7 +2627,7 @@ EXAMPLE_MULTI_AGENT_ROOT_CAUSE_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/ops/incidents.csv to run multi-agent root-cause analysis and produce a ranked remediation plan.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/ops/incidents.csv to run multi-agent root-cause analysis and produce a ranked remediation plan.",
             summary="Multi-agent root cause",
         ),
     ],
@@ -3148,7 +3148,7 @@ EXAMPLE_REPLACE_EXCEL_PIVOT_WORK_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Load /home/jovyan/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then replace a manual pivot-table workflow in one notebook by producing: schema+missing values, survival breakdown, and one chart with a concise summary.",
+            text="Load /home/datalayer/datasets/datalayer-nfs/titanic/titanic.xlsx with pandas.read_excel, then replace a manual pivot-table workflow in one notebook by producing: schema+missing values, survival breakdown, and one chart with a concise summary.",
             summary="Replace the pivot table",
         ),
     ],
@@ -3201,7 +3201,7 @@ EXAMPLE_RESUMABLE_ETL_WITH_CHECKPOINTS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/etl/source_orders.csv to build a resumable ETL flow with explicit checkpoint states.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/etl/source_orders.csv to build a resumable ETL flow with explicit checkpoint states.",
             summary="Resumable ETL",
         ),
     ],
@@ -3254,7 +3254,7 @@ EXAMPLE_RUN_PYTHON_SAFELY_IN_THE_CLOUD_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/notebooks/experiment_metrics.csv and execute Python in a controlled runtime with clear safety and output notes.",
             summary="Python in a controlled runtime",
         ),
     ],
@@ -5208,7 +5208,7 @@ WORKER_AGENT_REVIEWS_SQL_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql and perform a structured SQL review with lint findings, risk notes, and an improved query draft.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sql/query_workload.sql and perform a structured SQL review with lint findings, risk notes, and an improved query draft.",
             summary="Structured SQL review",
         ),
     ],
@@ -6380,7 +6380,7 @@ WORKER_COMPLIANCE_REPORT_DRAFT_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/compliance/audit_findings.csv to draft a compliance report with top risks, control gaps, and remediation priorities.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/compliance/audit_findings.csv to draft a compliance report with top risks, control gaps, and remediation priorities.",
             summary="Draft the compliance report",
         ),
     ],
@@ -6786,7 +6786,7 @@ WORKER_CUSTOMER_CHURN_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/churn/customer_churn.csv to identify churn signals, rank at-risk customers, and propose retention actions.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/churn/customer_churn.csv to identify churn signals, rank at-risk customers, and propose retention actions.",
             summary="Churn signals and actions",
         ),
     ],
@@ -7201,7 +7201,7 @@ WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Load PDFs from /home/jovyan/datasets/datalayer-nfs/placeholder, answer three cross-document questions, and cite which file supports each answer.",
+            text="Load PDFs from /home/datalayer/datasets/datalayer-nfs/placeholder, answer three cross-document questions, and cite which file supports each answer.",
             summary="Cross-document questions",
         ),
     ],
@@ -7851,7 +7851,7 @@ WORKER_EXTRACT_KPIS_FROM_QUARTERLY_PDF_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use the PDF set in /home/jovyan/datasets/datalayer-nfs/placeholder to extract quarterly KPI candidates and return them in a structured table.",
+            text="Use the PDF set in /home/datalayer/datasets/datalayer-nfs/placeholder to extract quarterly KPI candidates and return them in a structured table.",
             summary="KPIs from the PDFs",
         ),
     ],
@@ -8420,7 +8420,7 @@ WORKER_INSURANCE_CLAIMS_REVIEW_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/insurance/claims.csv to detect suspicious claim patterns and draft a prioritized review queue.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/insurance/claims.csv to detect suspicious claim patterns and draft a prioritized review queue.",
             summary="Suspicious claims queue",
         ),
     ],
@@ -8521,7 +8521,7 @@ WORKER_INVENTORY_DEMAND_PLANNING_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/inventory/inventory_demand.csv to forecast near-term stock risk and recommend reorder priorities.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/inventory/inventory_demand.csv to forecast near-term stock risk and recommend reorder priorities.",
             summary="Stock risk and reorders",
         ),
     ],
@@ -8670,7 +8670,7 @@ WORKER_MARKETING_ANALYTICS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/marketing/campaign_performance.csv to analyze ROAS, conversion efficiency, and channel-level recommendations.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/marketing/campaign_performance.csv to analyze ROAS, conversion efficiency, and channel-level recommendations.",
             summary="ROAS and channel advice",
         ),
     ],
@@ -8723,7 +8723,7 @@ WORKER_MEDICAL_RESEARCH_REVIEW_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/medical/clinical_trials.csv to summarize trial outcomes, safety trade-offs, and key evidence caveats.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/medical/clinical_trials.csv to summarize trial outcomes, safety trade-offs, and key evidence caveats.",
             summary="Trial outcomes summary",
         ),
     ],
@@ -9356,7 +9356,7 @@ WORKER_OPTIMIZE_SQL_QUERY_PERFORMANCE_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sql/query_workload.sql to identify query bottlenecks and propose optimized SQL with rationale.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sql/query_workload.sql to identify query bottlenecks and propose optimized SQL with rationale.",
             summary="Query bottlenecks",
         ),
     ],
@@ -10257,7 +10257,7 @@ WORKER_SALES_FORECASTING_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sales/sales_history.csv to produce a short-term sales forecast with assumptions and confidence notes.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sales/sales_history.csv to produce a short-term sales forecast with assumptions and confidence notes.",
             summary="Short-term sales forecast",
         ),
     ],
@@ -10310,7 +10310,7 @@ WORKER_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to generate a board-ready pipeline report with stage health and key risks.",
             summary="Board pipeline report",
         ),
     ],
@@ -10417,7 +10417,7 @@ WORKER_SCHEDULED_NIGHTLY_DATA_QUALITY_CHECKS_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/quality/data_quality_checks.csv to define nightly quality checks and return a failure triage summary.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/quality/data_quality_checks.csv to define nightly quality checks and return a failure triage summary.",
             summary="Nightly quality checks",
         ),
     ],
@@ -10470,7 +10470,7 @@ WORKER_SCIENTIFIC_NOTEBOOK_ASSISTANT_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/notebooks/scientific_measurements.csv to run exploratory analysis and produce publication-ready notebook notes.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/notebooks/scientific_measurements.csv to run exploratory analysis and produce publication-ready notebook notes.",
             summary="Exploratory analysis notes",
         ),
     ],
@@ -11183,7 +11183,7 @@ WORKER_WEEKLY_EXECUTIVE_BRIEFING_AGENTSPEC_0_0_1 = Agentspec(
     color="#1F883D",
     suggestions=[
         AgentSuggestion(
-            text="Use /home/jovyan/datasets/datalayer-nfs/sales/sales_pipeline.csv to produce a weekly executive briefing with trends, risks, and actions.",
+            text="Use /home/datalayer/datasets/datalayer-nfs/sales/sales_pipeline.csv to produce a weekly executive briefing with trends, risks, and actions.",
             summary="Weekly executive briefing",
         ),
     ],

@@ -235,6 +235,10 @@ def register_a2a_agent(
             async with app.task_manager, worker.run():
                 yield
 
+        from fasta2a.schema import AgentExtension
+
+        from ..context.delegation import EXTENSION_URI
+
         a2a_app = FastA2A(
             storage=a2a_storage,
             broker=a2a_broker,
@@ -244,6 +248,19 @@ def register_a2a_agent(
             description=card.description,
             provider=provider,
             skills=skills,
+            # The Datalayer orchestration extension (O2-05): a delegation names
+            # its execution and may resume from a checkpoint; a running task can
+            # be paused at one and steered, at these routes.
+            extensions=[
+                AgentExtension(
+                    uri=EXTENSION_URI,
+                    description=(
+                        "Pause at a checkpoint and resume from it; steer a task while it works."
+                    ),
+                    required=False,
+                    params={"pause": f"{_api_prefix}/a2a/pause", "steer": f"{_api_prefix}/a2a/steer"},
+                )
+            ],
             lifespan=lifespan,
         )
 
@@ -490,6 +507,64 @@ async def terminate_task(request: TerminateRequest) -> TerminateResponse:
             success=True,
             message=f"Terminated {count} running task(s)",
         )
+
+
+class PauseRequest(BaseModel):
+    """Request to pause a running A2A task at a checkpoint (O2-05)."""
+
+    task_id: str
+
+
+class SteerRequest(BaseModel):
+    """Instructions for a running A2A task, for its model's next request (O2-05)."""
+
+    task_id: str
+    instructions: str
+
+
+@router.post("/pause", response_model=TerminateResponse)
+async def pause_task(request: PauseRequest) -> TerminateResponse:
+    """
+    Pause a running A2A task: it keeps a checkpoint of its conversation and stops.
+
+    Part of the Datalayer orchestration extension (O2-05). The task ends
+    `canceled`, its final status message naming the checkpoint under
+    `datalayer.paused`, and a delegation naming that checkpoint resumes it. A
+    task that names no execution has nowhere to keep a checkpoint, and is
+    stopped instead.
+    """
+    from ..context.delegation import forget_pause, request_pause
+
+    request_pause(request.task_id)
+    if cancel_task(request.task_id):
+        return TerminateResponse(
+            success=True, message=f"Task {request.task_id} is pausing", task_id=request.task_id
+        )
+    forget_pause(request.task_id)
+    return TerminateResponse(
+        success=False,
+        message=f"Task {request.task_id} not found or already completed",
+        task_id=request.task_id,
+    )
+
+
+@router.post("/steer", response_model=TerminateResponse)
+async def steer_task(request: SteerRequest) -> TerminateResponse:
+    """
+    Steer a running A2A task: its model reads the instructions before its next request.
+
+    Part of the Datalayer orchestration extension (O2-05). A task that is not
+    working receives nothing, and the answer says so.
+    """
+    from ..context.delegation import deliver_steer
+
+    if deliver_steer(request.task_id, request.instructions):
+        return TerminateResponse(
+            success=True, message=f"Task {request.task_id} was steered", task_id=request.task_id
+        )
+    return TerminateResponse(
+        success=False, message=f"Task {request.task_id} is not working", task_id=request.task_id
+    )
 
 
 @router.get("/tasks")

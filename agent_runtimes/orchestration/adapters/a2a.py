@@ -3,11 +3,12 @@
 
 """The A2A binding (PLAN_ORCHESTRATOR.md, sections 7.1, O0-06).
 
-Standard A2A only. There is no Datalayer extension on this path and no
-private field smuggled into an A2A message: the mapping is the one in the
-plan's table — an execution is a Task, an objective is a Message, a status
-is a task status, an output is an Artifact, a cancel is a task cancellation
-— and a worker that has never heard of Datalayer is expected to work.
+Standard A2A first: the mapping is the one in the plan's table — an
+execution is a Task, an objective is a Message, a status is a task status,
+an output is an Artifact, a cancel is a task cancellation — and a worker
+that has never heard of Datalayer is expected to work. What travels in the
+message's ``metadata`` beside the objective, the model budget and the
+execution's credential, is ignored by a worker that does not read it.
 
 It is built on ``agent_runtimes.subagents.a2a``, which already launches or
 resolves a remote agent, streams its run, republishes it on the parent's
@@ -35,6 +36,15 @@ declared in ``A2A_CAPABILITIES`` rather than discovered:
 Every one of those is on the execution's own event stream before anything is
 dispatched, because ``dispatch`` yields ``capability_report`` first.
 
+A worker whose agent card declares the Datalayer orchestration extension
+(``EXTENSION_URI``) gets steering, pause and resume back, from the worker
+rather than invented here (O2-05). ``resolve`` gives it
+``A2A_EXTENDED_CAPABILITIES``; its delegation names the execution, and the
+checkpoint when the attempt resumes; ``pause`` and ``steer`` post to the
+routes its card names, on the worker's own origin; and a task that ends
+``canceled`` naming the checkpoint it kept is read as a pause, not a
+cancellation.
+
 The trace (section 10, O0-11) is carried the only way standard A2A leaves
 open: a ``traceparent`` header on the HTTP requests the relay makes, which
 reaches them because the attempt span instruments ``httpx`` rather than
@@ -52,7 +62,8 @@ import hashlib
 import logging
 import uuid
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Mapping
+from typing import Any, AsyncIterator, Mapping, Sequence
+from urllib.parse import urlsplit
 
 from datalayer_core.orchestration import (
     AcknowledgementKind,
@@ -62,6 +73,7 @@ from datalayer_core.orchestration import (
     ArtifactProvenance,
     ArtifactType,
     Attempt,
+    ContextReference,
     ErrorCode,
     Execution,
     LifecycleEvent,
@@ -69,6 +81,7 @@ from datalayer_core.orchestration import (
     WorkerOperation,
 )
 
+from agent_runtimes.context.delegation import EXTENSION_URI, paused_at
 from agent_runtimes.monitoring.otel import attempt_span
 from agent_runtimes.orchestration.adapter import (
     AdapterCapabilities,
@@ -82,6 +95,8 @@ from agent_runtimes.orchestration.adapter import (
     capability_report,
     now,
     objective_prompt,
+    resume_in_a_new_attempt,
+    resumed_without_the_extension,
     trace_id_of,
 )
 from agent_runtimes.orchestration.budget import budget_refusal, delegation_meta
@@ -98,7 +113,7 @@ from agent_runtimes.subagents.a2a import (
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["A2A_CAPABILITIES", "A2AWorkerAdapter"]
+__all__ = ["A2A_CAPABILITIES", "A2A_EXTENDED_CAPABILITIES", "A2AWorkerAdapter"]
 
 
 #: What an A2A task state is evidence of, in canonical terms. A2A's states
@@ -144,6 +159,12 @@ def _refused(operation: WorkerOperation, reason: str) -> Unsupported:
     """
     return Unsupported(operation=operation, protocol=AgentProtocol.A2A, reason=reason)
 
+
+#: The reduction a worker speaking the orchestration extension does not have.
+_NO_CHECKPOINTED = (
+    "No 'checkpointed' acknowledgement: A2A has no worker-side "
+    "checkpoint, so recovery here is a retry and not a resume."
+)
 
 #: 19.8's fifth decision as data: created, assigned, running, completed,
 #: failed, cancelled, artifacts and cancellation, and nothing else.
@@ -202,8 +223,7 @@ A2A_CAPABILITIES = AdapterCapabilities(
     reductions=(
         "No 'accepted' acknowledgement: A2A's 'submitted' says the endpoint "
         "took the message, not that a worker took responsibility (6.3).",
-        "No 'checkpointed' acknowledgement: A2A has no worker-side "
-        "checkpoint, so recovery here is a retry and not a resume.",
+        _NO_CHECKPOINTED,
         "No lease: an attempt that loses its stream is re-attached by "
         "polling tasks/get, which is decision 5's 'no lease beyond polling'.",
         "The objective and its context references travel as one text part, "
@@ -213,6 +233,24 @@ A2A_CAPABILITIES = AdapterCapabilities(
         "requests, not in the A2A message, so a worker that reads only the "
         "message body shows as a broken link rather than a second trace "
         "(section 10, O0-11).",
+    ),
+)
+
+#: A worker whose agent card declares the Datalayer orchestration extension
+#: (O2-05): steered within its task, paused at a checkpoint it reports, and
+#: resumed by an attempt that names that checkpoint.
+A2A_EXTENDED_CAPABILITIES = A2A_CAPABILITIES.extended(
+    without=(_NO_CHECKPOINTED,),
+    reductions=(
+        "A pause keeps the conversation — what was asked and what the worker "
+        "had said — and not the tool calls of the turn it stopped, so a "
+        "resumed attempt may make them again (O2-05).",
+        "A resume is a new A2A task in the same context whose delegation "
+        "names the checkpoint: the paused task stays canceled, as A2A "
+        "restarts no task that ended.",
+        "A steer reaches the model's next request in the running task; one "
+        "sent when the task is not working reaches nobody, and the worker "
+        "answers so.",
     ),
 )
 
@@ -231,8 +269,15 @@ class _Seen:
     state: str | None = None
     acknowledged: bool = False
     #: The final status message's metadata, which names the model budget's
-    #: limit when that is what stopped the worker (O1-07).
+    #: limit when that is what stopped the worker (O1-07), and the checkpoint
+    #: it kept when it paused (O2-05).
     metadata: dict[str, Any] | None = None
+    #: Whether the worker speaks the orchestration extension: only then is a
+    #: canceled task that names a checkpoint a pause.
+    extended: bool = False
+    #: Whether this attempt resumes from a checkpoint: the worker's first
+    #: 'working' is then the execution resuming, not starting.
+    resumed: bool = False
 
 
 class A2AWorkerAdapter(WorkerAdapter):
@@ -255,9 +300,10 @@ class A2AWorkerAdapter(WorkerAdapter):
         emit: Any = None,
         poll_interval_seconds: float = 2.0,
         credential: str | None = None,
+        account_uid: str | None = None,
     ) -> None:
         """
-        Hold the parent's emitter, the polling interval and the execution's credential.
+        Hold the parent's emitter, the polling interval, and the execution's credential and account.
 
         Parameters
         ----------
@@ -268,10 +314,14 @@ class A2AWorkerAdapter(WorkerAdapter):
         credential : str | None
             The execution's token for the run, handed to the worker with the
             delegation (O1-17).
+        account_uid : str | None
+            The account the execution belongs to, named to a worker that
+            speaks the extension, which asks for its children in it (O2-06).
         """
         self._emit = emit
         self._poll_interval_seconds = poll_interval_seconds
         self._credential = credential
+        self._account_uid = account_uid
 
     def capabilities(self) -> AdapterCapabilities:
         """
@@ -293,6 +343,10 @@ class A2AWorkerAdapter(WorkerAdapter):
         server or on a Datalayer runtime — is what ``ensure_remote_agent``
         already does for subagents; doing it a second way here is how the
         two would come to disagree about what a launched agent is.
+
+        A worker whose agent card declares the orchestration extension is
+        resolved with ``A2A_EXTENDED_CAPABILITIES``, and one whose card does
+        not, or that serves no card, with ``A2A_CAPABILITIES``.
 
         Parameters
         ----------
@@ -324,7 +378,9 @@ class A2AWorkerAdapter(WorkerAdapter):
         )
         return ResolvedWorker(
             binding=binding.model_copy(update={"endpoint": remote.url}),
-            capabilities=A2A_CAPABILITIES,
+            capabilities=A2A_EXTENDED_CAPABILITIES
+            if _extension_of(remote.card) is not None
+            else A2A_CAPABILITIES,
             endpoint=remote.url,
             # What the worker says about itself, shown and never followed.
             details=remote.describe(),
@@ -369,10 +425,21 @@ class A2AWorkerAdapter(WorkerAdapter):
         # traceparent on the relay's outgoing requests.
         with attempt_span(execution, attempt, operation=WorkerOperation.DELEGATE):
             yield capability_report(worker.capabilities)
+            refused = resumed_without_the_extension(worker, attempt)
+            if refused is not None:
+                yield Observation.moved(
+                    LifecycleEvent.FAIL, message=refused.message, error=refused
+                )
+                return
 
             queue: asyncio.Queue[Observation | None] = asyncio.Queue()
-            seen = _Seen()
-            relay = asyncio.create_task(self._relay(remote, execution, queue, seen))
+            seen = _Seen(
+                extended=EXTENSION_URI in worker.capabilities.extensions,
+                resumed=attempt.resumed_from is not None,
+            )
+            relay = asyncio.create_task(
+                self._relay(remote, execution, attempt, queue, seen)
+            )
             try:
                 while True:
                     observation = await queue.get()
@@ -390,7 +457,8 @@ class A2AWorkerAdapter(WorkerAdapter):
                 return
             failure = relay.exception()
             if failure is not None:
-                yield self._ending(seen, str(failure))
+                for observation in self._ending(seen, str(failure)):
+                    yield observation
                 return
 
             answer = str(relay.result() or "")
@@ -473,11 +541,25 @@ class A2AWorkerAdapter(WorkerAdapter):
                         )
                     )
                     return
-                state = str((task.get("status") or {}).get("state") or "")
+                status = task.get("status") or {}
+                state = str(status.get("state") or "")
                 if state in TERMINAL_STATES:
                     for artifact, body in _task_artifacts(task, execution, attempt):
                         yield Observation.produced(artifact, data={"text": body})
-                    yield self._ending(_Seen(task_id=task_id, state=state), None)
+                    # The final status message says why it ended: the budget
+                    # that stopped it, or the checkpoint it paused at.
+                    message = status.get("message")
+                    metadata = (
+                        message.get("metadata") if isinstance(message, Mapping) else None
+                    )
+                    ended = _Seen(
+                        task_id=task_id,
+                        state=state,
+                        metadata=dict(metadata) if isinstance(metadata, Mapping) else None,
+                        extended=EXTENSION_URI in worker.capabilities.extensions,
+                    )
+                    for observation in self._ending(ended, None):
+                        yield observation
                     return
                 if first:
                     yield Observation.progress(
@@ -539,12 +621,210 @@ class A2AWorkerAdapter(WorkerAdapter):
             + (f" Reason: {reason}" if reason else ""),
         )
 
+    async def steer(
+        self,
+        worker: ResolvedWorker,
+        execution: Execution,
+        attempt: Attempt,
+        *,
+        instructions: str,
+        references: Sequence[ContextReference] = (),
+    ) -> OperationOutcome:
+        """
+        Steer the running task through the route the worker's card names (O2-05).
+
+        The worker adds the instructions to its model's next request, within
+        the task. A plain A2A worker has no such route, and is refused.
+
+        Parameters
+        ----------
+        worker : ResolvedWorker
+            The worker.
+        execution : Execution
+            The execution being steered.
+        attempt : Attempt
+            The attempt whose task takes the instructions.
+        instructions : str
+            What to add.
+        references : Sequence[ContextReference]
+            Context to add with it, named rather than resolved.
+
+        Returns
+        -------
+        OperationOutcome
+            What the worker answered, or why it could not be asked.
+        """
+        refused = worker.capabilities.refusal(WorkerOperation.STEER) or _untasked(
+            WorkerOperation.STEER, attempt
+        )
+        if refused is not None:
+            return refused
+        lines = [instructions]
+        if references:
+            lines += ["", "Further context references:"]
+            lines += [f"- {reference.uri}" for reference in references]
+        return await self._ask(
+            worker,
+            WorkerOperation.STEER,
+            {"task_id": attempt.protocol_task_id, "instructions": "\n".join(lines)},
+        )
+
+    async def pause(
+        self,
+        worker: ResolvedWorker,
+        execution: Execution,
+        attempt: Attempt,
+        *,
+        reason: str | None = None,
+    ) -> OperationOutcome:
+        """
+        Ask the running task to pause, through the route the worker's card names (O2-05).
+
+        What this answers is only that the worker was asked. The pause itself
+        arrives on the stream of the dispatch watching the task: it ends
+        ``canceled``, naming the checkpoint it kept, and ``_ending`` reads
+        that as the execution pausing.
+
+        Parameters
+        ----------
+        worker : ResolvedWorker
+            The worker.
+        execution : Execution
+            The execution being paused.
+        attempt : Attempt
+            The attempt whose task is to pause.
+        reason : str | None
+            Why, for the record; the route carries none.
+
+        Returns
+        -------
+        OperationOutcome
+            What the worker answered, or why it could not be asked.
+        """
+        refused = worker.capabilities.refusal(WorkerOperation.PAUSE) or _untasked(
+            WorkerOperation.PAUSE, attempt
+        )
+        if refused is not None:
+            return refused
+        return await self._ask(
+            worker, WorkerOperation.PAUSE, {"task_id": attempt.protocol_task_id}
+        )
+
+    async def resume(
+        self,
+        worker: ResolvedWorker,
+        execution: Execution,
+        attempt: Attempt,
+        *,
+        checkpoint_id: str | None = None,
+    ) -> OperationOutcome:
+        """
+        Say how the execution resumes: a new task whose delegation names the checkpoint.
+
+        Nothing is sent here: A2A restarts no task that ended, so the next
+        attempt is dispatched as a new task in the same context, and the
+        worker starts it from the checkpoint's conversation (O2-05).
+
+        Parameters
+        ----------
+        worker : ResolvedWorker
+            The worker.
+        execution : Execution
+            The execution being resumed.
+        attempt : Attempt
+            The attempt that paused.
+        checkpoint_id : str | None
+            The checkpoint to resume from.
+
+        Returns
+        -------
+        OperationOutcome
+            How it resumes, or why it cannot.
+        """
+        return resume_in_a_new_attempt(
+            worker, checkpoint_id, next_attempt="a new A2A task"
+        )
+
     # -- Working parts. ------------------------------------------------------
+
+    async def _ask(
+        self,
+        worker: ResolvedWorker,
+        operation: WorkerOperation,
+        body: Mapping[str, Any],
+    ) -> OperationOutcome:
+        """
+        Post one request of the orchestration extension, and say what the worker answered.
+
+        Parameters
+        ----------
+        worker : ResolvedWorker
+            The worker, whose card names the route.
+        operation : WorkerOperation
+            The operation, which is the name of its route in the card.
+        body : Mapping[str, Any]
+            What the route is posted.
+
+        Returns
+        -------
+        OperationOutcome
+            What the worker answered, or a refusal when its card names no
+            usable route.
+        """
+        route = _extension_route(worker, operation.value)
+        if route is None:
+            return Unsupported(
+                operation=operation,
+                protocol=AgentProtocol.A2A,
+                reason=(
+                    "the worker declares the orchestration extension and its card "
+                    f"names no '{operation.value}' route on its own origin"
+                ),
+            )
+        answer = await self._post_extension(_remote(worker), route, body)
+        said = str(answer.get("message") or "")
+        if answer.get("success") is True:
+            return Performed(operation=operation, detail=said or None)
+        return Performed(
+            operation=operation,
+            detail=f"The worker did not take the {operation.value}"
+            + (f": {said}" if said else "."),
+        )
+
+    async def _post_extension(
+        self, remote: A2ARemoteAgent, route: str, body: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Post to one route of the orchestration extension on the worker.
+
+        Parameters
+        ----------
+        remote : A2ARemoteAgent
+            The worker, whose token the request carries.
+        route : str
+            The route, already on the worker's own origin.
+        body : Mapping[str, Any]
+            The request.
+
+        Returns
+        -------
+        dict[str, Any]
+            The worker's answer.
+        """
+        import httpx
+
+        headers = {"Authorization": f"Bearer {remote.token}"} if remote.token else {}
+        async with httpx.AsyncClient(headers=headers, timeout=30.0) as http:
+            response = await http.post(route, json=dict(body))
+            response.raise_for_status()
+            answer = response.json()
+        return answer if isinstance(answer, dict) else {}
 
     async def _relay(
         self,
         remote: A2ARemoteAgent,
         execution: Execution,
+        attempt: Attempt,
         queue: "asyncio.Queue[Observation | None]",
         seen: _Seen,
     ) -> str:
@@ -557,6 +837,8 @@ class A2AWorkerAdapter(WorkerAdapter):
             The worker.
         execution : Execution
             The execution being dispatched.
+        attempt : Attempt
+            This dispatch, which names the checkpoint when it resumes.
         queue : asyncio.Queue[Observation | None]
             Where observations go; ``None`` ends the stream.
         seen : _Seen
@@ -588,21 +870,34 @@ class A2AWorkerAdapter(WorkerAdapter):
         try:
             return await relay_a2a_task(
                 remote,
-                objective_prompt(execution),
+                objective_prompt(execution, attempt),
                 # One tree, one A2A context: the plan's table maps context
                 # references onto A2A, and the root is what groups a tree.
                 context_id=execution.root_execution_id,
                 emit=emit,
-                # The model budget the worker's run is held to (O1-07), and
-                # the execution's token it reaches Datalayer with (O1-17).
-                metadata=delegation_meta(execution, credential=self._credential),
+                # The model budget the worker's run is held to (O1-07), the
+                # execution's token it reaches Datalayer with (O1-17), and, to
+                # a worker speaking the extension, the execution and the
+                # checkpoint this attempt resumes from (O2-05).
+                metadata=delegation_meta(
+                    execution,
+                    credential=self._credential,
+                    extended=seen.extended,
+                    resumed_from=attempt.resumed_from,
+                    account_uid=self._account_uid,
+                ),
             )
         finally:
             queue.put_nowait(None)
 
-    def _ending(self, seen: _Seen, detail: str | None) -> Observation:
+    def _ending(self, seen: _Seen, detail: str | None) -> list[Observation]:
         """
         Read the end of a task: which lifecycle event, and which failure.
+
+        A worker speaking the orchestration extension that ends a task
+        ``canceled`` and names the checkpoint it kept has paused (O2-05): the
+        execution pauses, and the milestone names the checkpoint a resume
+        will name.
 
         Parameters
         ----------
@@ -613,10 +908,28 @@ class A2AWorkerAdapter(WorkerAdapter):
 
         Returns
         -------
-        Observation
-            The terminal move, with the error when there is one.
+        list[Observation]
+            The terminal move, with the error when there is one; or the pause
+            and the checkpoint it kept.
         """
         state = seen.state or ""
+        checkpoint_id = (
+            paused_at(seen.metadata) if seen.extended and state == "canceled" else None
+        )
+        if checkpoint_id is not None:
+            return [
+                Observation.moved(
+                    LifecycleEvent.PAUSE,
+                    message=f"Paused at checkpoint '{checkpoint_id}'.",
+                    protocol_task_id=seen.task_id,
+                ),
+                Observation.acknowledged(
+                    AcknowledgementKind.CHECKPOINTED,
+                    message="The worker kept its conversation as it paused.",
+                    protocol_task_id=seen.task_id,
+                    checkpoint_id=checkpoint_id,
+                ),
+            ]
         refused = (
             budget_refusal(seen.metadata, source="adapter:a2a")
             if state == "failed"
@@ -625,12 +938,14 @@ class A2AWorkerAdapter(WorkerAdapter):
         if refused is not None:
             # Stopped by the model budget the delegation set: not a worker
             # that broke, and nothing another attempt could spend (O1-07).
-            return Observation.moved(
-                LifecycleEvent.FAIL,
-                message=refused.message,
-                error=refused,
-                protocol_task_id=seen.task_id,
-            )
+            return [
+                Observation.moved(
+                    LifecycleEvent.FAIL,
+                    message=refused.message,
+                    error=refused,
+                    protocol_task_id=seen.task_id,
+                )
+            ]
         event, code, retryable = A2A_ENDINGS.get(
             state, (LifecycleEvent.FAIL, ErrorCode.WORKER_UNREACHABLE, True)
         )
@@ -644,12 +959,14 @@ class A2AWorkerAdapter(WorkerAdapter):
             if code is not None
             else None
         )
-        return Observation.moved(
-            event,
-            message=detail or state or None,
-            error=error,
-            protocol_task_id=seen.task_id,
-        )
+        return [
+            Observation.moved(
+                event,
+                message=detail or state or None,
+                error=error,
+                protocol_task_id=seen.task_id,
+            )
+        ]
 
     async def _artifacts(
         self,
@@ -729,6 +1046,90 @@ class A2AWorkerAdapter(WorkerAdapter):
             return None
         result = response.get("result") if isinstance(response, dict) else None
         return result if isinstance(result, dict) else None
+
+
+def _extension_of(card: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    """
+    The Datalayer orchestration extension an agent card declares, when it does.
+
+    Parameters
+    ----------
+    card : Mapping[str, Any] | None
+        The worker's agent card, or ``None`` when it serves none.
+
+    Returns
+    -------
+    Mapping[str, Any] | None
+        The extension's entry under ``capabilities.extensions``.
+    """
+    capabilities = card.get("capabilities") if isinstance(card, Mapping) else None
+    extensions = (
+        capabilities.get("extensions") if isinstance(capabilities, Mapping) else None
+    )
+    for extension in extensions if isinstance(extensions, list) else []:
+        if isinstance(extension, Mapping) and extension.get("uri") == EXTENSION_URI:
+            return extension
+    return None
+
+
+def _extension_route(worker: ResolvedWorker, name: str) -> str | None:
+    """
+    Where the worker's card says an operation of the extension is asked.
+
+    The card comes from the worker, so what it names is not followed to
+    anywhere else (section 9): only a path is taken, and it is joined to the
+    origin the worker was resolved at, so the token the request carries
+    never goes to a host a card chose.
+
+    Parameters
+    ----------
+    worker : ResolvedWorker
+        The worker, with the card it was resolved with.
+    name : str
+        The operation, as the extension's params name its route.
+
+    Returns
+    -------
+    str | None
+        The route on the worker's origin, or ``None`` when the card names
+        none that is a path.
+    """
+    remote = _remote(worker)
+    extension = _extension_of(remote.card)
+    params = extension.get("params") if extension is not None else None
+    path = params.get(name) if isinstance(params, Mapping) else None
+    if not isinstance(path, str) or not path.startswith("/") or path.startswith("//"):
+        return None
+    origin = urlsplit(remote.url)
+    return f"{origin.scheme}://{origin.netloc}{path}"
+
+
+def _untasked(operation: WorkerOperation, attempt: Attempt) -> Unsupported | None:
+    """
+    The refusal for asking a task of an attempt that has none yet.
+
+    Parameters
+    ----------
+    operation : WorkerOperation
+        What was asked.
+    attempt : Attempt
+        The attempt it was asked of.
+
+    Returns
+    -------
+    Unsupported | None
+        The refusal, or ``None`` when the attempt has its task.
+    """
+    if attempt.protocol_task_id:
+        return None
+    return Unsupported(
+        operation=operation,
+        protocol=AgentProtocol.A2A,
+        reason=(
+            f"this attempt has no A2A task yet, and a {operation.value} is asked "
+            "of a task"
+        ),
+    )
 
 
 def _remote(worker: ResolvedWorker) -> A2ARemoteAgent:
@@ -823,10 +1224,15 @@ def _observe(phase: str, payload: Mapping[str, Any], seen: _Seen) -> list[Observ
             )
         )
         return observations
+    starting = observed is LifecycleEvent.START
+    if starting and seen.resumed:
+        # The attempt resumes from a checkpoint: the worker working is the
+        # paused execution resuming, once (O2-05).
+        observed, seen.resumed = LifecycleEvent.RESUME, False
     observations.append(
         Observation.moved(observed, message=state, protocol_task_id=task_id)
     )
-    if observed is LifecycleEvent.START:
+    if starting:
         # Started is a milestone as well as a move, and the move goes first:
         # an acknowledgement never lands on an execution the lifecycle has
         # not yet let start.

@@ -447,7 +447,7 @@
             "format": 0,
             "mode": "normal",
             "style": "",
-            "text": "\"/home/jovyan/home/training7\"",
+            "text": "\"/home/datalayer/home/training7\"",
             "type": "jupyter-input-highlight",
             "version": 1,
             "highlightType": "string"

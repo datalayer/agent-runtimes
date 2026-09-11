@@ -185,11 +185,28 @@ Two things this arrangement insists on:
 - **An adapter reports; it never decides.** What an observation means to an
   execution is decided where the execution lives, so a worker cannot report
   work it never did.
-- **An adapter says out loud what it cannot do.** A2A cannot steer a running
-  task and ACP can; neither can pause, resume or checkpoint. Each adapter
-  declares its own reductions and they reach the execution's event stream as
-  the first thing a dispatch reports, so "why did this never checkpoint?" is
-  answered from the run's own record.
+- **An adapter says out loud what it cannot do.** A plain A2A worker cannot be
+  steered while it works, and a plain ACP worker is steered with a turn of its
+  own; neither can be paused or resumed. Each adapter declares its own
+  reductions and they reach the execution's event stream as the first thing a
+  dispatch reports, so "why did this never checkpoint?" is answered from the
+  run's own record.
+- **A worker says what it adds.** A worker `agent-runtimes` serves declares the
+  Datalayer orchestration extension — on its A2A agent card, in its ACP
+  capabilities — and is resolved with more (`AdapterCapabilities.extended`): a
+  steer reaches the turn it is working on, a pause stops it at a checkpoint it
+  reports, and a resume is a new attempt whose delegation names that checkpoint
+  (`Attempt.resumed_from`). The control plane asks a worker for what the report
+  recorded on its execution says, so a plain worker keeps its refusals.
+
+An execution's checkpoints can outlive the process that made them:
+`create_checkpoint_store("protocol_state", scope=<execution id>)` keeps them in
+the same protocol state store as the runtime's A2A tasks and ACP sessions
+(SQLite locally, the agent-memories PostgreSQL on Kubernetes), keyed by the
+execution, so another process of the runtime — after a restart — reads them,
+and two executions of one agent never read each other's. The checkpoint
+capability, its middleware and the `save_checkpoint`, `list_checkpoints` and
+`rewind_to` tools work over it unchanged.
 
 `examples/orchestration` is the runnable version of that paragraph: one
 objective delegated to an A2A worker and to an ACP worker over one code path,

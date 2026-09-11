@@ -324,8 +324,16 @@ class SubagentsCapability(AbstractCapability[Any]):
             self._emit_subagent_event(
                 subagent_name, tool_call_id, "start", task=task, **transport
             )
+            from ..context.delegation import run_execution
+
             try:
-                if remote is not None:
+                if remote is not None and run_execution() is not None:
+                    # A run the control plane dispatched asks it for the
+                    # child rather than taking it (O2-06).
+                    output = await self._run_as_requested_child(
+                        remote, subagent_name, tool_call_id, task
+                    )
+                elif remote is not None:
                     output = await self._run_remote_streaming(
                         remote, subagent_name, tool_call_id, task
                     )
@@ -380,6 +388,40 @@ class SubagentsCapability(AbstractCapability[Any]):
         if remote is not None:
             return remote.describe()
         return {"transport": "a2a", "launch": definition.a2a.launch}
+
+    async def _run_as_requested_child(
+        self,
+        definition: SubagentDefinition,
+        subagent_name: str,
+        tool_call_id: str | None,
+        task: str,
+    ) -> str:
+        """Ask the control plane for the subagent as a child of this run's execution (O2-06).
+
+        The child's progress comes back on the parent's monitoring stream as
+        the phases a relayed run produces, with ``transport: "a2a"``, so the
+        transcript reads the same as it did when the parent relayed itself.
+        """
+        from datalayer_core.orchestration import AgentBinding, AgentProtocol
+
+        from ..context.delegation import run_execution
+        from .a2a import request_child
+
+        execution = run_execution()
+        assert execution is not None and definition.a2a is not None
+        agent = AgentBinding(
+            agent_id=definition.a2a.spec_id or subagent_name,
+            capability=subagent_name,
+            protocol=AgentProtocol.A2A,
+            endpoint=definition.a2a.url,
+        )
+
+        def emit(phase: str, **payload: Any) -> None:
+            self._emit_subagent_event(
+                subagent_name, tool_call_id, phase, transport="a2a", **payload
+            )
+
+        return await request_child(execution, subagent_name, agent, task, emit=emit)
 
     async def _run_remote_streaming(
         self,

@@ -149,6 +149,19 @@ from an in-process one. The `AgentA2AExample` shows it with the A2A sidebar
 plugin (`@datalayer/loop-plugin-a2a-sidebar`): the remote agents, their status
 and card, and the live run box.
 
+A run the orchestration control plane dispatched — one whose delegation names
+its execution — does not launch or relay to a subagent over A2A itself.
+`delegate_task` asks the control plane for a child execution under the run's
+own, with the run's credential. The control plane resolves, authorizes and
+dispatches the child within the tree's budget and depth. The child's progress
+arrives as the same `agent.subagent` events, and the delegation answers with
+what the child produced. Resolving, launching or relaying to an agent from
+inside such a run is refused. In-process subagents stay in the run. A tool of
+the agent asks for a child of either protocol the same way, with
+`request_child` and the child's agent binding (an A2A agent's URL or
+agentspec, an ACP agent's endpoint); the control plane places A2A and ACP
+children under one parent alike, in the parent's trace.
+
 ## TypeScript Types
 
 The TypeScript types for subagents are available in the `@datalayer/agent-runtimes` package:

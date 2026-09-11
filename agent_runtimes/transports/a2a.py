@@ -416,18 +416,32 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         prompt = a2a_message_text(incoming)
 
         from ..adapters.base import AgentContext
-        from ..context.delegation import CredentialLost, release, was_delegated
+        from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
+        from ..context.delegation import (
+            CredentialLost,
+            checkpoint_of,
+            close_steering,
+            enter_execution,
+            execution_of,
+            forget_pause,
+            open_steering,
+            pause_requested,
+            paused_meta,
+            release,
+            was_delegated,
+        )
         from ..context.identities import set_request_user_jwt
         from ..guardrails.model_budget import delegated_budget
 
+        meta = incoming.get("metadata")
         # The model budget the delegation set on this run, when it set one:
         # the adapter applies it as the run's usage limits (O1-07).
-        budget = delegated_budget(incoming.get("metadata"))
+        budget = delegated_budget(meta)
         # The execution's token, taken out of the message when the task was
         # submitted: the run's identity, which its approvals, its telemetry and
         # its Datalayer MCP toolset use instead of the process's (O1-17).
         credential = release(task_id)
-        if credential is None and was_delegated(incoming.get("metadata")):
+        if credential is None and was_delegated(meta):
             # Owed by a process that has since restarted, and the credential
             # went with it. Run as the runtime instead and the worker reaches
             # whatever the runtime's key does; fail, and the execution retries
@@ -438,9 +452,29 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             )
         if credential:
             set_request_user_jwt(credential)
+        # The execution this run is for, whose checkpoints it keeps, and the
+        # checkpoint it resumes from when it was paused (O2-05).
+        execution_id = execution_of(meta)
+        # On the run, where its tools read it: an orchestrated run asks the
+        # control plane for its children rather than taking them (O2-06).
+        enter_execution(meta)
+        conversation = self.build_message_history(history)
+        resumed_from = checkpoint_of(meta)
+        if resumed_from:
+            checkpoint = (
+                await ProtocolStateCheckpointStore(execution_id).get(resumed_from)
+                if execution_id
+                else None
+            )
+            if checkpoint is None:
+                raise RuntimeError(
+                    f"Checkpoint '{resumed_from}' of execution '{execution_id}' is not kept by "
+                    "this runtime, so the run cannot resume from it."
+                )
+            conversation = [dict(message) for message in checkpoint.messages]
         context = AgentContext(
             session_id=context_id,
-            conversation_history=self.build_message_history(history),
+            conversation_history=conversation,
             metadata={
                 "a2a": {
                     "task_id": task_id,
@@ -449,6 +483,8 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                 },
                 **({"budget": budget} if budget else {}),
                 **({"user_token": credential} if credential else {}),
+                # What is steered into this task reaches its model within the turn.
+                "steer_run": task_id,
             },
         )
 
@@ -456,57 +492,85 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         text = ""
         final_output: str | None = None
         canceled = False
-        async for event in self.agent.stream(prompt, context):
-            if cancel is not None and cancel.is_set():
-                # Leaving the loop closes the adapter's stream, which stops the
-                # run underneath it.
-                canceled = True
-                break
-            if event.type == "text":
-                delta = str(event.data or "")
-                if not delta:
-                    continue
-                text += delta
-                await self.publish_artifact(
-                    task_id,
-                    context_id,
-                    Artifact(
-                        artifact_id=artifact_id, name="result", parts=[Part(text=delta)]
-                    ),
-                    append=True,
-                    last_chunk=False,
-                )
-            elif event.type == "tool_call":
-                await self.publish_status(
-                    task_id,
-                    context_id,
-                    "working",
-                    _agent_message(
+        open_steering(task_id)
+        try:
+            async for event in self.agent.stream(prompt, context):
+                if cancel is not None and cancel.is_set():
+                    # Leaving the loop closes the adapter's stream, which stops
+                    # the run underneath it.
+                    canceled = True
+                    break
+                if event.type == "text":
+                    delta = str(event.data or "")
+                    if not delta:
+                        continue
+                    text += delta
+                    await self.publish_artifact(
+                        task_id,
                         context_id,
-                        Part(data={"tool_call": _tool_call_payload(event.data)}),
-                    ),
-                )
-            elif event.type == "tool_result":
-                await self.publish_status(
-                    task_id,
-                    context_id,
-                    "working",
-                    _agent_message(
+                        Artifact(
+                            artifact_id=artifact_id, name="result", parts=[Part(text=delta)]
+                        ),
+                        append=True,
+                        last_chunk=False,
+                    )
+                elif event.type == "tool_call":
+                    await self.publish_status(
+                        task_id,
                         context_id,
-                        Part(data={"tool_result": _tool_result_payload(event.data)}),
-                    ),
-                )
-            elif event.type == "output":
-                final_output = str(event.data) if event.data is not None else None
-            elif event.type == "error":
-                from ..guardrails.model_budget import (
-                    ModelBudgetExceeded,
-                    ModelBudgetReached,
-                )
+                        "working",
+                        _agent_message(
+                            context_id,
+                            Part(data={"tool_call": _tool_call_payload(event.data)}),
+                        ),
+                    )
+                elif event.type == "tool_result":
+                    await self.publish_status(
+                        task_id,
+                        context_id,
+                        "working",
+                        _agent_message(
+                            context_id,
+                            Part(data={"tool_result": _tool_result_payload(event.data)}),
+                        ),
+                    )
+                elif event.type == "output":
+                    final_output = str(event.data) if event.data is not None else None
+                elif event.type == "error":
+                    from ..guardrails.model_budget import (
+                        ModelBudgetExceeded,
+                        ModelBudgetReached,
+                    )
 
-                if isinstance(event.data, ModelBudgetReached):
-                    raise ModelBudgetExceeded(event.data)
-                raise RuntimeError(str(event.data))
+                    if isinstance(event.data, ModelBudgetReached):
+                        raise ModelBudgetExceeded(event.data)
+                    raise RuntimeError(str(event.data))
+        finally:
+            close_steering(task_id)
+
+        if canceled and pause_requested(task_id):
+            forget_pause(task_id)
+            if execution_id:
+                # Paused, not cancelled: the conversation so far is kept where a
+                # resume finds it, in whichever process of this runtime (O2-05).
+                messages = [*conversation, {"role": "user", "content": prompt}]
+                if text:
+                    messages.append({"role": "assistant", "content": text})
+                checkpoint = await ProtocolStateCheckpointStore(execution_id).create_checkpoint(
+                    "paused", turn=len(messages), messages=messages, metadata={"task_id": task_id}
+                )
+                logger.info("A2A task %s for agent %s paused at %s", task_id, self.agent.name, checkpoint.id)
+                await self.storage.update_task(task_id, state="canceled")
+                stopped = _agent_message(context_id, Part(text="Paused."))
+                stopped["metadata"] = paused_meta(checkpoint.id)
+                await self.publish_status(task_id, context_id, "canceled", stopped)
+                await self.broker.event_bus.close(task_id)
+                return
+            logger.warning(
+                "A2A task %s was asked to pause and names no execution to keep a checkpoint "
+                "under; it is stopped instead",
+                task_id,
+            )
 
         if canceled:
             logger.info("A2A task %s for agent %s stopped", task_id, self.agent.name)

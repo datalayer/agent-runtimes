@@ -25,6 +25,14 @@ tool-call content until O1-10 commits them. All of it is in
 ``ACP_CAPABILITIES`` and reaches the execution as the first observation of a
 dispatch (19.8, decision 5's rule, applied to the other protocol).
 
+An agent that declares the Datalayer orchestration extension at initialize,
+under ``agentCapabilities._meta.datalayer.extensions``, gets three of them
+back from the agent rather than invented here (O2-05): it is resolved with
+``ACP_EXTENDED_CAPABILITIES``; a steer reaches its running turn as the
+``_datalayer/steer`` notification; a pause is a ``session/cancel`` asking for
+a checkpoint, and a turn that answers ``cancelled`` naming the checkpoint it
+kept is read as a pause; and a resume is a new attempt whose prompt names it.
+
 The second is the state of the client this is built on.
 ``transports/clients/acp_client.py`` owns the connection, the receive loop
 and ``initialize``, and this adapter uses that rather than opening a second
@@ -83,6 +91,12 @@ from datalayer_core.orchestration import (
     WorkerOperation,
 )
 
+from agent_runtimes.context.delegation import (
+    EXTENSION_URI,
+    STEER_METHOD,
+    pause_meta,
+    paused_at,
+)
 from agent_runtimes.mcp.tracing import with_trace
 from agent_runtimes.monitoring.otel import attempt_span
 from agent_runtimes.orchestration.adapter import (
@@ -96,6 +110,8 @@ from agent_runtimes.orchestration.adapter import (
     answer_artifact,
     capability_report,
     objective_prompt,
+    resume_in_a_new_attempt,
+    resumed_without_the_extension,
 )
 from agent_runtimes.orchestration.budget import budget_refusal, delegation_meta
 from agent_runtimes.subagents.a2a import caller_token
@@ -103,7 +119,13 @@ from agent_runtimes.transports.clients.acp_client import ACPClient
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["ACP_CAPABILITIES", "ACPChannel", "ACPClientChannel", "ACPWorkerAdapter"]
+__all__ = [
+    "ACP_CAPABILITIES",
+    "ACP_EXTENDED_CAPABILITIES",
+    "ACPChannel",
+    "ACPClientChannel",
+    "ACPWorkerAdapter",
+]
 
 #: Who answers a permission request. It is given the request's parameters
 #: and returns the option the person chose, or ``None`` to refuse. The
@@ -144,6 +166,18 @@ def _refused(operation: WorkerOperation, reason: str) -> Unsupported:
     """
     return Unsupported(operation=operation, protocol=AgentProtocol.ACP, reason=reason)
 
+
+#: The reductions an agent speaking the orchestration extension does not have.
+_NO_CHECKPOINTED = (
+    "No 'checkpointed' acknowledgement: a session is the agent's own "
+    "memory and the control plane cannot ask it to persist one."
+)
+_STEER_IS_A_TURN = (
+    "A steer is a turn of its own: ACP cannot add instructions to a turn "
+    "already running, so executions.steer becomes the session's next "
+    "prompt and its updates reach the execution only while a dispatch or "
+    "a subscribe is streaming that session (7.4)."
+)
 
 #: What ACP gives an execution, before a particular agent has been asked.
 #: ``resolve`` narrows it further from what the agent declares in its
@@ -199,12 +233,8 @@ ACP_CAPABILITIES = AdapterCapabilities(
         "No 'accepted' acknowledgement: session/prompt answers only when the "
         "turn is over, so the first session update is the earliest evidence "
         "that a worker took the work, and it is reported as 'started' (6.3).",
-        "No 'checkpointed' acknowledgement: a session is the agent's own "
-        "memory and the control plane cannot ask it to persist one.",
-        "A steer is a turn of its own: ACP cannot add instructions to a turn "
-        "already running, so executions.steer becomes the session's next "
-        "prompt and its updates reach the execution only while a dispatch or "
-        "a subscribe is streaming that session (7.4).",
+        _NO_CHECKPOINTED,
+        _STEER_IS_A_TURN,
         "No stdio yet: the client this adapter is built on speaks WebSocket "
         "only, so a local stdio agent needs a stdio ACPChannel (7.4).",
         "No artifacts in ACP: the turn's answer is registered as one "
@@ -218,6 +248,24 @@ ACP_CAPABILITIES = AdapterCapabilities(
         "each one carries the context of whatever asked for it, and an "
         "agent that ignores the header is a broken link in the tree's "
         "trace rather than a second trace (section 10, O0-11).",
+    ),
+)
+
+#: An agent that declares the Datalayer orchestration extension at
+#: initialize (O2-05): steered within its turn, paused at a checkpoint it
+#: reports, and resumed by an attempt that names that checkpoint.
+ACP_EXTENDED_CAPABILITIES = ACP_CAPABILITIES.extended(
+    without=(_NO_CHECKPOINTED, _STEER_IS_A_TURN),
+    reductions=(
+        "A pause keeps the conversation — what was asked and what the agent "
+        "had said — and not the tool calls of the turn it stopped, so a "
+        "resumed attempt may make them again (O2-05).",
+        "A resume is a new session whose prompt names the checkpoint, and the "
+        "agent restores the conversation before that prompt: session/load "
+        "replays a session, it does not carry on a turn that was cancelled.",
+        "A steer reaches the running turn as the _datalayer/steer "
+        "notification, which is not answered: one sent when no turn is "
+        "running reaches nobody, and nothing says so.",
     ),
 )
 
@@ -494,9 +542,10 @@ class ACPWorkerAdapter(WorkerAdapter):
         approvals: ApprovalResponder | None = None,
         timeout_seconds: float = 600.0,
         credential: str | None = None,
+        account_uid: str | None = None,
     ) -> None:
         """
-        Hold how to connect, who approves, how long a turn may take, and the execution's credential.
+        Hold how to connect, who approves, how long a turn may take, and the execution's credential and account.
 
         Parameters
         ----------
@@ -509,11 +558,15 @@ class ACPWorkerAdapter(WorkerAdapter):
         credential : str | None
             The execution's token for the run, handed to the agent with the
             prompt (O1-17).
+        account_uid : str | None
+            The account the execution belongs to, named to an agent that
+            speaks the extension, which asks for its children in it (O2-06).
         """
         self._connect = connect or ACPClientChannel.connect
         self._approvals = approvals
         self._timeout_seconds = timeout_seconds
         self._credential = credential
+        self._account_uid = account_uid
 
     def capabilities(self) -> AdapterCapabilities:
         """
@@ -567,7 +620,12 @@ class ACPWorkerAdapter(WorkerAdapter):
         loads = bool(getattr(declared, "load_session", False))
         sessions = getattr(declared, "session_capabilities", None)
         forks = bool(getattr(sessions, "fork", None))
-        capabilities = ACP_CAPABILITIES
+        extensions = _declared_extensions(declared)
+        capabilities = (
+            ACP_EXTENDED_CAPABILITIES
+            if EXTENSION_URI in extensions
+            else ACP_CAPABILITIES
+        )
         if not loads:
             capabilities = capabilities.with_reduction(
                 "This agent does not declare loadSession: an attempt that "
@@ -588,6 +646,7 @@ class ACPWorkerAdapter(WorkerAdapter):
             details={
                 "loadSession": loads,
                 "sessionFork": forks,
+                "extensions": extensions,
                 "agentCapabilities": declared.model_dump(by_alias=True)
                 if declared is not None
                 else None,
@@ -627,6 +686,13 @@ class ACPWorkerAdapter(WorkerAdapter):
         # connection's traceparent header is taken from.
         with attempt_span(execution, attempt, operation=WorkerOperation.DELEGATE):
             yield capability_report(worker.capabilities)
+            refused = resumed_without_the_extension(worker, attempt)
+            if refused is not None:
+                yield Observation.moved(
+                    LifecycleEvent.FAIL, message=refused.message, error=refused
+                )
+                return
+            extended = EXTENSION_URI in worker.capabilities.extensions
             channel = await self._open(_endpoint(worker))
             answer: list[str] = []
             try:
@@ -652,11 +718,20 @@ class ACPWorkerAdapter(WorkerAdapter):
                     self._prompt(
                         channel,
                         session_id,
-                        objective_prompt(execution),
+                        objective_prompt(execution, attempt),
                         queue,
                         # The model budget the agent's turn is held to (O1-07),
-                        # and the execution's token it reaches Datalayer with (O1-17).
-                        meta=delegation_meta(execution, credential=self._credential),
+                        # the execution's token it reaches Datalayer with
+                        # (O1-17), and, to an agent speaking the extension, the
+                        # execution and the checkpoint this attempt resumes
+                        # from (O2-05).
+                        meta=delegation_meta(
+                            execution,
+                            credential=self._credential,
+                            extended=extended,
+                            resumed_from=attempt.resumed_from,
+                            account_uid=self._account_uid,
+                        ),
                     )
                 )
                 started = False
@@ -666,7 +741,12 @@ class ACPWorkerAdapter(WorkerAdapter):
                         if message is _DONE:
                             break
                         async for observation in self._translate(
-                            channel, session_id, message, answer, started
+                            channel,
+                            session_id,
+                            message,
+                            answer,
+                            started,
+                            resumed=attempt.resumed_from is not None,
                         ):
                             started = started or (
                                 observation.acknowledgement
@@ -697,7 +777,12 @@ class ACPWorkerAdapter(WorkerAdapter):
                     )
                     return
                 for observation in self._ending(
-                    turn.result(), execution, attempt, session_id, "".join(answer)
+                    turn.result(),
+                    execution,
+                    attempt,
+                    session_id,
+                    "".join(answer),
+                    extended=extended,
                 ):
                     yield observation
             finally:
@@ -800,13 +885,17 @@ class ACPWorkerAdapter(WorkerAdapter):
         references: Sequence[ContextReference] = (),
     ) -> OperationOutcome:
         """
-        Send the instructions as the session's next prompt.
+        Steer the running turn, or send the instructions as the session's next prompt.
 
-        ACP has no mid-turn steering (7.4 maps steering onto
-        ``session/prompt`` because that is all there is), so this is a turn:
-        it returns when the agent has finished acting on the instruction,
-        and the updates of that turn reach the execution only through a
-        dispatch or a subscribe streaming the same session.
+        An agent speaking the orchestration extension is sent the
+        ``_datalayer/steer`` notification, and its model reads the
+        instructions before its next request, within the turn (O2-05).
+
+        Plain ACP has no mid-turn steering (7.4 maps steering onto
+        ``session/prompt`` because that is all there is), so for any other
+        agent this is a turn: it returns when the agent has finished acting
+        on the instruction, and the updates of that turn reach the execution
+        only through a dispatch or a subscribe streaming the same session.
 
         Parameters
         ----------
@@ -840,6 +929,19 @@ class ACPWorkerAdapter(WorkerAdapter):
         if references:
             lines += ["", "Further context references:"]
             lines += [f"- {reference.uri}" for reference in references]
+        if EXTENSION_URI in worker.capabilities.extensions:
+            channel = await self._open(_endpoint(worker))
+            try:
+                await channel.notify(
+                    STEER_METHOD,
+                    {"sessionId": attempt.session_id, "instructions": "\n".join(lines)},
+                )
+            finally:
+                await channel.close()
+            return Performed(
+                operation=WorkerOperation.STEER,
+                detail=f"Steered the running turn of session '{attempt.session_id}'.",
+            )
         channel = await self._open(_endpoint(worker))
         try:
             response = await channel.request(
@@ -900,6 +1002,101 @@ class ACPWorkerAdapter(WorkerAdapter):
             operation=WorkerOperation.CANCEL,
             detail=f"Cancelled session '{attempt.session_id}'."
             + (f" Reason: {reason}" if reason else ""),
+        )
+
+    async def pause(
+        self,
+        worker: ResolvedWorker,
+        execution: Execution,
+        attempt: Attempt,
+        *,
+        reason: str | None = None,
+    ) -> OperationOutcome:
+        """
+        Ask the running turn to pause: ``session/cancel`` asking for a checkpoint (O2-05).
+
+        ``session/cancel`` is a notification, so this says only that the
+        agent was asked. The pause arrives where a cancellation does: the
+        running turn's prompt response is ``cancelled`` and names the
+        checkpoint the agent kept, which ``_ending`` reads as the execution
+        pausing.
+
+        Parameters
+        ----------
+        worker : ResolvedWorker
+            The worker.
+        execution : Execution
+            The execution being paused.
+        attempt : Attempt
+            The attempt whose turn is to pause.
+        reason : str | None
+            Why, for the record; ACP carries no reason on a cancellation.
+
+        Returns
+        -------
+        OperationOutcome
+            What was asked of the agent, or why it could not be.
+        """
+        refused = worker.capabilities.refusal(WorkerOperation.PAUSE)
+        if refused is not None:
+            return refused
+        if not attempt.session_id:
+            return Unsupported(
+                operation=WorkerOperation.PAUSE,
+                protocol=AgentProtocol.ACP,
+                reason=(
+                    "this attempt has no session yet, and a pause is asked of a "
+                    "session's turn"
+                ),
+            )
+        channel = await self._open(_endpoint(worker))
+        try:
+            await channel.notify(
+                AGENT_METHODS["session_cancel"],
+                {"sessionId": attempt.session_id, "_meta": pause_meta()},
+            )
+        finally:
+            await channel.close()
+        return Performed(
+            operation=WorkerOperation.PAUSE,
+            detail=f"Asked session '{attempt.session_id}' to pause its turn."
+            + (f" Reason: {reason}" if reason else ""),
+        )
+
+    async def resume(
+        self,
+        worker: ResolvedWorker,
+        execution: Execution,
+        attempt: Attempt,
+        *,
+        checkpoint_id: str | None = None,
+    ) -> OperationOutcome:
+        """
+        Say how the execution resumes: a new session whose prompt names the checkpoint.
+
+        Nothing is sent here: the turn that paused was cancelled, and a
+        cancelled turn is not carried on. The next attempt opens a session,
+        and the agent restores the checkpoint's conversation before its
+        prompt (O2-05).
+
+        Parameters
+        ----------
+        worker : ResolvedWorker
+            The worker.
+        execution : Execution
+            The execution being resumed.
+        attempt : Attempt
+            The attempt that paused.
+        checkpoint_id : str | None
+            The checkpoint to resume from.
+
+        Returns
+        -------
+        OperationOutcome
+            How it resumes, or why it cannot.
+        """
+        return resume_in_a_new_attempt(
+            worker, checkpoint_id, next_attempt="a new ACP session"
         )
 
     async def fork_session(self, worker: ResolvedWorker, session_id: str) -> str | None:
@@ -1073,6 +1270,8 @@ class ACPWorkerAdapter(WorkerAdapter):
         message: Mapping[str, Any],
         answer: list[str],
         started: bool,
+        *,
+        resumed: bool = False,
     ) -> AsyncIterator[Observation]:
         """
         Turn one raw ACP message into observations, answering what must be.
@@ -1089,6 +1288,9 @@ class ACPWorkerAdapter(WorkerAdapter):
             Where the turn's text is collected, to be registered at the end.
         started : bool
             Whether the started milestone has already been reported.
+        resumed : bool
+            Whether the attempt resumes from a checkpoint: its first update
+            is then the paused execution resuming, not starting (O2-05).
 
         Yields
         ------
@@ -1102,8 +1304,9 @@ class ACPWorkerAdapter(WorkerAdapter):
                 return
             if not started:
                 yield Observation.moved(
-                    LifecycleEvent.START,
-                    message="The agent sent its first session update.",
+                    LifecycleEvent.RESUME if resumed else LifecycleEvent.START,
+                    message="The agent sent its first session update"
+                    + (", resuming from the checkpoint." if resumed else "."),
                     session_id=session_id,
                 )
                 yield Observation.acknowledged(
@@ -1194,9 +1397,17 @@ class ACPWorkerAdapter(WorkerAdapter):
         attempt: Attempt,
         session_id: str,
         answer: str,
+        *,
+        extended: bool = False,
     ) -> list[Observation]:
         """
         Read the turn's stop reason, and register what it produced.
+
+        A turn of an agent speaking the orchestration extension that stopped
+        ``cancelled`` and names the checkpoint it kept has paused (O2-05):
+        the execution pauses, the milestone names the checkpoint, and what
+        the turn said so far is in the checkpoint rather than an artifact,
+        since the attempt that resumes from it registers the answer.
 
         Parameters
         ----------
@@ -1210,6 +1421,9 @@ class ACPWorkerAdapter(WorkerAdapter):
             The session the turn ran in.
         answer : str
             The text the agent sent during the turn.
+        extended : bool
+            Whether the agent speaks the orchestration extension: only then is
+            a cancelled turn that names a checkpoint a pause.
 
         Returns
         -------
@@ -1217,6 +1431,25 @@ class ACPWorkerAdapter(WorkerAdapter):
             The artifact, the move, and the milestone when there is one.
         """
         reason = _stop_reason(response)
+        checkpoint_id = (
+            paused_at((response or {}).get("_meta"))
+            if extended and reason == "cancelled"
+            else None
+        )
+        if checkpoint_id is not None:
+            return [
+                Observation.moved(
+                    LifecycleEvent.PAUSE,
+                    message=f"Paused at checkpoint '{checkpoint_id}'.",
+                    session_id=session_id,
+                ),
+                Observation.acknowledged(
+                    AcknowledgementKind.CHECKPOINTED,
+                    message="The agent kept its conversation as it paused.",
+                    session_id=session_id,
+                    checkpoint_id=checkpoint_id,
+                ),
+            ]
         event, code, retryable = ACP_STOP_REASONS.get(
             reason, (LifecycleEvent.FAIL, ErrorCode.INTERNAL, True)
         )
@@ -1312,6 +1545,31 @@ def _unsupported_error(reason: str) -> OrchestrationError:
         retryable=False,
         source="adapter:acp",
     )
+
+
+def _declared_extensions(declared: AgentCapabilities | None) -> list[str]:
+    """
+    The extensions an ACP agent declares at initialize.
+
+    Under ``agentCapabilities._meta.datalayer.extensions``, which is where
+    the ACP schema leaves room for what is not in it.
+
+    Parameters
+    ----------
+    declared : AgentCapabilities | None
+        What the agent declared.
+
+    Returns
+    -------
+    list[str]
+        The extension URIs, in the order declared.
+    """
+    meta = getattr(declared, "field_meta", None)
+    ours = meta.get("datalayer") if isinstance(meta, Mapping) else None
+    extensions = ours.get("extensions") if isinstance(ours, Mapping) else None
+    if not isinstance(extensions, list):
+        return []
+    return [extension for extension in extensions if isinstance(extension, str)]
 
 
 def _endpoint(worker: ResolvedWorker) -> str:

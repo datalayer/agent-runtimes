@@ -10,6 +10,10 @@ stops its own run when one is reached (``agent_runtimes.guardrails.model_budget`
 What comes back is read by ``budget_refusal`` into the canonical error, so an
 execution stopped by its model budget says so, and which limit, rather than
 reading as a worker that broke.
+
+Beside the budget travel the execution's credential (O1-17) and, to a worker
+that speaks the Datalayer orchestration extension, the execution itself and
+the checkpoint an attempt resumes from (O2-05).
 """
 
 from __future__ import annotations
@@ -18,7 +22,11 @@ from typing import Any, Mapping
 
 from datalayer_core.orchestration import ErrorCode, Execution, OrchestrationError
 
-from agent_runtimes.context.delegation import CREDENTIAL_FIELD
+from agent_runtimes.context.delegation import (
+    CHECKPOINT_FIELD,
+    CREDENTIAL_FIELD,
+    EXECUTION_FIELD,
+)
 from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
 
 __all__ = ["budget_refusal", "delegation_meta", "model_budget"]
@@ -52,10 +60,15 @@ def model_budget(execution: Execution) -> dict[str, Any] | None:
 
 
 def delegation_meta(
-    execution: Execution, *, credential: str | None = None
+    execution: Execution,
+    *,
+    credential: str | None = None,
+    extended: bool = False,
+    resumed_from: str | None = None,
+    account_uid: str | None = None,
 ) -> dict[str, Any] | None:
     """
-    What a delegation carries beside the objective: the model budget and the execution's credential.
+    What a delegation carries beside the objective.
 
     Parameters
     ----------
@@ -65,19 +78,55 @@ def delegation_meta(
         The execution's own token, which the worker reaches Datalayer with for
         the run (O1-17). The worker takes it out of the message on arrival
         (``agent_runtimes.context.delegation``), so nothing keeps it.
+    extended : bool
+        Whether the worker speaks the Datalayer orchestration extension. Its
+        delegation then names the execution, which is the scope the worker
+        keeps its checkpoints under (O2-05).
+    resumed_from : str | None
+        The checkpoint the attempt resumes from.
+    account_uid : str | None
+        The account the execution belongs to, named beside it to a worker
+        that speaks the extension: what the worker's request for a child is
+        made in (O2-06).
 
     Returns
     -------
     dict[str, Any] | None
         The A2A message's ``metadata``, or the ACP prompt's ``_meta``; nothing
-        when there is neither.
+        when there is nothing to carry.
+
+    Raises
+    ------
+    ValueError
+        When an attempt resumes from a checkpoint and the worker does not
+        speak the extension: nothing it could be sent says where to resume.
     """
+    if resumed_from and not extended:
+        raise ValueError(
+            f"Execution '{execution.execution_id}' resumes from checkpoint "
+            f"'{resumed_from}', and its worker does not speak the orchestration "
+            "extension."
+        )
     ours: dict[str, Any] = {}
     budget = model_budget(execution)
     if budget:
         ours["budget"] = budget
     if credential:
         ours[CREDENTIAL_FIELD] = credential
+    if extended:
+        ours[EXECUTION_FIELD] = {
+            "executionId": execution.execution_id,
+            "rootExecutionId": execution.root_execution_id,
+            **(
+                {"parentExecutionId": execution.parent_execution_id}
+                if execution.parent_execution_id
+                else {}
+            ),
+            "depth": execution.depth,
+            **({"accountUid": account_uid} if account_uid else {}),
+        }
+    if resumed_from:
+        ours[CHECKPOINT_FIELD] = {"checkpointId": resumed_from}
     return {DELEGATION_META_KEY: ours} if ours else None
 
 

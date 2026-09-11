@@ -14,6 +14,14 @@ from typing import Any, AsyncIterator
 
 from pydantic_ai import Agent, DeferredToolRequests
 from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    SystemPromptPart,
+    TextPart,
+    UserPromptPart,
+)
 from pydantic_ai.tools import DeferredToolResults, ToolDenied
 
 from ..context.usage import get_usage_tracker
@@ -38,6 +46,58 @@ logger = logging.getLogger(__name__)
 
 _MAX_DEFERRED_APPROVAL_CONTINUATIONS = 5
 _DEFERRED_CONTINUATION_PROMPT = "Continue with the approved tool results."
+
+#: The roles a conversation names the agent's own turns with: the transports'
+#: ``assistant``, and A2A's ``agent``.
+_AGENT_ROLES = frozenset({"assistant", "agent"})
+
+
+def model_messages(history: list[Any]) -> list[ModelMessage]:
+    """
+    A conversation's previous messages, as the messages pydantic-ai takes.
+
+    ``AgentContext.conversation_history`` is the transports' shape —
+    ``{"role", "content"}`` — and pydantic-ai's ``message_history`` takes its
+    own message objects, so each message becomes one: the person's a request,
+    the agent's a response, a system message a system prompt. A message that
+    already is pydantic-ai's is kept as it is. This is how an A2A task's
+    context, and the checkpoint a resumed run starts from (O2-05), reach the
+    model.
+
+    Parameters
+    ----------
+    history : list[Any]
+        The previous messages, oldest first; the prompt is not one of them.
+
+    Returns
+    -------
+    list[ModelMessage]
+        The same messages, in the same order.
+
+    Raises
+    ------
+    ValueError
+        When a message names a role this does not know, or carries no text:
+        guessing would put words in somebody else's mouth.
+    """
+    messages: list[ModelMessage] = []
+    for message in history:
+        if isinstance(message, (ModelRequest, ModelResponse)):
+            messages.append(message)
+            continue
+        role = message.get("role") if isinstance(message, dict) else None
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, str):
+            raise ValueError(f"A conversation message carries no text: {message!r}")
+        if role == "user":
+            messages.append(ModelRequest(parts=[UserPromptPart(content=content)]))
+        elif role in _AGENT_ROLES:
+            messages.append(ModelResponse(parts=[TextPart(content=content)]))
+        elif role == "system":
+            messages.append(ModelRequest(parts=[SystemPromptPart(content=content)]))
+        else:
+            raise ValueError(f"A conversation message names a role nobody speaks in: {role!r}")
+    return messages
 
 
 class PydanticAIAdapter(BaseAgent):
@@ -639,10 +699,8 @@ class PydanticAIAdapter(BaseAgent):
         Returns:
             Complete agent response.
         """
-        # Build message history from context
-        message_history = []
-        for msg in context.conversation_history:
-            message_history.append(msg)
+        # The conversation before the prompt, as pydantic-ai's own messages.
+        message_history = model_messages(context.conversation_history)
 
         # Extract model from context metadata for per-request model override
         model_override = context.metadata.get("model") if context.metadata else None
@@ -672,6 +730,13 @@ class PydanticAIAdapter(BaseAgent):
             )
             if usage_limits is not None:
                 run_kwargs_base["usage_limits"] = usage_limits
+            steer_run = context.metadata.get("steer_run") if context.metadata else None
+            if steer_run:
+                from ..context.delegation import SteerCapability
+
+                # What is steered into this run reaches its model within the
+                # turn, before its next model request (O2-05).
+                run_kwargs_base["capabilities"] = [SteerCapability(steer_run)]
             if model_override:
                 run_kwargs_base["model"] = model_override
                 logger.info(
@@ -814,12 +879,10 @@ class PydanticAIAdapter(BaseAgent):
         import asyncio
         import time
 
-        from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
+        from pydantic_ai.messages import PartDeltaEvent, PartStartEvent, TextPartDelta
 
-        # Build message history from context
-        message_history = []
-        for msg in context.conversation_history:
-            message_history.append(msg)
+        # The conversation before the prompt, as pydantic-ai's own messages.
+        message_history = model_messages(context.conversation_history)
 
         # Extract per-request overrides from context metadata
         model_override = context.metadata.get("model") if context.metadata else None
@@ -862,19 +925,19 @@ class PydanticAIAdapter(BaseAgent):
             for continuation_round in range(_MAX_DEFERRED_APPROVAL_CONTINUATIONS + 1):
                 # -- per-round queue & handler --------------------------------
                 text_queue: asyncio.Queue[str | None] = asyncio.Queue()
-                handler_called = False
 
                 async def _event_handler(_run_ctx: Any, events: Any) -> None:
-                    nonlocal handler_called
-                    handler_called = True
-                    try:
-                        async for ev in events:
-                            if isinstance(ev, PartDeltaEvent) and isinstance(
-                                ev.delta, TextPartDelta
-                            ):
-                                await text_queue.put(ev.delta.content_delta)
-                    finally:
-                        await text_queue.put(None)  # sentinel
+                    # Called for each model request of the run, so the text of
+                    # every round is the stream's; a part's first chunk arrives
+                    # as the part's start, and the rest as deltas.
+                    async for ev in events:
+                        if isinstance(ev, PartStartEvent) and isinstance(ev.part, TextPart):
+                            if ev.part.content:
+                                await text_queue.put(ev.part.content)
+                        elif isinstance(ev, PartDeltaEvent) and isinstance(
+                            ev.delta, TextPartDelta
+                        ):
+                            await text_queue.put(ev.delta.content_delta)
 
                 run_kwargs: dict[str, Any] = {
                     "message_history": current_message_history,
@@ -895,18 +958,23 @@ class PydanticAIAdapter(BaseAgent):
                 )
                 if usage_limits is not None:
                     run_kwargs["usage_limits"] = usage_limits
+                steer_run = context.metadata.get("steer_run") if context.metadata else None
+                if steer_run:
+                    from ..context.delegation import SteerCapability
+
+                    # What is steered into this run reaches its model within
+                    # the turn, before its next model request (O2-05).
+                    run_kwargs["capabilities"] = [SteerCapability(steer_run)]
 
                 # -- launch agent.run() concurrently --------------------------
                 request_start = time.perf_counter()
 
                 async def _safe_run() -> Any:
-                    """Wrapper that ensures the queue is unblocked on failure."""
+                    """The run, which ends the text stream however it ends."""
                     try:
                         return await self._agent.run(current_prompt, **run_kwargs)
-                    except BaseException:
-                        if not handler_called:
-                            await text_queue.put(None)
-                        raise
+                    finally:
+                        await text_queue.put(None)  # sentinel
 
                 run_task = asyncio.create_task(_safe_run())
 

@@ -833,7 +833,38 @@ the same `datalayer.credential` too. The store takes it out of the message
 before the task, its context or the owed run is written, keeps `withheld` in
 its place, and holds the credential in process memory for the run it came
 with; a run a restarted runtime owes has lost it and fails rather than run as
-the runtime, and the execution's retry dispatches with a token of its own. The store is a SQLite file at
+the runtime, and the execution's retry dispatches with a token of its own.
+
+Both routes speak the Datalayer orchestration extension,
+`https://datalayer.ai/extensions/orchestration/v1` — declared on the A2A agent
+card with its routes as params, and at ACP `initialize` under
+`agentCapabilities._meta.datalayer.extensions`:
+
+- A delegation names its execution, `datalayer.execution: {executionId, …}`,
+  which is the scope its checkpoints are kept under, and may name a checkpoint
+  to resume from, `datalayer.checkpoint: {checkpointId}`: the run starts from
+  that checkpoint's conversation. A checkpoint this runtime does not keep fails
+  the A2A task, and is refused `-32602` over ACP.
+- `POST /api/v1/a2a/pause {task_id}`, or ACP `session/cancel` with
+  `_meta: {"datalayer": {"pause": true}}`, pauses a running turn: it saves its
+  conversation so far as a checkpoint in the protocol state store and ends as a
+  cancel naming it — the A2A task `canceled` with `datalayer.paused.checkpointId`
+  in its final status message's `metadata`, the ACP turn `cancelled` with the
+  same in `_meta`. A run that names no execution is only stopped.
+- `POST /api/v1/a2a/steer {task_id, instructions}`, or the ACP notification
+  `_datalayer/steer {sessionId, instructions}`, adds instructions to a running
+  turn: they join its next model request. A run that is not working receives
+  nothing, and the A2A route answers `success: false`.
+- A run whose delegation names its execution is that execution's worker, and
+  `datalayer.execution.accountUid` names the account the execution belongs to.
+  Such a run does not take a child itself. `delegate_task` to a subagent
+  reached over A2A asks the control plane for a child execution under the
+  run's own, with the run's credential, and answers with what the child
+  produced; the child's progress arrives as `agent.subagent` events. Resolving,
+  launching or relaying to an agent from inside the run is refused. In-process
+  subagents stay in the run.
+
+The store is a SQLite file at
 `AGENT_RUNTIMES_PROTOCOL_STATE_PATH` (default
 `~/.datalayer/agent-runtimes/protocol-state.sqlite`), or, on Kubernetes, the
 agent-memories PostgreSQL the memory backends use.
