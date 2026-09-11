@@ -73,11 +73,11 @@ from datalayer_core.orchestration import (  # noqa: E402
     ProtocolEndpoint,
     Trace,
     WorkerOperation,
-    commit_artifacts,
     format_context_uri,
 )
 from workers.a2a_worker import AGENT_ID, CAPABILITY  # noqa: E402
 
+from agent_runtimes.monitoring import orchestration_measures as measures  # noqa: E402
 from agent_runtimes.orchestration import (  # noqa: E402
     InMemoryExecutionStore,
     Observation,
@@ -328,12 +328,7 @@ async def orchestrate(descriptor: AgentDescriptor, notebook_uri: str) -> Run:
         # nobody will read.
         await stream.aclose()
 
-    artifacts = await store.artifacts(execution.execution_id)
-    commit = commit_artifacts(
-        artifacts, execution_id=execution.execution_id, attempt_id=attempt.attempt_id
-    )
-    for artifact in commit.artifacts:
-        await store.save_artifact(execution.execution_id, artifact)
+    await store.commit_artifacts(execution.execution_id, attempt.attempt_id)
 
     return Run(
         descriptor=descriptor,
@@ -499,6 +494,93 @@ def _print_comparison(runs: Sequence[Run]) -> None:
             print(f"  {line}")
 
 
+def _share(part: int, of: int, *, nothing: str) -> str:
+    """
+    A part of a whole, in words.
+
+    Parameters
+    ----------
+    part : int
+        The part.
+    of : int
+        The whole.
+    nothing : str
+        What to say when there is no whole, which is not the same as none.
+
+    Returns
+    -------
+    str
+        The share.
+    """
+    return f"{part} of {of} ({part / of:.0%})" if of else nothing
+
+
+def _milliseconds(by_protocol: dict[str, float]) -> str:
+    """
+    Latencies by protocol, in milliseconds.
+
+    Parameters
+    ----------
+    by_protocol : dict[str, float]
+        Seconds, by protocol.
+
+    Returns
+    -------
+    str
+        The latencies.
+    """
+    spelled = [
+        f"{protocol} {seconds * 1000:.0f} ms"
+        for protocol, seconds in sorted(by_protocol.items())
+    ]
+    return ", ".join(spelled) or "not measured"
+
+
+def _print_measures(taken: measures.RecordedMeasures) -> None:
+    """
+    What the execution store measured of the two runs.
+
+    The same measures the orchestration dashboard reads from exported points,
+    read here from the points kept in memory.
+
+    Parameters
+    ----------
+    taken : measures.RecordedMeasures
+        The measures.
+    """
+    print(f"\n{'=' * 72}")
+    print("Measures")
+    print("=" * 72)
+    for label, value in (
+        (
+            "completed after a disconnect",
+            _share(
+                *taken.completed_after_disconnect,
+                nothing="no execution lost sight of its worker",
+            ),
+        ),
+        (
+            "completed after a lost worker",
+            _share(
+                *taken.completed_after_worker_lost,
+                nothing="no execution lost its worker",
+            ),
+        ),
+        (
+            "duplicate delegations",
+            _share(*taken.duplicate_delegations, nothing="nothing delegated"),
+        ),
+        (
+            "superseded artifacts",
+            _share(*taken.superseded_artifacts, nothing="nothing committed"),
+        ),
+        ("time to acceptance", _milliseconds(taken.acceptance_seconds)),
+        ("first worker event", _milliseconds(taken.first_worker_event_seconds)),
+        ("conformance rate", "printed by pytest agent_runtimes/tests/orchestration"),
+    ):
+        print(f"  {label:<30} {value}")
+
+
 def _digest(answer: str) -> str:
     """
     An answer reduced to something two runs can be compared on.
@@ -588,6 +670,9 @@ async def _both(a2a_endpoint: str, acp_endpoint: str, notebook_uri: str) -> int:
     int
         0 when both completed and agreed, 1 otherwise.
     """
+    # The measures the store takes are kept in memory here rather than
+    # exported, so the scenario's own numbers print beside what it did.
+    measures.configure(recording=True)
     runs = [
         await orchestrate(descriptor_for(protocol, endpoint), notebook_uri)
         for protocol, endpoint in (
@@ -598,6 +683,7 @@ async def _both(a2a_endpoint: str, acp_endpoint: str, notebook_uri: str) -> int:
     for run in runs:
         _print_run(run)
     _print_comparison(runs)
+    _print_measures(measures.recorded_measures(measures.instruments()))
 
     completed = all(run.execution.status.value == "completed" for run in runs)
     # Not the first line of the answer: the hashes, so that two workers that

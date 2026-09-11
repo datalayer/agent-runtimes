@@ -17,7 +17,12 @@ import {
 import { formatRelativeTime } from '@datalayer/core/lib/utils';
 
 export type ApprovalStatus =
-  'pending' | 'approved' | 'approved_with_changes' | 'rejected';
+  | 'pending'
+  | 'approved'
+  | 'approved_with_changes'
+  | 'rejected'
+  // Past its deadline, or the run waiting on it is over: nobody decides it.
+  | 'expired';
 type RiskLevel = 'low' | 'medium' | 'high';
 
 export const TOOL_APPROVAL_STATUS_CONFIG: Record<
@@ -40,6 +45,7 @@ export const TOOL_APPROVAL_STATUS_CONFIG: Record<
   approved: { label: 'Approved', variant: 'success' },
   approved_with_changes: { label: 'Approved with Changes', variant: 'accent' },
   rejected: { label: 'Rejected', variant: 'danger' },
+  expired: { label: 'Expired', variant: 'secondary' },
 };
 
 const RISK_CONFIG: Record<

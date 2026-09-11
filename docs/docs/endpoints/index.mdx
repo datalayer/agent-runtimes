@@ -790,6 +790,41 @@ returns ACP-compliant responses/events.
 If `{agent_id}` is unknown, the server sends an ACP error payload and closes
 the socket.
 
+The route speaks the ACP schema:
+
+- `session/prompt` takes the prompt's content blocks under `prompt`, and
+  answers with a `stopReason` once the turn is over.
+- A prompt may carry a model budget in its `_meta`:
+  `{"datalayer": {"budget": {"inputTokens": …, "outputTokens": …, "cost": …}}}`,
+  which an orchestration delegation sends. The turn is held to it as
+  pydantic-ai's per-run usage limits; a limit reached ends the turn with
+  `max_tokens` (or `max_turn_requests` for requests), and `_meta` in the answer
+  names it: `{"datalayer": {"error": {"code": "budget_exhausted", "details":
+  {"budget": "model", "limit": "output_tokens"}}}}`.
+- Each `session/update` nests the update under `update`, its text in a content
+  block — `{"sessionId": "…", "update": {"sessionUpdate": "agent_message_chunk",
+  "content": {"type": "text", "text": "…"}}}`; tool calls are `tool_call` and
+  `tool_call_update` with `toolCallId`, `title`, `rawInput`, `rawOutput` and
+  `status`. A failed turn is the prompt's JSON-RPC error.
+- `session/cancel` is a notification: the running prompt stops where the agent
+  is waiting and answers `cancelled`; the cancel itself is not answered. A
+  prompt runs on its own task, so the cancel is read while it runs.
+- `initialize` declares `loadSession: true`. Sessions and each turn of their
+  conversation are kept in the runtime's protocol state store, so
+  `session/load` on a restarted runtime finds the session and replays its
+  conversation as `user_message_chunk` and `agent_message_chunk` updates before
+  answering.
+
+The A2A agents mounted under `/api/v1/a2a/agents/{agent_id}` keep their tasks,
+contexts and owed runs in the same store: `tasks/get` answers for a task issued
+before a restart, and a task left submitted or working is run again when the
+runtime starts. A message's `metadata` may carry the same `datalayer.budget` as
+an ACP prompt's `_meta`; a run it stops ends the task `failed`, and the failed
+status message's `metadata` carries the same `datalayer.error`. The store is a SQLite file at
+`AGENT_RUNTIMES_PROTOCOL_STATE_PATH` (default
+`~/.datalayer/agent-runtimes/protocol-state.sqlite`), or, on Kubernetes, the
+agent-memories PostgreSQL the memory backends use.
+
 ## MCP Servers
 
 Manage MCP (Model Context Protocol) servers for tool integration. There are two types of MCP servers:

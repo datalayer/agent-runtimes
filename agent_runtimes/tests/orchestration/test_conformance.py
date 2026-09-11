@@ -492,6 +492,35 @@ class TestDuplicateCommandDelivery:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# 11. Budget exhaustion: the model budget (O1-07)
+# ---------------------------------------------------------------------------
+
+
+class TestBudgetExhaustion:
+    @pytest.mark.asyncio
+    async def test_a_worker_stopped_by_its_budget_fails_the_execution_saying_which_limit(
+        self, binding, monkeypatch
+    ):
+        """The worker's own words for the limit it reached, read into the
+        canonical reason: not a worker that broke, and nothing another attempt
+        could spend. The platform budget — an exhausted reservation — is the
+        durable worker's to see, and has its own reason (``details.budget``)."""
+        delivered = await deliver(
+            binding, monkeypatch, WorkerScript(ending=Ending.BUDGET)
+        )
+
+        await dispatch(delivered)
+
+        stored = await delivered.store.get(delivered.execution.execution_id)
+        assert stored.status is ExecutionState.FAILED
+        assert stored.error is not None
+        assert stored.error.code is ErrorCode.BUDGET_EXHAUSTED
+        assert stored.error.retryable is False
+        assert (stored.error.details or {}).get("budget") == "model"
+        assert (stored.error.details or {}).get("limit") == "output_tokens"
+
+
 class TestTheHarness:
     @pytest.mark.asyncio
     async def test_a_dispatch_invents_no_canonical_transition(

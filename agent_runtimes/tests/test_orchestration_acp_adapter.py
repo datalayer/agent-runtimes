@@ -65,8 +65,8 @@ SPEC_UPDATES = [
     }
 ]
 
-#: The same turn as agent-runtimes' own ACP route sends it: flattened into
-#: the parameters, with a bare string where the schema has a content block.
+#: The same turn in the dialect agent-runtimes' own ACP route spoke until
+#: O1-11: flattened into the parameters, a bare string for the content block.
 ROUTE_UPDATES = [
     {
         "method": "session/update",
@@ -376,14 +376,12 @@ class TestDelegation:
         assert artifact.summary == "The notebook runs clean."
 
     @pytest.mark.asyncio
-    async def test_the_route_this_repository_serves_is_read_too(self):
-        """agent-runtimes' ACP route diverges from the ACP schema.
+    async def test_an_update_outside_the_schema_carries_no_answer(self):
+        """The flattened dialect with a bare ``chunk`` is not the schema's.
 
-        It flattens the update into the notification's parameters and sends
-        a bare string where the schema has a content block. Both shapes are
-        read here, because this adapter has to work against a third-party
-        agent and against the route next door, and correcting that route is
-        not this item's.
+        agent-runtimes' own route spoke it until O1-11; now that the route
+        speaks the schema, an update in that shape is read as nothing rather
+        than guessed at.
         """
         store = InMemoryExecutionStore()
 
@@ -391,8 +389,7 @@ class TestDelegation:
             _adapter(FakeChannel(script=ROUTE_UPDATES)), store
         )
 
-        (artifact,) = await store.artifacts(execution.execution_id)
-        assert artifact.summary == "The notebook runs clean."
+        assert [artifact.summary for artifact in await store.artifacts(execution.execution_id)] in ([], [""], [None])
 
     @pytest.mark.asyncio
     async def test_the_objective_is_prompted_as_the_schema_spells_it(self):

@@ -92,7 +92,7 @@ def _relay(
     """
     sent: list[tuple[str, dict[str, Any]]] = []
 
-    async def relay_a2a_task(remote, task, *, context_id, emit):
+    async def relay_a2a_task(remote, task, *, context_id, emit, metadata=None):
         """
         Replay the script, then answer or fail as the worker did.
 

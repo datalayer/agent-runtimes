@@ -306,6 +306,9 @@ class RelayOutcome:
     final: str | None = None
     detail: str | None = None
     """What the remote agent said with its final status: the reason, when it failed."""
+    metadata: dict[str, Any] | None = None
+    """The final status message's metadata: which limit of a delegated model
+    budget stopped the run, when one did (ORCHESTRATOR.md, O1-07)."""
 
     @property
     def output(self) -> str:
@@ -400,7 +403,14 @@ async def relay_stream(
                 # reason, when it failed — not more of the answer.
                 if isinstance(message, dict):
                     outcome.detail = _message_text(message) or None
-                emit("status", taskId=outcome.task_id, state=outcome.state)
+                    if isinstance(message.get("metadata"), dict):
+                        outcome.metadata = dict(message["metadata"])
+                emit(
+                    "status",
+                    taskId=outcome.task_id,
+                    state=outcome.state,
+                    **({"metadata": outcome.metadata} if outcome.metadata else {}),
+                )
                 break
             if isinstance(message, dict):
                 _relay_message(message, emit)
@@ -429,8 +439,13 @@ async def relay_a2a_task(
     *,
     context_id: str,
     emit: EmitFn,
+    metadata: dict[str, Any] | None = None,
 ) -> str:
-    """Send ``task`` to the remote agent and republish its run; return its answer."""
+    """Send ``task`` to the remote agent and republish its run; return its answer.
+
+    ``metadata`` goes on the message: what an orchestrated delegation carries
+    beside the objective, its model budget (ORCHESTRATOR.md, O1-07).
+    """
     import httpx
     from fasta2a.client import A2AClient
     from fasta2a.schema import Message, Part
@@ -448,6 +463,8 @@ async def relay_a2a_task(
             message_id=str(uuid.uuid4()),
             context_id=context_id,
         )
+        if metadata:
+            message["metadata"] = metadata
         outcome = RelayOutcome()
         try:
             await relay_stream(client.stream_message(message), emit, outcome)

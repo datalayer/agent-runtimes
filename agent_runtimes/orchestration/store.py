@@ -34,6 +34,7 @@ a library; only the implementation behind the port changes.
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Mapping
@@ -41,6 +42,7 @@ from typing import Any, Mapping
 from datalayer_core.orchestration import (
     Acknowledgement,
     Artifact,
+    ArtifactCommit,
     ArtifactStatus,
     Attempt,
     ErrorCode,
@@ -54,10 +56,12 @@ from datalayer_core.orchestration import (
     is_terminal,
     transition,
 )
+from datalayer_core.orchestration import commit_artifacts as arbitrate
 
 from agent_runtimes.orchestration.adapter import Observation, now
 
 __all__ = [
+    "REATTACHED",
     "ExecutionConflict",
     "ExecutionNotFound",
     "ExecutionStore",
@@ -66,6 +70,14 @@ __all__ = [
     "event_for",
     "now",
 ]
+
+logger = logging.getLogger(__name__)
+
+#: The ``data`` key of the progress event ``record_reattach`` appends when a
+#: watcher lost sight of an attempt and asked its worker again. It holds the
+#: attempt's number, and it is what tells a disconnect apart in the settled
+#: measure of O1-14.
+REATTACHED = "reattached"
 
 
 class ExecutionStoreError(Exception):
@@ -406,7 +418,71 @@ class ExecutionStore(ABC):
             Its artifacts.
         """
 
+    @property
+    def account_uid(self) -> str | None:
+        """
+        The account this store's executions belong to, when it is opened for one.
+
+        The canonical execution names no owner, so the owner is the store's
+        (O1-01), and the measures of O1-14 are filed under it. A store that
+        is not scoped — the in-memory one, an operator's tool — answers
+        ``None``, and its points are filed under whoever exports them.
+
+        Returns
+        -------
+        str | None
+            The account, or ``None``.
+        """
+        return None
+
     # -- Rules, shared by every implementation. ------------------------------
+
+    def _delegated(self, execution: Execution, *, duplicate: bool) -> None:
+        """
+        Count one delegation (O1-14), new or already seen.
+
+        Imported where it is used, as the trace is in ``_append``: the
+        measures live in ``monitoring``, whose package brings pydantic-ai.
+
+        Parameters
+        ----------
+        execution : Execution
+            The execution created, or the one the command already created.
+        duplicate : bool
+            Whether the command had been delivered before.
+        """
+        from agent_runtimes.monitoring.orchestration_measures import (
+            delegation_received,
+        )
+
+        delegation_received(
+            execution, duplicate=duplicate, account_uid=self.account_uid
+        )
+
+    async def _settled(self, execution: Execution) -> None:
+        """
+        Count an execution that has just reached its terminal state (O1-14).
+
+        Read once, here, rather than tracked while the execution moved: how
+        it got here — whether its worker was lost, whether its watcher had to
+        ask again — is in its events, and only a settled execution has all of
+        them.
+
+        Parameters
+        ----------
+        execution : Execution
+            The execution, in its terminal state.
+        """
+        from agent_runtimes.monitoring.orchestration_measures import (
+            execution_settled,
+        )
+
+        try:
+            events = await self.events(execution.execution_id)
+        except Exception as error:  # noqa: BLE001 - a measure never fails the work
+            logger.debug("Settled %s unmeasured: %s", execution.execution_id, error)
+            return
+        execution_settled(execution, events, account_uid=self.account_uid)
 
     async def _append(self, event: ExecutionEvent) -> ExecutionEvent:
         """
@@ -476,6 +552,7 @@ class ExecutionStore(ABC):
                         f"Idempotency key '{idempotency_key}' already created "
                         f"execution '{existing.execution_id}' for different work."
                     )
+                self._delegated(existing, duplicate=True)
                 return existing
         try:
             await self.get(execution.execution_id)
@@ -495,6 +572,7 @@ class ExecutionStore(ABC):
             if idempotency_key:
                 existing = await self.find_by_idempotency_key(idempotency_key)
                 if existing is not None and _same_intent(existing, execution):
+                    self._delegated(existing, duplicate=True)
                     return existing
             raise
         await self._append(
@@ -505,6 +583,7 @@ class ExecutionStore(ABC):
                 message=execution.objective.goal,
             )
         )
+        self._delegated(execution, duplicate=False)
         return execution
 
     async def set_state(
@@ -515,6 +594,7 @@ class ExecutionStore(ABC):
         attempt_id: str | None = None,
         message: str | None = None,
         error: OrchestrationError | None = None,
+        approval_uid: str | None = None,
     ) -> Execution:
         """
         Move an execution, if the canonical lifecycle allows the move.
@@ -531,6 +611,10 @@ class ExecutionStore(ABC):
             What to record against the new state.
         error : OrchestrationError | None
             The failure, when this is one.
+        approval_uid : str | None
+            The platform approval the move waits on, or that ended the wait:
+            a ``wait`` for a person and the ``resume`` their decision brought
+            name it on their events (O1-08).
 
         Returns
         -------
@@ -548,6 +632,7 @@ class ExecutionStore(ABC):
             attempt_id=attempt_id,
             message=message,
             error=error,
+            approval_uid=approval_uid,
         )
         return execution
 
@@ -632,6 +717,93 @@ class ExecutionStore(ABC):
         """
         stored, _ = await self._register(await self.get(execution_id), artifact)
         return stored
+
+    async def commit_artifacts(
+        self, execution_id: str, attempt_id: str
+    ) -> ArtifactCommit:
+        """
+        Commit what one attempt produced, and write back what that decided.
+
+        ``commit_artifacts`` in ``core`` decides — the first attempt to
+        commit wins, and a later one's artifacts are kept and superseded
+        (19.8, decision 4). This is where the decision is stored, said on the
+        event stream and counted (O1-14). Durable's commit step and the O0-13
+        example both call it, so a commit is written in one place rather than
+        once per caller.
+
+        Parameters
+        ----------
+        execution_id : str
+            The execution whose artifacts are committed.
+        attempt_id : str
+            The attempt asking to commit.
+
+        Returns
+        -------
+        ArtifactCommit
+            The set after arbitration, and who holds the result.
+        """
+        execution = await self.get(execution_id)
+        known = await self.artifacts(execution_id)
+        decision = arbitrate(known, execution_id=execution_id, attempt_id=attempt_id)
+        before = {artifact.artifact_id: artifact for artifact in known}
+        changed = [
+            artifact
+            for artifact in decision.artifacts
+            if before.get(artifact.artifact_id) != artifact
+        ]
+        for artifact in changed:
+            await self.save_artifact(execution_id, artifact)
+        if changed:
+            await self.record(
+                execution_id,
+                Observation.progress(
+                    f"Committed the artifacts of {decision.winning_attempt_id}.",
+                    data={
+                        "committed": [artifact.artifact_id for artifact in changed],
+                        "won": decision.won,
+                    },
+                ),
+                attempt_id=attempt_id,
+            )
+            from agent_runtimes.monitoring.orchestration_measures import (
+                artifacts_committed,
+            )
+
+            artifacts_committed(execution, changed, account_uid=self.account_uid)
+        return decision
+
+    async def record_reattach(
+        self, execution_id: str, attempt: Attempt, *, reason: str
+    ) -> ExecutionEvent:
+        """
+        Say that whoever watched an attempt lost sight of it and is asking again.
+
+        Section 10 records recoveries, and a re-attach is one. A process that
+        picks a run up after the one watching it died, or a watch that ended
+        before its attempt did, otherwise leaves nothing in the execution's
+        history, and section 16's share of executions completing after a
+        disconnect could not count it (O1-14).
+
+        Parameters
+        ----------
+        execution_id : str
+            The execution.
+        attempt : Attempt
+            The attempt re-attached to, through the handle it recorded.
+        reason : str
+            Why sight of it was lost, in words.
+
+        Returns
+        -------
+        ExecutionEvent
+            The progress event, carrying ``REATTACHED``.
+        """
+        return await self.record(
+            execution_id,
+            Observation.progress(reason, data={REATTACHED: attempt.number}),
+            attempt_id=attempt.attempt_id,
+        )
 
     async def record(
         self,
@@ -743,6 +915,7 @@ class ExecutionStore(ABC):
         attempt_id: str | None,
         message: str | None,
         error: OrchestrationError | None,
+        approval_uid: str | None = None,
     ) -> tuple[Execution, ExecutionEvent]:
         """
         Transition, store, keep the attempt in step, and say what happened.
@@ -759,6 +932,8 @@ class ExecutionStore(ABC):
             What to record against the new state.
         error : OrchestrationError | None
             The failure, when this is one.
+        approval_uid : str | None
+            The platform approval the move waits on or was decided by.
 
         Returns
         -------
@@ -791,9 +966,12 @@ class ExecutionStore(ABC):
                 previous_state=previous,
                 lifecycle_event=lifecycle_event,
                 error=error,
+                approval_uid=approval_uid,
                 message=message,
             )
         )
+        if is_terminal(state):
+            await self._settled(moved)
         return moved, event
 
     async def _move_attempt(
@@ -854,7 +1032,22 @@ class ExecutionStore(ABC):
         tuple[Acknowledgement, ExecutionEvent]
             The milestone and its event.
         """
+        try:
+            earlier: list[Acknowledgement] | None = await self.acknowledgements(
+                execution.execution_id
+            )
+        except Exception as error:  # noqa: BLE001 - a measure never fails the work
+            logger.debug("Milestones of %s unread: %s", execution.execution_id, error)
+            earlier = None
         await self.save_acknowledgement(acknowledgement)
+        if earlier is not None:
+            from agent_runtimes.monitoring.orchestration_measures import (
+                milestone_reached,
+            )
+
+            milestone_reached(
+                execution, acknowledgement, earlier, account_uid=self.account_uid
+            )
         event = await self._append(
             event_for(
                 execution,

@@ -134,6 +134,7 @@ class RuntimesClient:
         billing_entity_handle: Optional[str] = None,
         runtime_name: Optional[str] = None,
         content_attachment_uids: Optional[list[str]] = None,
+        parent_reservation_uid: Optional[str] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -155,6 +156,10 @@ class RuntimesClient:
             Contents attachments to mount, created for ``runtime_name`` before the
             runtime: a Home Folder attachment mounts the caller's home
             folders, a Volume attachment mounts its Volume.
+        parent_reservation_uid : Optional[str]
+            The execution tree the runtime is metered against
+            (ORCHESTRATOR.md, O1-07): IAM grants its reservation no more than
+            the tree has left, and refuses it once the tree has nothing.
 
         Returns
         -------
@@ -177,6 +182,8 @@ class RuntimesClient:
 
         if given_name:
             body["given_name"] = given_name
+        if parent_reservation_uid:
+            body["parent_reservation_uid"] = parent_reservation_uid
 
         try:
             if credits_limit is None:

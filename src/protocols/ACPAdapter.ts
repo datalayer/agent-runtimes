@@ -300,18 +300,17 @@ export class ACPAdapter extends BaseProtocolAdapter {
         return;
       }
 
-      // Send session/cancel JSON-RPC request
-      const requestId = `cancel-${Date.now()}`;
-      const cancelRequest = {
+      // A notification, as the ACP schema makes session/cancel: no id and no
+      // answer. The running prompt answers with stopReason "cancelled".
+      const cancelNotification = {
         jsonrpc: '2.0',
         method: 'session/cancel',
         params: {
           sessionId: targetSessionId,
         },
-        id: requestId,
       };
 
-      this.ws.send(JSON.stringify(cancelRequest));
+      this.ws.send(JSON.stringify(cancelNotification));
       console.debug('[ACPAdapter] Sent session/cancel for:', targetSessionId);
     } catch (err) {
       console.debug('[ACPAdapter] Terminate request error:', err);
@@ -384,7 +383,7 @@ export class ACPAdapter extends BaseProtocolAdapter {
 
       await this.sendRequest(AGENT_METHODS.session_prompt, {
         sessionId: this.session.sessionId,
-        content: [{ type: 'text', text: content }],
+        prompt: [{ type: 'text', text: content }],
         // Include metadata with model and identities
         ...(Object.keys(metadata).length > 0 && { metadata }),
       });
@@ -608,14 +607,24 @@ export class ACPAdapter extends BaseProtocolAdapter {
    * Handle session update notifications
    */
   private handleSessionUpdate(params: Record<string, unknown>): void {
-    const updateType = params.sessionUpdate as SessionUpdateType | undefined;
+    // As the ACP schema spells it: the update nested under `update`, its text
+    // in a content block. A failed turn is the prompt's JSON-RPC error, not an
+    // update.
+    const update = params.update as SessionUpdate | undefined;
+    if (!update) {
+      return;
+    }
+    const updateType = update.sessionUpdate as SessionUpdateType;
+    const textOf = (content: unknown): string =>
+      content &&
+      typeof content === 'object' &&
+      (content as { type?: string }).type === 'text'
+        ? String((content as { text?: string }).text ?? '')
+        : '';
 
-    // Handle streaming text chunks
-    if (updateType === 'agent_message_chunk' && params.chunk) {
-      const chunk = params.chunk as string;
-
-      // Filter out debug StreamEvent strings
-      if (!chunk.startsWith('StreamEvent(')) {
+    if (updateType === 'agent_message_chunk') {
+      const chunk = textOf((update as { content?: unknown }).content);
+      if (chunk) {
         this.streamingContent += chunk;
 
         // Use stable message ID for streaming updates
@@ -632,50 +641,47 @@ export class ACPAdapter extends BaseProtocolAdapter {
       }
     }
 
-    // Handle tool calls
     if (updateType === 'tool_call') {
+      const call = update as {
+        toolCallId?: string;
+        title?: string;
+        rawInput?: unknown;
+      };
       this.emit({
         type: 'tool-call',
         toolCall: {
-          toolCallId: (params.toolCallId as string) || generateMessageId(),
-          toolName: (params.title as string) || '',
-          args: (params.rawInput as Record<string, unknown>) || {},
+          toolCallId: call.toolCallId || generateMessageId(),
+          toolName: call.title || '',
+          args: (call.rawInput as Record<string, unknown>) || {},
         },
         timestamp: new Date(),
       });
     }
 
-    // Handle tool results
     if (updateType === 'tool_call_update') {
+      const progress = update as { rawOutput?: unknown; status?: string };
       this.emit({
         type: 'tool-result',
         toolResult: {
-          success: true,
-          result: params.rawOutput,
+          success: progress.status !== 'failed',
+          result: progress.rawOutput,
         },
         timestamp: new Date(),
       });
     }
 
-    // Handle thought chunks (could be displayed differently)
-    if (updateType === 'agent_thought_chunk' && params.chunk) {
-      this.emit({
-        type: 'activity',
-        activity: {
-          type: 'thought',
-          data: params.chunk,
-        },
-        timestamp: new Date(),
-      });
-    }
-
-    // Handle error events - emit as error, not as message
-    if (params.error) {
-      this.emit({
-        type: 'error',
-        error: new Error(params.error as string),
-        timestamp: new Date(),
-      });
+    if (updateType === 'agent_thought_chunk') {
+      const thought = textOf((update as { content?: unknown }).content);
+      if (thought) {
+        this.emit({
+          type: 'activity',
+          activity: {
+            type: 'thought',
+            data: thought,
+          },
+          timestamp: new Date(),
+        });
+      }
     }
   }
 

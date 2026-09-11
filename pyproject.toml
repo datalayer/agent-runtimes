@@ -60,6 +60,10 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.44.0,<2.0.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.44.0,<2.0.0",
     "opentelemetry-instrumentation>=0.65b0,<1.0",
+    # The agent-memories PostgreSQL a runtime on Kubernetes keeps its A2A
+    # tasks and ACP sessions in (`protocol_state`); the runtime image installs
+    # only these dependencies.
+    "psycopg[binary]>=3.2.8",
     "pydantic-ai-slim[mcp]>=2.35.0,<3",
     "pydantic-graph>=2.35.0,<3",
     "pydantic-settings>=2.14.2",

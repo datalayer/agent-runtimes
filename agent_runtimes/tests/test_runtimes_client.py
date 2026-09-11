@@ -64,6 +64,22 @@ class TestItIsWrittenToTheProtocol:
             assert handle.supports(verb), verb
 
 
+class TestARuntimeOfAnExecutionTree:
+    """The tree a runtime is metered against reaches Runtimes (ORCHESTRATOR.md, O1-07)."""
+
+    def _posted(self, **kwargs: Any) -> dict[str, Any]:
+        transport = _Transport(_Response(payload={"success": True, "runtime": {}}))
+        RuntimesClient(transport).create(environment_name="ai-agents-env", credits_limit=6.0, **kwargs)
+        [posted] = [call for call in transport.calls if call.get("method") == "POST"]
+        return posted["json"]
+
+    def test_it_names_the_tree(self) -> None:
+        assert self._posted(parent_reservation_uid="exec_root")["parent_reservation_uid"] == "exec_root"
+
+    def test_a_runtime_of_no_tree_names_none(self) -> None:
+        assert "parent_reservation_uid" not in self._posted()
+
+
 class TestTheVerbsReachTheRightUrls:
     """The paths come from the vocabulary, so this pins them where callers see them."""
 

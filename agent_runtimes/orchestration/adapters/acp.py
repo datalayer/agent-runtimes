@@ -97,6 +97,7 @@ from agent_runtimes.orchestration.adapter import (
     capability_report,
     objective_prompt,
 )
+from agent_runtimes.orchestration.budget import budget_refusal, delegation_meta
 from agent_runtimes.subagents.a2a import caller_token
 from agent_runtimes.transports.clients.acp_client import ACPClient
 
@@ -644,7 +645,12 @@ class ACPWorkerAdapter(WorkerAdapter):
                 stop = channel.listen(queue.put_nowait)
                 turn = asyncio.create_task(
                     self._prompt(
-                        channel, session_id, objective_prompt(execution), queue
+                        channel,
+                        session_id,
+                        objective_prompt(execution),
+                        queue,
+                        # The model budget the agent's turn is held to (O1-07).
+                        meta=delegation_meta(execution),
                     )
                 )
                 started = False
@@ -1022,9 +1028,13 @@ class ACPWorkerAdapter(WorkerAdapter):
         session_id: str,
         prompt: str,
         queue: "asyncio.Queue[Any]",
+        meta: Mapping[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """
         Run the turn, and end the stream whatever happens to it.
+
+        ``meta`` goes in the prompt's ``_meta``: the model budget the turn is
+        held to, when the execution sets one.
 
         Parameters
         ----------
@@ -1044,7 +1054,8 @@ class ACPWorkerAdapter(WorkerAdapter):
         """
         try:
             return await channel.request(
-                AGENT_METHODS["session_prompt"], _prompt_params(session_id, prompt)
+                AGENT_METHODS["session_prompt"],
+                _prompt_params(session_id, prompt, meta),
             )
         finally:
             queue.put_nowait(_DONE)
@@ -1221,6 +1232,22 @@ class ACPWorkerAdapter(WorkerAdapter):
             if code is not None
             else None
         )
+        if code is ErrorCode.BUDGET_EXHAUSTED:
+            # Which limit: the delegation's budget when the agent says so in
+            # `_meta`, the agent's own otherwise (O1-07).
+            error = budget_refusal(
+                (response or {}).get("_meta"), source="adapter:acp"
+            ) or OrchestrationError(
+                code=code,
+                message=f"The ACP turn stopped: {reason}.",
+                retryable=False,
+                source="adapter:acp",
+                details={
+                    "budget": "model",
+                    "limit": "requests" if reason == "max_turn_requests" else "tokens",
+                    "delegated": False,
+                },
+            )
         observations.append(
             Observation.moved(event, message=reason, error=error, session_id=session_id)
         )
@@ -1305,7 +1332,9 @@ def _endpoint(worker: ResolvedWorker) -> str:
     return worker.endpoint
 
 
-def _prompt_params(session_id: str, text: str) -> dict[str, Any]:
+def _prompt_params(
+    session_id: str, text: str, meta: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
     """
     The parameters of ``session/prompt``, spelled as the ACP schema spells them.
 
@@ -1315,6 +1344,9 @@ def _prompt_params(session_id: str, text: str) -> dict[str, Any]:
         The session to prompt.
     text : str
         What to say to it.
+    meta : Mapping[str, Any] | None
+        The schema's ``_meta``: what a delegation carries beside the
+        objective, its model budget (O1-07).
 
     Returns
     -------
@@ -1324,6 +1356,7 @@ def _prompt_params(session_id: str, text: str) -> dict[str, Any]:
     return {
         "sessionId": session_id,
         "prompt": [{"type": "text", "text": text}],
+        **({"_meta": dict(meta)} if meta else {}),
     }
 
 
@@ -1349,11 +1382,10 @@ def _read_update(params: Mapping[str, Any]) -> tuple[str, str]:
     """
     What kind of session update this is, and what text it carries.
 
-    ACP nests the update under ``update``; agent-runtimes' own ACP route
-    flattens it into the notification's parameters and sends a bare string
-    where the schema has a content block. Both are read here, because this
-    adapter has to work against a third-party agent and against the route
-    this repository serves, and the route is not this item's to correct.
+    As the ACP schema spells it: the update nested under ``update``, its
+    text in a content block. agent-runtimes' own route spoke a flattened
+    dialect with a bare ``chunk`` until O1-11 made it speak the schema, so
+    the one shape read here is the one every agent is held to.
 
     Parameters
     ----------
@@ -1365,23 +1397,14 @@ def _read_update(params: Mapping[str, Any]) -> tuple[str, str]:
     tuple[str, str]
         The update kind, and its text where it has any.
     """
-    nested = params.get("update")
-    update: Mapping[str, Any] = nested if isinstance(nested, dict) else params
-    kind = str(update.get("sessionUpdate") or update.get("session_update") or "update")
+    update = params.get("update")
+    if not isinstance(update, Mapping):
+        return "update", ""
+    kind = str(update.get("sessionUpdate") or "update")
     content = update.get("content")
-    text = ""
-    if isinstance(content, dict):
-        text = str(content.get("text") or "")
-    elif isinstance(content, str):
-        text = content
-    if not text:
-        chunk = update.get("chunk")
-        if isinstance(chunk, dict):
-            text = str(chunk.get("text") or "")
-        elif isinstance(chunk, str):
-            text = chunk
+    text = str(content.get("text") or "") if isinstance(content, Mapping) else ""
     if not text and kind in {"tool_call", "tool_call_update"}:
-        text = f"Calling '{update.get('name') or update.get('title') or ''}'."
+        text = f"Calling '{update.get('title') or ''}'."
     return kind, text
 
 

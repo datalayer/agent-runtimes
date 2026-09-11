@@ -84,6 +84,7 @@ from agent_runtimes.orchestration.adapter import (
     objective_prompt,
     trace_id_of,
 )
+from agent_runtimes.orchestration.budget import budget_refusal, delegation_meta
 from agent_runtimes.subagents.a2a import (
     TERMINAL_STATES,
     A2ARemoteAgent,
@@ -229,6 +230,9 @@ class _Seen:
     task_id: str | None = None
     state: str | None = None
     acknowledged: bool = False
+    #: The final status message's metadata, which names the model budget's
+    #: limit when that is what stopped the worker (O1-07).
+    metadata: dict[str, Any] | None = None
 
 
 class A2AWorkerAdapter(WorkerAdapter):
@@ -385,10 +389,13 @@ class A2AWorkerAdapter(WorkerAdapter):
                 return
 
             answer = str(relay.result() or "")
-            for artifact in await self._artifacts(
+            # The whole body travels with the observation, for the durable
+            # worker to write to the platform (O1-10); the record keeps a
+            # summary and the body's hash.
+            for artifact, body in await self._artifacts(
                 remote, execution, attempt, seen, answer
             ):
-                yield Observation.produced(artifact, data={"text": artifact.summary})
+                yield Observation.produced(artifact, data={"text": body})
             yield Observation.moved(
                 LifecycleEvent.COMPLETE,
                 message=seen.state or "completed",
@@ -463,8 +470,8 @@ class A2AWorkerAdapter(WorkerAdapter):
                     return
                 state = str((task.get("status") or {}).get("state") or "")
                 if state in TERMINAL_STATES:
-                    for artifact in _task_artifacts(task, execution, attempt):
-                        yield Observation.produced(artifact)
+                    for artifact, body in _task_artifacts(task, execution, attempt):
+                        yield Observation.produced(artifact, data={"text": body})
                     yield self._ending(_Seen(task_id=task_id, state=state), None)
                     return
                 if first:
@@ -581,6 +588,8 @@ class A2AWorkerAdapter(WorkerAdapter):
                 # references onto A2A, and the root is what groups a tree.
                 context_id=execution.root_execution_id,
                 emit=emit,
+                # The model budget the worker's run is held to (O1-07).
+                metadata=delegation_meta(execution),
             )
         finally:
             queue.put_nowait(None)
@@ -602,6 +611,20 @@ class A2AWorkerAdapter(WorkerAdapter):
             The terminal move, with the error when there is one.
         """
         state = seen.state or ""
+        refused = (
+            budget_refusal(seen.metadata, source="adapter:a2a")
+            if state == "failed"
+            else None
+        )
+        if refused is not None:
+            # Stopped by the model budget the delegation set: not a worker
+            # that broke, and nothing another attempt could spend (O1-07).
+            return Observation.moved(
+                LifecycleEvent.FAIL,
+                message=refused.message,
+                error=refused,
+                protocol_task_id=seen.task_id,
+            )
         event, code, retryable = A2A_ENDINGS.get(
             state, (LifecycleEvent.FAIL, ErrorCode.WORKER_UNREACHABLE, True)
         )
@@ -629,7 +652,7 @@ class A2AWorkerAdapter(WorkerAdapter):
         attempt: Attempt,
         seen: _Seen,
         answer: str,
-    ) -> list[Artifact]:
+    ) -> list[tuple[Artifact, str]]:
         """
         The task's A2A artifacts, or the answer it streamed instead.
 
@@ -655,14 +678,14 @@ class A2AWorkerAdapter(WorkerAdapter):
 
         Returns
         -------
-        list[Artifact]
-            The artifacts to register.
+        list[tuple[Artifact, str]]
+            The artifacts to register, each with its body.
         """
         task = await self._get_task(remote, seen.task_id) if seen.task_id else None
         artifacts = _task_artifacts(task or {}, execution, attempt)
         if artifacts:
             return artifacts
-        return [answer_artifact(execution, attempt, answer)] if answer else []
+        return [(answer_artifact(execution, attempt, answer), answer)] if answer else []
 
     async def _get_task(
         self, remote: A2ARemoteAgent, task_id: str | None
@@ -783,6 +806,8 @@ def _observe(phase: str, payload: Mapping[str, Any], seen: _Seen) -> list[Observ
     seen.state = state
     if state in TERMINAL_STATES:
         # Read after the stream ends, where the reason is known too.
+        if isinstance(payload.get("metadata"), Mapping):
+            seen.metadata = dict(payload["metadata"])
         return observations
     observed = A2A_OBSERVED.get(state)
     if observed is None:
@@ -809,11 +834,59 @@ def _observe(phase: str, payload: Mapping[str, Any], seen: _Seen) -> list[Observ
     return observations
 
 
+def _notebook_part(raw: Mapping[str, Any]) -> str | None:
+    """
+    The notebook an A2A artifact carries, as JSON text, when it carries one.
+
+    In a file part under the notebook media type with its bytes inline, or in
+    a data part that is an nbformat document itself.
+
+    Parameters
+    ----------
+    raw : Mapping[str, Any]
+        The A2A artifact.
+
+    Returns
+    -------
+    str | None
+        The notebook's JSON, or ``None``.
+    """
+    import base64
+    import json
+
+    from agent_runtimes.orchestration.documents import NOTEBOOK_MEDIA_TYPE, notebook_of
+
+    for part in raw.get("parts") or []:
+        if not isinstance(part, dict):
+            continue
+        file = part.get("file")
+        media_type = (
+            (file.get("mimeType") or file.get("mime_type"))
+            if isinstance(file, dict)
+            else None
+        )
+        if media_type == NOTEBOOK_MEDIA_TYPE and file.get("bytes"):
+            try:
+                text = base64.b64decode(str(file["bytes"])).decode("utf-8")
+            except (ValueError, UnicodeDecodeError):
+                return None
+            return text if notebook_of(text) is not None else None
+        data = part.get("data")
+        if isinstance(data, dict) and notebook_of(json.dumps(data)) is not None:
+            return json.dumps(data)
+    return None
+
+
 def _task_artifacts(
     task: Mapping[str, Any], execution: Execution, attempt: Attempt
-) -> list[Artifact]:
+) -> list[tuple[Artifact, str]]:
     """
     The A2A artifacts of a task, as canonical artifacts with provenance.
+
+    Each comes with its body, which the observation carries for the durable
+    worker to write to the platform (O1-10): the notebook, when a part is
+    one, and the artifact's text otherwise. The record keeps a summary and
+    the body's hash.
 
     Parameters
     ----------
@@ -826,42 +899,58 @@ def _task_artifacts(
 
     Returns
     -------
-    list[Artifact]
-        One canonical artifact per A2A artifact.
+    list[tuple[Artifact, str]]
+        One canonical artifact per A2A artifact, with its body.
     """
-    registered: list[Artifact] = []
+    from agent_runtimes.orchestration.documents import NOTEBOOK_MEDIA_TYPE, notebook_of
+
+    registered: list[tuple[Artifact, str]] = []
     for raw in task.get("artifacts") or []:
         if not isinstance(raw, dict):
             continue
+        notebook = _notebook_part(raw)
         # The same reader the relay uses, so an artifact says the same thing
         # whether it arrived on the stream or from tasks/get.
-        text = _artifact_text(raw)
+        text = notebook if notebook is not None else _artifact_text(raw)
         body = text.encode("utf-8")
+        if notebook is not None:
+            cells = len((notebook_of(notebook) or {}).get("cells") or [])
+            summary = f"A notebook of {cells} cells"
+        else:
+            summary = text if len(text) <= 200 else text[:200] + "…"
         registered.append(
-            Artifact(
-                artifact_id=str(
-                    raw.get("artifactId")
-                    or raw.get("artifact_id")
-                    or f"art_{uuid.uuid4().hex}"
+            (
+                Artifact(
+                    artifact_id=str(
+                        raw.get("artifactId")
+                        or raw.get("artifact_id")
+                        or f"art_{uuid.uuid4().hex}"
+                    ),
+                    type=ArtifactType.NOTEBOOK
+                    if notebook is not None
+                    else ArtifactType.FILE,
+                    name=str(raw.get("name") or "artifact"),
+                    media_type=NOTEBOOK_MEDIA_TYPE
+                    if notebook is not None
+                    else "text/plain",
+                    size_bytes=len(body),
+                    provenance=[
+                        ArtifactProvenance(
+                            execution_id=execution.execution_id,
+                            attempt_id=attempt.attempt_id,
+                            agent_id=attempt.agent_id,
+                            produced_at=now(),
+                            source_references=[
+                                reference.uri
+                                for reference in execution.context.references
+                            ],
+                            content_hash=f"sha256:{hashlib.sha256(body).hexdigest()}",
+                            trace_id=trace_id_of(execution.trace.traceparent),
+                        )
+                    ],
+                    summary=summary,
                 ),
-                type=ArtifactType.FILE,
-                name=str(raw.get("name") or "artifact"),
-                media_type="text/plain",
-                size_bytes=len(body),
-                provenance=[
-                    ArtifactProvenance(
-                        execution_id=execution.execution_id,
-                        attempt_id=attempt.attempt_id,
-                        agent_id=attempt.agent_id,
-                        produced_at=now(),
-                        source_references=[
-                            reference.uri for reference in execution.context.references
-                        ],
-                        content_hash=f"sha256:{hashlib.sha256(body).hexdigest()}",
-                        trace_id=trace_id_of(execution.trace.traceparent),
-                    )
-                ],
-                summary=text if len(text) <= 200 else text[:200] + "…",
+                text,
             )
         )
     return registered

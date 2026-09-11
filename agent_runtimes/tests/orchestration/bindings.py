@@ -40,6 +40,7 @@ from datalayer_core.orchestration import (
     WorkerOperation,
 )
 
+from agent_runtimes.guardrails.model_budget import ModelBudgetReached, refusal_meta
 from agent_runtimes.orchestration import (
     AdapterCapabilities,
     InMemoryExecutionStore,
@@ -75,6 +76,15 @@ class Ending(str, Enum):
     REJECTED = "rejected"
     FAILED = "failed"
     WORKING = "working"
+    #: Stopped by the model budget the delegation set (scenario 11, O1-07):
+    #: the worker says which limit, where the delegation put the budget.
+    BUDGET = "budget"
+
+
+#: What a worker stopped by its budget says back, in both protocols.
+BUDGET_REACHED = ModelBudgetReached(
+    "Exceeded the output_tokens_limit of 100 (output_tokens=150)", "output_tokens"
+)
 
 
 @dataclass(frozen=True)
@@ -263,7 +273,9 @@ class A2ABinding(ConformanceBinding):
             """
             return remote
 
-        async def relay_a2a_task(remote_agent, objective, *, context_id, emit):
+        async def relay_a2a_task(
+            remote_agent, objective, *, context_id, emit, metadata=None
+        ):
             """
             Replay the script through the relay's own phases.
 
@@ -283,7 +295,9 @@ class A2ABinding(ConformanceBinding):
             str
                 The worker's answer.
             """
-            task.sent.append({"text": objective, "contextId": context_id})
+            task.sent.append(
+                {"text": objective, "contextId": context_id, "metadata": metadata}
+            )
             return await task.run(emit)
 
         async def get_task(self, remote_agent, task_id):
@@ -821,6 +835,17 @@ class _A2ATask:
             self.state = "failed"
             emit("status", taskId=self.task_id, state="failed")
             raise RuntimeError("The remote agent's task ended failed: kernel died")
+        if self._script.ending is Ending.BUDGET:
+            self.state = "failed"
+            emit(
+                "status",
+                taskId=self.task_id,
+                state="failed",
+                metadata=refusal_meta(BUDGET_REACHED),
+            )
+            raise RuntimeError(
+                f"The remote agent's task ended failed: {BUDGET_REACHED}"
+            )
         self.state = "completed"
         emit("status", taskId=self.task_id, state="completed")
         return self._script.answer
@@ -859,6 +884,7 @@ class _ACPChannel(ACPChannel):
         Ending.COMPLETED: "end_turn",
         Ending.REJECTED: "refusal",
         Ending.FAILED: "internal_error",
+        Ending.BUDGET: "max_tokens",
     }
 
     def __init__(self, script: WorkerScript, capabilities: AgentCapabilities) -> None:
@@ -910,6 +936,11 @@ class _ACPChannel(ACPChannel):
             self._replay(self._updates())
             if self._script.ending is Ending.WORKING:
                 await asyncio.Event().wait()
+            if self._script.ending is Ending.BUDGET:
+                return {
+                    "stopReason": self.STOP_REASONS[Ending.BUDGET],
+                    "_meta": refusal_meta(BUDGET_REACHED),
+                }
             return {"stopReason": self.STOP_REASONS[self._script.ending]}
         return {}
 

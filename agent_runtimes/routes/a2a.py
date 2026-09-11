@@ -22,9 +22,7 @@ from starlette.routing import Mount
 
 try:
     from fasta2a import FastA2A, Skill
-    from fasta2a.broker import InMemoryBroker
     from fasta2a.schema import AgentProvider
-    from fasta2a.storage import InMemoryStorage
 
     FASTA2A_AVAILABLE = True
 except ImportError:
@@ -178,8 +176,9 @@ def register_a2a_agent(
     Args:
         agent: The agent to register.
         card: Agent card configuration.
-        broker: Optional custom broker (defaults to InMemoryBroker).
-        storage: Optional custom storage (defaults to InMemoryStorage).
+        broker: Optional custom broker (defaults to one kept in the runtime's
+            protocol state store, which runs again the work left unfinished).
+        storage: Optional custom storage (defaults to one kept in that store).
     """
     if not FASTA2A_AVAILABLE:
         logger.warning("fasta2a not installed, A2A agent registration skipped")
@@ -210,8 +209,14 @@ def register_a2a_agent(
                 url=card.provider.get("url", ""),
             )
 
-        a2a_broker = broker or InMemoryBroker()
-        a2a_storage = storage or InMemoryStorage()
+        # Kept in the runtime's protocol state store, so a task a client was
+        # given the id of outlives this process, and the work it was owed is
+        # run again when the runtime starts (O1-11).
+        from ..protocol_state.a2a import DurableBroker, DurableStorage
+        from ..protocol_state.store import protocol_state_store
+
+        a2a_broker = broker or DurableBroker(protocol_state_store(), agent_id)
+        a2a_storage = storage or DurableStorage(protocol_state_store(), agent_id)
         worker = A2AWorker(
             broker=a2a_broker,
             storage=a2a_storage,

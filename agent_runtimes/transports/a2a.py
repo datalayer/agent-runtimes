@@ -377,13 +377,17 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             logger.exception(
                 "A2A task %s for agent %s failed", task_id, self.agent.name
             )
+            from ..guardrails.model_budget import ModelBudgetExceeded, refusal_meta
+
             await self.storage.update_task(task_id, state="failed")
-            await self.publish_status(
-                task_id,
-                context_id,
-                "failed",
-                _agent_message(context_id, Part(text=f"{type(exc).__name__}: {exc}")),
+            message = _agent_message(
+                context_id, Part(text=f"{type(exc).__name__}: {exc}")
             )
+            if isinstance(exc, ModelBudgetExceeded):
+                # Which limit of the budget the delegation set stopped the run,
+                # where the delegation put the budget (O1-07).
+                message["metadata"] = refusal_meta(exc.reached)
+            await self.publish_status(task_id, context_id, "failed", message)
             await self.broker.event_bus.close(task_id)
             raise
 
@@ -412,7 +416,11 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         prompt = a2a_message_text(incoming)
 
         from ..adapters.base import AgentContext
+        from ..guardrails.model_budget import delegated_budget
 
+        # The model budget the delegation set on this run, when it set one:
+        # the adapter applies it as the run's usage limits (O1-07).
+        budget = delegated_budget(incoming.get("metadata"))
         context = AgentContext(
             session_id=context_id,
             conversation_history=self.build_message_history(history),
@@ -421,7 +429,8 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                     "task_id": task_id,
                     "context_id": context_id,
                     "activated_extensions": activated_extensions_of(params),
-                }
+                },
+                **({"budget": budget} if budget else {}),
             },
         )
 
@@ -472,6 +481,13 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
             elif event.type == "output":
                 final_output = str(event.data) if event.data is not None else None
             elif event.type == "error":
+                from ..guardrails.model_budget import (
+                    ModelBudgetExceeded,
+                    ModelBudgetReached,
+                )
+
+                if isinstance(event.data, ModelBudgetReached):
+                    raise ModelBudgetExceeded(event.data)
                 raise RuntimeError(str(event.data))
 
         if canceled:

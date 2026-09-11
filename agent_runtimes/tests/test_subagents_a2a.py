@@ -241,6 +241,42 @@ class TestRelay:
         with pytest.raises(RuntimeError, match="Task not found"):
             await relay_stream(_responses(responses), lambda *_a, **_k: None)
 
+    @pytest.mark.asyncio
+    async def test_a_final_status_keeps_its_metadata(self) -> None:
+        """O1-07: which limit of a delegated model budget stopped the remote
+        run travels on the final status, and reaches whoever follows it."""
+        meta = {
+            "datalayer": {
+                "error": {
+                    "code": "budget_exhausted",
+                    "details": {"budget": "model", "limit": "output_tokens"},
+                }
+            }
+        }
+        emitted: list[tuple[str, dict[str, Any]]] = []
+        responses = [
+            _status("working"),
+            _status(
+                "failed",
+                {
+                    "role": "agent",
+                    "message_id": "m9",
+                    "parts": [{"text": "Exceeded the output_tokens_limit of 100"}],
+                    "metadata": meta,
+                },
+            ),
+        ]
+        outcome = await relay_stream(
+            _responses(responses),
+            lambda phase, **payload: emitted.append((phase, payload)),
+        )
+
+        assert outcome.state == "failed" and outcome.metadata == meta
+        assert outcome.detail == "Exceeded the output_tokens_limit of 100"
+        assert emitted[-1][0] == "status"
+        assert emitted[-1][1]["state"] == "failed"
+        assert emitted[-1][1]["metadata"] == meta
+
     def test_the_output_prefers_the_whole_artifact(self) -> None:
         assert RelayOutcome(streamed="partial", final="whole").output == "whole"
         assert RelayOutcome(streamed="partial").output == "partial"
@@ -698,6 +734,43 @@ class TestWorker:
         ]
         stored = await storage.load_task(task_id)
         assert stored is not None and stored["status"]["state"] == "failed"
+
+    @pytest.mark.asyncio
+    async def test_a_run_its_delegated_budget_stopped_says_which_limit(self) -> None:
+        """O1-07: the budget the message carries reaches the run, and a limit
+        reached comes back on the failed status, where the budget came from."""
+        from agent_runtimes.adapters.base import StreamEvent
+        from agent_runtimes.guardrails.model_budget import (
+            ModelBudgetReached,
+            refusal_meta,
+        )
+
+        said = ModelBudgetReached(
+            "Exceeded the output_tokens_limit of 100 (output_tokens=150)",
+            "output_tokens",
+        )
+        seen: list = []
+        agent = self._fake_agent(
+            lambda: [
+                StreamEvent(type="text", data="Star"),
+                StreamEvent(type="error", data=said),
+            ],
+            seen,
+        )
+        message = {
+            "role": "user",
+            "parts": [{"text": "hi"}],
+            "message_id": "m3",
+            "context_id": "c1",
+            "metadata": {"datalayer": {"budget": {"outputTokens": 100}}},
+        }
+        events, storage, task_id = await self._run_through_the_broker(agent, message)
+
+        _, agent_context = seen[0]
+        assert agent_context.metadata["budget"] == {"outputTokens": 100}
+        final = events[-1]["status_update"]["status"]
+        assert final["state"] == "failed"
+        assert final["message"]["metadata"] == refusal_meta(said)
 
     @pytest.mark.asyncio
     async def test_a_terminated_task_ends_canceled(self) -> None:

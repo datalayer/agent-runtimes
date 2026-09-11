@@ -64,6 +64,30 @@ What legitimately differs, and why:
 | Artifact name | `notebook-analysis`, because A2A artifacts are named | `answer`, because an ACP turn has no artifact and the adapter registers the turn's text |
 | Cannot do | steer, pause, resume, checkpoint, collect, terminate | pause, resume, checkpoint, collect, terminate |
 
+## What it measures
+
+The execution store takes the orchestration measures as it records — the
+same ones a Datalayer deployment exports to its observability service — and
+the example keeps them in memory and prints them last:
+
+```text
+Measures
+  completed after a disconnect   no execution lost sight of its worker
+  completed after a lost worker  no execution lost its worker
+  duplicate delegations          0 of 2 (0%)
+  superseded artifacts           0 of 2 (0%)
+  time to acceptance             a2a 9 ms, acp 2 ms
+  first worker event             a2a 8 ms, acp 1 ms
+  conformance rate               printed by pytest agent_runtimes/tests/orchestration
+```
+
+The latencies are measured from the execution's creation, so they include
+dispatch: the first worker event is the first milestone the worker reported,
+and acceptance the first at or past `accepted`. Nothing here disconnects or
+loses a worker, which is why those two shares have nothing to divide and say
+so rather than printing 0%. The conformance rate belongs to the conformance
+suite, which prints each binding's scenarios passed at the end of its run.
+
 ## The pieces
 
 | File | What it is |

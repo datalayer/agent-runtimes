@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 
@@ -28,13 +28,35 @@ EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "orchestration"
 
 
 @pytest.fixture(scope="module")
-def runs() -> list[Any]:
+def recorded() -> Iterator[Any]:
+    """
+    The measures the execution store takes, kept in memory while the example runs.
+
+    Yields
+    ------
+    Any
+        What answers the recording instruments.
+    """
+    from agent_runtimes.monitoring import orchestration_measures as measures
+
+    measures.configure(recording=True)
+    yield measures.instruments
+    measures.configure()
+
+
+@pytest.fixture(scope="module")
+def runs(recorded: Any) -> list[Any]:
     """
     The example, run once, both delegations.
 
     Run through ``asyncio.run`` in a module-scoped fixture rather than as an
     async fixture: the example starts two servers and the two runs cost about
     a second and a half between them, which is worth paying once.
+
+    Parameters
+    ----------
+    recorded : Any
+        The recording instruments, in place before the runs start.
 
     Returns
     -------
@@ -71,6 +93,54 @@ def runs() -> list[Any]:
             ]
 
     return asyncio.run(both())
+
+
+class TestTheMeasuresOfTheScenario:
+    """The measures of O1-14 have a number for this scenario."""
+
+    def test_nothing_was_repeated_superseded_or_recovered(
+        self, runs: list[Any], recorded: Any
+    ) -> None:
+        """
+        Two delegations, two commits, and no disconnect or lost worker to survive.
+
+        Parameters
+        ----------
+        runs : list[Any]
+            The two runs.
+        recorded : Any
+            The recording instruments.
+        """
+        from agent_runtimes.monitoring.orchestration_measures import recorded_measures
+
+        taken = recorded_measures(recorded())
+
+        assert taken.duplicate_delegations == (0, 2)
+        assert taken.superseded_artifacts == (0, 2)
+        assert taken.completed_after_disconnect == (0, 0)
+        assert taken.completed_after_worker_lost == (0, 0)
+
+    def test_each_worker_accepted_no_sooner_than_its_first_event(
+        self, runs: list[Any], recorded: Any
+    ) -> None:
+        """
+        Both protocols are timed, and acceptance never precedes the first event.
+
+        Parameters
+        ----------
+        runs : list[Any]
+            The two runs.
+        recorded : Any
+            The recording instruments.
+        """
+        from agent_runtimes.monitoring.orchestration_measures import recorded_measures
+
+        taken = recorded_measures(recorded())
+
+        assert set(taken.acceptance_seconds) == {"a2a", "acp"}
+        assert set(taken.first_worker_event_seconds) == {"a2a", "acp"}
+        for protocol, accepted in taken.acceptance_seconds.items():
+            assert 0 <= taken.first_worker_event_seconds[protocol] <= accepted
 
 
 class TestTheOnlyDifferenceIsTheDescriptor:

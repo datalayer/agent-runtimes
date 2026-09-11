@@ -802,6 +802,7 @@ class AgentClient(
         runtime_name: Optional[str] = None,
         content_attachment_uids: Optional[list[str]] = None,
         from_snapshot_uid: Optional[str] = None,
+        parent_reservation_uid: Optional[str] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -828,6 +829,9 @@ class AgentClient(
             holds the uid rather than the name (a benchmark task's sandbox is
             restored from the snapshot its result names, BENCHMARK.md B3-05).
             ``snapshot_name`` looks the uid up by name; this skips the lookup.
+        parent_reservation_uid : Optional[str], optional
+            The execution tree the runtime is metered against (ORCHESTRATOR.md,
+            O1-07): its reservation gets no more than the tree has left.
 
         Returns
         -------
@@ -886,6 +890,7 @@ class AgentClient(
                 billing_entity_handle=billing_entity_handle,
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
+                parent_reservation_uid=parent_reservation_uid,
             )
         else:
             # Create runtime without snapshot
@@ -900,6 +905,7 @@ class AgentClient(
                 billing_entity_handle=billing_entity_handle,
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
+                parent_reservation_uid=parent_reservation_uid,
             )
 
         # Process the response and create RuntimesService object

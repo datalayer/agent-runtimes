@@ -13,9 +13,11 @@ import uuid
 from typing import Any, AsyncIterator
 
 from pydantic_ai import Agent, DeferredToolRequests
+from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.tools import DeferredToolResults, ToolDenied
 
 from ..context.usage import get_usage_tracker
+from ..guardrails.model_budget import reached, usage_limits_for
 from ..guardrails.tool_approvals import (
     ToolApprovalConfig,
     ToolApprovalManager,
@@ -658,6 +660,12 @@ class PydanticAIAdapter(BaseAgent):
             run_kwargs_base: dict[str, Any] = {
                 "toolsets": runtime_toolsets,
             }
+            # The model budget a delegation set on this run (O1-07).
+            usage_limits = usage_limits_for(
+                context.metadata.get("budget") if context.metadata else None
+            )
+            if usage_limits is not None:
+                run_kwargs_base["usage_limits"] = usage_limits
             if model_override:
                 run_kwargs_base["model"] = model_override
                 logger.info(
@@ -868,6 +876,13 @@ class PydanticAIAdapter(BaseAgent):
                     )
                 if deferred_tool_results is not None:
                     run_kwargs["deferred_tool_results"] = deferred_tool_results
+                # The model budget a delegation set on this run: pydantic-ai
+                # stops the run when a limit is reached (O1-07).
+                usage_limits = usage_limits_for(
+                    context.metadata.get("budget") if context.metadata else None
+                )
+                if usage_limits is not None:
+                    run_kwargs["usage_limits"] = usage_limits
 
                 # -- launch agent.run() concurrently --------------------------
                 request_start = time.perf_counter()
@@ -929,6 +944,10 @@ class PydanticAIAdapter(BaseAgent):
 
             yield StreamEvent(type="done", data=None)
 
+        except UsageLimitExceeded as e:
+            # Stopped by the budget the delegation set: said as such, so the
+            # transport can tell its caller which limit it was (O1-07).
+            yield StreamEvent(type="error", data=reached(e))
         except Exception as e:
             yield StreamEvent(type="error", data=str(e))
         finally:
