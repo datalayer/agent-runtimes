@@ -743,6 +743,13 @@ async def _handle_prompt(
     budget = delegated_budget(params.get("_meta"))
     if budget:
         context_metadata["budget"] = budget
+    # The execution's token, taken out of `_meta` before anything keeps the
+    # prompt: the turn's identity, and its Datalayer MCP toolset's (O1-17).
+    from ..context.delegation import take_credential
+
+    delegated_credential = take_credential(params.get("_meta"))
+    if delegated_credential:
+        context_metadata["user_token"] = delegated_credential
     budget_meta: dict[str, Any] | None = None
 
     context = AgentContext(
@@ -801,7 +808,9 @@ async def _handle_prompt(
     hint_user_id, hint_provider, hint_token = extract_identity_hints(
         metadata_identities
     )
-    user_jwt_token = hint_token or user_jwt_token
+    # The execution's token is the turn's identity when the prompt delegated
+    # one (O1-17); otherwise the identity hints', or the connection's.
+    user_jwt_token = delegated_credential or hint_token or user_jwt_token
     if hint_user_id:
         session_user_id = hint_user_id
     if hint_provider:

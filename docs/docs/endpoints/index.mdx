@@ -801,6 +801,14 @@ The route speaks the ACP schema:
   `max_tokens` (or `max_turn_requests` for requests), and `_meta` in the answer
   names it: `{"datalayer": {"error": {"code": "budget_exhausted", "details":
   {"budget": "model", "limit": "output_tokens"}}}}`.
+- A prompt an orchestration delegation sends also carries the execution's own
+  token in `_meta`, as `{"datalayer": {"credential": "…"}}`. The route takes it
+  out of `_meta` before anything keeps the prompt, and the turn runs as that
+  token — its approvals, its telemetry and its Datalayer MCP toolset: the
+  agent's Datalayer server is replaced, for the turn, by one holding the token
+  (`agent_runtimes.mcp.datalayer_gateway`), so what the gateway lets the turn
+  reach is what the execution's manifest names. An agent given no Datalayer
+  server is not given one by a delegation.
 - Each `session/update` nests the update under `update`, its text in a content
   block — `{"sessionId": "…", "update": {"sessionUpdate": "agent_message_chunk",
   "content": {"type": "text", "text": "…"}}}`; tool calls are `tool_call` and
@@ -820,7 +828,12 @@ contexts and owed runs in the same store: `tasks/get` answers for a task issued
 before a restart, and a task left submitted or working is run again when the
 runtime starts. A message's `metadata` may carry the same `datalayer.budget` as
 an ACP prompt's `_meta`; a run it stops ends the task `failed`, and the failed
-status message's `metadata` carries the same `datalayer.error`. The store is a SQLite file at
+status message's `metadata` carries the same `datalayer.error`. It may carry
+the same `datalayer.credential` too. The store takes it out of the message
+before the task, its context or the owed run is written, keeps `withheld` in
+its place, and holds the credential in process memory for the run it came
+with; a run a restarted runtime owes has lost it and fails rather than run as
+the runtime, and the execution's retry dispatches with a token of its own. The store is a SQLite file at
 `AGENT_RUNTIMES_PROTOCOL_STATE_PATH` (default
 `~/.datalayer/agent-runtimes/protocol-state.sqlite`), or, on Kubernetes, the
 agent-memories PostgreSQL the memory backends use.

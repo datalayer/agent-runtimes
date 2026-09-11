@@ -254,9 +254,10 @@ class A2AWorkerAdapter(WorkerAdapter):
         *,
         emit: Any = None,
         poll_interval_seconds: float = 2.0,
+        credential: str | None = None,
     ) -> None:
         """
-        Hold the parent's emitter and the polling interval.
+        Hold the parent's emitter, the polling interval and the execution's credential.
 
         Parameters
         ----------
@@ -264,9 +265,13 @@ class A2AWorkerAdapter(WorkerAdapter):
             The parent's subagent emitter, if any.
         poll_interval_seconds : float
             Seconds between ``tasks/get`` polls in ``subscribe``.
+        credential : str | None
+            The execution's token for the run, handed to the worker with the
+            delegation (O1-17).
         """
         self._emit = emit
         self._poll_interval_seconds = poll_interval_seconds
+        self._credential = credential
 
     def capabilities(self) -> AdapterCapabilities:
         """
@@ -588,8 +593,9 @@ class A2AWorkerAdapter(WorkerAdapter):
                 # references onto A2A, and the root is what groups a tree.
                 context_id=execution.root_execution_id,
                 emit=emit,
-                # The model budget the worker's run is held to (O1-07).
-                metadata=delegation_meta(execution),
+                # The model budget the worker's run is held to (O1-07), and
+                # the execution's token it reaches Datalayer with (O1-17).
+                metadata=delegation_meta(execution, credential=self._credential),
             )
         finally:
             queue.put_nowait(None)

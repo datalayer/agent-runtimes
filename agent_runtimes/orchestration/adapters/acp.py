@@ -493,9 +493,10 @@ class ACPWorkerAdapter(WorkerAdapter):
         connect: Callable[..., Awaitable[ACPChannel]] | None = None,
         approvals: ApprovalResponder | None = None,
         timeout_seconds: float = 600.0,
+        credential: str | None = None,
     ) -> None:
         """
-        Hold how to connect, who approves, and how long a turn may take.
+        Hold how to connect, who approves, how long a turn may take, and the execution's credential.
 
         Parameters
         ----------
@@ -505,10 +506,14 @@ class ACPWorkerAdapter(WorkerAdapter):
             Who answers a permission request.
         timeout_seconds : float
             How long one request may take.
+        credential : str | None
+            The execution's token for the run, handed to the agent with the
+            prompt (O1-17).
         """
         self._connect = connect or ACPClientChannel.connect
         self._approvals = approvals
         self._timeout_seconds = timeout_seconds
+        self._credential = credential
 
     def capabilities(self) -> AdapterCapabilities:
         """
@@ -649,8 +654,9 @@ class ACPWorkerAdapter(WorkerAdapter):
                         session_id,
                         objective_prompt(execution),
                         queue,
-                        # The model budget the agent's turn is held to (O1-07).
-                        meta=delegation_meta(execution),
+                        # The model budget the agent's turn is held to (O1-07),
+                        # and the execution's token it reaches Datalayer with (O1-17).
+                        meta=delegation_meta(execution, credential=self._credential),
                     )
                 )
                 started = False

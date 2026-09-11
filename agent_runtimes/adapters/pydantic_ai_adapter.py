@@ -655,6 +655,12 @@ class PydanticAIAdapter(BaseAgent):
         try:
             # Dynamically get toolsets at run time to reflect current MCP server state
             runtime_toolsets = await self._get_runtime_toolsets_async()
+            if user_token_override:
+                from ..mcp.datalayer_gateway import toolsets_for_the_run
+
+                # A run with an identity of its own reaches the Datalayer MCP
+                # gateway with it, never with the process's key (O1-17).
+                runtime_toolsets = toolsets_for_the_run(runtime_toolsets, user_token_override)
             # Always pass toolsets to override any default toolsets on the agent.
             # Even an empty list should be passed to ensure no tools are available.
             run_kwargs_base: dict[str, Any] = {
@@ -837,6 +843,12 @@ class PydanticAIAdapter(BaseAgent):
                     )
 
             runtime_toolsets = await self._get_runtime_toolsets_async()
+            if user_token_override:
+                from ..mcp.datalayer_gateway import toolsets_for_the_run
+
+                # A run with an identity of its own reaches the Datalayer MCP
+                # gateway with it, never with the process's key (O1-17).
+                runtime_toolsets = toolsets_for_the_run(runtime_toolsets, user_token_override)
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )

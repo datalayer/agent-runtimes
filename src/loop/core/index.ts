@@ -23,6 +23,7 @@ import type { ComponentType, ReactNode } from 'react';
 import type { ExecutionState } from '@datalayer/jupyter-react/kernel-indicator';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import type { FrontendToolDefinition } from '../../types/tools';
+import type { ContextSnapshotData } from '../../types/context';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
@@ -644,6 +645,16 @@ export type LoopChatExtrasValue = {
    * on the chip's text, which is how the chat tells openers apart already.
    */
   hiddenOpeners?: string[];
+  /**
+   * Told what the agent has used, each time the chat learns it.
+   *
+   * The composer's usage band is for a reader who wants the numbers in the
+   * chat. A host that draws its own — a landing page counting what a
+   * question cost under the notebook it was asked in — needs the same
+   * snapshot outside the chat, without turning the band back on. Called with
+   * every snapshot the chat receives, `undefined` included.
+   */
+  onUsage?: (snapshot: ContextSnapshotData | undefined) => void;
 };
 
 export type ChatExtrasContribution = {

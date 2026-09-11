@@ -18,6 +18,7 @@ from typing import Any, Mapping
 
 from datalayer_core.orchestration import ErrorCode, Execution, OrchestrationError
 
+from agent_runtimes.context.delegation import CREDENTIAL_FIELD
 from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
 
 __all__ = ["budget_refusal", "delegation_meta", "model_budget"]
@@ -50,22 +51,34 @@ def model_budget(execution: Execution) -> dict[str, Any] | None:
     return limits or None
 
 
-def delegation_meta(execution: Execution) -> dict[str, Any] | None:
+def delegation_meta(
+    execution: Execution, *, credential: str | None = None
+) -> dict[str, Any] | None:
     """
-    What a delegation carries beside the objective: the model budget, or nothing.
+    What a delegation carries beside the objective: the model budget and the execution's credential.
 
     Parameters
     ----------
     execution : Execution
         The execution being delegated.
+    credential : str | None
+        The execution's own token, which the worker reaches Datalayer with for
+        the run (O1-17). The worker takes it out of the message on arrival
+        (``agent_runtimes.context.delegation``), so nothing keeps it.
 
     Returns
     -------
     dict[str, Any] | None
-        The A2A message's ``metadata``, or the ACP prompt's ``_meta``.
+        The A2A message's ``metadata``, or the ACP prompt's ``_meta``; nothing
+        when there is neither.
     """
+    ours: dict[str, Any] = {}
     budget = model_budget(execution)
-    return {DELEGATION_META_KEY: {"budget": budget}} if budget else None
+    if budget:
+        ours["budget"] = budget
+    if credential:
+        ours[CREDENTIAL_FIELD] = credential
+    return {DELEGATION_META_KEY: ours} if ours else None
 
 
 def budget_refusal(

@@ -54,11 +54,11 @@ export type AnonymousKeyExpiredProps = {
   /**
    * Whether the credential that ran out was the anonymous trial key.
    *
-   * It decides the wording, and the difference is not cosmetic. "Your
-   * temporary key has expired" is true of a visitor who never signed in and
-   * simply wrong for a member whose own session ran out — that reader would
-   * go looking for a temporary key they never had, and conclude the page had
-   * confused them with somebody else.
+   * It decides the wording, and the difference is not cosmetic. "This demo
+   * runs on a shared key" is true of a visitor who never signed in and simply
+   * wrong for a member whose own session ran out — that reader would go
+   * looking for a demo key they never had, and conclude the page had confused
+   * them with somebody else.
    *
    * Defaults to the trial, because that is the only credential this panel
    * could describe when it was written and every existing caller means it.
@@ -123,7 +123,7 @@ export function AnonymousKeyExpired({
             sx={{ fontSize: 2, fontWeight: 'semibold', color: 'fg.default' }}
           >
             {temporary
-              ? 'Your temporary key has expired'
+              ? 'This demo runs on a shared key'
               : 'Your key has expired'}
           </Text>
         </Box>
@@ -137,20 +137,24 @@ export function AnonymousKeyExpired({
           }}
         >
           {/*
-            Two facts, and neither is the one in the heading above.
+            An upgrade, not a wall.
 
-            That the key expired is already said, in larger type, an inch up —
-            so this says who stopped and what did not. The second half is the
-            one worth the words: a reader watching the agent go quiet has every
-            reason to assume the page broke, and the notebook beside them is
-            still perfectly alive.
+            The heading says what the demo runs on; this says what an account
+            changes — the reader's own agent, their own data, no clock — and,
+            where the code runs in the page, that the notebook beside them is
+            still alive, so the agent going quiet does not read as the page
+            breaking.
+
+            It no longer promises that signing in brings the notebook back.
+            That is the host's to keep, not this panel's: a host that swaps its
+            routes when somebody signs in — the landing page does — unmounts
+            the notebook, and a promise it cannot keep is worse than none.
           */}
-          {agentName ?? 'The agent'}{' '}
           {temporary
-            ? 'was answering on a trial key.'
-            : 'stopped because your session ran out.'}
+            ? `${agentName ?? 'The agent'} has used the time this key allows. Sign in to point your own agent at it, use your own data, and drop the time limit.`
+            : `${agentName ?? 'The agent'} stopped because your session ran out.`}
           {sandboxStillRuns
-            ? ' Your notebook is still running in this page — signing in brings it back, with its cells and its state.'
+            ? ' Your notebook is still running in this page.'
             : ''}
         </Text>
 
@@ -160,9 +164,6 @@ export function AnonymousKeyExpired({
           hideHero
           fillHeight={false}
           calloutTitle="Sign in to keep going"
-          // What an account is, in the terms the last minute made vivid: the
-          // three things they just ran out of.
-          calloutDescription="Your agents with hosted MCP, and no clock."
           /*
             The social providers, which is how most people will do this.
 

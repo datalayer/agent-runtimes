@@ -318,11 +318,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     [],
   );
 
-  // The window, for the prompt band and for the turn feed both.
+  /* Read through a ref by the snapshot handler, memoised with empty deps. */
+  const chatExtrasRef = useRef(chatExtras);
+  chatExtrasRef.current = chatExtras;
+
+  // The window, for the prompt band, the turn feed, and a host counting it.
   const handleContextSnapshot = useCallback(
     (snapshot: ContextSnapshotData | undefined) => {
       setChatUsage(snapshot);
       turnFeedRef.current?.usage(snapshot);
+      chatExtrasRef.current.onUsage?.(snapshot);
     },
     [],
   );
@@ -995,7 +1000,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const chatDisabled = gateBlocked || keyExpired;
   const disabledReason = keyExpired
     ? expiredKeyIsTemporary
-      ? 'Your temporary key has expired. Sign in to keep going.'
+      ? 'This demo runs on a shared key, and its time is up. Sign in to keep going.'
       : 'Your key has expired. Sign in to keep going.'
     : gateReason;
 

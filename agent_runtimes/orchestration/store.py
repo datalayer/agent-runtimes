@@ -1212,6 +1212,35 @@ def _same_intent(existing: Execution, requested: Execution) -> bool:
     )
 
 
+def refuse_moving(existing: Execution, execution: Execution) -> None:
+    """
+    Refuse a write that would move an execution in its tree (O2-01).
+
+    ``root_execution_id`` is set once, when the execution is created, and so
+    are its parent and its depth: a tree is one query on its root, and a
+    write that moved one execution would take its whole subtree into another
+    tree without anybody asking.
+
+    Parameters
+    ----------
+    existing : Execution
+        What the store holds.
+    execution : Execution
+        What is being written over it.
+
+    Raises
+    ------
+    ExecutionConflict
+        When the root, the parent or the depth would change.
+    """
+    for name in ("root_execution_id", "parent_execution_id", "depth"):
+        if getattr(existing, name) != getattr(execution, name):
+            raise ExecutionConflict(
+                f"Execution '{execution.execution_id}' keeps its {name.replace('_', ' ')} "
+                f"'{getattr(existing, name)}': it is set when the execution is created and never rewritten."
+            )
+
+
 class InMemoryExecutionStore(ExecutionStore):
     """The Phase 0 store: dictionaries, one process, one lock.
 
@@ -1248,6 +1277,9 @@ class InMemoryExecutionStore(ExecutionStore):
         idempotency_key : str | None
             The key of the command that created it, kept on the insert only.
         """
+        existing = self._executions.get(execution.execution_id)
+        if existing is not None:
+            refuse_moving(existing, execution)
         self._executions[execution.execution_id] = execution
         if idempotency_key:
             self._by_idempotency_key.setdefault(idempotency_key, execution.execution_id)

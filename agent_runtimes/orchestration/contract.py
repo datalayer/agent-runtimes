@@ -132,6 +132,31 @@ class CreatingContract:
                 idempotency_key="key-1",
             )
 
+    @pytest.mark.asyncio
+    async def test_an_execution_keeps_its_place_in_its_tree(self):
+        """O2-01: the root, the parent and the depth are set when an execution
+        is created, and no write rewrites them — a tree is one query on its
+        root, and moving one execution would move its subtree with it."""
+        store = self.make_store()
+        execution = await store.create(an_execution())
+
+        for moved in (
+            execution.model_copy(update={"root_execution_id": "exec_other"}),
+            execution.model_copy(update={"parent_execution_id": "exec_other"}),
+            execution.model_copy(update={"depth": 1}),
+        ):
+            with pytest.raises(ExecutionConflict):
+                await store.save(moved)
+
+        await store.save(execution.model_copy(update={"status_message": "Still here"}))
+        kept = await store.get(execution.execution_id)
+        assert (kept.root_execution_id, kept.parent_execution_id, kept.depth) == (
+            execution.execution_id,
+            None,
+            0,
+        )
+        assert kept.status_message == "Still here"
+
 
 # ---------------------------------------------------------------------------
 # Reading a tree

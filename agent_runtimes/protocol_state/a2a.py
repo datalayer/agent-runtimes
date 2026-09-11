@@ -82,9 +82,17 @@ class DurableStorage(Storage[Any]):
         return task  # type: ignore[return-value]
 
     async def submit_task(self, context_id: str, message: Message) -> Task:
+        from agent_runtimes.context.delegation import hold, take_credential
+
         task_id = str(uuid.uuid4())
         message["task_id"] = task_id
         message["context_id"] = context_id
+        # A delegation's credential leaves the message before anything keeps
+        # it — this task's history, its context, the work the broker owes —
+        # and waits in process memory for the run it came with (O1-17).
+        credential = take_credential(message.get("metadata"))
+        if credential:
+            hold(task_id, credential)
         task = Task(
             id=task_id,
             context_id=context_id,

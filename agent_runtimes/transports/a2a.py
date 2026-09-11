@@ -416,11 +416,28 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
         prompt = a2a_message_text(incoming)
 
         from ..adapters.base import AgentContext
+        from ..context.delegation import CredentialLost, release, was_delegated
+        from ..context.identities import set_request_user_jwt
         from ..guardrails.model_budget import delegated_budget
 
         # The model budget the delegation set on this run, when it set one:
         # the adapter applies it as the run's usage limits (O1-07).
         budget = delegated_budget(incoming.get("metadata"))
+        # The execution's token, taken out of the message when the task was
+        # submitted: the run's identity, which its approvals, its telemetry and
+        # its Datalayer MCP toolset use instead of the process's (O1-17).
+        credential = release(task_id)
+        if credential is None and was_delegated(incoming.get("metadata")):
+            # Owed by a process that has since restarted, and the credential
+            # went with it. Run as the runtime instead and the worker reaches
+            # whatever the runtime's key does; fail, and the execution retries
+            # with a token of its own.
+            raise CredentialLost(
+                "The execution's credential did not survive a restart of this runtime, "
+                "so the run is not started without it."
+            )
+        if credential:
+            set_request_user_jwt(credential)
         context = AgentContext(
             session_id=context_id,
             conversation_history=self.build_message_history(history),
@@ -431,6 +448,7 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                     "activated_extensions": activated_extensions_of(params),
                 },
                 **({"budget": budget} if budget else {}),
+                **({"user_token": credential} if credential else {}),
             },
         )
 
