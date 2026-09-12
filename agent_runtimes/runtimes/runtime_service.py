@@ -25,7 +25,7 @@ from datalayer_core.utils.types import (
     Seconds,
 )
 from datalayer_core.utils.urls import DEFAULT_DATALAYER_URL, DatalayerURLs
-from jupyter_kernel_client import KernelClient
+from jupyter_kernel_client import JupyterKernelClient
 
 from agent_runtimes.mixins.runtimes import RuntimesMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
@@ -303,7 +303,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
     def _start(self) -> None:
         """Start the runtime."""
         if self.model.ingress is not None and self.model.jupyter_token is not None:
-            self.model.kernel_client = KernelClient(
+            self.model.kernel_client = JupyterKernelClient(
                 server_url=self.model.ingress, token=self.model.jupyter_token
             )
             self.model.kernel_client.start()
@@ -367,7 +367,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
             last_error: Optional[Exception] = None
             for attempt in range(1, 4):
                 try:
-                    self.model.kernel_client = KernelClient(
+                    self.model.kernel_client = JupyterKernelClient(
                         server_url=self.model.ingress, token=self.model.jupyter_token
                     )
                     self.model.kernel_client.start()

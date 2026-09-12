@@ -27,7 +27,7 @@ from datalayer_core.utils.defaults import (
     DEFAULT_TIME_RESERVATION,
 )
 from datalayer_core.utils.types import Minutes
-from jupyter_kernel_client import KernelClient
+from jupyter_kernel_client import JupyterKernelClient
 
 from agent_runtimes.mixins.environments import EnvironmentsMixin
 from agent_runtimes.mixins.evals import EvalsMixin
@@ -1112,9 +1112,9 @@ class AgentClient(
             result["message"] = "runtime token is missing"
             return result
 
-        kernel_client: Optional[KernelClient] = None
+        kernel_client: Optional[JupyterKernelClient] = None
         try:
-            kernel_client = KernelClient(server_url=endpoint, token=runtime_token)
+            kernel_client = JupyterKernelClient(server_url=endpoint, token=runtime_token)
             kernel_client.start()
             reply = kernel_client.execute(probe_code, timeout=timeout)
             outputs = reply.get("outputs", [])
