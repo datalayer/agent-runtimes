@@ -9,11 +9,29 @@
  * @module protocols/A2AAdapter
  */
 
+import {
+  ORCHESTRATION_EXTENSION_URI,
+  ENVELOPE_KEY as DATALAYER_META_KEY,
+  readUsageMeta,
+  type Usage,
+} from '@datalayer/agent-teams';
+
 import type { ChatMessage } from '../types/messages';
 import type { ProtocolAdapterConfig, AgentCard } from '../types';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/messages';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
+
+/**
+ * The header fasta2a-based workers (`agent-runtimes`'s own, and any other
+ * built on it) actually read to activate an extension for one request —
+ * confirmed from `fasta2a.extensions`, not assumed: comma-separated URIs,
+ * answered on the same header naming which of them the agent knows.
+ * Neither this codebase's own `configuration.requestedExtensions` (read by
+ * nothing server-side) nor the A2A SDK's `Message.extensions` field is what
+ * a `fasta2a` worker's `activated_extensions()` looks at — this header is.
+ */
+const A2A_EXTENSIONS_HEADER = 'A2A-Extensions';
 
 /**
  * A2A specific configuration
@@ -51,6 +69,18 @@ export class A2AAdapter extends BaseProtocolAdapter {
   private agentCard: AgentCard | null = null;
   private currentTaskId: string | null = null;
 
+  /**
+   * Whether the connected agent's card advertised the Datalayer
+   * orchestration extension (ORCHESTRATOR.md, O3-03). Set once, from
+   * `connect()`'s card fetch: neither side infers support from a
+   * successful message (the extension's own negotiation rule), so this is
+   * the one place that decides it, and every request either activates the
+   * extension by this or sends nothing extension-related at all — a worker
+   * that never advertised it sees a plain A2A client, unchanged from
+   * before this existed.
+   */
+  private orchestrationExtensionSupported = false;
+
   constructor(config: A2AAdapterConfig) {
     super(config);
     this.a2aConfig = {
@@ -81,6 +111,10 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
       if (response.ok) {
         this.agentCard = await response.json();
+        this.orchestrationExtensionSupported =
+          this.agentCard?.capabilities?.extensions?.some(
+            extension => extension.uri === ORCHESTRATION_EXTENSION_URI,
+          ) ?? false;
       }
 
       this.setConnectionState('connected');
@@ -146,6 +180,17 @@ export class A2AAdapter extends BaseProtocolAdapter {
    */
   async getAgentCard(): Promise<AgentCard | null> {
     return this.agentCard;
+  }
+
+  /**
+   * Whether the connected agent advertised the Datalayer orchestration
+   * extension. `false` until `connect()` has fetched a card, and `false`
+   * for any card that does not list it — including one that could not be
+   * fetched at all, so a worker with no card behaves exactly as it did
+   * before this existed.
+   */
+  get supportsOrchestrationExtension(): boolean {
+    return this.orchestrationExtensionSupported;
   }
 
   /**
@@ -249,6 +294,12 @@ export class A2AAdapter extends BaseProtocolAdapter {
         method: 'POST',
         headers: this.buildHeaders({
           Accept: 'text/event-stream, application/json',
+          // Activates the extension for this one request, only once the
+          // worker's own card advertised it — degrading to a plain A2A
+          // request (no header at all) otherwise.
+          ...(this.orchestrationExtensionSupported && {
+            [A2A_EXTENSIONS_HEADER]: ORCHESTRATION_EXTENSION_URI,
+          }),
         }),
         body: JSON.stringify(jsonRpcRequest),
         signal: controller.signal,
@@ -424,9 +475,44 @@ export class A2AAdapter extends BaseProtocolAdapter {
         task.final &&
         (state === 'completed' || state === 'failed' || state === 'canceled')
       ) {
+        // Only read the envelope once the worker actually named the
+        // extension active — a plain worker's status carries no
+        // `datalayer` key, and this stays `undefined` for it exactly as
+        // it did before the extension existed.
+        const datalayerMeta = this.orchestrationExtensionSupported
+          ? task.status?.message?.metadata?.[DATALAYER_META_KEY]
+          : undefined;
+        const datalayerUsage: Usage | undefined = datalayerMeta
+          ? readUsageMeta(task.status.message.metadata)
+          : undefined;
+
         this.emit({
           type: 'state-update',
-          data: { state, final: true },
+          data: {
+            state,
+            final: true,
+            ...(datalayerMeta?.paused && {
+              datalayerPaused: datalayerMeta.paused,
+            }),
+            ...(datalayerMeta?.error && {
+              datalayerError: datalayerMeta.error,
+            }),
+            ...(datalayerUsage && { datalayerUsage }),
+          },
+          // Best-effort mapping onto the cross-protocol shape; a worker
+          // that priced the run also sets `datalayerUsage.cost`, which
+          // has no field here and is not dropped — it is still on `data`.
+          ...(datalayerUsage && {
+            usage: {
+              promptTokens: datalayerUsage.inputTokens ?? 0,
+              completionTokens: datalayerUsage.outputTokens ?? 0,
+              ...(datalayerUsage.inputTokens !== undefined &&
+                datalayerUsage.outputTokens !== undefined && {
+                  totalTokens:
+                    datalayerUsage.inputTokens + datalayerUsage.outputTokens,
+                }),
+            },
+          }),
           timestamp: new Date(),
         });
       }
