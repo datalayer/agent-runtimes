@@ -145,3 +145,32 @@ def test_the_envelope_is_closed_so_an_unknown_field_is_noticed(schema):
 def test_a_message_carrying_the_envelope_is_still_a_message(schema):
     """The extension adds a key; it does not own the message it rides in."""
     assert schema["additionalProperties"] is True
+
+
+def test_every_catalogued_capability_is_in_the_closed_vocabulary():
+    """No spec slipped a capability past the generator (O2-07).
+
+    The vocabulary is validated on the model, so a spec built in Python
+    cannot name an unknown capability. The catalogue is generated from YAML,
+    and this is the proof that the generated file agrees — free text does not
+    match, and two specs saying "analysis" and "analyse" describe the same
+    work and find each other never.
+
+    It lives here rather than in `core`'s descriptor suite because that suite
+    reads the catalogue as YAML data on purpose: `core` does not depend on
+    `agent-runtimes` and must not, since the dependency runs the other way.
+    """
+    from agent_runtimes.specs.agents import list_agentspecs
+    from agent_runtimes.types import AGENT_CAPABILITIES
+
+    specs = list_agentspecs()
+    declared = {
+        capability.id for spec in specs for capability in spec.delegable
+    }
+    assert declared, "no spec declares delegable work, so discovery matches nothing"
+    assert declared <= set(AGENT_CAPABILITIES), sorted(declared - set(AGENT_CAPABILITIES))
+
+    # A demonstration discovered as something to hand work to is worse than
+    # one that cannot be discovered at all.
+    examples = [s for s in specs if s.id.startswith("example-") and s.delegable]
+    assert not examples, [s.id for s in examples]

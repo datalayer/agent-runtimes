@@ -65,6 +65,28 @@ export interface AgentCheckpointsConfig {
   store?: 'in_memory' | 'file';
 }
 
+/**
+ * One kind of work an agent can be delegated, and what it takes and returns.
+ *
+ * The unit `agents.discover` matches on. It maps onto an A2A agent card's
+ * `skills` entry, so a Datalayer agentspec and a third-party A2A worker are
+ * discoverable through one query rather than two.
+ */
+export interface AgentCapability {
+  /** One of the closed vocabulary in `agent_runtimes.types`. */
+  id: string;
+  /** Display label; the vocabulary's own description when absent. */
+  name?: string;
+  /** What this agent in particular does under that capability. */
+  description?: string;
+  /** Context reference kinds it accepts — notebook, dataset, file, sandbox. */
+  inputs?: string[];
+  /** Artifact types it produces — notebook, report, dataset, file. */
+  outputs?: string[];
+  /** Free text, for humans reading a catalogue; never matched on. */
+  tags?: string[];
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -129,6 +151,20 @@ export interface Agentspec {
   sandboxVariant?: string;
   /** User-facing objective for the agent */
   goal?: string;
+  /**
+   * What work this agent can be delegated (ORCHESTRATOR.md, O2-07).
+   *
+   * `protocol` below says how a client and an agent talk; this says what it
+   * is worth handing the agent. Ids come from a closed vocabulary, because
+   * `agents.discover --capability notebook.validate` has to match something
+   * and free text does not: two specs saying "analysis" and "analyse"
+   * describe the same work and find each other never.
+   *
+   * Deliberately not called `capabilities`: that name is already taken on
+   * this type for pydantic-ai capability configurations, which are runtime
+   * behaviours attached to an agent rather than work handed to it.
+   */
+  delegable?: AgentCapability[];
   /** Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai') */
   protocol?: string;
   /** UI extension type (e.g., 'a2ui', 'mcp-apps') */
