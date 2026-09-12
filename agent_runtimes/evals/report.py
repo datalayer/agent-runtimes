@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Real evaluation and reporting logic for Datalayer evals.
 
 This module hosts the evals report engine and the helper functions used by the
@@ -21,7 +18,6 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, cast
-from urllib.parse import quote
 
 import typer
 from rich.console import Console
@@ -31,7 +27,7 @@ from agent_runtimes.client import AgentClient
 
 console = Console()
 
-WEB_APP_BASE_URL = "https://datalayer.ai"
+from agent_runtimes.evals.links import agentspec_url, benchmark_url, run_url  # noqa: E402 — the product's addresses (B4-08)
 
 
 def _now_iso() -> str:
@@ -128,42 +124,6 @@ def _parse_evaluator_specs(
     return evaluators
 
 
-def _agentspec_details_url(agent_spec_id: str) -> str:
-    value = str(agent_spec_id or "").strip()
-    if not value:
-        return ""
-    return f"{WEB_APP_BASE_URL}/settings/agentspecs/{quote(value, safe='')}"
-
-
-def _evalset_runs_url(evalset_id: str, run_environment: str) -> str:
-    evalset_value = str(evalset_id or "").strip()
-    if not evalset_value:
-        return ""
-    encoded_evalset_id = quote(evalset_value, safe="")
-    env_value = str(run_environment or "").strip()
-    if env_value:
-        encoded_env = quote(env_value, safe="")
-        return (
-            f"{WEB_APP_BASE_URL}/evals/experiments/{encoded_env}/{encoded_evalset_id}"
-        )
-    return f"{WEB_APP_BASE_URL}/evals/experiments?evalset_id={encoded_evalset_id}"
-
-
-def _run_overlay_url(evalset_runs_url: str, run_id: str) -> str:
-    """Build a deep link that opens the run-details overlay directly.
-
-    The experiments page reads the ``run`` query parameter and opens the
-    run-details dialog for that run, so the same overlay shown by the in-app
-    "Details" button is reachable straight from the CLI report.
-    """
-    base = str(evalset_runs_url or "").strip()
-    run_value = str(run_id or "").strip()
-    if not base or not run_value:
-        return base
-    separator = "&" if "?" in base else "?"
-    return f"{base}{separator}run={quote(run_value, safe='')}"
-
-
 def _style_text(value: str, style: str | None, colorize: bool) -> str:
     if not colorize or not style:
         return value
@@ -178,10 +138,16 @@ def _compute_baseline_and_drift(
     ]
     if not pass_rates:
         return None, None, None
+    # The runs arrive newest first, as the service sorts them and as
+    # `latest_two_run_ids` reads them a few lines below. This used to take the
+    # first slice as the baseline and the last rate as the latest, which is the
+    # opposite way round: every experiment with more than one run reported its
+    # oldest rate as its latest, and its drift with the sign reversed — and
+    # only an experiment with more than one run has a drift to be wrong about.
     baseline_size = min(3, max(1, len(pass_rates) // 2))
-    baseline_slice = pass_rates[:baseline_size]
+    baseline_slice = pass_rates[-baseline_size:]
     baseline = sum(baseline_slice) / baseline_size
-    latest = pass_rates[-1]
+    latest = pass_rates[0]
     drift = latest - baseline
     return baseline, latest, drift
 
@@ -214,6 +180,47 @@ def _analysis_line(name: str, x: list[Any], y: list[float]) -> dict[str, Any]:
         "name": name,
         "x": x,
         "y": y,
+    }
+
+
+def _analysis_heatmap(
+    name: str, rows: list[str], columns: list[str], values: list[list[float | None]]
+) -> dict[str, Any]:
+    """A grid of pass rates: one row per experiment, one column per run.
+
+    `BENCHMARK.md` section 12.2 asks for "recent-run heatmaps" beside the
+    pairwise deltas, and a heatmap is the one shape that shows a regression
+    that only some experiments had — a column that darkens across every row is
+    the benchmark, a cell that darkens alone is that experiment.
+
+    A run an experiment does not have is `None` rather than 0: an experiment
+    that ran four times where another ran six has a gap, and drawing the gap as
+    a zero would read as a total failure.
+    """
+    return {
+        "kind": "heatmap",
+        "name": name,
+        "rows": rows,
+        "columns": columns,
+        "values": values,
+    }
+
+
+def _analysis_pairwise(name: str, pairs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Every experiment against every other, as candidate against baseline.
+
+    Section 12.2 fixes the direction and it is not a detail: **A is the
+    candidate, B is the baseline, and the delta is `A - B`**. A positive delta
+    is the candidate ahead. Two readers who disagree about the sign of a delta
+    are two readers who disagree about whether a change helped, so the
+    convention is written into the payload rather than left to whoever draws
+    it.
+    """
+    return {
+        "kind": "pairwise",
+        "name": name,
+        "convention": "delta = candidate - baseline",
+        "pairs": pairs,
     }
 
 
@@ -324,7 +331,77 @@ def _build_evalset_report_analyses(
             latest_rows,
         ),
         _analysis_line("Latest Pass Rate By Experiment", latest_names, latest_values),
+        _recent_run_heatmap(experiments),
+        _pairwise_deltas(experiments),
     ]
+
+
+#: How many of an experiment's runs the heatmap shows. Enough to see a trend,
+#: few enough that the grid stays readable in a report somebody scrolls.
+HEATMAP_RUNS = 6
+
+
+def _recent_run_heatmap(experiments: list[dict[str, Any]]) -> dict[str, Any]:
+    """The last few runs of every experiment, as one grid (B3-10).
+
+    The columns are positions rather than run identifiers: two experiments'
+    fourth runs are comparable as "the fourth", and no two experiments share a
+    run id to line up on.
+    """
+    rows: list[str] = []
+    values: list[list[float | None]] = []
+    for experiment in experiments:
+        runs = [run for run in (experiment.get("runs") or []) if isinstance(run, dict)]
+        recent = runs[-HEATMAP_RUNS:]
+        row: list[float | None] = []
+        for run in recent:
+            pass_rate = run.get("pass_rate")
+            row.append(float(pass_rate) if isinstance(pass_rate, (int, float)) else None)
+        # Left-padded, so the last column is every experiment's latest run and
+        # a column reads down as "the most recent", not as "the fourth of
+        # however many this one happened to have".
+        row = [None] * (HEATMAP_RUNS - len(row)) + row
+        rows.append(str(experiment.get("name") or experiment.get("id") or ""))
+        values.append(row)
+    columns = [f"-{HEATMAP_RUNS - index - 1}" for index in range(HEATMAP_RUNS)]
+    columns[-1] = "latest"
+    return _analysis_heatmap("Recent Runs", rows, columns, values)
+
+
+def _pairwise_deltas(experiments: list[dict[str, Any]]) -> dict[str, Any]:
+    """Every experiment against every other, candidate minus baseline (B3-10).
+
+    Both directions of a pair, because which one is the candidate is the
+    reader's question and not the report's: somebody comparing a new agent
+    against the incumbent and somebody comparing the incumbent against the new
+    agent are asking different things, and a table with one row per unordered
+    pair answers only one of them.
+    """
+    named = [
+        (str(item.get("name") or item.get("id") or ""), item.get("latest_pass_rate"))
+        for item in experiments
+    ]
+    pairs: list[dict[str, Any]] = []
+    for candidate, candidate_rate in named:
+        for baseline, baseline_rate in named:
+            if candidate == baseline:
+                continue
+            delta = (
+                float(candidate_rate) - float(baseline_rate)
+                if isinstance(candidate_rate, (int, float))
+                and isinstance(baseline_rate, (int, float))
+                else None
+            )
+            pairs.append(
+                {
+                    "candidate": candidate,
+                    "baseline": baseline,
+                    "candidate_pass_rate": candidate_rate,
+                    "baseline_pass_rate": baseline_rate,
+                    "delta_pass_rate": delta,
+                }
+            )
+    return _analysis_pairwise("Pairwise Deltas", pairs)
 
 
 def _classify_legacy_failure(message: str) -> dict[str, Any]:
@@ -418,7 +495,7 @@ def _failure_cause_detail_lines(cause: dict[str, Any]) -> list[str]:
     for key, label in (
         ("stage", "Stage"),
         ("type", "Type"),
-        ("runtime_pod_name", "Runtime pod"),
+        ("runtime_name", "Runtime pod"),
         ("runtime_id", "Runtime ID"),
         ("environment_name", "Environment"),
         ("execution_url", "Execution URL"),
@@ -439,7 +516,7 @@ def _failure_cause_detail_lines(cause: dict[str, Any]) -> list[str]:
     if isinstance(diagnostics, dict) and diagnostics:
         for key, label in (
             ("agent_runtimes_url", "Agent runtimes URL"),
-            ("datalayer_url", "Datalayer URL"),
+            ("iam_url", "Datalayer IAM URL"),
         ):
             diag_value = diagnostics.get(key)
             if diag_value:
@@ -489,6 +566,8 @@ def _run_detail_record(run: dict[str, Any]) -> dict[str, Any]:
     usage = _extract_run_usage(run)
     return {
         "id": str(run.get("id", "")),
+        # The launch a run belongs to is where its page is (B4-08).
+        "launch_id": str(run.get("launch_id", "") or ""),
         "status": str(run.get("status", "")),
         "created_at": str(run.get("created_at", "")),
         "updated_at": str(run.get("updated_at", "")),
@@ -1523,7 +1602,6 @@ def _report_markdown(
     report: dict[str, Any], run_limit: int, *, colorize: bool = False
 ) -> str:
     evalset_id = str(report.get("evalset_id", ""))
-    run_environment = str(report.get("run_environment") or "")
     generated_at = str(report.get("generated_at", ""))
     experiments = [
         item for item in (report.get("experiments") or []) if isinstance(item, dict)
@@ -1542,7 +1620,7 @@ def _report_markdown(
             representative_case_name = name
         if name not in case_by_name:
             case_by_name[name] = case
-    evalset_runs_url = _evalset_runs_url(evalset_id, run_environment)
+    evalset_runs_url = benchmark_url(evalset_id)
 
     lines: list[str] = []
     # Verbose, drill-down content is collected here and emitted under a single
@@ -1577,7 +1655,7 @@ def _report_markdown(
         agentspec_rows: list[list[str]] = []
         for item in agentspecs:
             agent_spec_id = str(item.get("id") or "")
-            agent_spec_link = _agentspec_details_url(agent_spec_id)
+            agent_spec_link = agentspec_url(agent_spec_id)
             agentspec_rows.append(
                 [
                     agent_spec_id,
@@ -1609,7 +1687,7 @@ def _report_markdown(
         appendix_lines.append("")
         for item in agentspecs:
             agent_spec_id = str(item.get("id") or "")
-            agent_spec_link = _agentspec_details_url(agent_spec_id)
+            agent_spec_link = agentspec_url(agent_spec_id)
             display_name = str(item.get("name") or agent_spec_id or "-")
             emoji = str(item.get("emoji") or "").strip()
             heading = f"{emoji} {display_name}".strip()
@@ -2223,7 +2301,7 @@ def _report_markdown(
         agent_spec_label = str(
             experiment.get("agent_spec_name") or agent_spec_id or "-"
         )
-        agent_spec_link = _agentspec_details_url(agent_spec_id)
+        agent_spec_link = agentspec_url(agent_spec_id)
         if agent_spec_link:
             appendix_lines.append(f"Agentspec: [{agent_spec_label}]({agent_spec_link})")
         else:
@@ -2249,7 +2327,7 @@ def _report_markdown(
                 token_timeline_values.append(float(total_tokens))
             cause_text = _format_failure_cause(run.get("failure_cause"))
             run_id = str(run.get("id", ""))
-            run_link = _run_overlay_url(evalset_runs_url, run_id)
+            run_link = run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
             run_rows.append(
                 [
                     str(idx),
@@ -2611,7 +2689,7 @@ def _run_detail_block_lines(
     lines.append(f"- Pass rate: {pass_text}")
     lines.append(f"- Created: {created}")
     summary_for_header = _as_dict(run.get("summary"))
-    runtime_pod = str(summary_for_header.get("runtime_pod_name") or "").strip()
+    runtime_pod = str(summary_for_header.get("runtime_name") or "").strip()
     if runtime_pod:
         lines.append(f"- Runtime: `{runtime_pod}`")
     runtime_id = str(summary_for_header.get("runtime_id") or "").strip()
@@ -2758,7 +2836,7 @@ def _run_detail_block_lines(
             "credits_consumed",
             "captured_at",
             "reservation_id",
-            "runtime_pod_name",
+            "runtime_name",
         ]
         usage_rows: list[list[str]] = []
         for key in preferred_keys:
@@ -2996,7 +3074,7 @@ def _report_appendix_lines(
             metrics = _as_dict(run.get("metrics"))
             usage = _extract_run_usage(run)
             run_id = str(run.get("id", ""))
-            run_link = _run_overlay_url(evalset_runs_url, run_id)
+            run_link = run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
             pass_rate = run.get("pass_rate")
             passed = _appendix_metric_int(metrics, "passed", "passed_cases")
             total = _appendix_metric_int(metrics, "total_cases", "total", "cases")
@@ -3157,8 +3235,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
         writer = csv.DictWriter(stream, fieldnames=fieldnames)
         writer.writeheader()
         evalset_id = str(report.get("evalset_id", ""))
-        run_environment = str(report.get("run_environment") or "")
-        evalset_runs_url = _evalset_runs_url(evalset_id, run_environment)
+        evalset_runs_url = benchmark_url(evalset_id)
         for experiment in experiments:
             agent_spec_id = str(experiment.get("agent_spec_id", ""))
             writer.writerow(
@@ -3168,7 +3245,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                     "evalset_runs_url": evalset_runs_url,
                     "agent_spec_id": agent_spec_id,
                     "agent_spec_name": str(experiment.get("agent_spec_name", "")),
-                    "agent_spec_url": _agentspec_details_url(agent_spec_id),
+                    "agent_spec_url": agentspec_url(agent_spec_id),
                     "experiment_id": str(experiment.get("id", "")),
                     "experiment_name": str(experiment.get("name", "")),
                     "run_index": "",
@@ -3214,7 +3291,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                         "evalset_runs_url": evalset_runs_url,
                         "agent_spec_id": agent_spec_id,
                         "agent_spec_name": str(experiment.get("agent_spec_name", "")),
-                        "agent_spec_url": _agentspec_details_url(agent_spec_id),
+                        "agent_spec_url": agentspec_url(agent_spec_id),
                         "experiment_id": str(experiment.get("id", "")),
                         "experiment_name": str(experiment.get("name", "")),
                         "run_index": idx,
@@ -3251,7 +3328,7 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
                                 "agent_spec_name": str(
                                     experiment.get("agent_spec_name", "")
                                 ),
-                                "agent_spec_url": _agentspec_details_url(agent_spec_id),
+                                "agent_spec_url": agentspec_url(agent_spec_id),
                                 "experiment_id": str(experiment.get("id", "")),
                                 "experiment_name": str(experiment.get("name", "")),
                                 "run_index": idx,
@@ -3309,7 +3386,6 @@ def _write_report_csv(report: dict[str, Any], output_path: Path) -> None:
 
 def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     evalset_id = str(report.get("evalset_id", ""))
-    run_environment = str(report.get("run_environment") or "")
     generated_at = str(report.get("generated_at", ""))
     experiments = [
         item for item in (report.get("experiments") or []) if isinstance(item, dict)
@@ -3317,7 +3393,7 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
     agentspecs = [
         item for item in (report.get("agentspecs") or []) if isinstance(item, dict)
     ]
-    evalset_runs_url = _evalset_runs_url(evalset_id, run_environment)
+    evalset_runs_url = benchmark_url(evalset_id)
 
     console.rule(f"[bold cyan]Evals Report[/bold cyan] {evalset_id}")
     console.print(f"Generated at: {generated_at}")
@@ -3602,7 +3678,7 @@ def _print_report_console(report: dict[str, Any], run_limit: int) -> None:
             if isinstance(diagnostics, dict):
                 for key, label in (
                     ("agent_runtimes_url", "agent runtimes url"),
-                    ("datalayer_url", "run url"),
+                    ("iam_url", "iam url"),
                 ):
                     diag_value = diagnostics.get(key)
                     if diag_value:
@@ -3767,14 +3843,82 @@ def build_eval_report(
     )
 
 
+def build_eval_report_lexical(
+    report: dict[str, Any],
+    *,
+    evalset: Optional[dict[str, Any]] = None,
+    launch: Optional[dict[str, Any]] = None,
+    run: Optional[dict[str, Any]] = None,
+    cases: Optional[list[dict[str, Any]]] = None,
+) -> dict[str, Any]:
+    """The report as a serialized Lexical editor state (BENCHMARK.md, B3-03)."""
+    from agent_runtimes.evals.lexical import build_eval_report_lexical as _build
+
+    return _build(report, evalset=evalset, launch=launch, run=run, cases=cases)
+
+
+#: What a review decision is called in a report (BENCHMARK.md, B4-03).
+DECISION_KIND_LABELS = {
+    "accepted_regression": "Accepted regression",
+    "expected_change": "Expected change",
+    "evaluator_issue": "Evaluator issue",
+    "data_issue": "Data issue",
+    "action_required": "Action required",
+}
+DECISION_OUTCOME_LABELS = {
+    "approved": "Approved",
+    "blocked": "Blocked",
+    "accepted_with_limitations": "Accepted with limitations",
+}
+
+
+def _decision_cell(value: Any) -> str:
+    return str(value or "").replace("|", "\\|").replace("\n", " ").strip()
+
+
+def render_decisions_markdown(decisions: list[dict[str, Any]]) -> str:
+    """The "Decisions" appendix of a report (B4-03).
+
+    What was decided about which part of the result, by whom and when, in
+    the order it was decided. Empty when nothing was, so a report nobody has
+    reviewed carries no empty section.
+    """
+    if not decisions:
+        return ""
+    lines = [
+        "## Decisions",
+        "",
+        "| Decided | Kind | Outcome | About | By | Note |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for decision in decisions:
+        kind = str(decision.get("kind") or "")
+        outcome = str(decision.get("outcome") or "")
+        about = f"{decision.get('scope') or ''} {decision.get('scope_ref') or ''}".strip()
+        cells = (
+            str(decision.get("decided_at") or "")[:10],
+            DECISION_KIND_LABELS.get(kind, kind),
+            DECISION_OUTCOME_LABELS.get(outcome, outcome),
+            about,
+            decision.get("decided_by_uid"),
+            decision.get("note"),
+        )
+        lines.append("| " + " | ".join(_decision_cell(cell) for cell in cells) + " |")
+    return "\n".join(lines) + "\n"
+
+
 def render_eval_report_markdown(
     report: dict[str, Any],
     *,
     run_limit: int = 50,
     colorize: bool = False,
+    decisions: list[dict[str, Any]] | None = None,
 ) -> str:
-    """Render a structured eval report as markdown."""
-    return _report_markdown(report, run_limit=run_limit, colorize=colorize)
+    """Render a structured eval report as markdown, with the decisions made
+    about it as its last section when there are any."""
+    markdown = _report_markdown(report, run_limit=run_limit, colorize=colorize)
+    appendix = render_decisions_markdown(decisions or [])
+    return f"{markdown.rstrip()}\n\n{appendix}" if appendix else markdown
 
 
 def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Path:
@@ -3782,6 +3926,78 @@ def write_eval_report_csv(report: dict[str, Any], output_path: str | Path) -> Pa
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     _write_report_csv(report, path)
+    return path
+
+
+#: The columns a report object's CSV adds after the CLI's own (B4-08).
+REPORT_OBJECT_COLUMNS = [
+    "block_index",
+    "block_type",
+    "block_is_evidence",
+    "block_text",
+    "decision_kind",
+    "decision_outcome",
+    "decision_scope",
+    "decision_scope_ref",
+    "decided_by_uid",
+    "decided_at",
+    "decision_note",
+]
+
+
+def write_report_object_csv(
+    report: dict[str, Any],
+    output_path: str | Path,
+    *,
+    narrative: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+) -> Path:
+    """The CSV of a report object (B4-08).
+
+    The rows of the report over its runs, exactly as the CLI writes them,
+    then a `narrative` row per block of its document and a `decision` row per
+    decision. The added fields are added columns, after the CLI's, so a
+    reader of the CLI's CSV reads the same columns in the same places.
+    """
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    runs_path = path.with_name(f"{path.stem}.runs{path.suffix}")
+    _write_report_csv(report, runs_path)
+    with runs_path.open("r", encoding="utf-8", newline="") as stream:
+        reader = csv.DictReader(stream)
+        fieldnames = list(reader.fieldnames or [])
+        rows = list(reader)
+    runs_path.unlink()
+    evalset_id = str(report.get("evalset_id", ""))
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fieldnames + REPORT_OBJECT_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+        for index, block in enumerate(narrative):
+            writer.writerow(
+                {
+                    "row_type": "narrative",
+                    "evalset_id": evalset_id,
+                    "block_index": index,
+                    "block_type": block.get("type", ""),
+                    "block_is_evidence": "true" if block.get("evidence") else "false",
+                    "block_text": block.get("text", ""),
+                }
+            )
+        for decision in decisions:
+            writer.writerow(
+                {
+                    "row_type": "decision",
+                    "evalset_id": evalset_id,
+                    "decision_kind": decision.get("kind", ""),
+                    "decision_outcome": decision.get("outcome", ""),
+                    "decision_scope": decision.get("scope", ""),
+                    "decision_scope_ref": decision.get("scope_ref", ""),
+                    "decided_by_uid": decision.get("decided_by_uid", ""),
+                    "decided_at": decision.get("decided_at", "") or "",
+                    "decision_note": decision.get("note", ""),
+                }
+            )
     return path
 
 

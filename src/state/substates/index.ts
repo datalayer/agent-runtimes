@@ -26,8 +26,6 @@ export {
   useSurveysStore,
   teamStore,
   useTeamStore,
-  datasourceStore,
-  useDatasourceStore,
   runStore,
   useRunStore,
   DATALAYER_IAM_TOKEN_KEY,

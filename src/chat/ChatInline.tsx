@@ -18,6 +18,7 @@
  * @module chat/ChatInline
  */
 
+import type { JSX } from 'react';
 import {
   useState,
   useCallback,

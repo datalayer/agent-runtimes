@@ -34,8 +34,17 @@ export interface IDatalayerSessionContext extends ISessionContext {
 export interface IRuntimeOptions {
   /**
    * Environment name
+   *
+   * A platform environment by its name, or an environment somebody built,
+   * named `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
    */
   environmentName: string;
+  /**
+   * Which version of a user environment to launch: its number, or a version
+   * uid. Absent means the version its owner promoted, which is what a platform
+   * environment always runs (E1-19).
+   */
+  environmentVersion?: number | string;
   /**
    * Credits limit to be consumed by the kernel
    */
@@ -149,6 +158,14 @@ export interface IRemoteRuntimesManager extends IDisposable {
   refresh(): Promise<void>;
 
   /**
+   * Resolve full kernel models for discovered runtime pods on demand.
+   *
+   * Implementations may omit this when {@link refresh} already returns full
+   * kernel models.
+   */
+  refreshRuntimeModels?(): Promise<void>;
+
+  /**
    * Launch a Kernel.
    *
    * @param createOptions - The kernel creation options
@@ -209,7 +226,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
   /**
    * Snapshot a runtime
    *
-   * The runtime may be given by its `id` or `podName`.
+   * The runtime may be given by its `id` or `runtimeName`.
    * A custom description for the snapshot can be provided.
    *
    * @returns The snapshot description
@@ -222,7 +239,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
     /**
      * The kernel pod name to snapshot
      */
-    podName?: string;
+    runtimeName?: string;
     /**
      * The snapshot name
      */
@@ -240,7 +257,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
   /**
    * Load a snapshot within a runtim
    *
-   * The runtime may be given by its `id` or `podName`.
+   * The runtime may be given by its `id` or `runtimeName`.
    */
   loadSandboxSnapshot(options: {
     /**
@@ -250,7 +267,7 @@ export interface IRemoteRuntimesManager extends IDisposable {
     /**
      * The kernel pod name
      */
-    podName?: string;
+    runtimeName?: string;
     /**
      * The snapshot UID
      */

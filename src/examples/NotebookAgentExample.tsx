@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Notebook Example with Agent-Runtimes Integration
+ * Notebook Agent with Agent-Runtimes Integration
  *
  * This example demonstrates using the agent-runtimes ChatFloating component
  * with notebook tools for AI-assisted notebook editing.
@@ -16,7 +16,8 @@
  * @module examples/NotebookAgentExample
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { JSX } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager, Session } from '@jupyterlab/services';
 import { Notebook, OnSessionConnection } from '@datalayer/jupyter-react';
@@ -26,13 +27,12 @@ import { ThemedJupyterProvider } from './utils/themedProvider';
 // Agent-runtimes imports
 import { ChatFloating } from '../chat';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 // Import Matplotlib notebook
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 
-import { DEFAULT_MODEL } from '../specs';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agui-notebook-example';
@@ -41,32 +41,6 @@ const NOTEBOOK_ID = 'agui-notebook-example';
 const NOTEBOOK_CONTENT = MatplotlibNotebook;
 
 const AGENT_ID = 'notebook-agent-runtime-example';
-
-function getJupyterSandboxUrl(
-  serviceManager?: ServiceManager.IManager,
-): string | undefined {
-  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
-  if (!baseUrl) {
-    return undefined;
-  }
-
-  if (baseUrl.includes('token=')) {
-    return baseUrl;
-  }
-
-  const token = serviceManager?.serverSettings?.token;
-  if (!token) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
 
 /**
  * Notebook UI component (without tool registration)
@@ -99,11 +73,11 @@ const NotebookUI = React.memo(function NotebookUI({
         }}
       >
         <Box as="h1" sx={{ margin: 0 }}>
-          Agent Runtime Notebook Example
+          Notebook Agent Example
         </Box>
         <p>
-          Platform-agnostic tool usage with agent-runtimes integration. Use the
-          AI copilot to manipulate the notebook.
+          Platform-agnostic usage with agent-runtimes integration. Use the AI
+          Agent to manipulate the Notebook.
         </p>
       </Box>
 
@@ -121,6 +95,7 @@ const NotebookUI = React.memo(function NotebookUI({
             <Notebook
               nbformat={NOTEBOOK_CONTENT}
               id={NOTEBOOK_ID}
+              Toolbar={ExampleNotebookToolbar}
               serviceManager={serviceManager}
               onSessionConnection={onSessionConnection}
               height="calc(100vh - 300px)"
@@ -148,54 +123,34 @@ interface NotebookWithChatProps {
 function NotebookWithChat({
   serviceManager,
 }: NotebookWithChatProps): JSX.Element {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const jupyterSandboxUrl = useMemo(
-    () => getJupyterSandboxUrl(serviceManager),
-    [serviceManager],
-  );
-  const [createRequested, setCreateRequested] = useState(false);
   const [notebookKernel, setNotebookKernel] =
     useState<IKernelConnection | null>(null);
 
-  const { agentId, isReady, status, error, createAgent } =
-    useExampleAgentRuntime({
-      exampleId: 'NotebookAgentExample',
-      agentName: AGENT_ID,
-      autoCreateAgent: false,
-      agentConfig: {
-        name: AGENT_ID,
-        description: 'Demo agent for notebook example',
-        protocol: 'vercel-ai',
-        model: DEFAULT_MODEL,
-        systemPrompt:
-          'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
-        enableCodemode: false,
-        sandboxVariant: 'jupyter',
-        jupyterSandbox: jupyterSandboxUrl,
-      },
-    });
+  // Get notebook tools. Which of the chat and the harness runs them depends on
+  // where the loop turns, and the hook decides that.
+  const frontendTools = useNotebookTools(NOTEBOOK_ID);
 
-  useEffect(() => {
-    if (!jupyterSandboxUrl || createRequested || agentId) {
-      return;
-    }
-    setCreateRequested(true);
-    void createAgent({
-      name: AGENT_ID,
-      description: 'Demo agent for notebook example',
-      protocol: 'vercel-ai',
-      model: DEFAULT_MODEL,
-      systemPrompt:
-        'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
-      enableCodemode: false,
-      sandboxVariant: 'jupyter',
-      jupyterSandbox: jupyterSandboxUrl,
-    }).catch(() => {
-      setCreateRequested(false);
-    });
-  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
+  const {
+    agentReady,
+    protocol: protocolConfig,
+    chatFrontendTools,
+    error,
+    unavailableReason,
+  } = useExampleJupyterAgent({
+    exampleId: 'NotebookAgentExample',
+    agentName: AGENT_ID,
+    description: 'Demo agent for notebook example',
+    systemPrompt:
+      'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCodeInNotebook only for temporary inspection code that should not modify notebook cells.',
+    serviceManager,
+    frontendTools,
+  });
 
-  const effectiveReady = isReady || status === 'ready';
+  // The example's own agent, not merely the runtime: on the cloud target the
+  // runtime is ready before this agent has been registered on it.
+  const effectiveReady = agentReady;
+  // One failed attempt is reported, not retried — see `useExampleJupyterAgent`.
+  const chatError = error || unavailableReason;
 
   const handleSessionConnection = useCallback(
     (session: Session.ISessionConnection | undefined) => {
@@ -203,20 +158,6 @@ function NotebookWithChat({
     },
     [],
   );
-
-  const protocolConfig = useMemo(
-    () => ({
-      type: 'vercel-ai' as const,
-      endpoint: `${baseUrl}/api/v1/vercel-ai/${AGENT_ID}`,
-      agentId: AGENT_ID,
-      enableConfigQuery: true,
-      configEndpoint: `${baseUrl}/api/v1/configure`,
-    }),
-    [baseUrl],
-  );
-
-  // Get notebook tools for ChatFloating
-  const frontendTools = useNotebookTools(NOTEBOOK_ID);
 
   return (
     <Box
@@ -232,7 +173,7 @@ function NotebookWithChat({
         onSessionConnection={handleSessionConnection}
       />
 
-      {error && (
+      {chatError && (
         <Box
           sx={{
             position: 'fixed',
@@ -245,7 +186,7 @@ function NotebookWithChat({
             maxWidth: 300,
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>Error:</strong> {chatError}
         </Box>
       )}
 
@@ -257,11 +198,29 @@ function NotebookWithChat({
           defaultOpen={true}
           defaultViewMode="panel"
           position="bottom-right"
-          frontendTools={frontendTools}
+          frontendTools={chatFrontendTools}
           useStore={false}
+          /*
+            Every control this chat has, which is what an example is for.
+
+            The menus draw themselves only where there is something behind
+            them: on a remote agent the config request answers and all three
+            appear, while an in-page agent has no config endpoint to ask, so
+            tools and skills are simply absent rather than pending. That used
+            to read as "Loading controls..." for ever.
+          */
           showModelSelector={true}
           showToolsMenu={true}
           showSkillsMenu={true}
+          showTokenUsage={true}
+          // The ring, here of all places: an agent working through a notebook
+          // is the case that actually fills a context window, so how it is
+          // being spent is worth a picture rather than two numbers.
+          showContextRing={true}
+          showInformation={true}
+          showHeader={true}
+          // The Lexical editor, which is the one with the `@` menu.
+          promptVariant="lexical"
           panelProps={{
             kernel: notebookKernel,
           }}

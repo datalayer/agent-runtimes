@@ -1,4 +1,5 @@
 ---
+sidebar_position: 4
 title: Programmatic Tools
 ---
 
@@ -388,7 +389,7 @@ mcp_toolsets = get_mcp_toolsets()
 # Create agent with MCP tools
 agent = Agent(
         "anthropic:claude-sonnet-4-20250514",
-        system_prompt="You are a helpful assistant.",
+    instructions="You are a helpful assistant.",
         toolsets=mcp_toolsets,
 )
 ```
@@ -424,7 +425,7 @@ agent = Agent(
                     "mcp-remote",
                     "https://www.kaggle.com/mcp",
                     "--header",
-                    "Authorization: Bearer <KAGGLE_TOKEN>"
+                    "Authorization: Bearer <KAGGLE_API_TOKEN>"
             ]
     }
 }
@@ -546,7 +547,7 @@ The [Kaggle MCP Server](https://www.kaggle.com/docs/mcp) is a **remote HTTP serv
                 "mcp-remote",
                 "https://www.kaggle.com/mcp",
                 "--header",
-                "Authorization: Bearer <KAGGLE_TOKEN>"
+                "Authorization: Bearer <KAGGLE_API_TOKEN>"
             ]
         }
     }

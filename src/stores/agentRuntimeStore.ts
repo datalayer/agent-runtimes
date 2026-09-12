@@ -23,6 +23,7 @@
 
 import { createStore } from 'zustand/vanilla';
 import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import {
   persist,
   createJSONStorage,
@@ -39,13 +40,40 @@ import type {
 } from '../types';
 import type {
   AgentStreamSnapshotPayload,
+  AgentStreamSubagentPayload,
+  AgentStreamCompactionPayload,
   AgentStreamToolApprovalPayload,
   CodemodeStatusData,
 } from '../types/stream';
+import { SUBAGENT_STOPPED } from '../types/stream';
 import type { ContextSnapshotData } from '../types/context';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 import type { LoadedSkillInfo } from '../types/skills';
 import type { EphemeralSurfaceMode } from '../types/chat';
+
+/** A subagent run is over once its events carry an `end` or an `error`. */
+export function isSubagentRunOver(
+  events: readonly AgentStreamSubagentPayload[],
+): boolean {
+  return events.some(event => event.phase === 'end' || event.phase === 'error');
+}
+
+/**
+ * The subagents with a run still going, by name and in the order their runs
+ * were opened — what a roster badges as running. A name appears once however
+ * many of its runs are open.
+ */
+export function runningSubagentNames(
+  activity: Record<string, readonly AgentStreamSubagentPayload[]>,
+): string[] {
+  const names: string[] = [];
+  for (const events of Object.values(activity)) {
+    const name = events[0]?.subagentName;
+    if (!name || names.includes(name) || isSubagentRunOver(events)) continue;
+    names.push(name);
+  }
+  return names;
+}
 
 // ---------------------------------------------------------------------------
 // Agent Registry types
@@ -122,11 +150,38 @@ export interface AgentRuntimeStoreState {
   wsState: AgentRuntimeWsState;
   approvals: AgentStreamToolApprovalPayload[];
   pendingApprovalCount: number;
+  /**
+   * Live subagent (`delegate_task`) activity keyed by the parent delegation
+   * tool call id. Each entry is the ordered stream of interaction events for
+   * that subagent run.
+   */
+  subagentActivity: Record<string, AgentStreamSubagentPayload[]>;
+  /**
+   * Latest history-compaction activity for the connected agent, or `null` when
+   * no compaction has occurred on the current stream.
+   */
+  compaction: AgentStreamCompactionPayload | null;
   contextSnapshot: ContextSnapshotData | null;
   costUsage: ContextSnapshotData['costUsage'] | null;
   mcpStatus: McpToolsetsStatusResponse | null;
   codemodeStatus: CodemodeStatusData | null;
   fullContext: Record<string, unknown> | null;
+  /**
+   * Bumped when the transcript changed on the server outside a run — a
+   * rewind to a checkpoint, a restore — so the chat reloads what it shows.
+   */
+  historyVersion: number;
+  /**
+   * A decision on a held tool call made outside the chat — a host page's own
+   * approval banner. The chat picks it up and answers the run with it, the
+   * way its own card would; `seq` tells one request from the next.
+   */
+  toolDecisionRequest: {
+    seq: number;
+    approvalId: string;
+    approved: boolean;
+    toolName?: string;
+  } | null;
   monitoringCache: Record<string, MonitoringCacheEntry>;
   loadedSkillsByAgentId: Record<string, LoadedSkillInfo[]>;
   ephemeralNotebookModels: Record<string, INotebookContent>;
@@ -184,7 +239,7 @@ export interface AgentRuntimeStoreActions {
   // ─── Runtime connection ──────────────────────────────────────────
   launchAgent: (options: LaunchAgentOptions) => Promise<AgentConnection>;
   connectAgent: (connection: {
-    podName: string;
+    runtimeName: string;
     environmentName: string;
     serviceManager?: ServiceManager.IManager;
     jupyterBaseUrl?: string;
@@ -201,6 +256,19 @@ export interface AgentRuntimeStoreActions {
   setWsState: (state: AgentRuntimeWsState) => void;
   setWs: (ws: WebSocket | null, agentId?: string) => void;
   applySnapshot: (payload: AgentStreamSnapshotPayload) => void;
+  appendSubagentEvent: (event: AgentStreamSubagentPayload) => void;
+  clearSubagentActivity: () => void;
+  /** Mark every delegation still running as stopped, as the person just did. */
+  stopSubagentActivity: () => void;
+  /** Ask the chat to reload its transcript from the server's next snapshot. */
+  requestHistoryReload: () => void;
+  /** Decide a held tool call from outside the chat: approve or deny it. */
+  requestToolDecision: (decision: {
+    approvalId: string;
+    approved: boolean;
+    toolName?: string;
+  }) => void;
+  setCompaction: (payload: AgentStreamCompactionPayload | null) => void;
   upsertApproval: (approval: AgentStreamToolApprovalPayload) => void;
   removeApproval: (approvalId: string) => void;
   sendDecision: (
@@ -286,11 +354,28 @@ function getTransportEndpoint(
   }
 }
 
+function toAgentRuntimeBaseUrl(baseUrl: string): string {
+  const normalized = baseUrl.replace(/\/$/, '');
+  if (normalized.includes('/api/agent-runtimes')) return normalized;
+  if (normalized.includes('/api/jupyter-server')) {
+    return normalized.replace('/api/jupyter-server', '/api/agent-runtimes');
+  }
+  if (normalized.includes('/jupyter/server/')) {
+    return normalized.replace('/jupyter/server/', '/agent-runtimes/');
+  }
+  if (normalized.includes('/jupyter-server/')) {
+    return normalized.replace('/jupyter-server/', '/agent-runtimes/');
+  }
+  return normalized.replace('/jupyter/', '/agent-runtimes/');
+}
+
 async function createAgentOnRuntime(
   agentBaseUrl: string,
   agentId: string,
   config: AgentConfig = {},
 ): Promise<Pick<AgentConnection, 'agentId' | 'endpoint' | 'isReady'>> {
+  const { iamStore } = await import('@datalayer/core/lib/state');
+  const token = iamStore.getState().token || '';
   if (!config.protocol && !config.agentSpecId) {
     throw new Error(
       'Agent protocol is required. Provide config.protocol from the selected spec/config.',
@@ -339,7 +424,10 @@ async function createAgentOnRuntime(
 
   const response = await fetch(`${agentBaseUrl}/api/v1/agents`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
   });
 
@@ -360,12 +448,19 @@ async function createAgentOnRuntime(
 
 const initialRuntimeState: Pick<
   AgentRuntimeStoreState,
-  'runtime' | 'status' | 'error' | 'isLaunching'
+  | 'runtime'
+  | 'status'
+  | 'error'
+  | 'isLaunching'
+  | 'historyVersion'
+  | 'toolDecisionRequest'
 > = {
   runtime: null,
   status: 'idle',
   error: null,
   isLaunching: false,
+  historyVersion: 0,
+  toolDecisionRequest: null,
 };
 
 const initialWsState: Pick<
@@ -373,6 +468,8 @@ const initialWsState: Pick<
   | 'wsState'
   | 'approvals'
   | 'pendingApprovalCount'
+  | 'subagentActivity'
+  | 'compaction'
   | 'contextSnapshot'
   | 'costUsage'
   | 'mcpStatus'
@@ -384,6 +481,8 @@ const initialWsState: Pick<
   wsState: 'closed',
   approvals: [],
   pendingApprovalCount: 0,
+  subagentActivity: {},
+  compaction: null,
   contextSnapshot: null,
   costUsage: null,
   mcpStatus: null,
@@ -624,13 +723,10 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               'connectAgent requires either jupyterBaseUrl or serviceManager',
             );
           }
-          const agentBaseUrl = baseUrl.replace(
-            '/jupyter/server/',
-            '/agent-runtimes/',
-          );
+          const agentBaseUrl = toAgentRuntimeBaseUrl(baseUrl);
           set({
             runtime: {
-              podName: connection.podName,
+              runtimeName: connection.runtimeName,
               environmentName: connection.environmentName,
               jupyterBaseUrl: baseUrl,
               agentBaseUrl,
@@ -655,7 +751,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             }
 
             const { runtimesUrl: _runtimesUrl, ...runtimeOptions } = config;
-            const runtimePod = await createRuntime({
+            const runtimeRecord = await createRuntime({
               environmentName: runtimeOptions.environmentName,
               creditsLimit: runtimeOptions.creditsLimit,
               type: runtimeOptions.type || 'notebook',
@@ -664,14 +760,11 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               snapshot: runtimeOptions.snapshot,
             });
             set({ status: 'connecting' });
-            const jupyterBaseUrl = runtimePod.ingress;
-            const agentBaseUrl = jupyterBaseUrl.replace(
-              '/jupyter/server/',
-              '/agent-runtimes/',
-            );
+            const jupyterBaseUrl = runtimeRecord.ingress;
+            const agentBaseUrl = toAgentRuntimeBaseUrl(jupyterBaseUrl);
             const conn: AgentConnection = {
-              podName: runtimePod.pod_name,
-              environmentName: runtimePod.environment_name,
+              runtimeName: runtimeRecord.runtime_name,
+              environmentName: runtimeRecord.environment.name,
               jupyterBaseUrl,
               agentBaseUrl,
               status: 'ready',
@@ -694,7 +787,7 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             );
           }
           try {
-            const agentId = config.name || runtime.podName;
+            const agentId = config.name || runtime.runtimeName;
             const agentConnection = await createAgentOnRuntime(
               runtime.agentBaseUrl,
               agentId,
@@ -753,6 +846,70 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             codemodeStatus: payload.codemodeStatus ?? null,
             fullContext: payload.fullContext ?? null,
           })),
+
+        appendSubagentEvent: event =>
+          set(state => {
+            const key = event.toolCallId ?? event.subagentName;
+            const existing = state.subagentActivity[key] ?? [];
+            // A run the person stopped is over. The server's last words —
+            // a delta in flight, its own "Stopped." — arrive a moment later
+            // and would read as a second ending under the first.
+            if (
+              existing.some(
+                entry =>
+                  entry.phase === 'error' && entry.error === SUBAGENT_STOPPED,
+              )
+            ) {
+              return {};
+            }
+            return {
+              subagentActivity: {
+                ...state.subagentActivity,
+                [key]: [...existing, event],
+              },
+            };
+          }),
+
+        clearSubagentActivity: () => set({ subagentActivity: {} }),
+
+        stopSubagentActivity: () =>
+          set(state => {
+            let changed = false;
+            const next: typeof state.subagentActivity = {};
+            for (const [key, events] of Object.entries(
+              state.subagentActivity,
+            )) {
+              if (events.length === 0 || isSubagentRunOver(events)) {
+                next[key] = events;
+                continue;
+              }
+              changed = true;
+              next[key] = [
+                ...events,
+                {
+                  subagentName: events[0].subagentName,
+                  toolCallId: events[0].toolCallId ?? key,
+                  phase: 'error',
+                  error: SUBAGENT_STOPPED,
+                  transport: events[0].transport,
+                },
+              ];
+            }
+            return changed ? { subagentActivity: next } : {};
+          }),
+
+        requestHistoryReload: () =>
+          set(state => ({ historyVersion: state.historyVersion + 1 })),
+
+        requestToolDecision: decision =>
+          set(state => ({
+            toolDecisionRequest: {
+              seq: (state.toolDecisionRequest?.seq ?? 0) + 1,
+              ...decision,
+            },
+          })),
+
+        setCompaction: payload => set({ compaction: payload }),
 
         upsertApproval: approval =>
           set(state => {
@@ -1100,6 +1257,10 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
             ephemeralNotebookModels: state.ephemeralNotebookModels,
             ephemeralDocumentModels: state.ephemeralDocumentModels,
             editorModeByRuntime: state.editorModeByRuntime,
+            // And the delegations already streamed: they are part of the
+            // transcript — the boxes under the tool cards — not of the socket
+            // session, and a reconnect used to blank every one of them.
+            subagentActivity: state.subagentActivity,
           }));
         },
       }),
@@ -1203,6 +1364,78 @@ export const useAgentRuntimeLoadedSkills = (agentId?: string) =>
   useAgentRuntimeStore(s =>
     agentId ? (s.loadedSkillsByAgentId[agentId] ?? []) : [],
   );
+
+const EMPTY_SUBAGENT_EVENTS: readonly AgentStreamSubagentPayload[] = [];
+
+/** Live subagent activity for a given parent `delegate_task` tool call id. */
+export const useAgentRuntimeSubagentActivity = (toolCallId?: string) =>
+  useAgentRuntimeStore(s =>
+    toolCallId
+      ? (s.subagentActivity[toolCallId] ?? EMPTY_SUBAGENT_EVENTS)
+      : EMPTY_SUBAGENT_EVENTS,
+  );
+
+/**
+ * Live subagent activity resolved by tool-call id with a subagent-name
+ * fallback. The backend keys events by the parent run's `tool_call_id`, which
+ * can differ from the id surfaced in the chat transport stream; when the id
+ * misses we fall back to the most recent run for the named subagent.
+ */
+export const useAgentRuntimeSubagentActivityByToolCall = (
+  toolCallId?: string,
+  subagentName?: string,
+) =>
+  useAgentRuntimeStore(s => {
+    if (toolCallId) {
+      const byId = s.subagentActivity[toolCallId];
+      if (byId && byId.length > 0) return byId;
+    }
+    if (subagentName) {
+      const byNameKey = s.subagentActivity[subagentName];
+      if (byNameKey && byNameKey.length > 0) return byNameKey;
+      let match: AgentStreamSubagentPayload[] | undefined;
+      for (const events of Object.values(s.subagentActivity)) {
+        if (events.length > 0 && events[0]?.subagentName === subagentName) {
+          match = events;
+        }
+      }
+      if (match) return match;
+    }
+    return EMPTY_SUBAGENT_EVENTS;
+  });
+
+/**
+ * Key of the currently active (running) subagent run, or `null` when none is
+ * active. A run is active while its event list has no `end`/`error` phase; when
+ * several are active the most recently started one wins.
+ */
+export const useAgentRuntimeActiveSubagentToolCallId = (): string | null =>
+  useAgentRuntimeStore(s => {
+    let activeKey: string | null = null;
+    for (const [key, events] of Object.entries(s.subagentActivity)) {
+      if (events.length === 0) continue;
+      if (!isSubagentRunOver(events)) activeKey = key;
+    }
+    return activeKey;
+  });
+
+/**
+ * Names of the subagents with a run still going, for a roster to badge.
+ * Compared element by element, so a store update that changes nothing about
+ * who is running does not re-render the roster.
+ */
+export const useAgentRuntimeRunningSubagentNames = (): string[] =>
+  useAgentRuntimeStore(
+    useShallow(s => runningSubagentNames(s.subagentActivity)),
+  );
+
+/** Bumped each time the chat is asked to reload its transcript. */
+export const useAgentRuntimeHistoryVersion = () =>
+  useAgentRuntimeStore(s => s.historyVersion);
+
+/** Latest history-compaction activity for the connected agent. */
+export const useAgentRuntimeCompaction = () =>
+  useAgentRuntimeStore(s => s.compaction);
 
 // ---------------------------------------------------------------------------
 // Non-React access

@@ -15,7 +15,7 @@ import {
   type DatalayerClientConfig,
 } from '@datalayer/core/lib/client';
 import type { HealthCheck } from '@datalayer/core/lib/models/HealthCheck';
-import { RuntimesMixin } from './mixins/RuntimesMixin';
+import { RuntimesMixin, type CreateRuntimeOptions } from './mixins/RuntimesMixin';
 import { SpacerMixin } from './mixins/SpacerMixin';
 import type { RuntimeDTO } from '../models/RuntimeDTO';
 import type { EnvironmentDTO } from '../models/EnvironmentDTO';
@@ -24,6 +24,10 @@ import type { SpaceDTO, UpdateSpaceRequest } from '../models/SpaceDTO';
 import type { NotebookDTO } from '../models/NotebookDTO';
 import type { LexicalDTO } from '../models/LexicalDTO';
 import type { ProjectDTO, ProjectDefaultItems } from '../models/ProjectDTO';
+import type {
+  RuntimeMemory,
+  ListRuntimeMemoriesOptions,
+} from '../api/runtimes/runtimes';
 
 // Apply the runtime + content mixins on top of the core client.
 const AgentRuntimesClientWithMixins = SpacerMixin(
@@ -66,18 +70,22 @@ export interface AgentRuntimesClient extends DatalayerCoreClient {
     snapshotId?: string,
   ): Promise<RuntimeDTO>;
   createRuntime(
-    environmentName: string,
-    type: 'notebook' | 'terminal' | 'job',
-    givenName: string,
-    minutesLimit: number,
+    environmentNameOrOptions: string | CreateRuntimeOptions,
+    type?: 'notebook' | 'terminal' | 'job',
+    givenName?: string,
+    minutesLimit?: number,
     fromSnapshotId?: string,
   ): Promise<RuntimeDTO>;
   listRuntimes(): Promise<RuntimeDTO[]>;
-  getRuntime(podName: string): Promise<RuntimeDTO>;
-  deleteRuntime(podName: string): Promise<void>;
+  listRuntimeMemories(
+    options?: ListRuntimeMemoriesOptions,
+  ): Promise<RuntimeMemory[]>;
+  getRuntimeMemory(memoryId: string): Promise<RuntimeMemory>;
+  getRuntime(runtimeName: string): Promise<RuntimeDTO>;
+  deleteRuntime(runtimeName: string): Promise<void>;
   terminateAllRuntimes(): Promise<PromiseSettledResult<void>[]>;
   createSnapshot(
-    podName: string,
+    runtimeName: string,
     name: string,
     description: string,
     stop?: boolean,

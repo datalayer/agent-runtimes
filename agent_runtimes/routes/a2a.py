@@ -4,14 +4,17 @@
 """
 A2A (Agent-to-Agent) protocol routes.
 
-Implements the A2A protocol using fasta2a for agent-to-agent communication.
-This module provides FastA2A application mounts for registered agents.
+Implements the A2A protocol with fasta2a. Every registered agent gets a FastA2A
+application mounted under ``{api_prefix}/a2a/agents/{agent_id}``, run by the
+`A2AWorker` of ``transports/a2a.py`` — the agent adapter with everything it has
+(MCP servers, skills, codemode, guardrails), streamed over ``message/stream``.
 """
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, AsyncIterator
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -19,9 +22,7 @@ from starlette.routing import Mount
 
 try:
     from fasta2a import FastA2A, Skill
-    from fasta2a.broker import InMemoryBroker
     from fasta2a.schema import AgentProvider
-    from fasta2a.storage import InMemoryStorage, StreamingStorageWrapper
 
     FASTA2A_AVAILABLE = True
 except ImportError:
@@ -165,14 +166,19 @@ def register_a2a_agent(
     """
     Register an agent with the A2A server.
 
-    This creates a FastA2A application for the agent that can be mounted
-    in the FastAPI application.
+    Builds a FastA2A application for the agent — its own storage and broker,
+    and an `A2AWorker` running the agent adapter — and mounts it under
+    ``{api_prefix}/a2a/agents/{agent_id}``. Any `BaseAgent` will do: the worker
+    speaks to the adapter, not to the framework agent underneath it, so the
+    agent answers over A2A with the same tools and guardrails it has over the
+    other transports.
 
     Args:
-        agent: The agent to register (must be a PydanticAIAgent)
-        card: Agent card configuration
-        broker: Optional custom broker (defaults to InMemoryBroker)
-        storage: Optional custom storage (defaults to InMemoryStorage)
+        agent: The agent to register.
+        card: Agent card configuration.
+        broker: Optional custom broker (defaults to one kept in the runtime's
+            protocol state store, which runs again the work left unfinished).
+        storage: Optional custom storage (defaults to one kept in that store).
     """
     if not FASTA2A_AVAILABLE:
         logger.warning("fasta2a not installed, A2A agent registration skipped")
@@ -180,99 +186,119 @@ def register_a2a_agent(
 
     agent_id = card.id
 
-    # Check if agent is a PydanticAIAgent with to_a2a method
-    from ..adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from ..transports.a2a import A2AWorker, TaskCancellation
 
-    if isinstance(agent, PydanticAIAdapter) and hasattr(agent._agent, "to_a2a"):
-        # Use pydantic-ai's native to_a2a() method
-        try:
-            # Convert skills to fasta2a Skill format if provided
-            skills = None
-            if card.skills:
-                skills = [
-                    Skill(
-                        id=s.get("id", s.get("name", "").lower().replace(" ", "-")),
-                        name=s.get("name", ""),
-                        description=s.get("description"),
-                    )
-                    for s in card.skills
-                ]
-
-            # Convert provider to fasta2a AgentProvider if provided
-            provider = None
-            if card.provider:
-                provider = AgentProvider(
-                    organization=card.provider.get("organization", ""),
-                    url=card.provider.get("url", ""),
+    try:
+        # Convert skills to fasta2a Skill format if provided
+        skills = None
+        if card.skills:
+            skills = [
+                Skill(
+                    id=s.get("id", s.get("name", "").lower().replace(" ", "-")),
+                    name=s.get("name", ""),
+                    description=s.get("description"),
                 )
+                for s in card.skills
+            ]
 
-            # Create broker and streaming-enabled storage
-            # StreamingStorageWrapper publishes events to broker when tasks are updated
-            a2a_broker = broker or InMemoryBroker()
-            base_storage = storage or InMemoryStorage()
-            streaming_storage = StreamingStorageWrapper(base_storage, a2a_broker)
-
-            # Create FastA2A app using pydantic-ai's to_a2a()
-            a2a_app = agent._agent.to_a2a(
-                name=card.name,
-                url=card.url,
-                version=card.version,
-                description=card.description,
-                provider=provider,
-                skills=skills,
-                storage=streaming_storage,
-                broker=a2a_broker,
+        # Convert provider to fasta2a AgentProvider if provided
+        provider = None
+        if card.provider:
+            provider = AgentProvider(
+                organization=card.provider.get("organization", ""),
+                url=card.provider.get("url", ""),
             )
 
-            # Enable streaming for SSE responses
-            a2a_app.streaming = True
+        # Kept in the runtime's protocol state store, so a task a client was
+        # given the id of outlives this process, and the work it was owed is
+        # run again when the runtime starts (O1-11).
+        from ..protocol_state.a2a import DurableBroker, DurableStorage
+        from ..protocol_state.store import protocol_state_store
 
-            registration = A2AAgentRegistration(
-                agent=agent,
-                card=card,
-                app=a2a_app,
-                broker=a2a_broker,
-                storage=streaming_storage,
-            )
-            _a2a_agents[agent_id] = registration
-
-            # Create mount for this agent
-            mount = Mount(f"/{agent_id}", app=a2a_app)
-            _a2a_mounts.append(mount)
-
-            # If app is available, also add route dynamically to running app
-            if _app is not None:
-                full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=a2a_app)
-                _app.routes.append(full_mount)
-                logger.info(
-                    f"Dynamically mounted A2A route: {_api_prefix}/a2a/agents/{agent_id}/"
-                )
-
-                # Start the lifespan for this agent's TaskManager
-                import asyncio
-
-                try:
-                    if hasattr(a2a_app, "router") and hasattr(
-                        a2a_app.router, "lifespan_context"
-                    ):
-                        lifespan = a2a_app.router.lifespan_context(a2a_app)
-                        asyncio.create_task(
-                            _start_a2a_lifespan(agent_id, a2a_app, lifespan)
-                        )
-                except Exception as e:
-                    logger.warning(f"Could not start lifespan for {agent_id}: {e}")
-
-            logger.info(f"Registered A2A agent (via to_a2a): {agent_id} ({card.name})")
-
-        except Exception as e:
-            logger.error(f"Failed to create A2A app for {agent_id}: {e}")
-            raise
-    else:
-        # For non-Pydantic AI agents, create a wrapper FastA2A app
-        logger.warning(
-            f"Agent {agent_id} is not a PydanticAIAgent, "
-            "A2A support requires pydantic-ai agent with to_a2a() method"
+        a2a_broker = broker or DurableBroker(protocol_state_store(), agent_id)
+        a2a_storage = storage or DurableStorage(protocol_state_store(), agent_id)
+        worker = A2AWorker(
+            broker=a2a_broker,
+            storage=a2a_storage,
+            agent=agent,
+            # What a task spent is counted under the id the agent is served under.
+            agent_id=agent_id,
+            # So `/a2a/terminate` interrupts a running task, not the next one.
+            cancellation=TaskCancellation(
+                register=register_task, unregister=unregister_task, cancel=cancel_task
+            ),
         )
+
+        @asynccontextmanager
+        async def lifespan(app: Any) -> AsyncIterator[None]:
+            # The task manager and the worker start and stop together. A
+            # mounted app's lifespan does not run on its own; it is driven
+            # from here, at registration or at server startup.
+            async with app.task_manager, worker.run():
+                yield
+
+        from fasta2a.schema import AgentExtension
+
+        from ..context.delegation import EXTENSION_URI
+
+        a2a_app = FastA2A(
+            storage=a2a_storage,
+            broker=a2a_broker,
+            name=card.name,
+            url=card.url,
+            version=card.version,
+            description=card.description,
+            provider=provider,
+            skills=skills,
+            # The Datalayer orchestration extension (O2-05): a delegation names
+            # its execution and may resume from a checkpoint; a running task can
+            # be paused at one and steered, at these routes.
+            extensions=[
+                AgentExtension(
+                    uri=EXTENSION_URI,
+                    description=(
+                        "Pause at a checkpoint and resume from it; steer a task while it works."
+                    ),
+                    required=False,
+                    params={"pause": f"{_api_prefix}/a2a/pause", "steer": f"{_api_prefix}/a2a/steer"},
+                )
+            ],
+            lifespan=lifespan,
+        )
+
+        registration = A2AAgentRegistration(
+            agent=agent,
+            card=card,
+            app=a2a_app,
+            broker=a2a_broker,
+            storage=a2a_storage,
+        )
+        _a2a_agents[agent_id] = registration
+
+        # Create mount for this agent
+        mount = Mount(f"/{agent_id}", app=a2a_app)
+        _a2a_mounts.append(mount)
+
+        # If app is available, also add route dynamically to running app
+        if _app is not None:
+            full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=a2a_app)
+            _app.routes.append(full_mount)
+            logger.info(
+                f"Dynamically mounted A2A route: {_api_prefix}/a2a/agents/{agent_id}/"
+            )
+            try:
+                lifespan_context = a2a_app.router.lifespan_context(a2a_app)
+                a2a_app._lifespan_task = asyncio.create_task(
+                    _start_a2a_lifespan(agent_id, a2a_app, lifespan_context)
+                )
+            except Exception as e:
+                logger.warning(f"Could not start lifespan for {agent_id}: {e}")
+
+        logger.info(f"Registered A2A agent: {agent_id} ({card.name})")
+
+    except Exception as e:
+        logger.error(f"Failed to create A2A app for {agent_id}: {e}")
+        raise
 
 
 def unregister_a2a_agent(agent_id: str) -> None:
@@ -282,13 +308,9 @@ def unregister_a2a_agent(agent_id: str) -> None:
     if agent_id in _a2a_agents:
         # Stop lifespan if running
         registration = _a2a_agents[agent_id]
-        if registration.app and hasattr(registration.app, "_lifespan_context"):
-            import asyncio
-
+        if registration.app is not None:
             try:
-                asyncio.create_task(
-                    registration.app._lifespan_context.__aexit__(None, None, None)
-                )
+                _request_lifespan_stop(agent_id, registration.app)
             except Exception as e:
                 logger.warning(f"Could not stop lifespan for {agent_id}: {e}")
 
@@ -333,16 +355,45 @@ def get_a2a_mounts() -> list[Mount]:
 
 async def _start_a2a_lifespan(agent_id: str, app: Any, lifespan: Any) -> None:
     """
-    Start A2A lifespan context for a dynamically registered agent.
+    Run a dynamically registered agent's lifespan, in a task of its own, until asked to stop.
+
+    Entered and exited in the same task on purpose: the lifespan runs the
+    worker's anyio task group, and anyio refuses to exit a cancel scope from a
+    task other than the one that entered it — which is what shutdown did when
+    it exited a context this task had entered, and logged an error for.
     """
+    stop = asyncio.Event()
+    app._lifespan_stop = stop
     try:
         await lifespan.__aenter__()
-        app._lifespan_context = lifespan
-        logger.info(
-            f"Started lifespan for dynamically registered A2A agent: {agent_id}"
-        )
     except Exception as e:
         logger.error(f"Failed to start lifespan for {agent_id}: {e}")
+        return
+    app._lifespan_context = lifespan
+    logger.info(f"Started lifespan for dynamically registered A2A agent: {agent_id}")
+    try:
+        await stop.wait()
+    finally:
+        try:
+            await lifespan.__aexit__(None, None, None)
+            logger.info(f"Stopped lifespan for A2A agent: {agent_id}")
+        except Exception as e:
+            logger.warning(f"Could not stop lifespan for {agent_id}: {e}")
+
+
+def _request_lifespan_stop(agent_id: str, app: Any) -> "asyncio.Task[None] | None":
+    """
+    Ask a dynamically registered agent's lifespan task to stop; returns it, to await.
+
+    An app whose lifespan was entered at server startup has no task of its own
+    and is stopped where it was started, in `stop_a2a_task_managers`.
+    """
+    stop = getattr(app, "_lifespan_stop", None)
+    task = getattr(app, "_lifespan_task", None)
+    if stop is None:
+        return None
+    stop.set()
+    return task
 
 
 async def start_a2a_task_managers() -> None:
@@ -379,12 +430,19 @@ async def stop_a2a_task_managers() -> None:
     Clean up the FastA2A app lifespan contexts.
     """
     for agent_id, registration in _a2a_agents.items():
-        if registration.app and hasattr(registration.app, "_lifespan_context"):
-            try:
-                await registration.app._lifespan_context.__aexit__(None, None, None)
+        app = registration.app
+        if app is None:
+            continue
+        try:
+            task = _request_lifespan_stop(agent_id, app)
+            if task is not None:
+                # Dynamically registered: its own task exits the context.
+                await asyncio.wait_for(task, timeout=10)
+            elif hasattr(app, "_lifespan_context"):
+                await app._lifespan_context.__aexit__(None, None, None)
                 logger.info(f"Stopped lifespan for A2A agent: {agent_id}")
-            except Exception as e:
-                logger.error(f"Failed to stop lifespan for {agent_id}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to stop lifespan for {agent_id}: {e}")
 
 
 # REST endpoint to list available A2A agents
@@ -451,6 +509,64 @@ async def terminate_task(request: TerminateRequest) -> TerminateResponse:
             success=True,
             message=f"Terminated {count} running task(s)",
         )
+
+
+class PauseRequest(BaseModel):
+    """Request to pause a running A2A task at a checkpoint (O2-05)."""
+
+    task_id: str
+
+
+class SteerRequest(BaseModel):
+    """Instructions for a running A2A task, for its model's next request (O2-05)."""
+
+    task_id: str
+    instructions: str
+
+
+@router.post("/pause", response_model=TerminateResponse)
+async def pause_task(request: PauseRequest) -> TerminateResponse:
+    """
+    Pause a running A2A task: it keeps a checkpoint of its conversation and stops.
+
+    Part of the Datalayer orchestration extension (O2-05). The task ends
+    `canceled`, its final status message naming the checkpoint under
+    `datalayer.paused`, and a delegation naming that checkpoint resumes it. A
+    task that names no execution has nowhere to keep a checkpoint, and is
+    stopped instead.
+    """
+    from ..context.delegation import forget_pause, request_pause
+
+    request_pause(request.task_id)
+    if cancel_task(request.task_id):
+        return TerminateResponse(
+            success=True, message=f"Task {request.task_id} is pausing", task_id=request.task_id
+        )
+    forget_pause(request.task_id)
+    return TerminateResponse(
+        success=False,
+        message=f"Task {request.task_id} not found or already completed",
+        task_id=request.task_id,
+    )
+
+
+@router.post("/steer", response_model=TerminateResponse)
+async def steer_task(request: SteerRequest) -> TerminateResponse:
+    """
+    Steer a running A2A task: its model reads the instructions before its next request.
+
+    Part of the Datalayer orchestration extension (O2-05). A task that is not
+    working receives nothing, and the answer says so.
+    """
+    from ..context.delegation import deliver_steer
+
+    if deliver_steer(request.task_id, request.instructions):
+        return TerminateResponse(
+            success=True, message=f"Task {request.task_id} was steered", task_id=request.task_id
+        )
+    return TerminateResponse(
+        success=False, message=f"Task {request.task_id} is not working", task_id=request.task_id
+    )
 
 
 @router.get("/tasks")

@@ -8,6 +8,7 @@ import { MCPServerConfig, ModelConfig } from './chat';
 import type { Protocol } from './protocol';
 import type { AgentValidationConfig } from './execution';
 import { BuiltinTool } from './models';
+import type { AgentSuggestion } from './agentspecs';
 
 /**
  * Default agent configuration values.
@@ -73,7 +74,13 @@ export interface RemoteConfig {
   defaultModel?: string;
   builtinTools: BuiltinTool[];
   mcpServers?: MCPServerConfig[];
-  suggestions?: string[];
+  /**
+   * What the server offers as openers.
+   *
+   * Either shape: a running agent may be older than the catalogue it was built
+   * from, and a string is a suggestion with no marks.
+   */
+  suggestions?: (string | AgentSuggestion)[];
   welcomeMessage?: string;
 }
 

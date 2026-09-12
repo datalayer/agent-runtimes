@@ -16,6 +16,42 @@ import '@testing-library/jest-dom/vitest';
 // Define other globals that might be needed
 (global as any).global = globalThis;
 
+/*
+ * Primer announces through `@primer/live-region-element`, whose `<live-region>`
+ * custom element it expects the document to define.
+ *
+ * jsdom defines no custom elements, and the package's Node build — the one
+ * Vitest loads, because Primer is externalised and Node takes the `node` export
+ * condition — assumes the element is already there. Primer therefore finds a
+ * plain `HTMLElement`, `announceFromElement` is undefined, and every
+ * announcement throws. Tests that assert a clean console then fail on an error
+ * raised nowhere near what they are testing.
+ *
+ * Nothing here has a screen reader, so the element only has to exist and do
+ * nothing. Defined rather than mocked so Primer's own code path runs unchanged.
+ */
+if (
+  typeof customElements !== 'undefined' &&
+  !customElements.get('live-region')
+) {
+  class LiveRegionStub extends HTMLElement {
+    // Both announce methods hand back a handle Primer keeps and cancels when
+    // the announcement is superseded, so returning nothing moves the failure
+    // rather than removing it.
+    announce() {
+      return { cancel() {} };
+    }
+    announceFromElement() {
+      return { cancel() {} };
+    }
+    clear() {}
+    getMessage() {
+      return '';
+    }
+  }
+  customElements.define('live-region', LiveRegionStub);
+}
+
 // Mock DragEvent and other DOM APIs not available in jsdom
 class MockDragEvent extends Event {
   dataTransfer: DataTransfer | null = null;
@@ -64,6 +100,20 @@ Object.defineProperty(window, 'matchMedia', {
 import { vi } from 'vitest';
 
 vi.mock('@datalayer/jupyter-react', () => ({
+  createLiteServiceManager: async () => ({
+    sessions: {
+      startNew: async () => ({
+        kernel: {
+          id: 'test-kernel',
+          requestExecute: () => ({ done: Promise.resolve(), onIOPub: null }),
+          shutdown: async () => {},
+        },
+      }),
+    },
+  }),
+  jupyterReactStore: {
+    getState: () => ({ setServiceManager: () => {} }),
+  },
   useJupyter: () => ({
     defaultKernel: null,
     serviceManager: null,
@@ -83,6 +133,29 @@ vi.mock('@datalayer/jupyter-react', () => ({
     CONNECTING: 'connecting',
     CONNECTED: 'connected',
     DISCONNECTED: 'disconnected',
+  },
+  // Reads JupyterLab's page config off the document. `AgentNotebook` and
+  // `AgentDocument` call it at module scope, so the mock has to answer even
+  // for a test that never renders either.
+  loadJupyterConfig: () => ({}),
+  /*
+   * What turns a tool definition into something callable.
+   *
+   * `createAgentRuntimesTool` builds one per tool, so any test that asks the
+   * adapters for a tool list constructs it — and a missing export here is not
+   * a mock returning nothing, it is a TypeError at construction. The real one
+   * calls the operation and formats the result; this does the first half and
+   * returns the result as it comes, which is what a test asserting on tool
+   * behaviour rather than on wire format wants.
+   */
+  OperationRunner: class OperationRunner {
+    async execute(
+      operation: { execute: (params: unknown, context: unknown) => unknown },
+      params: unknown,
+      context: unknown,
+    ) {
+      return operation.execute(params, context);
+    }
   },
 }));
 

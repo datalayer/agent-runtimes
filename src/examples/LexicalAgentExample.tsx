@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Lexical Example with Agent-Runtimes Integration.
+ * Lexical Example with Agent-Runtimes Integration.
  *
  * This example demonstrates using the agent-runtimes ChatFloating component
  * with lexical tools for AI-assisted document editing.
@@ -16,54 +16,28 @@
  * @module examples/LexicalAgentExample
  */
 
+import type { JSX } from 'react';
 import '@datalayer/jupyter-react/lib/css/PrismCss';
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { $getRoot, $createParagraphNode, EditorState } from 'lexical';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { TRANSFORMERS } from '@lexical/markdown';
-import { registerCodeHighlighting } from '@lexical/code';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { useJupyter } from '@datalayer/jupyter-react';
 import { ThemedJupyterProvider } from './utils/themedProvider';
 import {
   ComponentPickerMenuPlugin,
-  JupyterCellPlugin,
   JupyterInputOutputPlugin,
   DraggableBlockPlugin,
-  ImagesPlugin,
-  HorizontalRulePlugin,
-  EquationsPlugin,
-  YouTubePlugin,
-  ExcalidrawPlugin,
-  CollapsiblePlugin,
-  AutoLinkPlugin,
-  AutoEmbedPlugin,
   LexicalConfigProvider,
   LexicalStatePlugin,
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
-  ListMaxIndentLevelPlugin,
   TableCellResizerPlugin,
-  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 
 // Agent-runtimes imports
@@ -71,11 +45,8 @@ import { ChatFloating } from '../chat';
 import { ChatInlinePlugin } from '../lexical/ChatInlinePlugin';
 import { useChatInlineToolbarItems } from '../lexical/useChatInlineToolbarItems';
 import { useLexicalTools } from '../tools/adapters/agent-runtimes/lexicalHooks';
-import { editorConfig } from './lexical/editorConfig';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
-
-import { DEFAULT_MODEL } from '../specs';
+import { editorExtension } from './lexical/editorConfig';
+import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import '@datalayer/jupyter-lexical/style/index.css';
 import './lexical/lexical-theme.css';
@@ -85,31 +56,8 @@ const LEXICAL_ID = 'agui-lexical-example';
 
 const AGENT_ID = 'lexical-agent-runtime-example';
 
-function getJupyterSandboxUrl(
-  serviceManager?: ServiceManager.IManager,
-): string | undefined {
-  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
-  if (!baseUrl) {
-    return undefined;
-  }
-
-  if (baseUrl.includes('token=')) {
-    return baseUrl;
-  }
-
-  const token = serviceManager?.serverSettings?.token;
-  if (!token) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
+/** The agentspec this example's agent is built from. */
+const AGENTSPEC_ID = 'example-document-agent';
 
 /**
  * Hook to ensure the example-agent exists on the server.
@@ -161,19 +109,6 @@ function LoadContentPlugin({ content }: { content?: string }) {
 }
 
 /**
- * Lexical plugin for Simple code syntax highlighting.
- */
-function CodeHighlightPlugin() {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
-    return registerCodeHighlighting(editor);
-  }, [editor]);
-
-  return null;
-}
-
-/**
  * Wrapper component for kernel-dependent Simple plugins.
  * Accepts a serviceManager so it can initialise a Jupyter kernel
  * (mirrors how the Notebook component bootstraps its runtime).
@@ -215,7 +150,7 @@ function LexicalToolsPlugin({
 }
 
 /**
- * Lexical UI component with full LexicalComposer setup.
+ * Lexical UI component with full extension composer setup.
  * Accepts onToolsReady callback to provide tools to parent component.
  */
 interface LexicalUIProps {
@@ -267,10 +202,10 @@ const LexicalUI = React.memo(function LexicalUI({
           borderColor: 'border.default',
         }}
       >
-        <h1>Agent Runtime Lexical Example</h1>
+        <h1>Lexical Example</h1>
         <p>
-          Platform-agnostic tool usage with agent-runtimes integration. Use the
-          AI copilot to manipulate the document.
+          Platform-agnostic usage with agent-runtimes integration. Use the AI
+          Agent to manipulate the Document.
         </p>
       </Box>
 
@@ -290,40 +225,20 @@ const LexicalUI = React.memo(function LexicalUI({
         >
           {/* LexicalToolsPlugin captures tools from context and passes to parent */}
           <LexicalToolsPlugin onToolsReady={onToolsReady} />
-          <LexicalComposer initialConfig={editorConfig}>
+          <LexicalExtensionComposer
+            extension={editorExtension}
+            contentEditable={null}
+          >
             <div className="lexical-editor-inner" ref={onRef}>
               {/* CRITICAL: LexicalStatePlugin registers the adapter in the store */}
               <LexicalStatePlugin />
-              <RichTextPlugin
-                contentEditable={
-                  <ContentEditable
-                    className="lexical-editor-content"
-                    aria-label="Lexical Editor"
-                  />
-                }
-                ErrorBoundary={LexicalErrorBoundary}
+              <ContentEditable
+                className="lexical-editor-content"
+                aria-label="Lexical Editor"
               />
               <OnChangePlugin onChange={handleChange} />
-              <HistoryPlugin />
-              <AutoFocusPlugin />
-              <ListPlugin />
-              <CheckListPlugin />
-              <LinkPlugin />
-              <AutoLinkPlugin />
-              <ListMaxIndentLevelPlugin maxDepth={7} />
-              <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
               <LoadContentPlugin content={content} />
-              <CodeHighlightPlugin />
-              <ImagesPlugin captionsEnabled={false} />
-              <HorizontalRulePlugin />
-              <EquationsPlugin />
-              <YouTubePlugin />
-              <ExcalidrawPlugin />
-              <CollapsiblePlugin />
-              <AutoEmbedPlugin />
-              <TablePlugin />
               <TableCellResizerPlugin />
-              <JupyterCellPlugin />
               {/* Wrap kernel plugins with Simple provider */}
               <ThemedJupyterProvider>
                 <SimpleKernelPluginsInner serviceManager={serviceManager} />
@@ -351,7 +266,7 @@ const LexicalUI = React.memo(function LexicalUI({
                 onPendingPromptConsumed={clearPendingPrompt}
               />
             </div>
-          </LexicalComposer>
+          </LexicalExtensionComposer>
         </LexicalConfigProvider>
       </Box>
     </Box>
@@ -370,54 +285,38 @@ function LexicalWithChat({
   content,
   serviceManager,
 }: LexicalWithChatProps): JSX.Element {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${AGENT_ID}`;
-  const [createRequested, setCreateRequested] = useState(false);
-  const jupyterSandboxUrl = useMemo(
-    () => getJupyterSandboxUrl(serviceManager),
-    [serviceManager],
-  );
-  const { agentId, isReady, status, error, createAgent } =
-    useExampleAgentRuntime({
-      exampleId: 'LexicalAgentExample',
-      agentName: AGENT_ID,
-      autoCreateAgent: false,
-      agentConfig: {
-        name: AGENT_ID,
-        description: 'Demo agent for lexical example',
-        protocol: 'vercel-ai',
-        model: DEFAULT_MODEL,
-        systemPrompt:
-          'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
-        enableCodemode: false,
-        sandboxVariant: 'jupyter',
-        jupyterSandbox: jupyterSandboxUrl,
-      },
-    });
+  // Lifted out of the editor below, and declared here so the hook that routes
+  // them is downstream of them.
+  const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
 
-  useEffect(() => {
-    if (!jupyterSandboxUrl || createRequested || agentId) {
-      return;
-    }
-    setCreateRequested(true);
-    void createAgent({
-      name: AGENT_ID,
-      description: 'Demo agent for lexical example',
-      protocol: 'vercel-ai',
-      model: DEFAULT_MODEL,
-      systemPrompt:
-        'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
-      enableCodemode: false,
-      sandboxVariant: 'jupyter',
-      jupyterSandbox: jupyterSandboxUrl,
-    }).catch(() => {
-      setCreateRequested(false);
-    });
-  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
-  const effectiveReady = isReady || status === 'ready';
+  const {
+    agentReady,
+    protocol: protocolConfig,
+    chatFrontendTools,
+    error,
+    unavailableReason,
+  } = useExampleJupyterAgent({
+    exampleId: 'LexicalAgentExample',
+    agentName: AGENT_ID,
+    specId: AGENTSPEC_ID,
+    description: 'Demo agent for lexical example',
+    systemPrompt:
+      'You are a helpful AI assistant that helps users work with documents. You can help with writing, editing, and formatting content.',
+    serviceManager,
+    // Lifted out of the editor by `onToolsReady`, so they reach the hook a
+    // render later than in the other examples. The protocol config is rebuilt
+    // when they arrive.
+    frontendTools: tools,
+  });
+  // One failed attempt is reported, not retried — see
+  // `useExampleJupyterAgent`.
+  const chatError = error || unavailableReason;
+
+  // The example's own agent, not merely the runtime: on the cloud target the
+  // runtime is ready before this agent has been registered on it.
+  const effectiveReady = agentReady;
 
   // State to hold tools - populated by LexicalToolsPlugin inside the context
-  const [tools, setTools] = useState<ReturnType<typeof useLexicalTools>>([]);
 
   // Stable callback for receiving tools from LexicalToolsPlugin
   // NOTE: Do NOT use a key={...} on ChatFloating to force re-render on tool changes.
@@ -444,11 +343,11 @@ function LexicalWithChat({
       <LexicalUI
         content={content}
         serviceManager={serviceManager}
-        endpoint={vercelAiEndpoint}
+        endpoint={protocolConfig.endpoint}
         onToolsReady={handleToolsReady}
       />
 
-      {error && (
+      {chatError && (
         <Box
           sx={{
             position: 'fixed',
@@ -461,20 +360,20 @@ function LexicalWithChat({
             maxWidth: 300,
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>Error:</strong> {chatError}
         </Box>
       )}
 
       {effectiveReady && (
         <ChatFloating
-          protocol="vercel-ai"
-          endpoint={vercelAiEndpoint}
+          kernelIndicatorPlacement="right"
+          protocol={protocolConfig}
           title="Lexical AI Agent Runtime"
           description="Hi! I can help you edit documents. Try: 'Insert a heading', 'Add a code block', or 'Create a list'"
           defaultOpen={true}
           defaultViewMode="panel"
           position="bottom-right"
-          frontendTools={tools}
+          frontendTools={chatFrontendTools}
           useStore={false}
           showModelSelector={true}
           showToolsMenu={true}

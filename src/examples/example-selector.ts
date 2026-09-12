@@ -18,11 +18,15 @@ export interface ExampleEntry {
 const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bAg Ui\b/g, 'AG-UI'],
   [/\bA2 Ui\b/g, 'A2UI'],
+  [/\bA2 A\b/g, 'A2A'],
   [/\bCopilot Kit\b/g, 'CopilotKit'],
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],
   [/\bOtel\b/g, 'OTEL'],
-  [/\bAgent Specs\b/g, 'Agent Specifications'],
+  [/\bAgentspecs\b/g, 'Agent Specifications'],
+  // The document editor is Lexical underneath; the examples are about the
+  // document.
+  [/\bLexical\b/g, 'Document'],
 ];
 
 function humanizeExampleName(name: string): string {
@@ -42,8 +46,9 @@ function inferTags(id: string): string[] {
   if (id.startsWith('Agent')) tags.add('agent');
   if (id.startsWith('AgUi')) tags.add('ag-ui');
   if (id.startsWith('A2Ui')) tags.add('a2ui');
+  if (id.startsWith('AgentA2A')) tags.add('a2a');
   if (id.includes('Notebook')) tags.add('notebook');
-  if (id.includes('Lexical')) tags.add('lexical');
+  if (id.includes('Lexical') || id.includes('Document')) tags.add('document');
   if (id.includes('Chat')) tags.add('chat');
   if (id.includes('Sandbox')) tags.add('sandbox');
   if (id.includes('Monitoring') || id.includes('Otel'))
@@ -101,6 +106,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'A2UI viewer integration example.',
   ),
   makeEntry(
+    'A2UiJupyterOutputExample',
+    () => import('./A2UiJupyterOutputExample'),
+    'One Jupyter execution shown twice: raw kernel outputs, and the A2UI surface the server converter makes of them.',
+  ),
+  makeEntry(
     'A2UiAgentExample',
     () => import('./A2UiAgentExample'),
     'A2UI Agent with built-in chat component and Python A2UI extension surface.',
@@ -141,9 +151,24 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Configure and run agents from specs and transports.',
   ),
   makeEntry(
-    'CellSimpleExample',
-    () => import('./CellSimpleExample'),
-    'Simple Jupyter cell integration example.',
+    'NotebookPageAgent',
+    () => import('./NotebookPageAgent'),
+    'A notebook as a page: floating prompt on top, a team of agents working in it.',
+  ),
+  makeEntry(
+    'DocumentPageAgent',
+    () => import('./DocumentPageAgent'),
+    'A document as a page: floating prompt on top, an agent writing in it.',
+  ),
+  makeEntry(
+    'DecksAgent',
+    () => import('./DecksAgent'),
+    'A deck beside the chat: the decks plugin in a Loop, and an agent that writes presentations as data.',
+  ),
+  makeEntry(
+    'CellExample',
+    () => import('./CellExample'),
+    'Simple cell example.',
   ),
   makeEntry(
     'ChatCustomExample',
@@ -163,7 +188,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'CopilotKitLexicalExample',
     () => import('./CopilotKitLexicalExample'),
-    'CopilotKit integration with Lexical editor.',
+    'CopilotKit integration with the document editor.',
   ),
   makeEntry(
     'CopilotKitNotebookExample',
@@ -174,6 +199,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentCheckpointsExample',
     () => import('./AgentCheckpointsExample'),
     'Checkpoint and resume lifecycle for agents.',
+  ),
+  makeEntry(
+    'AgentCompactionExample',
+    () => import('./AgentCompactionExample'),
+    'Set a context token budget and watch history compaction summarize older messages, with live from/to token and timing details.',
+    ['example', 'agent', 'compaction', 'context', 'tokens'],
   ),
   makeEntry(
     'AgentCodemodeExample',
@@ -208,6 +239,23 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'inference', 'provider', 'runtime'],
   ),
   makeEntry(
+    'LoopWorkspaceExample',
+    () => import('./LoopWorkspaceExample'),
+    'The LOOP workspace: a blank shell, with the chat, the editors and the plugin list all contributed as plugins.',
+    // `owns-sandbox-control`: this example brings its own sandbox switch, so
+    // the shell hides the one in its header rather than showing two controls
+    // for one sandbox — and a second one that would not agree with the first.
+    ['example', 'loop', 'workspace', 'sandbox', 'owns-sandbox-control'],
+  ),
+  makeEntry(
+    'LoopShellExample',
+    () => import('./LoopShellExample'),
+    'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
+    // `owns-sandbox-control`: the shell is pinned to the browser sandbox, so
+    // the page's selector would offer three targets it cannot move to.
+    ['example', 'loop', 'shell', 'prompt', 'editors', 'owns-sandbox-control'],
+  ),
+  makeEntry(
     'AgentLoopExample',
     () => import('./AgentLoopExample'),
     'Define and launch an agent execution loop (observe/think/act/evaluate) over a live notebook, driven by generic loop specs.',
@@ -239,8 +287,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'OpenTelemetry instrumentation and traces example.',
   ),
   makeEntry(
-    'AgentSandboxExample',
-    () => import('./AgentSandboxExample'),
+    'AgentCodeSandboxExample',
+    () => import('./AgentCodeSandboxExample'),
     'Sandbox execution variants and context controls.',
   ),
   makeEntry(
@@ -251,7 +299,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'AgentSubagentsExample',
     () => import('./AgentSubagentsExample'),
-    'Multi-agent delegation with subagents-pydantic-ai.',
+    'Multi-agent delegation with the in-repo subagents capability.',
+  ),
+  makeEntry(
+    'AgentA2AExample',
+    () => import('./AgentA2AExample'),
+    'Delegation to separate agents over the A2A protocol, launched locally or on Datalayer runtimes.',
   ),
   makeEntry(
     'AgentNotificationsExample',
@@ -276,12 +329,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'LexicalAgentExample',
     () => import('./LexicalAgentExample'),
-    'Lexical document integration example.',
+    'Document agent integration example.',
   ),
   makeEntry(
     'LexicalAgentSidebarExample',
     () => import('./LexicalAgentSidebarExample'),
-    'Lexical with sidebar orchestration example.',
+    'Document agent with sidebar orchestration example.',
   ),
   makeEntry(
     'NotebookAgentExample',

@@ -115,6 +115,10 @@ export interface UseAIAgentsWebSocketResult {
 // ─── Hook ────────────────────────────────────────────────────────────
 
 const RECONNECT_DELAY_MS = 3_000;
+// Buffer outgoing messages sent while the socket is briefly down (e.g. a user
+// approves during an auto-reconnect window) and flush them once reconnected.
+const OUTBOUND_QUEUE_TTL_MS = 30_000;
+const OUTBOUND_QUEUE_MAX = 50;
 const WS_DEFAULT_PATH = `${API_BASE_PATHS.AI_AGENTS}/ws`;
 
 const isDevTraceEnabled = (): boolean => {
@@ -170,6 +174,9 @@ export function useAIAgentsWebSocket(
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const outboundQueueRef = useRef<
+    Array<{ payload: unknown; expiresAt: number }>
+  >([]);
   // Keep a ref of channels so we can re-subscribe on reconnect without
   // tearing down the socket when the array reference changes.
   const channelsRef = useRef<string[]>(options?.channels ?? []);
@@ -243,6 +250,24 @@ export function useAIAgentsWebSocket(
         const channels = channelsRef.current;
         if (channels.length > 0) {
           ws.send(JSON.stringify({ subscribe: { channels } }));
+        }
+
+        // Flush messages buffered while the socket was down (dropping any
+        // that have exceeded their TTL) so decisions aren't lost on a blip.
+        const now = Date.now();
+        const queued = outboundQueueRef.current;
+        outboundQueueRef.current = [];
+        for (const item of queued) {
+          if (item.expiresAt < now) continue;
+          try {
+            ws.send(
+              typeof item.payload === 'string'
+                ? item.payload
+                : JSON.stringify(item.payload),
+            );
+          } catch {
+            // Drop on serialization/send failure.
+          }
         }
       };
 
@@ -420,6 +445,19 @@ export function useAIAgentsWebSocket(
     send: (payload: unknown) => {
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN) {
+        // Not open: buffer for delivery on the next (auto)reconnect so a click
+        // during a transient drop isn't lost. Only when a reconnect is coming.
+        if (enabled && token && autoReconnectRef.current) {
+          const queue = outboundQueueRef.current;
+          if (queue.length >= OUTBOUND_QUEUE_MAX) {
+            queue.shift();
+          }
+          queue.push({
+            payload,
+            expiresAt: Date.now() + OUTBOUND_QUEUE_TTL_MS,
+          });
+          return true;
+        }
         return false;
       }
       try {

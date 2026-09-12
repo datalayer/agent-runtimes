@@ -25,7 +25,8 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { createAgentInferencePlugin } from '../loop/plugins/agent-inference';
 import { useAIAgentsWebSocket } from '../hooks';
 
 const AGENTSPEC_ID = 'example-inference';
@@ -70,7 +71,7 @@ const ProviderBadge: React.FC<{ provider: InferenceProviderKind }> = ({
       borderColor: 'border.default',
       fontSize: 0,
       color: 'fg.muted',
-      bg: 'canvas.inset',
+      bg: 'canvas.default',
       textTransform: 'uppercase',
       letterSpacing: '0.03em',
     }}
@@ -102,12 +103,8 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
       return 'local inference';
     }
     const env = (import.meta as any).env ?? {};
-    return (
-      env.VITE_DATALAYER_AI_INFERENCE_URL ||
-      env.VITE_DATALAYER_URL ||
-      'https://prod1.datalayer.run'
-    );
-  }, [provider]);
+    return env.VITE_DATALAYER_AI_INFERENCE_URL || baseUrl;
+  }, [provider, baseUrl]);
 
   const authFetch = useCallback(
     (url: string, init: RequestInit = {}) => {
@@ -170,7 +167,6 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             body: JSON.stringify({ provider: nextProvider }),
           },
         );
-
         appendProviderEvent(
           'configure.provider',
           `Configured runtime inference provider to ${nextProvider}`,
@@ -179,36 +175,15 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             provider: nextProvider,
           },
         );
-
-        const name = uniqueAgentId(`${AGENT_NAME}-${nextProvider}`);
-        const createResponse = await authFetch(`${baseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name,
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            inferenceProvider: nextProvider,
-          }),
-        });
-
-        if (!createResponse.ok) {
-          const detail = await createResponse.text();
-          throw new Error(
-            detail || `Failed to create agent (${createResponse.status})`,
-          );
-        }
-
-        const payload = (await createResponse.json()) as { id?: string };
-        const nextAgentId = payload.id || name;
-
+        // A new agent for the provider: the Loop creates it from the
+        // capacity plugin's blueprint, provider included, when it mounts.
+        const nextAgentId = uniqueAgentId(`${AGENT_NAME}-${nextProvider}`);
         if (requestEpoch !== requestEpochRef.current) {
           return;
         }
-
         currentAgentRef.current = nextAgentId;
         setAgentId(nextAgentId);
-
-        appendProviderEvent('agent.created', 'Launched local agent runtime', {
+        appendProviderEvent('agent.launched', 'Agent launched by the Loop', {
           agentId: nextAgentId,
           agentSpecId: AGENTSPEC_ID,
           inferenceProvider: nextProvider,
@@ -250,6 +225,10 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
   const onProviderChange = useCallback((next: InferenceProviderKind) => {
     setProvider(next);
   }, []);
+  const plugins = useMemo(
+    () => [createAgentInferencePlugin(provider)],
+    [provider],
+  );
 
   useAIAgentsWebSocket({
     enabled: Boolean(agentId) && !isLaunching,
@@ -406,51 +385,15 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             }}
           >
             {agentId && !isLaunching ? (
-              <Chat
-                protocol="vercel-ai"
-                baseUrl={baseUrl}
+              <LoopEmbed
+                key={agentId}
+                serverUrl={baseUrl}
+                target="local"
+                showAgentVariants
                 agentId={agentId}
-                authToken={token ?? undefined}
-                title="Agent Inference Provider Example"
-                subtitle={`Spec: ${AGENTSPEC_ID}`}
-                placeholder="Ask the inference provider something..."
-                showHeader={true}
-                showNewChatButton={true}
-                showClearButton={true}
-                showModelSelector={true}
-                showToolsMenu={true}
-                showSkillsMenu={true}
-                showTokenUsage={true}
-                autoFocus
-                height="100%"
-                runtimeId={agentId}
-                historyEndpoint={`${baseUrl}/api/v1/history`}
-                onMessageSent={content => {
-                  appendProviderEvent(
-                    'provider.request',
-                    `Sent message via ${provider}`,
-                    {
-                      provider,
-                      agentId,
-                      content,
-                    },
-                  );
-                }}
-                onMessageReceived={message => {
-                  appendProviderEvent(
-                    'provider.message',
-                    'Received stream message',
-                    message,
-                  );
-                }}
-                suggestions={[
-                  {
-                    title: 'Compare providers',
-                    message:
-                      'Give me a short 3-point comparison between local and datalayer inference providers.',
-                  },
-                ]}
-                submitOnSuggestionClick
+                editors={false}
+                showHeader
+                plugins={plugins}
               />
             ) : (
               <Box
@@ -478,7 +421,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             gap: 2,
             minHeight: 0,
             overflow: 'hidden',
-            bg: 'canvas.inset',
+            bg: 'canvas.default',
           }}
         >
           <Heading as="h3" sx={{ fontSize: 2 }}>
@@ -574,7 +517,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
                         mb: 0,
                         p: 2,
                         borderRadius: 2,
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         fontSize: 0,
                         whiteSpace: 'pre-wrap',
                         fontFamily: 'mono',

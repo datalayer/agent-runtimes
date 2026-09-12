@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Evals management mixin for Datalayer Core."""
 
 from __future__ import annotations
@@ -115,53 +112,80 @@ class EvalsMixin:
         billing_entity_uid: Optional[str] = None,
         account_uid: Optional[str] = None,
     ) -> dict[str, Any]:
-        if not isinstance(spec, dict):
-            raise ValueError("spec must be a JSON object")
+        # One derivation of the body for every caller (the schema module is
+        # what the CLI, the action and the service's import share); the
+        # overrides given here replace the spec's own values.
+        from agent_runtimes.evals.spec_schema import evalset_payload_from_spec
 
-        resolved_name = str(
-            name if name is not None else spec.get("name") or ""
-        ).strip()
-        if not resolved_name:
+        payload = evalset_payload_from_spec(spec)
+        if name is not None:
+            payload["name"] = str(name).strip()
+        if description is not None:
+            payload["description"] = str(description)
+        if run_environment is not None:
+            payload["run_environment"] = str(run_environment)
+        if kind is not None:
+            payload["kind"] = str(kind)
+        if not payload["name"]:
             raise ValueError("spec.name is required when name is not provided")
 
-        resolved_description = str(
-            description if description is not None else spec.get("description") or ""
-        )
-        resolved_run_environment = str(
-            run_environment
-            if run_environment is not None
-            else spec.get("run_environment") or "sdk"
-        )
-        resolved_kind = str(kind if kind is not None else spec.get("kind") or "batch")
-
-        schema = spec.get("schema") if isinstance(spec.get("schema"), dict) else {}
-        metadata = (
-            spec.get("metadata") if isinstance(spec.get("metadata"), dict) else {}
-        )
-        tags = [str(tag) for tag in (spec.get("tags") or []) if str(tag).strip()]
-        evalset_evaluators = [
-            item
-            for item in (spec.get("evalset_evaluators") or [])
-            if isinstance(item, dict)
-        ]
-        report_evaluators = [
-            item
-            for item in (spec.get("report_evaluators") or [])
-            if isinstance(item, dict)
-        ]
-        cases = [item for item in (spec.get("cases") or []) if isinstance(item, dict)]
-
         return self.evals_create_eval(
-            name=resolved_name,
-            description=resolved_description,
-            run_environment=resolved_run_environment,
-            kind=resolved_kind,
-            schema=schema,
-            evalset_evaluators=evalset_evaluators,
-            report_evaluators=report_evaluators,
-            tags=tags,
-            metadata=metadata,
-            cases=cases,
+            **payload,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_import_eval(
+        self,
+        *,
+        spec: dict[str, Any],
+        run_environment: Optional[str] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Import an ``*.evalset.json`` spec through the service's own import
+        route — the one the wizard uses — so the derivation from the spec
+        happens once, server-side. The answer carries the evalset and the
+        ``unsupported_evaluators`` the platform dropped."""
+        body: dict[str, Any] = {"spec": spec}
+        if run_environment:
+            body["run_environment"] = str(run_environment)
+        return self._evals_request(
+            "/evalsets/import",
+            method="POST",
+            json_body=body,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_export_eval(
+        self,
+        evalset_id: str,
+        *,
+        format: str = "json",
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The evalset as a spec (``json``) or as a pydantic-evals dataset."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/export",
+            method="GET",
+            params={"format": format},
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_list_subjects(
+        self,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """What an experiment can run: the subject kinds, which execute, and
+        the models AI Inference offers (BENCHMARK.md, B2-11)."""
+        return self._evals_request(
+            "/subjects",
+            method="GET",
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
@@ -431,6 +455,127 @@ class EvalsMixin:
             "/live/events",
             method="GET",
             params=params,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    # --- Launches (BENCHMARK.md, B2-03, B2-07, B2-15) ---
+
+    def _launch_body(
+        self,
+        *,
+        experiment_ids: list[str],
+        run_mode: str,
+        config: Optional[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return {
+            "experiment_ids": [
+                str(item) for item in experiment_ids if str(item or "").strip()
+            ],
+            "run_mode": str(run_mode or "batch"),
+            "config": dict(config or {}),
+        }
+
+    def evals_validate_launch(
+        self,
+        evalset_id: str,
+        *,
+        experiment_ids: list[str],
+        run_mode: str = "batch",
+        config: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The plan of a launch before it is made: estimated duration and
+        cost, the compute, and the problems that would stop it. Nothing is
+        created."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/launches/validate",
+            method="POST",
+            json_body=self._launch_body(
+                experiment_ids=experiment_ids, run_mode=run_mode, config=config
+            ),
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_create_launch(
+        self,
+        evalset_id: str,
+        *,
+        experiment_ids: list[str],
+        run_mode: str = "batch",
+        config: Optional[dict[str, Any]] = None,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """One submission of a benchmark across its experiments: one queued
+        run per experiment, executed by the platform. ``config`` carries
+        ``concurrency``, ``environment``, ``time_reservation`` (minutes),
+        ``request_timeout_seconds``, ``budget`` (credits) and ``retention``."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}/launches",
+            method="POST",
+            json_body=self._launch_body(
+                experiment_ids=experiment_ids, run_mode=run_mode, config=config
+            ),
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_list_launches(
+        self,
+        *,
+        evalset_id: Optional[str] = None,
+        status: Optional[str] = None,
+        include_archived: bool = False,
+        limit: int = 50,
+        offset: int = 0,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "limit": limit,
+            "offset": offset,
+            "include_archived": include_archived,
+        }
+        if evalset_id:
+            params["evalset_id"] = evalset_id
+        if status:
+            params["status"] = status
+        return self._evals_request(
+            "/launches",
+            method="GET",
+            params=params,
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_get_launch(
+        self,
+        launch_id: str,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The launch and its runs."""
+        return self._evals_request(
+            f"/launches/{launch_id}",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_cancel_launch(
+        self,
+        launch_id: str,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        return self._evals_request(
+            f"/launches/{launch_id}/cancel",
+            method="POST",
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )

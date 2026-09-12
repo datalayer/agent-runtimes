@@ -138,11 +138,13 @@ async def delegate_to_agent(
         metadata: dict[str, Any] = {}
 
         if hasattr(result, "usage"):
-            usage = result.usage()
-            tokens_used = getattr(usage, "total_tokens", 0) or 0
-            metadata["requests"] = getattr(usage, "requests", 0)
-            metadata["request_tokens"] = getattr(usage, "request_tokens", 0)
-            metadata["response_tokens"] = getattr(usage, "response_tokens", 0)
+            usage_candidate = getattr(result, "usage", None)
+            usage = usage_candidate() if callable(usage_candidate) else usage_candidate
+            if usage is not None:
+                tokens_used = getattr(usage, "total_tokens", 0) or 0
+                metadata["requests"] = getattr(usage, "requests", 0)
+                metadata["input_tokens"] = getattr(usage, "input_tokens", 0)
+                metadata["output_tokens"] = getattr(usage, "output_tokens", 0)
 
         if hasattr(result, "cost"):
             cost_info = result.cost()

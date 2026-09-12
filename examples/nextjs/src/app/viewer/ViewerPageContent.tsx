@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 'use client';
 
 import { useEffect, useState, Suspense, useRef } from 'react';
@@ -64,7 +59,7 @@ function ViewerContent() {
   const [error, setError] = useState<string | null>(null);
   const [isTerminating, setIsTerminating] = useState(false);
   const runtimeIdRef = useRef<string | null>(null);
-  const podNameRef = useRef<string | null>(null);
+  const runtimeNameRef = useRef<string | null>(null);
 
   const notebookId = searchParams.get('notebook');
   const environment = searchParams.get('environment');
@@ -120,9 +115,9 @@ function ViewerContent() {
     return notebook;
   };
 
-  const terminateRuntime = (podName: string) => {
+  const terminateRuntime = (runtimeName: string) => {
     // Use deleteRuntime from core, same functionality
-    return deleteRuntime({ id: podName });
+    return deleteRuntime({ id: runtimeName });
   };
 
   useEffect(() => {
@@ -187,24 +182,27 @@ function ViewerContent() {
 
     try {
       // Get pod name from multiple sources
-      let podName = activeNotebook?.podName || podNameRef.current;
+      let runtimeName = activeNotebook?.runtimeName || runtimeNameRef.current;
 
       // If no pod name from state, try to get it from localStorage
-      if (!podName && notebookId && environment) {
+      if (!runtimeName && notebookId && environment) {
         const runtimeKey = `${notebookId}_${environment}`;
         const storedRuntime = getStoredRuntime(runtimeKey);
         if (storedRuntime) {
-          podName = storedRuntime.podName;
-          console.log('Retrieved pod name from localStorage:', podName);
+          runtimeName = storedRuntime.runtimeName;
+          console.log('Retrieved pod name from localStorage:', runtimeName);
         }
       }
 
-      console.log('Attempting to terminate runtime with pod name:', podName);
+      console.log(
+        'Attempting to terminate runtime with pod name:',
+        runtimeName,
+      );
 
       // If we have a pod name, terminate it
-      if (podName) {
+      if (runtimeName) {
         try {
-          await terminateRuntime(podName);
+          await terminateRuntime(runtimeName);
           console.log('Runtime terminated successfully');
         } catch (error: any) {
           // If error is not 404 (already terminated), show error
@@ -368,9 +366,9 @@ function ViewerContent() {
             notebookPath={notebookId}
             runtime={environment}
             notebookContent={notebookData?.content}
-            onRuntimeCreated={(runtimeId, podName) => {
+            onRuntimeCreated={(runtimeId, runtimeName) => {
               runtimeIdRef.current = runtimeId;
-              podNameRef.current = podName;
+              runtimeNameRef.current = runtimeName;
               // Update active notebook with runtime ID and pod name
               if (notebookId && environment) {
                 const viewerUrl = `/viewer?notebook=${encodeURIComponent(notebookId)}&environment=${encodeURIComponent(environment)}`;
@@ -383,7 +381,7 @@ function ViewerContent() {
                   environment: environment,
                   viewerUrl: viewerUrl,
                   runtimeId: runtimeId,
-                  podName: podName,
+                  runtimeName: runtimeName,
                 });
               }
             }}

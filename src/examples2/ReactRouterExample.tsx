@@ -189,7 +189,7 @@ const Layout: React.FC = () => {
             to="/"
             style={({ isActive }) => ({
               fontWeight: isActive ? 'bold' : 'normal',
-              color: isActive ? '#0969da' : 'inherit',
+              color: isActive ? '#16A085' : 'inherit',
               textDecoration: 'none',
             })}
           >
@@ -199,7 +199,7 @@ const Layout: React.FC = () => {
             to="/dashboard"
             style={({ isActive }) => ({
               fontWeight: isActive ? 'bold' : 'normal',
-              color: isActive ? '#0969da' : 'inherit',
+              color: isActive ? '#16A085' : 'inherit',
               textDecoration: 'none',
             })}
           >
@@ -209,7 +209,7 @@ const Layout: React.FC = () => {
             to="/products"
             style={({ isActive }) => ({
               fontWeight: isActive ? 'bold' : 'normal',
-              color: isActive ? '#0969da' : 'inherit',
+              color: isActive ? '#16A085' : 'inherit',
               textDecoration: 'none',
             })}
           >
@@ -219,7 +219,7 @@ const Layout: React.FC = () => {
             to="/users/john-doe"
             style={({ isActive }) => ({
               fontWeight: isActive ? 'bold' : 'normal',
-              color: isActive ? '#0969da' : 'inherit',
+              color: isActive ? '#16A085' : 'inherit',
               textDecoration: 'none',
             })}
           >
@@ -229,7 +229,7 @@ const Layout: React.FC = () => {
             to="/settings"
             style={({ isActive }) => ({
               fontWeight: isActive ? 'bold' : 'normal',
-              color: isActive ? '#0969da' : 'inherit',
+              color: isActive ? '#16A085' : 'inherit',
               textDecoration: 'none',
             })}
           >

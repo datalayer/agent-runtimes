@@ -149,6 +149,7 @@ Be concise, helpful, and provide working code examples when appropriate.`,
               </Box>
             ) : agentId ? (
               <Chat
+                kernelIndicatorPlacement="right"
                 protocol="ag-ui"
                 agentId={agentId}
                 showModelSelector={true}

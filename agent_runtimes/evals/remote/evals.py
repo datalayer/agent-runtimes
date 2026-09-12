@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Shared helpers for evals CLI and integrations."""
 
 from __future__ import annotations
@@ -18,16 +15,8 @@ from datalayer_core.utils.urls import DatalayerURLs
 
 from agent_runtimes.client import AgentClient
 
-_TERMINAL_RUN_STATES = {
-    "completed",
-    "failed",
-    "error",
-    "cancelled",
-    "success",
-    "succeeded",
-    "passed",
-    "done",
-}
+from agent_runtimes.evals.status import is_terminal_run_status
+from agent_runtimes.evals.spec_schema import validate_evalset_spec
 
 
 def parse_json_value(raw: Optional[str], flag_name: str) -> dict[str, Any]:
@@ -98,10 +87,8 @@ def load_evalset_spec(
     if not path.exists():
         raise FileNotFoundError(f"Evalset spec file not found: {path}")
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Evalset spec must be a JSON object: {path}")
-    if not str(payload.get("name") or "").strip():
-        raise ValueError(f"Evalset spec is missing 'name': {path}")
+    # The schema says what an evalset spec is; a problem is named by path.
+    validate_evalset_spec(payload, source=str(path))
     if expected_kind is not None:
         kind = str(payload.get("kind") or "").strip().lower()
         if kind and kind != expected_kind:
@@ -146,7 +133,7 @@ def watch_runs(
             )
             statuses[run_id] = status
             counts[status] = counts.get(status, 0) + 1
-            if status not in _TERMINAL_RUN_STATES:
+            if not is_terminal_run_status(status):
                 pending.append(run_id)
         if verbose:
             elapsed = int(time.time() - started)
@@ -207,6 +194,20 @@ def build_eval_report(
         billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
+
+
+def build_eval_report_lexical(
+    report: dict[str, Any],
+    *,
+    evalset: Optional[dict[str, Any]] = None,
+    launch: Optional[dict[str, Any]] = None,
+    run: Optional[dict[str, Any]] = None,
+    cases: Optional[list[dict[str, Any]]] = None,
+) -> dict[str, Any]:
+    """The report as a serialized Lexical editor state (BENCHMARK.md, B3-03)."""
+    from agent_runtimes.evals.lexical import build_eval_report_lexical as _build
+
+    return _build(report, evalset=evalset, launch=launch, run=run, cases=cases)
 
 
 def render_eval_report_markdown(

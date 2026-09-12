@@ -13,9 +13,19 @@ import uuid
 from typing import Any, AsyncIterator
 
 from pydantic_ai import Agent, DeferredToolRequests
+from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    SystemPromptPart,
+    TextPart,
+    UserPromptPart,
+)
 from pydantic_ai.tools import DeferredToolResults, ToolDenied
 
 from ..context.usage import get_usage_tracker
+from ..guardrails.model_budget import reached, usage_limits_for
 from ..guardrails.tool_approvals import (
     ToolApprovalConfig,
     ToolApprovalManager,
@@ -36,6 +46,58 @@ logger = logging.getLogger(__name__)
 
 _MAX_DEFERRED_APPROVAL_CONTINUATIONS = 5
 _DEFERRED_CONTINUATION_PROMPT = "Continue with the approved tool results."
+
+#: The roles a conversation names the agent's own turns with: the transports'
+#: ``assistant``, and A2A's ``agent``.
+_AGENT_ROLES = frozenset({"assistant", "agent"})
+
+
+def model_messages(history: list[Any]) -> list[ModelMessage]:
+    """
+    A conversation's previous messages, as the messages pydantic-ai takes.
+
+    ``AgentContext.conversation_history`` is the transports' shape —
+    ``{"role", "content"}`` — and pydantic-ai's ``message_history`` takes its
+    own message objects, so each message becomes one: the person's a request,
+    the agent's a response, a system message a system prompt. A message that
+    already is pydantic-ai's is kept as it is. This is how an A2A task's
+    context, and the checkpoint a resumed run starts from (O2-05), reach the
+    model.
+
+    Parameters
+    ----------
+    history : list[Any]
+        The previous messages, oldest first; the prompt is not one of them.
+
+    Returns
+    -------
+    list[ModelMessage]
+        The same messages, in the same order.
+
+    Raises
+    ------
+    ValueError
+        When a message names a role this does not know, or carries no text:
+        guessing would put words in somebody else's mouth.
+    """
+    messages: list[ModelMessage] = []
+    for message in history:
+        if isinstance(message, (ModelRequest, ModelResponse)):
+            messages.append(message)
+            continue
+        role = message.get("role") if isinstance(message, dict) else None
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, str):
+            raise ValueError(f"A conversation message carries no text: {message!r}")
+        if role == "user":
+            messages.append(ModelRequest(parts=[UserPromptPart(content=content)]))
+        elif role in _AGENT_ROLES:
+            messages.append(ModelResponse(parts=[TextPart(content=content)]))
+        elif role == "system":
+            messages.append(ModelRequest(parts=[SystemPromptPart(content=content)]))
+        else:
+            raise ValueError(f"A conversation message names a role nobody speaks in: {role!r}")
+    return messages
 
 
 class PydanticAIAdapter(BaseAgent):
@@ -92,6 +154,9 @@ class PydanticAIAdapter(BaseAgent):
         self._selected_mcp_servers = selected_mcp_servers or []
         self._non_mcp_toolsets = non_mcp_toolsets or []
         self._codemode_builder = codemode_builder
+        # Contents MCP toolsets, one per session uid, kept across runs so a
+        # session's record and tool schemas are read once.
+        self._contents_toolsets: dict[str, Any] = {}
         self._codemode_toolset_index: int | None = None
         self._sandbox_only_toolset_index: int | None = None
         self._refresh_codemode_indexes()
@@ -389,7 +454,8 @@ class PydanticAIAdapter(BaseAgent):
             lifecycle_manager = get_mcp_lifecycle_manager()
             for selection in self._selected_mcp_servers:
                 server_id = getattr(selection, "id", None)
-                if not server_id:
+                if not server_id or getattr(selection, "origin", None) == "contents":
+                    # A Contents session has no process here to wait for.
                     continue
                 logger.info(
                     f"PydanticAIAdapter [{self._name}]: ensuring MCP server '{server_id}' readiness"
@@ -402,6 +468,41 @@ class PydanticAIAdapter(BaseAgent):
                 )
 
         return self._get_runtime_toolsets()
+
+    def _contents_toolset(self, selection: Any) -> Any:
+        """
+        The toolset of a Contents MCP session, built once per session uid.
+
+        The selection's ``id`` is the Contents source uid and its
+        ``session_uid`` the session the calls go through. The toolset offers
+        the session's ``allowed_tools`` and forwards every call to Contents
+        with the caller's token; it is registered so the MCP proxy can serve
+        a sandbox's calls on the same session with the same settings.
+        """
+        session_uid = getattr(selection, "session_uid", None)
+        if not session_uid:
+            logger.warning(
+                f"PydanticAIAdapter [{self._name}]: Contents MCP selection "
+                f"'{getattr(selection, 'id', None)}' has no session_uid, skipping"
+            )
+            return None
+        toolset = self._contents_toolsets.get(session_uid)
+        if toolset is None:
+            from agent_runtimes.mcp.contents_toolset import (
+                ContentsMcpToolset,
+                register_contents_toolset,
+            )
+
+            toolset = ContentsMcpToolset(
+                session_uid=str(session_uid),
+                source_uid=getattr(selection, "id", None) or None,
+            )
+            register_contents_toolset(toolset)
+            self._contents_toolsets[session_uid] = toolset
+            logger.info(
+                f"PydanticAIAdapter [{self._name}]: Added Contents MCP session '{session_uid}' toolset"
+            )
+        return toolset
 
     def _get_runtime_toolsets(self) -> list[Any]:
         """
@@ -439,6 +540,11 @@ class PydanticAIAdapter(BaseAgent):
             for selection in self._selected_mcp_servers:
                 server_id = getattr(selection, "id", None)
                 origin = getattr(selection, "origin", None)
+                if origin == "contents":
+                    contents_toolset = self._contents_toolset(selection)
+                    if contents_toolset is not None:
+                        toolsets.append(contents_toolset)
+                    continue
                 if not server_id or origin not in {"config", "catalog"}:
                     continue
 
@@ -593,10 +699,8 @@ class PydanticAIAdapter(BaseAgent):
         Returns:
             Complete agent response.
         """
-        # Build message history from context
-        message_history = []
-        for msg in context.conversation_history:
-            message_history.append(msg)
+        # The conversation before the prompt, as pydantic-ai's own messages.
+        message_history = model_messages(context.conversation_history)
 
         # Extract model from context metadata for per-request model override
         model_override = context.metadata.get("model") if context.metadata else None
@@ -609,11 +713,30 @@ class PydanticAIAdapter(BaseAgent):
         try:
             # Dynamically get toolsets at run time to reflect current MCP server state
             runtime_toolsets = await self._get_runtime_toolsets_async()
+            if user_token_override:
+                from ..mcp.datalayer_gateway import toolsets_for_the_run
+
+                # A run with an identity of its own reaches the Datalayer MCP
+                # gateway with it, never with the process's key (O1-17).
+                runtime_toolsets = toolsets_for_the_run(runtime_toolsets, user_token_override)
             # Always pass toolsets to override any default toolsets on the agent.
             # Even an empty list should be passed to ensure no tools are available.
             run_kwargs_base: dict[str, Any] = {
                 "toolsets": runtime_toolsets,
             }
+            # The model budget a delegation set on this run (O1-07).
+            usage_limits = usage_limits_for(
+                context.metadata.get("budget") if context.metadata else None
+            )
+            if usage_limits is not None:
+                run_kwargs_base["usage_limits"] = usage_limits
+            steer_run = context.metadata.get("steer_run") if context.metadata else None
+            if steer_run:
+                from ..context.delegation import SteerCapability
+
+                # What is steered into this run reaches its model within the
+                # turn, before its next model request (O2-05).
+                run_kwargs_base["capabilities"] = [SteerCapability(steer_run)]
             if model_override:
                 run_kwargs_base["model"] = model_override
                 logger.info(
@@ -704,12 +827,18 @@ class PydanticAIAdapter(BaseAgent):
             # Detailed tracking is handled by LLMContextUsageCapability.
             usage = {}
             if hasattr(result, "usage"):
-                run_usage = result.usage()
-                usage = {
-                    "prompt_tokens": getattr(run_usage, "input_tokens", 0),
-                    "completion_tokens": getattr(run_usage, "output_tokens", 0),
-                    "total_tokens": getattr(run_usage, "total_tokens", 0),
-                }
+                run_usage_candidate = getattr(result, "usage", None)
+                run_usage = (
+                    run_usage_candidate()
+                    if callable(run_usage_candidate)
+                    else run_usage_candidate
+                )
+                if run_usage is not None:
+                    usage = {
+                        "prompt_tokens": getattr(run_usage, "input_tokens", 0),
+                        "completion_tokens": getattr(run_usage, "output_tokens", 0),
+                        "total_tokens": getattr(run_usage, "total_tokens", 0),
+                    }
 
             return AgentResponse(
                 content=content,
@@ -750,12 +879,10 @@ class PydanticAIAdapter(BaseAgent):
         import asyncio
         import time
 
-        from pydantic_ai.messages import PartDeltaEvent, TextPartDelta
+        from pydantic_ai.messages import PartDeltaEvent, PartStartEvent, TextPartDelta
 
-        # Build message history from context
-        message_history = []
-        for msg in context.conversation_history:
-            message_history.append(msg)
+        # The conversation before the prompt, as pydantic-ai's own messages.
+        message_history = model_messages(context.conversation_history)
 
         # Extract per-request overrides from context metadata
         model_override = context.metadata.get("model") if context.metadata else None
@@ -779,6 +906,12 @@ class PydanticAIAdapter(BaseAgent):
                     )
 
             runtime_toolsets = await self._get_runtime_toolsets_async()
+            if user_token_override:
+                from ..mcp.datalayer_gateway import toolsets_for_the_run
+
+                # A run with an identity of its own reaches the Datalayer MCP
+                # gateway with it, never with the process's key (O1-17).
+                runtime_toolsets = toolsets_for_the_run(runtime_toolsets, user_token_override)
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )
@@ -792,19 +925,19 @@ class PydanticAIAdapter(BaseAgent):
             for continuation_round in range(_MAX_DEFERRED_APPROVAL_CONTINUATIONS + 1):
                 # -- per-round queue & handler --------------------------------
                 text_queue: asyncio.Queue[str | None] = asyncio.Queue()
-                handler_called = False
 
                 async def _event_handler(_run_ctx: Any, events: Any) -> None:
-                    nonlocal handler_called
-                    handler_called = True
-                    try:
-                        async for ev in events:
-                            if isinstance(ev, PartDeltaEvent) and isinstance(
-                                ev.delta, TextPartDelta
-                            ):
-                                await text_queue.put(ev.delta.content_delta)
-                    finally:
-                        await text_queue.put(None)  # sentinel
+                    # Called for each model request of the run, so the text of
+                    # every round is the stream's; a part's first chunk arrives
+                    # as the part's start, and the rest as deltas.
+                    async for ev in events:
+                        if isinstance(ev, PartStartEvent) and isinstance(ev.part, TextPart):
+                            if ev.part.content:
+                                await text_queue.put(ev.part.content)
+                        elif isinstance(ev, PartDeltaEvent) and isinstance(
+                            ev.delta, TextPartDelta
+                        ):
+                            await text_queue.put(ev.delta.content_delta)
 
                 run_kwargs: dict[str, Any] = {
                     "message_history": current_message_history,
@@ -818,18 +951,30 @@ class PydanticAIAdapter(BaseAgent):
                     )
                 if deferred_tool_results is not None:
                     run_kwargs["deferred_tool_results"] = deferred_tool_results
+                # The model budget a delegation set on this run: pydantic-ai
+                # stops the run when a limit is reached (O1-07).
+                usage_limits = usage_limits_for(
+                    context.metadata.get("budget") if context.metadata else None
+                )
+                if usage_limits is not None:
+                    run_kwargs["usage_limits"] = usage_limits
+                steer_run = context.metadata.get("steer_run") if context.metadata else None
+                if steer_run:
+                    from ..context.delegation import SteerCapability
+
+                    # What is steered into this run reaches its model within
+                    # the turn, before its next model request (O2-05).
+                    run_kwargs["capabilities"] = [SteerCapability(steer_run)]
 
                 # -- launch agent.run() concurrently --------------------------
                 request_start = time.perf_counter()
 
                 async def _safe_run() -> Any:
-                    """Wrapper that ensures the queue is unblocked on failure."""
+                    """The run, which ends the text stream however it ends."""
                     try:
                         return await self._agent.run(current_prompt, **run_kwargs)
-                    except BaseException:
-                        if not handler_called:
-                            await text_queue.put(None)
-                        raise
+                    finally:
+                        await text_queue.put(None)  # sentinel
 
                 run_task = asyncio.create_task(_safe_run())
 
@@ -879,6 +1024,10 @@ class PydanticAIAdapter(BaseAgent):
 
             yield StreamEvent(type="done", data=None)
 
+        except UsageLimitExceeded as e:
+            # Stopped by the budget the delegation set: said as such, so the
+            # transport can tell its caller which limit it was (O1-07).
+            yield StreamEvent(type="error", data=reached(e))
         except Exception as e:
             yield StreamEvent(type="error", data=str(e))
         finally:

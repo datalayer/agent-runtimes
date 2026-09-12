@@ -138,7 +138,7 @@ class ConversationSummarizer:
             prompt = _SUMMARIZE_PROMPT.format(messages=text)
             agent = PydanticAgent(
                 self.model,
-                system_prompt="You are a precise conversation summarizer.",
+                instructions="You are a precise conversation summarizer.",
             )
             result = await agent.run(prompt)
             return str(result.output) if result.output else ""

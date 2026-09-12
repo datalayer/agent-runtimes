@@ -22,7 +22,7 @@ import type {
 
 /** Category definitions for ECharts graph. */
 const CATEGORIES = [
-  { name: 'start', itemStyle: { color: '#58a6ff' } },
+  { name: 'start', itemStyle: { color: '#16A085' } },
   { name: 'step', itemStyle: { color: '#3fb950' } },
   { name: 'end', itemStyle: { color: '#f85149' } },
   { name: 'end_or_continue', itemStyle: { color: '#d29922' } },

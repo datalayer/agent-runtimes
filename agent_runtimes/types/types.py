@@ -4,9 +4,9 @@
 """Pydantic models for chat functionality and agent specifications."""
 
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class EnvvarSpec(BaseModel):
@@ -179,9 +179,14 @@ class FrontendToolSpec(BaseModel):
     enabled: bool = Field(
         default=True, description="Whether the frontend tool is enabled"
     )
-    toolset: str = Field(
+    toolset: Union[str, List[str]] = Field(
         default="all",
-        description="Which tools from the toolset to include ('all' or a list)",
+        description=(
+            "Which tools of the underlying toolset this bundle grants: the "
+            "string 'all', or an explicit list of tool names. A list is how a "
+            "specialist takes only what it needs — an agent that may read and "
+            "edit a notebook but must never delete from it."
+        ),
     )
     icon: Optional[str] = Field(
         default=None,
@@ -232,9 +237,57 @@ class AIModel(BaseModel):
     default: bool = Field(
         default=False, description="Whether this is the default model"
     )
+    available: bool = Field(
+        default=False,
+        description=(
+            "Whether this model is offered to a person choosing one. The "
+            "catalogue is what the platform knows how to talk to; this is "
+            "what is worth offering today."
+        ),
+    )
     required_env_vars: List[str] = Field(
         default_factory=list,
         description="Required environment variable names",
+    )
+    tokens_limit: Optional[int] = Field(
+        default=None,
+        description=(
+            "Maximum output tokens the model can generate in a single run "
+            "(maps to pydantic-ai output_tokens_limit)."
+        ),
+    )
+    local: bool = Field(
+        default=False,
+        description=(
+            "Whether the model runs on the user's own machine (Ollama, LM "
+            "Studio, vLLM, llama.cpp). A local model needs no API key, and "
+            "choosing one moves execution to a local sandbox so the code stays "
+            "where the tokens do."
+        ),
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        description=(
+            "OpenAI-compatible base URL to reach the model. Set for local "
+            "models and for self-hosted endpoints; falls back to the provider's "
+            "default when omitted."
+        ),
+    )
+    api_key_env: Optional[str] = Field(
+        default=None,
+        description=(
+            "Environment variable holding an API key, for endpoints that want "
+            "one without requiring it (a vLLM server behind a gateway)."
+        ),
+    )
+    capabilities: List[str] = Field(
+        default_factory=list,
+        description=(
+            "What the model can be trusted with: 'tools', 'codemode', "
+            "'vision', 'thinking'. Empty means unstated rather than incapable. "
+            "A small local model that lists no 'tools' is warned about at "
+            "selection instead of failing mysteriously mid-run."
+        ),
     )
 
 
@@ -322,6 +375,13 @@ class EvalSpec(BaseModel):
         ..., description="Case-level or report-level evaluator"
     )
     pydantic_class: str = Field(..., description="Pydantic evaluator class name")
+    executable: bool = Field(
+        default=False,
+        description=(
+            "Whether the platform can run this evaluator today. A catalogue "
+            "entry that is not executable is shown, never offered."
+        ),
+    )
     output_kind: Literal[
         "boolean",
         "boolean_with_reason",
@@ -820,8 +880,21 @@ class AIModelRuntime(BaseModel):
     )
     is_available: bool = Field(
         default=True,
-        description="Whether the model is available (based on env vars)",
+        description=(
+            "Whether this model can be picked: both entitled by the registry "
+            "and ready in this environment"
+        ),
         alias="isAvailable",
+    )
+    unavailable_reason: Optional[str] = Field(
+        default=None,
+        description=(
+            "Why the model cannot be picked, when it cannot. Carried because "
+            "the two reasons are not interchangeable: a missing API key is "
+            "something the reader can go and fix, and a model this deployment "
+            "is not entitled to is not."
+        ),
+        alias="unavailableReason",
     )
 
 
@@ -850,6 +923,39 @@ class MCPServerTool(BaseModel):
         default=None,
         description="JSON schema for tool input parameters",
         alias="inputSchema",
+    )
+
+
+class AgentSuggestion(BaseModel):
+    """An opener offered to somebody arriving at an empty chat.
+
+    Text and, optionally, a mark to show beside it. It was a bare string, which
+    is enough for a chip in an empty state and not enough for anywhere else a
+    suggestion is offered — a menu, a launcher, a list of what an agent is for
+    — where an unmarked row of sentences is hard to scan. Both marks are
+    optional and independent: an octicon suits chrome already drawn in line
+    art, an emoji suits a place that has colour, and a spec is free to give
+    one, both or neither.
+    """
+
+    text: str = Field(
+        ...,
+        description="What is sent when the suggestion is taken",
+    )
+    summary: Optional[str] = Field(
+        default=None,
+        description=(
+            "A few words shown as the label where the text is too long for "
+            "one — a chip, a menu row; the text itself is then the tooltip"
+        ),
+    )
+    icon: Optional[str] = Field(
+        default=None,
+        description="Octicon name to show beside it",
+    )
+    emoji: Optional[str] = Field(
+        default=None,
+        description="Unicode emoji to show beside it",
     )
 
 
@@ -948,7 +1054,7 @@ class FrontendConfig(BaseModel):
         description="Whether tool approvals are disabled for new agent launches",
         alias="disableToolApprovals",
     )
-    suggestions: List[str] = Field(
+    suggestions: List[AgentSuggestion] = Field(
         default_factory=list,
         description="Chat suggestions to show users what this agent can do",
     )
@@ -959,10 +1065,38 @@ class FrontendConfig(BaseModel):
     )
 
 
+class A2ASubagentConfig(BaseModel):
+    """Where a subagent reached over A2A lives, or how to launch it.
+
+    Either ``url`` names an agent already running, or the subagent's ``ref``
+    names the agentspec to launch one from — on the local agent-runtimes server
+    when the parent runs locally and on a Datalayer runtime when it runs in the
+    cloud (``launch: auto``, the default), or on one of those explicitly.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+    url: Optional[str] = Field(
+        default=None,
+        description="JSON-RPC endpoint of an A2A agent already running",
+    )
+    launch: Literal["local", "cloud", "auto"] = Field(
+        default="auto",
+        description=(
+            "Where to launch the agent named by `ref`: the local server, a "
+            "Datalayer runtime, or whichever the parent runs on"
+        ),
+    )
+    environment: Optional[str] = Field(
+        default=None,
+        description="Runtime environment for a cloud launch",
+    )
+
+
 class SubAgentspecConfig(BaseModel):
     """Configuration for a subagent within an agent specification.
 
-    Maps to ``subagents_pydantic_ai.SubAgentConfig`` at runtime.
+    Maps to ``agent_runtimes.subagents.SubagentDefinition`` at runtime.
     """
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
@@ -971,7 +1105,28 @@ class SubAgentspecConfig(BaseModel):
     description: str = Field(
         ..., description="Brief description shown to the parent agent"
     )
-    instructions: str = Field(..., description="System prompt for the subagent")
+    instructions: str = Field(
+        default="",
+        description=(
+            "System prompt for the subagent. Optional when `ref` names an "
+            "agentspec to take it from."
+        ),
+    )
+    ref: Optional[str] = Field(
+        default=None,
+        description=(
+            "An agentspec this subagent *is*, as `<id>:<version>`. A specialist "
+            "defined once and referenced by many parents, rather than its "
+            "instructions copy-pasted into each — which is how they drift."
+        ),
+    )
+    a2a: Optional[A2ASubagentConfig] = Field(
+        default=None,
+        description=(
+            "Reach this subagent over A2A, as a separate agent, instead of "
+            "running it inside the parent's process"
+        ),
+    )
     model: Optional[str] = Field(
         default=None,
         description="LLM model to use (defaults to parent agent's model)",
@@ -1029,6 +1184,126 @@ class SubAgentsConfig(BaseModel):
     )
 
 
+#: The closed vocabulary of delegable work (ORCHESTRATOR.md, O2-07).
+#:
+#: `agents.discover --capability notebook.validate` has to match something,
+#: and free text does not match: two specs saying "analysis" and "analyse"
+#: describe the same work and find each other never. A closed list is also
+#: what makes the answer to "what can this platform be asked to do" finite.
+#:
+#: The axis is **what work is delegated**, not who it is for. `domain` is the
+#: vertical (accounting, insurance) and `tags` are categorisation; neither
+#: says what an orchestrator may hand over, which is why this is its own field
+#: rather than a reading of those.
+#:
+#: A `<subject>.<verb>` shape, so the subject is the thing the work is about
+#: and the verb is what is done to it. Adding one is a deliberate act: it is
+#: the vocabulary a third-party worker advertises against.
+AGENT_CAPABILITIES: Dict[str, str] = {
+    "notebook.run": "Execute a notebook and return it with its outputs.",
+    "notebook.validate": "Check that a notebook runs clean, and say where it does not.",
+    "notebook.author": "Write or edit a notebook to meet a stated objective.",
+    "data.extract": "Pull structured records out of unstructured sources.",
+    "data.transform": "Reshape, clean or join data that is already structured.",
+    "data.acquire": "Fetch data from an external source into the platform.",
+    "data.analyse": "Answer a question from data, with the working shown.",
+    "data.visualise": "Produce charts or figures from data.",
+    "document.summarise": "Reduce a document or a set of them to its substance.",
+    "document.extract": "Pull named fields out of documents.",
+    "document.author": "Write a document to a brief.",
+    "report.author": "Produce a report from evidence that already exists.",
+    "code.execute": "Run code in a sandbox and return what it produced.",
+    "code.review": "Read code and report on it without changing it.",
+    "research.gather": "Find and cite sources answering a question.",
+    "workflow.orchestrate": "Break work down and delegate it to other agents.",
+    "support.respond": "Answer a request on behalf of a team.",
+}
+
+
+class AgentCapability(BaseModel):
+    """One kind of work an agent can be delegated, and what it takes and returns.
+
+    This is the unit `agents.discover` matches on, and it maps onto an A2A
+    agent card's `skills` entry — `id`, `name`, `description`, `tags` — so a
+    Datalayer agentspec and a third-party A2A worker are discoverable through
+    the same query rather than through two.
+
+    `inputs` and `outputs` are the *contract* half, and the reason this is not
+    simply a tag: an orchestrator choosing between two workers that both claim
+    `data.analyse` needs to know which of them accepts a notebook reference
+    and which returns one. They name context-reference kinds and artifact
+    types, the vocabularies of sections 5.3 and 5.4.
+    """
+
+    id: str = Field(
+        ...,
+        description=(
+            "One of AGENT_CAPABILITIES. Validated, because a capability "
+            "nothing else uses the same spelling for is a capability nobody "
+            "discovers."
+        ),
+    )
+    name: str = Field(
+        default="",
+        description="Display label; the vocabulary's own description when empty.",
+    )
+    description: str = Field(
+        default="",
+        description="What this agent in particular does under that capability.",
+    )
+    inputs: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Context reference kinds it accepts — notebook, document, dataset, "
+            "file, sandbox (section 5.3). Empty means it was not stated, which "
+            "is not the same as accepting nothing."
+        ),
+    )
+    outputs: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Artifact types it produces — notebook, report, dataset, file, "
+            "cell_output, structured (section 5.4)."
+        ),
+    )
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Free text, for humans reading a catalogue; never matched on.",
+    )
+
+    @field_validator("id")
+    @classmethod
+    def _known(cls, value: str) -> str:
+        """
+        Refuse a capability the vocabulary does not have.
+
+        Parameters
+        ----------
+        value : str
+            The proposed capability id.
+
+        Returns
+        -------
+        str
+            The id, when it is in AGENT_CAPABILITIES.
+
+        Raises
+        ------
+        ValueError
+            When it is not. Adding one is an edit to AGENT_CAPABILITIES, on
+            purpose: the vocabulary is a contract with everything that
+            discovers against it.
+        """
+        if value not in AGENT_CAPABILITIES:
+            known = ", ".join(sorted(AGENT_CAPABILITIES))
+            raise ValueError(
+                f"'{value}' is not a known capability. The vocabulary is a "
+                f"closed list so that discovery matches: {known}. Add it to "
+                "AGENT_CAPABILITIES if this is genuinely new work."
+            )
+        return value
+
+
 class Agentspec(BaseModel):
     """
     Specification for an AI agent.
@@ -1044,6 +1319,11 @@ class Agentspec(BaseModel):
     name: str = Field(..., description="Display name for the agent")
     description: str = Field(default="", description="Agent description")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    domain: Optional[str] = Field(
+        default=None,
+        description="Domain used to group agents in the gallery (e.g. 'earth-observation')",
+        validation_alias=AliasChoices("domain", "vertical"),
+    )
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
     model: Optional[str] = Field(
         default=None,
@@ -1119,7 +1399,7 @@ class Agentspec(BaseModel):
         default=None,
         description="Theme color for the agent (hex code)",
     )
-    suggestions: List[str] = Field(
+    suggestions: List[AgentSuggestion] = Field(
         default_factory=list,
         description="Chat suggestions to show users what this agent can do",
     )
@@ -1138,11 +1418,28 @@ class Agentspec(BaseModel):
         description="Path to Lexical document to show on agent creation",
         alias="welcomeDocument",
     )
+    harness: str = Field(
+        default="pydantic-ai",
+        description=(
+            "Which agent framework runs this agent's loop. "
+            "'pydantic-ai' (default) runs it server-side in the agent runtime; "
+            "'vercel-ai' runs it in the browser with the Vercel AI SDK, for an "
+            "agent that has to work with no server behind it. "
+            "Distinct from `protocol`, which says how a client and an agent "
+            "talk to each other rather than what runs the loop — the two can "
+            "name the same word and mean different things."
+        ),
+        alias="harness",
+    )
+
     sandbox_variant: Optional[str] = Field(
         default=None,
         description=(
             "Sandbox variant to use for this agent. "
-            "Accepted values: 'eval' (default), 'jupyter' (Jupyter server)"
+            "Accepted values: 'eval' (default), 'jupyter-server' (Jupyter "
+            "server), or a provider reached with its own credentials — "
+            "'docker', 'datalayer', 'google-colab', 'kaggle', 'monty', "
+            "'modal', 'daytona', 'cloudflare', 'coreweave', 'e2b'."
         ),
         alias="sandboxVariant",
     )
@@ -1159,6 +1456,19 @@ class Agentspec(BaseModel):
     goal: Optional[str] = Field(
         default=None,
         description="User-facing objective for the agent",
+    )
+    delegable: List[AgentCapability] = Field(
+        default_factory=list,
+        description=(
+            "What work this agent can be delegated (ORCHESTRATOR.md, O2-07). "
+            "`protocol` below says how it is reached; this says what it is "
+            "worth reaching it for. Empty means the spec has not said, and "
+            "discovery reports that rather than guessing from tags. "
+            "Deliberately not called `capabilities`: that field already exists "
+            "on this model and means pydantic-ai capability configurations — "
+            "guardrails, budgets, memory — which are runtime behaviours "
+            "attached to an agent rather than work an orchestrator may hand it."
+        ),
     )
     protocol: Optional[str] = Field(
         default=None,
@@ -1207,6 +1517,14 @@ class Agentspec(BaseModel):
         default=None,
         description="Advanced settings (cost_limit, time_limit, max_iterations, validation)",
     )
+    checkpoints: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Conversation checkpoint configuration: enabled, frequency "
+            "(every_turn, every_tool, manual_only), max_checkpoints, store "
+            "(in_memory, file)."
+        ),
+    )
     authorization_policy: Optional[str] = Field(
         default=None,
         description="Authorization policy",
@@ -1219,6 +1537,11 @@ class Agentspec(BaseModel):
     memory: Optional[str] = Field(
         default=None,
         description="Memory backend identifier (e.g., 'ephemeral', 'mem0', 'memu', 'simplemem')",
+    )
+    memory_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        alias="memoryConfig",
+        description="Optional backend-specific memory configuration (for example Mem0 faiss/pgvector settings).",
     )
     pre_hooks: Optional[Dict[str, Any]] = Field(
         default=None,
@@ -1254,22 +1577,63 @@ class Agentspec(BaseModel):
         default=None,
         description=(
             "Subagent delegation configuration. When set, the agent can "
-            "delegate tasks to specialised child agents via the "
-            "subagents-pydantic-ai SubAgentCapability."
+            "delegate tasks to specialised child agents via the in-repo "
+            "SubagentsCapability."
         ),
     )
+
+
+class TeamSubagentspec(BaseModel):
+    """A specialist a team member may hand work to.
+
+    The same shape as a subagent on an agent spec: delegation is one idea, and
+    it should be written the same way wherever it appears.
+    """
+
+    name: str = Field(..., description="How the member addresses it, e.g. `@CellFixer`")
+    ref: str = Field(
+        default="", description="Agent catalogue reference, `id` or `id:version`"
+    )
+    description: str = Field(
+        default="", description="What it is for, and when to reach for it"
+    )
+    instructions: str = Field(
+        default="", description="System prompt, for a subagent defined only here"
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class TeamAgentspec(BaseModel):
     """Specification for an agent within a team."""
 
     id: str = Field(..., description="Agent identifier within the team")
-    name: str = Field(..., description="Display name for the team agent")
-    role: str = Field(
+    name: str = Field(default="", description="Display name for the team agent")
+    ref: str = Field(
         default="",
-        description="Role within the team (e.g., 'Primary · Initiator', 'Secondary', 'Final')",
+        description=(
+            "Agent catalogue reference, `id` or `id:version`. A member that "
+            "names one inherits its model, tools, prompt and subagents; the "
+            "fields below then say what is different about it in this team."
+        ),
+    )
+    role: str = Field(
+        default="contributor",
+        description="Structural role: coordinator, initiator, contributor, reviewer or finalizer",
     )
     goal: str = Field(default="", description="Goal or objective for this agent")
+    depends_on: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Member ids that must finish first. What makes the running order "
+            "computable — it replaced a prose `trigger` that read well and "
+            "could not be executed."
+        ),
+        alias="dependsOn",
+    )
+    subagents: list[TeamSubagentspec] = Field(
+        default_factory=list, description="Specialists this member may delegate to"
+    )
     model: str = Field(default="", description="AI model identifier")
     mcp_server: str = Field(
         default="", description="MCP server used by this agent", alias="mcpServer"
@@ -1277,7 +1641,14 @@ class TeamAgentspec(BaseModel):
     tools: list[str] = Field(
         default_factory=list, description="Tools available to this agent"
     )
-    trigger: str = Field(default="", description="Trigger condition for this agent")
+    trigger: str = Field(
+        default="",
+        description=(
+            "What starts this member from outside the team — an event, a "
+            "schedule. Distinct from `depends_on`, which is what it waits for "
+            "inside."
+        ),
+    )
     approval: str = Field(
         default="auto", description="Approval policy: 'auto' or 'manual'"
     )
@@ -1285,11 +1656,102 @@ class TeamAgentspec(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class TeamSupervisorSpec(BaseModel):
-    """Specification for a team supervisor agent."""
+class TeamDelegationSpec(BaseModel):
+    """How far members may hand work to each other, and to subagents."""
 
-    name: str = Field(..., description="Supervisor agent name")
-    model: str = Field(default="", description="AI model used by the supervisor")
+    max_depth: int = Field(
+        default=2,
+        description="Levels of delegation allowed; 0 forbids it",
+        alias="maxDepth",
+    )
+    allow_peer_delegation: bool = Field(
+        default=False,
+        description="Whether a member may hand work to another member",
+        alias="allowPeerDelegation",
+    )
+    include_general_purpose: bool = Field(
+        default=False,
+        description="Whether members also get the general-purpose subagent",
+        alias="includeGeneralPurpose",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamContextSpec(BaseModel):
+    """What each member of a team is told about the conversation so far.
+
+    The two things every multi-agent framework does, named rather than assumed:
+
+    - ``shared`` — one thread, and every member is sent all of it. What a
+      supervisor team wants: routing only makes sense if the member receiving
+      the work can see what was already said. AutoGen group chats, LangGraph
+      supervisors and OpenAI handoffs all work this way.
+    - ``isolated`` — a thread per member, swapped when the person switches.
+      What a delegation model wants: the child runs blind and returns a result,
+      as Claude Code subagents and CrewAI tasks do. Choose it when members
+      would mislead each other more than they would help.
+    - ``own-turns`` — one thread on screen, but each member is sent only the
+      turns it took part in. For a team whose members share a person but not a
+      subject; deliberately makes what the reader sees differ from what the
+      model sees, which is a cost worth naming.
+
+    It is a team's property rather than a runtime's setting because it follows
+    from what the team *is*: the jupyter team routes between an analyst, a
+    tutor, a compactor and the rest, and a compactor that cannot see what the
+    learner was just told would undo the explanation.
+    """
+
+    sharing: str = Field(
+        default="shared",
+        description=(
+            "How much of the conversation each member is given: 'shared' "
+            "(all of it), 'isolated' (its own thread), or 'own-turns' (one "
+            "thread, but only its own turns are sent)"
+        ),
+    )
+
+    model_config = {"populate_by_name": True}
+
+
+class TeamSupervisorSpec(BaseModel):
+    """The agent that routes work within a team.
+
+    Required on a team. A team is not a list of agents — it is a list of agents
+    plus someone deciding what happens next, and a spec that leaves that out
+    describes a set, not a team.
+    """
+
+    name: str = Field(..., description="Display name for the supervisor")
+    ref: str = Field(
+        default="",
+        description="Agent catalogue reference, `id` or `id:version`",
+    )
+    model: str = Field(
+        default="", description="Model id, overriding the referenced agent's"
+    )
+    goal: str = Field(
+        default="",
+        description="What the supervisor is accountable for across the whole run",
+    )
+    instructions: str = Field(
+        default="",
+        description="Supervision prompt, for a supervisor defined only here",
+    )
+    approval: str = Field(
+        default="auto",
+        description="Whether a person signs off the routing decisions",
+    )
+    can_terminate: bool = Field(
+        default=True,
+        description=(
+            "Whether the supervisor may end the run before every member has "
+            "gone. False makes it a router only."
+        ),
+        alias="canTerminate",
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class TeamValidationSpec(BaseModel):
@@ -1375,6 +1837,28 @@ class TeamOutputSpec(BaseModel):
     storage: str = Field(default="", description="Storage location (e.g., S3 path)")
 
 
+class TeamSuggestionSpec(BaseModel):
+    """An opener offered at a team's front door.
+
+    The same shape as an agent's — see `AgentSuggestion`. Two classes rather
+    than one because the runtime's team types are generated from a catalogue
+    that the agent types are not, and a shared base would tie the two
+    generators together for the sake of three fields.
+    """
+
+    text: str = Field(..., description="What is sent when the suggestion is taken")
+    summary: Optional[str] = Field(
+        default=None,
+        description="A few words shown as the label; the text is then the tooltip",
+    )
+    icon: Optional[str] = Field(
+        default=None, description="Octicon name to show beside it"
+    )
+    emoji: Optional[str] = Field(
+        default=None, description="Unicode emoji to show beside it"
+    )
+
+
 class TeamSpec(BaseModel):
     """Specification for a multi-agent team."""
 
@@ -1392,9 +1876,22 @@ class TeamSpec(BaseModel):
         description="ID of the associated agent spec",
         alias="agentSpecId",
     )
-    orchestration_protocol: str = Field(
+    #: How the team is meant to be coordinated once teams execute.
+    #:
+    #: Every value here names a protocol for which no adapter is registered
+    #: yet: `datalayer` is the durable control plane of
+    #: PLAN_ORCHESTRATOR.md O1-01, `a2a` and `acp` its two adapters (O0-06,
+    #: O0-07). The field is an intention until one of them lands, and the
+    #: literal type is what keeps it from naming a protocol nobody is
+    #: building — it used to be a free string defaulting to `datalayer`,
+    #: which read as a protocol that exists (O0-15).
+    orchestration_protocol: Literal["datalayer", "a2a", "acp"] = Field(
         default="datalayer",
-        description="Orchestration protocol (e.g., 'datalayer')",
+        description=(
+            "Orchestration protocol a team is meant to be coordinated by. "
+            "No adapter is registered for any of these yet, so a team is a "
+            "definition and this is an intention."
+        ),
         alias="orchestrationProtocol",
     )
     execution_mode: str = Field(
@@ -1411,9 +1908,27 @@ class TeamSpec(BaseModel):
         description="Instructions for routing tasks between agents",
         alias="routingInstructions",
     )
+    suggestions: list[TeamSuggestionSpec] = Field(
+        default_factory=list,
+        description=(
+            "Openers shown in an empty chat, so a person arriving at a team "
+            "sees what it can be asked rather than an empty box. At the team "
+            "level because they describe the team's front door: the "
+            "supervisor answers first, and what it is worth asking is a "
+            "property of the whole team rather than of any one member."
+        ),
+    )
     validation: Optional[TeamValidationSpec] = Field(
         default=None,
         description="Validation settings for the team",
+    )
+    delegation: TeamDelegationSpec = Field(
+        default_factory=TeamDelegationSpec,
+        description="How far members may hand work to each other, and to subagents",
+    )
+    context: TeamContextSpec = Field(
+        default_factory=TeamContextSpec,
+        description="What each member is told about the conversation so far",
     )
     agents: list[TeamAgentspec] = Field(
         default_factory=list,

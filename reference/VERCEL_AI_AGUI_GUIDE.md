@@ -198,7 +198,7 @@ from agent_runtimes.server.routes import register_vercel_agent
 # Create your Pydantic AI agent
 pydantic_agent = Agent(
     "openai:gpt-4o",
-    system_prompt="You are a helpful assistant"
+  instructions="You are a helpful assistant"
 )
 
 # Add tools
@@ -230,7 +230,7 @@ from agent_runtimes.server.routes import register_agui_agent
 # Create your Pydantic AI agent
 pydantic_agent = Agent(
     "openai:gpt-4o",
-    system_prompt="You are a helpful assistant"
+  instructions="You are a helpful assistant"
 )
 
 # Wrap with agent adapter
@@ -295,7 +295,7 @@ from agent_runtimes.server.app import create_app
 # Create agent
 pydantic_agent = Agent(
     "openai:gpt-4o",
-    system_prompt="You are a helpful coding assistant"
+  instructions="You are a helpful coding assistant"
 )
 
 @pydantic_agent.tool_plain

@@ -9,6 +9,13 @@
  * @module protocols/A2AAdapter
  */
 
+import {
+  ORCHESTRATION_EXTENSION_URI,
+  ENVELOPE_KEY as DATALAYER_META_KEY,
+  readUsageMeta,
+  type Usage,
+} from '@datalayer/agent-teams';
+
 import type { ChatMessage } from '../types/messages';
 import type { ProtocolAdapterConfig, AgentCard } from '../types';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
@@ -16,10 +23,77 @@ import { generateMessageId, createAssistantMessage } from '../types/messages';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 
 /**
+ * The header fasta2a-based workers (`agent-runtimes`'s own, and any other
+ * built on it) actually read to activate an extension for one request —
+ * confirmed from `fasta2a.extensions`, not assumed: comma-separated URIs,
+ * answered on the same header naming which of them the agent knows.
+ * Neither this codebase's own `configuration.requestedExtensions` (read by
+ * nothing server-side) nor the A2A SDK's `Message.extensions` field is what
+ * a `fasta2a` worker's `activated_extensions()` looks at — this header is.
+ */
+const A2A_EXTENSIONS_HEADER = 'A2A-Extensions';
+
+const TERMINAL_TASK_STATES = new Set([
+  'completed',
+  'failed',
+  'canceled',
+  'rejected',
+]);
+
+/**
+ * `fasta2a` wraps every `message/send` result and every `message/stream`
+ * event in a named key — `{ task: Task }`, `{ statusUpdate: ... }`,
+ * `{ artifactUpdate: ... }`, `{ message: Message }` — instead of the bare,
+ * `kind`-discriminated object
+ * (`Task.kind: 'task'`, `TaskStatusUpdateEvent.kind: 'status-update'`, ...)
+ * the current A2A specification requires and this file was written
+ * against. Confirmed directly, not assumed: `fasta2a.schema.SendMessageResult`
+ * and `StreamResponse` are TypedDicts with those named optional fields, and
+ * neither `Task` nor `TaskStatusUpdateEvent` in that schema carries a
+ * `kind` field at all. `agent_runtimes`' own A2A route is the same
+ * `FastA2A`, so every production Datalayer A2A worker serves this shape —
+ * a spec-conformant client (this file, or a genuine `a2a-sdk`-based one)
+ * could not render a single reply without this normalizer.
+ *
+ * A worker built to the current spec (its `result` already carries
+ * `kind`) passes through unchanged — this only steps in for the shape
+ * `fasta2a` actually sends.
+ *
+ * `fasta2a`'s `TaskStatusUpdateEvent` also has no `final` field, which the
+ * spec has and this file's status-update handling gates on; inferred here
+ * from the status being one of the terminal states, since nothing else in
+ * the payload says so.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeA2AResult(result: any): any {
+  if (!result || typeof result !== 'object' || result.kind) {
+    return result;
+  }
+  if (result.task) {
+    return { ...result.task, kind: 'task' };
+  }
+  if (result.statusUpdate) {
+    const update = result.statusUpdate;
+    return {
+      ...update,
+      kind: 'status-update',
+      final: update.final ?? TERMINAL_TASK_STATES.has(update.status?.state),
+    };
+  }
+  if (result.artifactUpdate) {
+    return { ...result.artifactUpdate, kind: 'artifact-update' };
+  }
+  if (result.message) {
+    return { ...result.message, kind: 'message' };
+  }
+  return result;
+}
+
+/**
  * A2A specific configuration
  */
 export interface A2AAdapterConfig extends ProtocolAdapterConfig {
-  /** Agent URL for .well-known/agent.json discovery */
+  /** Agent URL for .well-known/agent-card.json discovery */
   agentUrl?: string;
 
   /** Enable A2UI extension */
@@ -36,8 +110,32 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
   private a2aConfig: A2AAdapterConfig;
   private abortController: AbortController | null = null;
+
+  /**
+   * Every in-flight request's abort controller, not just the newest.
+   *
+   * `abortController` is a single field that each request overwrites, and each
+   * request's `finally` used to clear it unconditionally — so a request that
+   * finished just after a newer one started would null the newer one's handle,
+   * and a subsequent stop had nothing left to abort. The stream carried on and
+   * the transcript went on typing itself after the reader had asked it not to.
+   */
+  private inFlight = new Set<AbortController>();
+
   private agentCard: AgentCard | null = null;
   private currentTaskId: string | null = null;
+
+  /**
+   * Whether the connected agent's card advertised the Datalayer
+   * orchestration extension (ORCHESTRATOR.md, O3-03). Set once, from
+   * `connect()`'s card fetch: neither side infers support from a
+   * successful message (the extension's own negotiation rule), so this is
+   * the one place that decides it, and every request either activates the
+   * extension by this or sends nothing extension-related at all — a worker
+   * that never advertised it sees a plain A2A client, unchanged from
+   * before this existed.
+   */
+  private orchestrationExtensionSupported = false;
 
   constructor(config: A2AAdapterConfig) {
     super(config);
@@ -54,10 +152,19 @@ export class A2AAdapter extends BaseProtocolAdapter {
     this.setConnectionState('connecting');
 
     try {
-      // Fetch agent card from .well-known endpoint
+      // Fetch agent card from .well-known endpoint. The current A2A
+      // specification's path is `agent-card.json` — `fasta2a`'s FastA2A
+      // (and a2a-sdk's own A2ACardResolver default) serves only that,
+      // confirmed by reading FastA2A's own route registration; the plain
+      // `agent.json` this fetched before was an earlier draft's path, and
+      // fetching it here 404s against every real worker, silently, since
+      // a missing card is caught below and connect() still "succeeds" —
+      // found live, against agent_teams.a2a.reference_worker
+      // (ORCHESTRATOR.md O3-04), not assumed: `supportsOrchestrationExtension`
+      // stayed false against a worker whose card plainly advertised it.
       const agentUrl = this.a2aConfig.agentUrl || this.a2aConfig.baseUrl;
       const wellKnownUrl = new URL(
-        '/.well-known/agent.json',
+        '/.well-known/agent-card.json',
         agentUrl,
       ).toString();
 
@@ -69,6 +176,10 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
       if (response.ok) {
         this.agentCard = await response.json();
+        this.orchestrationExtensionSupported =
+          this.agentCard?.capabilities?.extensions?.some(
+            extension => extension.uri === ORCHESTRATION_EXTENSION_URI,
+          ) ?? false;
       }
 
       this.setConnectionState('connected');
@@ -83,10 +194,8 @@ export class A2AAdapter extends BaseProtocolAdapter {
    * Disconnect and terminate any ongoing agent execution
    */
   disconnect(): void {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+    // Every open stream, not merely the newest.
+    this.stopGeneration();
 
     // Send terminate request to backend if we have a task ID
     if (this.currentTaskId) {
@@ -139,6 +248,17 @@ export class A2AAdapter extends BaseProtocolAdapter {
   }
 
   /**
+   * Whether the connected agent advertised the Datalayer orchestration
+   * extension. `false` until `connect()` has fetched a card, and `false`
+   * for any card that does not list it — including one that could not be
+   * fetched at all, so a worker with no card behaves exactly as it did
+   * before this existed.
+   */
+  get supportsOrchestrationExtension(): boolean {
+    return this.orchestrationExtensionSupported;
+  }
+
+  /**
    * Send a message through A2A protocol
    */
   async sendMessage(
@@ -160,7 +280,9 @@ export class A2AAdapter extends BaseProtocolAdapter {
       }>;
     },
   ): Promise<void> {
-    this.abortController = new AbortController();
+    const controller = new AbortController();
+    this.abortController = controller;
+    this.inFlight.add(controller);
 
     const taskId =
       options?.threadId || this.currentTaskId || generateMessageId();
@@ -237,9 +359,15 @@ export class A2AAdapter extends BaseProtocolAdapter {
         method: 'POST',
         headers: this.buildHeaders({
           Accept: 'text/event-stream, application/json',
+          // Activates the extension for this one request, only once the
+          // worker's own card advertised it — degrading to a plain A2A
+          // request (no header at all) otherwise.
+          ...(this.orchestrationExtensionSupported && {
+            [A2A_EXTENSIONS_HEADER]: ORCHESTRATION_EXTENSION_URI,
+          }),
         }),
         body: JSON.stringify(jsonRpcRequest),
-        signal: this.abortController.signal,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -274,8 +402,27 @@ export class A2AAdapter extends BaseProtocolAdapter {
       });
       throw error;
     } finally {
-      this.abortController = null;
+      this.inFlight.delete(controller);
+      if (this.abortController === controller) {
+        this.abortController = null;
+      }
     }
+  }
+
+  /**
+   * Abort every in-flight stream without tearing the adapter down.
+   *
+   * This adapter had no such method, so pressing Stop reached only
+   * `terminateTask` — a request to the backend to cancel — and never closed
+   * the client's own stream. Whatever was already on the wire kept arriving
+   * and kept being rendered. `ChatBase` looks for this by name.
+   */
+  stopGeneration(): void {
+    for (const controller of this.inFlight) {
+      controller.abort();
+    }
+    this.inFlight.clear();
+    this.abortController = null;
   }
 
   /**
@@ -355,7 +502,7 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
     // Handle JSON-RPC response
     if (event.result) {
-      this.handleTaskUpdate(event.result);
+      this.handleTaskUpdate(normalizeA2AResult(event.result));
     } else if (event.error) {
       this.emit({
         type: 'error',
@@ -393,9 +540,44 @@ export class A2AAdapter extends BaseProtocolAdapter {
         task.final &&
         (state === 'completed' || state === 'failed' || state === 'canceled')
       ) {
+        // Only read the envelope once the worker actually named the
+        // extension active — a plain worker's status carries no
+        // `datalayer` key, and this stays `undefined` for it exactly as
+        // it did before the extension existed.
+        const datalayerMeta = this.orchestrationExtensionSupported
+          ? task.status?.message?.metadata?.[DATALAYER_META_KEY]
+          : undefined;
+        const datalayerUsage: Usage | undefined = datalayerMeta
+          ? readUsageMeta(task.status.message.metadata)
+          : undefined;
+
         this.emit({
           type: 'state-update',
-          data: { state, final: true },
+          data: {
+            state,
+            final: true,
+            ...(datalayerMeta?.paused && {
+              datalayerPaused: datalayerMeta.paused,
+            }),
+            ...(datalayerMeta?.error && {
+              datalayerError: datalayerMeta.error,
+            }),
+            ...(datalayerUsage && { datalayerUsage }),
+          },
+          // Best-effort mapping onto the cross-protocol shape; a worker
+          // that priced the run also sets `datalayerUsage.cost`, which
+          // has no field here and is not dropped — it is still on `data`.
+          ...(datalayerUsage && {
+            usage: {
+              promptTokens: datalayerUsage.inputTokens ?? 0,
+              completionTokens: datalayerUsage.outputTokens ?? 0,
+              ...(datalayerUsage.inputTokens !== undefined &&
+                datalayerUsage.outputTokens !== undefined && {
+                  totalTokens:
+                    datalayerUsage.inputTokens + datalayerUsage.outputTokens,
+                }),
+            },
+          }),
           timestamp: new Date(),
         });
       }

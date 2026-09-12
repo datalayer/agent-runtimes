@@ -5,11 +5,9 @@
 
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { IItem } from './Item';
-import { IDataset } from './Dataset';
 
 export type IBaseNotebook = IItem & {
   nbformat?: INotebookContent;
-  datasets: Array<IDataset>;
 };
 
 export type INotebook = IBaseNotebook & {

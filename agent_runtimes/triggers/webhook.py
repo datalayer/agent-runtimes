@@ -271,7 +271,7 @@ async def _execute_agent_webhook(agent_id: str, message: str) -> dict[str, Any]:
 
     context = AgentContext(
         session_id=f"webhook-{agent_id}",
-        conversation_history=[{"role": "user", "content": message}],
+        # A trigger starts a conversation: the message is the prompt, once.
         metadata={"trigger": "webhook", "agent_id": agent_id},
     )
 

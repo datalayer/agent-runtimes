@@ -23,6 +23,8 @@ from versioning import (
     versioned_ref,
 )
 
+from compose import resolve_spec  # noqa: E402  (sibling module, same folder)
+
 
 def _fmt_list(items: list[str]) -> str:
     """Format a list of strings with double quotes for ruff compliance."""
@@ -43,6 +45,112 @@ def _fmt_ts_literal(value: Any) -> str:
     if value is None:
         return "undefined"
     return json.dumps(value, ensure_ascii=False)
+
+
+def _suggestion_fields(item: Any) -> dict[str, Any]:
+    """A suggestion's fields, from either shape it may be written in.
+
+    A bare string is still read as a suggestion with no marks. Specs were all
+    migrated to the mapping form, so nothing in the catalogue takes this path —
+    it is here so a hand-written spec, or one restored from an older branch,
+    generates rather than crashing the build with an attribute error.
+    """
+    if isinstance(item, str):
+        return {"text": item}
+    return {
+        "text": item.get("text", ""),
+        # The label, when the text is too long to be one.
+        "summary": item.get("summary"),
+        "icon": item.get("icon"),
+        "emoji": item.get("emoji"),
+    }
+
+
+def _fmt_py_suggestions(items: list[Any]) -> str:
+    """`AgentSuggestion(...)` calls, one per line, or an empty list."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _suggestion_fields(item)
+        parts = [f"text={_fmt_py_literal(fields['text'])}"]
+        for key in ("summary", "icon", "emoji"):
+            if fields.get(key):
+                parts.append(f"{key}={_fmt_py_literal(fields[key])}")
+        rendered.append(f"AgentSuggestion({', '.join(parts)})")
+    return "[\n        " + ",\n        ".join(rendered) + ",\n    ]"
+
+
+def _fmt_ts_suggestions(items: list[Any]) -> str:
+    """Object literals, one per line, or an empty array."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _suggestion_fields(item)
+        parts = [f"text: {_fmt_ts_literal(fields['text'])}"]
+        for key in ("summary", "icon", "emoji"):
+            if fields.get(key):
+                parts.append(f"{key}: {_fmt_ts_literal(fields[key])}")
+        rendered.append("{ " + ", ".join(parts) + " }")
+    return "[\n    " + ",\n    ".join(rendered) + ",\n  ]"
+
+
+def _delegable_fields(item: Any) -> dict[str, Any]:
+    """
+    One `delegable` entry from YAML, as a mapping.
+
+    Parameters
+    ----------
+    item : Any
+        A mapping, or a bare string naming a capability with nothing else
+        said about it — the common case, and worth allowing so a spec that
+        has nothing to add beyond the id does not have to write a mapping.
+
+    Returns
+    -------
+    dict[str, Any]
+        The entry's fields.
+    """
+    if isinstance(item, str):
+        return {"id": item}
+    return dict(item or {})
+
+
+def _fmt_py_delegable(items: list[Any]) -> str:
+    """`AgentCapability(...)` calls, one per line, or an empty list."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _delegable_fields(item)
+        parts = [f"id={_fmt_py_literal(fields['id'])}"]
+        for key in ("name", "description"):
+            if fields.get(key):
+                parts.append(f"{key}={_fmt_py_literal(fields[key])}")
+        for key in ("inputs", "outputs", "tags"):
+            if fields.get(key):
+                parts.append(f"{key}={_fmt_py_literal(list(fields[key]))}")
+        rendered.append(f"AgentCapability({', '.join(parts)})")
+    return "[\n        " + ",\n        ".join(rendered) + ",\n    ]"
+
+
+def _fmt_ts_delegable(items: list[Any]) -> str:
+    """Object literals, one per line, or an empty array."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _delegable_fields(item)
+        parts = [f"id: {_fmt_ts_literal(fields['id'])}"]
+        for key in ("name", "description"):
+            if fields.get(key):
+                parts.append(f"{key}: {_fmt_ts_literal(fields[key])}")
+        for key in ("inputs", "outputs", "tags"):
+            if fields.get(key):
+                parts.append(f"{key}: {_fmt_ts_literal(list(fields[key]))}")
+        rendered.append("{ " + ", ".join(parts) + " }")
+    return "[\n    " + ",\n    ".join(rendered) + ",\n  ]"
 
 
 def _normalize_subagents_for_typescript(value: Any) -> Any:
@@ -107,9 +215,34 @@ def _sanitize_spec_for_codegen(spec: Dict[str, Any]) -> Dict[str, Any]:
     return sanitized
 
 
+def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
+    """Load capability fragments, which live beside the agents.
+
+    A fragment is not a runnable agent — no model, no system prompt, only
+    capability — so it is loaded separately and never generated into the
+    catalogue. See `scripts/codegen/compose.py`.
+    """
+    fragments_dir = specs_dir.parent / "fragments"
+    if not fragments_dir.is_dir():
+        return []
+
+    fragments: List[Dict[str, Any]] = []
+    for yaml_file in sorted(fragments_dir.glob("*.yaml")):
+        with open(yaml_file, "r") as f:
+            fragment = yaml.safe_load(f)
+            if fragment:
+                fragments.append(fragment)
+    return fragments
+
+
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     """
     Load all YAML agent specifications from directory and subdirectories.
+
+    Specs that declare `extends` or `includes` are flattened here, at
+    generation time, so the generated catalogue stays flat, the runtime keeps
+    no inheritance logic, and the pod companion — which forwards specs without
+    interpreting a field (D33) — never meets an unresolved reference.
 
     Returns list of tuples: (subfolder_name, spec_dict)
     where subfolder_name is the immediate parent folder name, or "" for root level.
@@ -134,7 +267,17 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
                         ensure_spec_version(spec)
                         specs.append((subdir.name, spec))
 
-    return specs
+    fragments = load_fragments(specs_dir)
+    by_id = {str(spec.get("id")): spec for _, spec in specs if spec.get("id")}
+    fragments_by_id = {str(f.get("id")): f for f in fragments if f.get("id")}
+
+    resolved: List[tuple[str, Dict[str, Any]]] = []
+    for subfolder, spec in specs:
+        if spec.get("extends") or spec.get("includes"):
+            spec = resolve_spec(spec, by_id, fragments_by_id)
+        resolved.append((subfolder, spec))
+
+    return resolved
 
 
 def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
@@ -154,7 +297,13 @@ Generated from YAML specifications in specs/agents/
 from typing import Dict
 
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
-from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
+from agent_runtimes.types import (
+    AgentCapability,
+    Agentspec,
+    AgentSuggestion,
+    SubAgentspecConfig,
+    SubAgentsConfig,
+)
 
 # ============================================================================
 # Agent Specs
@@ -234,13 +383,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             emoji = f'"{spec.get("emoji")}"' if spec.get("emoji") else "None"
             color = f'"{spec.get("color")}"' if spec.get("color") else "None"
             suggestions = spec.get("suggestions", [])
-            suggestions_str = (
-                "[\n        "
-                + ",\n        ".join(_fmt_py_literal(s) for s in suggestions)
-                + ",\n    ]"
-                if suggestions
-                else "[]"
-            )
+            suggestions_str = _fmt_py_suggestions(suggestions)
             # Escape multi-line strings properly
             welcome = (
                 spec.get("welcome_message", "").replace('"', '\\"').replace("\n", " ")
@@ -297,6 +440,10 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             # Sandbox variant field
             sandbox_variant = spec.get("sandbox_variant")
             sandbox_variant_str = f'"{sandbox_variant}"' if sandbox_variant else "None"
+            # Defaulted rather than optional: every agent is run by something,
+            # and a spec that says nothing is run by the server-side harness
+            # that has always run it.
+            harness = spec.get("harness") or "pydantic-ai"
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -308,6 +455,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             goal_str = _fmt_py_literal(goal_clean)
             protocol_val = spec.get("protocol")
             protocol_str = f'"{protocol_val}"' if protocol_val else "None"
+            delegable_str = _fmt_py_delegable(spec.get("delegable", []))
             ui_ext = spec.get("ui_extension")
             ui_ext_str = f'"{ui_ext}"' if ui_ext else "None"
             trigger_val = spec.get("trigger")
@@ -318,6 +466,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
             codemode_val = spec.get("codemode")
             output_val = spec.get("output")
             advanced_val = spec.get("advanced")
+            checkpoints_val = spec.get("checkpoints")
             auth_policy = spec.get("authorization_policy")
             auth_policy_str = f'"{auth_policy}"' if auth_policy is not None else "None"
             notifs = spec.get("notifications")
@@ -337,9 +486,15 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                     sa_fields = [
                         f"name={_fmt_py_literal(sa['name'])}",
                         f"description={_fmt_py_literal(sa['description'])}",
-                        f"instructions={_fmt_py_literal(sa['instructions'])}",
+                        # Optional: a subagent that names a `ref` takes its
+                        # instructions from the spec it refers to.
+                        f"instructions={_fmt_py_literal(sa.get('instructions', ''))}",
                     ]
                     for opt_key in (
+                        "ref",
+                        # Where a subagent reached over A2A is, or how to
+                        # launch it; a mapping, coerced by the pydantic model.
+                        "a2a",
                         "model",
                         "can_ask_questions",
                         "max_questions",
@@ -347,25 +502,42 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                         "typical_complexity",
                         "typically_needs_context",
                     ):
+                        camel_key = "".join(
+                            part if index == 0 else part.capitalize()
+                            for index, part in enumerate(opt_key.split("_"))
+                        )
                         opt_val = sa.get(opt_key)
+                        if opt_val is None:
+                            opt_val = sa.get(camel_key)
                         if opt_val is not None:
                             sa_fields.append(f"{opt_key}={_fmt_py_literal(opt_val)}")
                     sa_items.append("SubAgentspecConfig(" + ", ".join(sa_fields) + ")")
                 sa_list_str = "[" + ", ".join(sa_items) + "]"
+
+                # The specs are written in camelCase (`includeGeneralPurpose`),
+                # matching the TypeScript aliases, but only snake_case was read
+                # here — so `maxNestingDepth: 2` in a YAML silently generated
+                # the default of 0. Accept both spellings.
+                def _subagents_option(snake: str) -> Any:
+                    camel = "".join(
+                        part if index == 0 else part.capitalize()
+                        for index, part in enumerate(snake.split("_"))
+                    )
+                    value = subagents_val.get(snake)
+                    return value if value is not None else subagents_val.get(camel)
+
                 cfg_parts = [f"subagents={sa_list_str}"]
-                if subagents_val.get("default_model") is not None:
-                    cfg_parts.append(
-                        f"default_model={_fmt_py_literal(subagents_val['default_model'])}"
-                    )
-                if subagents_val.get("include_general_purpose") is not None:
-                    cfg_parts.append(
-                        f"include_general_purpose={_fmt_py_literal(subagents_val['include_general_purpose'])}"
-                    )
-                if subagents_val.get("max_nesting_depth") is not None:
-                    cfg_parts.append(
-                        f"max_nesting_depth={_fmt_py_literal(subagents_val['max_nesting_depth'])}"
-                    )
+                for option in (
+                    "default_model",
+                    "include_general_purpose",
+                    "max_nesting_depth",
+                ):
+                    option_value = _subagents_option(option)
+                    if option_value is not None:
+                        cfg_parts.append(f"{option}={_fmt_py_literal(option_value)}")
                 subagents_str = "SubAgentsConfig(" + ", ".join(cfg_parts) + ")"
+
+            domain_value = spec.get("domain") or spec.get("vertical")
 
             code += f'''{const_name} = Agentspec(
     id="{full_agent_id}",
@@ -373,6 +545,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
                 name="{display_name}",
     description="{description}",
     tags={_fmt_list(spec.get("tags", []))},
+    domain={f'"{domain_value}"' if domain_value else "None"},
     enabled={spec.get("enabled", True)},
     model={model_str},
     inference_provider={inference_provider_str},
@@ -389,9 +562,11 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
     welcome_notebook={f'"{welcome_notebook}"' if welcome_notebook else "None"},
     welcome_document={f'"{welcome_document}"' if welcome_document else "None"},
     sandbox_variant={sandbox_variant_str},
+    harness="{harness}",
     system_prompt={system_prompt_str},
     system_prompt_codemode_addons={system_prompt_codemode_addons_str},
     goal={goal_str},
+    delegable={delegable_str},
     protocol={protocol_str},
     ui_extension={ui_ext_str},
     trigger={_fmt_py_literal(trigger_val)},
@@ -402,6 +577,7 @@ from agent_runtimes.types import Agentspec, SubAgentspecConfig, SubAgentsConfig
     codemode={_fmt_py_literal(codemode_val)},
     output={_fmt_py_literal(output_val)},
     advanced={_fmt_py_literal(advanced_val)},
+    checkpoints={_fmt_py_literal(checkpoints_val)},
     authorization_policy={auth_policy_str},
     notifications={_fmt_py_literal(notifs)},
     memory={memory_str},
@@ -836,16 +1012,11 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             tags = spec.get("tags", [])
             tags_str = "[" + ", ".join(f"'{t}'" for t in tags) + "]"
 
+            domain_val = spec.get("domain") or spec.get("vertical")
+            domain_ts = f"'{domain_val}'" if domain_val else "undefined"
+
             suggestions = spec.get("suggestions", [])
-            # Escape single quotes in suggestions for TypeScript
-            escaped_suggestions = [s.replace("'", "\\'") for s in suggestions]
-            suggestions_str = (
-                "[\n    "
-                + ",\n    ".join(f"'{s}'" for s in escaped_suggestions)
-                + ",\n  ]"
-                if suggestions
-                else "[]"
-            )
+            suggestions_str = _fmt_ts_suggestions(suggestions)
 
             # Format optional fields
             icon = f"'{spec.get('icon')}'" if spec.get("icon") else "undefined"
@@ -893,6 +1064,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             sandbox_variant_ts = (
                 f"'{sandbox_variant}'" if sandbox_variant else "undefined"
             )
+            harness = spec.get("harness") or "pydantic-ai"
 
             # New flow-level fields
             goal_raw = spec.get("goal")
@@ -903,6 +1075,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             )
             protocol_val = spec.get("protocol")
             protocol_ts = f"'{protocol_val}'" if protocol_val else "undefined"
+            delegable_ts = _fmt_ts_delegable(spec.get("delegable", []))
             ui_ext = spec.get("ui_extension")
             ui_ext_ts = f"'{ui_ext}'" if ui_ext else "undefined"
             trigger_val = spec.get("trigger")
@@ -913,6 +1086,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             codemode_val = spec.get("codemode")
             output_val = spec.get("output")
             advanced_val = spec.get("advanced")
+            checkpoints_val = spec.get("checkpoints")
             auth_policy = spec.get("authorization_policy")
             auth_policy_ts = (
                 f"'{auth_policy}'" if auth_policy is not None else "undefined"
@@ -940,6 +1114,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 name: '{display_name}',
     description: `{description}`,
     tags: {tags_str},
+    domain: {domain_ts},
     enabled: {str(spec.get("enabled", True)).lower()},
     model: {model_ts},
 {inference_provider_line}    mcpServers: [{mcp_servers_str}],
@@ -955,9 +1130,11 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     welcomeNotebook: {_fmt_ts_literal(welcome_notebook)},
     welcomeDocument: {_fmt_ts_literal(welcome_document)},
     sandboxVariant: {sandbox_variant_ts},
+    harness: '{harness}',
     systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
     systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
     goal: {goal_ts},
+    delegable: {delegable_ts},
     protocol: {protocol_ts},
     uiExtension: {ui_ext_ts},
     trigger: {_fmt_ts_literal(trigger_val)},
@@ -968,6 +1145,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     codemode: {_fmt_ts_literal(codemode_val)},
     output: {_fmt_ts_literal(output_val)},
     advanced: {_fmt_ts_literal(advanced_val)},
+    checkpoints: {_fmt_ts_literal(checkpoints_val)},
     authorizationPolicy: {auth_policy_ts},
     notifications: {_fmt_ts_literal(notifs)},
     memory: {memory_ts},

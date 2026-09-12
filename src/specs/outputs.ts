@@ -42,6 +42,18 @@ export const DASHBOARD_OUTPUT_SPEC_0_0_1: OutputSpec = {
   mime_types: ['text/html', 'application/json'],
 };
 
+export const DATABASE_OUTPUT_SPEC_0_0_1: OutputSpec = {
+  id: 'database',
+  version: '0.0.1',
+  name: 'Database',
+  description:
+    'Write results back to a SQL or NoSQL store, where the rest of the business already reads from rather than into a file somebody must find.',
+  icon: 'database',
+  supports_template: false,
+  supports_storage: true,
+  mime_types: ['application/sql', 'application/json'],
+};
+
 export const DOCUMENT_OUTPUT_SPEC_0_0_1: OutputSpec = {
   id: 'document',
   version: '0.0.1',
@@ -108,6 +120,18 @@ export const SPREADSHEET_OUTPUT_SPEC_0_0_1: OutputSpec = {
   ],
 };
 
+export const WEBHOOK_OUTPUT_SPEC_0_0_1: OutputSpec = {
+  id: 'webhook',
+  version: '0.0.1',
+  name: 'Webhook',
+  description:
+    'Push results to any HTTP endpoint as they are produced, so a run can hand its answer straight to whatever is waiting for it.',
+  icon: 'globe',
+  supports_template: true,
+  supports_storage: false,
+  mime_types: ['application/json', 'text/plain'],
+};
+
 // ============================================================================
 // Output Catalog
 // ============================================================================
@@ -115,11 +139,13 @@ export const SPREADSHEET_OUTPUT_SPEC_0_0_1: OutputSpec = {
 export const OUTPUT_CATALOG: Record<string, OutputSpec> = {
   csv: CSV_OUTPUT_SPEC_0_0_1,
   dashboard: DASHBOARD_OUTPUT_SPEC_0_0_1,
+  database: DATABASE_OUTPUT_SPEC_0_0_1,
   document: DOCUMENT_OUTPUT_SPEC_0_0_1,
   email: EMAIL_OUTPUT_SPEC_0_0_1,
   json: JSON_OUTPUT_SPEC_0_0_1,
   notebook: NOTEBOOK_OUTPUT_SPEC_0_0_1,
   spreadsheet: SPREADSHEET_OUTPUT_SPEC_0_0_1,
+  webhook: WEBHOOK_OUTPUT_SPEC_0_0_1,
 };
 
 export function getOutputSpecs(): OutputSpec[] {

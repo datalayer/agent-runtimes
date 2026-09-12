@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Slash command: /status - Show agent-runtimes CLI status."""
 
 from __future__ import annotations
@@ -146,7 +142,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
             summary_parts.append(
                 f"{skill_count} skill{'s' if skill_count != 1 else ''}"
             )
-        if sandbox_variant == "jupyter":
+        if sandbox_variant == "jupyter-server":
             summary_parts.append("Jupyter sandbox")
         if codemode_on:
             summary_parts.append("Code Mode")

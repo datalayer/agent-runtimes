@@ -1,0 +1,18 @@
+# Deterministic constraints for Python 3.13 installs.
+# Use with: pip install -c constraints/py313.txt -e .
+
+fastapi==0.141.0
+httpx==0.28.1
+mcp==1.29.0
+openai==2.29.0
+
+opentelemetry-api==1.40.0
+opentelemetry-sdk==1.40.0
+opentelemetry-semantic-conventions==0.61b0
+opentelemetry-exporter-otlp-proto-http==1.40.0
+opentelemetry-exporter-otlp-proto-grpc==1.40.0
+opentelemetry-instrumentation==0.61b0
+
+pydantic-ai==2.8.0
+pydantic-ai-slim==2.8.0
+pydantic-graph==2.8.0

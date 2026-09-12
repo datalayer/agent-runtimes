@@ -89,8 +89,10 @@ class ChatResponseData(BaseModel):
     """Chat completion response data model."""
 
     response: Optional[str] = Field(None, description="Generated response text")
-    message: Optional[Dict[str, Any]] = Field(
-        None, description="Full message object for tool calls"
+    # Not `message`: the service flattens this payload to the top level of its
+    # response envelope, whose own `message` is a sentence for a person to read.
+    assistant_message: Optional[Dict[str, Any]] = Field(
+        None, description="The assistant's whole message, including any tool calls"
     )
     choices: Optional[List[Dict[str, Any]]] = Field(
         None, description="Full choices for complex responses"

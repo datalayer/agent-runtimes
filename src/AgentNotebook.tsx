@@ -98,7 +98,7 @@ async function fetchStartupKernelId(): Promise<string | undefined> {
     }
     const payload = await resp.json();
     const sandbox = payload?.sandbox;
-    if (sandbox?.variant !== 'jupyter') {
+    if (sandbox?.variant !== 'jupyter-server') {
       return undefined;
     }
     const kernelId = sandbox?.kernel_id;

@@ -36,17 +36,19 @@ from acp import (
     PROTOCOL_VERSION as ACP_PROTOCOL_VERSION,
 )
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, model_serializer
 
 from ..adapters.base import BaseAgent
+from ..context.delegation import STEER_METHOD
 from ..context.identities import set_request_user_jwt
-from ..context.usage import get_usage_tracker
+from ..context.usage import TurnSpend
 from ..otel.prompt_turn_metrics import (
     extract_identity_hints,
     extract_jwt_token,
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
+from ..protocol_state import acp as sessions
 from ..transports.acp import ACPSession, ACPTransport
 
 logger = logging.getLogger(__name__)
@@ -103,6 +105,13 @@ class ACPMessage(BaseModel):
     Base ACP message format.
 
     Per JSON-RPC 2.0 spec, id can be a string, number, or null.
+
+    What it is written as is exactly one JSON-RPC message: a request or a
+    notification carries its method, and its id and params when it has them;
+    a response carries its id and either its result or its error. Never both,
+    and never the other member as null — a conforming client reads an
+    ``error`` member as a failure whatever its value, which is how the
+    repository's own ACP client came to refuse every answer of this route.
     """
 
     jsonrpc: str = "2.0"
@@ -111,6 +120,18 @@ class ACPMessage(BaseModel):
     params: dict[str, Any] | None = None
     result: Any | None = None
     error: dict[str, Any] | None = None
+
+    @model_serializer(mode="wrap")
+    def _json_rpc(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        dumped = handler(self)
+        if self.method is not None:
+            return {
+                key: dumped[key]
+                for key in ("jsonrpc", "id", "method", "params")
+                if dumped.get(key) is not None
+            }
+        member = "error" if self.error is not None else "result"
+        return {"jsonrpc": dumped["jsonrpc"], "id": dumped["id"], member: dumped[member]}
 
 
 class ACPError(BaseModel):
@@ -135,9 +156,12 @@ class ACPErrorCode:
     AGENT_NOT_FOUND = -32003
 
 
-# In-memory stores (should be replaced with proper persistence in production)
+# The agents registered in this process, and the transport of each open
+# connection's session: process state, made again by whoever connects. The
+# sessions themselves are records of the protocol state store
+# (`protocol_state/acp.py`), so `session/load` on a restarted runtime finds the
+# session a client names (O1-11).
 _agents: dict[str, tuple[BaseAgent, AgentInfo]] = {}
-_sessions: dict[str, ACPSession] = {}
 _adapters: dict[str, ACPTransport] = {}
 
 # Track running prompts per session ID for termination
@@ -278,24 +302,23 @@ async def get_agent(agent_id: str) -> AgentInfo:
 @router.get("/sessions")
 async def list_sessions() -> dict[str, Any]:
     """
-    List all active sessions.
+    List the sessions this runtime keeps, whichever process made them.
 
     Returns:
         List of session information.
     """
-    sessions = []
-    for session_id, session in _sessions.items():
-        sessions.append(
+    return {
+        "sessions": [
             SessionInfo(
-                session_id=session_id,
+                session_id=session.id,
                 agent_id=session.agent_id,
                 created_at=session.created_at,
                 status=session.status,
                 metadata=session.metadata,
             ).model_dump()
-        )
-
-    return {"sessions": sessions}
+            for session in await sessions.list_sessions()
+        ]
+    }
 
 
 @router.get("/sessions/{session_id}")
@@ -312,12 +335,11 @@ async def get_session(session_id: str) -> SessionInfo:
     Raises:
         HTTPException: If session not found.
     """
-    if session_id not in _sessions:
+    session = await sessions.load_session(session_id)
+    if session is None:
         raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
-
-    session = _sessions[session_id]
     return SessionInfo(
-        session_id=session_id,
+        session_id=session.id,
         agent_id=session.agent_id,
         created_at=session.created_at,
         status=session.status,
@@ -328,7 +350,7 @@ async def get_session(session_id: str) -> SessionInfo:
 @router.delete("/sessions/{session_id}")
 async def close_session(session_id: str) -> dict[str, str]:
     """
-    Close an active session.
+    Close a session: its running prompt stops, and it and its conversation are forgotten.
 
     Args:
         session_id: The session identifier.
@@ -339,17 +361,10 @@ async def close_session(session_id: str) -> dict[str, str]:
     Raises:
         HTTPException: If session not found.
     """
-    if session_id not in _sessions:
+    if not await sessions.close_session(session_id):
         raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
-
-    session = _sessions[session_id]
-    session.status = "closed"
-    del _sessions[session_id]
-
-    # Clean up adapter if exists
-    if session_id in _adapters:
-        del _adapters[session_id]
-
+    cancel_prompt(session_id)
+    _adapters.pop(session_id, None)
     return {"message": f"Session {session_id} closed"}
 
 
@@ -384,6 +399,8 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
     agent, agent_info = _agents[agent_id]
     session_id: str | None = None
     adapter: ACPTransport | None = None
+    # The prompts this connection is running, each on a task of its own.
+    prompts: set[asyncio.Task[None]] = set()
     websocket_user_jwt_token = extract_jwt_token(
         websocket.headers.get("authorization"),
         websocket.headers.get("x-external-token"),
@@ -427,30 +444,40 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                     adapter = ACPTransport(agent)
                     _adapters[session_id] = adapter
 
-            # ACP spec method: session/prompt
+            # ACP spec method: session/prompt. On a task of its own, so this
+            # loop goes on reading while the prompt runs: the `session/cancel`
+            # that stops it arrives on this same connection (O1-11).
             elif message.method == "session/prompt":
-                if not session_id or session_id not in _sessions:
+                prompted_session_id = (message.params or {}).get("sessionId")
+                if (
+                    not prompted_session_id
+                    or await sessions.load_session(prompted_session_id) is None
+                ):
                     await _send_error(
                         websocket,
                         message.id,
                         ACPErrorCode.SESSION_NOT_FOUND,
-                        "No active session",
+                        f"Session not found: {prompted_session_id}",
                     )
                     continue
 
-                await _handle_prompt(
-                    websocket,
-                    message,
-                    session_id,
-                    agent,
-                    adapter,
-                    websocket_user_jwt_token,
+                prompting = asyncio.create_task(
+                    _handle_prompt(
+                        websocket,
+                        message,
+                        prompted_session_id,
+                        agent,
+                        _adapters.get(prompted_session_id),
+                        websocket_user_jwt_token,
+                    )
                 )
+                prompts.add(prompting)
+                prompting.add_done_callback(prompts.discard)
 
             # Legacy method name: acp.session.run
             elif message.method == "acp.session.run":
                 # Run agent on input
-                if not session_id or session_id not in _sessions:
+                if not session_id or await sessions.load_session(session_id) is None:
                     await _send_error(
                         websocket,
                         message.id,
@@ -461,60 +488,85 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
 
                 await _handle_run(websocket, message, session_id, agent, adapter)
 
-            # ACP spec method: session/load
+            # ACP spec method: session/load. The session is read from the
+            # protocol state store, whichever process made it, and its
+            # conversation is replayed before the load is answered — what the
+            # schema asks of an agent that declares `loadSession`.
             elif message.method == "session/load":
                 params = message.params or {}
                 target_session_id = params.get("sessionId")
-                if target_session_id and target_session_id in _sessions:
-                    session_id = target_session_id
-                    await websocket.send_json(
-                        ACPMessage(
-                            jsonrpc=ACP_JSONRPC_VERSION,
-                            id=message.id,
-                            result={"sessionId": session_id},
-                        ).model_dump()
-                    )
-                else:
+                loaded = (
+                    await sessions.load_session(target_session_id)
+                    if target_session_id
+                    else None
+                )
+                if loaded is None:
                     await _send_error(
                         websocket,
                         message.id,
                         ACPErrorCode.SESSION_NOT_FOUND,
                         f"Session not found: {target_session_id}",
                     )
+                    continue
 
-            # ACP spec method: session/cancel
+                loaded.status = "active"
+                loaded.cwd = params.get("cwd") or loaded.cwd
+                if "mcpServers" in params:
+                    loaded.mcp_servers = list(params.get("mcpServers") or [])
+                await sessions.save_session(loaded)
+                session_id = loaded.id
+                adapter = ACPTransport(agent)
+                _adapters[session_id] = adapter
+                for turn in await sessions.turns(session_id):
+                    await websocket.send_json(
+                        ACPMessage(
+                            jsonrpc=ACP_JSONRPC_VERSION,
+                            method="session/update",
+                            params=_session_update(
+                                session_id,
+                                {
+                                    "sessionUpdate": "user_message_chunk"
+                                    if turn["role"] == "user"
+                                    else "agent_message_chunk",
+                                    "content": _text_block(str(turn["text"])),
+                                },
+                            ),
+                        ).model_dump()
+                    )
+                await websocket.send_json(
+                    ACPMessage(
+                        jsonrpc=ACP_JSONRPC_VERSION, id=message.id, result={}
+                    ).model_dump()
+                )
+
+            # ACP spec method: session/cancel, a notification: the running
+            # prompt stops and answers `cancelled`, and the cancel itself is
+            # not answered.
             elif message.method == "session/cancel":
-                # Cancel the running prompt for this session
-                params = message.params or {}
-                target_session_id = params.get("sessionId", session_id)
+                cancelled_session_id = (message.params or {}).get("sessionId")
+                if cancelled_session_id:
+                    from ..context.delegation import pause_asked, request_pause
 
-                if target_session_id:
-                    cancelled = cancel_prompt(target_session_id)
-                    await websocket.send_json(
-                        ACPMessage(
-                            jsonrpc=ACP_JSONRPC_VERSION,
-                            id=message.id,
-                            result={
-                                "acknowledged": True,
-                                "cancelled": cancelled,
-                                "sessionId": target_session_id,
-                            },
-                        ).model_dump()
-                    )
-                else:
-                    # Cancel all prompts if no session specified
-                    count = cancel_all_prompts()
-                    await websocket.send_json(
-                        ACPMessage(
-                            jsonrpc=ACP_JSONRPC_VERSION,
-                            id=message.id,
-                            result={
-                                "acknowledged": True,
-                                "cancelled": count > 0,
-                                "cancelledCount": count,
-                            },
-                        ).model_dump()
-                    )
+                    # A cancel that asks to pause (the Datalayer orchestration
+                    # extension, O2-05): the turn keeps a checkpoint of its
+                    # conversation and answers with it, rather than only stopping.
+                    if pause_asked((message.params or {}).get("_meta")):
+                        request_pause(cancelled_session_id)
+                    cancel_prompt(cancelled_session_id)
+
+            # The Datalayer orchestration extension's steer (O2-05), a
+            # notification: the instructions reach the session's running turn
+            # before its next model request, and a session not working drops
+            # them.
+            elif message.method == STEER_METHOD:
+                from ..context.delegation import deliver_steer
+
+                steered = message.params or {}
+                steered_session_id = steered.get("sessionId")
+                instructions = steered.get("instructions")
+                if steered_session_id and isinstance(instructions, str) and instructions:
+                    if not deliver_steer(steered_session_id, instructions):
+                        logger.info("ACP session %s is not working; its steer was dropped", steered_session_id)
 
             elif message.method == "acp.permission.respond":
                 # Handle permission response
@@ -523,11 +575,9 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
 
             elif message.method == "shutdown":
                 # Shutdown connection
-                if session_id and session_id in _sessions:
-                    _sessions[session_id].status = "closed"
-                    del _sessions[session_id]
-                if session_id and session_id in _adapters:
-                    del _adapters[session_id]
+                if session_id:
+                    await sessions.set_session_status(session_id, "closed")
+                    _adapters.pop(session_id, None)
 
                 await websocket.send_json(
                     ACPMessage(
@@ -556,9 +606,12 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
         except Exception:
             pass
     finally:
-        # Cleanup
-        if session_id and session_id in _sessions:
-            _sessions[session_id].status = "disconnected"
+        # Cleanup: the prompts this connection ran stop with it, and its
+        # session is kept, disconnected, for a `session/load` to find.
+        for prompting in list(prompts):
+            prompting.cancel()
+        if session_id:
+            await sessions.set_session_status(session_id, "disconnected")
         if session_id and session_id in _adapters:
             del _adapters[session_id]
 
@@ -588,14 +641,24 @@ async def _handle_initialize(
     session = ACPSession(
         id=session_id,
         context=context,
+        agent_id=agent_info.id,
     )
-    _sessions[session_id] = session
+    await sessions.save_session(session)
+
+    from ..context.delegation import EXTENSION_URI
 
     # Build ACP-compliant response
     result = {
         "protocolVersion": ACP_PROTOCOL_VERSION,
         "agentCapabilities": {
-            "loadSession": False,
+            # The Datalayer orchestration extension (O2-05): a prompt may name
+            # its execution and resume from a checkpoint, a `session/cancel`
+            # may ask to pause at one, and `_datalayer/steer` reaches the
+            # running turn.
+            "_meta": {"datalayer": {"extensions": [EXTENSION_URI]}},
+            # A session outlives this process, and its conversation is
+            # replayed on `session/load` (O1-11).
+            "loadSession": True,
             "promptCapabilities": {
                 "image": False,
                 "audio": False,
@@ -658,8 +721,9 @@ async def _handle_new_session(
         context=context,
         mcp_servers=params.get("mcpServers", []),
         current_mode=params.get("mode"),
+        agent_id=agent_info.id,
     )
-    _sessions[session_id] = session
+    await sessions.save_session(session)
 
     # ACP-compliant response
     result = {
@@ -690,7 +754,8 @@ async def _handle_prompt(
     and returns stopReason when complete.
     """
     params = message.params or {}
-    content = params.get("content", [])
+    # The prompt's content blocks, under the name the schema gives them (O1-11).
+    content = params.get("prompt", [])
     metadata = params.get("metadata", {})
     metadata_identities = (
         metadata.get("identities") if isinstance(metadata, dict) else None
@@ -701,14 +766,12 @@ async def _handle_prompt(
     if model:
         logger.info(f"ACP: Using model from request metadata: {model}")
 
-    # Extract text from content blocks per ACP spec
-    prompt = ""
-    for block in content:
-        if isinstance(block, str):
-            prompt = block
-        elif isinstance(block, dict):
-            if block.get("type") == "text":
-                prompt = block.get("text", "")
+    # The text of every text block, in order.
+    prompt = "\n".join(
+        str(block.get("text", ""))
+        for block in content
+        if isinstance(block, dict) and block.get("type") == "text"
+    )
 
     # Convert to context - include model in metadata for agents that support it
     from ..adapters.base import AgentContext
@@ -716,61 +779,90 @@ async def _handle_prompt(
     context_metadata = params.get("metadata", {}) or {}
     if model:
         context_metadata["model"] = model
+    from ..guardrails.model_budget import (
+        ModelBudgetReached,
+        acp_stop_reason,
+        delegated_budget,
+        refusal_meta,
+    )
+
+    # The model budget the delegation set on this turn, in the schema's `_meta`:
+    # the adapter applies it as the run's usage limits (O1-07).
+    budget = delegated_budget(params.get("_meta"))
+    if budget:
+        context_metadata["budget"] = budget
+    # The execution's token, taken out of `_meta` before anything keeps the
+    # prompt: the turn's identity, and its Datalayer MCP toolset's (O1-17).
+    from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
+    from ..context.delegation import (
+        checkpoint_of,
+        enter_execution,
+        execution_of,
+        take_credential,
+    )
+
+    delegated_credential = take_credential(params.get("_meta"))
+    if delegated_credential:
+        context_metadata["user_token"] = delegated_credential
+    budget_meta: dict[str, Any] | None = None
+
+    # The execution this turn is for, whose checkpoints it keeps, and the one
+    # it resumes from when it was paused (O2-05); what is steered into it while
+    # it works reaches its model within the turn.
+    execution_id = execution_of(params.get("_meta"))
+    # On the turn, where its tools read it: an orchestrated turn asks the
+    # control plane for its children rather than taking them (O2-06).
+    enter_execution(params.get("_meta"))
+    # The conversation before this prompt — none, or the checkpoint's. The
+    # prompt is not part of it: the adapter is given the prompt once, as such.
+    history: list[dict[str, Any]] = []
+    resumed_from = checkpoint_of(params.get("_meta"))
+    if resumed_from:
+        checkpoint = (
+            await ProtocolStateCheckpointStore(execution_id).get(resumed_from)
+            if execution_id
+            else None
+        )
+        if checkpoint is None:
+            await _send_error(
+                websocket,
+                message.id,
+                ACPErrorCode.INVALID_PARAMS,
+                f"Checkpoint '{resumed_from}' of execution '{execution_id}' is not kept by this "
+                "runtime, so the turn cannot resume from it.",
+            )
+            return
+        history = [dict(one) for one in checkpoint.messages]
+    context_metadata["steer_run"] = session_id
 
     context = AgentContext(
         session_id=session_id,
-        conversation_history=[{"role": "user", "content": prompt}],
+        conversation_history=history,
         metadata=context_metadata,
     )
 
     stop_reason = "end_turn"
     start_time = time.perf_counter()
     tool_call_count = 0
-    input_tokens: int | None = None
-    output_tokens: int | None = None
-    total_tokens: int | None = None
     response_chunks: list[str] = []
     completed_without_error = False
-    session = _sessions.get(session_id)
+    session = await sessions.load_session(session_id)
+    # Kept before it runs: a runtime that stops mid-turn still replays what
+    # was asked on `session/load`.
+    await sessions.append_turn(session_id, "user", prompt)
     session_agent_id = session.agent_id if session else None
-    usage_tracker = get_usage_tracker()
-    usage_history_len_before = 0
-    if session_agent_id:
-        stats_before = usage_tracker.get_agent_stats(session_agent_id)
-        if stats_before:
-            usage_history_len_before = len(stats_before.request_usage_history)
-
-    def _parse_usage_tokens(usage: Any) -> tuple[int | None, int | None, int | None]:
-        if not isinstance(usage, dict):
-            return None, None, None
-
-        raw_input = usage.get("input_tokens")
-        if raw_input is None:
-            raw_input = usage.get("prompt_tokens")
-        raw_output = usage.get("output_tokens")
-        if raw_output is None:
-            raw_output = usage.get("completion_tokens")
-        raw_total = usage.get("total_tokens")
-
-        parsed_input = int(raw_input) if isinstance(raw_input, (int, float)) else None
-        parsed_output = (
-            int(raw_output) if isinstance(raw_output, (int, float)) else None
-        )
-        parsed_total = int(raw_total) if isinstance(raw_total, (int, float)) else None
-
-        if parsed_total is None and (
-            parsed_input is not None or parsed_output is not None
-        ):
-            parsed_total = max((parsed_input or 0) + (parsed_output or 0), 0)
-
-        return parsed_input, parsed_output, parsed_total
+    # What the turn spends, counted from here: answered with the turn, so the
+    # control plane knows what its attempt cost (O2-10), and kept in the metrics.
+    turn = TurnSpend.begin(session_agent_id)
 
     session_user_id = session.context.user_id if session and session.context else None
     metric_user_provider = "acp-session"
     hint_user_id, hint_provider, hint_token = extract_identity_hints(
         metadata_identities
     )
-    user_jwt_token = hint_token or user_jwt_token
+    # The execution's token is the turn's identity when the prompt delegated
+    # one (O1-17); otherwise the identity hints', or the connection's.
+    user_jwt_token = delegated_credential or hint_token or user_jwt_token
     if hint_user_id:
         session_user_id = hint_user_id
     if hint_provider:
@@ -794,65 +886,152 @@ async def _handle_prompt(
         if hasattr(agent, "stream"):
             logger.info(f"Using streaming for agent {agent}, prompt: {prompt[:50]}...")
             event_count = 0
-            # Streaming response with session/update notifications
-            async for event in agent.stream(prompt, context):
-                # Check for cancellation
-                if cancel_event.is_set():
+            from ..context.delegation import close_steering, open_steering
+
+            # Steerable while it works: what arrives on `_datalayer/steer` for
+            # this session reaches its model before the next request (O2-05).
+            open_steering(session_id)
+            stream = agent.stream(prompt, context).__aiter__()
+            cancelled = asyncio.ensure_future(cancel_event.wait())
+            try:
+                while not cancelled.done():
+                    # The next event or the cancel, whichever comes first: an
+                    # agent waiting in the middle of its answer is stopped
+                    # where it waits, not after its next event (O1-11).
+                    step = asyncio.ensure_future(stream.__anext__())
+                    await asyncio.wait(
+                        {step, cancelled}, return_when=asyncio.FIRST_COMPLETED
+                    )
+                    if not step.done():
+                        step.cancel()
+                        try:
+                            await step
+                        except (asyncio.CancelledError, StopAsyncIteration):
+                            pass
+                        break
+                    try:
+                        event = step.result()
+                    except StopAsyncIteration:
+                        break
+
+                    event_type = ""
+                    event_data: Any = None
+                    if hasattr(event, "type"):
+                        event_type = getattr(event, "type", "")
+                        event_data = getattr(event, "data", None)
+                    elif isinstance(event, dict):
+                        event_type = event.get("type", "")
+                        event_data = event.get("data")
+
+                    if event_type == "error" and isinstance(
+                        event_data, ModelBudgetReached
+                    ):
+                        # The turn's budget, reached: a stop reason the schema
+                        # has, and which limit in `_meta` (O1-07).
+                        stop_reason = acp_stop_reason(event_data.limit)
+                        budget_meta = refusal_meta(event_data)
+                        break
+                    if event_type == "error":
+                        # A failed turn is the prompt's error, not an update
+                        # the schema does not have.
+                        raise RuntimeError(
+                            str(event_data) if event_data else "The agent failed."
+                        )
+                    if event_type == "text" and isinstance(event_data, str):
+                        response_chunks.append(event_data)
+                    elif event_type == "output" and event_data and not response_chunks:
+                        # An agent that answered at once, with no text on the
+                        # way: its answer is the turn's message.
+                        response_chunks.append(str(event_data))
+                        await websocket.send_json(
+                            ACPMessage(
+                                jsonrpc=ACP_JSONRPC_VERSION,
+                                method="session/update",
+                                params=_session_update(
+                                    session_id,
+                                    {
+                                        "sessionUpdate": "agent_message_chunk",
+                                        "content": _text_block(str(event_data)),
+                                    },
+                                ),
+                            ).model_dump()
+                        )
+                    elif event_type == "tool_call":
+                        tool_call_count += 1
+                    elif event_type == "done":
+                        turn.reported(
+                            event_data.get("usage")
+                            if isinstance(event_data, dict)
+                            else None
+                        )
+
+                    event_count += 1
+                    update_params = _convert_event_to_session_update(session_id, event)
+                    if update_params is not None:
+                        await websocket.send_json(
+                            ACPMessage(
+                                jsonrpc=ACP_JSONRPC_VERSION,
+                                method="session/update",
+                                params=update_params,
+                            ).model_dump()
+                        )
+                if cancelled.done():
                     logger.info(f"Prompt cancelled for session {session_id}")
                     stop_reason = "cancelled"
-                    break
+            finally:
+                cancelled.cancel()
+                closing = getattr(stream, "aclose", None)
+                if closing is not None:
+                    try:
+                        await closing()
+                    except Exception:  # noqa: BLE001 - the stream is over either way
+                        pass
+                close_steering(session_id)
 
-                event_type = ""
-                event_data: Any = None
-                if hasattr(event, "type"):
-                    event_type = getattr(event, "type", "")
-                    event_data = getattr(event, "data", None)
-                elif isinstance(event, dict):
-                    event_type = event.get("type", "")
-                    event_data = event.get("data")
+            from ..context.delegation import (
+                forget_pause,
+                merged_meta,
+                pause_requested,
+                paused_meta,
+                spent_meta,
+            )
 
-                if event_type == "text" and isinstance(event_data, str):
-                    response_chunks.append(event_data)
-                elif event_type == "tool_call":
-                    tool_call_count += 1
-                elif event_type == "done":
-                    done_usage = (
-                        event_data.get("usage")
-                        if isinstance(event_data, dict)
-                        else None
+            paused: dict[str, Any] | None = None
+            if stop_reason == "cancelled" and pause_requested(session_id):
+                forget_pause(session_id)
+                if execution_id:
+                    # Paused, not cancelled: the turn's conversation so far is
+                    # kept where a resume finds it, in whichever process (O2-05).
+                    kept = [*history, {"role": "user", "content": prompt}]
+                    if response_chunks:
+                        kept.append({"role": "assistant", "content": "".join(response_chunks)})
+                    checkpoint = await ProtocolStateCheckpointStore(execution_id).create_checkpoint(
+                        "paused", turn=len(kept), messages=kept, metadata={"session_id": session_id}
                     )
-                    parsed_input, parsed_output, parsed_total = _parse_usage_tokens(
-                        done_usage
+                    paused = paused_meta(checkpoint.id)
+                    logger.info("ACP session %s paused at %s", session_id, checkpoint.id)
+                else:
+                    logger.warning(
+                        "ACP session %s was asked to pause and names no execution to keep a "
+                        "checkpoint under; it is stopped instead",
+                        session_id,
                     )
-                    if parsed_input is not None:
-                        input_tokens = parsed_input
-                    if parsed_output is not None:
-                        output_tokens = parsed_output
-                    if parsed_total is not None:
-                        total_tokens = parsed_total
 
-                event_count += 1
-                logger.info(f"Received event #{event_count}: {event}")
-                # Send session/update notification per ACP spec
-                update_params = _convert_event_to_session_update(session_id, event)
-                logger.info(f"Converted to update_params: {update_params}")
-                if (
-                    update_params is not None
-                ):  # Skip events that return None (e.g., 'done')
-                    notification = ACPMessage(
-                        jsonrpc=ACP_JSONRPC_VERSION,
-                        method="session/update",
-                        params=update_params,
-                    )
-                    await websocket.send_json(notification.model_dump())
-
+            if response_chunks:
+                await sessions.append_turn(
+                    session_id, "agent", "".join(response_chunks)
+                )
             logger.info(f"Stream complete, received {event_count} events")
-            # Send final response with stopReason
+            # Send final response with stopReason, and what the turn spent.
+            answer_meta = merged_meta(budget_meta, paused, spent_meta(turn.settle()))
             await websocket.send_json(
                 ACPMessage(
                     jsonrpc=ACP_JSONRPC_VERSION,
                     id=message.id,
-                    result={"stopReason": stop_reason},
+                    result={
+                        "stopReason": stop_reason,
+                        **({"_meta": answer_meta} if answer_meta else {}),
+                    },
                 ).model_dump()
             )
             completed_without_error = True
@@ -862,18 +1041,11 @@ async def _handle_prompt(
             response_content = response.content if response else ""
             if response and response.tool_calls:
                 tool_call_count = len(response.tool_calls)
-            response_usage = response.usage if response else None
-            parsed_input, parsed_output, parsed_total = _parse_usage_tokens(
-                response_usage
-            )
-            if parsed_input is not None:
-                input_tokens = parsed_input
-            if parsed_output is not None:
-                output_tokens = parsed_output
-            if parsed_total is not None:
-                total_tokens = parsed_total
+            turn.reported(response.usage if response else None)
             response_chunks.append(response_content)
+            from ..context.delegation import spent_meta
 
+            spent = spent_meta(turn.settle())
             await websocket.send_json(
                 ACPMessage(
                     jsonrpc=ACP_JSONRPC_VERSION,
@@ -881,6 +1053,7 @@ async def _handle_prompt(
                     result={
                         "stopReason": stop_reason,
                         "output": response_content,
+                        **({"_meta": spent} if spent else {}),
                     },
                 ).model_dump()
             )
@@ -898,24 +1071,7 @@ async def _handle_prompt(
         # Always unregister the prompt when done
         unregister_prompt(session_id)
 
-        if session_agent_id and (input_tokens is None or output_tokens is None):
-            stats_after = usage_tracker.get_agent_stats(session_agent_id)
-            if (
-                stats_after
-                and len(stats_after.request_usage_history) > usage_history_len_before
-            ):
-                delta_history = stats_after.request_usage_history[
-                    usage_history_len_before:
-                ]
-                if input_tokens is None:
-                    input_tokens = sum(item.input_tokens for item in delta_history)
-                if output_tokens is None:
-                    output_tokens = sum(item.output_tokens for item in delta_history)
-
-        if total_tokens is None and (
-            input_tokens is not None or output_tokens is not None
-        ):
-            total_tokens = max((input_tokens or 0) + (output_tokens or 0), 0)
+        turn.settle()
 
         duration_ms = (time.perf_counter() - start_time) * 1000.0
         record_prompt_turn_completion(
@@ -927,9 +1083,9 @@ async def _handle_prompt(
             success=completed_without_error,
             model=model if isinstance(model, str) else None,
             tool_call_count=tool_call_count,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
+            input_tokens=turn.input_tokens,
+            output_tokens=turn.output_tokens,
+            total_tokens=turn.total_tokens,
             user_id=str(session_user_id) if session_user_id else None,
             user_provider=metric_user_provider,
             identities_count=None,
@@ -972,54 +1128,76 @@ def _convert_event_to_session_update(
         logger.debug(f"Skipping done event for session {session_id}")
         return None
 
+    # As the ACP schema spells an update: nested under `update`, its text in a
+    # content block (O1-11).
     if event_type == "text":
-        return {
-            "sessionId": session_id,
-            "sessionUpdate": "agent_message_chunk",
-            "chunk": event_data,
-        }
-    elif event_type == "tool_call":
-        return {
-            "sessionId": session_id,
-            "sessionUpdate": "tool_call",
-            "toolCallId": event_data.get("id", str(uuid.uuid4()))
-            if isinstance(event_data, dict)
-            else str(uuid.uuid4()),
-            "name": event_data.get("name", "") if isinstance(event_data, dict) else "",
-            "arguments": event_data.get("arguments", {})
-            if isinstance(event_data, dict)
-            else {},
-        }
-    elif event_type == "tool_result":
-        return {
-            "sessionId": session_id,
-            "sessionUpdate": "tool_call_update",
-            "toolCallId": event_data.get("id", "")
-            if isinstance(event_data, dict)
-            else "",
-            "result": event_data.get("result")
-            if isinstance(event_data, dict)
-            else event_data,
-        }
-    elif event_type == "thought":
-        return {
-            "sessionId": session_id,
-            "sessionUpdate": "agent_thought_chunk",
-            "chunk": event_data,
-        }
-    elif event_type == "error":
-        # Error events should be sent with a special sessionUpdate type
-        return {
-            "sessionId": session_id,
-            "sessionUpdate": "error",
-            "error": str(event_data) if event_data else "Unknown error",
-        }
-    else:
-        return {
-            "sessionId": session_id,
-            "sessionUpdate": "agent_message_chunk",
-            "chunk": str(event_data) if event_data else "",
-        }
+        return _session_update(
+            session_id,
+            {
+                "sessionUpdate": "agent_message_chunk",
+                "content": _text_block(str(event_data)),
+            },
+        )
+    if event_type == "thought":
+        return _session_update(
+            session_id,
+            {
+                "sessionUpdate": "agent_thought_chunk",
+                "content": _text_block(str(event_data)),
+            },
+        )
+    if event_type == "tool_call":
+        call = _fields(event_data)
+        return _session_update(
+            session_id,
+            {
+                "sessionUpdate": "tool_call",
+                "toolCallId": str(
+                    call.get("id") or call.get("tool_call_id") or uuid.uuid4()
+                ),
+                "title": str(call.get("name") or ""),
+                "kind": "other",
+                "status": "pending",
+                "rawInput": call.get("arguments") or {},
+            },
+        )
+    if event_type == "tool_result":
+        result = _fields(event_data)
+        return _session_update(
+            session_id,
+            {
+                "sessionUpdate": "tool_call_update",
+                "toolCallId": str(result.get("tool_call_id") or result.get("id") or ""),
+                "status": "failed" if result.get("error") else "completed",
+                "rawOutput": result.get("result", event_data),
+            },
+        )
+    # Anything else — a final `output`, an error, a framework's own events — is
+    # not an update the schema has, and is not guessed into one.
+    return None
+
+
+def _text_block(text: str) -> dict[str, Any]:
+    """
+    A text content block, as the ACP schema spells one.
+    """
+    return {"type": "text", "text": text}
+
+
+def _session_update(session_id: str, update: dict[str, Any]) -> dict[str, Any]:
+    """
+    The parameters of a `session/update` notification: the update nested under `update`.
+    """
+    return {"sessionId": session_id, "update": update}
+
+
+def _fields(data: Any) -> dict[str, Any]:
+    """
+    An event's data as a mapping, whether it came as one or as a dataclass.
+    """
+    if isinstance(data, dict):
+        return data
+    return dict(vars(data)) if hasattr(data, "__dict__") else {}
 
 
 async def _handle_run(
@@ -1056,18 +1234,18 @@ async def _handle_run(
                 }
             )
 
+    # The prompt is the last user message, and what came before it is the
+    # conversation the adapter is given: the prompt is not part of that.
+    last = max(
+        (index for index, msg in enumerate(messages) if msg.get("role") == "user"),
+        default=None,
+    )
+    prompt = messages[last].get("content", "") if last is not None else ""
     context = AgentContext(
         session_id=session_id,
-        conversation_history=messages,
+        conversation_history=messages[:last] if last is not None else messages,
         metadata=params.get("metadata", {}),
     )
-
-    # Extract prompt from the last user message
-    prompt = ""
-    for msg in reversed(messages):
-        if msg.get("role") == "user":
-            prompt = msg.get("content", "")
-            break
 
     try:
         if stream and hasattr(agent, "stream"):
@@ -1165,17 +1343,18 @@ def get_registered_agents() -> list[AgentInfo]:
     return [info for _, info in list(_agents.values())]
 
 
-def get_active_sessions() -> list[SessionInfo]:
+async def get_active_sessions() -> list[SessionInfo]:
     """
-    Get all active sessions.
+    Get the sessions this runtime keeps that are active.
     """
     return [
         SessionInfo(
-            session_id=sid,
-            agent_id=s.agent_id,
-            created_at=s.created_at,
-            status=s.status,
-            metadata=s.metadata,
+            session_id=session.id,
+            agent_id=session.agent_id,
+            created_at=session.created_at,
+            status=session.status,
+            metadata=session.metadata,
         )
-        for sid, s in _sessions.items()
+        for session in await sessions.list_sessions()
+        if session.status == "active"
     ]

@@ -3,6 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { CodeCellModel } from '@jupyterlab/cells';
 import type { IMarkdownParser, IRenderMime } from '@jupyterlab/rendermime';

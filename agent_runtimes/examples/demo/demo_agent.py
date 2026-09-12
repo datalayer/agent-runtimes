@@ -215,7 +215,7 @@ def create_pydantic_demo_agent() -> tuple[Any, AgentInfo]:
         # Create a simple Pydantic AI agent
         pydantic_agent = Agent(
             "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-            system_prompt=(
+            instructions=(
                 "You are a helpful demo agent for testing the agent-runtimes server. "
                 "Keep your responses concise and helpful. "
                 "If asked about your capabilities, mention that you can help with general questions "

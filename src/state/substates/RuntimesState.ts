@@ -11,7 +11,7 @@ import type { IMultiServiceManager } from '../../runtimes';
 import { getRuntimes } from '../../runtimes';
 import type { IRuntimesConfiguration } from '@datalayer/core/lib/config';
 import type {
-  IRuntimePod,
+  IRuntimeRecord,
   ICodeSandboxSnapshot,
   IRuntimeModel,
 } from '../../models';
@@ -37,19 +37,19 @@ export type RuntimesState = {
   /**
    * Runtime pods.
    */
-  runtimePods: IRuntimePod[];
+  runtimes: IRuntimeRecord[];
   /**
    * Refresh the runtime pods.
    */
-  refreshRuntimePods: () => Promise<void>;
+  refreshRuntimes: () => Promise<void>;
   /**
    * Remove a runtime pod from the local state by its pod name.
    *
    * Used to prune a pod immediately after it is deleted, without waiting for
-   * the next `refreshRuntimePods()` poll tick. This lets the remote service
+   * the next `refreshRuntimes()` poll tick. This lets the remote service
    * managers dispose right away and stop polling the (now dead) pod ingress.
    */
-  removeRuntimePod: (podName: string) => void;
+  removeRuntime: (runtimeName: string) => void;
   /**
    * Cached runtime models.
    */
@@ -119,28 +119,28 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
     /**
      * Remote runtime pods.
      */
-    runtimePods: [],
+    runtimes: [],
     /**
      * Refresh the runtime pods.
      */
-    refreshRuntimePods: async () => {
+    refreshRuntimes: async () => {
       const servers = await getRuntimes();
       // Update the state with the Remote Kernels.
-      if (!JSONExt.deepEqual(get().runtimePods as any, servers as any)) {
-        set({ runtimePods: [...servers] });
+      if (!JSONExt.deepEqual(get().runtimes as any, servers as any)) {
+        set({ runtimes: [...servers] });
       }
     },
     /**
      * Remove a runtime pod by its pod name.
      */
-    removeRuntimePod: (podName: string) => {
-      if (!podName) {
+    removeRuntime: (runtimeName: string) => {
+      if (!runtimeName) {
         return;
       }
-      const current = get().runtimePods;
-      const next = current.filter(pod => pod.pod_name !== podName);
+      const current = get().runtimes;
+      const next = current.filter(pod => pod.runtime_name !== runtimeName);
       if (next.length !== current.length) {
-        set({ runtimePods: next });
+        set({ runtimes: next });
       }
     },
     /**
@@ -154,7 +154,7 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
       const kernels = get().runtimeModels;
       // Identity check: a runtime may not have a kernel `id` yet (it appears
       // only once a kernel is attached), so fall back to the stable pod `uid`.
-      // See the IRuntimeModel / IRuntimePod / Kernel.IModel docs in models/Runtime.ts.
+      // See the IRuntimeModel / IRuntimeRecord / Kernel.IModel docs in models/Runtime.ts.
       const index = kernels.findIndex(
         m =>
           (model.id && model.id === m.id) ||
@@ -169,7 +169,13 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
      */
     removeRuntimeModel: (id: string) => {
       const kernels = [...get().runtimeModels];
-      const index = kernels?.findIndex(model => id === model.id) ?? -1;
+      // By the kernel it runs, or by the pod it is: a sandbox of an external
+      // provider has no kernel, so its pod name is the only name it answers
+      // to — matched on the kernel alone it was never removed from the list.
+      const index =
+        kernels?.findIndex(
+          model => (!!model.id && id === model.id) || id === model.runtime_name,
+        ) ?? -1;
       if (index >= 0) {
         kernels.splice(index, 1);
         set({ runtimeModels: kernels });
@@ -239,7 +245,7 @@ export const runtimesStore = createStore<RuntimesState>((set, get) => {
 // Poll remote kernels
 const kernelsPoll = new Poll({
   auto: true,
-  factory: () => runtimesStore.getState().refreshRuntimePods(),
+  factory: () => runtimesStore.getState().refreshRuntimes(),
   frequency: {
     interval: 61 * 1000,
     backoff: true,
@@ -254,13 +260,11 @@ const kernelsPoll = new Poll({
 
 // Force refresh at expiration date if next tick is after it.
 runtimesStore.subscribe((state: RuntimesState, prevState: RuntimesState) => {
-  if (
-    !JSONExt.deepEqual(state.runtimePods as any, prevState.runtimePods as any)
-  ) {
+  if (!JSONExt.deepEqual(state.runtimes as any, prevState.runtimes as any)) {
     const now = Date.now();
     const minExpiredAt =
       Math.min(
-        ...state.runtimePods.map(kernel =>
+        ...state.runtimes.map(kernel =>
           kernel.expired_at ? parseFloat(kernel.expired_at) : Infinity,
         ),
       ) * 1_000;

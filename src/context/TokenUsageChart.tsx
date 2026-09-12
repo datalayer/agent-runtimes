@@ -230,7 +230,7 @@ export interface TokenUsageChartProps {
   agentId?: string;
   runtimeId?: string;
   apiKey?: string;
-  datalayerUrl?: string;
+  otelUrl?: string;
   wsUrl?: string;
   liveSystemPromptTokens?: number;
   liveToolsDescriptionTokens?: number;
@@ -299,8 +299,8 @@ function extractRuntimeId(row: Record<string, unknown>): string | undefined {
   const directCandidates = [
     row.runtime_id,
     row.runtime,
-    row.pod_name,
-    row.k8s_pod_name,
+    row.runtime_name,
+    row.k8s_runtime_name,
   ];
   for (const candidate of directCandidates) {
     if (typeof candidate === 'string' && candidate.trim().length > 0) {
@@ -311,7 +311,7 @@ function extractRuntimeId(row: Record<string, unknown>): string | undefined {
   const attrs = parseAttributes(row.attributes);
   const attrCandidates = [
     attrs['runtime.id'],
-    attrs['runtime.pod_name'],
+    attrs['runtime.runtime_name'],
     attrs['k8s.pod.name'],
   ];
   for (const candidate of attrCandidates) {
@@ -323,7 +323,7 @@ function extractRuntimeId(row: Record<string, unknown>): string | undefined {
   const resourceAttributes = parseResourceAttributes(row.resource_attributes);
   const resourceCandidates = [
     resourceAttributes['runtime.id'],
-    resourceAttributes['runtime.pod_name'],
+    resourceAttributes['runtime.runtime_name'],
     resourceAttributes['k8s.pod.name'],
   ];
   for (const candidate of resourceCandidates) {
@@ -367,7 +367,7 @@ export function TokenUsageChart({
   agentId,
   runtimeId,
   apiKey,
-  datalayerUrl,
+  otelUrl,
   wsUrl,
   liveSystemPromptTokens,
   liveToolsDescriptionTokens,
@@ -420,7 +420,7 @@ export function TokenUsageChart({
   // Bootstrap chart with historical OTEL metrics so charts are populated even
   // before the first websocket update arrives.
   useEffect(() => {
-    if (!cacheServiceKey || !apiKey || !datalayerUrl) {
+    if (!cacheServiceKey || !apiKey || !otelUrl) {
       return;
     }
 
@@ -434,7 +434,7 @@ export function TokenUsageChart({
             fetchOtelMetricRows({
               metric,
               serviceName,
-              datalayerUrl,
+              otelUrl,
               apiKey,
               limit: 1000,
             }),
@@ -503,7 +503,7 @@ export function TokenUsageChart({
     agentId,
     apiKey,
     cacheServiceKey,
-    datalayerUrl,
+    otelUrl,
     mergeTokenTurns,
     runtimeId,
     serviceName,
@@ -581,7 +581,7 @@ export function TokenUsageChart({
 
     const rawBaseUrl =
       wsUrl ||
-      datalayerUrl ||
+      otelUrl ||
       (typeof window !== 'undefined' ? window.location.origin : '');
     if (!rawBaseUrl) return;
 
@@ -655,7 +655,7 @@ export function TokenUsageChart({
     apiKey,
     cacheServiceKey,
     mergeTokenTurns,
-    datalayerUrl,
+    otelUrl,
     runtimeId,
     serviceName,
     wsUrl,
@@ -733,7 +733,7 @@ export function TokenUsageChart({
               ]
             : [[initialTimestampMsRef.current, 0]],
       })),
-      color: ['#2da44e', '#0969da', '#8250df', '#bf8700', '#cf222e'],
+      color: ['#2da44e', '#16A085', '#0ea5a5', '#bf8700', '#cf222e'],
     };
   }, [turns]);
 

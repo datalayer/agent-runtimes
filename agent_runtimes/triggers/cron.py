@@ -273,7 +273,7 @@ async def _execute_agent(agent_id: str, message: str) -> Any:
 
     context = AgentContext(
         session_id=f"cron-{agent_id}",
-        conversation_history=[{"role": "user", "content": message}],
+        # A trigger starts a conversation: the message is the prompt, once.
         metadata={"trigger": "cron", "agent_id": agent_id},
     )
 

@@ -74,7 +74,7 @@ class TestCLIHelp:
         assert "Available Agent Specs" in result.stdout
         # Check for known agent specs
         assert VALID_AGENT_ID in result.stdout
-        assert "gallery-crawler" in result.stdout
+        assert "worker-crawler" in result.stdout
 
     def test_list_specs_json_output(self) -> None:
         """Test that list-specs --output json returns valid JSON."""
@@ -675,3 +675,27 @@ class TestParseSkills:
             "web_search",
             "github_lookup",
         ]
+
+
+class TestServeOrchestrator:
+    """--orchestrator-root registers the orchestrator as an ACP agent (O2-08)."""
+
+    def test_an_agentspec_root_is_handed_to_the_app(self) -> None:
+        with patch.dict(os.environ, {}, clear=False), patch("uvicorn.run") as mock_run:
+            result = runner.invoke(app, ["serve", "--orchestrator-root", VALID_AGENT_ID])
+            assert result.exit_code == 0
+            assert os.environ.get("AGENT_RUNTIMES_ORCHESTRATOR_ROOT") == VALID_AGENT_ID
+            mock_run.assert_called_once()
+
+    def test_an_endpoint_is_a_root_too(self) -> None:
+        root = "ws://agents.example/api/v1/acp/ws/reviewer"
+        with patch.dict(os.environ, {}, clear=False), patch("uvicorn.run"):
+            result = runner.invoke(app, ["serve", "--orchestrator-root", root])
+            assert result.exit_code == 0
+            assert os.environ.get("AGENT_RUNTIMES_ORCHESTRATOR_ROOT") == root
+
+    def test_a_root_the_library_does_not_have_is_refused(self) -> None:
+        with patch.dict(os.environ, {}, clear=False), patch("uvicorn.run") as mock_run:
+            result = runner.invoke(app, ["serve", "--orchestrator-root", "no-such-agent"])
+            assert result.exit_code == 1
+            mock_run.assert_not_called()

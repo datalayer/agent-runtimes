@@ -30,7 +30,7 @@ export interface IDatalayerCollaborationConfig {
   /**
    * Base URL for the Datalayer server (optional, uses config from store if not provided).
    */
-  datalayerUrl?: string;
+  spacerUrl?: string;
   /**
    * Authentication token (optional, uses config from store if not provided).
    */
@@ -108,12 +108,12 @@ export class DatalayerCollaborationProvider implements ICollaborationProvider {
     this.setStatus(CollaborationStatus.Connecting);
 
     try {
-      const datalayerUrl = this._config.datalayerUrl;
+      const spacerUrl = this._config.spacerUrl;
       const token = this._config.token;
 
-      if (!datalayerUrl) {
+      if (!spacerUrl) {
         throw new Error(
-          'Datalayer datalayerUrl is not configured - must be explicitly provided in DatalayerCollaborationProvider config',
+          'The Datalayer spacerUrl is not configured - it must be explicitly provided in the DatalayerCollaborationProvider config',
         );
       }
       if (!token) {
@@ -124,9 +124,9 @@ export class DatalayerCollaborationProvider implements ICollaborationProvider {
 
       const { ydoc, awareness } = sharedModel;
 
-      const documentURL = URLExt.join(datalayerUrl, '/api/spacer/v1/documents');
+      const documentURL = URLExt.join(spacerUrl, '/api/spacer/v1/documents');
       const wsUrl = URLExt.join(
-        datalayerUrl,
+        spacerUrl,
         '/api/spacer/v1/documents/ws',
       ).replace(/^http/, 'ws');
 

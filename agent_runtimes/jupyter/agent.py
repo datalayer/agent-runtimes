@@ -4,7 +4,7 @@
 """AI agent for chat."""
 
 from pydantic_ai import Agent
-from pydantic_ai.mcp import MCPServerStreamableHTTP
+from pydantic_ai.mcp import MCPToolset
 
 from agent_runtimes.models.models import create_model_with_provider
 
@@ -12,7 +12,7 @@ from agent_runtimes.models.models import create_model_with_provider
 def create_jupyter_chat_agent(
     model: str | None = None,
     timeout: float = 60.0,
-    mcp_server: MCPServerStreamableHTTP | None = None,
+    mcp_server: MCPToolset | None = None,
 ) -> Agent | None:
     """
     Create the main chat agent for JupyterLab.

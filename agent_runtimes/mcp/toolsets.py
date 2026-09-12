@@ -12,11 +12,11 @@ MCP servers are managed using the MCPLifecycleManager which handles:
 - Tracking running state and tool discovery
 - Merging mcp.json config with catalog commands
 
-Uses Pydantic AI's built-in MCP client support (MCPServerStdio, MCPServerStreamableHTTP)
+Uses Pydantic AI's built-in MCP client support (MCPToolset)
 which automatically detects the transport type from the config:
-- `command` field → MCPServerStdio (stdio transport)
+- `command` field → MCPToolset(StdioTransport(...)) (stdio transport)
 - `url` field ending with `/sse` → MCPServerSSE (deprecated SSE transport)
-- `url` field (not `/sse`) → MCPServerStreamableHTTP (recommended HTTP transport)
+- `url` field (not `/sse`) → MCPToolset(url) (recommended HTTP transport)
 """
 
 import logging

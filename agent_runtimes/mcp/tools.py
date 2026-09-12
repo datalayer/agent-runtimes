@@ -12,7 +12,9 @@ import logging
 from typing import Any
 from urllib.parse import urljoin
 
-from pydantic_ai.mcp import MCPServerStreamableHTTP
+from pydantic_ai.mcp import MCPToolset
+
+from agent_runtimes.mcp.tracing import tracing_client
 
 from agent_runtimes.types import BuiltinTool
 
@@ -71,7 +73,7 @@ def tools_to_builtin_list(tools: list[dict[str, Any]]) -> list[BuiltinTool]:
 def create_mcp_server(
     base_url: str,
     token: str | None = None,
-) -> MCPServerStreamableHTTP:
+) -> MCPToolset:
     """
     Create an MCP server connection.
 
@@ -83,21 +85,27 @@ def create_mcp_server(
         token: Authentication token
 
     Returns:
-        MCPServerStreamableHTTP instance connected to the MCP server
+        MCPToolset instance connected to the MCP server
     """
     # Construct the MCP endpoint URL
     mcp_url = urljoin(base_url.rstrip("/") + "/", "mcp")
 
     logger.info(f"Creating MCP server connection to {mcp_url}")
 
-    # Create MCP server with authentication headers if token is provided
-    if token:
-        headers = {"Authorization": f"token {token}"}
-        server = MCPServerStreamableHTTP(mcp_url, headers=headers)
-        logger.info("MCP server connection created successfully with authentication")
-    else:
-        server = MCPServerStreamableHTTP(mcp_url)
-        logger.info("MCP server connection created successfully without authentication")
+    # One client, carrying the credential and the trace. `MCPToolset` refuses
+    # `headers` beside an `http_client` — deliberately, since two sources of
+    # headers is one of them silently losing — so the token goes on the client.
+    #
+    # The trace goes with every *request* rather than being fixed here: an MCP
+    # session is long-lived and spans many of the agent's own spans, so a
+    # header set at construction would file every call in the session under
+    # whichever trace happened to be current when the connection opened.
+    headers = {"Authorization": f"token {token}"} if token else {}
+    server = MCPToolset(mcp_url, http_client=tracing_client(headers=headers))
+    logger.info(
+        "MCP server connection created successfully %s",
+        "with authentication" if token else "without authentication",
+    )
 
     return server
 
@@ -138,9 +146,16 @@ async def get_tools_from_mcp(
                     "description": tool.description or "",
                 }
 
-                # Include inputSchema if available
-                if hasattr(tool, "inputSchema") and tool.inputSchema:
-                    tool_dict["inputSchema"] = tool.inputSchema
+                # Include inputSchema if available. The key stays camelCase —
+                # it is the wire name and what the callers read — while the
+                # attribute is snake_case since mcp 2.
+                if getattr(tool, "input_schema", None):
+                    tool_dict["inputSchema"] = tool.input_schema
+                elif (
+                    hasattr(tool, "parameters_json_schema")
+                    and tool.parameters_json_schema
+                ):
+                    tool_dict["inputSchema"] = tool.parameters_json_schema
                 else:
                     tool_dict["inputSchema"] = {
                         "type": "object",

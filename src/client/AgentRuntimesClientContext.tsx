@@ -17,6 +17,7 @@
  * @module client/AgentRuntimesClientContext
  */
 
+import type { JSX } from 'react';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useMemo } from 'react';
 

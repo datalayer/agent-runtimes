@@ -1,0 +1,1909 @@
+{
+  "agentspecs": [
+    {
+      "experiment_names": [
+        "jupyter-data-analyst"
+      ],
+      "experiments": 1,
+      "id": "jupyter-data-analyst",
+      "name": "jupyter-data-analyst",
+      "runs": 3
+    },
+    {
+      "experiment_names": [
+        "example-evals"
+      ],
+      "experiments": 1,
+      "id": "example-evals",
+      "name": "example-evals",
+      "runs": 2
+    }
+  ],
+  "cases": [
+    {
+      "evaluators": [
+        {
+          "name": "contains"
+        }
+      ],
+      "expected_output": "2000",
+      "id": "case-1",
+      "inputs": {
+        "prompt": "Question 1 about customers.csv"
+      },
+      "metadata": {
+        "category": "counting",
+        "difficulty": "easy"
+      },
+      "name": "row-count"
+    },
+    {
+      "evaluators": [
+        {
+          "name": "contains"
+        }
+      ],
+      "expected_output": "0",
+      "id": "case-2",
+      "inputs": {
+        "prompt": "Question 2 about customers.csv"
+      },
+      "metadata": {
+        "category": "duplicates",
+        "difficulty": "easy"
+      },
+      "name": "exact-duplicate-rows"
+    },
+    {
+      "evaluators": [
+        {
+          "name": "contains"
+        }
+      ],
+      "expected_output": "157",
+      "id": "case-3",
+      "inputs": {
+        "prompt": "Question 3 about customers.csv"
+      },
+      "metadata": {
+        "category": "duplicates",
+        "difficulty": "medium"
+      },
+      "name": "duplicate-customers"
+    },
+    {
+      "evaluators": [
+        {
+          "name": "contains"
+        }
+      ],
+      "expected_output": "314",
+      "id": "case-4",
+      "inputs": {
+        "prompt": "Question 4 about customers.csv"
+      },
+      "metadata": {
+        "category": "duplicates",
+        "difficulty": "medium"
+      },
+      "name": "duplicate-rows"
+    },
+    {
+      "evaluators": [
+        {
+          "name": "contains"
+        }
+      ],
+      "expected_output": "free",
+      "id": "case-5",
+      "inputs": {
+        "prompt": "Question 5 about customers.csv"
+      },
+      "metadata": {
+        "category": "aggregation",
+        "difficulty": "easy"
+      },
+      "name": "largest-plan"
+    },
+    {
+      "evaluators": [
+        {
+          "name": "contains"
+        }
+      ],
+      "expected_output": "1843",
+      "id": "case-6",
+      "inputs": {
+        "prompt": "Question 6 about customers.csv"
+      },
+      "metadata": {
+        "category": "counting",
+        "difficulty": "medium"
+      },
+      "name": "unique-customers"
+    }
+  ],
+  "evalset_evaluators": [
+    {
+      "arguments": {
+        "threshold": 0.6
+      },
+      "name": "pass_rate_threshold"
+    }
+  ],
+  "evalset_id": "evalset-reference",
+  "evalset_name": "Data Analysis Agent Benchmark",
+  "evaluator_results": [
+    {
+      "latest_passed": true,
+      "latest_score": 0.8333,
+      "mean_score": 0.5667,
+      "name": "pass_rate_threshold",
+      "observed": 0.8333,
+      "passed_cases": 5,
+      "passed_runs": 2,
+      "runs": 5,
+      "scope": "evalset",
+      "summary": "pass rate 0.83 ≥ threshold 0.60",
+      "threshold": 0.6,
+      "total_cases": 6
+    }
+  ],
+  "experiments": [
+    {
+      "agent_spec_id": "jupyter-data-analyst",
+      "agent_spec_name": "jupyter-data-analyst",
+      "baseline_pass_rate": 0.5,
+      "consecutive_comparisons": [
+        {
+          "delta_pass_rate": 0.16666666666666674,
+          "run_a_id": "run-1-3",
+          "run_a_pass_rate": 0.8333333333333334,
+          "run_a_status": "completed",
+          "run_b_id": "run-1-2",
+          "run_b_pass_rate": 0.6666666666666666,
+          "run_b_status": "completed"
+        },
+        {
+          "delta_pass_rate": 0.16666666666666663,
+          "run_a_id": "run-1-2",
+          "run_a_pass_rate": 0.6666666666666666,
+          "run_a_status": "completed",
+          "run_b_id": "run-1-1",
+          "run_b_pass_rate": 0.5,
+          "run_b_status": "completed"
+        }
+      ],
+      "drift_delta": 0.33333333333333337,
+      "id": "experiment-1",
+      "latest_pass_rate": 0.8333333333333334,
+      "latest_two_comparison": {
+        "delta_pass_rate": 0.16666666666666674,
+        "run_a": {
+          "created_at": "2026-09-03T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-1-3",
+          "launch_id": "launch-123",
+          "metrics": {
+            "avg_score": 0.8333333333333334,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "0",
+                "passed": true,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "314",
+                "passed": true,
+                "prompt": "Question about duplicate-rows",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "1843",
+                "passed": true,
+                "prompt": "Question about unique-customers",
+                "score": 1.0,
+                "status": "passed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.8333,
+                "passed": true,
+                "passed_cases": 5,
+                "scope": "evalset",
+                "score": 0.8333,
+                "summary": "pass rate 0.83 ≥ threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 1,
+            "pass_rate": 0.8333333333333334,
+            "passed": 5,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.8333333333333334,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "jupyter-data-analyst",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-03T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        },
+        "run_b": {
+          "created_at": "2026-09-02T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-1-2",
+          "launch_id": "launch-122",
+          "metrics": {
+            "avg_score": 0.6666666666666666,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "0",
+                "passed": true,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "1843",
+                "passed": true,
+                "prompt": "Question about unique-customers",
+                "score": 1.0,
+                "status": "passed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.6667,
+                "passed": true,
+                "passed_cases": 4,
+                "scope": "evalset",
+                "score": 0.6667,
+                "summary": "pass rate 0.67 ≥ threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 2,
+            "pass_rate": 0.6666666666666666,
+            "passed": 4,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.6666666666666666,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "jupyter-data-analyst",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-02T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        },
+        "run_ids": [
+          "run-1-3",
+          "run-1-2"
+        ]
+      },
+      "latest_two_delta": 0.16666666666666674,
+      "latest_two_run_ids": [
+        "run-1-3",
+        "run-1-2"
+      ],
+      "mean_pass_rate": 0.6666666666666666,
+      "name": "jupyter-data-analyst",
+      "report_analyses": [
+        {
+          "kind": "scalar",
+          "metric": "latest_pass_rate",
+          "name": "Latest Pass Rate",
+          "value": 0.8333333333333334
+        },
+        {
+          "kind": "scalar",
+          "metric": "baseline_pass_rate",
+          "name": "Baseline Pass Rate",
+          "value": 0.5
+        },
+        {
+          "kind": "scalar",
+          "metric": "drift_delta",
+          "name": "Drift Delta",
+          "value": 0.33333333333333337
+        },
+        {
+          "kind": "scalar",
+          "metric": "latest_two_delta",
+          "name": "Latest Two Delta",
+          "value": 0.16666666666666674
+        },
+        {
+          "kind": "scalar",
+          "metric": "mean_pass_rate",
+          "name": "Mean Pass Rate",
+          "value": 0.6666666666666666
+        },
+        {
+          "kind": "scalar",
+          "metric": "stddev_pass_rate",
+          "name": "Stddev Pass Rate",
+          "value": 0.13608276348795434
+        },
+        {
+          "columns": [
+            "index",
+            "run_id",
+            "status",
+            "pass_rate"
+          ],
+          "kind": "table",
+          "name": "Run Pass Rates",
+          "rows": [
+            [
+              0,
+              "run-1-3",
+              "completed",
+              0.8333333333333334
+            ],
+            [
+              1,
+              "run-1-2",
+              "completed",
+              0.6666666666666666
+            ],
+            [
+              2,
+              "run-1-1",
+              "completed",
+              0.5
+            ]
+          ]
+        },
+        {
+          "kind": "line",
+          "name": "Run Pass Rate Trend",
+          "x": [
+            "run-1-3",
+            "run-1-2",
+            "run-1-1"
+          ],
+          "y": [
+            0.8333333333333334,
+            0.6666666666666666,
+            0.5
+          ]
+        },
+        {
+          "columns": [
+            "run_a_id",
+            "run_b_id",
+            "run_a_pass_rate",
+            "run_b_pass_rate",
+            "delta_pass_rate"
+          ],
+          "kind": "table",
+          "name": "Consecutive Run Deltas",
+          "rows": [
+            [
+              "run-1-3",
+              "run-1-2",
+              0.8333333333333334,
+              0.6666666666666666,
+              0.16666666666666674
+            ],
+            [
+              "run-1-2",
+              "run-1-1",
+              0.6666666666666666,
+              0.5,
+              0.16666666666666663
+            ]
+          ]
+        }
+      ],
+      "runs": [
+        {
+          "created_at": "2026-09-03T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-1-3",
+          "launch_id": "launch-123",
+          "metrics": {
+            "avg_score": 0.8333333333333334,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "0",
+                "passed": true,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "314",
+                "passed": true,
+                "prompt": "Question about duplicate-rows",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "1843",
+                "passed": true,
+                "prompt": "Question about unique-customers",
+                "score": 1.0,
+                "status": "passed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.8333,
+                "passed": true,
+                "passed_cases": 5,
+                "scope": "evalset",
+                "score": 0.8333,
+                "summary": "pass rate 0.83 ≥ threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 1,
+            "pass_rate": 0.8333333333333334,
+            "passed": 5,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.8333333333333334,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "jupyter-data-analyst",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-03T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        },
+        {
+          "created_at": "2026-09-02T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-1-2",
+          "launch_id": "launch-122",
+          "metrics": {
+            "avg_score": 0.6666666666666666,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "0",
+                "passed": true,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "1843",
+                "passed": true,
+                "prompt": "Question about unique-customers",
+                "score": 1.0,
+                "status": "passed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.6667,
+                "passed": true,
+                "passed_cases": 4,
+                "scope": "evalset",
+                "score": 0.6667,
+                "summary": "pass rate 0.67 ≥ threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 2,
+            "pass_rate": 0.6666666666666666,
+            "passed": 4,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.6666666666666666,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "jupyter-data-analyst",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-02T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        },
+        {
+          "created_at": "2026-09-01T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-1-1",
+          "launch_id": "launch-121",
+          "metrics": {
+            "avg_score": 0.5,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "0",
+                "passed": true,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about unique-customers",
+                "score": 0.0,
+                "status": "failed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.5,
+                "passed": false,
+                "passed_cases": 3,
+                "scope": "evalset",
+                "score": 0.5,
+                "summary": "pass rate 0.50 < threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 3,
+            "pass_rate": 0.5,
+            "passed": 3,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.5,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "jupyter-data-analyst",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-01T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        }
+      ],
+      "runs_fetched": 3,
+      "runs_total": 3,
+      "stddev_pass_rate": 0.13608276348795434
+    },
+    {
+      "agent_spec_id": "example-evals",
+      "agent_spec_name": "example-evals",
+      "baseline_pass_rate": 0.5,
+      "consecutive_comparisons": [
+        {
+          "delta_pass_rate": -0.16666666666666669,
+          "run_a_id": "run-2-2",
+          "run_a_pass_rate": 0.3333333333333333,
+          "run_a_status": "completed",
+          "run_b_id": "run-2-1",
+          "run_b_pass_rate": 0.5,
+          "run_b_status": "completed"
+        }
+      ],
+      "drift_delta": -0.16666666666666669,
+      "id": "experiment-2",
+      "latest_pass_rate": 0.3333333333333333,
+      "latest_two_comparison": {
+        "delta_pass_rate": -0.16666666666666669,
+        "run_a": {
+          "created_at": "2026-09-02T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-2-2",
+          "launch_id": "launch-122",
+          "metrics": {
+            "avg_score": 0.3333333333333333,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about unique-customers",
+                "score": 0.0,
+                "status": "failed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.3333,
+                "passed": false,
+                "passed_cases": 2,
+                "scope": "evalset",
+                "score": 0.3333,
+                "summary": "pass rate 0.33 < threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 4,
+            "pass_rate": 0.3333333333333333,
+            "passed": 2,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.3333333333333333,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "example-evals",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-02T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        },
+        "run_b": {
+          "created_at": "2026-09-01T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-2-1",
+          "launch_id": "launch-121",
+          "metrics": {
+            "avg_score": 0.5,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "1843",
+                "passed": true,
+                "prompt": "Question about unique-customers",
+                "score": 1.0,
+                "status": "passed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.5,
+                "passed": false,
+                "passed_cases": 3,
+                "scope": "evalset",
+                "score": 0.5,
+                "summary": "pass rate 0.50 < threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 3,
+            "pass_rate": 0.5,
+            "passed": 3,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.5,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "example-evals",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-01T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        },
+        "run_ids": [
+          "run-2-2",
+          "run-2-1"
+        ]
+      },
+      "latest_two_delta": -0.16666666666666669,
+      "latest_two_run_ids": [
+        "run-2-2",
+        "run-2-1"
+      ],
+      "mean_pass_rate": 0.41666666666666663,
+      "name": "example-evals",
+      "report_analyses": [
+        {
+          "kind": "scalar",
+          "metric": "latest_pass_rate",
+          "name": "Latest Pass Rate",
+          "value": 0.3333333333333333
+        },
+        {
+          "kind": "scalar",
+          "metric": "baseline_pass_rate",
+          "name": "Baseline Pass Rate",
+          "value": 0.5
+        },
+        {
+          "kind": "scalar",
+          "metric": "drift_delta",
+          "name": "Drift Delta",
+          "value": -0.16666666666666669
+        },
+        {
+          "kind": "scalar",
+          "metric": "latest_two_delta",
+          "name": "Latest Two Delta",
+          "value": -0.16666666666666669
+        },
+        {
+          "kind": "scalar",
+          "metric": "mean_pass_rate",
+          "name": "Mean Pass Rate",
+          "value": 0.41666666666666663
+        },
+        {
+          "kind": "scalar",
+          "metric": "stddev_pass_rate",
+          "name": "Stddev Pass Rate",
+          "value": 0.08333333333333334
+        },
+        {
+          "columns": [
+            "index",
+            "run_id",
+            "status",
+            "pass_rate"
+          ],
+          "kind": "table",
+          "name": "Run Pass Rates",
+          "rows": [
+            [
+              0,
+              "run-2-2",
+              "completed",
+              0.3333333333333333
+            ],
+            [
+              1,
+              "run-2-1",
+              "completed",
+              0.5
+            ]
+          ]
+        },
+        {
+          "kind": "line",
+          "name": "Run Pass Rate Trend",
+          "x": [
+            "run-2-2",
+            "run-2-1"
+          ],
+          "y": [
+            0.3333333333333333,
+            0.5
+          ]
+        },
+        {
+          "columns": [
+            "run_a_id",
+            "run_b_id",
+            "run_a_pass_rate",
+            "run_b_pass_rate",
+            "delta_pass_rate"
+          ],
+          "kind": "table",
+          "name": "Consecutive Run Deltas",
+          "rows": [
+            [
+              "run-2-2",
+              "run-2-1",
+              0.3333333333333333,
+              0.5,
+              -0.16666666666666669
+            ]
+          ]
+        }
+      ],
+      "runs": [
+        {
+          "created_at": "2026-09-02T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-2-2",
+          "launch_id": "launch-122",
+          "metrics": {
+            "avg_score": 0.3333333333333333,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about unique-customers",
+                "score": 0.0,
+                "status": "failed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.3333,
+                "passed": false,
+                "passed_cases": 2,
+                "scope": "evalset",
+                "score": 0.3333,
+                "summary": "pass rate 0.33 < threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 4,
+            "pass_rate": 0.3333333333333333,
+            "passed": 2,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.3333333333333333,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "example-evals",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-02T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        },
+        {
+          "created_at": "2026-09-01T10:18:24Z",
+          "failure_cause": null,
+          "id": "run-2-1",
+          "launch_id": "launch-121",
+          "metrics": {
+            "avg_score": 0.5,
+            "case_results": [
+              {
+                "category": "counting",
+                "difficulty": "easy",
+                "name": "row-count",
+                "output": "2000",
+                "passed": true,
+                "prompt": "Question about row-count",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "easy",
+                "name": "exact-duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about exact-duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-customers",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-customers",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "duplicates",
+                "difficulty": "medium",
+                "name": "duplicate-rows",
+                "output": "unsure",
+                "passed": false,
+                "prompt": "Question about duplicate-rows",
+                "score": 0.0,
+                "status": "failed"
+              },
+              {
+                "category": "aggregation",
+                "difficulty": "easy",
+                "name": "largest-plan",
+                "output": "free",
+                "passed": true,
+                "prompt": "Question about largest-plan",
+                "score": 1.0,
+                "status": "passed"
+              },
+              {
+                "category": "counting",
+                "difficulty": "medium",
+                "name": "unique-customers",
+                "output": "1843",
+                "passed": true,
+                "prompt": "Question about unique-customers",
+                "score": 1.0,
+                "status": "passed"
+              }
+            ],
+            "evaluator_results": [
+              {
+                "name": "pass_rate_threshold",
+                "observed": 0.5,
+                "passed": false,
+                "passed_cases": 3,
+                "scope": "evalset",
+                "score": 0.5,
+                "summary": "pass rate 0.50 < threshold 0.60",
+                "threshold": 0.6,
+                "total_cases": 6
+              }
+            ],
+            "failed": 3,
+            "pass_rate": 0.5,
+            "passed": 3,
+            "pydantic_ai_usage": {
+              "completion_tokens": 1800,
+              "credits_consumed": 3.2,
+              "duration_ms": 184000,
+              "model": "claude-sonnet-4-6",
+              "prompt_tokens": 7200,
+              "provider": "bedrock",
+              "requests": 6,
+              "total_tokens": 9000
+            },
+            "total_cases": 6
+          },
+          "pass_rate": 0.5,
+          "report": {
+            "interaction": [
+              {
+                "case": "row-count",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "exact-duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-customers",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "duplicate-rows",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "largest-plan",
+                "output": "…",
+                "prompt": "…"
+              },
+              {
+                "case": "unique-customers",
+                "output": "…",
+                "prompt": "…"
+              }
+            ]
+          },
+          "status": "completed",
+          "summary": {
+            "agent_spec_id": "example-evals",
+            "execution_target": "cloud",
+            "launch_source": "datalayer-core",
+            "run_mode": "batch"
+          },
+          "updated_at": "2026-09-01T10:18:24Z",
+          "usage": {
+            "completion_tokens": 1800,
+            "credits_consumed": 3.2,
+            "duration_ms": 184000,
+            "model": "claude-sonnet-4-6",
+            "prompt_tokens": 7200,
+            "provider": "bedrock",
+            "requests": 6,
+            "total_tokens": 9000
+          }
+        }
+      ],
+      "runs_fetched": 2,
+      "runs_total": 2,
+      "stddev_pass_rate": 0.08333333333333334
+    }
+  ],
+  "generated_at": "2026-09-09T12:00:00.000000Z",
+  "report_analyses": [
+    {
+      "kind": "scalar",
+      "metric": "experiment_count",
+      "name": "Experiment Count",
+      "value": 2
+    },
+    {
+      "kind": "scalar",
+      "metric": "overall_mean_pass_rate",
+      "name": "Overall Mean Pass Rate",
+      "value": 0.5666666666666667
+    },
+    {
+      "columns": [
+        "experiment",
+        "latest_pass_rate",
+        "baseline_pass_rate",
+        "drift_delta"
+      ],
+      "kind": "table",
+      "name": "Experiment Latest/Baseline",
+      "rows": [
+        [
+          "jupyter-data-analyst",
+          0.8333333333333334,
+          0.5,
+          0.33333333333333337
+        ],
+        [
+          "example-evals",
+          0.3333333333333333,
+          0.5,
+          -0.16666666666666669
+        ]
+      ]
+    },
+    {
+      "kind": "line",
+      "name": "Latest Pass Rate By Experiment",
+      "x": [
+        "jupyter-data-analyst",
+        "example-evals"
+      ],
+      "y": [
+        0.8333333333333334,
+        0.3333333333333333
+      ]
+    },
+    {
+      "columns": [
+        "-5",
+        "-4",
+        "-3",
+        "-2",
+        "-1",
+        "latest"
+      ],
+      "kind": "heatmap",
+      "name": "Recent Runs",
+      "rows": [
+        "jupyter-data-analyst",
+        "example-evals"
+      ],
+      "values": [
+        [
+          null,
+          null,
+          null,
+          0.8333333333333334,
+          0.6666666666666666,
+          0.5
+        ],
+        [
+          null,
+          null,
+          null,
+          null,
+          0.3333333333333333,
+          0.5
+        ]
+      ]
+    },
+    {
+      "convention": "delta = candidate - baseline",
+      "kind": "pairwise",
+      "name": "Pairwise Deltas",
+      "pairs": [
+        {
+          "baseline": "example-evals",
+          "baseline_pass_rate": 0.3333333333333333,
+          "candidate": "jupyter-data-analyst",
+          "candidate_pass_rate": 0.8333333333333334,
+          "delta_pass_rate": 0.5
+        },
+        {
+          "baseline": "jupyter-data-analyst",
+          "baseline_pass_rate": 0.8333333333333334,
+          "candidate": "example-evals",
+          "candidate_pass_rate": 0.3333333333333333,
+          "delta_pass_rate": -0.5
+        }
+      ]
+    }
+  ],
+  "report_evaluators": [],
+  "run_environment": "sdk"
+}

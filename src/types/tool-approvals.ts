@@ -11,7 +11,7 @@ export interface ToolApproval {
   /** Agent that requested the tool call */
   agentId: string;
   /** Pod running the agent */
-  podName: string;
+  runtimeName: string;
   /** Tool being requested */
   toolName: string;
   /** Tool call arguments */

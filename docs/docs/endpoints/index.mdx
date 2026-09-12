@@ -1,4 +1,5 @@
 ---
+sidebar_position: 15
 title: Endpoints
 ---
 
@@ -702,7 +703,7 @@ Get detailed information about running MCP toolsets.
 ```json
 [
   {
-    "type": "MCPServerStdio",
+    "type": "MCPToolset",
     "id": "tavily",
     "command": "npx",
     "args": ["-y", "tavily-mcp@0.1.3"]
@@ -788,6 +789,94 @@ returns ACP-compliant responses/events.
 
 If `{agent_id}` is unknown, the server sends an ACP error payload and closes
 the socket.
+
+The route speaks the ACP schema:
+
+- `session/prompt` takes the prompt's content blocks under `prompt`, and
+  answers with a `stopReason` once the turn is over.
+- A prompt may carry a model budget in its `_meta`:
+  `{"datalayer": {"budget": {"inputTokens": …, "outputTokens": …, "cost": …}}}`,
+  which an orchestration delegation sends. The turn is held to it as
+  pydantic-ai's per-run usage limits; a limit reached ends the turn with
+  `max_tokens` (or `max_turn_requests` for requests), and `_meta` in the answer
+  names it: `{"datalayer": {"error": {"code": "budget_exhausted", "details":
+  {"budget": "model", "limit": "output_tokens"}}}}`.
+- A prompt an orchestration delegation sends also carries the execution's own
+  token in `_meta`, as `{"datalayer": {"credential": "…"}}`. The route takes it
+  out of `_meta` before anything keeps the prompt, and the turn runs as that
+  token — its approvals, its telemetry and its Datalayer MCP toolset: the
+  agent's Datalayer server is replaced, for the turn, by one holding the token
+  (`agent_runtimes.mcp.datalayer_gateway`), so what the gateway lets the turn
+  reach is what the execution's manifest names. An agent given no Datalayer
+  server is not given one by a delegation.
+- Each `session/update` nests the update under `update`, its text in a content
+  block — `{"sessionId": "…", "update": {"sessionUpdate": "agent_message_chunk",
+  "content": {"type": "text", "text": "…"}}}`; tool calls are `tool_call` and
+  `tool_call_update` with `toolCallId`, `title`, `rawInput`, `rawOutput` and
+  `status`. A failed turn is the prompt's JSON-RPC error.
+- `session/cancel` is a notification: the running prompt stops where the agent
+  is waiting and answers `cancelled`; the cancel itself is not answered. A
+  prompt runs on its own task, so the cancel is read while it runs.
+- `initialize` declares `loadSession: true`. Sessions and each turn of their
+  conversation are kept in the runtime's protocol state store, so
+  `session/load` on a restarted runtime finds the session and replays its
+  conversation as `user_message_chunk` and `agent_message_chunk` updates before
+  answering.
+
+The A2A agents mounted under `/api/v1/a2a/agents/{agent_id}` keep their tasks,
+contexts and owed runs in the same store: `tasks/get` answers for a task issued
+before a restart, and a task left submitted or working is run again when the
+runtime starts. A message's `metadata` may carry the same `datalayer.budget` as
+an ACP prompt's `_meta`; a run it stops ends the task `failed`, and the failed
+status message's `metadata` carries the same `datalayer.error`. It may carry
+the same `datalayer.credential` too. The store takes it out of the message
+before the task, its context or the owed run is written, keeps `withheld` in
+its place, and holds the credential in process memory for the run it came
+with; a run a restarted runtime owes has lost it and fails rather than run as
+the runtime, and the execution's retry dispatches with a token of its own.
+
+Both routes speak the Datalayer orchestration extension,
+`https://datalayer.ai/extensions/orchestration/v1` — declared on the A2A agent
+card with its routes as params, and at ACP `initialize` under
+`agentCapabilities._meta.datalayer.extensions`:
+
+- A delegation names its execution, `datalayer.execution: {executionId, …}`,
+  which is the scope its checkpoints are kept under, and may name a checkpoint
+  to resume from, `datalayer.checkpoint: {checkpointId}`: the run starts from
+  that checkpoint's conversation. A checkpoint this runtime does not keep fails
+  the A2A task, and is refused `-32602` over ACP.
+- `POST /api/v1/a2a/pause {task_id}`, or ACP `session/cancel` with
+  `_meta: {"datalayer": {"pause": true}}`, pauses a running turn: it saves its
+  conversation so far as a checkpoint in the protocol state store and ends as a
+  cancel naming it — the A2A task `canceled` with `datalayer.paused.checkpointId`
+  in its final status message's `metadata`, the ACP turn `cancelled` with the
+  same in `_meta`. A run that names no execution is only stopped.
+- `POST /api/v1/a2a/steer {task_id, instructions}`, or the ACP notification
+  `_datalayer/steer {sessionId, instructions}`, adds instructions to a running
+  turn: they join its next model request. A run that is not working receives
+  nothing, and the A2A route answers `success: false`.
+- Each turn answers with what it spent, `datalayer.usage: {inputTokens,
+  outputTokens, cost, currency}`: in the ACP prompt response's `_meta`, beside
+  `datalayer.paused` or `datalayer.error` when the turn paused or its budget
+  stopped it, and in the `metadata` of the A2A task's final status message,
+  which the worker sends itself for every ending — `completed` with the answer,
+  `canceled` and `failed` alike. The tokens are the model's own count when the
+  run reports one, and otherwise what the agent's usage counters grew by during
+  the turn; `cost` is there only when the agent's cost monitor priced a run
+  during it. A turn that counted nothing sends no `usage`.
+- A run whose delegation names its execution is that execution's worker, and
+  `datalayer.execution.accountUid` names the account the execution belongs to.
+  Such a run does not take a child itself. `delegate_task` to a subagent
+  reached over A2A asks the control plane for a child execution under the
+  run's own, with the run's credential, and answers with what the child
+  produced; the child's progress arrives as `agent.subagent` events. Resolving,
+  launching or relaying to an agent from inside the run is refused. In-process
+  subagents stay in the run.
+
+The store is a SQLite file at
+`AGENT_RUNTIMES_PROTOCOL_STATE_PATH` (default
+`~/.datalayer/agent-runtimes/protocol-state.sqlite`), or, on Kubernetes, the
+agent-memories PostgreSQL the memory backends use.
 
 ## MCP Servers
 
@@ -1282,6 +1371,7 @@ Read or update local node configuration.
 POST /api/runtimes/v1/agent-nodes/register
 POST /api/runtimes/v1/agent-nodes/heartbeat
 POST /api/runtimes/v1/agent-nodes/configuration
+POST /api/runtimes/v1/agent-nodes/aws/discover
 GET  /api/runtimes/v1/agent-nodes
 GET  /api/runtimes/v1/agent-nodes/{node_id}
 ```
@@ -1290,6 +1380,10 @@ These endpoints maintain fleet state and enforce visibility:
 
 - own nodes are always visible,
 - other users' nodes are visible only when `mode=shared`.
+
+`POST /agent-nodes/aws/discover` accepts `{ "aws_account_id": "123456789012" }`,
+allowlists that account id for the caller in memory, and returns currently
+available nodes registered with the same AWS account id.
 
 ### Agent Node Tunnel (datalayer-runtimes)
 

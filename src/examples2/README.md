@@ -23,7 +23,7 @@ npm install
 ```bash
 # Create .env file with your local configuration
 echo "VITE_DATALAYER_API_KEY=$DATALAYER_API_KEY" > .env
-echo "VITE_DATALAYER_URL=$DATALAYER_URL" >> .env
+echo "VITE_DATALAYER_IAM_URL=$DATALAYER_IAM_URL" >> .env
 ```
 
 3. Start the examples server:
@@ -94,7 +94,7 @@ const EXAMPLE =
 The examples support these environment variables:
 
 - `VITE_DATALAYER_API_KEY`: Your Datalayer authentication token (required for full functionality)
-- `VITE_DATALAYER_URL`: The Datalayer RUN server.
+- `VITE_DATALAYER_IAM_URL`: The Datalayer IAM server.
 - `EXAMPLE`: Override the selected example via command line
 
 ### Vite Configuration

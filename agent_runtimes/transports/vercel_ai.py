@@ -110,8 +110,17 @@ def _is_live_eval_emission_enabled() -> bool:
 
 
 def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
+    experiment_id, evalset_id, _ = _extract_eval_binding(prompt)
+    return experiment_id, evalset_id
+
+
+def _extract_eval_binding(prompt: str) -> tuple[str | None, str | None, str | None]:
+    """The experiment, evalset and case a prompt names on its own lines
+    (`experiment_id=`, `evalset_id=`, `case_id=`): what binds the live event
+    to the experiment the platform evaluates it for (BENCHMARK.md, B2-13)."""
     experiment_id: str | None = None
     evalset_id: str | None = None
+    case_id: str | None = None
     for raw_line in str(prompt or "").splitlines():
         line = raw_line.strip()
         if line.startswith("experiment_id="):
@@ -120,7 +129,10 @@ def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
         elif line.startswith("evalset_id="):
             value = line.partition("=")[2].strip()
             evalset_id = value or None
-    return experiment_id, evalset_id
+        elif line.startswith("case_id="):
+            value = line.partition("=")[2].strip()
+            case_id = value or None
+    return experiment_id, evalset_id, case_id
 
 
 def _extract_first_json_object(text: str) -> dict[str, Any] | None:
@@ -157,7 +169,7 @@ async def _emit_interactive_live_eval_event(
     if not _is_live_eval_emission_enabled():
         return
 
-    experiment_id, evalset_id = _extract_eval_identifiers(prompt)
+    experiment_id, evalset_id, case_id = _extract_eval_binding(prompt)
     if not experiment_id:
         return
 
@@ -181,7 +193,6 @@ async def _emit_interactive_live_eval_event(
     base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or os.environ.get("DATALAYER_URL")
         or "https://prod1.datalayer.run"
     ).rstrip("/")
     url = f"{base_url}/api/ai-agents/v1/evals/live/events"
@@ -213,6 +224,12 @@ async def _emit_interactive_live_eval_event(
     payload: dict[str, Any] = {
         "target_id": experiment_id,
         "target_type": "experiment",
+        # The binding the platform grades the event for, with the
+        # experiment's own evaluators (B2-13); the emitter's own measure
+        # stays beside it as `interactive-pass-rate`.
+        "experiment_id": experiment_id,
+        "evalset_id": evalset_id,
+        "case_id": case_id,
         "evaluator_name": "interactive-pass-rate",
         "metric_name": "pass_rate",
         "value_num": pass_rate,
@@ -447,7 +464,7 @@ async def _wrap_streaming_body_with_approvals(
     approval_tool_ids: list[str],
     agent_id: str,
     user_jwt_token: str | None = None,
-    pod_name: str | None = None,
+    runtime_name: str | None = None,
 ) -> AsyncIterator[str]:
     """Wrap a streaming body to create local approval records for deferred tools.
 
@@ -459,6 +476,10 @@ async def _wrap_streaming_body_with_approvals(
     """
     import json as json_mod
 
+    from ..guardrails.tool_approvals import (
+        _agent_scope_key,
+        has_tool_grant_for_scope,
+    )
     from ..routes.tool_approvals import (
         _APPROVALS,
         _APPROVALS_LOCK,
@@ -510,7 +531,7 @@ async def _wrap_streaming_body_with_approvals(
                     "/api/ai-agents/v1/tool-approvals",
                     json={
                         "agent_id": agent_id,
-                        "pod_name": pod_name or "",
+                        "runtime_name": runtime_name or "",
                         "tool_name": tool_name,
                         "tool_args": tool_args,
                         "tool_call_id": tool_call_id,
@@ -552,6 +573,11 @@ async def _wrap_streaming_body_with_approvals(
         from datetime import datetime, timezone
 
         async for chunk in body_iterator:
+            # Approval-request SSE lines to strip from this chunk when the tool
+            # was already approved earlier in the chat (prevents a phantom
+            # approval banner + SaaS request on repeat asks; the tool still
+            # auto-executes via handle_deferred_tool_calls).
+            suppressed_lines: set[str] = set()
             # Fast path: skip parsing when not relevant
             if "tool-input-available" in chunk or "tool-approval-request" in chunk:
                 try:
@@ -597,6 +623,54 @@ async def _wrap_streaming_body_with_approvals(
                         normalized_tool_args = (
                             tool_args if isinstance(tool_args, dict) else {}
                         )
+
+                        # Chat-scoped reuse: once this exact tool+args was
+                        # approved earlier in the chat, later identical calls
+                        # auto-execute via handle_deferred_tool_calls. Do NOT
+                        # create a new local record, forward a remote (ai-agents)
+                        # approval, or leak the approval-request event — else the
+                        # SaaS Tool Approvals view and the local banner show a
+                        # phantom request. The in-memory grant map can be missed
+                        # when the prior record is already "consumed", so also
+                        # honour a matching resolved record in _APPROVALS.
+                        already_approved_in_chat = has_tool_grant_for_scope(
+                            _agent_scope_key(agent_id),
+                            tool_name,
+                            normalized_tool_args,
+                        )
+                        if not already_approved_in_chat:
+                            async with _APPROVALS_LOCK:
+                                for candidate in _APPROVALS.values():
+                                    if candidate.status not in (
+                                        "approved",
+                                        "executing",
+                                        "consumed",
+                                    ):
+                                        continue
+                                    if _approval_envelope_matches(
+                                        candidate,
+                                        agent_id=agent_id,
+                                        tool_name=tool_name,
+                                        tool_args=normalized_tool_args,
+                                    ):
+                                        already_approved_in_chat = True
+                                        break
+                        if already_approved_in_chat:
+                            if tool_call_id:
+                                created_tool_call_ids.add(tool_call_id)
+                            # Drop the approval-request event so the client
+                            # renders no banner; keep tool-input-available so the
+                            # tool card still shows.
+                            if event_type == "tool-approval-request":
+                                suppressed_lines.add(line.strip())
+                            logger.info(
+                                "[Vercel AI] Suppressing approval banner/record "
+                                "for '%s' (tool_call_id=%s): already approved in "
+                                "this chat",
+                                tool_name,
+                                tool_call_id,
+                            )
+                            continue
 
                         # Root-cause guard: when a tool has already been
                         # approved recently for the same agent/tool/args
@@ -750,7 +824,15 @@ async def _wrap_streaming_body_with_approvals(
                         "[Vercel AI] Error parsing SSE for approval: %s",
                         parse_err,
                     )
-            yield chunk
+            if suppressed_lines:
+                kept = [
+                    ln for ln in chunk.split("\n") if ln.strip() not in suppressed_lines
+                ]
+                rebuilt = "\n".join(kept)
+                if rebuilt.strip():
+                    yield rebuilt
+            else:
+                yield chunk
     except Exception as e:
         logger.error(f"[Vercel AI] STREAMING ERROR: {e}")
         logger.error(
@@ -1042,42 +1124,47 @@ class VercelAITransport(BaseTransport):
                 "Vercel AI: Could not apply per-turn tool/skill state: %s", exc
             )
 
-        # Convert string tool IDs to actual AbstractBuiltinTool instances
-        # pydantic-ai expects Sequence[AbstractBuiltinTool], not list[str]
-        effective_builtin_tools = None
+        # Convert string tool IDs to pydantic-ai v2 native tool capabilities.
+        # The frontend still uses `builtinTools` naming for compatibility.
+        request_native_capabilities = []
         if builtin_tools_input:
             try:
-                from pydantic_ai.builtin_tools import (
-                    BUILTIN_TOOL_TYPES,
-                    AbstractBuiltinTool,
+                from pydantic_ai.capabilities import NativeTool
+                from pydantic_ai.native_tools import (
+                    NATIVE_TOOL_TYPES,
+                    AbstractNativeTool,
                 )
 
-                tool_instances: list[AbstractBuiltinTool] = []
+                tool_instances: list[AbstractNativeTool] = []
                 for tool_id in builtin_tools_input:
                     if isinstance(tool_id, str):
-                        tool_cls = BUILTIN_TOOL_TYPES.get(tool_id)
+                        tool_cls = NATIVE_TOOL_TYPES.get(tool_id)
                         if tool_cls is not None:
                             tool_instances.append(tool_cls())
                             logger.debug(
-                                f"Vercel AI: Converted builtin tool '{tool_id}' to {tool_cls.__name__}"
+                                f"Vercel AI: Converted builtin tool '{tool_id}' to native {tool_cls.__name__}"
                             )
                         else:
                             logger.warning(
-                                f"Vercel AI: Unknown builtin tool '{tool_id}', skipping"
+                                f"Vercel AI: Unknown native tool '{tool_id}', skipping"
                             )
-                    elif isinstance(tool_id, AbstractBuiltinTool):
+                    elif isinstance(tool_id, AbstractNativeTool):
                         # Already an instance
                         tool_instances.append(tool_id)
                     else:
                         logger.warning(
-                            f"Vercel AI: Invalid builtin tool type: {type(tool_id)}, skipping"
+                            f"Vercel AI: Invalid native tool type: {type(tool_id)}, skipping"
                         )
-                effective_builtin_tools = tool_instances if tool_instances else None
+                request_native_capabilities = [
+                    NativeTool(tool_instance) for tool_instance in tool_instances
+                ]
                 logger.info(
-                    f"Vercel AI: Converted {len(builtin_tools_input)} builtin tool names to {len(tool_instances)} instances"
+                    "Vercel AI: Converted %d builtin tool names to %d native capabilities",
+                    len(builtin_tools_input),
+                    len(request_native_capabilities),
                 )
             except ImportError as e:
-                logger.error(f"Vercel AI: Could not import builtin_tools: {e}")
+                logger.error(f"Vercel AI: Could not import native_tools: {e}")
 
         # Extract identity/JWT hints for OTEL metric attribution
         metric_user_id: str | None = None
@@ -1134,7 +1221,10 @@ class VercelAITransport(BaseTransport):
             Callback invoked after agent run completes.
             Usage tracking is handled by LLMContextUsageCapability.
             """
-            usage = result.usage()
+            usage_candidate = getattr(result, "usage", None)
+            usage = usage_candidate() if callable(usage_candidate) else usage_candidate
+            if usage is None:
+                return
             input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
             output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
             tool_call_count = int(getattr(usage, "tool_calls", 0) or 0)
@@ -1192,7 +1282,7 @@ class VercelAITransport(BaseTransport):
                             events_base_url = (
                                 os.environ.get("DATALAYER_AI_AGENTS_URL")
                                 or os.environ.get("AI_AGENTS_URL")
-                                or os.environ.get("DATALAYER_URL")
+                                or os.environ.get("DATALAYER_AI_AGENTS_URL")
                                 or "https://prod1.datalayer.run"
                             )
                             create_event(
@@ -1397,8 +1487,8 @@ class VercelAITransport(BaseTransport):
                     "toolsets": runtime_toolsets,
                     "on_complete": on_complete,
                 }
-                if effective_builtin_tools is not None:
-                    dispatch_kwargs["builtin_tools"] = effective_builtin_tools
+                if request_native_capabilities:
+                    dispatch_kwargs["capabilities"] = request_native_capabilities
 
                 dispatch_params = inspect.signature(
                     VercelAIAdapter.dispatch_request
@@ -1451,7 +1541,7 @@ class VercelAITransport(BaseTransport):
                         approval_tool_ids=self._approval_tool_ids,
                         agent_id=agent_id,
                         user_jwt_token=metric_user_jwt_token,
-                        pod_name=None,
+                        runtime_name=None,
                     )
                     # Inject pydantic-ai token usage into the message-metadata
                     # event so eval reports can read token counts from the stream.

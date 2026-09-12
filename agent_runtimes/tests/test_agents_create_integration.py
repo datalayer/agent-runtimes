@@ -133,7 +133,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         tools=["fetch_webpage", "run_in_terminal"],
         description="Spec description",
         model="openai:gpt-4.1",
-        sandbox_variant="jupyter",
+        sandbox_variant="jupyter-server",
         protocol="a2a",
         codemode={
             "enabled": True,
@@ -151,7 +151,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         pass
 
     class _DummySandboxManager:
-        variant = "jupyter"
+        variant = "jupyter-server"
 
         def configure_from_url(self, _url: str) -> None:
             pass
@@ -167,7 +167,9 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         lambda: _DummySandboxManager(),
     )
     monkeypatch.setattr(
-        agents_route, "create_shared_sandbox", lambda _url: _DummySandbox()
+        agents_route,
+        "create_shared_sandbox",
+        lambda _url, _variant=None: _DummySandbox(),
     )
 
     request = CreateAgentRequest(
@@ -185,8 +187,8 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
 
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
-    assert "Spec system prompt" in str(pydantic_kwargs.get("system_prompt"))
-    assert "Use codemode tools." in str(pydantic_kwargs.get("system_prompt"))
+    assert "Spec system prompt" in str(pydantic_kwargs.get("instructions"))
+    assert "Use codemode tools." in str(pydantic_kwargs.get("instructions"))
 
     adapter_kwargs = creation_spy["adapter_kwargs"]
     assert isinstance(adapter_kwargs, dict)
@@ -222,7 +224,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
 
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
-    assert pydantic_kwargs.get("system_prompt") == "Forwarded prompt"
+    assert pydantic_kwargs.get("instructions") == "Forwarded prompt"
 
     # Ensure model actually changed from request default.
     assert creation_spy["pydantic_model"] != DEFAULT_MODEL.value

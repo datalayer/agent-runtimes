@@ -97,11 +97,15 @@ function getEndpointPath(protocol: Protocol, agentId?: string): string {
 }
 
 /**
- * Map transport type to protocol type
+ * Map transport type to protocol type.
+ *
+ * Only `vercel-ai-jupyter` collapses: it is the same wire protocol reached
+ * through Jupyter's request machinery. Everything else, `browser-vercel-ai`
+ * included, is its own adapter and passes through.
  */
 function getProtocolType(
   protocol: Protocol,
-): 'ag-ui' | 'a2a' | 'acp' | 'vercel-ai' {
+): Exclude<Protocol, 'vercel-ai-jupyter'> {
   switch (protocol) {
     case 'vercel-ai-jupyter':
       return 'vercel-ai';
@@ -114,14 +118,42 @@ function getProtocolType(
  * Chat props — extends ChatCommonProps with transport-specific configuration.
  */
 export interface ChatProps extends ChatCommonProps {
-  /** Transport to use — REQUIRED (narrows protocol to string enum) */
-  protocol: Protocol;
+  /**
+   * Transport to use — REQUIRED.
+   *
+   * A `Protocol` string is the usual form: this component then builds the
+   * endpoint, the config endpoint and the auth token from `baseUrl` and
+   * `agentId`, which is what makes it convenient.
+   *
+   * A full `ProtocolConfig` is taken as given instead, for an adapter whose
+   * configuration cannot be derived from a base URL — the in-page harness
+   * carries live objects (its instructions, its tools, where to reach a model)
+   * rather than an address. `ChatFloating` has always accepted both; this is
+   * the same seam.
+   */
+  protocol: Protocol | ProtocolConfig;
 
   /** Extensions for chat features */
   extensions?: Extension[];
 
   /** Base URL of the server (for HTTP-based protocols) */
   baseUrl?: string;
+
+  /**
+   * Explicit endpoint URL override. When set, it is used verbatim instead of
+   * deriving `${baseUrl}${getEndpointPath(protocol, agentId)}`. Useful for
+   * proxied endpoints such as the Agent Node tunnel proxy.
+   */
+  endpoint?: string;
+
+  /**
+   * Explicit config endpoint override. When provided (including `null`/empty
+   * to disable), it replaces the default `${baseUrl}/api/v1/configure`.
+   */
+  configEndpoint?: string;
+
+  /** Override whether the protocol queries the backend for models/tools. */
+  enableConfigQuery?: boolean;
 
   /** WebSocket URL (for WebSocket-based protocols like ACP) */
   wsUrl?: string;
@@ -226,6 +258,9 @@ export function Chat({
   protocol: transport,
   extensions: _extensions,
   baseUrl = 'http://localhost:8765',
+  endpoint: endpointProp,
+  configEndpoint: configEndpointProp,
+  enableConfigQuery: enableConfigQueryProp,
   wsUrl,
   agentId,
   authToken: authTokenProp,
@@ -249,6 +284,8 @@ export function Chat({
   showToolsMenu = true,
   showInput = true,
   disableInputPrompt = false,
+  disabled,
+  disableReason,
   overlay,
   launching = false,
   launchingMessage,
@@ -287,6 +324,12 @@ export function Chat({
   collapsed = false,
   onExpandFromCollapsed,
   ephemeralNotebookToolbar,
+  ephemeralNotebookToolbarExtraItems,
+  ephemeralDocumentToolbarExtraItems,
+  ephemeralNotebookCollaborationProvider,
+  ephemeralNotebookCollaborationDocumentId,
+  ephemeralDocumentCollaboration,
+  ephemeralRuntimeOverride,
   onToolCallStart,
   onToolCallComplete,
   renderToolResult,
@@ -296,6 +339,13 @@ export function Chat({
   codemodeStatusData,
   sandboxStatusData,
   kernel,
+  kernelIndicatorPlacement,
+  kernelEnvironmentName,
+  kernelCpu,
+  kernelMemory,
+  kernelGpu,
+  themeVariant,
+  colorMode,
   showToolApprovalBanner,
   pendingApprovals,
   onApproveApproval,
@@ -339,6 +389,12 @@ export function Chat({
     }
   }, [showDetails]);
 
+  /** The protocol's name, whichever form it was given in. */
+  const transportName: Protocol =
+    typeof transport === 'object' && transport !== null
+      ? transport.type
+      : transport;
+
   // Build protocol config based on transport.
   // Keep this pure: never call React state setters inside this memo.
   const protocolConfigResult = useMemo((): {
@@ -346,6 +402,12 @@ export function Chat({
     error: string | null;
   } => {
     try {
+      // A config given outright is used as it stands: there is nothing here
+      // that could improve on an adapter's own description of itself.
+      if (typeof transport === 'object' && transport !== null) {
+        return { config: transport, error: null };
+      }
+
       let endpoint: string;
       let authToken: string | undefined = authTokenProp;
       let options: Record<string, unknown> | undefined;
@@ -400,6 +462,11 @@ export function Chat({
         }
       }
 
+      // Explicit endpoint override (e.g. Agent Node tunnel proxy).
+      if (endpointProp) {
+        endpoint = endpointProp;
+      }
+
       return {
         config: {
           type: getProtocolType(transport),
@@ -408,13 +475,15 @@ export function Chat({
           authToken,
           options,
           // Enable config query for all protocols to fetch models and tools
-          enableConfigQuery: true,
+          enableConfigQuery: enableConfigQueryProp ?? true,
           // For Jupyter-based transports, use Jupyter requestAPI (configEndpoint undefined)
           // For FastAPI-based transports, use direct fetch to the configure endpoint
           configEndpoint:
-            transport === 'vercel-ai-jupyter'
-              ? undefined // Use Jupyter requestAPI
-              : `${baseUrl}/api/v1/configure`,
+            configEndpointProp !== undefined
+              ? configEndpointProp
+              : transport === 'vercel-ai-jupyter'
+                ? undefined // Use Jupyter requestAPI
+                : `${baseUrl}/api/v1/configure`,
         },
         error: null,
       };
@@ -425,7 +494,16 @@ export function Chat({
         error: err instanceof Error ? err.message : 'Failed to configure',
       };
     }
-  }, [transport, baseUrl, wsUrl, resolvedAgentId, authTokenProp]);
+  }, [
+    transport,
+    baseUrl,
+    wsUrl,
+    resolvedAgentId,
+    authTokenProp,
+    endpointProp,
+    configEndpointProp,
+    enableConfigQueryProp,
+  ]);
 
   const protocolConfig = protocolConfigResult.config;
 
@@ -538,7 +616,8 @@ export function Chat({
           >
             <Spinner size="large" />
             <Text sx={{ mt: 3, color: 'fg.muted' }}>
-              Connecting to {transport.toUpperCase().replace('-', ' ')} agent...
+              Connecting to {transportName.toUpperCase().replace('-', ' ')}{' '}
+              agent...
             </Text>
           </Box>
         </QueryClientProvider>
@@ -570,7 +649,7 @@ export function Chat({
             <AgentDetails
               name={title || 'AI Agent'}
               icon={brandIcon}
-              protocol={transport}
+              protocol={transportName}
               url={protocolConfig?.endpoint || baseUrl}
               messageCount={messageCount}
               agentId={agentId}
@@ -655,6 +734,8 @@ export function Chat({
               showToolsMenu={showToolsMenu}
               showInput={showInput}
               disableInputPrompt={disableInputPrompt}
+              disabled={disabled}
+              disableReason={disableReason}
               overlay={overlay}
               launching={launching}
               launchingMessage={launchingMessage}
@@ -686,6 +767,20 @@ export function Chat({
               collapsed={collapsed}
               onExpandFromCollapsed={onExpandFromCollapsed}
               ephemeralNotebookToolbar={ephemeralNotebookToolbar}
+              ephemeralNotebookToolbarExtraItems={
+                ephemeralNotebookToolbarExtraItems
+              }
+              ephemeralDocumentToolbarExtraItems={
+                ephemeralDocumentToolbarExtraItems
+              }
+              ephemeralNotebookCollaborationProvider={
+                ephemeralNotebookCollaborationProvider
+              }
+              ephemeralNotebookCollaborationDocumentId={
+                ephemeralNotebookCollaborationDocumentId
+              }
+              ephemeralDocumentCollaboration={ephemeralDocumentCollaboration}
+              ephemeralRuntimeOverride={ephemeralRuntimeOverride}
               onToolCallStart={onToolCallStart}
               onToolCallComplete={onToolCallComplete}
               renderToolResult={renderToolResult}
@@ -694,6 +789,13 @@ export function Chat({
               mcpStatusData={mcpStatusData}
               sandboxStatusData={sandboxStatusData}
               kernel={kernel}
+              kernelIndicatorPlacement={kernelIndicatorPlacement}
+              kernelEnvironmentName={kernelEnvironmentName}
+              kernelCpu={kernelCpu}
+              kernelMemory={kernelMemory}
+              kernelGpu={kernelGpu}
+              themeVariant={themeVariant}
+              colorMode={colorMode}
               showToolApprovalBanner={showToolApprovalBanner}
               pendingApprovals={pendingApprovals}
               onApproveApproval={onApproveApproval}

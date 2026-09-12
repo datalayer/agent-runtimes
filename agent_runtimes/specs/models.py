@@ -38,12 +38,17 @@ class AIModels(str, Enum):
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = (
         "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
     )
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5 = "bedrock:us.anthropic.claude-opus-5"
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = (
         "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     )
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6 = "bedrock:us.anthropic.claude-sonnet-4-6"
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = (
         "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
     )
+    OLLAMA_GEMMA3_4B = "ollama:gemma3:4b"
+    OLLAMA_LLAMA3_1_8B = "ollama:llama3.1:8b"
+    OLLAMA_QWEN2_5_CODER_7B = "ollama:qwen2.5-coder:7b"
     OPENAI_GPT_4_1_MINI = "openai:gpt-4.1-mini"
     OPENAI_GPT_4_1_NANO = "openai:gpt-4.1-nano"
     OPENAI_GPT_4_1 = "openai:gpt-4.1"
@@ -63,7 +68,9 @@ ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1 = AIModel(
     description="Claude Haiku 3.5 by Anthropic - fast and efficient",
     provider="anthropic",
     default=False,
+    available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=8192,
 )
 
 ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1 = AIModel(
@@ -73,7 +80,9 @@ ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1 = AIModel(
     description="Claude Opus 4 by Anthropic - highest capability model",
     provider="anthropic",
     default=False,
+    available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=32000,
 )
 
 ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1 = AIModel(
@@ -83,7 +92,9 @@ ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1 = AIModel(
     description="Claude Sonnet 4.5 by Anthropic - balanced performance and speed",
     provider="anthropic",
     default=False,
+    available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=64000,
 )
 
 ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1 = AIModel(
@@ -93,7 +104,9 @@ ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1 = AIModel(
     description="Claude Sonnet 4 by Anthropic - strong reasoning and coding",
     provider="anthropic",
     default=False,
+    available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
+    tokens_limit=64000,
 )
 
 AZURE_OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
@@ -103,7 +116,9 @@ AZURE_OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
     description="GPT-4.1 Mini via Azure OpenAI - compact version",
     provider="azure-openai",
     default=False,
+    available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=32768,
 )
 
 AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
@@ -113,7 +128,9 @@ AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
     description="GPT-4.1 Nano via Azure OpenAI - smallest and fastest",
     provider="azure-openai",
     default=False,
+    available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=32768,
 )
 
 AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
@@ -123,7 +140,9 @@ AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
     description="GPT-4.1 via Azure OpenAI - strong general purpose",
     provider="azure-openai",
     default=False,
+    available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=32768,
 )
 
 AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
@@ -133,7 +152,9 @@ AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
     description="GPT-4o Mini via Azure OpenAI - compact enterprise deployment",
     provider="azure-openai",
     default=False,
+    available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=16384,
 )
 
 AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
@@ -143,7 +164,9 @@ AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
     description="GPT-4o via Azure OpenAI - enterprise deployment",
     provider="azure-openai",
     default=False,
+    available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
+    tokens_limit=16384,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
@@ -153,11 +176,13 @@ BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
     description="Claude Fable 5 via AWS Bedrock",
     provider="bedrock",
     default=False,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=64000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
@@ -167,11 +192,13 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
     description="Claude Opus 4.6 via AWS Bedrock",
     provider="bedrock",
     default=False,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=32000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
@@ -181,11 +208,13 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
     description="Claude Opus 4.8 via AWS Bedrock",
     provider="bedrock",
     default=False,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=32000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
@@ -195,11 +224,29 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
     description="Claude Opus 4 via AWS Bedrock - highest capability",
     provider="bedrock",
     default=False,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=32000,
+)
+
+BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
+    id="bedrock:us.anthropic.claude-opus-5",
+    version="0.0.1",
+    name="Bedrock Claude Opus 5",
+    description="Claude Opus 5 via AWS Bedrock - the current frontier model",
+    provider="bedrock",
+    default=False,
+    available=False,
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
+    tokens_limit=32000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
@@ -209,11 +256,29 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
     description="Claude Sonnet 4.5 via AWS Bedrock - balanced performance",
     provider="bedrock",
     default=True,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=64000,
+)
+
+BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
+    id="bedrock:us.anthropic.claude-sonnet-4-6",
+    version="0.0.1",
+    name="Bedrock Claude Sonnet 4.6",
+    description="Claude Sonnet 4.6 via AWS Bedrock - balanced performance",
+    provider="bedrock",
+    default=True,
+    available=True,
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
+    tokens_limit=64000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
@@ -223,11 +288,55 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
     description="Claude Sonnet 4 via AWS Bedrock - strong reasoning",
     provider="bedrock",
     default=False,
+    available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
     ],
+    tokens_limit=64000,
+)
+
+OLLAMA_GEMMA3_4B_0_0_1 = AIModel(
+    id="ollama:gemma3:4b",
+    version="0.0.1",
+    name="Gemma 3 4B (Ollama)",
+    description="Gemma 3 4B running locally through Ollama - small and fast, no tool calling",
+    provider="ollama",
+    default=False,
+    available=False,
+    required_env_vars=[],
+    tokens_limit=4096,
+    local=True,
+    capabilities=["chat"],
+)
+
+OLLAMA_LLAMA3_1_8B_0_0_1 = AIModel(
+    id="ollama:llama3.1:8b",
+    version="0.0.1",
+    name="Llama 3.1 8B (Ollama)",
+    description="Meta Llama 3.1 8B running locally through Ollama - tool calling, no data leaves the machine",
+    provider="ollama",
+    default=False,
+    available=False,
+    required_env_vars=[],
+    tokens_limit=4096,
+    local=True,
+    capabilities=["chat", "tools", "codemode"],
+)
+
+OLLAMA_QWEN2_5_CODER_7B_0_0_1 = AIModel(
+    id="ollama:qwen2.5-coder:7b",
+    version="0.0.1",
+    name="Qwen2.5 Coder 7B (Ollama)",
+    description="Qwen2.5 Coder 7B running locally through Ollama - code-focused with tool calling",
+    provider="ollama",
+    default=False,
+    available=False,
+    required_env_vars=[],
+    tokens_limit=4096,
+    local=True,
+    capabilities=["chat", "tools", "codemode"],
 )
 
 OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
@@ -237,7 +346,9 @@ OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
     description="GPT-4.1 Mini by OpenAI - compact version of GPT-4.1",
     provider="openai",
     default=False,
+    available=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=32768,
 )
 
 OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
@@ -247,7 +358,9 @@ OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
     description="GPT-4.1 Nano by OpenAI - smallest and fastest",
     provider="openai",
     default=False,
+    available=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=32768,
 )
 
 OPENAI_GPT_4_1_0_0_1 = AIModel(
@@ -257,7 +370,9 @@ OPENAI_GPT_4_1_0_0_1 = AIModel(
     description="GPT-4.1 by OpenAI - strong general purpose model",
     provider="openai",
     default=False,
+    available=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=32768,
 )
 
 OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
@@ -267,7 +382,9 @@ OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
     description="GPT-4o Mini by OpenAI - compact and cost-effective",
     provider="openai",
     default=False,
+    available=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=16384,
 )
 
 OPENAI_GPT_4O_0_0_1 = AIModel(
@@ -277,7 +394,9 @@ OPENAI_GPT_4O_0_0_1 = AIModel(
     description="GPT-4o by OpenAI - fast multimodal model",
     provider="openai",
     default=False,
+    available=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=16384,
 )
 
 OPENAI_O3_MINI_0_0_1 = AIModel(
@@ -287,7 +406,9 @@ OPENAI_O3_MINI_0_0_1 = AIModel(
     description="o3 Mini by OpenAI - reasoning-focused compact model",
     provider="openai",
     default=False,
+    available=False,
     required_env_vars=["OPENAI_API_KEY"],
+    tokens_limit=100000,
 )
 
 # ============================================================================
@@ -308,8 +429,13 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "bedrock:us.anthropic.claude-opus-4-6-v1": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-8": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1,
     "bedrock:us.anthropic.claude-opus-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1,
+    "bedrock:us.anthropic.claude-opus-5": BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
+    "bedrock:us.anthropic.claude-sonnet-4-6": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
+    "ollama:gemma3:4b": OLLAMA_GEMMA3_4B_0_0_1,
+    "ollama:llama3.1:8b": OLLAMA_LLAMA3_1_8B_0_0_1,
+    "ollama:qwen2.5-coder:7b": OLLAMA_QWEN2_5_CODER_7B_0_0_1,
     "openai:gpt-4.1-mini": OPENAI_GPT_4_1_MINI_0_0_1,
     "openai:gpt-4.1-nano": OPENAI_GPT_4_1_NANO_0_0_1,
     "openai:gpt-4.1": OPENAI_GPT_4_1_0_0_1,

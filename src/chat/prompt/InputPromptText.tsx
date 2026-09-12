@@ -94,6 +94,14 @@ export function InputPromptText({
         sx={{
           width: '100%',
           resize: 'none',
+          // Greyed while it cannot be typed in, so the state is legible
+          // without trying it. Primer's `disabled` textarea keeps the
+          // author's colour, and `!important` is needed for the same reason
+          // the border rules below need it.
+          '& textarea:disabled, & textarea[readonly]': {
+            color: 'fg.subtle !important',
+            cursor: 'not-allowed',
+          },
           minHeight: '40px',
           maxHeight: '120px',
           overflow: 'hidden',

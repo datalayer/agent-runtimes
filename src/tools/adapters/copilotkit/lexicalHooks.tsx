@@ -15,8 +15,7 @@ import type { ToolExecutionContext } from '@datalayer/jupyter-react';
 import {
   useLexicalStore,
   DefaultExecutor as LexicalDefaultExecutor,
-  lexicalToolDefinitions,
-  lexicalToolOperations,
+  useLexicalToolBundle,
 } from '@datalayer/jupyter-lexical';
 import { createAllCopilotKitActions } from './CopilotKitToolAdapter';
 
@@ -73,16 +72,21 @@ export function useLexicalToolActions(
     [documentId, executor, contextOverrides],
   );
 
+  // The document's tools: the block ones, plus whatever the plugins mounted
+  // in this editor have contributed. Changes only when a plugin mounts or
+  // unmounts.
+  const bundle = useLexicalToolBundle(documentId);
+
   // Create and return CopilotKit actions (stable reference)
-  // Only re-create when context changes (i.e., when documentId or contextOverrides change)
+  // Only re-create when the context or the mounted plugins change
   const actions = useMemo(
     () =>
       createAllCopilotKitActions(
-        lexicalToolDefinitions,
-        lexicalToolOperations,
+        bundle.definitions,
+        bundle.operations,
         context,
       ),
-    [context], // Depend on context, which is stable unless ID/overrides change
+    [bundle, context],
   );
 
   return actions;

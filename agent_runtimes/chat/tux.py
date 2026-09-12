@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Terminal UX (TUX) for theLoop assistant."""
 
 import asyncio
@@ -16,10 +12,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.cursor_shapes import CursorShape
 from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.key_binding import KeyBindings
+from reactor.repl import build_completer, build_key_bindings
 from prompt_toolkit.styles import Style as PTStyle
 from rich.box import ROUNDED
 from rich.columns import Columns
@@ -28,7 +23,9 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
-from .commands import SlashCommand, build_commands
+from agent_runtimes.loop import LoopSession, SessionSync, SlashCommandRegistry
+
+from .commands import SlashCommand, build_registry
 from .execution import TuxExecutionGateway
 
 # Rich styles matching Datalayer brand
@@ -58,48 +55,6 @@ SYMBOL_TOOLS = "⛀"
 SYMBOL_MESSAGES = "⛁"
 SYMBOL_FREE = "⛶"
 SYMBOL_BUFFER = "⛝"
-
-
-class SlashCommandCompleter(Completer):
-    """Completer for slash commands with menu-style display."""
-
-    def __init__(self, commands: dict[str, "SlashCommand"]):
-        self.commands = commands
-
-    def get_completions(self, document: Any, complete_event: Any) -> Any:
-        """Yield completions for slash commands."""
-        text = document.text_before_cursor
-
-        # Only show completions when input starts with /
-        if not text.startswith("/"):
-            return
-
-        # Get the partial command (without the leading /)
-        partial = text[1:].lower()
-
-        # Track which commands we've shown (to avoid duplicates from aliases)
-        shown = set()
-
-        for name, cmd in sorted(self.commands.items()):
-            # Only show primary command names, not aliases
-            if cmd.name in shown:
-                continue
-
-            # Match if partial matches start of command name or is empty
-            if name.startswith(partial) and cmd.name == name:
-                shown.add(cmd.name)
-
-                # Truncate description to fit in menu
-                desc = cmd.description
-                if len(desc) > 70:
-                    desc = desc[:67] + "..."
-
-                yield Completion(
-                    text=f"/{cmd.name}",
-                    start_position=-len(text),
-                    display=HTML(f"<ansicyan>/{cmd.name}</ansicyan>"),
-                    display_meta=HTML(f"<ansibrightblack>{desc}</ansibrightblack>"),
-                )
 
 
 @dataclass
@@ -202,10 +157,42 @@ class CliTux:
         self._executor = TuxExecutionGateway(agent_id, server_url=self.server_url)
         self.startup_message = startup_message
 
-        # Initialize slash commands
-        self.commands: dict[str, SlashCommand] = build_commands(
+        # Initialize slash commands. The registry is the source of truth —
+        # built-ins plus whatever the installed plugins contributed — and
+        # `self.commands` stays the name-and-alias mapping this UI reads.
+        self.command_registry: SlashCommandRegistry = build_registry(
             self, eggs=eggs, jupyter_url=jupyter_url
         )
+        self.commands: dict[str, SlashCommand] = self.command_registry.as_mapping()
+
+        # What a command is allowed to know about the session it runs in, so a
+        # command can be written against the session rather than against this
+        # terminal (and can therefore also run in the browser workspace).
+        self.session = LoopSession(
+            server_url=self.server_url,
+            agent_id=agent_id,
+            owns_server=False,
+        )
+
+        # `/browser` hands this session to a page, and both ends stay attached
+        # to it. The sandbox and the agent are shared by construction — one
+        # server holds them — but each front-end renders only what it saw
+        # happen, so this watches the shared history and shows what the other
+        # end did.
+        self.sync = SessionSync(server_url=self.server_url, agent_id=agent_id)
+
+    @property
+    def loop_session(self) -> LoopSession:
+        """This session, with the terminal's live values folded in.
+
+        `CliTux` mutates `agent_id` and `server_url` as the session goes on —
+        `/agents use` switches agent, a reconnect changes the URL — so the
+        session is refreshed on read rather than left to drift from the terminal
+        it describes. Commands should read this, not the attributes.
+        """
+        self.session.server_url = self.server_url
+        self.session.agent_id = self.agent_id or self.session.agent_id
+        return self.session
 
         # Initialize prompt session with slash command completer
         # Style for the completion menu matching Datalayer brand colors
@@ -519,7 +506,7 @@ class CliTux:
         footer_right = Text(" Cheaper • Faster • Collaborative", style=STYLE_MUTED)
 
         # Create the main panel
-        title = f" LOOP ⟳ {version} "
+        title = f" ☰ LOOP ⟳ {version} "
 
         content = Group(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -541,43 +528,36 @@ class CliTux:
         self.console.print(f" {path_line}", style=STYLE_MUTED)
         self.console.print()
 
-    def _create_key_bindings(self) -> KeyBindings:
-        """Create keyboard shortcuts for slash commands.
+    async def _show_foreign_turns(self) -> None:
+        """Print anything the browser did since we last looked.
 
-        Uses Meta/Alt key combinations (e.g., 'escape', 'x' for Alt+X).
+        Before the prompt rather than during it: interrupting a half-typed line
+        to announce someone else's turn would be worse than showing it a moment
+        later.
         """
-        kb = KeyBindings()
+        try:
+            turns = await self.sync.poll()
+        except Exception:  # noqa: BLE001
+            # Silent by design: the two ends being briefly out of step is not
+            # something to interrupt a prompt over, and the next poll fixes it.
+            return
 
-        # Map shortcuts to command names
-        # Shortcuts are stored as tuples for multi-key sequences
-        shortcut_map: dict[tuple[str, ...], str] = {}
-        for cmd in self.commands.values():
-            if cmd.shortcut and cmd.name not in shortcut_map.values():
-                # Parse shortcut string into tuple (e.g., "escape x" -> ("escape", "x"))
-                keys = tuple(cmd.shortcut.split())
-                shortcut_map[keys] = cmd.name
-
-        # Create a handler that returns the command string
-        def make_handler(cmd_name: str) -> Any:
-            async def handler(event: Any) -> None:
-                # Set the buffer to the command and accept it
-                event.current_buffer.text = f"/{cmd_name}"
-                event.current_buffer.validate_and_handle()
-
-            return handler
-
-        # Register each shortcut - unpack tuple as separate arguments
-        for keys, cmd_name in shortcut_map.items():
-            kb.add(*keys)(make_handler(cmd_name))
-
-        return kb
+        for turn in turns:
+            self.console.print()
+            who = "you, in the browser" if turn.role == "user" else "the agent"
+            self.console.print(f"  ↔ {who}", style=STYLE_MUTED)
+            self.console.print(f"  {turn.content}", style=STYLE_MUTED)
+        if turns:
+            self.console.print()
 
     async def show_prompt(self) -> str:
         """Display the prompt and get user input with slash command completion."""
         # Initialize prompt session lazily (after commands are registered)
         if self.prompt_session is None:
-            completer = SlashCommandCompleter(self.commands)
-            key_bindings = self._create_key_bindings()
+            # The reactor's REPL machinery, over the same registry: the slash
+            # menu, per-argument completion, and one binding per shortcut.
+            completer = build_completer(self.command_registry)
+            key_bindings = build_key_bindings(self.command_registry)
             self.prompt_session = PromptSession(
                 completer=completer,
                 style=self.prompt_style,
@@ -614,12 +594,12 @@ class CliTux:
 
         parts = user_input[1:].split(maxsplit=1)
         cmd_name = parts[0].lower() if parts else ""
-        # args = parts[1] if len(parts) > 1 else ""
+        args = parts[1].strip() if len(parts) > 1 else ""
 
         if cmd_name in self.commands:
             cmd = self.commands[cmd_name]
             if cmd.handler:
-                result = await cmd.handler()
+                result = await cmd.handler(args)
                 # Commands may return a string to use as the next prompt
                 if result:
                     return result
@@ -1080,6 +1060,9 @@ class CliTux:
 
         while self.running:
             try:
+                # Both ends stay live: whatever happened in the browser since
+                # the last prompt is shown before this one is drawn.
+                await self._show_foreign_turns()
                 user_input = await self.show_prompt()
 
                 if not user_input:
@@ -1098,8 +1081,10 @@ class CliTux:
                     result = await self.handle_command(user_input)
                     # If a command returned a prompt string, send it to the agent
                     if result:
+                        self.sync.note_local(result)
                         await self.send_message(result)
                 else:
+                    self.sync.note_local(user_input)
                     await self.send_message(user_input)
 
             except KeyboardInterrupt:

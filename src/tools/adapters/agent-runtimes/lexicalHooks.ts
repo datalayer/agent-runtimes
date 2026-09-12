@@ -10,13 +10,24 @@
  * @module tools/adapters/agent-runtimes/lexicalHooks
  */
 
+/*
+ * First, before anything lexical: `@datalayer/jupyter-lexical` pulls
+ * `@lexical/code`, whose Prism language components read the bare global
+ * `Prism` the moment they evaluate — and PrismCss is what defines it. This
+ * module is now loaded *eagerly by the document plugin's build* (to
+ * contribute the document tools), so it can be the first lexical import in
+ * the page; without this line the whole document chunk died on "Prism is
+ * not defined".
+ */
+import '@datalayer/jupyter-react/lib/css/PrismCss';
+
 import { useMemo } from 'react';
 import type { ToolExecutionContext } from '@datalayer/jupyter-react';
 import {
   lexicalStore,
   DefaultExecutor as LexicalDefaultExecutor,
-  lexicalToolDefinitions,
-  lexicalToolOperations,
+  getLexicalTools,
+  useLexicalToolBundle,
 } from '@datalayer/jupyter-lexical';
 import { createAllAgentRuntimesTools } from './AgentRuntimesToolAdapter';
 import type { FrontendToolDefinition } from '../../../types/tools';
@@ -51,6 +62,34 @@ import type { FrontendToolDefinition } from '../../../types/tools';
  * />
  * ```
  */
+/**
+ * The document's frontend tools, built without React.
+ *
+ * The plain twin of `useLexicalTools`, for the document plugin contributing
+ * to the chat's `LoopFrontendTool` point. The executor reads the lexical
+ * store's live state through its methods; no reactivity needed.
+ */
+export function createLexicalTools(
+  documentId: string,
+  contextOverrides?: Partial<
+    Omit<ToolExecutionContext, 'executor' | 'documentId'>
+  >,
+): FrontendToolDefinition[] {
+  const executor = new LexicalDefaultExecutor(
+    documentId,
+    lexicalStore.getState(),
+  );
+  // A snapshot: whichever plugins have mounted by now. The React hook below
+  // is the one that keeps up as they come and go.
+  const { definitions, operations } = getLexicalTools(documentId);
+  return createAllAgentRuntimesTools(definitions, operations, {
+    documentId,
+    executor,
+    format: 'toon',
+    ...contextOverrides,
+  });
+}
+
 export function useLexicalTools(
   documentId: string,
   contextOverrides?: Partial<
@@ -77,15 +116,28 @@ export function useLexicalTools(
     [documentId, executor, contextOverrides],
   );
 
+  /*
+   * The tools a document offers are not a constant.
+   *
+   * The block tools are — every Lexical document has blocks — but a plugin
+   * brings its own, and which plugins are mounted is the editor's business,
+   * not this hook's. `useLexicalToolBundle` watches the set of mounted
+   * plugins by name, so this recomputes when the editor gains or loses one
+   * and at no other time: the stability the comment above is about is
+   * preserved, because a block insertion does not change which plugins are
+   * mounted.
+   */
+  const bundle = useLexicalToolBundle(documentId);
+
   // Create and return tools (stable reference)
   return useMemo(
     () =>
       createAllAgentRuntimesTools(
-        lexicalToolDefinitions,
-        lexicalToolOperations,
+        bundle.definitions,
+        bundle.operations,
         context,
       ),
-    [context],
+    [bundle, context],
   );
 }
 

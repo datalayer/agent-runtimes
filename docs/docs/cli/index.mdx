@@ -1,8 +1,9 @@
 ---
-title: CLI
+sidebar_position: 8
+title: Loop CLI
 ---
 
-# CLI
+# Loop CLI
 
 The `agent-runtimes` package provides a command-line interface for starting and managing the Agent Runtimes server.
 
@@ -226,7 +227,7 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `checkpoints` | Runtime checkpoint commands |
 | `console` | Runtime console commands |
 | `envs` | Environment management commands |
-| `evals` | Evalset/experiment/run commands |
+| `evals` | Benchmarks: `evals run <spec|evalset_id> --agent-spec-ids … [--models …] [--budget …]` imports, validates, launches and follows a benchmark on the platform — a line per change, a heartbeat while nothing changes, and a launch still `queued` with no task after 3 minutes is given up on naming the executor rather than waited on for an hour; `evals launches ls|get|cancel`, `evals subjects`, and the evalset, experiment, run and report commands |
 | `exec` | Execute Python files or notebooks on a runtime |
 | `pools` | Runtime pool administration commands |
 | `sandbox-snapshots` | Runtime snapshot commands |
@@ -240,6 +241,22 @@ agent-runtimes --help
 # Or using the Python module directly
 python -m agent_runtimes --help
 ```
+
+## Extending, and Being an Extension
+
+The command line is wired into the reactor's extensible-CLI machinery in
+both directions:
+
+- **As an extension** — `agent_runtimes.reactor_extension` packages every
+  command group of this package as a reactor CLI plugin, advertised under
+  `datalayer.cli` (so the `datalayer` command carries `sandboxes`, `agents`,
+  `envs` and the rest) and under `datalayer.reactor.cli` (so the `reactor`
+  command does too). Nothing spawns another executable; the groups register
+  in-process at startup.
+- **As a host** — the interactive chat's slash commands sit in the reactor's
+  slash registry, and a distribution advertising a plugin under the
+  `loop.plugins` entry-point group adds its own commands to the session. See
+  the [Loop REPL](/loop-repl#slash-command-registry) page.
 
 ## Shell Autocomplete
 
@@ -345,6 +362,7 @@ agent-runtimes serve [OPTIONS]
 | `--log-level` | `-l` | `info` | `AGENT_RUNTIMES_LOG_LEVEL` | Log level (`debug`, `info`, `warning`, `error`, `critical`) |
 | `--agent-id` | `-a` | - | `AGENT_RUNTIMES_DEFAULT_AGENT` | Agent spec ID from the library to start |
 | `--agent-name` | `-n` | `default` | `AGENT_RUNTIMES_AGENT_NAME` | Custom name for the agent (requires `--agent-id`) |
+| `--orchestrator-root` | - | - | `AGENT_RUNTIMES_ORCHESTRATOR_ROOT` | Register the orchestrator as the ACP agent `orchestrator`, delegating each turn to this agent: an agentspec ID, or an A2A (`http`) or ACP (`ws`) endpoint |
 | `--protocol` | `-t` | `ag-ui` | `AGENT_RUNTIMES_PROTOCOL` | Transport protocol (`ag-ui`, `vercel-ai`, `vercel-ai-jupyter`, `a2a`) |
 | `--no-config-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | Skip starting config MCP servers from `~/.datalayer/mcp.json` |
 | `--no-catalog-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS` | Skip starting catalog MCP servers defined in the agent spec (requires `--agent-id`) |

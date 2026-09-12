@@ -1,4 +1,5 @@
 ---
+sidebar_position: 10
 title: Protocols
 ---
 
@@ -168,6 +169,73 @@ This is due to:
 2. **Use Different Protocol**: Switch to AG-UI, Vercel AI, or ACP for
    per-request model selection.
 
+## Delegating Work Over A2A and ACP
+
+Everything above is agent-runtimes as a **server**: an agent answering over a
+protocol. It is also a **client**, and delegating work to a worker that speaks
+A2A or ACP goes through one port rather than through each protocol's own code:
+`agent_runtimes.orchestration` holds a `WorkerAdapter` for each, and the
+canonical model they speak — the execution, its attempts, its context
+manifest, its artifacts, the lifecycle and the commands — lives in
+`datalayer_core.orchestration` so that the app, the CLI and the services share
+one vocabulary.
+
+Two things this arrangement insists on:
+
+- **An adapter reports; it never decides.** What an observation means to an
+  execution is decided where the execution lives, so a worker cannot report
+  work it never did.
+- **An adapter says out loud what it cannot do.** A plain A2A worker cannot be
+  steered while it works, and a plain ACP worker is steered with a turn of its
+  own; neither can be paused or resumed. Each adapter declares its own
+  reductions and they reach the execution's event stream as the first thing a
+  dispatch reports, so "why did this never checkpoint?" is answered from the
+  run's own record.
+- **A worker says what it adds.** A worker `agent-runtimes` serves declares the
+  Datalayer orchestration extension — on its A2A agent card, in its ACP
+  capabilities — and is resolved with more (`AdapterCapabilities.extended`): a
+  steer reaches the turn it is working on, a pause stops it at a checkpoint it
+  reports, and a resume is a new attempt whose delegation names that checkpoint
+  (`Attempt.resumed_from`). The control plane asks a worker for what the report
+  recorded on its execution says, so a plain worker keeps its refusals.
+
+An execution's checkpoints can outlive the process that made them:
+`create_checkpoint_store("protocol_state", scope=<execution id>)` keeps them in
+the same protocol state store as the runtime's A2A tasks and ACP sessions
+(SQLite locally, the agent-memories PostgreSQL on Kubernetes), keyed by the
+execution, so another process of the runtime — after a restart — reads them,
+and two executions of one agent never read each other's. The checkpoint
+capability, its middleware and the `save_checkpoint`, `list_checkpoints` and
+`rewind_to` tools work over it unchanged.
+
+`examples/orchestration` is the runnable version of that paragraph: one
+objective delegated to an A2A worker and to an ACP worker over one code path,
+with the agent descriptor as the only difference between the two runs. Both
+workers are real protocol servers, both need no model, and both runs come out
+with the same artifact content hash.
+
+```bash
+cd examples/orchestration && python orchestrate.py
+```
+
+The gaps this turned up in both protocols, and the extension fields each one
+maps to, are in `research/orchestration-protocols/docs/` (from `index.md`, the gap table in `gaps.md`).
+
+The same runtime can put that whole arrangement behind one ACP agent. Started
+with `--orchestrator-root`, it registers `orchestrator` on its ACP route. Each
+`session/prompt` becomes a root execution, delegated as the person the
+connection's token names to the agent the option names: an agentspec ID, or
+an A2A (`http(s)`) or ACP (`ws(s)`) endpoint. That agent's worker asks the
+control plane for whatever children it needs. The client sees one agent: the
+tree's progress arrives as thought chunks, and what the root produced as the
+agent's message. A turn is keyed on its session and its prompt, so the same
+prompt in a session loaded after the runtime restarted is answered from the
+same tree, and cancelling the turn cancels the tree.
+
+```bash
+agent-runtimes serve --orchestrator-root http://127.0.0.1:8765/api/v1/a2a/agents/researcher
+```
+
 ## Choosing a Protocol
 
 | Requirement | Recommended Protocol |
@@ -178,6 +246,7 @@ This is due to:
 | Human-in-the-loop workflows | ACP or AG-UI |
 | Multi-agent orchestration | A2A |
 | Per-request model switching | AG-UI, Vercel AI, or ACP |
+| Delegating to a worker on either protocol | `agent_runtimes.orchestration` |
 
 ## Extension Protocols
 

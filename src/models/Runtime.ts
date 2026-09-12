@@ -29,17 +29,26 @@ export type IRuntimeLocation = 'browser' | 'local' | string;
 /**
  * A live runtime.
  *
- * Composition of the control-plane runtime pod ({@link IRuntimePod}) and the
+ * Composition of the control-plane runtime pod ({@link IRuntimeRecord}) and the
  * JupyterLab kernel model ({@link Kernel.IModel}, e.g. `id`, `name`,
  * `execution_state`). This is the canonical shape used across the app once a
- * pod has an attached kernel: `IRuntimePod` supplies the pod/control-plane
+ * pod has an attached kernel: `IRuntimeRecord` supplies the pod/control-plane
  * fields (snake_case) and `Kernel.IModel` supplies the live kernel fields.
  *
  * Note on identity: `Kernel.IModel.id` is the *kernel* id (only present once a
- * kernel is attached), while {@link IRuntimePod.uid} is the stable *pod* id.
+ * kernel is attached), while {@link IRuntimeRecord.uid} is the stable *pod* id.
  * Prefer `uid` for pod identity and `id` for kernel identity.
  */
-export interface IRuntimeModel extends IRuntimePod, Kernel.IModel {}
+export interface IRuntimeModel extends IRuntimeRecord, Kernel.IModel {}
+
+export interface IRuntimeEnvironment {
+  name: string;
+  title?: string;
+  cpu?: string;
+  memory?: string;
+  gpu?: string;
+  resources?: Record<string, string>;
+}
 
 /**
  * A runtime pod as returned by the Datalayer control-plane.
@@ -53,7 +62,7 @@ export interface IRuntimeModel extends IRuntimePod, Kernel.IModel {}
  * location-agnostic UI descriptor used by pickers/launchers - do not merge the
  * two (see `IRuntimeDesc`).
  */
-export interface IRuntimePod {
+export interface IRuntimeRecord {
   /**
    * Stable runtime pod identifier (ULID) assigned by the control-plane.
    *
@@ -61,18 +70,12 @@ export interface IRuntimePod {
    * exist before a kernel is attached, so prefer `uid` for pod identity.
    */
   uid: string;
-  /**
-   * Environment display name
-   */
-  environment_title: string;
-  /**
-   * Environment name
-   */
-  environment_name: string;
+  /** Runtime environment details. */
+  environment: IRuntimeEnvironment;
   /**
    * Runtime name
    */
-  pod_name: string;
+  runtime_name: string;
   /**
    * Runtime ingress URL
    */
@@ -113,12 +116,12 @@ export interface IRuntimePod {
  * A lightweight, camelCase, location-agnostic descriptor used by the runtime
  * pickers/launchers to describe a *desired or selected* runtime across all
  * locations (browser / local / remote). It is intentionally kept separate from
- * {@link IRuntimePod}:
+ * {@link IRuntimeRecord}:
  *  - naming: camelCase (UI) vs snake_case (backend transport);
  *  - scope: spans all {@link IRuntimeLocation}s vs remote pod only;
  *  - lifecycle: a selection/description (may not exist yet) vs a concrete
  *    running pod.
- * Map between the two at the boundary (e.g. `podName` <-> `pod_name`,
+ * Map between the two at the boundary (e.g. `runtimeName` <-> `runtime_name`,
  * `burningRate` <-> `burning_rate`) rather than merging them.
  */
 export interface IRuntimeDesc {
@@ -155,9 +158,9 @@ export interface IRuntimeDesc {
    */
   burningRate?: number;
   /**
-   * Runtime Pod name (if applicable).
+   * The runtime's name, which is its uid (if applicable).
    */
-  podName?: string;
+  runtimeName?: string;
 }
 
 /**
@@ -170,4 +173,4 @@ export type IRuntimeType = 'notebook' | 'cell';
 /**
  * Runtime optional capabilities.
  */
-export type IRuntimeCapabilities = 'user_storage';
+export type IRuntimeCapabilities = 'home-folder';

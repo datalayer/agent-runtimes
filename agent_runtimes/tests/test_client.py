@@ -84,16 +84,25 @@ def test_runtime_create_execute_and_list() -> None:
     time.sleep(10)
     # Create a secret
     client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
-    runtime_name = f"test_runtime-{uuid.uuid4()}"
-    with client.create_runtime(name=runtime_name) as runtime:
-        assert runtime.name == runtime_name
+    given_name = f"test_runtime-{uuid.uuid4()}"
+    with client.create_runtime(name=given_name) as runtime:
+        assert runtime.name == given_name
         assert runtime.uid is not None
 
         # Execute a command
         response = runtime.execute("print('test')")
         assert response.stdout.strip() == "test"
 
-        assert len(client.list_runtimes()) == 1
+        # This runtime is listed — not "this is the only runtime". The account
+        # is shared with every other test, every other developer and anything
+        # left running from earlier work, so asserting a global count made the
+        # test fail for reasons that had nothing to do with what it covers.
+        # It owns the runtime it created, and that is what it may assert.
+        listed = client.list_runtimes()
+        assert runtime.uid in {entry.uid for entry in listed}, (
+            f"the runtime this test created ({runtime.uid}) is missing from "
+            f"{[entry.name for entry in listed]}"
+        )
     time.sleep(10)
 
 
@@ -107,7 +116,7 @@ def test_code_sandbox_snapshot_create_and_delete() -> None:
     """
     time.sleep(10)
     client = AgentClient(api_key=TEST_DATALAYER_API_KEY)
-    runtime_name = f"test_runtime-{uuid.uuid4()}"
+    given_name = f"test_runtime-{uuid.uuid4()}"
     snapshot_name = f"test_snapshot-{uuid.uuid4()}"
     snapshot_name_2 = f"test_snapshot-{uuid.uuid4()}"
     snapshot_name_3 = f"test_snapshot-{uuid.uuid4()}"
@@ -127,7 +136,7 @@ def test_code_sandbox_snapshot_create_and_delete() -> None:
             f"Failed to delete snapshot '{snap.name}' after {retries} attempts: {result}"
         )
 
-    with client.create_runtime(name=runtime_name) as runtime:
+    with client.create_runtime(name=given_name) as runtime:
         snapshot = runtime.create_snapshot(name=snapshot_name, stop=False)
         assert snapshot.name == snapshot_name
         snapshot_2 = client.create_snapshot(
@@ -135,7 +144,7 @@ def test_code_sandbox_snapshot_create_and_delete() -> None:
         )
         assert snapshot_2.name == snapshot_name_2
         snapshot_3 = client.create_snapshot(
-            pod_name=runtime.pod_name, name=snapshot_name_3, stop=False
+            runtime_name=runtime.runtime_name, name=snapshot_name_3, stop=False
         )
         assert snapshot_3.name == snapshot_name_3
 

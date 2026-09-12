@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Reusable evaluator execution for real (non-synthetic) eval runs.
 
 Implements the common Datalayer evaluators (``equals_expected``, ``equals``,
@@ -112,10 +109,205 @@ def _evaluate_pass_rate_threshold(
     }
 
 
+# ---------------------------------------------------------------------------
+# The LLM judge (BENCHMARK.md, B2-12)
+# ---------------------------------------------------------------------------
+
+#: What a judge may call the way a task failed. A closed list, so the task
+#: grid can filter on it and the report can count it.
+JUDGE_FAILURE_MODES: tuple[str, ...] = (
+    "wrong_answer",
+    "incomplete",
+    "hallucination",
+    "format",
+    "refused",
+    "tool_misuse",
+    "timeout",
+    "other",
+)
+
+DEFAULT_JUDGE_RUBRIC = (
+    "You are grading the answer an AI agent gave to a data analysis task. "
+    "Judge whether the answer is correct and complete against the expected "
+    "output, and be strict about numbers: a number that differs is wrong."
+)
+
+DEFAULT_JUDGE_THRESHOLD = 0.7
+
+JudgeCall = Callable[[str, str], str]
+
+_judge_state: dict[str, Any] = {"call": None, "url": "", "token": "", "model": ""}
+
+
+def configure_judge(
+    *,
+    call: JudgeCall | None = None,
+    url: str | None = None,
+    token: str | None = None,
+    model: str | None = None,
+) -> None:
+    """Where the judge's questions go by default.
+
+    `call(prompt, model) -> text` replaces the transport (the tests use it);
+    otherwise `url` and `token` name the AI Inference service and the person
+    the question is asked as. A caller that grades for many people at once
+    passes a judge per case through the evaluator's `_judge` argument instead.
+    """
+    if call is not None:
+        _judge_state["call"] = call
+    if url is not None:
+        _judge_state["url"] = str(url).strip().rstrip("/")
+    if token is not None:
+        _judge_state["token"] = str(token)
+    if model is not None:
+        _judge_state["model"] = str(model)
+
+
+def make_judge(*, url: str, token: str, timeout: float = 60.0) -> JudgeCall:
+    """A judge that asks the AI Inference service as the holder of `token`."""
+
+    def call(prompt: str, model: str) -> str:
+        import httpx  # noqa: PLC0415
+
+        body: dict[str, Any] = {
+            "messages": [
+                {"role": "system", "content": "You answer with one JSON object and nothing else."},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0,
+            "stream": False,
+        }
+        if model:
+            body["model"] = model
+        headers = {"Authorization": f"Bearer {token}", "X-API-Key": token} if token else {}
+        with httpx.Client(timeout=timeout) as client:
+            response = client.post(f"{url.rstrip('/')}/api/ai-inference/v1/chat/completions", json=body, headers=headers)
+        if response.status_code >= 400:
+            raise RuntimeError(f"the judge refused: HTTP {response.status_code} {response.text[:200]}")
+        payload = response.json() if response.content else {}
+        data = payload.get("data") if isinstance(payload, dict) and isinstance(payload.get("data"), dict) else payload
+        text = data.get("response") if isinstance(data, dict) else None
+        if not text and isinstance(data, dict):
+            # The assistant's whole message, under the name the service can
+            # actually answer with: a payload field called `message` collided
+            # with the envelope's own and was never delivered.
+            message = data.get("assistant_message") if isinstance(data.get("assistant_message"), dict) else {}
+            text = message.get("content")
+            if not text:
+                choices = data.get("choices") if isinstance(data.get("choices"), list) else []
+                first = choices[0] if choices and isinstance(choices[0], dict) else {}
+                text = ((first.get("message") or {}).get("content") if isinstance(first.get("message"), dict) else None) or first.get("text")
+        return str(text or "")
+
+    return call
+
+
+def _default_judge() -> JudgeCall | None:
+    call = _judge_state.get("call")
+    if call is not None:
+        return call
+    url = str(_judge_state.get("url") or "")
+    if not url:
+        import os  # noqa: PLC0415
+
+        url = str(os.environ.get("DATALAYER_AI_INFERENCE_URL") or "").strip()
+        token = str(os.environ.get("DATALAYER_API_KEY") or os.environ.get("DATALAYER_TOKEN") or "").strip()
+    else:
+        token = str(_judge_state.get("token") or "")
+    if not url:
+        return None
+    return make_judge(url=url, token=token)
+
+
+def _judge_prompt(*, output_text: str, expected_text: str, rubric: str, failure_modes: tuple[str, ...]) -> str:
+    return (
+        f"{rubric}\n\n"
+        f"Expected output:\n{expected_text or '(none given)'}\n\n"
+        f"The agent's answer:\n{output_text or '(no answer)'}\n\n"
+        "Reply with one JSON object with exactly these keys: "
+        '"score" (a number from 0 to 1), "passed" (true or false), '
+        '"explanation" (one or two sentences), and "failure_mode" '
+        f"(one of {', '.join(failure_modes)}, or an empty string when the answer passed)."
+    )
+
+
+def _first_json_object(text: str) -> dict[str, Any] | None:
+    import json  # noqa: PLC0415
+
+    start = text.find("{")
+    while start != -1:
+        depth = 0
+        for index in range(start, len(text)):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        parsed = json.loads(text[start : index + 1])
+                    except ValueError:
+                        break
+                    return parsed if isinstance(parsed, dict) else None
+        start = text.find("{", start + 1)
+    return None
+
+
+def _evaluate_llm_judge(output: Any, expected: Any, arguments: dict[str, Any]) -> dict[str, Any]:
+    """An LLM judges the answer against the expected output and a rubric.
+
+    Answers a score in [0, 1], a pass against the threshold, the judge's
+    explanation and a failure mode from the closed list. A judge that cannot
+    be reached or does not answer JSON fails the case with the reason, as a
+    scorer failure: a benchmark must not claim a judge it did not have.
+    """
+    judge: JudgeCall | None = arguments.get("_judge") or _default_judge()
+    threshold = float(arguments.get("threshold", DEFAULT_JUDGE_THRESHOLD) or DEFAULT_JUDGE_THRESHOLD)
+    model = str(arguments.get("model") or _judge_state.get("model") or "")
+    rubric = str(arguments.get("rubric") or DEFAULT_JUDGE_RUBRIC)
+    modes = tuple(str(mode) for mode in (arguments.get("failure_modes") or JUDGE_FAILURE_MODES))
+    if judge is None:
+        return {
+            "passed": False,
+            "score": 0.0,
+            "reason": "no judge is configured: set DATALAYER_AI_INFERENCE_URL or pass a judge",
+            "failure_mode": "other",
+            "failure_stage": "scorer",
+        }
+    prompt = _judge_prompt(
+        output_text=_coerce_text(output).strip(), expected_text=_coerce_text(expected).strip(), rubric=rubric, failure_modes=modes
+    )
+    try:
+        reply = judge(prompt, model)
+    except Exception as error:  # noqa: BLE001 - the judge not answering is the outcome
+        return {"passed": False, "score": 0.0, "reason": f"the judge could not be asked: {error}", "failure_mode": "other", "failure_stage": "scorer"}
+    verdict = _first_json_object(str(reply or ""))
+    if not verdict:
+        return {"passed": False, "score": 0.0, "reason": "the judge did not answer with a JSON verdict", "failure_mode": "other", "failure_stage": "scorer"}
+    try:
+        score = max(0.0, min(1.0, float(verdict.get("score", 0.0))))
+    except (TypeError, ValueError):
+        score = 0.0
+    passed = bool(verdict.get("passed", score >= threshold)) and score >= threshold
+    mode = str(verdict.get("failure_mode") or "").strip().lower().replace("-", "_")
+    if passed:
+        mode = ""
+    elif mode not in modes:
+        mode = "other"
+    return {
+        "passed": passed,
+        "score": round(score, 4),
+        "reason": str(verdict.get("explanation") or "").strip(),
+        "failure_mode": mode,
+        "threshold": threshold,
+        "judge_model": model,
+    }
+
+
 CASE_EVALUATORS: dict[str, CaseEvaluator] = {
     "equals_expected": _evaluate_equals_expected,
     "equals": _evaluate_equals_expected,
     "contains": _evaluate_contains,
+    "llm_judge": _evaluate_llm_judge,
 }
 
 REPORT_EVALUATORS: dict[str, ReportEvaluator] = {
@@ -152,14 +344,17 @@ def run_case_evaluators(
         outcome = func(output, expected, arguments)
         outcome_passed = bool(outcome.get("passed"))
         outcome_score = float(outcome.get("score", 1.0 if outcome_passed else 0.0))
-        records.append(
-            {
-                "name": name,
-                "passed": outcome_passed,
-                "score": round(outcome_score, 4),
-                "reason": str(outcome.get("reason") or ""),
-            }
-        )
+        record = {
+            "name": name,
+            "passed": outcome_passed,
+            "score": round(outcome_score, 4),
+            "reason": str(outcome.get("reason") or ""),
+        }
+        if outcome.get("failure_mode"):
+            record["failure_mode"] = str(outcome.get("failure_mode"))
+        if outcome.get("failure_stage"):
+            record["failure_stage"] = str(outcome.get("failure_stage"))
+        records.append(record)
         scores.append(outcome_score)
         passed_all = passed_all and outcome_passed
         applied += 1
@@ -225,6 +420,9 @@ def evaluate_run(
         if _status_for(idx) in {"failed", "error"}:
             case_passed = False
             score = 0.0
+        records = [item for item in (outcome.get("evaluators") or []) if isinstance(item, dict)]
+        explanation = "; ".join(str(item.get("reason") or "") for item in records if item.get("reason"))
+        failure_mode = next((str(item.get("failure_mode")) for item in records if item.get("failure_mode")), "")
         case_results.append(
             {
                 "name": case.get("name"),
@@ -233,6 +431,8 @@ def evaluate_run(
                 "score": round(score, 4),
                 "category": metadata.get("category"),
                 "difficulty": metadata.get("difficulty") or metadata.get("priority"),
+                "explanation": explanation,
+                "failure_mode": failure_mode if not case_passed else "",
             }
         )
 
@@ -267,6 +467,13 @@ def evaluate_run(
                 passed_cases += 1
             scores.append(float(single.get("score", 0.0)) if ok else 0.0)
         mean_score = round(sum(scores) / len(scores), 4) if scores else None
+        if applicable_cases == 0:
+            # Every case declares its own evaluators, so this evalset default
+            # graded nothing and its verdict is in the per-case results.
+            # Reported as a result it read "0/0 cases passed" and counted as
+            # a failed run in every report of a benchmark whose cases all
+            # passed (2026-09-10).
+            continue
         evaluator_results.append(
             {
                 "name": name,

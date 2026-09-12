@@ -17,12 +17,17 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Text,
   Button,
-  Spinner,
   Heading,
   Label,
   Flash,
@@ -40,6 +45,7 @@ import { useCoreStore } from '../state/substates';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { waitForAgent } from './utils/waitForAgent';
 import type {
   AgentStreamSnapshotPayload,
   AgentStreamToolApprovalPayload,
@@ -53,7 +59,10 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { agentRuntimeStore } from '../stores';
+import { AgentGuardrailsPlugin } from '../loop/plugins/agent-guardrails';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -63,7 +72,7 @@ const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
 // Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
 // read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
 const OTEL_IN_BASE_URL_ENV = import.meta.env.VITE_OTEL_IN_BASE_URL;
-const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
+const AI_AGENTS_URL_ENV = import.meta.env.VITE_DATALAYER_AI_AGENTS_URL;
 const OTEL_SERVICE_NAME = 'agent-runtimes';
 const COST_RUN_METRIC = 'agent_runtimes.capability.cost.run.usd';
 const COST_CUMULATIVE_METRIC = 'agent_runtimes.capability.cost.cumulative.usd';
@@ -299,6 +308,36 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
   );
   const [totalTokens, setTotalTokens] = useState(0);
   const [otelRunCostUsd, setOtelRunCostUsd] = useState<number | null>(null);
+
+  // The chat column is the shared loop; the example's live over-budget banner
+  // reaches it through the chat-extras channel. Declared here — above the
+  // early returns below — so these hooks run in the same order every render,
+  // and the banner is recomputed from the cost state the effect depends on.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentGuardrailsPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    const cost = Math.max(snapshotRunCostUsd, otelRunCostUsd ?? 0);
+    const over =
+      runBudgetUsd != null && runBudgetUsd > 0 && cost > runBudgetUsd;
+    setExtras({
+      errorBanner: over
+        ? {
+            variant: 'danger',
+            message: `Run budget exceeded: $${cost.toFixed(4)} / $${(
+              runBudgetUsd ?? 0
+            ).toFixed(
+              2,
+            )}. Start a new run or adjust the budget before sending more messages.`,
+          }
+        : undefined,
+    });
+  }, [snapshotRunCostUsd, otelRunCostUsd, runBudgetUsd, setExtras]);
   const [otelCumulativeCostUsd, setOtelCumulativeCostUsd] = useState<
     number | null
   >(null);
@@ -312,15 +351,15 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
-    configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
-    configuration?.datalayerUrl ||
+    configuration?.aiAgentsUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_URL_ENV ||
-    'https://prod1.datalayer.run';
-  const podName = agentId;
+    AI_AGENTS_URL_ENV ||
+    agentBaseUrl;
+  const runtimeName = agentId;
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   // Authenticated fetch helper (for sidecar endpoints)
   const authFetch = useCallback(
@@ -338,6 +377,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const createLocalAgent = async () => {
       setRuntimeStatus('launching');
@@ -346,54 +386,22 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description: 'Agent with cost budget and tool approval guardrails',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_skills: true,
-            tools: [],
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint as
+        // it mounts; the page only waits until the server has it, so its own
+        // sockets and reads address an agent that exists.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
+        setAgentId(agentName);
+        setIsReconnectedAgent(false);
+        setIsReady(true);
+        setRuntimeStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setHookError(
@@ -408,6 +416,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [agentBaseUrl, agentName, authFetch]);
 
@@ -521,68 +530,34 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
 
   // ── Approve / Reject ─────────────────────────────────────────────────────
 
-  const handleApprove = useCallback(
-    async (requestId: string) => {
-      if (!agentBaseUrl) return;
+  // The banner's buttons answer the run the way the chat's own card does:
+  // the decision goes through the chat, which continues the held tool call.
+  // (The `/tool-approvals/{id}/approve` route only records a decision for
+  // the websocket approvals; a tool held by the guardrail waits on the run.)
+  const decide = useCallback(
+    (requestId: string, approved: boolean) => {
       setApprovalLoading(requestId);
-      try {
-        await authFetch(
-          `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/approve`,
-          { method: 'POST' },
-        );
-        setApprovals(prev => prev.filter(a => a.id !== requestId));
-      } catch {
-        /* ok */
-      } finally {
-        setApprovalLoading(null);
-      }
+      const approval = approvals.find(a => a.id === requestId);
+      agentRuntimeStore.getState().requestToolDecision({
+        approvalId: requestId,
+        approved,
+        toolName: approval?.tool_name,
+      });
+      setApprovals(prev => prev.filter(a => a.id !== requestId));
+      setApprovalLoading(null);
     },
-    [agentBaseUrl, authFetch],
+    [approvals],
   );
-
+  const handleApprove = useCallback(
+    (requestId: string) => decide(requestId, true),
+    [decide],
+  );
   const handleReject = useCallback(
-    async (requestId: string) => {
-      if (!agentBaseUrl) return;
-      setApprovalLoading(requestId);
-      try {
-        await authFetch(
-          `${agentBaseUrl}/api/v1/tool-approvals/${requestId}/reject`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ reason: 'User rejected' }),
-          },
-        );
-        setApprovals(prev => prev.filter(a => a.id !== requestId));
-      } catch {
-        /* ok */
-      } finally {
-        setApprovalLoading(null);
-      }
-    },
-    [agentBaseUrl, authFetch],
+    (requestId: string) => decide(requestId, false),
+    [decide],
   );
 
   // ── Loading / Error ──────────────────────────────────────────────────────
-
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching guardrails example agent...
-        </Text>
-      </Box>
-    );
-  }
 
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
@@ -594,12 +569,10 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
     runBudgetUsd != null && runBudgetUsd > 0 && runCostUsd > runBudgetUsd;
   const runBudgetDisplayUsd =
     runBudgetUsd != null ? runBudgetUsd.toFixed(2) : '0.00';
-  const overBudgetBanner = isOverRunBudget
-    ? {
-        variant: 'danger' as const,
-        message: `Run budget exceeded: $${runCostUsd.toFixed(4)} / $${runBudgetDisplayUsd}. Start a new run or adjust the budget before sending more messages.`,
-      }
-    : undefined;
+  // The over-budget banner now rides the chat-extras channel (wired above);
+  // its render-time copy is gone with the <Chat errorBanner> that used it.
+  void runBudgetDisplayUsd;
+
   const budgetForProgress = runBudgetUsd && runBudgetUsd > 0 ? runBudgetUsd : 1;
   const usagePercentRaw = (runCostUsd / budgetForProgress) * 100;
   const costPercent = Math.min(usagePercentRaw, 100);
@@ -647,7 +620,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <ShieldCheckIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2 }}>
-            Guardrails Demo — {podName}
+            Guardrails Demo — {runtimeName}
           </Heading>
         </Box>
         <Label variant={wsState === 'connected' ? 'success' : 'secondary'}>
@@ -783,44 +756,18 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         </Flash>
       ))}
 
-      {/* Chat */}
+      {/* Chat — the shared loop on the guardrails capacity plugin; the cost
+          gauge and approval cards above are the example's own. The live
+          over-budget banner rides the chat-extras channel. */}
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        <Chat
-          protocol="vercel-ai"
-          baseUrl={agentBaseUrl}
+        <LoopEmbed
+          serverUrl={agentBaseUrl}
+          target="local"
+          showAgentVariants
           agentId={agentId}
-          authToken={chatAuthToken}
-          title="Guardrails Agent"
-          brandIcon={<ShieldCheckIcon size={16} />}
-          placeholder="Ask something that triggers tools…"
-          description="Cost guardrail with OTEL-backed gauge and hook-aware approvals (before_tool_execute, after_tool_execute, on_tool_execute_error, deferred_tool_calls)"
-          showHeader={true}
-          showTokenUsage={true}
-          errorBanner={overBudgetBanner}
-          disableInputPrompt={isOverRunBudget}
-          autoFocus
-          height="100%"
-          runtimeId={agentId}
-          historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-          suggestions={[
-            { title: 'Update CRM', message: 'Update the CRM records for Q3' },
-            {
-              title: 'Trigger before_tool_execute',
-              message:
-                "Call runtime_sensitive_echo with text 'hello' and reason 'audit', then explain the before_tool_execute authorization decision.",
-            },
-            {
-              title: 'Trigger deny policy',
-              message:
-                "Call runtime_sensitive_echo with text 'danger' and reason 'delete CRM rows', then explain why policy denied it.",
-            },
-            {
-              title: 'Explain deferred flow',
-              message:
-                'Explain how deferred_tool_calls and manual approvals interact in this guardrails run.',
-            },
-          ]}
-          submitOnSuggestionClick
+          editors={false}
+          showHeader
+          plugins={chatPlugins}
         />
       </Box>
     </Box>

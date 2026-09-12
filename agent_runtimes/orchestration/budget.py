@@ -1,0 +1,174 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""An execution's model budget, on the way to its worker and back (ORCHESTRATOR.md, O1-07).
+
+The control plane does not count a worker's tokens. It hands the execution's
+limits to the worker with the delegation — ``delegation_meta``, which both
+adapters put where their protocol keeps extension fields — and the worker
+stops its own run when one is reached (``agent_runtimes.guardrails.model_budget``).
+What comes back is read by ``budget_refusal`` into the canonical error, so an
+execution stopped by its model budget says so, and which limit, rather than
+reading as a worker that broke.
+
+Beside the budget travel the execution's credential (O1-17) and, to a worker
+that speaks the Datalayer orchestration extension, the execution itself and
+the checkpoint an attempt resumes from (O2-05).
+"""
+
+from __future__ import annotations
+
+from typing import Any, Mapping
+
+from datalayer_core.orchestration import ErrorCode, Execution, OrchestrationError
+
+from agent_runtimes.context.delegation import (
+    CHECKPOINT_FIELD,
+    CREDENTIAL_FIELD,
+    EXECUTION_FIELD,
+)
+from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+
+__all__ = ["budget_refusal", "delegation_meta", "model_budget"]
+
+
+def model_budget(execution: Execution) -> dict[str, Any] | None:
+    """
+    The part of an execution's budget a worker spends on models, when it sets any.
+
+    Parameters
+    ----------
+    execution : Execution
+        The execution being delegated.
+
+    Returns
+    -------
+    dict[str, Any] | None
+        ``inputTokens``, ``outputTokens`` and ``cost`` with its ``currency``,
+        each only when set; nothing when none is.
+    """
+    budget = execution.policy.budget
+    limits: dict[str, Any] = {}
+    if budget.input_tokens is not None:
+        limits["inputTokens"] = budget.input_tokens
+    if budget.output_tokens is not None:
+        limits["outputTokens"] = budget.output_tokens
+    if budget.cost is not None:
+        limits["cost"] = budget.cost
+        limits["currency"] = budget.currency
+    return limits or None
+
+
+def delegation_meta(
+    execution: Execution,
+    *,
+    credential: str | None = None,
+    extended: bool = False,
+    resumed_from: str | None = None,
+    account_uid: str | None = None,
+) -> dict[str, Any] | None:
+    """
+    What a delegation carries beside the objective.
+
+    Parameters
+    ----------
+    execution : Execution
+        The execution being delegated.
+    credential : str | None
+        The execution's own token, which the worker reaches Datalayer with for
+        the run (O1-17). The worker takes it out of the message on arrival
+        (``agent_runtimes.context.delegation``), so nothing keeps it.
+    extended : bool
+        Whether the worker speaks the Datalayer orchestration extension. Its
+        delegation then names the execution, which is the scope the worker
+        keeps its checkpoints under (O2-05).
+    resumed_from : str | None
+        The checkpoint the attempt resumes from.
+    account_uid : str | None
+        The account the execution belongs to, named beside it to a worker
+        that speaks the extension: what the worker's request for a child is
+        made in (O2-06).
+
+    Returns
+    -------
+    dict[str, Any] | None
+        The A2A message's ``metadata``, or the ACP prompt's ``_meta``; nothing
+        when there is nothing to carry.
+
+    Raises
+    ------
+    ValueError
+        When an attempt resumes from a checkpoint and the worker does not
+        speak the extension: nothing it could be sent says where to resume.
+    """
+    if resumed_from and not extended:
+        raise ValueError(
+            f"Execution '{execution.execution_id}' resumes from checkpoint "
+            f"'{resumed_from}', and its worker does not speak the orchestration "
+            "extension."
+        )
+    ours: dict[str, Any] = {}
+    budget = model_budget(execution)
+    if budget:
+        ours["budget"] = budget
+    if credential:
+        ours[CREDENTIAL_FIELD] = credential
+    if extended:
+        ours[EXECUTION_FIELD] = {
+            "executionId": execution.execution_id,
+            "rootExecutionId": execution.root_execution_id,
+            **(
+                {"parentExecutionId": execution.parent_execution_id}
+                if execution.parent_execution_id
+                else {}
+            ),
+            "depth": execution.depth,
+            **({"accountUid": account_uid} if account_uid else {}),
+        }
+    if resumed_from:
+        ours[CHECKPOINT_FIELD] = {"checkpointId": resumed_from}
+    return {DELEGATION_META_KEY: ours} if ours else None
+
+
+def budget_refusal(
+    meta: Any, *, source: str, delegated: bool = True
+) -> OrchestrationError | None:
+    """
+    The model budget a worker says stopped it, as the canonical error.
+
+    Parameters
+    ----------
+    meta : Any
+        The A2A status message's ``metadata`` or the ACP response's ``_meta``.
+    source : str
+        The adapter reading it.
+    delegated : bool
+        Whether the budget was the execution's rather than the worker's own.
+
+    Returns
+    -------
+    OrchestrationError | None
+        ``budget_exhausted``, not retryable, with ``details.budget = model``
+        and the limit; nothing when the worker says no such thing.
+    """
+    if not isinstance(meta, Mapping):
+        return None
+    ours = meta.get(DELEGATION_META_KEY)
+    error = ours.get("error") if isinstance(ours, Mapping) else None
+    if (
+        not isinstance(error, Mapping)
+        or error.get("code") != ErrorCode.BUDGET_EXHAUSTED.value
+    ):
+        return None
+    details = error.get("details") if isinstance(error.get("details"), Mapping) else {}
+    return OrchestrationError(
+        code=ErrorCode.BUDGET_EXHAUSTED,
+        message=str(error.get("message") or "The worker's model budget was reached."),
+        retryable=False,
+        source=source,
+        details={
+            "budget": "model",
+            "limit": str(details.get("limit") or "tokens"),
+            "delegated": delegated,
+        },
+    )

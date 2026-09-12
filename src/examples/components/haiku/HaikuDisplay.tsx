@@ -52,7 +52,7 @@ export function HaikuDisplay({
           border: '2px dashed',
           borderColor: 'var(--borderColor-muted, #d0d7de)',
           borderRadius: 12,
-          backgroundColor: 'var(--bgColor-subtle, #f6f8fa)',
+          backgroundColor: 'var(--bgColor-default, #ffffff)',
           minHeight: 200,
         }}
       >
@@ -189,7 +189,7 @@ export function HaikuDisplay({
                 border: 'none',
                 backgroundColor:
                   index === currentIndex
-                    ? 'var(--fgColor-accent, #0969da)'
+                    ? 'var(--fgColor-accent, #16A085)'
                     : 'var(--borderColor-muted, #d0d7de)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',

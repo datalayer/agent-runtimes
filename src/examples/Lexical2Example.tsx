@@ -23,20 +23,9 @@ import '@datalayer/jupyter-react/lib/css/PrismCss';
 
 import { useCallback, useEffect, useState } from 'react';
 import { EditorState } from 'lexical';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
+import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
-import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
-import { TRANSFORMERS } from '@lexical/markdown';
-import { registerCodeHighlighting } from '@lexical/code';
-import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { CheckListPlugin } from '@lexical/react/LexicalCheckListPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import type { ServiceManager } from '@jupyterlab/services';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
@@ -44,27 +33,16 @@ import { useJupyter } from '@datalayer/jupyter-react';
 import { ThemedJupyterProvider } from './utils/themedProvider';
 import {
   ComponentPickerMenuPlugin,
-  JupyterCellPlugin,
   JupyterInputOutputPlugin,
   DraggableBlockPlugin,
-  ImagesPlugin,
-  HorizontalRulePlugin,
-  EquationsPlugin,
-  YouTubePlugin,
-  ExcalidrawPlugin,
-  CollapsiblePlugin,
-  AutoLinkPlugin,
-  AutoEmbedPlugin,
   FloatingTextFormatToolbarPlugin,
   CodeActionMenuPlugin,
-  ListMaxIndentLevelPlugin,
   TableCellResizerPlugin,
-  TablePlugin,
 } from '@datalayer/jupyter-lexical';
 import { ChatFloating } from '../chat';
 import { useLexicalToolActions } from '../tools/adapters/copilotkit/lexicalHooks';
 import { ActionRegistrar } from '../tools/adapters/copilotkit/CopilotKitToolAdapter';
-import { editorConfig } from './lexical/editorConfig';
+import { editorExtension } from './lexical/editorConfig';
 import { useFrontendTool } from '../hooks';
 import { useChatStore, type ChatConfig } from '../stores';
 import { DatalayerInferenceProvider } from '../inference';
@@ -75,19 +53,6 @@ import './lexical/lexical-theme.css';
 
 // Fixed lexical document ID
 const LEXICAL_ID = 'chat-popup-lexical-example';
-
-/**
- * Lexical plugin for code highlighting
- */
-function CodeHighlightingPlugin() {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
-    return registerCodeHighlighting(editor);
-  }, [editor]);
-
-  return null;
-}
 
 /**
  * Tool registration component - registers Lexical tools with Chat
@@ -128,7 +93,7 @@ function CustomToolsRegistrar() {
     ],
     handler: async ({ name }: { name: string }) => {
       return {
-        greeting: `Hello, ${name}! Welcome to Agent Runtime Lexical Example.`,
+        greeting: `Hello, ${name}! Welcome to Lexical Example.`,
       };
     },
   });
@@ -189,7 +154,10 @@ function LexicalEditor({
   }, []);
 
   return (
-    <LexicalComposer initialConfig={editorConfig}>
+    <LexicalExtensionComposer
+      extension={editorExtension}
+      contentEditable={null}
+    >
       <Box
         sx={{
           position: 'relative',
@@ -199,63 +167,42 @@ function LexicalEditor({
           overflow: 'hidden',
         }}
       >
-        <RichTextPlugin
-          contentEditable={
-            <div
-              ref={onRef}
-              style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-            >
-              <ContentEditable
-                className="lexical-editor-content"
+        <div
+          ref={onRef}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+        >
+          <ContentEditable
+            placeholder={
+              <div
                 style={{
-                  flex: 1,
-                  padding: '24px',
-                  outline: 'none',
-                  overflow: 'auto',
+                  position: 'absolute',
+                  top: '24px',
+                  left: '24px',
+                  color: 'var(--fgColor-muted)',
+                  pointerEvents: 'none',
                 }}
-              />
-            </div>
-          }
-          placeholder={
-            <div
-              style={{
-                position: 'absolute',
-                top: '24px',
-                left: '24px',
-                color: 'var(--fgColor-muted)',
-                pointerEvents: 'none',
-              }}
-            >
-              Start typing or click the chat button to open the AI assistant...
-            </div>
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
+              >
+                Start typing or click the chat button to open the AI
+                assistant...
+              </div>
+            }
+            aria-placeholder="Start typing or click the chat button to open the AI assistant..."
+            className="lexical-editor-content"
+            style={{
+              flex: 1,
+              padding: '24px',
+              outline: 'none',
+              overflow: 'auto',
+            }}
+          />
+        </div>
 
         {/* Core plugins */}
-        <HistoryPlugin />
-        <AutoFocusPlugin />
         <OnChangePlugin onChange={onChange} />
-        <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-        <CodeHighlightingPlugin />
-        <ListPlugin />
-        <CheckListPlugin />
-        <LinkPlugin />
 
         {/* Jupyter Lexical plugins */}
-        <JupyterCellPlugin />
         <JupyterInputOutputPlugin />
-        <ImagesPlugin />
-        <HorizontalRulePlugin />
-        <EquationsPlugin />
-        <YouTubePlugin />
-        <ExcalidrawPlugin />
-        <CollapsiblePlugin />
-        <AutoLinkPlugin />
-        <AutoEmbedPlugin />
-        <TablePlugin />
         <TableCellResizerPlugin />
-        <ListMaxIndentLevelPlugin maxDepth={7} />
 
         {/* Toolbar plugins */}
         {floatingAnchorElem && (
@@ -270,7 +217,7 @@ function LexicalEditor({
           </>
         )}
       </Box>
-    </LexicalComposer>
+    </LexicalExtensionComposer>
   );
 }
 
@@ -337,7 +284,7 @@ export function ChatLexicalExampleInner({
             p: 3,
             borderBottom: '1px solid',
             borderColor: 'border.default',
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -392,6 +339,7 @@ export function ChatLexicalExampleInner({
 
       {/* Floating Chat */}
       <ChatFloating
+        kernelIndicatorPlacement="right"
         useStore={true}
         title="AI Assistant"
         position="bottom-right"

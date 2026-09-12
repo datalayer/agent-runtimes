@@ -1,0 +1,273 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The one dropdown for choosing where code runs.
+ *
+ * The launcher asks it of a new sandbox and the picker asks it of an editor
+ * that needs one; both are the same question, and were drawn twice — a menu
+ * here, a column of radio buttons there. This is that control, once: the
+ * chosen entry reads on the trigger exactly as the entries read in the list,
+ * name to the left and labels to the right, so the closed control and the
+ * open one show the same thing.
+ *
+ * An `ActionMenu` rather than a `<select>`: what tells two entries apart is
+ * their labels — the environment name, the provider, the credits it burns —
+ * and no `<option>` can carry those.
+ *
+ * @module components/code-sandboxes/CodeSandboxEnvironmentSelect
+ */
+
+import type { JSX } from 'react';
+import { ActionList, ActionMenu, Box, Label, Link, Text } from '@primer/react';
+
+/** One choice of the dropdown. */
+export type ICodeSandboxEnvironmentOption = {
+  /** Identity of the choice, as the host knows it. */
+  key: string;
+  /** What it is called. */
+  title: string;
+  /** The environment name, shown as a label beside the title. */
+  name?: string;
+  /** Who runs it — Datalayer, Kaggle, Modal, the Jupyter Server… */
+  providerTitle?: string;
+  /** Where it runs: `local`, `remote`, `browser`. */
+  location?: string;
+  /** Credits per second, when it costs any. */
+  burningRate?: number;
+  /** The GPU the environment carries, when it carries one. */
+  gpu?: string | boolean;
+  /** The heading this choice is listed under, when the list is grouped. */
+  group?: string;
+  /**
+   * The version this choice launches, written as it reads — `v3`. Only an
+   * environment somebody built has one (PLAN_ENV.md, E1-19).
+   */
+  version?: string;
+  /** The size class it runs on, which is what prices it (D-4). */
+  sizeClass?: string;
+  /**
+   * Whether the choice cannot be launched: a version whose Datalayer artifact
+   * was never built, or one nothing prices. Shown, rather than withheld, so
+   * the environment somebody is looking for is where they expect it.
+   */
+  disabled?: boolean;
+  /**
+   * Where to go to build the missing artifact: the version's own page. Offered
+   * beside a disabled choice whose only trouble is that nobody built it yet.
+   */
+  buildHref?: string;
+};
+
+export type ICodeSandboxEnvironmentSelectProps = {
+  /** The choices, in the order they should read. */
+  options: ICodeSandboxEnvironmentOption[];
+  /** The `key` of the chosen one, if any. */
+  selectedKey?: string;
+  /** Called with the `key` of the choice made. */
+  onSelect: (key: string) => void;
+  /** Whether the control refuses to open. */
+  disabled?: boolean;
+  /** What the trigger reads when nothing is chosen. */
+  placeholder?: string;
+  /**
+   * Width of the overlay, `xlarge` by default.
+   *
+   * Wide because the entries carry their labels on the same line as their
+   * name, and a priced one — the credits it burns, the environment, the
+   * provider, where it runs — is nearly as wide as the row itself.
+   */
+  overlayWidth?: 'small' | 'medium' | 'large' | 'xlarge' | 'auto';
+};
+
+/**
+ * The labels of an option, on one line: cost, name, provider, where.
+ *
+ * The price is the widest of them — "0.0008 credits/second" outruns the
+ * name, the provider and the location together — so the room comes from the
+ * overlay rather than from a second line: see `overlayWidth`.
+ */
+function OptionLabels(props: {
+  option: ICodeSandboxEnvironmentOption;
+}): JSX.Element {
+  const { option } = props;
+  return (
+    <Box
+      as="span"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 1,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {option.burningRate ? (
+        <Label size="small" variant="sponsors">
+          {option.burningRate} credits/second
+        </Label>
+      ) : null}
+      {option.gpu ? (
+        <Label size="small" variant="success">
+          GPU
+        </Label>
+      ) : null}
+      {option.version ? (
+        <Label size="small" variant="secondary">
+          {option.version}
+        </Label>
+      ) : null}
+      {option.sizeClass ? (
+        <Label size="small" variant="secondary">
+          {option.sizeClass}
+        </Label>
+      ) : null}
+      {option.name ? <Label size="small">{option.name}</Label> : null}
+      {option.providerTitle ? (
+        <Label size="small" variant="accent">
+          {option.providerTitle}
+        </Label>
+      ) : null}
+      {option.location ? (
+        <Label size="small" variant="secondary">
+          {option.location}
+        </Label>
+      ) : null}
+    </Box>
+  );
+}
+
+export function CodeSandboxEnvironmentSelect(
+  props: ICodeSandboxEnvironmentSelectProps,
+): JSX.Element {
+  const {
+    disabled,
+    onSelect,
+    options,
+    overlayWidth = 'xlarge',
+    placeholder = 'Select an environment',
+    selectedKey,
+  } = props;
+  const selected = options.find(option => option.key === selectedKey);
+  /*
+   * What costs credits leads.
+   *
+   * The sandboxes of the platform and of its providers are the ones worth
+   * choosing between — a kernel of this server is the fallback, always
+   * there and free — so they are read first rather than found under a list
+   * of local specifications. A stable partition: within each half the order
+   * given by the caller is kept.
+   */
+  const priceFirst = (subset: ICodeSandboxEnvironmentOption[]) => [
+    ...subset.filter(option => option.burningRate),
+    ...subset.filter(option => !option.burningRate),
+  ];
+  const grouped = options.some(option => option.group);
+  /*
+   * Within a group when there are groups. A grouped list has already been put
+   * in the order its headings should read — what is yours, your organizations',
+   * then the platform's (E1-19) — and partitioning across the whole list would
+   * undo that: one unpriced environment of your own, which is exactly what an
+   * environment awaiting its first build is, would move your heading below the
+   * platform's.
+   */
+  const ordered = grouped ? options : priceFirst(options);
+  const groups = grouped
+    ? Array.from(new Set(options.map(option => option.group ?? '')))
+    : [];
+
+  const rows = (subset: ICodeSandboxEnvironmentOption[]) =>
+    subset.map(option => (
+      <ActionList.Item
+        key={option.key}
+        selected={option.key === selectedKey}
+        disabled={option.disabled}
+        onSelect={() => {
+          // A choice that cannot be launched is shown, not chosen: selecting
+          // it would start a sandbox the platform refuses.
+          if (!option.disabled) {
+            onSelect(option.key);
+          }
+        }}
+      >
+        {option.title}
+        <ActionList.TrailingVisual>
+          <OptionLabels option={option} />
+        </ActionList.TrailingVisual>
+        {option.disabled && option.buildHref ? (
+          // What to do about it, where it is noticed: the version's page is
+          // where a build for this variant is started (E1-21).
+          <ActionList.Description variant="block">
+            <Link
+              href={option.buildHref}
+              onClick={event => event.stopPropagation()}
+              sx={{ pointerEvents: 'auto' }}
+            >
+              Build for this variant
+            </Link>
+          </ActionList.Description>
+        ) : null}
+      </ActionList.Item>
+    ));
+
+  return (
+    <ActionMenu>
+      <ActionMenu.Button
+        block
+        disabled={disabled || ordered.length === 0}
+        // The button centers its text by default; the trigger must read like
+        // the rows below it — name left, labels right.
+        sx={{
+          // The content of a Primer button is a grid whose middle track is
+          // content-sized, which hugs the labels against the title. The
+          // template areas stay "leadingVisual text trailingVisual": only
+          // that track changes, from content-sized to 1fr.
+          '& [data-component="buttonContent"]': {
+            flex: 1,
+            gridTemplateColumns: 'min-content minmax(0, 1fr) min-content',
+          },
+          '& [data-component="text"]': { width: '100%', textAlign: 'left' },
+        }}
+      >
+        {selected ? (
+          <Box
+            as="span"
+            sx={{
+              display: 'flex',
+              width: '100%',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+            }}
+          >
+            <Text>{selected.title}</Text>
+            <OptionLabels option={selected} />
+          </Box>
+        ) : (
+          placeholder
+        )}
+      </ActionMenu.Button>
+      <ActionMenu.Overlay width={overlayWidth}>
+        <ActionList selectionVariant="single">
+          {grouped
+            ? groups.map(group => (
+                <ActionList.Group key={group || 'ungrouped'}>
+                  {group ? (
+                    <ActionList.GroupHeading>{group}</ActionList.GroupHeading>
+                  ) : null}
+                  {rows(
+                    priceFirst(
+                      ordered.filter(option => (option.group ?? '') === group),
+                    ),
+                  )}
+                </ActionList.Group>
+              ))
+            : rows(ordered)}
+        </ActionList>
+      </ActionMenu.Overlay>
+    </ActionMenu>
+  );
+}
+
+export default CodeSandboxEnvironmentSelect;

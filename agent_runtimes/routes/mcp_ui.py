@@ -5,6 +5,10 @@
 MCP-UI routes for agent-runtimes server.
 """
 
+# `MCPUITransport` is None without the `ui` extra, and an annotation naming it
+# is evaluated at import time otherwise -- `None | None` is a TypeError.
+from __future__ import annotations
+
 import logging
 from typing import Any, AsyncGenerator
 

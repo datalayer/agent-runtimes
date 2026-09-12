@@ -171,6 +171,13 @@ pip install -e ".[chat]"       # chat-related extras
 pip install -e ".[docs]"       # docs build dependencies
 ```
 
+For deterministic installs in CI (and to avoid resolver backtracking), use the
+version constraints file:
+
+```bash
+pip install -c constraints/py313.txt -e .
+```
+
 ### Run
 
 ```bash
@@ -182,7 +189,7 @@ make examples
 For focused Agent Node development, run:
 
 ```bash
-make agent-nodes
+make agent-node
 ```
 
 This target starts both:
@@ -202,7 +209,7 @@ Expected central visibility semantics:
 To run Agent Node with local service URLs preconfigured, use:
 
 ```bash
-make agent-nodes:proxy
+make agent-node-local
 ```
 
 This target applies the `PLANE_LOCAL_*_URL` mappings and exports both
@@ -217,7 +224,7 @@ Prerequisites:
 Override any local service URL if needed:
 
 ```bash
-PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-nodes:proxy
+PLANE_LOCAL_RUNTIMES_URL=http://localhost:19500 make agent-node-local
 ```
 
 ### Docker build notes
@@ -254,7 +261,7 @@ and propagates those values to the Vite HTML placeholders.
 Override any URL on the command line:
 
 ```bash
-make examples:prod DATALAYER_URL=https://prod2.datalayer.run
+make examples:prod DATALAYER_DEFAULT_URL=https://prod2.datalayer.run
 ```
 
 ### Running against a local `plane local` stack
@@ -262,10 +269,11 @@ make examples:prod DATALAYER_URL=https://prod2.datalayer.run
 If you are developing against a local Plane (`plane local`), use:
 
 ```bash
-make examples:proxy
+make example-local
 ```
 
-This points each `DATALAYER_*_URL` at the matching localhost port exposed by
+This points each `DATALAYER_*_URL` (and its `VITE_*` frontend counterpart, so
+both http and ws traffic stay local) at the matching localhost port exposed by
 `plane local` (see `services/plane/datalayer_plane/sbin/local.sh`):
 
 | Variable                       | Default port                  |
@@ -277,7 +285,7 @@ This points each `DATALAYER_*_URL` at the matching localhost port exposed by
 | `PLANE_LOCAL_MANAGER_URL`      | `http://localhost:2100`       |
 | `PLANE_LOCAL_AI_AGENTS_URL`    | `http://localhost:4400`       |
 | `PLANE_LOCAL_AI_INFERENCE_URL` | `http://localhost:4450`       |
-| `PLANE_LOCAL_MCP_SERVERS_URL`  | `http://localhost:4111`       |
+| `PLANE_LOCAL_JUPYTER_MCP_SERVER_URL` | `http://localhost:4404/mcp`   |
 | `PLANE_LOCAL_GROWTH_URL`       | `http://localhost:6660`       |
 | `PLANE_LOCAL_SUCCESS_URL`      | `http://localhost:3300`       |
 | `PLANE_LOCAL_STATUS_URL`       | `http://localhost:4785`       |
@@ -286,7 +294,7 @@ This points each `DATALAYER_*_URL` at the matching localhost port exposed by
 Override any port on the command line, e.g.:
 
 ```bash
-PLANE_LOCAL_IAM_URL=http://localhost:9701 make examples:proxy
+PLANE_LOCAL_IAM_URL=http://localhost:9701 make example-local
 ```
 
 On the main page, you’ll find an example gallery (cards) that break things down into practical building blocks:

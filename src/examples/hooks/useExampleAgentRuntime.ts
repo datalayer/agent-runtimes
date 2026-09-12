@@ -4,40 +4,41 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useAgentRuntimes } from '../../hooks/useAgentRuntimes';
+import type { UseAgentReturn } from '../../hooks/useAgentRuntimes';
 import type { AgentConfig } from '../../types/config';
-import { useExampleAgentRuntimesUrl } from '../utils/useExampleAgentRuntimesUrl';
-import { useRuntimeTargetStore } from '../utils/runtimeTargetStore';
+import {
+  runtimeTargetCapabilities,
+  useRuntimeTargetStore,
+  type ExampleRuntimeTarget,
+} from '../utils/runtimeTargetStore';
 import { agentSummaryStore } from '../utils/agentSummaryStore';
+import { useExampleAgentRuntimes } from './useExampleAgentRuntimes';
+import { harnessOf, SPEC_HARNESS_BY_HARNESS } from '../../runtimes/variants';
 
-interface UseExampleAgentRuntimeOptions {
+export interface UseExampleAgentRuntimeOptions {
   exampleId: string;
   agentName: string;
   specId?: string;
-  environmentName?: string;
   autoStart?: boolean;
   autoCreateAgent?: boolean;
   agentConfig?: AgentConfig;
 }
 
-interface UseExampleAgentRuntimeResult {
-  location: 'local' | 'cloud';
+export interface UseExampleAgentRuntimeResult extends UseAgentReturn {
+  location: ExampleRuntimeTarget;
   baseUrl: string;
   agentId?: string;
   agentBaseUrl?: string;
-  status: string;
-  isReady: boolean;
-  error: string | null;
-  createAgent: (config?: AgentConfig) => Promise<{
-    agentId?: string;
-    endpoint?: string;
-    isReady?: boolean;
-  }>;
+  /** Whether an agent runs on the current target at all. */
+  hasAgent: boolean;
   /**
-   * Tear down the agent launched by this hook: delete it on the server and
-   * wipe in-process agent state so a fresh runtime can be launched.
+   * What to spread onto a `ChatBase` so it shows itself switched off, with the
+   * reason, wherever there is no agent to talk to.
+   *
+   * Computed here so no example has to know which targets have agents — the
+   * question is about the target, and the target is the shell's business.
    */
-  teardown: () => Promise<void>;
+  chatGate: { disabled: boolean; disableReason?: string };
 }
 
 /**
@@ -51,15 +52,14 @@ export function useExampleAgentRuntime(
     exampleId,
     agentName,
     specId,
-    environmentName = 'local-agent-runtimes',
     autoStart = true,
     autoCreateAgent = true,
     agentConfig,
   } = options;
 
   const location = useRuntimeTargetStore(state => state.target);
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const isCloud = location === 'cloud';
+  const capabilities = runtimeTargetCapabilities(location);
+  const isCloud = location === 'datalayer';
 
   const combinedConfig = useMemo<AgentConfig>(
     () => ({
@@ -70,44 +70,40 @@ export function useExampleAgentRuntime(
     [agentName, specId, agentConfig],
   );
 
-  const {
-    runtime,
-    status,
-    isReady,
-    error,
-    connectToRuntime,
-    createAgent,
-    teardown,
-  } = useAgentRuntimes({
-    agentSpecId: isCloud ? specId : undefined,
+  const result = useExampleAgentRuntimes({
+    agentSpecId: specId,
     autoCreateAgent,
-    autoStart: isCloud ? autoStart : false,
-    runtimeCreationTarget: isCloud
-      ? 'backend-services'
-      : 'local-agent-runtimes',
-    runtimeCreationBaseUrl: isCloud ? undefined : baseUrl,
+    autoStart,
     agentConfig: combinedConfig,
   });
+  const { runtime, status, isReady, error, variant } = result;
+  // The harness reported is the one actually turning the loop, read off the
+  // variant rather than off the spec: a spec states what it needs, and this
+  // says what it got.
+  const harness = SPEC_HARNESS_BY_HARNESS[harnessOf(variant)];
+  const baseUrl = isCloud
+    ? runtime?.agentBaseUrl || result.runtimeCreationBaseUrl
+    : result.runtimeCreationBaseUrl;
 
   useEffect(() => {
-    if (isCloud) {
-      return;
-    }
-    connectToRuntime({
-      podName: agentName,
-      environmentName,
-      jupyterBaseUrl: baseUrl,
-    });
-  }, [isCloud, connectToRuntime, agentName, environmentName, baseUrl]);
-
-  useEffect(() => {
+    // Agent status and code sandbox status are both reported by the
+    // agent-runtimes API server. For local runs that server is `baseUrl`
+    // (e.g. http://localhost:8765); the Jupyter sandbox lives elsewhere
+    // (`runtime.agentBaseUrl`). For cloud runs the per-agent runtime URL
+    // (`runtime.agentBaseUrl`) hosts the API, so prefer it when present.
+    const agentApiBaseUrl = isCloud
+      ? runtime?.agentBaseUrl || baseUrl
+      : baseUrl;
     agentSummaryStore.getState().setActive({
       exampleId,
       agentName,
       agentId: runtime?.agentId,
       specId,
+      harness,
+      variant,
       location,
-      baseUrl: runtime?.agentBaseUrl || baseUrl,
+      baseUrl: agentApiBaseUrl,
+      sandboxBaseUrl: runtime?.agentBaseUrl,
       status,
       isReady,
       error: error || undefined,
@@ -122,22 +118,28 @@ export function useExampleAgentRuntime(
     runtime?.agentId,
     runtime?.agentBaseUrl,
     specId,
+    harness,
+    variant,
     location,
     baseUrl,
+    isCloud,
     status,
     isReady,
     error,
   ]);
 
   return {
+    ...result,
     location,
     baseUrl,
     agentId: runtime?.agentId,
     agentBaseUrl: runtime?.agentBaseUrl,
+    hasAgent: capabilities.hasAgent,
+    chatGate: capabilities.hasAgent
+      ? { disabled: false }
+      : { disabled: true, disableReason: capabilities.noAgentReason },
     status,
     isReady,
     error,
-    createAgent,
-    teardown,
   };
 }

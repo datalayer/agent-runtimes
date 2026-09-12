@@ -9,19 +9,30 @@ export { default as A2UiContactCardExample } from './A2UiContactCardExample';
 export { default as A2UiRestaurantExample } from './A2UiRestaurantExample';
 export { default as A2UiAgentExample } from './A2UiAgentExample';
 export { default as A2UiViewerExample } from './A2UiViewerExample';
+export { default as LoopShellExample } from './LoopShellExample';
+export { default as LoopWorkspaceExample } from './LoopWorkspaceExample';
+// The same workspace with the lazy loading, the preload and the error
+// boundary a host would otherwise write for itself.
+export {
+  default as LoopWorkspaceEmbed,
+  preloadLoopWorkspace,
+  type LoopWorkspaceEmbedProps,
+} from './LoopWorkspaceEmbed';
+export { default as A2UiJupyterOutputExample } from './A2UiJupyterOutputExample';
 export { default as AgUiAgenticExample } from './AgUiAgenticExample';
 export { default as AgUiBackendToolRenderingExample } from './AgUiBackendToolRenderingExample';
 export { default as AgUiHaikuGenUiExample } from './AgUiHaikuGenUiExample';
 export { default as AgUiHumanInTheLoopExample } from './AgUiHumanInTheLoopExample';
 export { default as AgUiSharedStateExample } from './AgUiSharedStateExample';
 export { default as AgUiToolsBasedGenUiExample } from './AgUiToolsBasedGenUiExample';
-export { default as CellExample } from './CellSimpleExample';
+export { default as CellExample } from './CellExample';
 export { default as ChatStandaloneExample } from './ChatStandaloneExample';
 export { default as CopilotKitLexicalExample } from './CopilotKitLexicalExample';
 export { default as CopilotKitNotebookExample } from './CopilotKitNotebookExample';
 export { default as CustomExample } from './ChatCustomExample';
 export { default as NotebookCollaborationExample } from './NotebookCollaborationExample';
 export { default as AgentCheckpointsExample } from './AgentCheckpointsExample';
+export { default as AgentCompactionExample } from './AgentCompactionExample';
 export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentCodeSandboxesExample } from './AgentCodeSandboxesExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';

@@ -11,20 +11,34 @@
 
 export {
   InputPrompt,
+  type InputPromptPlacement,
   type InputPromptProps,
-  type InputPromptVariant,
 } from './InputPrompt';
+export { FloatingCard, type FloatingCardProps } from './FloatingCard';
 export {
-  InputPromptHeader,
-  type InputPromptHeaderProps,
-} from './InputPromptHeader';
+  InputPromptBase,
+  type InputPromptBaseProps,
+  type InputPromptVariant,
+} from './InputPromptBase';
+/*
+ * The four regions around the input, and the band they are all made of.
+ *
+ * | | above the input | below the input |
+ * | --- | --- | --- |
+ * | inside the box | `InPromptHeader` | `InPromptFooter` |
+ * | under the box | `BelowPromptHeader` | `BelowPromptFooter` |
+ */
+export * from './header';
+export * from './footer';
 export {
-  InputPromptFooter,
-  type InputPromptFooterProps,
-} from './InputPromptFooter';
+  PromptStacks,
+  type PromptStack,
+  type PromptStacksProps,
+} from './stack';
 export { InputPromptText, type InputPromptTextProps } from './InputPromptText';
 export {
   InputPromptLexical,
   type InputPromptLexicalProps,
 } from './InputPromptLexical';
-export { InputToolbar, type InputToolbarProps } from './InputFooter';
+export * from './menus';
+export * from './plugins/AgentMentionPlugin';

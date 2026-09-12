@@ -142,7 +142,9 @@ export function SandboxStatusIndicator({
   const [status, setStatus] = useState<SandboxWsStatus | null>(null);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const wsUrl = useMemo(
     () => getWsUrl(apiBase, authToken, agentId),

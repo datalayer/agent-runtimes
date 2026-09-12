@@ -14,11 +14,14 @@ import httpx
 
 from ..routes.agent_node import (
     get_agent_node_configuration,
-    get_runtime_credentials,
+    register_configuration_change_callback,
     register_credentials_change_callback,
     register_mode_change_callback,
+    set_agent_node_aws_identity,
     set_agent_node_uid,
 )
+from .agent_node_auth import resolve_auth_token, resolve_runtimes_url
+from .agent_node_collaboration import ensure_collaboration_room
 from .agent_node_health import collect_health
 
 logger = logging.getLogger(__name__)
@@ -42,27 +45,12 @@ def _node_name() -> str:
 
 def _runtimes_url() -> str:
     """Resolve runtimes API base URL from env first, then UI credentials."""
-    env_url = (
-        (
-            os.environ.get("DATALAYER_RUNTIMES_URL")
-            or os.environ.get("DATALAYER_AGENT_RUNTIMES_URL")
-            or ""
-        )
-        .strip()
-        .rstrip("/")
-    )
-    if env_url:
-        return env_url
-    ui_url = (get_runtime_credentials().get("runtimes_url") or "").strip().rstrip("/")
-    return ui_url
+    return resolve_runtimes_url()
 
 
 def _auth_token() -> str:
     """Resolve runtime API token from env first, then UI credentials."""
-    env_token = (os.environ.get("DATALAYER_API_KEY") or "").strip()
-    if env_token:
-        return env_token
-    return (get_runtime_credentials().get("token") or "").strip()
+    return resolve_auth_token()
 
 
 def _auth_headers() -> dict[str, str]:
@@ -101,6 +89,45 @@ def _register_payload() -> dict:
     return payload
 
 
+def _detect_aws_identity() -> tuple[str | None, str | None, str | None]:
+    """Return (account_id, region, arn) when running with AWS credentials."""
+    try:
+        import boto3
+    except Exception:
+        return None, None, None
+
+    try:
+        session = boto3.session.Session()
+        sts = session.client("sts")
+        identity = sts.get_caller_identity()
+        account_id = str(identity.get("Account") or "").strip() or None
+        arn = str(identity.get("Arn") or "").strip() or None
+        region = (
+            str(session.region_name or "").strip()
+            or str(os.environ.get("AWS_REGION") or "").strip()
+            or str(os.environ.get("AWS_DEFAULT_REGION") or "").strip()
+            or None
+        )
+        if account_id and (not account_id.isdigit() or len(account_id) != 12):
+            account_id = None
+        return account_id, region, arn
+    except Exception:
+        return None, None, None
+
+
+def _has_running_active_agent() -> bool:
+    """Return True when the configured active agent is currently registered."""
+    active_agent_id = (get_agent_node_configuration().active_agent_id or "").strip()
+    if not active_agent_id:
+        return False
+    try:
+        from ..routes.acp import _agents  # local import to avoid heavy import cycles
+
+        return active_agent_id in _agents
+    except Exception:
+        return False
+
+
 async def _register(client: httpx.AsyncClient) -> str | None:
     """Register with the central service and return the assigned node id."""
     response = await client.post("/register", json=_register_payload())
@@ -126,6 +153,14 @@ async def _heartbeat(client: httpx.AsyncClient, node_id: str) -> None:
     }
     response = await client.post("/heartbeat", json=body)
     response.raise_for_status()
+
+
+async def _unregister(client: httpx.AsyncClient, node_id: str) -> None:
+    """Remove this node from the central registry."""
+    response = await client.delete(f"/{node_id}")
+    # The node may already be missing due to prior eviction/deletion.
+    if response.status_code not in (200, 404):
+        response.raise_for_status()
 
 
 async def _post_health(client: httpx.AsyncClient, node_id: str, reason: str) -> None:
@@ -154,6 +189,7 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
     loop = asyncio.get_running_loop()
     mode_change_event = asyncio.Event()
     credentials_change_event = asyncio.Event()
+    configuration_change_event = asyncio.Event()
 
     def _on_mode_change(_new_mode: str) -> None:
         loop.call_soon_threadsafe(mode_change_event.set)
@@ -161,11 +197,16 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
     def _on_credentials_change() -> None:
         loop.call_soon_threadsafe(credentials_change_event.set)
 
+    def _on_configuration_change() -> None:
+        loop.call_soon_threadsafe(configuration_change_event.set)
+
     register_mode_change_callback(_on_mode_change)
     register_credentials_change_callback(_on_credentials_change)
+    register_configuration_change_callback(_on_configuration_change)
 
     last_health_at = 0.0
     first_health_sent = False
+    advertised_node_id: str | None = None
     client: httpx.AsyncClient | None = None
     client_signature: tuple[str, str] | None = None
 
@@ -174,6 +215,7 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
             mode_change_triggered = mode_change_event.is_set()
             mode_change_event.clear()
             credentials_change_event.clear()
+            configuration_change_event.clear()
 
             base_url = _runtimes_url()
             token = _auth_token()
@@ -190,13 +232,42 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
                     await client.aclose()
                     client = None
                     client_signature = None
+                advertised_node_id = None
                 await _wait_next(
                     stop_event,
                     credentials_change_event,
                     mode_change_event,
+                    configuration_change_event,
                     heartbeat_seconds,
                 )
                 continue
+
+            if not _has_running_active_agent():
+                if client is not None and advertised_node_id:
+                    try:
+                        await _unregister(client, advertised_node_id)
+                    except Exception as exc:
+                        logger.debug("Agent node unregister skipped/failed: %s", exc)
+                    advertised_node_id = None
+                    first_health_sent = False
+                    last_health_at = 0.0
+                await _wait_next(
+                    stop_event,
+                    credentials_change_event,
+                    mode_change_event,
+                    configuration_change_event,
+                    heartbeat_seconds,
+                )
+                continue
+
+            configuration = get_agent_node_configuration()
+            if configuration.deployment_target == "aws":
+                account_id, region, identity_arn = _detect_aws_identity()
+                set_agent_node_aws_identity(
+                    aws_account_id=account_id,
+                    aws_region=region,
+                    aws_identity_arn=identity_arn,
+                )
 
             if client is None or client_signature != signature:
                 if client is not None:
@@ -214,6 +285,10 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
             try:
                 node_id = await _register(client)
                 if node_id:
+                    advertised_node_id = node_id
+                    # Provision (once) the shared spacer notebook room so the
+                    # heartbeat below carries its uid to the central service.
+                    await ensure_collaboration_room(node_id)
                     await _heartbeat(client, node_id)
                     now = loop.time()
                     needs_health = (
@@ -237,6 +312,7 @@ async def run_agent_node_sync(stop_event: asyncio.Event) -> None:
                 stop_event,
                 credentials_change_event,
                 mode_change_event,
+                configuration_change_event,
                 heartbeat_seconds,
             )
     finally:
@@ -248,6 +324,7 @@ async def _wait_next(
     stop_event: asyncio.Event,
     credentials_change_event: asyncio.Event,
     mode_change_event: asyncio.Event,
+    configuration_change_event: asyncio.Event,
     heartbeat_seconds: int,
 ) -> None:
     """Wake on stop, credential change, mode change, or heartbeat tick."""
@@ -255,6 +332,7 @@ async def _wait_next(
         asyncio.create_task(stop_event.wait()),
         asyncio.create_task(credentials_change_event.wait()),
         asyncio.create_task(mode_change_event.wait()),
+        asyncio.create_task(configuration_change_event.wait()),
     ]
     try:
         _, pending = await asyncio.wait(
