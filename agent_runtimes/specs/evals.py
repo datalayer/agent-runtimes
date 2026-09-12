@@ -13,7 +13,6 @@ from typing import Dict, List
 
 from agent_runtimes.types import EvalSpec
 
-
 # ============================================================================
 # Eval Definitions
 # ============================================================================
@@ -134,7 +133,7 @@ LLM_JUDGE_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="slow",
     requires=["model"],
     source="https://ai.pydantic.dev/evals/",
-    default_config={'threshold': 0.7},
+    default_config={"threshold": 0.7},
 )
 
 MAX_DURATION_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -151,7 +150,7 @@ MAX_DURATION_EVAL_SPEC_0_0_1 = EvalSpec(
     latency="instant",
     requires=["duration_ms"],
     source="https://ai.pydantic.dev/evals/",
-    default_config={'max_duration_ms': 5000},
+    default_config={"max_duration_ms": 5000},
 )
 
 PRECISION_RECALL_EVALUATOR_EVAL_SPEC_0_0_1 = EvalSpec(
@@ -193,8 +192,8 @@ def get_eval_spec(eval_id: str) -> EvalSpec | None:
     spec = EVAL_CATALOG.get(eval_id)
     if spec is not None:
         return spec
-    base, _, ver = eval_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = eval_id.rpartition(":")
+    if base and "." in ver:
         return EVAL_CATALOG.get(base)
     return None
 

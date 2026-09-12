@@ -33,7 +33,7 @@ them:
 
 1. **Resolve the worker** the descriptor names, and read back what it turned
    out to be able to do. Decision 5 of section 19.8 requires a reduced
-   guarantee to be *reported on the execution* rather than hidden, so the
+   guarantee to be _reported on the execution_ rather than hidden, so the
    first observation of every dispatch is the adapter's capability report —
    which is why the output says, in the adapter's own words, that A2A has no
    steer and ACP has no pause.
@@ -58,11 +58,11 @@ on a headline and differed underneath it.
 
 What legitimately differs, and why:
 
-| | A2A | ACP |
-|---|---|---|
-| Acceptance | The task's own `submitted` state | The first session update, which is the earliest honest evidence |
+|               | A2A                                                  | ACP                                                                                     |
+| ------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Acceptance    | The task's own `submitted` state                     | The first session update, which is the earliest honest evidence                         |
 | Artifact name | `notebook-analysis`, because A2A artifacts are named | `answer`, because an ACP turn has no artifact and the adapter registers the turn's text |
-| Cannot do | steer, pause, resume, checkpoint, collect, terminate | pause, resume, checkpoint, collect, terminate |
+| Cannot do     | steer, pause, resume, checkpoint, collect, terminate | pause, resume, checkpoint, collect, terminate                                           |
 
 ## What it measures
 
@@ -90,13 +90,13 @@ suite, which prints each binding's scenarios passed at the end of its run.
 
 ## The pieces
 
-| File | What it is |
-|---|---|
-| `orchestrate.py` | The parent. One code path, run twice. |
-| `notebook_analysis.py` | The work both workers do, so neither is the one doing it better. |
-| `workers/a2a_worker.py` | An A2A server, on `fasta2a` — the same library `agent_runtimes.routes.a2a` serves the platform's agents with. |
+| File                    | What it is                                                                                                       |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `orchestrate.py`        | The parent. One code path, run twice.                                                                            |
+| `notebook_analysis.py`  | The work both workers do, so neither is the one doing it better.                                                 |
+| `workers/a2a_worker.py` | An A2A server, on `fasta2a` — the same library `agent_runtimes.routes.a2a` serves the platform's agents with.    |
 | `workers/acp_worker.py` | An ACP agent over WebSocket, whose methods, `session/update` shape and stop reason are the ACP SDK's own models. |
-| `notebook.ipynb` | The notebook. It has real problems in it, so a worker reporting "looks fine" would be visibly wrong. |
+| `notebook.ipynb`        | The notebook. It has real problems in it, so a worker reporting "looks fine" would be visibly wrong.             |
 
 ### Why the workers are here rather than reused
 
@@ -107,7 +107,7 @@ reason would demonstrate nothing about orchestration. The workers here are
 protocol shells around one shared, deterministic analysis. They are real
 servers on the wire; what they are not is intelligent.
 
-The client sides are *not* re-implemented. The A2A adapter reaches the worker
+The client sides are _not_ re-implemented. The A2A adapter reaches the worker
 through the same `ensure_remote_agent` and task relay the platform's subagents
 use, and the ACP adapter through this repository's own `ACPClient`. If either
 breaks, this example stops working.
@@ -141,7 +141,7 @@ Deliberately, because each is a later item and a stub here would be a claim:
 - No durable control plane. The execution store is the in-memory one; Solr is
   O1-02 and the durable workflow is O1-03.
 - No child executions. Trees are Phase 2 (O2-01).
-- No context resolution. The notebook is *named*; resolving a reference and
+- No context resolution. The notebook is _named_; resolving a reference and
   minting a scoped credential for it are O0-09 and O1-06.
 - No artifact bodies. An artifact keeps a summary and a content hash;
   committing the body to contents or the Library is O1-10.
