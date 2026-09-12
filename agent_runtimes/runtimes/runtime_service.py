@@ -24,7 +24,7 @@ from datalayer_core.utils.types import (
     Minutes,
     Seconds,
 )
-from datalayer_core.utils.urls import DEFAULT_DATALAYER_URL, DatalayerURLs
+from datalayer_core.utils.urls import DEFAULT_DATALAYER_IAM_URL, DatalayerURLs
 from jupyter_kernel_client import JupyterKernelClient
 
 from agent_runtimes.mixins.runtimes import RuntimesMixin
@@ -57,7 +57,7 @@ class RuntimeService(AuthnMixin, RuntimesMixin, SandboxSnapshotsMixin):
         name: str,
         environment: str = DEFAULT_ENVIRONMENT,
         time_reservation: Minutes = DEFAULT_TIME_RESERVATION,
-        datalayer_url: str = DEFAULT_DATALAYER_URL,
+        datalayer_url: str = DEFAULT_DATALAYER_IAM_URL,
         iam_url: Optional[str] = None,
         token: Optional[str] = None,
         api_key: Optional[str] = None,

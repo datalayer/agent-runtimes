@@ -21,7 +21,7 @@ try:
     from fasta2a import FastA2A, Skill
     from fasta2a.broker import InMemoryBroker
     from fasta2a.schema import AgentProvider
-    from fasta2a.storage import InMemoryStorage, StreamingStorageWrapper
+    from fasta2a.storage import InMemoryStorage
 
     FASTA2A_AVAILABLE = True
 except ImportError:
@@ -206,11 +206,15 @@ def register_a2a_agent(
                     url=card.provider.get("url", ""),
                 )
 
-            # Create broker and streaming-enabled storage
-            # StreamingStorageWrapper publishes events to broker when tasks are updated
+            # Create broker and storage.
+            #
+            # No StreamingStorageWrapper: it no longer exists in fasta2a
+            # 2.x (found and fixed the same way in agent-teams's own
+            # a2a/application.py, ORCHESTRATOR.md O3-02) — FastA2A's own
+            # TaskManager streams natively now, so a plain Storage is all
+            # `to_a2a()` needs.
             a2a_broker = broker or InMemoryBroker()
             base_storage = storage or InMemoryStorage()
-            streaming_storage = StreamingStorageWrapper(base_storage, a2a_broker)
 
             # Create FastA2A app using pydantic-ai's to_a2a()
             a2a_app = agent._agent.to_a2a(
@@ -220,7 +224,7 @@ def register_a2a_agent(
                 description=card.description,
                 provider=provider,
                 skills=skills,
-                storage=streaming_storage,
+                storage=base_storage,
                 broker=a2a_broker,
             )
 
