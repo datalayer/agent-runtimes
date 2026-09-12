@@ -188,7 +188,10 @@ def make_judge(*, url: str, token: str, timeout: float = 60.0) -> JudgeCall:
         data = payload.get("data") if isinstance(payload, dict) and isinstance(payload.get("data"), dict) else payload
         text = data.get("response") if isinstance(data, dict) else None
         if not text and isinstance(data, dict):
-            message = data.get("message") if isinstance(data.get("message"), dict) else {}
+            # The assistant's whole message, under the name the service can
+            # actually answer with: a payload field called `message` collided
+            # with the envelope's own and was never delivered.
+            message = data.get("assistant_message") if isinstance(data.get("assistant_message"), dict) else {}
             text = message.get("content")
             if not text:
                 choices = data.get("choices") if isinstance(data.get("choices"), list) else []
