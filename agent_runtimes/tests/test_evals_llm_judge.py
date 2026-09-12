@@ -126,6 +126,41 @@ def test_the_http_judge_asks_inference_as_the_person(monkeypatch):
     assert seen["body"]["messages"][1]["content"] == "grade this"
 
 
+def test_the_judge_reads_the_assistant_message_when_there_is_no_text(monkeypatch):
+    """AI Inference answers the whole message as `assistant_message`: its old
+    name, `message`, collided with the response envelope's own and never
+    carried anything (datalayer-core 1.2.4)."""
+    import httpx
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "message": "Chat completion successful",
+                "assistant_message": {
+                    "role": "assistant",
+                    "content": '{"score": 0.5, "passed": false, "explanation": "half"}',
+                },
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.Client
+
+    class PatchedClient(real_client):
+        def __init__(self, *args, **kwargs):
+            kwargs["transport"] = transport
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "Client", PatchedClient)
+    judge = make_judge(url="https://inference.example/", token="dla_tmp_user")
+
+    reply = judge("grade this", "claude-sonnet-4-6")
+
+    assert '"score": 0.5' in reply, "the envelope's own message is not the answer"
+
+
 def test_a_run_carries_the_judges_explanation_and_failure_mode():
     judge = _judge({"score": 0.1, "passed": False, "explanation": "wrong count", "failure_mode": "wrong_answer"})
     cases = [{"name": "dups", "inputs": {"prompt": "?"}, "expected_output": "157", "evaluators": [{"name": "llm-judge", "arguments": {"_judge": judge}}]}]
