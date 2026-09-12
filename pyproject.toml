@@ -35,7 +35,11 @@ dependencies = [
     "croniter",
     # `datalayer_core.orchestration.Usage`, what an attempt spent as its worker
     # reported it, arrived in 1.2.2.
-    "datalayer-core>=1.2.2",
+    # 1.2.3 is where a delegable agentspec becomes a discoverable, reachable
+    # descriptor: `from_agentspec` reads the contract and gives it an A2A
+    # endpoint (ORCHESTRATOR.md, O2-07). Below it, every capability query
+    # answers nothing.
+    "datalayer-core>=1.2.3",
     "fastapi",
     "filelock>=3.20.3",
     "httpx",
