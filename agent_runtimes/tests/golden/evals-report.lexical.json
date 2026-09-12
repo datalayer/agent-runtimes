@@ -114,7 +114,7 @@
             "format": 0,
             "mode": "normal",
             "style": "",
-            "text": "2 experiments on 6 tasks; jupyter-data-analyst leads at 50.0%.",
+            "text": "2 experiments on 6 tasks; jupyter-data-analyst leads at 83.3%.",
             "type": "text",
             "version": 1
           }
@@ -780,7 +780,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "50.0%",
+                        "text": "83.3%",
                         "type": "text",
                         "version": 1
                       }
@@ -1200,7 +1200,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "50.0%",
+                        "text": "33.3%",
                         "type": "text",
                         "version": 1
                       }
@@ -1840,199 +1840,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "0.5",
-                        "type": "text",
-                        "version": 1
-                      }
-                    ],
-                    "direction": "ltr",
-                    "format": "",
-                    "indent": 0,
-                    "textFormat": 0,
-                    "textStyle": "",
-                    "type": "paragraph",
-                    "version": 1
-                  }
-                ],
-                "colSpan": 1,
-                "direction": "ltr",
-                "format": "",
-                "headerState": 0,
-                "indent": 0,
-                "rowSpan": 1,
-                "type": "tablecell",
-                "version": 1
-              },
-              {
-                "$": {
-                  "evidence": {
-                    "analysis": "Experiment Latest/Baseline",
-                    "block": "block-8",
-                    "case": null,
-                    "evalset": "evalset-reference",
-                    "experiment": null,
-                    "launch": "launch-128",
-                    "run": null,
-                    "version": 3
-                  }
-                },
-                "backgroundColor": null,
-                "children": [
-                  {
-                    "$": {
-                      "evidence": {
-                        "analysis": "Experiment Latest/Baseline",
-                        "block": "block-8",
-                        "case": null,
-                        "evalset": "evalset-reference",
-                        "experiment": null,
-                        "launch": "launch-128",
-                        "run": null,
-                        "version": 3
-                      }
-                    },
-                    "children": [
-                      {
-                        "detail": 0,
-                        "format": 0,
-                        "mode": "normal",
-                        "style": "",
                         "text": "0.8333",
-                        "type": "text",
-                        "version": 1
-                      }
-                    ],
-                    "direction": "ltr",
-                    "format": "",
-                    "indent": 0,
-                    "textFormat": 0,
-                    "textStyle": "",
-                    "type": "paragraph",
-                    "version": 1
-                  }
-                ],
-                "colSpan": 1,
-                "direction": "ltr",
-                "format": "",
-                "headerState": 0,
-                "indent": 0,
-                "rowSpan": 1,
-                "type": "tablecell",
-                "version": 1
-              },
-              {
-                "$": {
-                  "evidence": {
-                    "analysis": "Experiment Latest/Baseline",
-                    "block": "block-8",
-                    "case": null,
-                    "evalset": "evalset-reference",
-                    "experiment": null,
-                    "launch": "launch-128",
-                    "run": null,
-                    "version": 3
-                  }
-                },
-                "backgroundColor": null,
-                "children": [
-                  {
-                    "$": {
-                      "evidence": {
-                        "analysis": "Experiment Latest/Baseline",
-                        "block": "block-8",
-                        "case": null,
-                        "evalset": "evalset-reference",
-                        "experiment": null,
-                        "launch": "launch-128",
-                        "run": null,
-                        "version": 3
-                      }
-                    },
-                    "children": [
-                      {
-                        "detail": 0,
-                        "format": 0,
-                        "mode": "normal",
-                        "style": "",
-                        "text": "-0.3333",
-                        "type": "text",
-                        "version": 1
-                      }
-                    ],
-                    "direction": "ltr",
-                    "format": "",
-                    "indent": 0,
-                    "textFormat": 0,
-                    "textStyle": "",
-                    "type": "paragraph",
-                    "version": 1
-                  }
-                ],
-                "colSpan": 1,
-                "direction": "ltr",
-                "format": "",
-                "headerState": 0,
-                "indent": 0,
-                "rowSpan": 1,
-                "type": "tablecell",
-                "version": 1
-              }
-            ],
-            "direction": "ltr",
-            "format": "",
-            "indent": 0,
-            "type": "tablerow",
-            "version": 1
-          },
-          {
-            "$": {
-              "evidence": {
-                "analysis": "Experiment Latest/Baseline",
-                "block": "block-8",
-                "case": null,
-                "evalset": "evalset-reference",
-                "experiment": null,
-                "launch": "launch-128",
-                "run": null,
-                "version": 3
-              }
-            },
-            "children": [
-              {
-                "$": {
-                  "evidence": {
-                    "analysis": "Experiment Latest/Baseline",
-                    "block": "block-8",
-                    "case": null,
-                    "evalset": "evalset-reference",
-                    "experiment": null,
-                    "launch": "launch-128",
-                    "run": null,
-                    "version": 3
-                  }
-                },
-                "backgroundColor": null,
-                "children": [
-                  {
-                    "$": {
-                      "evidence": {
-                        "analysis": "Experiment Latest/Baseline",
-                        "block": "block-8",
-                        "case": null,
-                        "evalset": "evalset-reference",
-                        "experiment": null,
-                        "launch": "launch-128",
-                        "run": null,
-                        "version": 3
-                      }
-                    },
-                    "children": [
-                      {
-                        "detail": 0,
-                        "format": 0,
-                        "mode": "normal",
-                        "style": "",
-                        "text": "example-evals",
                         "type": "text",
                         "version": 1
                       }
@@ -2168,6 +1976,84 @@
                 "rowSpan": 1,
                 "type": "tablecell",
                 "version": 1
+              }
+            ],
+            "direction": "ltr",
+            "format": "",
+            "indent": 0,
+            "type": "tablerow",
+            "version": 1
+          },
+          {
+            "$": {
+              "evidence": {
+                "analysis": "Experiment Latest/Baseline",
+                "block": "block-8",
+                "case": null,
+                "evalset": "evalset-reference",
+                "experiment": null,
+                "launch": "launch-128",
+                "run": null,
+                "version": 3
+              }
+            },
+            "children": [
+              {
+                "$": {
+                  "evidence": {
+                    "analysis": "Experiment Latest/Baseline",
+                    "block": "block-8",
+                    "case": null,
+                    "evalset": "evalset-reference",
+                    "experiment": null,
+                    "launch": "launch-128",
+                    "run": null,
+                    "version": 3
+                  }
+                },
+                "backgroundColor": null,
+                "children": [
+                  {
+                    "$": {
+                      "evidence": {
+                        "analysis": "Experiment Latest/Baseline",
+                        "block": "block-8",
+                        "case": null,
+                        "evalset": "evalset-reference",
+                        "experiment": null,
+                        "launch": "launch-128",
+                        "run": null,
+                        "version": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "detail": 0,
+                        "format": 0,
+                        "mode": "normal",
+                        "style": "",
+                        "text": "example-evals",
+                        "type": "text",
+                        "version": 1
+                      }
+                    ],
+                    "direction": "ltr",
+                    "format": "",
+                    "indent": 0,
+                    "textFormat": 0,
+                    "textStyle": "",
+                    "type": "paragraph",
+                    "version": 1
+                  }
+                ],
+                "colSpan": 1,
+                "direction": "ltr",
+                "format": "",
+                "headerState": 0,
+                "indent": 0,
+                "rowSpan": 1,
+                "type": "tablecell",
+                "version": 1
               },
               {
                 "$": {
@@ -2203,7 +2089,121 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "0.1667",
+                        "text": "0.3333",
+                        "type": "text",
+                        "version": 1
+                      }
+                    ],
+                    "direction": "ltr",
+                    "format": "",
+                    "indent": 0,
+                    "textFormat": 0,
+                    "textStyle": "",
+                    "type": "paragraph",
+                    "version": 1
+                  }
+                ],
+                "colSpan": 1,
+                "direction": "ltr",
+                "format": "",
+                "headerState": 0,
+                "indent": 0,
+                "rowSpan": 1,
+                "type": "tablecell",
+                "version": 1
+              },
+              {
+                "$": {
+                  "evidence": {
+                    "analysis": "Experiment Latest/Baseline",
+                    "block": "block-8",
+                    "case": null,
+                    "evalset": "evalset-reference",
+                    "experiment": null,
+                    "launch": "launch-128",
+                    "run": null,
+                    "version": 3
+                  }
+                },
+                "backgroundColor": null,
+                "children": [
+                  {
+                    "$": {
+                      "evidence": {
+                        "analysis": "Experiment Latest/Baseline",
+                        "block": "block-8",
+                        "case": null,
+                        "evalset": "evalset-reference",
+                        "experiment": null,
+                        "launch": "launch-128",
+                        "run": null,
+                        "version": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "detail": 0,
+                        "format": 0,
+                        "mode": "normal",
+                        "style": "",
+                        "text": "0.5",
+                        "type": "text",
+                        "version": 1
+                      }
+                    ],
+                    "direction": "ltr",
+                    "format": "",
+                    "indent": 0,
+                    "textFormat": 0,
+                    "textStyle": "",
+                    "type": "paragraph",
+                    "version": 1
+                  }
+                ],
+                "colSpan": 1,
+                "direction": "ltr",
+                "format": "",
+                "headerState": 0,
+                "indent": 0,
+                "rowSpan": 1,
+                "type": "tablecell",
+                "version": 1
+              },
+              {
+                "$": {
+                  "evidence": {
+                    "analysis": "Experiment Latest/Baseline",
+                    "block": "block-8",
+                    "case": null,
+                    "evalset": "evalset-reference",
+                    "experiment": null,
+                    "launch": "launch-128",
+                    "run": null,
+                    "version": 3
+                  }
+                },
+                "backgroundColor": null,
+                "children": [
+                  {
+                    "$": {
+                      "evidence": {
+                        "analysis": "Experiment Latest/Baseline",
+                        "block": "block-8",
+                        "case": null,
+                        "evalset": "evalset-reference",
+                        "experiment": null,
+                        "launch": "launch-128",
+                        "run": null,
+                        "version": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "detail": 0,
+                        "format": 0,
+                        "mode": "normal",
+                        "style": "",
+                        "text": "-0.1667",
                         "type": "text",
                         "version": 1
                       }
@@ -2266,8 +2266,8 @@
                   "example-evals"
                 ],
                 "y": [
-                  0.5,
-                  0.5
+                  0.8333333333333334,
+                  0.3333333333333333
                 ]
               },
               "text/plain": "Latest Pass Rate By Experiment"
@@ -2367,17 +2367,17 @@
                 "pairs": [
                   {
                     "baseline": "example-evals",
-                    "baseline_pass_rate": 0.5,
+                    "baseline_pass_rate": 0.3333333333333333,
                     "candidate": "jupyter-data-analyst",
-                    "candidate_pass_rate": 0.5,
-                    "delta_pass_rate": 0.0
+                    "candidate_pass_rate": 0.8333333333333334,
+                    "delta_pass_rate": 0.5
                   },
                   {
                     "baseline": "jupyter-data-analyst",
-                    "baseline_pass_rate": 0.5,
+                    "baseline_pass_rate": 0.8333333333333334,
                     "candidate": "example-evals",
-                    "candidate_pass_rate": 0.5,
-                    "delta_pass_rate": 0.0
+                    "candidate_pass_rate": 0.3333333333333333,
+                    "delta_pass_rate": -0.5
                   }
                 ]
               },
@@ -2790,7 +2790,7 @@
                         "format": 0,
                         "mode": "normal",
                         "style": "",
-                        "text": "+0.0 pts",
+                        "text": "+50.0 pts",
                         "type": "text",
                         "version": 1
                       }

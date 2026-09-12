@@ -59,8 +59,8 @@ Compare how each case performs across agentspecs (for example codemode vs no-cod
 
 | Experiment           | Agentspec            | Runs (fetched/total) | Latest | Baseline | Drift       | Latest-2 Delta |
 | :------------------- | :------------------- | -------------------: | -----: | -------: | ----------: | -------------: |
-| jupyter-data-analyst | jupyter-data-analyst |                  3/3 |  50.0% |    83.3% | 🔴 -33.3 pts |    🟢 +16.7 pts |
-| example-evals        | example-evals        |                  2/2 |  50.0% |    33.3% | 🟢 +16.7 pts |    🔴 -16.7 pts |
+| jupyter-data-analyst | jupyter-data-analyst |                  3/3 |  83.3% |    50.0% | 🟢 +33.3 pts |    🟢 +16.7 pts |
+| example-evals        | example-evals        |                  2/2 |  33.3% |    50.0% | 🔴 -16.7 pts |    🔴 -16.7 pts |
 
 ## Comparison Combinations
 
@@ -68,35 +68,35 @@ Compare how each case performs across agentspecs (for example codemode vs no-cod
 
 | Rank | Experiment           | Latest |
 | ---: | :------------------- | -----: |
-|    1 | jupyter-data-analyst |  50.0% |
-|    2 | example-evals        |  50.0% |
+|    1 | jupyter-data-analyst |  83.3% |
+|    2 | example-evals        |  33.3% |
 
 Latest pass-rate histogram (pts):
 `   0.0 to   12.5 pts |░░░░░░░░░░░░░░░░░░░░| 0`
 `  12.5 to   25.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`  25.0 to   37.5 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  25.0 to   37.5 pts |████████████████████| 1`
 `  37.5 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`  50.0 to   62.5 pts |████████████████████| 2`
+`  50.0 to   62.5 pts |░░░░░░░░░░░░░░░░░░░░| 0`
 `  62.5 to   75.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`  75.0 to   87.5 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  75.0 to   87.5 pts |████████████████████| 1`
 `  87.5 to  100.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
 
 ### By Drift (Most Negative To Most Positive)
 
 | Rank | Experiment           | Drift       |
 | ---: | :------------------- | ----------: |
-|    1 | jupyter-data-analyst | 🔴 -33.3 pts |
-|    2 | example-evals        | 🟢 +16.7 pts |
+|    1 | example-evals        | 🔴 -16.7 pts |
+|    2 | jupyter-data-analyst | 🟢 +33.3 pts |
 
 Drift histogram (delta pts):
-` -33.3 to  -27.1 pts |████████████████████| 1`
-` -27.1 to  -20.8 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-` -20.8 to  -14.6 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-` -14.6 to   -8.3 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`  -8.3 to   -2.1 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`  -2.1 to    4.2 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`   4.2 to   10.4 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`  10.4 to   16.7 pts |████████████████████| 1`
+` -16.7 to  -10.4 pts |████████████████████| 1`
+` -10.4 to   -4.2 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  -4.2 to    2.1 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`   2.1 to    8.3 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`   8.3 to   14.6 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  14.6 to   20.8 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  20.8 to   27.1 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  27.1 to   33.3 pts |████████████████████| 1`
 
 ### By Stability (Lowest Pass-Rate StdDev)
 
@@ -118,17 +118,17 @@ Total tokens across fetched runs for each experiment. Trends are ordered oldest 
 
 | Pair                                  | Left Latest | Right Latest | Delta (Left-Right) |
 | :------------------------------------ | ----------: | -----------: | -----------------: |
-| jupyter-data-analyst vs example-evals |       50.0% |        50.0% |         ⚪ +0.0 pts |
+| jupyter-data-analyst vs example-evals |       83.3% |        33.3% |        🟢 +50.0 pts |
 
 Pairwise latest-delta histogram (pts):
-`   0.0 to    0.0 pts |████████████████████| 1`
-`   0.0 to    0.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`   0.0 to    0.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`   0.0 to    0.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`   0.0 to    0.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`   0.0 to    0.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`   0.0 to    0.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
-`   0.0 to    0.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  50.0 to   50.0 pts |████████████████████| 1`
+`  50.0 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  50.0 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  50.0 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  50.0 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  50.0 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  50.0 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
+`  50.0 to   50.0 pts |░░░░░░░░░░░░░░░░░░░░| 0`
 
 ### Within-Agentspec Pairwise Latest-Pass Deltas
 
@@ -140,14 +140,14 @@ Pairwise latest-delta histogram (pts):
 
 | Pair                                                                         | Left Latest | Right Latest | Delta (Left-Right) |
 | :--------------------------------------------------------------------------- | ----------: | -----------: | -----------------: |
-| jupyter-data-analyst (jupyter-data-analyst) vs example-evals (example-evals) |       50.0% |        50.0% |         ⚪ +0.0 pts |
+| jupyter-data-analyst (jupyter-data-analyst) vs example-evals (example-evals) |       83.3% |        33.3% |        🟢 +50.0 pts |
 
 ### Insight Highlights
 
-- Top latest pass-rate: jupyter-data-analyst (50.0%).
-- Lowest latest pass-rate: example-evals (50.0%).
-- Strongest positive drift: example-evals (🟢 +16.7 pts).
-- Strongest negative drift: jupyter-data-analyst (🔴 -33.3 pts).
+- Top latest pass-rate: jupyter-data-analyst (83.3%).
+- Lowest latest pass-rate: example-evals (33.3%).
+- Strongest positive drift: jupyter-data-analyst (🟢 +33.3 pts).
+- Strongest negative drift: example-evals (🔴 -16.7 pts).
 - Stability leader: example-evals (stddev=8.33 pts, mean=41.7%).
 
 Drift balance meter:
@@ -243,15 +243,15 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "rows": [
       [
         "jupyter-data-analyst",
-        0.5,
         0.8333333333333334,
-        -0.33333333333333337
+        0.5,
+        0.33333333333333337
       ],
       [
         "example-evals",
-        0.5,
         0.3333333333333333,
-        0.16666666666666669
+        0.5,
+        -0.16666666666666669
       ]
     ]
   },
@@ -263,8 +263,8 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
       "example-evals"
     ],
     "y": [
-      0.5,
-      0.5
+      0.8333333333333334,
+      0.3333333333333333
     ]
   },
   {
@@ -308,17 +308,17 @@ The JSON block below is rendered directly from the top-level `report_analyses` p
     "pairs": [
       {
         "baseline": "example-evals",
-        "baseline_pass_rate": 0.5,
+        "baseline_pass_rate": 0.3333333333333333,
         "candidate": "jupyter-data-analyst",
-        "candidate_pass_rate": 0.5,
-        "delta_pass_rate": 0.0
+        "candidate_pass_rate": 0.8333333333333334,
+        "delta_pass_rate": 0.5
       },
       {
         "baseline": "jupyter-data-analyst",
-        "baseline_pass_rate": 0.5,
+        "baseline_pass_rate": 0.8333333333333334,
         "candidate": "example-evals",
-        "candidate_pass_rate": 0.5,
-        "delta_pass_rate": 0.0
+        "candidate_pass_rate": 0.3333333333333333,
+        "delta_pass_rate": -0.5
       }
     ]
   }

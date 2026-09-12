@@ -138,10 +138,16 @@ def _compute_baseline_and_drift(
     ]
     if not pass_rates:
         return None, None, None
+    # The runs arrive newest first, as the service sorts them and as
+    # `latest_two_run_ids` reads them a few lines below. This used to take the
+    # first slice as the baseline and the last rate as the latest, which is the
+    # opposite way round: every experiment with more than one run reported its
+    # oldest rate as its latest, and its drift with the sign reversed — and
+    # only an experiment with more than one run has a drift to be wrong about.
     baseline_size = min(3, max(1, len(pass_rates) // 2))
-    baseline_slice = pass_rates[:baseline_size]
+    baseline_slice = pass_rates[-baseline_size:]
     baseline = sum(baseline_slice) / baseline_size
-    latest = pass_rates[-1]
+    latest = pass_rates[0]
     drift = latest - baseline
     return baseline, latest, drift
 

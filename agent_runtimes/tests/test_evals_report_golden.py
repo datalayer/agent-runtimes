@@ -195,6 +195,31 @@ class FakeStoreClient:
         return {"runs": [by_id[run_id] for run_id in run_ids if run_id in by_id]}
 
 
+def test_the_latest_run_is_the_newest_one_and_drift_points_the_right_way():
+    """The service answers runs newest first, and so does this fixture.
+
+    This used to take the last rate as the latest and the first slice as the
+    baseline, which is the opposite way round: a benchmark that improved
+    reported its oldest rate and a negative drift. Only an experiment with more
+    than one run has a drift to be wrong about, which is why it survived.
+    """
+    newest_first = [
+        {"metrics": {"pass_rate": 0.9}},
+        {"metrics": {"pass_rate": 0.6}},
+        {"metrics": {"pass_rate": 0.3}},
+    ]
+
+    baseline, latest, drift = report_module._compute_baseline_and_drift(newest_first)
+
+    assert latest == 0.9, "the newest run is the latest"
+    assert baseline == 0.3, "the baseline is what it drifted from"
+    assert drift == pytest.approx(0.6), "improving is a positive drift"
+
+    one_run = report_module._compute_baseline_and_drift([{"metrics": {"pass_rate": 0.5}}])
+    assert one_run == (0.5, 0.5, 0.0), "one run has drifted from nothing"
+    assert report_module._compute_baseline_and_drift([]) == (None, None, None)
+
+
 @pytest.fixture
 def frozen_report(monkeypatch, tmp_path):
     monkeypatch.setattr(report_module, "_now_iso", lambda: FROZEN_NOW)
