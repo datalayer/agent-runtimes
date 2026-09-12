@@ -159,13 +159,22 @@ export function CodeSandboxEnvironmentSelect(
    * of local specifications. A stable partition: within each half the order
    * given by the caller is kept.
    */
-  const ordered = [
-    ...options.filter(option => option.burningRate),
-    ...options.filter(option => !option.burningRate),
+  const priceFirst = (subset: ICodeSandboxEnvironmentOption[]) => [
+    ...subset.filter(option => option.burningRate),
+    ...subset.filter(option => !option.burningRate),
   ];
-  const grouped = ordered.some(option => option.group);
+  const grouped = options.some(option => option.group);
+  /*
+   * Within a group when there are groups. A grouped list has already been put
+   * in the order its headings should read — what is yours, your organizations',
+   * then the platform's (E1-19) — and partitioning across the whole list would
+   * undo that: one unpriced environment of your own, which is exactly what an
+   * environment awaiting its first build is, would move your heading below the
+   * platform's.
+   */
+  const ordered = grouped ? options : priceFirst(options);
   const groups = grouped
-    ? Array.from(new Set(ordered.map(option => option.group ?? '')))
+    ? Array.from(new Set(options.map(option => option.group ?? '')))
     : [];
 
   const rows = (subset: ICodeSandboxEnvironmentOption[]) =>
@@ -248,7 +257,9 @@ export function CodeSandboxEnvironmentSelect(
                     <ActionList.GroupHeading>{group}</ActionList.GroupHeading>
                   ) : null}
                   {rows(
-                    ordered.filter(option => (option.group ?? '') === group),
+                    priceFirst(
+                      ordered.filter(option => (option.group ?? '') === group),
+                    ),
                   )}
                 </ActionList.Group>
               ))
