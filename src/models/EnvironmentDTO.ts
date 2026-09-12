@@ -73,7 +73,7 @@ export interface EnvironmentJSON {
   title: string;
   /** Unique name identifier for the environment */
   name: string;
-  /** Credits consumed per hour for this environment */
+  /** Credits consumed per second for this environment */
   burningRate: number;
   /** Description of the environment (contains HTML markup) */
   description: string;
