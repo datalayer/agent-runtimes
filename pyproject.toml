@@ -28,7 +28,7 @@ dependencies = [
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
-    # The Datalayer orchestration extension's wire-level constants
+    # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
     # each re-declaring its own copy of the same strings (ORCHESTRATOR.md,
@@ -101,7 +101,7 @@ Changelog = "https://github.com/datalayer/agent-runtimes/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 anthropic = [
     # pydantic-ai 2.34+ builds on the anthropic SDK 1.x; nothing here calls
-    # the SDK directly, so the floor follows pydantic-ai's.
+    # the SDK directly, so the floor follows pydantic-ai`s.
     "anthropic>=1.0.0,<2.0.0",
     "pydantic-ai-slim[anthropic]>=2.35.0,<3",
 ]
@@ -135,13 +135,13 @@ a2a = [
     # `A2AClient.__init__` renamed its worker-URL argument from `base_url`
     # to `agent`. Nothing failed at import or at startup — the two call
     # sites that build one are wrapped in a `try` or run fine until asked
-    # to do something — so the first thing to notice was a team member's
+    # to do something — so the first thing to notice was a team member`s
     # dispatch on prod1 answering `A2AClient.__init__() got an unexpected
-    # keyword argument 'base_url'`. Every A2A dispatch through
+    # keyword argument `base_url``. Every A2A dispatch through
     # `relay_a2a_task` was broken until then, silently. `<2.1` matches the
     # `agent=` constructor this pin was fixed against; move it only with
     # the call sites that use it.
-    "fasta2a>=2.0.0,<2.1",
+    "fasta2a>=2.0.1,<2.1",
 ]
 # The ACP client the orchestration adapter speaks, and the route serves.
 #
@@ -176,9 +176,7 @@ ui = [
 # ceiling is restated here so that installing it resolves in seconds instead of
 # discovering the same cap through sixty google-adk releases.
 a2ui = [
-    "a2ui-agent-sdk>=0.5.0",
-    "opentelemetry-api<=1.42.1",
-    "opentelemetry-sdk<=1.42.1",
+    "a2ui-agent-sdk>=0.6.0",
 ]
 memory = [
     "mem0ai>=2.0.1",
