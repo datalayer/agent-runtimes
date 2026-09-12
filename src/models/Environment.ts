@@ -6,6 +6,8 @@
 import { IContent } from './Content';
 import { IItem } from './Item';
 import type { Environment as EnvironmentDocument } from './environments.generated';
+import type { IRuntimeEnvironment } from './Runtime';
+import type { CreateRuntimeResponse } from './RuntimeDTO';
 
 /**
  * The Environment specification, `environments.datalayer.io/v1alpha1`,
@@ -248,8 +250,105 @@ export interface IEnvironmentVersionRecord {
   updatedAt: string;
   promotedAt: string | null;
   deprecatedAt: string | null;
+  /**
+   * The promotion that last made this version the promoted one, kept after a
+   * later one is promoted; `null` for a version never promoted, and absent
+   * from a Runtimes before E1-15.
+   */
+  promotion?: IEnvironmentPromotionRecord | null;
   /** What a conditional write names in `If-Match`. */
   etag: string;
+}
+
+/** One artifact a promotion put in service, with the policy decision it carried (E1-08). */
+export interface IEnvironmentPromotionPolicyDecision {
+  artifactUid: string;
+  variant: string;
+  region: string;
+  immutableReference: string;
+  /** The artifact's scan summary, as E1-08 decides it; `null` when no decision was made. */
+  policyDecision: Record<string, unknown> | null;
+}
+
+/** The promotion that last made a version its environment's promoted one (E1-15, D-11). */
+export interface IEnvironmentPromotionRecord {
+  promotedAt: string;
+  /** The uid of who promoted it. */
+  promotedBy: string;
+  /** The version's optional variants with no artifact a sandbox starts from; empty for a ready version. */
+  unavailableVariants: string[];
+  /** What the promotion acknowledged: exactly `unavailableVariants`. */
+  acknowledgedUnavailableVariants: string[];
+  /** Whether any artifact carried a policy decision; false until E1-08 makes them. */
+  policyDecisionMade: boolean;
+  policyDecisions: IEnvironmentPromotionPolicyDecision[];
+}
+
+/** A runtime still running one of an environment's artifacts, as a refused deletion names it (E1-15). */
+export interface IEnvironmentLiveRuntime {
+  runtimeUid: string;
+  versionUid: string;
+  /** The digest of the artifact it runs. */
+  digest: string;
+}
+
+/**
+ * The `detail` of a refused deletion, 409 `DL_ENV_CONFLICT`: what still refers
+ * to the environment, checked in this order.
+ */
+export interface IEnvironmentDeletionConflict {
+  /** A version is promoted: promote none first. */
+  promotedVersionUid?: string;
+  /** How many of its artifacts are referenced. */
+  referencedArtifacts?: number;
+  /** The runtimes still running one of its artifacts, whoever launched them. */
+  runtimes?: IEnvironmentLiveRuntime[];
+}
+
+/** The `detail` of a refused promotion, 409 `DL_ENV_CONFLICT`. */
+export interface IEnvironmentPromotionConflict {
+  status: EnvironmentVersionStatus;
+  /** A partially ready version's: what the acknowledgement must name, exactly. */
+  unavailableVariants?: string[];
+  /** What the refused acknowledgement named. */
+  acknowledgedUnavailableVariants?: string[];
+}
+
+/** The artifact a runtime was started from, as its answer names it (section 7.6, E1-11). */
+export interface ILaunchedEnvironmentArtifact {
+  uid: string;
+  variant: string;
+  region: string;
+  /** What the sandbox started from: an OCI reference pinned by its digest. */
+  immutable_reference: string;
+  digest: string;
+  contract_version: string;
+  size_class: string;
+}
+
+/**
+ * A runtime's user environment, as its answer names it (E1-11): beside the
+ * name and title every runtime's environment carries, the version launched and
+ * its artifact. Snake_case, as the rest of the runtime.
+ */
+export interface ILaunchedEnvironment extends IRuntimeEnvironment {
+  uid: string;
+  version_uid: string;
+  version: number;
+  contract_version: string;
+  artifact: ILaunchedEnvironmentArtifact;
+}
+
+/**
+ * What trying a version answers (E1-14): `POST /runtimes`' answer, its
+ * runtime's environment naming the version tried and the artifact it started
+ * from. `success` is false, and the runtime carries a `reason`, when the
+ * Operator started none.
+ */
+export interface IEnvironmentTrial extends CreateRuntimeResponse {
+  runtime: CreateRuntimeResponse['runtime'] & {
+    environment: ILaunchedEnvironment;
+  };
 }
 
 /** One build of one version, on one variant and region. */
@@ -400,6 +499,16 @@ export interface IPromoteEnvironmentVersionRequest {
   versionUid: string | null;
   /** The unavailable variants of a partially ready version. */
   acknowledgeUnavailableVariants?: string[];
+}
+
+/** `POST /environment-versions/{uid}/trial`. */
+export interface ITrialEnvironmentVersionRequest {
+  /**
+   * The most credits the trial spends. The service keeps a lower limit, and
+   * lowers a higher one to its cap, `DATALAYER_RUNTIMES_TRIAL_CREDITS_LIMIT`
+   * (5 by default), which is also the limit when none is given.
+   */
+  creditsLimit?: number;
 }
 
 /** `POST /environments/{uid}/versions`. */

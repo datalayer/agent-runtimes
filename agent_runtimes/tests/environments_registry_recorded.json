@@ -386,6 +386,45 @@
       "path": "/api/runtimes/v1/environments/01M28PM3AAHED80MHYGC1724A0",
       "status": 204
     },
+    "delete_environment_running": {
+      "body": {
+        "code": "DL_ENV_CONFLICT",
+        "correlationId": "01M290VDSDN5W76EJV7WQWZCF0",
+        "detail": {
+          "runtimes": [
+            {
+              "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "runtimeUid": "01runtime",
+              "versionUid": "01M290VDRETZKB6W02NWA4W0NR"
+            }
+          ]
+        },
+        "message": "An environment is not deleted while a runtime runs one of its artifacts: runtime 01runtime on version 01M290VDRETZKB6W02NWA4W0NR"
+      },
+      "headers": {
+        "If-Match": "\"103\""
+      },
+      "json": null,
+      "method": "DELETE",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M290VDR1AC0ECB3J4JKKZQHW",
+      "status": 409
+    },
+    "delete_environment_unavailable": {
+      "body": {
+        "code": "DL_ENV_UNAVAILABLE",
+        "correlationId": "01M290VDSF7ASW0JMESW4FJRJJ",
+        "message": "The runtimes of environment 01M290VDR1AC0ECB3J4JKKZQHW could not be read from the Operator, and an environment is not deleted while they are unknown"
+      },
+      "headers": {
+        "If-Match": "\"103\""
+      },
+      "json": null,
+      "method": "DELETE",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M290VDR1AC0ECB3J4JKKZQHW",
+      "status": 503
+    },
     "deprecate_version": {
       "body": {
         "contractVersion": "sandbox-contract/v1",
@@ -583,6 +622,56 @@
       "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7",
       "status": 200
     },
+    "get_environment_before_deletion": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T19:59:27Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "",
+        "etag": "\"103\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": null,
+        "title": "geo",
+        "uid": "01M290VDR1AC0ECB3J4JKKZQHW",
+        "updatedAt": "2026-09-11T19:59:27Z",
+        "visibility": "private"
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M290VDR1AC0ECB3J4JKKZQHW",
+      "status": 200
+    },
+    "get_environment_before_promotion": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T19:59:27Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "",
+        "etag": "\"101\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": null,
+        "title": "geo",
+        "uid": "01M290VDR1AC0ECB3J4JKKZQHW",
+        "updatedAt": "2026-09-11T19:59:27Z",
+        "visibility": "private"
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M290VDR1AC0ECB3J4JKKZQHW",
+      "status": 200
+    },
     "get_environment_missing": {
       "body": {
         "code": "DL_ENV_NOT_FOUND",
@@ -626,6 +715,260 @@
       "method": "GET",
       "params": null,
       "path": "/api/runtimes/v1/environment-builds/01M28WHXKDKSTHC5RNRY6128V2",
+      "status": 200
+    },
+    "get_partially_ready_version": {
+      "body": {
+        "contractVersion": "sandbox-contract/v1",
+        "createdAt": "2026-09-11T19:59:27Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deprecatedAt": null,
+        "environmentUid": "01M290VDR1AC0ECB3J4JKKZQHW",
+        "etag": "\"105\"",
+        "failureCode": "",
+        "label": "",
+        "lockDigest": "",
+        "optionalVariants": [
+          "e2b",
+          "modal"
+        ],
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedAt": null,
+        "promotion": null,
+        "requiredVariants": [
+          "datalayer"
+        ],
+        "resolvedBases": {},
+        "sourceArchiveDigest": "",
+        "sourceArchiveRef": "",
+        "sourceFormat": "",
+        "sourceType": "packages",
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "labels": {},
+            "name": "geo",
+            "title": null
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "build": {
+              "source": "packages"
+            },
+            "buildSecrets": [],
+            "commands": {
+              "postInstall": []
+            },
+            "compatibility": {
+              "regions": [],
+              "variants": {
+                "optional": [
+                  "e2b",
+                  "modal"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "contract": "sandbox-contract/v1",
+            "env": {},
+            "files": [],
+            "language": {
+              "name": "python",
+              "version": "3.13"
+            },
+            "packages": {
+              "python": {
+                "constraints": [],
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ],
+                "indexes": [
+                  "https://pypi.org/simple"
+                ],
+                "manager": "uv"
+              },
+              "system": {
+                "apt": []
+              }
+            },
+            "platform": {
+              "architecture": "linux/amd64"
+            },
+            "resources": {
+              "accelerator": "none",
+              "hints": {
+                "cpu": null,
+                "diskGi": null,
+                "memoryGi": null
+              },
+              "sizeClass": "small"
+            }
+          }
+        },
+        "specDigest": "sha256:8562522e28c5912f2e77cbb00a062793af13fcdebfc7f2dbfedcd5716975535d",
+        "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+        "status": "partially_ready",
+        "uid": "01M290VDRSV8E2B3AFMQW9NZXP",
+        "updatedAt": "2026-09-11T19:59:27Z",
+        "validationSummary": {},
+        "version": 3
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M290VDRSV8E2B3AFMQW9NZXP",
+      "status": 200
+    },
+    "get_promoted_version": {
+      "body": {
+        "contractVersion": "sandbox-contract/v1",
+        "createdAt": "2026-09-11T19:59:27Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deprecatedAt": null,
+        "environmentUid": "01M290VDR1AC0ECB3J4JKKZQHW",
+        "etag": "\"106\"",
+        "failureCode": "",
+        "label": "",
+        "lockDigest": "",
+        "optionalVariants": [
+          "e2b",
+          "modal"
+        ],
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedAt": "2026-09-11T19:59:27Z",
+        "promotion": {
+          "acknowledgedUnavailableVariants": [
+            "modal"
+          ],
+          "policyDecisionMade": true,
+          "policyDecisions": [
+            {
+              "artifactUid": "01M290VDRVH5WJB8PNAZ67SHEW",
+              "immutableReference": "123456789012.dkr.ecr.us-east-1.amazonaws.com/environments/u/01j9envperson0000000000000/geo@sha256:8529da1bb5a0adc67a270b262c818a0265c861b70c14defb0ab56f157f45cba7",
+              "policyDecision": {
+                "cves": [],
+                "inputs": {
+                  "digest": "sha256:8529da1bb5a0adc67a270b262c818a0265c861b70c14defb0ab56f157f45cba7",
+                  "scanner": "ecr-enhanced"
+                },
+                "outcome": "pass",
+                "threshold": {
+                  "block": "critical-with-fix"
+                }
+              },
+              "region": "r1",
+              "variant": "datalayer"
+            },
+            {
+              "artifactUid": "01M290VDRVGPRH0N0TXMKXY708",
+              "immutableReference": "e2b-template-8b99ad83e3352824",
+              "policyDecision": null,
+              "region": "r1",
+              "variant": "e2b"
+            }
+          ],
+          "promotedAt": "2026-09-11T19:59:27Z",
+          "promotedBy": "01J9ENVPERSON0000000000000",
+          "unavailableVariants": [
+            "modal"
+          ]
+        },
+        "requiredVariants": [
+          "datalayer"
+        ],
+        "resolvedBases": {},
+        "sourceArchiveDigest": "",
+        "sourceArchiveRef": "",
+        "sourceFormat": "",
+        "sourceType": "packages",
+        "spec": {
+          "apiVersion": "environments.datalayer.io/v1alpha1",
+          "kind": "Environment",
+          "metadata": {
+            "labels": {},
+            "name": "geo",
+            "title": null
+          },
+          "spec": {
+            "base": {
+              "channel": "2026.09",
+              "ref": "datalayer/python-cpu"
+            },
+            "build": {
+              "source": "packages"
+            },
+            "buildSecrets": [],
+            "commands": {
+              "postInstall": []
+            },
+            "compatibility": {
+              "regions": [],
+              "variants": {
+                "optional": [
+                  "e2b",
+                  "modal"
+                ],
+                "required": [
+                  "datalayer"
+                ]
+              }
+            },
+            "contract": "sandbox-contract/v1",
+            "env": {},
+            "files": [],
+            "language": {
+              "name": "python",
+              "version": "3.13"
+            },
+            "packages": {
+              "python": {
+                "constraints": [],
+                "dependencies": [
+                  "geopandas==1.1.1"
+                ],
+                "indexes": [
+                  "https://pypi.org/simple"
+                ],
+                "manager": "uv"
+              },
+              "system": {
+                "apt": []
+              }
+            },
+            "platform": {
+              "architecture": "linux/amd64"
+            },
+            "resources": {
+              "accelerator": "none",
+              "hints": {
+                "cpu": null,
+                "diskGi": null,
+                "memoryGi": null
+              },
+              "sizeClass": "small"
+            }
+          }
+        },
+        "specDigest": "sha256:8562522e28c5912f2e77cbb00a062793af13fcdebfc7f2dbfedcd5716975535d",
+        "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+        "status": "partially_ready",
+        "uid": "01M290VDRSV8E2B3AFMQW9NZXP",
+        "updatedAt": "2026-09-11T19:59:27Z",
+        "validationSummary": {},
+        "version": 3
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environment-versions/01M290VDRSV8E2B3AFMQW9NZXP",
       "status": 200
     },
     "get_version": {
@@ -932,6 +1275,354 @@
       "path": "/api/runtimes/v1/environments",
       "status": 200
     },
+    "list_promoted_versions": {
+      "body": {
+        "nextCursor": null,
+        "versions": [
+          {
+            "contractVersion": "sandbox-contract/v1",
+            "createdAt": "2026-09-11T19:59:27Z",
+            "createdBy": "01J9ENVPERSON0000000000000",
+            "deprecatedAt": null,
+            "environmentUid": "01M290VDR1AC0ECB3J4JKKZQHW",
+            "etag": "\"106\"",
+            "failureCode": "",
+            "label": "",
+            "lockDigest": "",
+            "optionalVariants": [
+              "e2b",
+              "modal"
+            ],
+            "ownerUid": "01J9ENVPERSON0000000000000",
+            "promotedAt": "2026-09-11T19:59:27Z",
+            "promotion": {
+              "acknowledgedUnavailableVariants": [
+                "modal"
+              ],
+              "policyDecisionMade": true,
+              "policyDecisions": [
+                {
+                  "artifactUid": "01M290VDRVH5WJB8PNAZ67SHEW",
+                  "immutableReference": "123456789012.dkr.ecr.us-east-1.amazonaws.com/environments/u/01j9envperson0000000000000/geo@sha256:8529da1bb5a0adc67a270b262c818a0265c861b70c14defb0ab56f157f45cba7",
+                  "policyDecision": {
+                    "cves": [],
+                    "inputs": {
+                      "digest": "sha256:8529da1bb5a0adc67a270b262c818a0265c861b70c14defb0ab56f157f45cba7",
+                      "scanner": "ecr-enhanced"
+                    },
+                    "outcome": "pass",
+                    "threshold": {
+                      "block": "critical-with-fix"
+                    }
+                  },
+                  "region": "r1",
+                  "variant": "datalayer"
+                },
+                {
+                  "artifactUid": "01M290VDRVGPRH0N0TXMKXY708",
+                  "immutableReference": "e2b-template-8b99ad83e3352824",
+                  "policyDecision": null,
+                  "region": "r1",
+                  "variant": "e2b"
+                }
+              ],
+              "promotedAt": "2026-09-11T19:59:27Z",
+              "promotedBy": "01J9ENVPERSON0000000000000",
+              "unavailableVariants": [
+                "modal"
+              ]
+            },
+            "requiredVariants": [
+              "datalayer"
+            ],
+            "resolvedBases": {},
+            "sourceArchiveDigest": "",
+            "sourceArchiveRef": "",
+            "sourceFormat": "",
+            "sourceType": "packages",
+            "spec": {
+              "apiVersion": "environments.datalayer.io/v1alpha1",
+              "kind": "Environment",
+              "metadata": {
+                "labels": {},
+                "name": "geo",
+                "title": null
+              },
+              "spec": {
+                "base": {
+                  "channel": "2026.09",
+                  "ref": "datalayer/python-cpu"
+                },
+                "build": {
+                  "source": "packages"
+                },
+                "buildSecrets": [],
+                "commands": {
+                  "postInstall": []
+                },
+                "compatibility": {
+                  "regions": [],
+                  "variants": {
+                    "optional": [
+                      "e2b",
+                      "modal"
+                    ],
+                    "required": [
+                      "datalayer"
+                    ]
+                  }
+                },
+                "contract": "sandbox-contract/v1",
+                "env": {},
+                "files": [],
+                "language": {
+                  "name": "python",
+                  "version": "3.13"
+                },
+                "packages": {
+                  "python": {
+                    "constraints": [],
+                    "dependencies": [
+                      "geopandas==1.1.1"
+                    ],
+                    "indexes": [
+                      "https://pypi.org/simple"
+                    ],
+                    "manager": "uv"
+                  },
+                  "system": {
+                    "apt": []
+                  }
+                },
+                "platform": {
+                  "architecture": "linux/amd64"
+                },
+                "resources": {
+                  "accelerator": "none",
+                  "hints": {
+                    "cpu": null,
+                    "diskGi": null,
+                    "memoryGi": null
+                  },
+                  "sizeClass": "small"
+                }
+              }
+            },
+            "specDigest": "sha256:8562522e28c5912f2e77cbb00a062793af13fcdebfc7f2dbfedcd5716975535d",
+            "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+            "status": "partially_ready",
+            "uid": "01M290VDRSV8E2B3AFMQW9NZXP",
+            "updatedAt": "2026-09-11T19:59:27Z",
+            "validationSummary": {},
+            "version": 3
+          },
+          {
+            "contractVersion": "sandbox-contract/v1",
+            "createdAt": "2026-09-11T19:59:27Z",
+            "createdBy": "01J9ENVPERSON0000000000000",
+            "deprecatedAt": null,
+            "environmentUid": "01M290VDR1AC0ECB3J4JKKZQHW",
+            "etag": "\"103\"",
+            "failureCode": "",
+            "label": "ready",
+            "lockDigest": "",
+            "optionalVariants": [
+              "e2b"
+            ],
+            "ownerUid": "01J9ENVPERSON0000000000000",
+            "promotedAt": null,
+            "promotion": null,
+            "requiredVariants": [
+              "datalayer"
+            ],
+            "resolvedBases": {},
+            "sourceArchiveDigest": "",
+            "sourceArchiveRef": "",
+            "sourceFormat": "",
+            "sourceType": "packages",
+            "spec": {
+              "apiVersion": "environments.datalayer.io/v1alpha1",
+              "kind": "Environment",
+              "metadata": {
+                "labels": {},
+                "name": "geo",
+                "title": null
+              },
+              "spec": {
+                "base": {
+                  "channel": "2026.09",
+                  "ref": "datalayer/python-cpu"
+                },
+                "build": {
+                  "source": "packages"
+                },
+                "buildSecrets": [],
+                "commands": {
+                  "postInstall": []
+                },
+                "compatibility": {
+                  "regions": [],
+                  "variants": {
+                    "optional": [
+                      "e2b"
+                    ],
+                    "required": [
+                      "datalayer"
+                    ]
+                  }
+                },
+                "contract": "sandbox-contract/v1",
+                "env": {},
+                "files": [],
+                "language": {
+                  "name": "python",
+                  "version": "3.13"
+                },
+                "packages": {
+                  "python": {
+                    "constraints": [],
+                    "dependencies": [
+                      "geopandas==1.1.1"
+                    ],
+                    "indexes": [
+                      "https://pypi.org/simple"
+                    ],
+                    "manager": "uv"
+                  },
+                  "system": {
+                    "apt": []
+                  }
+                },
+                "platform": {
+                  "architecture": "linux/amd64"
+                },
+                "resources": {
+                  "accelerator": "none",
+                  "hints": {
+                    "cpu": null,
+                    "diskGi": null,
+                    "memoryGi": null
+                  },
+                  "sizeClass": "small"
+                }
+              }
+            },
+            "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+            "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+            "status": "ready",
+            "uid": "01M290VDRETZKB6W02NWA4W0NR",
+            "updatedAt": "2026-09-11T19:59:27Z",
+            "validationSummary": {},
+            "version": 2
+          },
+          {
+            "contractVersion": "sandbox-contract/v1",
+            "createdAt": "2026-09-11T19:59:27Z",
+            "createdBy": "01J9ENVPERSON0000000000000",
+            "deprecatedAt": null,
+            "environmentUid": "01M290VDR1AC0ECB3J4JKKZQHW",
+            "etag": "\"101\"",
+            "failureCode": "",
+            "label": "",
+            "lockDigest": "",
+            "optionalVariants": [
+              "e2b"
+            ],
+            "ownerUid": "01J9ENVPERSON0000000000000",
+            "promotedAt": null,
+            "promotion": null,
+            "requiredVariants": [
+              "datalayer"
+            ],
+            "resolvedBases": {},
+            "sourceArchiveDigest": "",
+            "sourceArchiveRef": "",
+            "sourceFormat": "",
+            "sourceType": "packages",
+            "spec": {
+              "apiVersion": "environments.datalayer.io/v1alpha1",
+              "kind": "Environment",
+              "metadata": {
+                "labels": {},
+                "name": "geo",
+                "title": null
+              },
+              "spec": {
+                "base": {
+                  "channel": "2026.09",
+                  "ref": "datalayer/python-cpu"
+                },
+                "build": {
+                  "source": "packages"
+                },
+                "buildSecrets": [],
+                "commands": {
+                  "postInstall": []
+                },
+                "compatibility": {
+                  "regions": [],
+                  "variants": {
+                    "optional": [
+                      "e2b"
+                    ],
+                    "required": [
+                      "datalayer"
+                    ]
+                  }
+                },
+                "contract": "sandbox-contract/v1",
+                "env": {},
+                "files": [],
+                "language": {
+                  "name": "python",
+                  "version": "3.13"
+                },
+                "packages": {
+                  "python": {
+                    "constraints": [],
+                    "dependencies": [
+                      "geopandas==1.1.1"
+                    ],
+                    "indexes": [
+                      "https://pypi.org/simple"
+                    ],
+                    "manager": "uv"
+                  },
+                  "system": {
+                    "apt": []
+                  }
+                },
+                "platform": {
+                  "architecture": "linux/amd64"
+                },
+                "resources": {
+                  "accelerator": "none",
+                  "hints": {
+                    "cpu": null,
+                    "diskGi": null,
+                    "memoryGi": null
+                  },
+                  "sizeClass": "small"
+                }
+              }
+            },
+            "specDigest": "sha256:aa5ac32d1007e94baa7a85ead37bf635f9a4c0bd492072796b83f72610bc406b",
+            "specSchemaVersion": "environments.datalayer.io/v1alpha1",
+            "status": "draft",
+            "uid": "01M290VDRB56YSR56CTWF673GX",
+            "updatedAt": "2026-09-11T19:59:27Z",
+            "validationSummary": {},
+            "version": 1
+          }
+        ]
+      },
+      "headers": null,
+      "json": null,
+      "method": "GET",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M290VDR1AC0ECB3J4JKKZQHW/versions",
+      "status": 200
+    },
     "list_versions": {
       "body": {
         "nextCursor": "WyIyIiwgIjAxTTI4UE0zODJXODY0MEZYVk0yMkQ3Mlo3OjIiXQ==",
@@ -1045,6 +1736,38 @@
       "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7/versions",
       "status": 200
     },
+    "promote_partially_ready_version": {
+      "body": {
+        "archivedAt": null,
+        "createdAt": "2026-09-11T19:59:27Z",
+        "createdBy": "01J9ENVPERSON0000000000000",
+        "deletedAt": null,
+        "description": "",
+        "etag": "\"102\"",
+        "name": "geo",
+        "origin": "user",
+        "ownerType": "user",
+        "ownerUid": "01J9ENVPERSON0000000000000",
+        "promotedVersionUid": "01M290VDRSV8E2B3AFMQW9NZXP",
+        "title": "geo",
+        "uid": "01M290VDR1AC0ECB3J4JKKZQHW",
+        "updatedAt": "2026-09-11T19:59:27Z",
+        "visibility": "private"
+      },
+      "headers": {
+        "If-Match": "\"101\""
+      },
+      "json": {
+        "acknowledgeUnavailableVariants": [
+          "modal"
+        ],
+        "versionUid": "01M290VDRSV8E2B3AFMQW9NZXP"
+      },
+      "method": "PUT",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M290VDR1AC0ECB3J4JKKZQHW/promoted-version",
+      "status": 200
+    },
     "promote_version": {
       "body": {
         "archivedAt": null,
@@ -1074,6 +1797,35 @@
       "params": null,
       "path": "/api/runtimes/v1/environments/01M28PM382W8640FXVM22D72Z7/promoted-version",
       "status": 200
+    },
+    "promote_version_wrong_acknowledgement": {
+      "body": {
+        "code": "DL_ENV_CONFLICT",
+        "correlationId": "01M290VDS08SEHRWYZG44JHXKW",
+        "detail": {
+          "acknowledgedUnavailableVariants": [
+            "e2b"
+          ],
+          "status": "partially_ready",
+          "unavailableVariants": [
+            "modal"
+          ]
+        },
+        "message": "The acknowledgement names e2b, and the unavailable variants of this version are modal"
+      },
+      "headers": {
+        "If-Match": "\"101\""
+      },
+      "json": {
+        "acknowledgeUnavailableVariants": [
+          "e2b"
+        ],
+        "versionUid": "01M290VDRSV8E2B3AFMQW9NZXP"
+      },
+      "method": "PUT",
+      "params": null,
+      "path": "/api/runtimes/v1/environments/01M290VDR1AC0ECB3J4JKKZQHW/promoted-version",
+      "status": 409
     },
     "read_build_log": {
       "body": {
@@ -1191,14 +1943,36 @@
     },
     "trial_version": {
       "body": {
-        "detail": "A trial sandbox is PLAN_ENV.md E1-14, which is not built yet."
+        "message": "Runtime created successfully",
+        "runtime": {
+          "environment": {
+            "artifact": {
+              "contract_version": "sandbox-contract/v1",
+              "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "immutable_reference": "123456789012.dkr.ecr.us-east-1.amazonaws.com/environments/u/01j9envperson0000000000000/geo@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "region": "r1",
+              "size_class": "small",
+              "uid": "01M290VDRNMWH0Q5W2YSC8VRW3",
+              "variant": "datalayer"
+            },
+            "contract_version": "sandbox-contract/v1",
+            "name": "01M290VDR1AC0ECB3J4JKKZQHW",
+            "uid": "01M290VDR1AC0ECB3J4JKKZQHW",
+            "version": 2,
+            "version_uid": "01M290VDRETZKB6W02NWA4W0NR"
+          },
+          "runtime_name": "01runtime"
+        },
+        "success": true
       },
       "headers": null,
-      "json": null,
+      "json": {
+        "creditsLimit": 10
+      },
       "method": "POST",
       "params": null,
-      "path": "/api/runtimes/v1/environment-versions/01M28PM38NVPEFBTDC1JVFANQS/trial",
-      "status": 501
+      "path": "/api/runtimes/v1/environment-versions/01M290VDRETZKB6W02NWA4W0NR/trial",
+      "status": 200
     },
     "unpromote_version": {
       "body": {
@@ -1418,5 +2192,5 @@
       "status": 200
     }
   },
-  "source": "What each E1-01 route of Runtimes was sent and answered (PLAN_ENV.md, section 9), recorded from the in-memory app of services runtimes/datalayer_runtimes/tests/test_environments_registry.py at services b4181e3f. The build log calls (create_followed_build, follow_build_log, follow_build_log_missing, get_followed_build, read_followed_build_log) were recorded from the same app at services 07aff15c, with E1-16's routes: a build on the datalayer variant, six chunks appended through POST /internal/environment-builds/{uid}/logs with durable's key, one of them echoing credentials the route redacted, then the build marked succeeded. follow_build_log's body is the Server-Sent Events stream in environments_build_logs_recorded.sse, byte for byte."
+  "source": "What each E1-01 route of Runtimes was sent and answered (PLAN_ENV.md, section 9), recorded from the in-memory app of services runtimes/datalayer_runtimes/tests/test_environments_registry.py at services b4181e3f. The build log calls (create_followed_build, follow_build_log, follow_build_log_missing, get_followed_build, read_followed_build_log) were recorded from the same app at services 07aff15c, with E1-16's routes: a build on the datalayer variant, six chunks appended through POST /internal/environment-builds/{uid}/logs with durable's key, one of them echoing credentials the route redacted, then the build marked succeeded. follow_build_log's body is the Server-Sent Events stream in environments_build_logs_recorded.sse, byte for byte. The trial, promotion and deletion calls (delete_environment_running, delete_environment_unavailable, get_environment_before_deletion, get_environment_before_promotion, get_partially_ready_version, get_promoted_version, list_promoted_versions, promote_partially_ready_version, promote_version_wrong_acknowledgement, trial_version) were recorded from the same app at services 98272ef2 with code-sandboxes f2002a65, with E1-14's and E1-15's routes, trial_version replacing the 501 recorded before them: the ready version tried before it was promoted, asking for 10 credits, launched from its Datalayer artifact on r1 through the app's stub Operator; a partially ready version whose modal variant had no artifact, promoted with the wrong acknowledgement and then the right one, and read back with its promotion record, the policy decision its datalayer artifact carried copied onto it; then, none promoted, the environment's deletion refused while the Operator listed the trial's runtime as running, and while the Operator could not be read."
 }

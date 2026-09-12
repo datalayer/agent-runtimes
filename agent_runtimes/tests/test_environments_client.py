@@ -9,6 +9,9 @@ client whose ``_fetch`` records each request and replays those answers is held
 to the request each route takes, and its typed answers to the canonical models
 of ``code_sandboxes.environments``. The build log calls were recorded the same
 way from E1-16's routes; ``test_envs_command.py`` replays the stream itself.
+The trial, the promotion with its record and its refusal, and the deletion a
+running runtime refuses were recorded from E1-14's and E1-15's routes, on an
+environment of their own.
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any, Iterable, Iterator
 
 import pytest
 import requests
@@ -37,8 +40,11 @@ from agent_runtimes.models.environment import (
     EnvironmentBuildLogChunk,
     EnvironmentBuildLogPage,
     EnvironmentBuildRecord,
+    EnvironmentLiveRuntime,
+    EnvironmentPromotionRecord,
     EnvironmentRecord,
     EnvironmentsPage,
+    EnvironmentTrial,
     EnvironmentValidationReport,
     EnvironmentVersionRecord,
 )
@@ -63,6 +69,12 @@ QUEUED = RECORDED["create_builds"]["body"]["builds"][0]["uid"]
 FAILED = uid_in("retry_build", -2)
 ARCHIVED = uid_in("archive_environment", -2)
 DELETED = uid_in("delete_environment")
+
+#: E1-14's and E1-15's routes, recorded on an environment of their own: its
+#: version 2 tried, its version 3 partially ready and promoted.
+TRIED = uid_in("trial_version", -2)
+PARTIAL = RECORDED["get_promoted_version"]["body"]["uid"]
+PROMOTED_ENV = RECORDED["promote_partially_ready_version"]["body"]["uid"]
 
 
 class _Urls:
@@ -297,6 +309,37 @@ def test_delete_environment_answers_nothing() -> None:
     assert_sent(client.calls[0], record)
 
 
+def test_a_deletion_a_running_runtime_blocks_raises_the_409_naming_it() -> None:
+    client, record = replaying("delete_environment_running")
+    with pytest.raises(EnvironmentsRequestError) as raised:
+        client.delete_environment(PROMOTED_ENV, if_match=record["headers"]["If-Match"])
+    assert_sent(client.calls[0], record)
+    error = raised.value
+    assert (error.status, error.code) == (409, "DL_ENV_CONFLICT")
+    # The runtime the trial launched, on the version it tried.
+    trial = RECORDED["trial_version"]["body"]["runtime"]
+    (runtime,) = error.runtimes
+    assert isinstance(runtime, EnvironmentLiveRuntime)
+    assert (runtime.runtime_uid, runtime.version_uid, runtime.digest) == (
+        trial["runtime_name"],
+        TRIED,
+        trial["environment"]["artifact"]["digest"],
+    )
+    assert error.unavailable_variants is None
+
+
+def test_a_deletion_the_operator_cannot_confirm_raises_the_503() -> None:
+    client, record = replaying("delete_environment_unavailable")
+    with pytest.raises(EnvironmentsRequestError) as raised:
+        client.delete_environment(PROMOTED_ENV, if_match=record["headers"]["If-Match"])
+    assert_sent(client.calls[0], record)
+    assert (raised.value.status, raised.value.code, raised.value.runtimes) == (
+        503,
+        "DL_ENV_UNAVAILABLE",
+        [],
+    )
+
+
 def test_archive_environment() -> None:
     client, record = replaying("archive_environment")
     environment = client.archive_environment(ARCHIVED)
@@ -322,6 +365,39 @@ def test_promote_a_version_and_then_none() -> None:
     assert_sent(client.calls[0], record)
     assert client.calls[0]["json"] == {"versionUid": None}
     assert none.promoted_version_uid is None
+
+
+def test_a_wrong_acknowledgement_raises_the_409_naming_the_unavailable_variants() -> None:
+    client, record = replaying("promote_version_wrong_acknowledgement")
+    with pytest.raises(EnvironmentsRequestError) as raised:
+        client.promote_environment_version(
+            PROMOTED_ENV,
+            PARTIAL,
+            if_match=record["headers"]["If-Match"],
+            acknowledge_unavailable_variants=["e2b"],
+        )
+    assert_sent(client.calls[0], record)
+    error = raised.value
+    assert (error.status, error.code) == (409, "DL_ENV_CONFLICT")
+    assert (error.unavailable_variants, error.acknowledged_unavailable_variants) == (
+        ["modal"],
+        ["e2b"],
+    )
+    assert error.runtimes == []
+
+
+def test_a_partially_ready_version_is_promoted_with_its_unavailable_variants_named() -> (
+    None
+):
+    client, record = replaying("promote_partially_ready_version")
+    promoted = client.promote_environment_version(
+        PROMOTED_ENV,
+        PARTIAL,
+        if_match=record["headers"]["If-Match"],
+        acknowledge_unavailable_variants=["modal"],
+    )
+    assert_sent(client.calls[0], record)
+    assert promoted.promoted_version_uid == PARTIAL
 
 
 # -- versions ---------------------------------------------------------------------
@@ -397,6 +473,55 @@ def test_get_version() -> None:
     ]
 
 
+def test_a_promoted_version_carries_its_promotion_record() -> None:
+    client, record = replaying("get_promoted_version")
+    version = client.get_environment_version(PARTIAL)
+    assert_sent(client.calls[0], record)
+    assert version.status is VersionState("partially_ready")
+    promotion = version.promotion
+    assert isinstance(promotion, EnvironmentPromotionRecord)
+    # The person who made the version promoted it, when the version says.
+    assert (promotion.promoted_at, promotion.promoted_by) == (
+        version.promoted_at,
+        version.created_by,
+    )
+    assert (
+        promotion.unavailable_variants,
+        promotion.acknowledged_unavailable_variants,
+    ) == (["modal"], ["modal"])
+    assert promotion.policy_decision_made is True
+    decisions = {item.variant: item for item in promotion.policy_decisions}
+    assert sorted(decisions) == ["datalayer", "e2b"]
+    datalayer = decisions["datalayer"].policy_decision
+    assert datalayer is not None and datalayer["outcome"] == "pass"
+    assert decisions["datalayer"].immutable_reference.endswith(
+        "@" + datalayer["inputs"]["digest"]
+    )
+    # E1-08 made no decision for the e2b artifact: the record says so.
+    assert decisions["e2b"].policy_decision is None
+    assert promotion.model_dump(by_alias=True, mode="json") == record["body"]["promotion"]
+
+
+@pytest.mark.parametrize("name", ["get_partially_ready_version", "get_version"])
+def test_a_version_never_promoted_has_no_promotion_record(name: str) -> None:
+    client, record = replaying(name)
+    version = client.get_environment_version(uid_in(name))
+    assert_sent(client.calls[0], record)
+    # A null record, or none at all from a Runtimes before E1-15.
+    assert version.promotion is None and version.promoted_at is None
+
+
+def test_listed_versions_carry_their_promotion_records() -> None:
+    client, record = replaying("list_promoted_versions")
+    page = client.list_environment_versions(PROMOTED_ENV)
+    assert_sent(client.calls[0], record)
+    assert [(item.version, item.promotion is not None) for item in page.items] == [
+        (3, True),
+        (2, False),
+        (1, False),
+    ]
+
+
 def test_update_version() -> None:
     client, record = replaying("update_version")
     version = client.update_environment_version(
@@ -417,29 +542,39 @@ def test_validate_version_answers_capability_reports() -> None:
     assert variant.findings[0].code == "DL_ENV_CAPABILITY_UNSUPPORTED"
 
 
-@pytest.mark.parametrize(
-    ("name", "call", "item"),
-    [
-        (
-            "resolve_version",
-            lambda client: client.resolve_environment_version(DRAFT),
-            "E1-04",
-        ),
-        (
-            "trial_version",
-            lambda client: client.trial_environment_version(READY),
-            "E1-14",
-        ),
-    ],
-)
-def test_the_routes_not_built_yet_raise_their_501(
-    name: str, call: Callable[[Any], Any], item: str
-) -> None:
-    client, record = replaying(name)
+def test_resolve_raises_its_501_until_e1_04() -> None:
+    client, record = replaying("resolve_version")
     with pytest.raises(EnvironmentsRequestError) as raised:
-        call(client)
+        client.resolve_environment_version(DRAFT)
     assert_sent(client.calls[0], record)
-    assert raised.value.status == 501 and item in str(raised.value)
+    assert raised.value.status == 501 and "E1-04" in str(raised.value)
+
+
+def test_a_trial_launches_the_version_pinned_and_answers_its_runtime() -> None:
+    client, record = replaying("trial_version")
+    trial = client.trial_environment_version(TRIED, credits_limit=10)
+    assert_sent(client.calls[0], record)
+    assert isinstance(trial, EnvironmentTrial) and trial.success is True
+    environment = trial.runtime.environment
+    assert trial.runtime.runtime_name == record["body"]["runtime"]["runtime_name"]
+    assert (environment.version_uid, environment.version) == (TRIED, 2)
+    assert environment.uid == environment.name
+    artifact = environment.artifact
+    assert artifact is not None
+    assert (artifact.variant, artifact.region, artifact.contract_version) == (
+        "datalayer",
+        "r1",
+        environment.contract_version,
+    )
+    assert artifact.immutable_reference.endswith("@" + artifact.digest)
+    # Written back, the answer is what the service gave: no default is added.
+    assert trial.model_dump(mode="json", exclude_unset=True) == record["body"]
+
+
+def test_a_trial_without_a_credits_limit_leaves_the_limit_to_the_service() -> None:
+    client, _ = replaying("trial_version")
+    client.trial_environment_version(TRIED)
+    assert client.calls[0]["json"] == {}
 
 
 def test_deprecate_version() -> None:

@@ -49,11 +49,13 @@ import type {
   IEnvironmentRecord,
   IEnvironmentsError,
   IEnvironmentsPageQuery,
+  IEnvironmentTrial,
   IEnvironmentValidationReport,
   IEnvironmentVersionRecord,
   IEnvironmentVersionsPage,
   IListEnvironmentsQuery,
   IPromoteEnvironmentVersionRequest,
+  ITrialEnvironmentVersionRequest,
   IUpdateEnvironmentRequest,
   IUpdateEnvironmentVersionRequest,
   IValidateEnvironmentVersionRequest,
@@ -281,8 +283,12 @@ export const updateEnvironment = async (
 };
 
 /**
- * Delete an environment, softly; refused with 409 while a version is promoted
- * or an artifact is referenced.
+ * Delete an environment, softly. Refused with 409 `DL_ENV_CONFLICT` while a
+ * version is promoted, an artifact is referenced, or a runtime still runs one
+ * of its artifacts, whoever launched it: the refusal's `detail` is an
+ * `IEnvironmentDeletionConflict`, whose `runtimes` name each one (E1-15).
+ * Refused with 503 `DL_ENV_UNAVAILABLE` when the service cannot read which
+ * runtimes run it; nothing is deleted then either.
  * @param token - Authentication token
  * @param environmentUid - The environment's uid
  * @param options - If-Match, correlation id and abort signal
@@ -335,7 +341,15 @@ export const archiveEnvironment = async (
 
 /**
  * Promote a version, or none with `versionUid: null`; a rollback is the same
- * call with an older version.
+ * call with an older version, and builds nothing (E1-15).
+ *
+ * A partially ready version is promoted only when
+ * `acknowledgeUnavailableVariants` names exactly its unavailable variants:
+ * otherwise 409 `DL_ENV_CONFLICT`, whose `detail` is an
+ * `IEnvironmentPromotionConflict` naming them. The promotion is recorded on
+ * the version, as its `promotion`. Asking again for the version already
+ * promoted writes nothing and answers the environment, even with a stale
+ * `If-Match`; asking for another with a stale one is refused with 412.
  * @param token - Authentication token
  * @param environmentUid - The environment's uid
  * @param request - `{versionUid, acknowledgeUnavailableVariants}`
@@ -626,23 +640,30 @@ export const listEnvironmentArtifacts = async (
 };
 
 /**
- * Launch a trial sandbox of a version before it is promoted. The service
- * answers 501 until PLAN_ENV.md E1-14 builds trials, whose answer this
- * resolves to.
+ * Launch a trial sandbox of a ready or partially ready version, before it is
+ * promoted (E1-14).
+ *
+ * Only an owner tries a version. The runtime is launched as `POST /runtimes`
+ * launches one, with the version pinned, a given name saying which version it
+ * tries, and a credits limit no higher than the service's cap. A draft, a
+ * failed or a deprecated version is refused with 409 `DL_ENV_CONFLICT`, and a
+ * version with no artifact on the plane with 422 `DL_ENV_ARTIFACT_MISSING`.
  * @param token - Authentication token
  * @param versionUid - The version's uid
+ * @param request - `{creditsLimit}`, lowered to the service's cap when higher
  * @param options - Correlation id and abort signal
  * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
- * @returns Promise resolving to the service's answer
+ * @returns Promise resolving to the runtime launched, its environment naming the version and artifact
  */
 export const trialEnvironmentVersion = async (
   token: string,
   versionUid: string,
+  request: ITrialEnvironmentVersionRequest = {},
   options: IEnvironmentsRequestOptions = {},
   baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
-): Promise<unknown> => {
+): Promise<IEnvironmentTrial> => {
   validateToken(token);
-  return send<unknown>(
+  return send<IEnvironmentTrial>(
     token,
     'POST',
     registryUrl(
@@ -650,6 +671,7 @@ export const trialEnvironmentVersion = async (
       `/environment-versions/${segment(versionUid, 'Version UID')}/trial`,
     ),
     options,
+    request,
   );
 };
 

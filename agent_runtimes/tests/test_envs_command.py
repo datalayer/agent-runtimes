@@ -6,8 +6,10 @@
 The fake is ``AgentClient`` over a fake ``_fetch``. Each route answers what
 E1-01's routes answered in ``environments_registry_recorded.json``, so a
 command is held to the requests its client calls really send, among them the
-``If-Match`` taken from the record it has just read. The routes E1-04 and
-E1-14 have not built answer their recorded 501s.
+``If-Match`` taken from the record it has just read. ``resolve``, which E1-04
+has not built, answers its recorded 501. ``try``, a promotion's record and its
+refusal, and ``rm`` refused while a runtime runs the environment answer what
+E1-14's and E1-15's routes answered, on an environment of their own.
 
 A build's log is what E1-16's routes answered for a build of its own, recorded
 from Runtimes' in-memory app (see the JSON's ``source``): the stream
@@ -73,6 +75,17 @@ DRAFT_UID = DRAFT["uid"]
 READY_UID = READY["uid"]
 BUILD_UID = QUEUED["uid"]
 
+#: E1-14's and E1-15's routes, recorded on an environment of their own.
+TRIAL = RECORDED["trial_version"]
+#: Its version 2, tried before it was ever promoted.
+TRIED_UID = TRIAL["path"].split("/")[-2]
+#: Its version 3, partially ready, as read before its promotion.
+PARTIAL = RECORDED["get_partially_ready_version"]["body"]
+#: The same version, with the record of its promotion.
+PROMOTED = RECORDED["get_promoted_version"]["body"]
+PARTIAL_UID = PARTIAL["uid"]
+GEO_UID = PARTIAL["environmentUid"]
+
 COMMANDS = {
     "ls",
     "create",
@@ -89,6 +102,7 @@ COMMANDS = {
     "rollback",
     "deprecate",
     "archive",
+    "rm",
 }
 
 #: What the recorded build wrote, a text per chunk, as the route stored it.
@@ -459,6 +473,56 @@ def test_versions_reads_every_page_and_marks_the_promoted_version(
     ]
 
 
+def lines_with(output: str, *words: str) -> list[str]:
+    """The lines of a rendered table holding every one of these words."""
+    return [line for line in output.splitlines() if all(word in line for word in words)]
+
+
+def test_show_a_version_renders_its_promotion_record(registry: Registry) -> None:
+    registry.on(
+        "GET", f"/environments/{GEO_UID}/versions", answered("list_promoted_versions")
+    )
+    promotion = PROMOTED["promotion"]
+    by_variant = {item["variant"]: item for item in promotion["policyDecisions"]}
+
+    result = invoke("show", f"{GEO_UID}@3")
+    assert result.exit_code == 0, result.output
+    out = result.stdout
+    assert lines_with(out, "Promoted by", promotion["promotedBy"])
+    assert lines_with(out, "Unavailable variants", "modal")
+    assert lines_with(out, "Acknowledged", "modal")
+    assert lines_with(out, "Policy decision ", " made ")
+    datalayer, e2b = by_variant["datalayer"], by_variant["e2b"]
+    assert lines_with(out, "datalayer", "r1", datalayer["artifactUid"], "pass")
+    assert lines_with(out, "e2b", "r1", e2b["artifactUid"], "none made")
+    assert datalayer["immutableReference"] in out
+
+    as_json = json.loads(invoke("show", f"{GEO_UID}@3", "-o", "json").stdout)
+    assert as_json["promotion"] == promotion
+
+    # The version tried and never promoted has no record to render.
+    never = invoke("show", f"{GEO_UID}@2")
+    assert never.exit_code == 0, never.output
+    assert TRIED_UID in never.stdout and "Promotion" not in never.stdout
+
+
+def test_versions_renders_each_versions_last_promotion(registry: Registry) -> None:
+    registry.on(
+        "GET", f"/environments/{GEO_UID}", answered("promote_partially_ready_version")
+    )
+    registry.on(
+        "GET", f"/environments/{GEO_UID}/versions", answered("list_promoted_versions")
+    )
+    promotion = PROMOTED["promotion"]
+    result = invoke("versions", GEO_UID)
+    assert result.exit_code == 0, result.output
+    (promoted,) = lines_with(result.stdout, "3 (promoted)")
+    assert promotion["promotedAt"] in promoted
+    assert f"by {promotion['promotedBy']}, acknowledging modal" in promoted
+    (tried,) = lines_with(result.stdout, TRIED_UID)
+    assert tried.rstrip(" │").endswith("-")
+
+
 # -- edit -----------------------------------------------------------------------------------
 
 
@@ -574,44 +638,81 @@ def test_validate_exits_0_when_every_variant_can_build(registry: Registry) -> No
     assert call["json"] == {}
 
 
-@pytest.mark.parametrize(
-    ("command", "route", "recorded", "item"),
-    [
-        ("resolve", "resolve", "resolve_version", "E1-04"),
-        ("try", "trial", "trial_version", "E1-14"),
-    ],
-)
-def test_resolve_and_try_print_their_501_until_the_items_land(
-    registry: Registry, command: str, route: str, recorded: str, item: str
-) -> None:
+def test_resolve_prints_its_501_until_e1_04_lands(registry: Registry) -> None:
     registry.on(
-        "POST", f"/environment-versions/{READY_UID}/{route}", answered(recorded)
+        "POST",
+        f"/environment-versions/{READY_UID}/resolve",
+        answered("resolve_version"),
     )
-    result = invoke(command, READY_UID)
+    result = invoke("resolve", READY_UID)
     assert result.exit_code == 1
-    assert result.stderr.startswith("HTTP 501: ") and item in result.stderr
+    assert result.stderr.startswith("HTTP 501: ") and "E1-04" in result.stderr
 
-    as_yaml = invoke(command, READY_UID, "-o", "yaml")
+    as_yaml = invoke("resolve", READY_UID, "-o", "yaml")
     assert as_yaml.exit_code == 1
     assert yaml.safe_load(as_yaml.stderr)["error"]["status"] == 501
 
 
-@pytest.mark.parametrize(
-    ("command", "route"), [("resolve", "resolve"), ("try", "trial")]
-)
-def test_resolve_and_try_print_what_the_service_answers(
-    registry: Registry, command: str, route: str
-) -> None:
+def test_resolve_prints_what_the_service_answers(registry: Registry) -> None:
     registry.on(
         "GET", f"/environments/{ENV_UID}/versions", ok({"versions": [READY, DRAFT]})
     )
     answer = {"versionUid": READY_UID, "status": "accepted"}
-    registry.on("POST", f"/environment-versions/{READY_UID}/{route}", ok(answer))
-    result = invoke(command, f"{ENV_UID}@2", "-o", "json")
+    registry.on("POST", f"/environment-versions/{READY_UID}/resolve", ok(answer))
+    result = invoke("resolve", f"{ENV_UID}@2", "-o", "json")
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout) == answer
-    table = invoke(command, READY_UID)
+    table = invoke("resolve", READY_UID)
     assert table.exit_code == 0 and "accepted" in table.stdout
+
+
+def test_try_sends_its_credits_limit_and_renders_the_runtime_launched(
+    registry: Registry,
+) -> None:
+    trial_route = f"/environment-versions/{TRIED_UID}/trial"
+    registry.on("POST", trial_route, answered("trial_version"))
+    runtime = TRIAL["body"]["runtime"]
+    artifact = runtime["environment"]["artifact"]
+
+    table = invoke("try", TRIED_UID, "--credits-limit", "10")
+    assert table.exit_code == 0, table.output
+    out = table.stdout
+    assert lines_with(out, "Runtime", runtime["runtime_name"])
+    assert lines_with(out, "Version", f"2 ({TRIED_UID})")
+    assert lines_with(out, "Variant", "datalayer on r1")
+    assert lines_with(out, "Artifact", artifact["uid"])
+    assert lines_with(out, "Reference", artifact["immutable_reference"])
+    assert lines_with(out, "Contract", artifact["contract_version"])
+    (sent,) = registry.sent("POST", trial_route)
+    assert sent["json"] == TRIAL["json"] == {"creditsLimit": 10}
+
+    # JSON is the answer as the service gave it; no limit leaves it to the service.
+    as_json = invoke("try", TRIED_UID, "-o", "json")
+    assert as_json.exit_code == 0, as_json.output
+    assert json.loads(as_json.stdout) == TRIAL["body"]
+    assert registry.sent("POST", trial_route)[1]["json"] == {}
+
+
+def test_try_exits_1_when_the_service_started_no_runtime(registry: Registry) -> None:
+    # The recorded answer, as `POST /runtimes` passes on an Operator that started none.
+    runtime = {
+        "reason": "no_capacity",
+        "retry_after_seconds": 30,
+        "environment": TRIAL["body"]["runtime"]["environment"],
+    }
+    none = record(
+        TRIAL["body"],
+        success=False,
+        message="Runtime could not be created",
+        runtime=runtime,
+    )
+    registry.on("POST", f"/environment-versions/{TRIED_UID}/trial", ok(none))
+    result = invoke("try", TRIED_UID)
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert result.stderr.strip() == (
+        "No trial runtime was started: Runtime could not be created (no_capacity)"
+    )
 
 
 # -- diff -------------------------------------------------------------------------------------
@@ -1008,6 +1109,47 @@ def test_promote_prints_the_412_when_the_environment_changed(
     assert put["json"] == {"versionUid": READY_UID}
 
 
+def test_promote_prints_the_unavailable_variants_a_wrong_acknowledgement_missed(
+    registry: Registry,
+) -> None:
+    wrong = RECORDED["promote_version_wrong_acknowledgement"]
+    right = RECORDED["promote_partially_ready_version"]
+    route = f"/environments/{GEO_UID}/promoted-version"
+    registry.on(
+        "GET",
+        f"/environment-versions/{PARTIAL_UID}",
+        answered("get_partially_ready_version"),
+    )
+    registry.on(
+        "GET", f"/environments/{GEO_UID}", answered("get_environment_before_promotion")
+    )
+    registry.on("PUT", route, answered("promote_version_wrong_acknowledgement"))
+
+    refused = invoke("promote", PARTIAL_UID, "--acknowledge", "e2b")
+    assert refused.exit_code == 1
+    assert refused.stderr.splitlines() == [
+        f"DL_ENV_CONFLICT: {wrong['body']['message']}",
+        "  unavailable variants: modal",
+        "  acknowledged: e2b",
+        f"  correlation id: {wrong['body']['correlationId']}",
+    ]
+    (put,) = registry.sent("PUT", route)
+    assert (put["headers"]["If-Match"], put["json"]) == (
+        wrong["headers"]["If-Match"],
+        wrong["json"],
+    )
+
+    registry.on("PUT", route, answered("promote_partially_ready_version"))
+    promoted = invoke("promote", PARTIAL_UID, "--acknowledge", "modal")
+    assert promoted.exit_code == 0, promoted.output
+    assert "Version 3 of geo is promoted." in promoted.stdout
+    put = registry.sent("PUT", route)[-1]
+    assert (put["headers"]["If-Match"], put["json"]) == (
+        right["headers"]["If-Match"],
+        right["json"],
+    )
+
+
 def history(*states: str) -> list[dict[str, Any]]:
     """Versions newest first, the last state being version 1's."""
     count = len(states)
@@ -1110,3 +1252,56 @@ def test_archive_sends_the_environments_etag_it_just_read(registry: Registry) ->
     assert "Archived" in result.stdout and archived["archivedAt"] in result.stdout
     (post,) = registry.sent("POST", f"/environments/{uid}/archive")
     assert post["headers"]["If-Match"] == '"105"'
+
+
+# -- rm ------------------------------------------------------------------------------------------
+
+
+def test_rm_deletes_with_the_etag_it_just_read(registry: Registry) -> None:
+    read = RECORDED["get_environment_before_deletion"]["body"]
+    registry.on("GET", f"/environments/{GEO_UID}", ok(read))
+    registry.on("DELETE", f"/environments/{GEO_UID}", answered("delete_environment"))
+    result = invoke("rm", GEO_UID)
+    assert result.exit_code == 0, result.output
+    assert result.stdout.strip() == f"geo ({GEO_UID}) is deleted."
+    (delete,) = registry.sent("DELETE", f"/environments/{GEO_UID}")
+    assert delete["headers"]["If-Match"] == read["etag"]
+
+    as_json = json.loads(invoke("rm", GEO_UID, "-o", "json").stdout)
+    assert as_json == {"uid": GEO_UID, "name": "geo", "deleted": True}
+
+
+def test_rm_names_each_runtime_that_blocks_the_deletion(registry: Registry) -> None:
+    running = RECORDED["delete_environment_running"]
+    route = f"/environments/{GEO_UID}"
+    registry.on("GET", route, answered("get_environment_before_deletion"))
+    registry.on("DELETE", route, answered("delete_environment_running"))
+
+    result = invoke("rm", GEO_UID)
+    assert result.exit_code == 1
+    (runtime,) = running["body"]["detail"]["runtimes"]
+    assert result.stderr.splitlines() == [
+        f"DL_ENV_CONFLICT: {running['body']['message']}",
+        f"  runtime {runtime['runtimeUid']} runs version {runtime['versionUid']} "
+        f"(sha256:{runtime['digest'][len('sha256:') :][:12]})",
+        f"  correlation id: {running['body']['correlationId']}",
+    ]
+    (delete,) = registry.sent("DELETE", route)
+    assert delete["headers"]["If-Match"] == running["headers"]["If-Match"]
+
+    as_json = invoke("rm", GEO_UID, "-o", "json")
+    assert as_json.exit_code == 1
+    assert json.loads(as_json.stderr)["error"]["detail"] == running["body"]["detail"]
+
+
+def test_rm_prints_the_503_when_the_runtimes_cannot_be_read(registry: Registry) -> None:
+    unavailable = RECORDED["delete_environment_unavailable"]["body"]
+    route = f"/environments/{GEO_UID}"
+    registry.on("GET", route, answered("get_environment_before_deletion"))
+    registry.on("DELETE", route, answered("delete_environment_unavailable"))
+    result = invoke("rm", GEO_UID)
+    assert result.exit_code == 1
+    assert result.stderr.splitlines() == [
+        f"DL_ENV_UNAVAILABLE: {unavailable['message']}",
+        f"  correlation id: {unavailable['correlationId']}",
+    ]

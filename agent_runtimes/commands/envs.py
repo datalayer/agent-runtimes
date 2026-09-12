@@ -8,7 +8,7 @@ Environment commands for Datalayer CLI.
 commands drive the registry of user environments (PLAN_ENV.md, section 9,
 E1-20): create one from a spec file, read it and its versions, edit, validate,
 resolve, compare two versions' locks, build and follow the log, try, promote,
-roll back, deprecate and archive. Every command takes ``--output
+roll back, deprecate, archive and delete. Every command takes ``--output
 table|json|yaml``.
 
 An environment is named by its uid or by ``<account>/<name>`` (D-2); a version
@@ -46,6 +46,7 @@ from agent_runtimes.displays.environments import (
     display_environments,
     display_lock_diff,
     display_refusal,
+    display_trial,
     display_validation_report,
     emit,
     emit_record,
@@ -666,16 +667,42 @@ def logs(
 @_refusals
 def try_version(
     version: VersionArgument,
+    credits_limit: Annotated[
+        Optional[float],
+        typer.Option(
+            "--credits-limit",
+            help="The most credits the trial spends. The service lowers a higher "
+            "limit to its cap, which is also the limit when none is given.",
+        ),
+    ] = None,
     token: ApiKeyOption = None,
     iam_url: IamUrlOption = None,
     runtimes_url: RuntimesUrlOption = None,
     output: OutputOption = OutputFormat.TABLE,
 ) -> None:
-    """Launch a trial sandbox of a version before promoting it."""
+    """
+    Launch a trial sandbox of a ready or partially ready version, before promoting it.
+
+    Prints the runtime launched, with the version and the artifact it runs.
+    Exits 1 when the service started no runtime.
+    """
     client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
-    answer = client.trial_environment_version(_version_uid(client, version))
-    if not emit(answer, output):
-        display_answer("Trial", answer)
+    trial = client.trial_environment_version(
+        _version_uid(client, version), credits_limit=credits_limit
+    )
+    # The answer as the service gave it: none of the defaults the model fills in.
+    if not emit(trial.model_dump(mode="json", exclude_unset=True), output):
+        if trial.success:
+            display_trial(trial)
+    if not trial.success:
+        reason = trial.runtime.reason
+        typer.secho(
+            f"No trial runtime was started: {trial.message}"
+            + (f" ({reason})" if reason else ""),
+            err=True,
+            fg="red",
+        )
+        raise typer.Exit(1)
 
 
 @app.command(name="promote")
@@ -786,6 +813,30 @@ def archive(
     changed = client.archive_environment(record.uid, if_match=record.etag)
     if not emit(changed, output):
         display_environment(changed)
+
+
+@app.command(name="rm")
+@_refusals
+def remove(
+    environment: EnvironmentArgument,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """
+    Delete an environment, softly: its name stays taken.
+
+    Refused while a version is promoted, an artifact is referenced, or a
+    runtime still runs one of its artifacts, whoever launched it; the refusal
+    names each runtime. Refused as well when the service cannot tell which
+    runtimes run it.
+    """
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    record = client.get_environment(_environment_uid(client, environment))
+    client.delete_environment(record.uid, if_match=record.etag)
+    if not emit({"uid": record.uid, "name": record.name, "deleted": True}, output):
+        typer.echo(f"{record.name} ({record.uid}) is deleted.")
 
 
 # Root level commands for convenience

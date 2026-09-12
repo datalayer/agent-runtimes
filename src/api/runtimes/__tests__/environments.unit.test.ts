@@ -9,7 +9,10 @@
  * PLAN_ENV.md section 9 as Runtimes serves them (E1-01). Following a build's
  * log runs on the stream E1-16's route sent, recorded in
  * `agent_runtimes/tests/environments_build_logs_recorded.sse`, and on streams
- * written to break where a network would.
+ * written to break where a network would. A trial, a promotion's record and
+ * its refusal, and a deletion refused while a runtime runs the environment
+ * are what E1-14's and E1-15's routes answered, recorded beside it in
+ * `environments_registry_recorded.json`.
  */
 
 import { readFileSync } from 'node:fs';
@@ -18,7 +21,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { environments } from '..';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api/DatalayerApi';
 import { MOCK_JWT_TOKEN } from '../../../__tests__/shared/test-constants';
-import type { EnvironmentDocument } from '../../../models/Environment';
+import type {
+  EnvironmentDocument,
+  IEnvironmentDeletionConflict,
+  IEnvironmentLiveRuntime,
+  IEnvironmentPromotionConflict,
+  IEnvironmentPromotionPolicyDecision,
+  IEnvironmentPromotionRecord,
+  ILaunchedEnvironmentArtifact,
+} from '../../../models/Environment';
 
 vi.mock('@datalayer/core/lib/api/DatalayerApi', () => ({
   requestDatalayerAPI: vi.fn(),
@@ -298,8 +309,29 @@ const CALLS: Array<[string, () => Promise<unknown>, Sent]> = [
   ],
   [
     'trialEnvironmentVersion',
-    () => environments.trialEnvironmentVersion(token, VERSION, {}, BASE),
-    { method: 'POST', url: `${API}/environment-versions/${VERSION}/trial` },
+    () =>
+      environments.trialEnvironmentVersion(
+        token,
+        VERSION,
+        { creditsLimit: 2 },
+        { correlationId: 'trace-4' },
+        BASE,
+      ),
+    {
+      method: 'POST',
+      url: `${API}/environment-versions/${VERSION}/trial`,
+      body: { creditsLimit: 2 },
+      headers: { 'X-Correlation-Id': 'trace-4' },
+    },
+  ],
+  [
+    'trialEnvironmentVersion with no credits limit',
+    () => environments.trialEnvironmentVersion(token, VERSION, {}, {}, BASE),
+    {
+      method: 'POST',
+      url: `${API}/environment-versions/${VERSION}/trial`,
+      body: {},
+    },
   ],
   [
     'deprecateEnvironmentVersion',
@@ -729,5 +761,208 @@ describe('subscribeToBuildLogs', () => {
     controller.abort();
     await expect(subscription.done).resolves.toBeUndefined();
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
+// -- Trials, promotions and deletions (E1-14, E1-15) --------------------------
+
+interface IRecordedCall {
+  method: string;
+  path: string;
+  status: number;
+  json: unknown;
+  headers: Record<string, string> | null;
+  body: any;
+}
+
+/** The fields each type declares, which the recorded answers must carry, and nothing else. */
+const PROMOTION_FIELDS: Record<keyof IEnvironmentPromotionRecord, true> = {
+  promotedAt: true,
+  promotedBy: true,
+  unavailableVariants: true,
+  acknowledgedUnavailableVariants: true,
+  policyDecisionMade: true,
+  policyDecisions: true,
+};
+const POLICY_DECISION_FIELDS: Record<
+  keyof IEnvironmentPromotionPolicyDecision,
+  true
+> = {
+  artifactUid: true,
+  variant: true,
+  region: true,
+  immutableReference: true,
+  policyDecision: true,
+};
+const LIVE_RUNTIME_FIELDS: Record<keyof IEnvironmentLiveRuntime, true> = {
+  runtimeUid: true,
+  versionUid: true,
+  digest: true,
+};
+const LAUNCHED_ARTIFACT_FIELDS: Record<
+  keyof ILaunchedEnvironmentArtifact,
+  true
+> = {
+  uid: true,
+  variant: true,
+  region: true,
+  immutable_reference: true,
+  digest: true,
+  contract_version: true,
+  size_class: true,
+};
+
+const fields = (value: object) => Object.keys(value).sort();
+
+/** The request a recorded call was, as `requestDatalayerAPI` was asked it. */
+const expectSent = (recorded: IRecordedCall) => {
+  expect(requestDatalayerAPI).toHaveBeenCalledTimes(1);
+  const [options] = vi.mocked(requestDatalayerAPI).mock.calls[0];
+  expect({
+    method: options.method,
+    url: options.url,
+    body: options.body,
+    headers: options.headers,
+  }).toEqual({
+    method: recorded.method,
+    url: `${BASE}${recorded.path}`,
+    body: recorded.json ?? undefined,
+    headers: recorded.headers ?? {},
+  });
+};
+
+/** A call answered as the recorded call was: its body, or its refusal. */
+const answering = (recorded: IRecordedCall) => {
+  if (recorded.status >= 400) {
+    vi.mocked(requestDatalayerAPI).mockRejectedValue({
+      response: { status: recorded.status, json: async () => recorded.body },
+    });
+  } else {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue(recorded.body);
+  }
+  return recorded;
+};
+
+const segments = (recorded: IRecordedCall) => recorded.path.split('/');
+
+describe('Trials, promotions and deletions, as E1-14 and E1-15 answered them', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('a trial sends its credits limit, and resolves to the runtime launched from the version pinned', async () => {
+    const recorded = answering(RECORDED.trial_version);
+    const versionUid = segments(recorded).slice(-2)[0];
+    const trial = await environments.trialEnvironmentVersion(
+      token,
+      versionUid,
+      recorded.json as { creditsLimit: number },
+      {},
+      BASE,
+    );
+    expectSent(recorded);
+
+    expect(trial.success).toBe(true);
+    const { environment } = trial.runtime;
+    expect(trial.runtime.runtime_name).toBe(recorded.body.runtime.runtime_name);
+    expect([environment.version_uid, environment.version]).toEqual([
+      versionUid,
+      2,
+    ]);
+    expect(fields(environment.artifact)).toEqual(
+      fields(LAUNCHED_ARTIFACT_FIELDS),
+    );
+    expect(environment.artifact.variant).toBe('datalayer');
+    expect(
+      environment.artifact.immutable_reference.endsWith(
+        `@${environment.artifact.digest}`,
+      ),
+    ).toBe(true);
+  });
+
+  it('a version carries the record of its last promotion, and one never promoted none', async () => {
+    const recorded = answering(RECORDED.get_promoted_version);
+    const version = await environments.getEnvironmentVersion(
+      token,
+      recorded.body.uid,
+      {},
+      BASE,
+    );
+    expectSent(recorded);
+
+    const promotion = version.promotion as IEnvironmentPromotionRecord;
+    expect(fields(promotion)).toEqual(fields(PROMOTION_FIELDS));
+    expect(promotion.promotedAt).toBe(version.promotedAt);
+    expect(promotion.unavailableVariants).toEqual(['modal']);
+    expect(promotion.acknowledgedUnavailableVariants).toEqual(['modal']);
+    expect(promotion.policyDecisionMade).toBe(true);
+    for (const decision of promotion.policyDecisions) {
+      expect(fields(decision)).toEqual(fields(POLICY_DECISION_FIELDS));
+    }
+    const byVariant = Object.fromEntries(
+      promotion.policyDecisions.map(decision => [decision.variant, decision]),
+    );
+    expect(byVariant.datalayer.policyDecision).toMatchObject({
+      outcome: 'pass',
+    });
+    // E1-08 made no decision for the e2b artifact, and the record says so.
+    expect(byVariant.e2b.policyDecision).toBeNull();
+    expect(RECORDED.get_partially_ready_version.body.promotion).toBeNull();
+  });
+
+  it('a promotion sends the acknowledgement, and a wrong one is refused naming the unavailable variants', async () => {
+    const recorded = answering(RECORDED.promote_version_wrong_acknowledgement);
+    const refusal = await environments
+      .promoteEnvironmentVersion(
+        token,
+        segments(recorded).slice(-2)[0],
+        recorded.json as { versionUid: string },
+        (recorded.headers as Record<string, string>)['If-Match'],
+        {},
+        BASE,
+      )
+      .catch(error => error);
+    expectSent(recorded);
+
+    const body = await environments.asEnvironmentsError(refusal);
+    expect(body?.code).toBe('DL_ENV_CONFLICT');
+    const detail = body?.detail as unknown as IEnvironmentPromotionConflict;
+    expect(detail.status).toBe('partially_ready');
+    expect(detail.unavailableVariants).toEqual(['modal']);
+    expect(detail.acknowledgedUnavailableVariants).toEqual(['e2b']);
+  });
+
+  it('a deletion is refused naming each runtime still running the environment, and while they cannot be read', async () => {
+    const running = answering(RECORDED.delete_environment_running);
+    const environmentUid = segments(running).slice(-1)[0];
+    const ifMatch = (running.headers as Record<string, string>)['If-Match'];
+    const refusal = await environments
+      .deleteEnvironment(token, environmentUid, { ifMatch }, BASE)
+      .catch(error => error);
+    expectSent(running);
+
+    const body = await environments.asEnvironmentsError(refusal);
+    expect(body?.code).toBe('DL_ENV_CONFLICT');
+    const { runtimes = [] } =
+      body?.detail as unknown as IEnvironmentDeletionConflict;
+    expect(runtimes).toHaveLength(1);
+    expect(fields(runtimes[0])).toEqual(fields(LIVE_RUNTIME_FIELDS));
+    // The runtime the trial launched, on the version it tried.
+    const tried = RECORDED.trial_version.body.runtime;
+    expect(runtimes[0]).toEqual({
+      runtimeUid: tried.runtime_name,
+      versionUid: tried.environment.version_uid,
+      digest: tried.environment.artifact.digest,
+    });
+
+    vi.clearAllMocks();
+    const unavailable = answering(RECORDED.delete_environment_unavailable);
+    const refused = await environments
+      .deleteEnvironment(token, environmentUid, { ifMatch }, BASE)
+      .catch(error => error);
+    expectSent(unavailable);
+    expect((await environments.asEnvironmentsError(refused))?.code).toBe(
+      'DL_ENV_UNAVAILABLE',
+    );
   });
 });

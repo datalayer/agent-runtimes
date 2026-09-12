@@ -6,8 +6,9 @@ Display functions for Datalayer environments.
 
 ``display_environments`` renders the listing of ``datalayer envs ls``. The rest
 serves the registry commands of PLAN_ENV.md E1-20: the three output formats,
-the tables of an environment, its versions, builds and validation reports, a
-refusal with its section 10 code, and the comparison of two versions' locks.
+the tables of an environment, its versions with their promotion records,
+builds, validation reports and trial runtimes, a refusal with its section 10
+code and what it names, and the comparison of two versions' locks.
 """
 
 from __future__ import annotations
@@ -31,7 +32,9 @@ from agent_runtimes.mixins.environments import EnvironmentsRequestError
 from agent_runtimes.models.environment import (
     EnvironmentBuildLogChunk,
     EnvironmentBuildRecord,
+    EnvironmentPromotionRecord,
     EnvironmentRecord,
+    EnvironmentTrial,
     EnvironmentValidationReport,
     EnvironmentVersionRecord,
 )
@@ -349,9 +352,12 @@ def display_refusal(
     error: BaseException, output: OutputFormat = OutputFormat.TABLE
 ) -> None:
     """
-    Print a refusal on stderr: its code and message, then its field and correlation id.
+    Print a refusal on stderr: its code and message, what it names, then its field and correlation id.
 
-    In JSON or YAML, the refusal is printed under ``error`` in that format.
+    What it names: each finding of a refused spec; each runtime still running
+    an environment a deletion was refused for; a refused promotion's
+    unavailable variants, and what was acknowledged instead (E1-15). In JSON
+    or YAML, the refusal is printed under ``error`` in that format.
 
     Parameters
     ----------
@@ -374,13 +380,29 @@ def display_refusal(
     if field_name and not message.startswith(f"{field_name}:"):
         typer.echo(f"  field: {field_name}", err=True)
     detail = body.get("detail")
-    findings = detail.get("findings") if isinstance(detail, Mapping) else None
+    detail = detail if isinstance(detail, Mapping) else {}
+    findings = detail.get("findings")
     if isinstance(findings, list) and len(findings) > 1:
         for finding in findings:
             if isinstance(finding, Mapping):
                 typer.echo(
                     f"  - {finding.get('field')}: {finding.get('message')}", err=True
                 )
+    runtimes = detail.get("runtimes")
+    for runtime in runtimes if isinstance(runtimes, list) else []:
+        if isinstance(runtime, Mapping):
+            digest = str(runtime.get("digest") or "")
+            typer.echo(
+                f"  runtime {runtime.get('runtimeUid')} runs version {runtime.get('versionUid')}"
+                + (f" ({_short_digest(digest)})" if digest else ""),
+                err=True,
+            )
+    unavailable = detail.get("unavailableVariants")
+    if isinstance(unavailable, list):
+        typer.echo(f"  unavailable variants: {_names(unavailable)}", err=True)
+        acknowledged = detail.get("acknowledgedUnavailableVariants")
+        if isinstance(acknowledged, list):
+            typer.echo(f"  acknowledged: {_names(acknowledged)}", err=True)
     if body.get("correlationId"):
         typer.echo(f"  correlation id: {body['correlationId']}", err=True)
 
@@ -396,6 +418,10 @@ def _state(value: Any) -> str:
 def _short_digest(digest: str) -> str:
     algorithm, _, hexadecimal = digest.partition(":")
     return f"{algorithm}:{hexadecimal[:12]}" if hexadecimal else digest
+
+
+def _names(values: Iterable[Any]) -> str:
+    return ", ".join(str(value) for value in values) or "none"
 
 
 def _fields_table(title: str, rows: Iterable[tuple[str, Any]]) -> Table:
@@ -441,7 +467,7 @@ def display_environment_version(
     version: EnvironmentVersionRecord, *, with_spec: bool = True
 ) -> None:
     """
-    Display a version's fields, and its spec as YAML.
+    Display a version's fields, its promotion record when it has one, and its spec as YAML.
 
     Parameters
     ----------
@@ -469,6 +495,8 @@ def display_environment_version(
             ],
         )
     )
+    if version.promotion is not None:
+        display_promotion(version.promotion)
     if with_spec:
         typer.echo(
             _dump_yaml(
@@ -477,13 +505,78 @@ def display_environment_version(
         )
 
 
+def _policy_decision(decision: Optional[Mapping[str, Any]]) -> str:
+    """A policy decision in words: its outcome, or that none was made."""
+    if decision is None:
+        return "none made"
+    outcome = decision.get("outcome")
+    return str(outcome) if outcome else json.dumps(decision, sort_keys=True)
+
+
+def display_promotion(promotion: EnvironmentPromotionRecord) -> None:
+    """Display a version's promotion record: who and when, the variants lacked and acknowledged, each policy decision."""
+    _print(
+        _fields_table(
+            "Promotion",
+            [
+                ("Promoted", promotion.promoted_at),
+                ("Promoted by", promotion.promoted_by),
+                ("Unavailable variants", _names(promotion.unavailable_variants)),
+                ("Acknowledged", _names(promotion.acknowledged_unavailable_variants)),
+                (
+                    "Policy decision",
+                    "made" if promotion.policy_decision_made else "none made",
+                ),
+            ],
+        )
+    )
+    if not promotion.policy_decisions:
+        return
+    table = Table(title="Policy decisions at promotion")
+    for column in ("Variant", "Region", "Artifact", "Reference", "Decision"):
+        table.add_column(
+            column,
+            no_wrap=column in ("Variant", "Region", "Artifact"),
+            overflow="fold",
+        )
+    for item in promotion.policy_decisions:
+        table.add_row(
+            Text(item.variant),
+            Text(item.region),
+            Text(item.artifact_uid),
+            Text(item.immutable_reference or "-"),
+            Text(_policy_decision(item.policy_decision)),
+        )
+    _print(table)
+
+
+def _promotion_summary(version: EnvironmentVersionRecord) -> str:
+    """A version's promotion record in a cell: when, by whom, and what was acknowledged."""
+    promotion = version.promotion
+    if promotion is None:
+        return "-"
+    summary = f"{promotion.promoted_at} by {promotion.promoted_by}"
+    if promotion.acknowledged_unavailable_variants:
+        summary += f", acknowledging {_names(promotion.acknowledged_unavailable_variants)}"
+    return summary
+
+
 def display_environment_versions(
     versions: Sequence[EnvironmentVersionRecord],
     promoted_version_uid: Optional[str] = None,
 ) -> None:
-    """Display versions, newest first, the promoted one marked."""
+    """Display versions, newest first, the promoted one marked, each with its last promotion."""
     table = Table(title="Versions")
-    for column in ("Version", "UID", "Label", "Status", "Variants", "Lock", "Created"):
+    for column in (
+        "Version",
+        "UID",
+        "Label",
+        "Status",
+        "Variants",
+        "Lock",
+        "Created",
+        "Last promotion",
+    ):
         table.add_column(column, no_wrap=column in ("Version", "UID"))
     for version in versions:
         number = str(version.version)
@@ -500,6 +593,7 @@ def display_environment_versions(
                     _variants(version),
                     _short_digest(version.lock_digest) or "-",
                     version.created_at or "",
+                    _promotion_summary(version),
                 )
             )
         )
@@ -589,8 +683,37 @@ def write_log_chunk(chunk: EnvironmentBuildLogChunk) -> None:
     typer.echo(chunk.text, nl=False)
 
 
+def display_trial(trial: EnvironmentTrial) -> None:
+    """Display the runtime a trial launched: its name, and the version and artifact it runs (E1-14)."""
+    runtime = trial.runtime
+    environment = runtime.environment
+    artifact = environment.artifact
+    version = environment.version_uid
+    if environment.version is not None:
+        version = f"{environment.version} ({environment.version_uid})"
+    _print(
+        _fields_table(
+            "Trial",
+            [
+                ("Runtime", runtime.runtime_name),
+                ("UID", runtime.uid),
+                ("Given name", runtime.given_name),
+                ("Environment", environment.uid or environment.name),
+                ("Version", version),
+                ("Variant", artifact and f"{artifact.variant} on {artifact.region}"),
+                ("Artifact", artifact and artifact.uid),
+                ("Reference", artifact and artifact.immutable_reference),
+                ("Contract", environment.contract_version),
+                ("Size class", artifact and artifact.size_class),
+                ("Credits/second", runtime.burning_rate),
+                ("Expires", runtime.expired_at),
+            ],
+        )
+    )
+
+
 def display_answer(title: str, value: Any) -> None:
-    """Display an answer the models do not type yet, such as ``resolve``'s and ``trial``'s."""
+    """Display an answer the models do not type yet, such as ``resolve``'s."""
     if isinstance(value, Mapping):
         _print(
             _fields_table(

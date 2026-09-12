@@ -38,8 +38,10 @@ from agent_runtimes.models.environment import (
     EnvironmentBuildLogChunk,
     EnvironmentBuildLogPage,
     EnvironmentBuildRecord,
+    EnvironmentLiveRuntime,
     EnvironmentRecord,
     EnvironmentsPage,
+    EnvironmentTrial,
     EnvironmentValidationReport,
     EnvironmentVersionRecord,
 )
@@ -104,6 +106,50 @@ class EnvironmentsRequestError(RuntimeError):
             ``DL_ENV_NOT_FOUND``, and for a refusal that names none.
         """
         return ERROR_CODES.get(self.code or "")
+
+    def _detail_list(self, name: str) -> Optional[list[Any]]:
+        value = self.detail.get(name) if isinstance(self.detail, Mapping) else None
+        return list(value) if isinstance(value, list) else None
+
+    @property
+    def runtimes(self) -> list[EnvironmentLiveRuntime]:
+        """
+        The runtimes a refused deletion names, each still running one of the environment's artifacts (E1-15).
+
+        Returns
+        -------
+        list[EnvironmentLiveRuntime]
+            Each runtime, with the version and the digest it runs; empty for any other refusal.
+        """
+        return [
+            EnvironmentLiveRuntime.model_validate(item)
+            for item in self._detail_list("runtimes") or []
+            if isinstance(item, Mapping)
+        ]
+
+    @property
+    def unavailable_variants(self) -> Optional[list[str]]:
+        """
+        The variants a refused promotion's acknowledgement must name, exactly (E1-15).
+
+        Returns
+        -------
+        Optional[list[str]]
+            The partially ready version's unavailable variants, or None when the refusal names none.
+        """
+        return self._detail_list("unavailableVariants")
+
+    @property
+    def acknowledged_unavailable_variants(self) -> Optional[list[str]]:
+        """
+        What a refused promotion's acknowledgement named, when it named the wrong variants (E1-15).
+
+        Returns
+        -------
+        Optional[list[str]]
+            The variants acknowledged, or None when the refusal names none.
+        """
+        return self._detail_list("acknowledgedUnavailableVariants")
 
 
 def _refusal(error: RuntimeError) -> EnvironmentsRequestError:
@@ -463,7 +509,11 @@ class EnvironmentsListMixin:
         """
         Delete an environment, softly.
 
-        Refused with 409 while a version is promoted or an artifact is referenced.
+        Refused with 409 ``DL_ENV_CONFLICT`` while a version is promoted, an
+        artifact is referenced, or a runtime still runs one of its artifacts,
+        whoever launched it; the refusal's ``runtimes`` name each one (E1-15).
+        Refused with 503 ``DL_ENV_UNAVAILABLE`` when the service cannot read
+        which runtimes run it, and nothing is deleted then either.
 
         Parameters
         ----------
@@ -523,7 +573,16 @@ class EnvironmentsListMixin:
         correlation_id: Optional[str] = None,
     ) -> EnvironmentRecord:
         """
-        Promote a version, or none; a rollback is the same call with an older version.
+        Promote a version, or none; a rollback is the same call with an older version, and builds nothing.
+
+        A partially ready version is promoted only when
+        ``acknowledge_unavailable_variants`` names exactly its unavailable
+        variants: otherwise 409 ``DL_ENV_CONFLICT``, whose
+        ``unavailable_variants`` name them. The promotion is recorded on the
+        version, as its ``promotion`` (E1-15). Asking again for the version
+        already promoted writes nothing and answers the environment, even with
+        a stale ``if_match``; asking for another with a stale one is refused
+        with 412.
 
         Parameters
         ----------
@@ -762,30 +821,46 @@ class EnvironmentsListMixin:
         )
 
     def trial_environment_version(
-        self, version_uid: str, *, correlation_id: Optional[str] = None
-    ) -> Any:
+        self,
+        version_uid: str,
+        *,
+        credits_limit: Optional[float] = None,
+        correlation_id: Optional[str] = None,
+    ) -> EnvironmentTrial:
         """
-        Launch a trial sandbox of a version before it is promoted.
+        Launch a trial sandbox of a ready or partially ready version, before it is promoted (E1-14).
 
-        The service answers 501 until PLAN_ENV.md E1-14 builds trials.
+        Only an owner tries a version. The runtime is launched as ``POST
+        /runtimes`` launches one, with the version pinned, a given name saying
+        which version it tries, and a credits limit no higher than the
+        service's cap. A draft, a failed or a deprecated version is refused
+        with 409 ``DL_ENV_CONFLICT``, and a version with no artifact on the
+        plane with 422 ``DL_ENV_ARTIFACT_MISSING``.
 
         Parameters
         ----------
         version_uid : str
             The version's uid.
+        credits_limit : Optional[float]
+            The most credits the trial spends. The service keeps a lower limit
+            and lowers a higher one to its cap,
+            ``DATALAYER_RUNTIMES_TRIAL_CREDITS_LIMIT`` (5 by default), which is
+            also the limit when none is given.
         correlation_id : Optional[str]
             Sent as ``X-Correlation-Id``.
 
         Returns
         -------
-        Any
-            The service's answer.
+        EnvironmentTrial
+            The runtime launched, its environment naming the version and the artifact.
         """
-        return self._environments_request(
+        answer = self._environments_request(
             "POST",
             f"/environment-versions/{_segment(version_uid, 'version_uid')}/trial",
+            body=_given(creditsLimit=credits_limit),
             correlation_id=correlation_id,
         )
+        return EnvironmentTrial.model_validate(answer)
 
     def deprecate_environment_version(
         self,
