@@ -23,6 +23,8 @@ $ pytest agent_runtimes/tests/orchestration -v
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from datalayer_core.orchestration import (
     AcknowledgementKind,
@@ -32,8 +34,14 @@ from datalayer_core.orchestration import (
     LifecycleEvent,
     WorkerOperation,
 )
+from datalayer_core.orchestration.lifecycle import InvalidTransition
 
 from agent_runtimes.orchestration import ExecutionConflict
+from agent_runtimes.orchestration.adapter import (
+    Observation,
+    Performed,
+    Unsupported,
+)
 from agent_runtimes.tests.orchestration.bindings import (
     Ending,
     WorkerScript,
@@ -47,7 +55,11 @@ from agent_runtimes.tests.orchestration.bindings import (
     started,
     subscribe,
 )
-from agent_runtimes.tests.orchestration_records import TRACEPARENT, an_execution
+from agent_runtimes.tests.orchestration_records import (
+    TRACEPARENT,
+    an_attempt,
+    an_execution,
+)
 
 # ---------------------------------------------------------------------------
 # 1. Successful delegation and artifact return
@@ -490,6 +502,252 @@ class TestDuplicateCommandDelivery:
 # ---------------------------------------------------------------------------
 # The harness itself: what it must refuse to pass
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# 7. Worker crash and checkpoint recovery (O1-16, O2-05)
+# ---------------------------------------------------------------------------
+
+
+class TestWorkerCrashAndRecovery:
+    """A worker that took the job and then died.
+
+    What every protocol settles the same way is here: a crash is not an
+    ending, the lost attempt is closed before anything is sent again, and
+    the execution ends on the successor rather than on the attempt that
+    disappeared. Resuming *from a checkpoint* belongs to the orchestration
+    extension, and neither plain binding has one — each says why in its own
+    words, which the reduced-guarantee test below reads rather than assumes.
+    O2-05 proves the extended path over both protocols against a runtime.
+    """
+
+    @pytest.mark.asyncio
+    async def test_the_execution_ends_on_the_successor_attempt(
+        self, binding, monkeypatch
+    ):
+        """Recovery is a new attempt, and the new attempt is what finishes.
+
+        The crashed attempt stays in the history — it is how the retry is
+        told from a duplicate — but it commits nothing, and the artifact
+        the execution ends with came from the worker that actually answered.
+        """
+        delivered = await deliver(
+            binding, monkeypatch, WorkerScript(ending=Ending.WORKING)
+        )
+        await dispatch(delivered, until=started)
+
+        await delivered.store.set_state(
+            delivered.execution.execution_id,
+            LifecycleEvent.RETRY,
+            message="the worker was lost",
+        )
+        adapter, worker = await binding.resolve(monkeypatch, WorkerScript())
+        successor = await delivered.store.record_attempt(
+            an_attempt(delivered.execution, attempt_id="att_2", number=2)
+        )
+        second = replace(
+            delivered, adapter=adapter, worker=worker, attempt=successor
+        )
+
+        await dispatch(second)
+
+        stored = await delivered.store.get(delivered.execution.execution_id)
+        assert stored.status is ExecutionState.COMPLETED
+        artifacts = await delivered.store.artifacts(
+            delivered.execution.execution_id
+        )
+        assert artifacts, "A recovered execution with no result recovered nothing."
+        produced_by = {
+            entry.attempt_id
+            for artifact in artifacts
+            for entry in artifact.provenance
+        }
+        assert produced_by == {successor.attempt_id}, (
+            "The crashed attempt produced nothing, so nothing may carry its "
+            "provenance; the result belongs to the worker that answered."
+        )
+
+    @pytest.mark.asyncio
+    async def test_the_crashed_attempt_never_reports_the_ending(
+        self, binding, monkeypatch
+    ):
+        """The lifecycle is walked once, through the states section 6.1 has.
+
+        An execution that went straight from running to completed would
+        have hidden the recovery; one that moved twice into a terminal
+        state would have let the dead attempt speak for the live one.
+        """
+        delivered = await deliver(
+            binding, monkeypatch, WorkerScript(ending=Ending.WORKING)
+        )
+        await dispatch(delivered, until=started)
+        await delivered.store.set_state(
+            delivered.execution.execution_id,
+            LifecycleEvent.RETRY,
+            message="the worker was lost",
+        )
+        adapter, worker = await binding.resolve(monkeypatch, WorkerScript())
+        successor = await delivered.store.record_attempt(
+            an_attempt(delivered.execution, attempt_id="att_2", number=2)
+        )
+
+        await dispatch(
+            replace(delivered, adapter=adapter, worker=worker, attempt=successor)
+        )
+
+        events = await delivered.store.events(delivered.execution.execution_id)
+        assert not _errors(events, ErrorCode.INVALID_TRANSITION)
+        moves = [
+            event.state
+            for event in events
+            if event.type is ExecutionEventType.STATE_CHANGED
+        ]
+        assert moves == [
+            ExecutionState.CREATED,
+            ExecutionState.ASSIGNED,
+            ExecutionState.RUNNING,
+            ExecutionState.RETRYING,
+            ExecutionState.RUNNING,
+            ExecutionState.COMPLETED,
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_worker_with_no_checkpoint_says_so_rather_than_pretending(
+        self, binding, monkeypatch
+    ):
+        """The reduced guarantee of decision 5, read from the adapter.
+
+        A plain worker cannot be resumed from a checkpoint, and the useful
+        thing on the day somebody asks why a crash cost the whole run is
+        the adapter's own sentence — not a silent restart that looks like
+        a resume.
+        """
+        delivered = await deliver(
+            binding, monkeypatch, WorkerScript(ending=Ending.WORKING)
+        )
+        await dispatch(delivered, until=started)
+
+        outcome = await delivered.adapter.resume(
+            delivered.worker,
+            delivered.execution,
+            delivered.attempt,
+            checkpoint_id="ckpt-that-does-not-exist",
+        )
+
+        refusal = delivered.worker.capabilities.refusal(WorkerOperation.RESUME)
+        if refusal is None:
+            pytest.skip("This worker declares it can be resumed; O2-05 proves that.")
+        assert isinstance(outcome, Unsupported)
+        assert outcome.reason.strip()
+
+
+# ---------------------------------------------------------------------------
+# 9. Cancellation race with completion (O1-16)
+# ---------------------------------------------------------------------------
+
+
+class TestCancellationRacesCompletion:
+    """A cancel and an ending, in flight at the same time.
+
+    One of them is the execution's outcome and the other is late. Which one
+    wins is not the claim — either order is legitimate, and which arrives
+    first is a race nobody controls. The claim is that the loser does not
+    overwrite the winner, does not go unrecorded, and does not leave a
+    worker running.
+    """
+
+    @pytest.mark.asyncio
+    async def test_an_ending_that_arrives_after_a_cancel_does_not_overwrite_it(
+        self, binding, monkeypatch
+    ):
+        """The cancel won. The worker's completion is late, not authoritative.
+
+        It is recorded as a refused move against the adapter that reported
+        it, which is the only way a later reader can tell this execution
+        from one that was cancelled before its worker ever answered.
+        """
+        require_operation(binding.declared, WorkerOperation.CANCEL)
+        delivered = await deliver(binding, monkeypatch, WorkerScript())
+        await dispatch(delivered, until=started)
+
+        await delivered.store.set_state(
+            delivered.execution.execution_id,
+            LifecycleEvent.CANCEL,
+            message="the person stopped it",
+        )
+        ending = Observation(
+            type=ExecutionEventType.STATE_CHANGED,
+            lifecycle_event=LifecycleEvent.COMPLETE,
+        )
+        await delivered.store.record(
+            delivered.execution.execution_id,
+            ending,
+            attempt_id=delivered.attempt.attempt_id,
+        )
+
+        stored = await delivered.store.get(delivered.execution.execution_id)
+        assert stored.status is ExecutionState.CANCELLED
+        assert _errors(
+            await delivered.store.events(delivered.execution.execution_id),
+            ErrorCode.INVALID_TRANSITION,
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_cancel_that_arrives_after_the_ending_is_refused(
+        self, binding, monkeypatch
+    ):
+        """The completion won, and a completed execution has no moves left.
+
+        Section 6.1 makes terminal states absorbing precisely so that a
+        cancel racing a result cannot un-complete work that was done — and
+        the result stays committed, because the worker did the work.
+        """
+        require_operation(binding.declared, WorkerOperation.CANCEL)
+        delivered = await deliver(binding, monkeypatch, WorkerScript())
+        await dispatch(delivered)
+        before = await delivered.store.artifacts(delivered.execution.execution_id)
+
+        with pytest.raises(InvalidTransition):
+            await delivered.store.set_state(
+                delivered.execution.execution_id,
+                LifecycleEvent.CANCEL,
+                message="the person stopped it, too late",
+            )
+
+        stored = await delivered.store.get(delivered.execution.execution_id)
+        assert stored.status is ExecutionState.COMPLETED
+        assert (
+            await delivered.store.artifacts(delivered.execution.execution_id)
+        ) == before
+
+    @pytest.mark.asyncio
+    async def test_the_worker_is_told_to_stop_even_when_the_cancel_was_late(
+        self, binding, monkeypatch
+    ):
+        """A worker is not left running because the control plane was slow.
+
+        The canonical state is settled and the worker is told anyway; an
+        adapter that refuses tells the caller in its own words instead of
+        reporting a stop that never happened.
+        """
+        require_operation(binding.declared, WorkerOperation.CANCEL)
+        delivered = await deliver(
+            binding, monkeypatch, WorkerScript(ending=Ending.WORKING)
+        )
+        await dispatch(delivered, until=started)
+
+        outcome = await delivered.adapter.cancel(
+            delivered.worker,
+            delivered.execution,
+            delivered.attempt,
+            reason="the person stopped it",
+        )
+
+        assert isinstance(outcome, (Performed, Unsupported))
+        if isinstance(outcome, Performed):
+            assert outcome.operation is WorkerOperation.CANCEL
+        else:
+            assert outcome.reason.strip()
 
 
 # ---------------------------------------------------------------------------
