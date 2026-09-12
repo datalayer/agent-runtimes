@@ -121,6 +121,17 @@ a2a = [
     # the stream to it, on Pydantic AI 2.
     "fasta2a>=2.0.0",
 ]
+# The ACP client the orchestration adapter speaks, and the route serves.
+#
+# It was imported and declared nowhere — the same defect O0-17 found in
+# ai-agents, and with the same failure: a dependency reached for at the
+# moment of doing the work is missing in every deployment that did not
+# happen to have it. The durable worker runs both adapters (19.8), so it is
+# `agent-runtimes[a2a,acp]` that it needs, and neither extra is optional
+# there.
+acp = [
+    "agent-client-protocol>=0.7.1",
+]
 ui = [
     "ag-ui-protocol>=0.1.19",
     "agent-client-protocol>=0.7.1",
@@ -193,7 +204,7 @@ agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
 all = [
-    "agent_runtimes[a2a,anthropic,aws,cli,durable,google,logfire,memory,openai,ui]",
+    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,logfire,memory,openai,ui]",
 ]
 test = [
     # Several tests build agents from `openai:` model strings, and pydantic-ai
