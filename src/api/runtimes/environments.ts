@@ -783,8 +783,13 @@ export const cancelEnvironmentBuild = async (
 };
 
 /**
- * Queue the next attempt of a failed or cancelled build, once however often
- * it is asked for.
+ * Queue the next attempt of a cancelled build, or of one that failed under a
+ * retryable code, once however often it is asked for.
+ *
+ * A retryable failure — a timeout, a quota, a missing artifact, an unmapped
+ * provider failure — reopens its version, `failed` back to `building`. Any
+ * other failure is refused with `DL_ENV_CONFLICT` naming the code: a new
+ * version is what changes it, not another attempt.
  * @param token - Authentication token
  * @param buildUid - The build's uid
  * @param options - Correlation id and abort signal

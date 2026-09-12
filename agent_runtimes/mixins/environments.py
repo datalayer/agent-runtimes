@@ -1222,7 +1222,16 @@ class EnvironmentsListMixin:
         self, build_uid: str, *, correlation_id: Optional[str] = None
     ) -> EnvironmentBuildRecord:
         """
-        Queue the next attempt of a failed or cancelled build, once however often it is asked for.
+        Queue the next attempt of a cancelled build, or of one that failed retryably.
+
+        Asking twice for the same build answers the attempt the first ask
+        created. A build that failed is retried only under a code section 10
+        calls retryable — a timeout, a quota, a missing artifact, an unmapped
+        provider failure — and such a retry reopens its version, ``failed``
+        back to ``building``. Any other failure is refused with
+        ``DL_ENV_CONFLICT``, naming the code: that spec, resolution, build,
+        scan or smoke failure meets the same end however often it is sent, and
+        what changes it is a new version.
 
         Parameters
         ----------
@@ -1235,6 +1244,12 @@ class EnvironmentsListMixin:
         -------
         EnvironmentBuildRecord
             The attempt queued.
+
+        Raises
+        ------
+        EnvironmentsRequestError
+            409 ``DL_ENV_CONFLICT`` when the failure is not retryable, when
+            the build never ended, or when its version was deprecated.
         """
         answer = self._environments_request(
             "POST",
