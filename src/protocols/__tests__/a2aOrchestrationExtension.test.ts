@@ -51,7 +51,7 @@ function fetchAnswering(card: unknown): {
       new Headers(init?.headers as HeadersInit).entries(),
     );
     requests.push({ url: href, headers });
-    if (href.includes('.well-known/agent.json')) {
+    if (href.includes('.well-known/agent-card.json')) {
       return Promise.resolve(
         new Response(JSON.stringify(card), {
           status: 200,

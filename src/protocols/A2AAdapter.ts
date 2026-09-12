@@ -33,11 +33,67 @@ import { BaseProtocolAdapter } from './BaseProtocolAdapter';
  */
 const A2A_EXTENSIONS_HEADER = 'A2A-Extensions';
 
+const TERMINAL_TASK_STATES = new Set([
+  'completed',
+  'failed',
+  'canceled',
+  'rejected',
+]);
+
+/**
+ * `fasta2a` wraps every `message/send` result and every `message/stream`
+ * event in a named key — `{ task: Task }`, `{ statusUpdate: ... }`,
+ * `{ artifactUpdate: ... }`, `{ message: Message }` — instead of the bare,
+ * `kind`-discriminated object
+ * (`Task.kind: 'task'`, `TaskStatusUpdateEvent.kind: 'status-update'`, ...)
+ * the current A2A specification requires and this file was written
+ * against. Confirmed directly, not assumed: `fasta2a.schema.SendMessageResult`
+ * and `StreamResponse` are TypedDicts with those named optional fields, and
+ * neither `Task` nor `TaskStatusUpdateEvent` in that schema carries a
+ * `kind` field at all. `agent_runtimes`' own A2A route is the same
+ * `FastA2A`, so every production Datalayer A2A worker serves this shape —
+ * a spec-conformant client (this file, or a genuine `a2a-sdk`-based one)
+ * could not render a single reply without this normalizer.
+ *
+ * A worker built to the current spec (its `result` already carries
+ * `kind`) passes through unchanged — this only steps in for the shape
+ * `fasta2a` actually sends.
+ *
+ * `fasta2a`'s `TaskStatusUpdateEvent` also has no `final` field, which the
+ * spec has and this file's status-update handling gates on; inferred here
+ * from the status being one of the terminal states, since nothing else in
+ * the payload says so.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeA2AResult(result: any): any {
+  if (!result || typeof result !== 'object' || result.kind) {
+    return result;
+  }
+  if (result.task) {
+    return { ...result.task, kind: 'task' };
+  }
+  if (result.statusUpdate) {
+    const update = result.statusUpdate;
+    return {
+      ...update,
+      kind: 'status-update',
+      final: update.final ?? TERMINAL_TASK_STATES.has(update.status?.state),
+    };
+  }
+  if (result.artifactUpdate) {
+    return { ...result.artifactUpdate, kind: 'artifact-update' };
+  }
+  if (result.message) {
+    return { ...result.message, kind: 'message' };
+  }
+  return result;
+}
+
 /**
  * A2A specific configuration
  */
 export interface A2AAdapterConfig extends ProtocolAdapterConfig {
-  /** Agent URL for .well-known/agent.json discovery */
+  /** Agent URL for .well-known/agent-card.json discovery */
   agentUrl?: string;
 
   /** Enable A2UI extension */
@@ -96,10 +152,19 @@ export class A2AAdapter extends BaseProtocolAdapter {
     this.setConnectionState('connecting');
 
     try {
-      // Fetch agent card from .well-known endpoint
+      // Fetch agent card from .well-known endpoint. The current A2A
+      // specification's path is `agent-card.json` — `fasta2a`'s FastA2A
+      // (and a2a-sdk's own A2ACardResolver default) serves only that,
+      // confirmed by reading FastA2A's own route registration; the plain
+      // `agent.json` this fetched before was an earlier draft's path, and
+      // fetching it here 404s against every real worker, silently, since
+      // a missing card is caught below and connect() still "succeeds" —
+      // found live, against agent_teams.a2a.reference_worker
+      // (ORCHESTRATOR.md O3-04), not assumed: `supportsOrchestrationExtension`
+      // stayed false against a worker whose card plainly advertised it.
       const agentUrl = this.a2aConfig.agentUrl || this.a2aConfig.baseUrl;
       const wellKnownUrl = new URL(
-        '/.well-known/agent.json',
+        '/.well-known/agent-card.json',
         agentUrl,
       ).toString();
 
@@ -437,7 +502,7 @@ export class A2AAdapter extends BaseProtocolAdapter {
 
     // Handle JSON-RPC response
     if (event.result) {
-      this.handleTaskUpdate(event.result);
+      this.handleTaskUpdate(normalizeA2AResult(event.result));
     } else if (event.error) {
       this.emit({
         type: 'error',
