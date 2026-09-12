@@ -22,6 +22,7 @@ import re
 from decimal import Decimal
 from typing import Any, Mapping
 
+from agent_teams.a2a.orchestration_extension import ENVELOPE_KEY
 from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.usage import UsageLimits
 
@@ -37,7 +38,11 @@ __all__ = [
 ]
 
 #: Where a delegation carries Datalayer's own fields beside a protocol's.
-DELEGATION_META_KEY = "datalayer"
+#: Imported from the standalone orchestration-extension package
+#: (ORCHESTRATOR.md, O3-02) rather than declared here — `context/delegation.py`
+#: imports it from this module in turn, so the whole runtime shares the one
+#: import rather than three hand-maintained copies of the same string.
+DELEGATION_META_KEY = ENVELOPE_KEY
 
 #: pydantic-ai's limit names, as the budget's limits are called.
 _LIMITS = {

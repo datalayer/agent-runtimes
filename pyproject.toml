@@ -28,6 +28,16 @@ dependencies = [
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
+    # The Datalayer orchestration extension's wire-level constants
+    # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
+    # `context/delegation.py` and `guardrails/model_budget.py` rather than
+    # each re-declaring its own copy of the same strings (ORCHESTRATOR.md,
+    # O3-02). Unconditional, not under the `a2a` extra below: delegation
+    # metadata is read on the ACP path too. 0.0.3 is where the field-name
+    # constants became public; pinned to the width of that one release,
+    # since a 0.0.x package makes no compatibility promise across even a
+    # patch bump.
+    "agent-teams>=0.0.3,<0.0.4",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
     # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0.

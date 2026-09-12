@@ -35,6 +35,16 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
+from agent_teams.a2a.orchestration_extension import (
+    CHECKPOINT_FIELD,
+    CREDENTIAL_FIELD,
+    EXECUTION_FIELD,
+    ORCHESTRATION_EXTENSION_URI,
+    PAUSE_FIELD,
+    PAUSED_FIELD,
+    STEER_METHOD,
+    USAGE_FIELD,
+)
 from datalayer_core.orchestration import Usage
 from pydantic import ValidationError
 from pydantic_ai.capabilities import AbstractCapability
@@ -78,24 +88,20 @@ __all__ = [
     "was_delegated",
 ]
 
-#: The Datalayer orchestration extension this runtime's workers speak: on the
-#: A2A agent card, and in the ACP agent's capabilities.
-EXTENSION_URI = "https://datalayer.ai/extensions/orchestration/v1"
-
-#: Where, under ``datalayer``, the delegation carries the credential.
-CREDENTIAL_FIELD = "credential"
-#: The execution a delegation is for: ``{executionId, parentExecutionId, rootExecutionId, depth}``.
-EXECUTION_FIELD = "execution"
-#: The checkpoint a delegation resumes from: ``{checkpointId}``.
-CHECKPOINT_FIELD = "checkpoint"
-#: What a paused worker answers: ``{checkpointId}``.
-PAUSED_FIELD = "paused"
-#: What an ACP ``session/cancel`` carries when it asks for a pause: ``true``.
-PAUSE_FIELD = "pause"
-#: The ACP notification that steers a running turn: ``{sessionId, instructions}``.
-STEER_METHOD = "_datalayer/steer"
+# The Datalayer orchestration extension this runtime's workers speak: on the
+# A2A agent card, and in the ACP agent's capabilities. `EXTENSION_URI`,
+# `CREDENTIAL_FIELD`, `EXECUTION_FIELD`, `CHECKPOINT_FIELD`, `PAUSED_FIELD`,
+# `PAUSE_FIELD` and `STEER_METHOD` are imported above, from the standalone
+# package this runtime's own delegation metadata is checked against
+# (ORCHESTRATOR.md, O3-02), rather than declared here — a rename on either
+# side is now a real import error, not a silent drift between two
+# hand-maintained copies of the same strings. What has no equivalent in that
+# package — held credentials, the current run's `ContextVar`,
+# `SteerCapability`'s pydantic-ai integration — stays here, since it is this
+# runtime's own state, not part of the wire protocol.
+EXTENSION_URI = ORCHESTRATION_EXTENSION_URI
 #: What a worker answers a turn with about what the turn spent: ``{inputTokens, outputTokens, cost, currency}``.
-SPENT_FIELD = "usage"
+SPENT_FIELD = USAGE_FIELD
 
 #: What the message keeps in the credential's place: that one was sent, and not what it was.
 WITHHELD = "withheld"
