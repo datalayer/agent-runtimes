@@ -66,6 +66,20 @@ class EnvironmentModel(BaseModel):
         default=None,
         description="The variants a user environment's promoted version builds for",
     )
+    available_variants: Optional[List[str]] = Field(
+        default=None,
+        description=(
+            "The variants a sandbox of the promoted version can start on: "
+            "those of `variants` that have a built artifact (E1-19)"
+        ),
+    )
+    size_class: Optional[str] = Field(
+        default=None,
+        description=(
+            "The size class the promoted version names, which prices it (D-4); "
+            "None for a platform entry, which carries its own rate"
+        ),
+    )
     metadata: Optional[Dict[str, Any]] = Field(
         default=None, description="Additional metadata for the environment"
     )

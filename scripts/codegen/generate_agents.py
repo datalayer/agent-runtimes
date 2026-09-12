@@ -96,6 +96,63 @@ def _fmt_ts_suggestions(items: list[Any]) -> str:
     return "[\n    " + ",\n    ".join(rendered) + ",\n  ]"
 
 
+def _delegable_fields(item: Any) -> dict[str, Any]:
+    """
+    One `delegable` entry from YAML, as a mapping.
+
+    Parameters
+    ----------
+    item : Any
+        A mapping, or a bare string naming a capability with nothing else
+        said about it — the common case, and worth allowing so a spec that
+        has nothing to add beyond the id does not have to write a mapping.
+
+    Returns
+    -------
+    dict[str, Any]
+        The entry's fields.
+    """
+    if isinstance(item, str):
+        return {"id": item}
+    return dict(item or {})
+
+
+def _fmt_py_delegable(items: list[Any]) -> str:
+    """`AgentCapability(...)` calls, one per line, or an empty list."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _delegable_fields(item)
+        parts = [f"id={_fmt_py_literal(fields['id'])}"]
+        for key in ("name", "description"):
+            if fields.get(key):
+                parts.append(f"{key}={_fmt_py_literal(fields[key])}")
+        for key in ("inputs", "outputs", "tags"):
+            if fields.get(key):
+                parts.append(f"{key}={_fmt_py_literal(list(fields[key]))}")
+        rendered.append(f"AgentCapability({', '.join(parts)})")
+    return "[\n        " + ",\n        ".join(rendered) + ",\n    ]"
+
+
+def _fmt_ts_delegable(items: list[Any]) -> str:
+    """Object literals, one per line, or an empty array."""
+    if not items:
+        return "[]"
+    rendered = []
+    for item in items:
+        fields = _delegable_fields(item)
+        parts = [f"id: {_fmt_ts_literal(fields['id'])}"]
+        for key in ("name", "description"):
+            if fields.get(key):
+                parts.append(f"{key}: {_fmt_ts_literal(fields[key])}")
+        for key in ("inputs", "outputs", "tags"):
+            if fields.get(key):
+                parts.append(f"{key}: {_fmt_ts_literal(list(fields[key]))}")
+        rendered.append("{ " + ", ".join(parts) + " }")
+    return "[\n    " + ",\n    ".join(rendered) + ",\n  ]"
+
+
 def _normalize_subagents_for_typescript(value: Any) -> Any:
     """Convert subagents config keys from YAML snake_case to TS camelCase."""
     if not isinstance(value, dict):
@@ -241,6 +298,7 @@ from typing import Dict
 
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from agent_runtimes.types import (
+    AgentCapability,
     Agentspec,
     AgentSuggestion,
     SubAgentspecConfig,
@@ -397,6 +455,7 @@ from agent_runtimes.types import (
             goal_str = _fmt_py_literal(goal_clean)
             protocol_val = spec.get("protocol")
             protocol_str = f'"{protocol_val}"' if protocol_val else "None"
+            delegable_str = _fmt_py_delegable(spec.get("delegable", []))
             ui_ext = spec.get("ui_extension")
             ui_ext_str = f'"{ui_ext}"' if ui_ext else "None"
             trigger_val = spec.get("trigger")
@@ -507,6 +566,7 @@ from agent_runtimes.types import (
     system_prompt={system_prompt_str},
     system_prompt_codemode_addons={system_prompt_codemode_addons_str},
     goal={goal_str},
+    delegable={delegable_str},
     protocol={protocol_str},
     ui_extension={ui_ext_str},
     trigger={_fmt_py_literal(trigger_val)},
@@ -1015,6 +1075,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             )
             protocol_val = spec.get("protocol")
             protocol_ts = f"'{protocol_val}'" if protocol_val else "undefined"
+            delegable_ts = _fmt_ts_delegable(spec.get("delegable", []))
             ui_ext = spec.get("ui_extension")
             ui_ext_ts = f"'{ui_ext}'" if ui_ext else "undefined"
             trigger_val = spec.get("trigger")
@@ -1073,6 +1134,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     systemPrompt: {f"`{system_prompt}`" if system_prompt else "undefined"},
     systemPromptCodemodeAddons: {f"`{system_prompt_codemode_addons}`" if system_prompt_codemode_addons else "undefined"},
     goal: {goal_ts},
+    delegable: {delegable_ts},
     protocol: {protocol_ts},
     uiExtension: {ui_ext_ts},
     trigger: {_fmt_ts_literal(trigger_val)},

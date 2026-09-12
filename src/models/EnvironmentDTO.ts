@@ -21,8 +21,11 @@ export interface EnvironmentData {
   title: string;
   /** Detailed description of the environment */
   description: string;
-  /** Docker image used for this environment */
-  dockerImage: string;
+  /**
+   * Docker image used for this environment. A platform entry names one; a user
+   * environment runs an artifact the platform resolves at launch (E1-11).
+   */
+  dockerImage?: string;
   /** Example usage or description */
   example?: string;
   /** Code snippets for this environment */
@@ -38,8 +41,14 @@ export interface EnvironmentData {
   language: string;
   /** Resource ranges configuration */
   resourcesRanges?: any; // Simplified - ResourceRanges type removed
-  /** Credits consumed per hour when running */
-  burning_rate: number;
+  /**
+   * Credits consumed per second when running. A user environment's is the rate
+   * of the size class its promoted version names (D-4); absent means unknown,
+   * not free (E1-19).
+   */
+  burning_rate?: number;
+  /** The size class that prices a user environment (D-4). */
+  sizeClass?: string;
   /** Simple resource specification */
   resources?: any; // Simplified - ResourceConfig type removed
   /** Name identifier for the environment */
@@ -126,9 +135,21 @@ export class EnvironmentDTO {
     return this._data.name;
   }
 
-  /** Credits consumed per hour for this environment. */
+  /**
+   * Credits consumed per second for this environment.
+   *
+   * Zero when the listing carries no rate, which for a user environment means
+   * its size class is unpriced rather than that it is free: `sizeClass` beside
+   * this tells the two apart, and the callers that reserve credits refuse the
+   * launch rather than reserving nothing (E1-19).
+   */
   get burningRate(): number {
-    return this._data.burning_rate;
+    return this._data.burning_rate ?? 0;
+  }
+
+  /** The size class that prices a user environment (D-4); absent on a platform entry. */
+  get sizeClass(): string | undefined {
+    return this._data.sizeClass || undefined;
   }
 
   /** Rich description of the environment (contains HTML markup). */

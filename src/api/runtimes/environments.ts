@@ -93,7 +93,13 @@ export type ListEnvironmentsPage = Omit<
     EnvironmentData &
       Pick<
         IDatalayerEnvironment,
-        'uid' | 'origin' | 'owner' | 'promotedVersion' | 'variants'
+        | 'uid'
+        | 'origin'
+        | 'owner'
+        | 'promotedVersion'
+        | 'variants'
+        | 'availableVariants'
+        | 'sizeClass'
       >
   >;
   /** The cursor of the next page; absent on the last one. */

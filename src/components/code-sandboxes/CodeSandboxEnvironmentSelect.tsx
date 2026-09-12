@@ -21,7 +21,7 @@
  */
 
 import type { JSX } from 'react';
-import { ActionList, ActionMenu, Box, Label, Text } from '@primer/react';
+import { ActionList, ActionMenu, Box, Label, Link, Text } from '@primer/react';
 
 /** One choice of the dropdown. */
 export type ICodeSandboxEnvironmentOption = {
@@ -41,6 +41,24 @@ export type ICodeSandboxEnvironmentOption = {
   gpu?: string | boolean;
   /** The heading this choice is listed under, when the list is grouped. */
   group?: string;
+  /**
+   * The version this choice launches, written as it reads — `v3`. Only an
+   * environment somebody built has one (PLAN_ENV.md, E1-19).
+   */
+  version?: string;
+  /** The size class it runs on, which is what prices it (D-4). */
+  sizeClass?: string;
+  /**
+   * Whether the choice cannot be launched: a version whose Datalayer artifact
+   * was never built, or one nothing prices. Shown, rather than withheld, so
+   * the environment somebody is looking for is where they expect it.
+   */
+  disabled?: boolean;
+  /**
+   * Where to go to build the missing artifact: the version's own page. Offered
+   * beside a disabled choice whose only trouble is that nobody built it yet.
+   */
+  buildHref?: string;
 };
 
 export type ICodeSandboxEnvironmentSelectProps = {
@@ -95,6 +113,16 @@ function OptionLabels(props: {
           GPU
         </Label>
       ) : null}
+      {option.version ? (
+        <Label size="small" variant="secondary">
+          {option.version}
+        </Label>
+      ) : null}
+      {option.sizeClass ? (
+        <Label size="small" variant="secondary">
+          {option.sizeClass}
+        </Label>
+      ) : null}
       {option.name ? <Label size="small">{option.name}</Label> : null}
       {option.providerTitle ? (
         <Label size="small" variant="accent">
@@ -145,12 +173,32 @@ export function CodeSandboxEnvironmentSelect(
       <ActionList.Item
         key={option.key}
         selected={option.key === selectedKey}
-        onSelect={() => onSelect(option.key)}
+        disabled={option.disabled}
+        onSelect={() => {
+          // A choice that cannot be launched is shown, not chosen: selecting
+          // it would start a sandbox the platform refuses.
+          if (!option.disabled) {
+            onSelect(option.key);
+          }
+        }}
       >
         {option.title}
         <ActionList.TrailingVisual>
           <OptionLabels option={option} />
         </ActionList.TrailingVisual>
+        {option.disabled && option.buildHref ? (
+          // What to do about it, where it is noticed: the version's page is
+          // where a build for this variant is started (E1-21).
+          <ActionList.Description variant="block">
+            <Link
+              href={option.buildHref}
+              onClick={event => event.stopPropagation()}
+              sx={{ pointerEvents: 'auto' }}
+            >
+              Build for this variant
+            </Link>
+          </ActionList.Description>
+        ) : null}
       </ActionList.Item>
     ));
 

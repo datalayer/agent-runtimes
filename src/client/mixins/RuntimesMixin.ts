@@ -23,6 +23,28 @@ import { RuntimeDTO } from '../../models/RuntimeDTO';
 import { CodeSandboxSnapshotDTO } from '../../models/CodeSandboxSnapshotDTO';
 import { HealthCheck } from '@datalayer/core/lib/models/HealthCheck';
 
+/** What creating a runtime is asked for, when it is asked with an object. */
+export interface CreateRuntimeOptions {
+  /**
+   * A platform environment by its name, or an environment somebody built,
+   * named `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
+   */
+  environmentName: string;
+  /**
+   * Which version of a user environment to launch: its number, or a version
+   * uid. Absent means the version its owner promoted (E1-19).
+   */
+  environmentVersion?: number | string;
+  /** Type of runtime */
+  type?: 'notebook' | 'terminal' | 'job';
+  /** User-friendly name for the runtime */
+  givenName?: string;
+  /** How long to reserve, in minutes */
+  minutesLimit?: number;
+  /** Snapshot to restore into the runtime */
+  fromSnapshotId?: string;
+}
+
 /** Options for ensuring a runtime is available. */
 export interface EnsureRuntimeOptions {
   /** Name of the environment to use */
@@ -84,19 +106,36 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
 
     /**
      * Create a new computational runtime.
-     * @param environmentName - Name of the environment to use
+     *
+     * Asked either with an options object — which is the only way to pin a
+     * version of a user environment (E1-19) — or with the positional arguments
+     * every caller used before there were versions.
+     *
+     * @param environmentNameOrOptions - The environment's name, or the options
      * @param type - Type of runtime
      * @param givenName - User-friendly name for the runtime
-     * @param creditsLimit - Credits limit
+     * @param minutesLimit - How long to reserve, in minutes
+     * @param fromSnapshotId - Snapshot to restore
      * @returns Created runtime
      */
     async createRuntime(
-      environmentName: string,
-      type: 'notebook' | 'terminal' | 'job',
-      givenName: string,
-      minutesLimit: number,
+      environmentNameOrOptions: string | CreateRuntimeOptions,
+      type?: 'notebook' | 'terminal' | 'job',
+      givenName?: string,
+      minutesLimit?: number,
       fromSnapshotId?: string,
     ): Promise<RuntimeDTO> {
+      const options: CreateRuntimeOptions =
+        typeof environmentNameOrOptions === 'string'
+          ? {
+              environmentName: environmentNameOrOptions,
+              type,
+              givenName,
+              minutesLimit,
+              fromSnapshotId,
+            }
+          : environmentNameOrOptions;
+      const { environmentName, environmentVersion } = options;
       if (!(this as any).environments) {
         await this.listEnvironments();
       }
@@ -112,19 +151,38 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
         } else {
           const token = (this as any).getToken();
           const runtimesUrl = (this as any).getRuntimesUrl();
+          /*
+           * What a second costs is READ FROM THE LISTING, never written here:
+           * a platform entry carries its pool's rate, a user environment the
+           * rate of the size class its promoted version names (D-4, E1-19). A
+           * class nothing prices is refused rather than reserved at zero,
+           * which would ask for a runtime the platform will not start.
+           */
+          if (env.sizeClass && !env.burningRate) {
+            throw new Error(
+              `Environment "${environmentName}" runs on the size class "${env.sizeClass}", ` +
+                'which has no burning rate: it cannot be priced, so no runtime is created.',
+            );
+          }
           const creditsLimit = (this as any).calculateCreditsFromMinutes(
-            minutesLimit,
+            options.minutesLimit,
             env.burningRate,
           );
 
           const data: CreateRuntimeRequest = {
             environment: {
               name: environmentName,
+              // Additive: without it this is the request runtimes have always
+              // been created with, and the platform resolves the promoted
+              // version itself (§7.6, E1-11).
+              ...(environmentVersion !== undefined && environmentVersion !== ''
+                ? { version: environmentVersion }
+                : {}),
             },
-            type,
-            given_name: givenName,
+            type: options.type ?? 'notebook',
+            given_name: options.givenName,
             credits_limit: creditsLimit,
-            from: fromSnapshotId,
+            from: options.fromSnapshotId,
           };
 
           const response = await runtimes.createRuntime(

@@ -34,6 +34,11 @@ import {
   type ICodeSandboxEnvironmentOption,
 } from './CodeSandboxEnvironmentSelect';
 import {
+  codeSandboxEnvironmentOptions,
+  codeSandboxEnvironmentVersion,
+  firstLaunchableCodeSandboxEnvironment,
+} from './codeSandboxEnvironments';
+import {
   getCodeSandboxGivenName,
   listCodeSandboxGivenNames,
   nextCodeSandboxGivenName,
@@ -219,22 +224,28 @@ export function CodeSandboxLauncher(
       }));
   }, [jupyterAvailable]);
   const LOCAL_PREFIX = 'local:';
+  /** Who is looking, which is what tells your environments from your organizations'. */
+  const viewer = useMemo(
+    () => ({ uid: (user as any)?.uid, handle: user?.handle }),
+    [user],
+  );
   /*
    * The choices of the dropdown: what the platform and the external
    * providers offer, then the kernelspecs of this Jupyter Server. Each says
    * whose machine it is — two entries called "GPU" are told apart by nothing
    * else.
+   *
+   * The environments come through `codeSandboxEnvironments`, so they read
+   * here exactly as they read in the picker: grouped as yours, your
+   * organizations' and the platform's, with the version and size class each
+   * runs, and disabled where there is nothing built to launch (E1-19).
    */
   const environmentOptions = useMemo(
     (): ICodeSandboxEnvironmentOption[] => [
-      ...environments.map(spec => ({
-        key: spec.name,
-        title: spec.title || spec.name,
-        name: spec.name,
+      ...codeSandboxEnvironmentOptions(environments, viewer, spec => ({
         providerTitle: codeSandboxVariantTitle(
           codeSandboxVariantOf((spec as any)?.owner),
         ),
-        burningRate: (spec as any).burning_rate,
       })),
       ...localSpecs.map(spec => ({
         key: `${LOCAL_PREFIX}${spec.name}`,
@@ -243,9 +254,10 @@ export function CodeSandboxLauncher(
         providerTitle: codeSandboxVariantTitle(
           CodeSandboxVariant.JupyterServer,
         ),
+        group: 'This Jupyter Server',
       })),
     ],
-    [environments, localSpecs],
+    [environments, localSpecs, viewer],
   );
 
   const localSpecOf = (value: string) =>
@@ -268,7 +280,11 @@ export function CodeSandboxLauncher(
   const jupyterReactStore = useJupyterReactStore();
   const jupyterLabAdapter = (jupyterReactStore as any).jupyterLabAdapter;
   const [selection, setSelection] = useState(
-    (kernelSnapshot?.environment || environments[0]?.name) ?? '',
+    // Never an environment that cannot be launched — one whose variant was
+    // never built — or the dialog would open on a choice it must refuse.
+    (kernelSnapshot?.environment ||
+      firstLaunchableCodeSandboxEnvironment(environments)?.name) ??
+      '',
   );
   /*
    * Something is always selected.
@@ -311,7 +327,7 @@ export function CodeSandboxLauncher(
     [takenGivenNames],
   );
   const [runtimeName, setRuntimeName] = useState(() =>
-    givenNameFor(environments[0]),
+    givenNameFor(firstLaunchableCodeSandboxEnvironment(environments)),
   );
   // Whether the runtim name has been changed by the user or not
   const [hasCustomRuntimeName, setHasCustomRuntimeName] = useState(false);
@@ -392,6 +408,17 @@ export function CodeSandboxLauncher(
       setError(undefined);
       setWaitingForRuntime(shouldStartRuntime);
       const spec = environments.find(s => s.name === selection);
+      /*
+       * The version the dropdown showed is the version that launches.
+       *
+       * A user environment's entry says "v3", and sending that pins it: a
+       * promotion made while this dialog was open cannot change what the
+       * person accepted. A platform environment has no version, and the
+       * request is then the one it has always been (PLAN_ENV.md, E1-19).
+       */
+      const environmentVersion = spec
+        ? codeSandboxEnvironmentVersion(spec)
+        : undefined;
       const desc: IRuntimeDesc = {
         name: selection,
         language: spec?.language ?? '',
@@ -420,6 +447,7 @@ export function CodeSandboxLauncher(
         try {
           await createRuntimeRecord({
             environmentName: selection,
+            environmentVersion,
             type: 'notebook',
             givenName: runtimeName,
             creditsLimit,
@@ -448,6 +476,7 @@ export function CodeSandboxLauncher(
             const connection = await manager.runtimesManager.startNew(
               {
                 environmentName: selection,
+                environmentVersion,
                 type: 'notebook',
                 givenName: runtimeName,
                 creditsLimit: creditsLimit,

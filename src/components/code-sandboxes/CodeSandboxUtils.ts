@@ -6,7 +6,11 @@
 import { SessionContext } from '@jupyterlab/apputils';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { IMultiServiceManager } from '../../runtimes';
-import { IRuntimeLocation, IRuntimeDesc } from '../../models';
+import {
+  IRuntimeLocation,
+  IRuntimeDesc,
+  type IDatalayerEnvironment,
+} from '../../models';
 
 const ASSIGN_NEW_RUNTIME_LABEL = 'Assign a new Code Sandbox';
 
@@ -26,6 +30,18 @@ export type IDatalayerCodeSandboxDesc = IRuntimeDesc & {
   gpu?: string;
   /** The provider the environment belongs to — see `CodeSandboxVariant`. */
   provider?: CodeSandboxVariant;
+  /**
+   * The listing entry a NEW sandbox would be started from, carried whole.
+   *
+   * What the picker has to say about an environment — whose it is, which
+   * version it launches, the class that prices it, whether anything was built
+   * for this variant — is decided by the rules in `codeSandboxEnvironments`,
+   * and they read the entry. Copying a field at a time here is how the
+   * launcher and the picker came to disagree about the same environment
+   * (PLAN_ENV.md, E1-19). Absent on a sandbox that already runs and on a
+   * kernelspec of a server or of the browser.
+   */
+  environment?: IDatalayerEnvironment;
 };
 
 /**
@@ -258,6 +274,7 @@ export function getGroupedCodeSandboxDescs(
             gpu: spec!.resources?.['nvidia.com/gpu'],
             burningRate: spec!.burning_rate,
             provider: codeSandboxVariantOf((spec as any)?.owner),
+            environment: spec!,
           }) satisfies IDatalayerCodeSandboxDesc,
       )
       .filter(filterKernels),

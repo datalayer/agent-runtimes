@@ -113,9 +113,13 @@ export interface IDatalayerEnvironment {
    */
   language: string;
   /**
-   * Docker image
+   * Docker image.
+   *
+   * A platform entry names one. A user environment does not: what it runs is
+   * an artifact of its promoted version, pinned by digest and resolved by the
+   * platform at launch, and never shown to a client (PLAN_ENV.md, E1-11).
    */
-  dockerImage: string;
+  dockerImage?: string;
   /**
    * Example notebook URL
    */
@@ -135,9 +139,21 @@ export interface IDatalayerEnvironment {
   };
 
   /**
-   * Environment credits burning rate
+   * Environment credits burning rate, per second.
+   *
+   * A platform entry carries its pool's. A user environment carries the rate
+   * of the size class its promoted version names (D-4), and carries none while
+   * no version is promoted or while its class is unpriced — absent means
+   * UNKNOWN, not free, and a launch that cannot be priced is refused rather
+   * than reserved at zero (E1-19).
    */
-  burning_rate: number;
+  burning_rate?: number;
+
+  /**
+   * The size class a user environment's promoted version names, which is what
+   * prices it (D-4). Absent on a platform entry, which carries its own rate.
+   */
+  sizeClass?: string;
 
   /**
    * Environment server resources
@@ -178,6 +194,14 @@ export interface IDatalayerEnvironment {
    * promoted. Absent on a platform entry.
    */
   variants?: string[];
+
+  /**
+   * The variants of `variants` a sandbox can actually start on: those whose
+   * artifact is built. A variant missing from this list has nothing to launch,
+   * and is offered with a build instead (E1-19). Absent on a platform entry,
+   * and from a Runtimes older than E1-19.
+   */
+  availableVariants?: string[];
 }
 
 // -- The registry (PLAN_ENV.md, section 9) -------------------------------------

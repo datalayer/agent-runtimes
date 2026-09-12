@@ -1184,6 +1184,126 @@ class SubAgentsConfig(BaseModel):
     )
 
 
+#: The closed vocabulary of delegable work (ORCHESTRATOR.md, O2-07).
+#:
+#: `agents.discover --capability notebook.validate` has to match something,
+#: and free text does not match: two specs saying "analysis" and "analyse"
+#: describe the same work and find each other never. A closed list is also
+#: what makes the answer to "what can this platform be asked to do" finite.
+#:
+#: The axis is **what work is delegated**, not who it is for. `domain` is the
+#: vertical (accounting, insurance) and `tags` are categorisation; neither
+#: says what an orchestrator may hand over, which is why this is its own field
+#: rather than a reading of those.
+#:
+#: A `<subject>.<verb>` shape, so the subject is the thing the work is about
+#: and the verb is what is done to it. Adding one is a deliberate act: it is
+#: the vocabulary a third-party worker advertises against.
+AGENT_CAPABILITIES: Dict[str, str] = {
+    "notebook.run": "Execute a notebook and return it with its outputs.",
+    "notebook.validate": "Check that a notebook runs clean, and say where it does not.",
+    "notebook.author": "Write or edit a notebook to meet a stated objective.",
+    "data.extract": "Pull structured records out of unstructured sources.",
+    "data.transform": "Reshape, clean or join data that is already structured.",
+    "data.acquire": "Fetch data from an external source into the platform.",
+    "data.analyse": "Answer a question from data, with the working shown.",
+    "data.visualise": "Produce charts or figures from data.",
+    "document.summarise": "Reduce a document or a set of them to its substance.",
+    "document.extract": "Pull named fields out of documents.",
+    "document.author": "Write a document to a brief.",
+    "report.author": "Produce a report from evidence that already exists.",
+    "code.execute": "Run code in a sandbox and return what it produced.",
+    "code.review": "Read code and report on it without changing it.",
+    "research.gather": "Find and cite sources answering a question.",
+    "workflow.orchestrate": "Break work down and delegate it to other agents.",
+    "support.respond": "Answer a request on behalf of a team.",
+}
+
+
+class AgentCapability(BaseModel):
+    """One kind of work an agent can be delegated, and what it takes and returns.
+
+    This is the unit `agents.discover` matches on, and it maps onto an A2A
+    agent card's `skills` entry — `id`, `name`, `description`, `tags` — so a
+    Datalayer agentspec and a third-party A2A worker are discoverable through
+    the same query rather than through two.
+
+    `inputs` and `outputs` are the *contract* half, and the reason this is not
+    simply a tag: an orchestrator choosing between two workers that both claim
+    `data.analyse` needs to know which of them accepts a notebook reference
+    and which returns one. They name context-reference kinds and artifact
+    types, the vocabularies of sections 5.3 and 5.4.
+    """
+
+    id: str = Field(
+        ...,
+        description=(
+            "One of AGENT_CAPABILITIES. Validated, because a capability "
+            "nothing else uses the same spelling for is a capability nobody "
+            "discovers."
+        ),
+    )
+    name: str = Field(
+        default="",
+        description="Display label; the vocabulary's own description when empty.",
+    )
+    description: str = Field(
+        default="",
+        description="What this agent in particular does under that capability.",
+    )
+    inputs: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Context reference kinds it accepts — notebook, document, dataset, "
+            "file, sandbox (section 5.3). Empty means it was not stated, which "
+            "is not the same as accepting nothing."
+        ),
+    )
+    outputs: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Artifact types it produces — notebook, report, dataset, file, "
+            "cell_output, structured (section 5.4)."
+        ),
+    )
+    tags: List[str] = Field(
+        default_factory=list,
+        description="Free text, for humans reading a catalogue; never matched on.",
+    )
+
+    @field_validator("id")
+    @classmethod
+    def _known(cls, value: str) -> str:
+        """
+        Refuse a capability the vocabulary does not have.
+
+        Parameters
+        ----------
+        value : str
+            The proposed capability id.
+
+        Returns
+        -------
+        str
+            The id, when it is in AGENT_CAPABILITIES.
+
+        Raises
+        ------
+        ValueError
+            When it is not. Adding one is an edit to AGENT_CAPABILITIES, on
+            purpose: the vocabulary is a contract with everything that
+            discovers against it.
+        """
+        if value not in AGENT_CAPABILITIES:
+            known = ", ".join(sorted(AGENT_CAPABILITIES))
+            raise ValueError(
+                f"'{value}' is not a known capability. The vocabulary is a "
+                f"closed list so that discovery matches: {known}. Add it to "
+                "AGENT_CAPABILITIES if this is genuinely new work."
+            )
+        return value
+
+
 class Agentspec(BaseModel):
     """
     Specification for an AI agent.
@@ -1336,6 +1456,19 @@ class Agentspec(BaseModel):
     goal: Optional[str] = Field(
         default=None,
         description="User-facing objective for the agent",
+    )
+    delegable: List[AgentCapability] = Field(
+        default_factory=list,
+        description=(
+            "What work this agent can be delegated (ORCHESTRATOR.md, O2-07). "
+            "`protocol` below says how it is reached; this says what it is "
+            "worth reaching it for. Empty means the spec has not said, and "
+            "discovery reports that rather than guessing from tags. "
+            "Deliberately not called `capabilities`: that field already exists "
+            "on this model and means pydantic-ai capability configurations — "
+            "guardrails, budgets, memory — which are runtime behaviours "
+            "attached to an agent rather than work an orchestrator may hand it."
+        ),
     )
     protocol: Optional[str] = Field(
         default=None,

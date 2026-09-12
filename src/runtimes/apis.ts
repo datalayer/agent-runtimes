@@ -34,8 +34,17 @@ export interface IDatalayerSessionContext extends ISessionContext {
 export interface IRuntimeOptions {
   /**
    * Environment name
+   *
+   * A platform environment by its name, or an environment somebody built,
+   * named `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
    */
   environmentName: string;
+  /**
+   * Which version of a user environment to launch: its number, or a version
+   * uid. Absent means the version its owner promoted, which is what a platform
+   * environment always runs (E1-19).
+   */
+  environmentVersion?: number | string;
   /**
    * Credits limit to be consumed by the kernel
    */

@@ -61,7 +61,16 @@ export interface RuntimeJSON {
 export interface CreateRuntimeRequest {
   /** Runtime environment to use */
   environment: {
+    /**
+     * A platform environment by its name, or a user environment as
+     * `<account-handle>/<name>` or by its uid (PLAN_ENV.md, D-2).
+     */
     name: string;
+    /**
+     * Which version of a user environment: its number, or a version uid.
+     * Absent means the promoted version (E1-19).
+     */
+    version?: number | string;
   };
   /** Type of runtime (e.g., 'notebook', 'terminal', 'job') */
   type?: 'notebook' | 'terminal' | 'job';

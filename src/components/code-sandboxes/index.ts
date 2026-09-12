@@ -17,6 +17,7 @@
 
 export * from './CodeSandboxCellVariables';
 export * from './CodeSandboxCellVariablesDialog';
+export * from './codeSandboxEnvironments';
 export * from './CodeSandboxEnvironmentSelect';
 export * from './CodeSandboxLauncher';
 export * from './CodeSandboxPicker';

@@ -829,6 +829,8 @@ class AgentClient(
                     origin=env_data.pop("origin", None),
                     promoted_version=env_data.pop("promotedVersion", None),
                     variants=env_data.pop("variants", None),
+                    available_variants=env_data.pop("availableVariants", None),
+                    size_class=env_data.pop("sizeClass", None) or None,
                     metadata=env_data,
                 )
             )
@@ -850,6 +852,7 @@ class AgentClient(
         content_attachment_uids: Optional[list[str]] = None,
         from_snapshot_uid: Optional[str] = None,
         parent_reservation_uid: Optional[str] = None,
+        version: Optional[Union[int, str]] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -859,7 +862,13 @@ class AgentClient(
         name : str, optional
             Name of the runtime to create.
         environment : str, optional
-            Environment type (e.g., "ai-agents-env"). Type of resources needed (cpu, gpu, etc.).
+            Environment type (e.g., "ai-agents-env"). Type of resources needed
+            (cpu, gpu, etc.). A user environment is named through the same
+            argument, as ``<account-handle>/<name>`` or by its uid (PLAN_ENV.md,
+            D-2).
+        version : Optional[Union[int, str]], optional
+            The version of a user environment to launch: its number, or a
+            version uid. Without one the promoted version launches (E1-19).
         time_reservation : Minutes, optional
             Time reservation in minutes for the runtime. Defaults to 10 minutes.
         snapshot_name : Optional[str], optional
@@ -891,17 +900,23 @@ class AgentClient(
                 f"Environment '{environment}' not found. Available environments: {self._available_environments_names}"
             )
 
-        burning_rate = None
-        credits_limit = None
-        for env in envs:
-            if env.name == environment:
-                burning_rate = env.burning_rate
-                credits_limit = env.burning_rate * 60.0 * time_reservation
-                break
-        if burning_rate is None or credits_limit is None:
+        entry = next((env for env in envs if env.name == environment), None)
+        if entry is None:
             raise ValueError(
                 f"Environment '{environment}' not found in environments list. Available: {[env.name for env in envs]}"
             )
+        # What a second costs is READ FROM THE LISTING, never written here: a
+        # platform entry carries its pool's rate, and a user environment the
+        # rate of the size class its promoted version names (PLAN_ENV.md, D-4,
+        # E1-19). A class nothing prices is refused rather than reserved at
+        # zero, which would ask the platform for a runtime it will not start.
+        burning_rate = entry.burning_rate
+        if entry.size_class and not burning_rate:
+            raise ValueError(
+                f"Environment '{environment}' runs on the size class '{entry.size_class}', "
+                "which has no burning rate: it cannot be priced, so no runtime is created."
+            )
+        credits_limit = burning_rate * 60.0 * time_reservation
 
         if name is None:
             name = f"runtime-{environment}-{uuid.uuid4()}"
@@ -928,6 +943,7 @@ class AgentClient(
             response = client_for_request.runtimes.create(
                 given_name=name,
                 environment_name=environment,
+                environment_version=version,
                 from_snapshot_uid=snapshot_uid,
                 agent_spec_id=agent_spec_id,
                 agent_spec=agent_spec,
@@ -944,6 +960,7 @@ class AgentClient(
             response = client_for_request.runtimes.create(
                 given_name=name,
                 environment_name=environment,
+                environment_version=version,
                 agent_spec_id=agent_spec_id,
                 agent_spec=agent_spec,
                 credits_limit=credits_limit,

@@ -25,7 +25,7 @@ import logging
 import os
 import sys
 import time
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, Union
 
 import requests
 from code_sandboxes.lifecycle import (
@@ -135,13 +135,20 @@ class RuntimesClient:
         runtime_name: Optional[str] = None,
         content_attachment_uids: Optional[list[str]] = None,
         parent_reservation_uid: Optional[str] = None,
+        environment_version: Optional[Union[int, str]] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
         Parameters
         ----------
         environment_name : str
-            Name of the environment to use.
+            Name of the environment to use. A platform environment by its
+            name, a user environment as ``<account-handle>/<name>`` or by its
+            uid (PLAN_ENV.md, D-2).
+        environment_version : Optional[Union[int, str]]
+            The version of a user environment to launch: its number, or a
+            version uid. Without one the promoted version launches, which is
+            what a platform environment always does.
         given_name : Optional[str]
             Custom name for the runtime.
         credits_limit : Optional[float]
@@ -166,9 +173,16 @@ class RuntimesClient:
         dict[str, Any]
             Response containing runtime creation details.
         """
+        # The launch contract is `environment: {name, version}`, and the
+        # version is additive: absent, this is byte for byte the request every
+        # platform environment has always been launched with (PLAN_ENV.md,
+        # §7.6, E1-11).
+        environment: dict[str, Any] = {"name": environment_name}
+        if environment_version is not None and str(environment_version).strip() != "":
+            environment["version"] = environment_version
         body: dict[str, Any] = {
             "type": "notebook",
-            "environment": {"name": environment_name},
+            "environment": environment,
         }
 
         resolved_billing_entity_uid = (

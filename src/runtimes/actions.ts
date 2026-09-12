@@ -77,10 +77,24 @@ export async function createRuntime(
         'A number of zero or more is required.',
     );
   }
+  /*
+   * `environment: {name, version}` — and the version is ADDITIVE.
+   *
+   * Without one this is, byte for byte, the request every runtime has been
+   * launched with since before user environments existed, and the platform
+   * resolves the promoted version itself (PLAN_ENV.md, §7.6, D-2, E1-11).
+   */
+  const environment: Record<string, unknown> = {
+    name: options.environmentName,
+  };
+  if (
+    options.environmentVersion !== undefined &&
+    options.environmentVersion !== ''
+  ) {
+    environment['version'] = options.environmentVersion;
+  }
   const body: Record<string, unknown> = {
-    environment: {
-      name: options.environmentName,
-    },
+    environment,
     type: options.type ?? 'notebook',
     given_name: options.givenName,
     credits_limit: options.creditsLimit,
