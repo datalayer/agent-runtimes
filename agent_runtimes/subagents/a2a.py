@@ -721,7 +721,16 @@ async def relay_a2a_task(
         headers=headers,
         timeout=httpx.Timeout(None, connect=30.0),
     ) as http:
-        client = A2AClient(base_url=remote.url, http_client=http)
+        # `fasta2a`'s constructor takes the worker's URL as `agent`, not
+        # `base_url` — a rename somewhere past 2.0.0 that the floor pin
+        # (`fasta2a>=2.0.0`, no ceiling) let straight through: every build
+        # re-resolves to whatever is latest on PyPI, so the two are only as
+        # compatible as the day the image was built. Found on prod1 on
+        # 2026-09-12 when a team member's dispatch failed
+        # `A2AClient.__init__() got an unexpected keyword argument 'base_url'`
+        # — every A2A dispatch through this function was broken, silently,
+        # until something actually delegated through it again.
+        client = A2AClient(agent=remote.url, http_client=http)
         message = Message(
             role="user",
             parts=[Part(text=task)],

@@ -835,3 +835,44 @@ class TestWorker:
         stored = await storage.load_task(task["id"])
         assert stored is not None and stored["status"]["state"] == "canceled"
         assert events_registry == {}, "the task was unregistered when it ended"
+
+
+class TestFasta2aClientSignature:
+    """`A2AClient` is built with the arguments its own package accepts.
+
+    Found on prod1 on 2026-09-12: `fasta2a>=2.0.0` with no ceiling let every
+    build re-resolve to whatever was newest on PyPI, and somewhere within
+    2.0.x `A2AClient.__init__` renamed its worker-URL argument from
+    `base_url` to `agent`. Nothing failed at import — the two call sites that
+    build one are either wrapped in a broad `try` or simply not exercised
+    until something dispatches through them — so the first thing to notice
+    was a team member's dispatch answering `A2AClient.__init__() got an
+    unexpected keyword argument 'base_url'`.
+
+    A mock with `**kwargs` — which is what `TestStop` above uses to fake the
+    client for its own purposes — accepts anything and would never have
+    caught this. So this constructs the *real* class, against the *real*
+    installed `fasta2a`, with exactly the call the two sites make.
+    """
+
+    def test_the_real_client_accepts_what_relay_a2a_task_passes(self) -> None:
+        from fasta2a.client import A2AClient
+
+        # Raises TypeError on its own if the signature drifts again; the
+        # http_client is real too, so this is the actual constructor path,
+        # not a mock of it.
+        import httpx
+
+        client = A2AClient(
+            agent="http://worker.test", http_client=httpx.AsyncClient()
+        )
+        assert client.http_client.base_url == "http://worker.test"
+
+    def test_the_renamed_argument_is_gone(self) -> None:
+        # The failure mode itself, pinned: a future fasta2a that reintroduces
+        # `base_url` would silently stop testing what this file exists to
+        # test. If this ever fails, the call sites can go back to `base_url`.
+        from fasta2a.client import A2AClient
+
+        with pytest.raises(TypeError):
+            A2AClient(base_url="http://worker.test")

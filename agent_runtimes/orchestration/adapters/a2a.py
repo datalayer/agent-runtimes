@@ -1045,8 +1045,12 @@ class A2AWorkerAdapter(WorkerAdapter):
             async with httpx.AsyncClient(
                 base_url=remote.url, headers=headers, timeout=30.0
             ) as http:
+                # `agent`, not `base_url` — see subagents/a2a.py's note on
+                # the same rename. Caught here by the surrounding try, so
+                # only a broken re-attach was masked, silently, as an
+                # unreachable worker.
                 response = await A2AClient(
-                    base_url=remote.url, http_client=http
+                    agent=remote.url, http_client=http
                 ).get_task(task_id)
         except Exception:  # noqa: BLE001 - an unreachable worker is an observation
             logger.debug("tasks/get failed for %s", task_id, exc_info=True)
