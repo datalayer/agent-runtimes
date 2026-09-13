@@ -56,6 +56,14 @@
 
 // Components - Chat elements
 export { ChatMessages, type ChatMessagesProps } from './messages/ChatMessages';
+// The transcript renderer `ChatBase` itself draws with — a `DisplayItem[]`
+// straight in, no protocol underneath — for a host with its own transcript
+// to show rather than a live runtime to talk to (a team's run, watched as
+// its agents' own conversation).
+export {
+  ChatMessageList,
+  type ChatMessageListProps,
+} from './messages/ChatMessageList';
 export {
   NotebookToolSurfaces,
   notebookToolSurfacesRenderer,

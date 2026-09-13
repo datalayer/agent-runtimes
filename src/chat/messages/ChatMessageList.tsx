@@ -20,11 +20,16 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import { Text, Spinner, Link } from '@primer/react';
+import { Text, Spinner, Link, Label, RelativeTime } from '@primer/react';
 import {
+  ArrowRightIcon,
   BroadcastIcon,
+  ClockIcon,
   DependabotIcon,
   PersonIcon,
+  SkipIcon,
+  ToolsIcon,
+  XCircleFillIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { Streamdown } from 'streamdown';
@@ -126,6 +131,13 @@ export interface ChatMessageListProps {
    * turn's footer, handing the whole turn's ids back to the state owner.
    */
   onRemoveItems?: (ids: string[]) => void;
+  /**
+   * Renders below a message's bubble — an escape hatch for whatever a host's
+   * own domain knows about it (an answer's document link, what it spent)
+   * that this list has no opinion on. Not called for tool calls or for a
+   * `note`, which has no footer of its own.
+   */
+  renderMessageFooter?: (message: ChatMessage) => ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +149,65 @@ function normalizeName(name: string): string {
     .replace(/:[0-9]+\.[0-9]+\.[0-9]+.*$/, '')
     .replace(/[-_]/g, '')
     .toLowerCase();
+}
+
+// ---------------------------------------------------------------------------
+// Speakers — a message's name, tone and initials, for a chat that holds more
+// than one non-user voice (a team's supervisor and its members, a
+// delegation's asker and asked — not just "the assistant").
+// ---------------------------------------------------------------------------
+
+/**
+ * A speaker's tone as the four Primer functional colours its header, its
+ * bubble and its avatar are drawn in. `'neutral'` (the default, for a
+ * speaker with no tone of its own) falls back to plain canvas/border/fg
+ * tokens, since Primer has no `neutral.subtle`.
+ */
+function toneColorsOf(tone: string | undefined): {
+  emphasis: string;
+  subtle: string;
+  muted: string;
+  fg: string;
+} {
+  if (!tone || tone === 'neutral') {
+    return {
+      emphasis: 'neutral.emphasis',
+      subtle: 'canvas.subtle',
+      muted: 'border.default',
+      fg: 'fg.default',
+    };
+  }
+  return {
+    emphasis: `${tone}.emphasis`,
+    subtle: `${tone}.subtle`,
+    muted: `${tone}.muted`,
+    fg: `${tone}.fg`,
+  };
+}
+
+/** Three pulsing dots: a speaker is still writing and has not settled yet. */
+function TypingDots({ size = 8 }: { size?: number }): React.ReactElement {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      {[0, 0.2, 0.4].map((delay, index) => (
+        <Box
+          key={index}
+          sx={{
+            width: size,
+            height: size,
+            borderRadius: '50%',
+            bg: 'fg.muted',
+            animation: 'typingPulse 1.4s ease-in-out infinite',
+            animationDelay: `${delay}s`,
+            '@keyframes typingPulse': {
+              '0%, 60%, 100%': { transform: 'scale(0.6)', opacity: 0.4 },
+              '30%': { transform: 'scale(1)', opacity: 1 },
+            },
+          }}
+        />
+      ))}
+    </Box>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -688,6 +759,7 @@ export function ChatMessageList({
   showTurnFooters = false,
   agentUsage,
   onRemoveItems,
+  renderMessageFooter,
 }: ChatMessageListProps) {
   if (displayItems.length === 0) {
     return <>{emptyContent}</>;
@@ -865,6 +937,62 @@ export function ChatMessageList({
     // ---- Chat message item ----
     const message = item as ChatMessage;
     const isUser = message.role === 'user';
+    const speaker = message.speaker;
+
+    /*
+     * A note — a wait, a failure, a stop — is not a speaker's turn: no
+     * avatar, no side, no bubble. Centred and pill-shaped, the way the
+     * transcript already sets apart what *happened* from what was *said*.
+     */
+    if (message.note) {
+      const noteColor =
+        message.note === 'failed'
+          ? 'danger.fg'
+          : message.note === 'waiting'
+            ? 'attention.fg'
+            : 'fg.muted';
+      const NoteIcon =
+        message.note === 'failed'
+          ? XCircleFillIcon
+          : message.note === 'waiting'
+            ? ClockIcon
+            : SkipIcon;
+      return (
+        <Box
+          key={message.id}
+          sx={{ display: 'flex', justifyContent: 'center', px: padding, py: 1 }}
+        >
+          <Box
+            sx={{
+              display: 'inline-flex',
+              gap: 2,
+              alignItems: 'center',
+              px: 3,
+              py: 1,
+              borderRadius: 999,
+              bg: 'canvas.subtle',
+              border: '1px solid',
+              borderColor: 'border.muted',
+              color: noteColor,
+              fontSize: 0,
+              maxWidth: '90%',
+            }}
+          >
+            <NoteIcon size={14} />
+            {speaker ? (
+              <Text sx={{ fontWeight: 'semibold' }}>{speaker.name}</Text>
+            ) : null}
+            <Text sx={{ color: 'fg.muted' }}>{getMessageText(message)}</Text>
+            {message.createdAt ? (
+              <RelativeTime
+                datetime={message.createdAt.toISOString()}
+                sx={{ color: 'fg.muted' }}
+              />
+            ) : null}
+          </Box>
+        </Box>
+      );
+    }
 
     // Optionally hide assistant messages that follow a rendered tool call
     if (!isUser && hideMessagesAfterToolUI && hasRenderedToolCall) {
@@ -953,57 +1081,173 @@ export function ChatMessageList({
                 width: avatarConfig.avatarSize,
                 height: avatarConfig.avatarSize,
                 borderRadius: '50%',
-                bg: isUser
-                  ? avatarConfig.userAvatarBg
-                  : avatarConfig.assistantAvatarBg,
-                color: isUser
-                  ? 'fg.default'
-                  : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
+                bg: speaker
+                  ? toneColorsOf(speaker.tone).emphasis
+                  : isUser
+                    ? avatarConfig.userAvatarBg
+                    : avatarConfig.assistantAvatarBg,
+                color: speaker
+                  ? 'fg.onEmphasis'
+                  : isUser
+                    ? 'fg.default'
+                    : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                fontSize: speaker ? 0 : undefined,
+                fontWeight: speaker ? 'bold' : undefined,
               }}
             >
-              {isUser ? avatarConfig.userAvatar : avatarConfig.assistantAvatar}
+              {speaker
+                ? speaker.initials || '?'
+                : isUser
+                  ? avatarConfig.userAvatar
+                  : avatarConfig.assistantAvatar}
             </Box>
           )}
 
-          {/* Message bubble */}
-          <Box
-            sx={{
-              maxWidth: '85%',
-              p: 2,
-              overflowX: 'auto',
-              borderRadius: 2,
-              backgroundColor: isUser ? 'accent.emphasis' : 'canvas.subtle',
-              // Use primary-button text token for better contrast when
-              // accent.emphasis is bright (e.g. Matrix dark theme).
-              color: isUser
-                ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
-                : 'fg.default',
-              ...streamdownCodeBlockStyles,
-            }}
-          >
-            {isUser ? (
-              <Text
+          <Box sx={{ maxWidth: '85%', minWidth: 0 }}>
+            {/* Speaker header — who said it, and who it was said to */}
+            {speaker ? (
+              <Box
                 sx={{
-                  fontSize: 1,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
+                  display: 'flex',
+                  gap: 2,
+                  alignItems: 'baseline',
+                  flexWrap: 'wrap',
+                  flexDirection: isUser ? 'row-reverse' : 'row',
+                  mb: 1,
                 }}
               >
-                {getMessageText(message)}
-              </Text>
-            ) : (
-              <Box sx={streamdownMarkdownStyles}>
-                <Streamdown>
-                  {normalizeAssistantMarkdown(
-                    getMessageText(message) || (isStreaming ? '...' : ''),
-                  )}
-                </Streamdown>
+                <Text
+                  sx={{
+                    fontWeight: 'semibold',
+                    fontSize: 1,
+                    color: toneColorsOf(speaker.tone).fg,
+                  }}
+                >
+                  {speaker.name}
+                </Text>
+                {message.directedTo ? (
+                  <>
+                    <Text
+                      sx={{
+                        color: 'fg.muted',
+                        fontSize: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      {message.steer ? 'steers' : 'asks'}{' '}
+                      <ArrowRightIcon size={12} />
+                    </Text>
+                    <Text
+                      sx={{
+                        fontWeight: 'semibold',
+                        fontSize: 1,
+                        color: toneColorsOf(message.directedTo.tone).fg,
+                      }}
+                    >
+                      {message.directedTo.name}
+                    </Text>
+                  </>
+                ) : speaker.role ? (
+                  <Label size="small">{speaker.role}</Label>
+                ) : null}
+                {message.createdAt ? (
+                  <RelativeTime
+                    datetime={message.createdAt.toISOString()}
+                    sx={{ fontSize: 0, color: 'fg.muted' }}
+                  />
+                ) : null}
               </Box>
-            )}
+            ) : null}
+
+            {/* Message bubble */}
+            <Box
+              sx={{
+                p: 2,
+                overflowX: 'auto',
+                borderRadius: 2,
+                backgroundColor: isUser
+                  ? 'accent.emphasis'
+                  : speaker
+                    ? toneColorsOf(speaker.tone).subtle
+                    : 'canvas.subtle',
+                border: !isUser && speaker ? '1px solid' : undefined,
+                borderColor:
+                  !isUser && speaker
+                    ? toneColorsOf(speaker.tone).muted
+                    : undefined,
+                // Use primary-button text token for better contrast when
+                // accent.emphasis is bright (e.g. Matrix dark theme).
+                color: isUser
+                  ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
+                  : 'fg.default',
+                ...streamdownCodeBlockStyles,
+              }}
+            >
+              {/* Tool chips — the turn's own tool calls, named rather than carded */}
+              {message.toolChips?.length ? (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                  {message.toolChips.map((label, chipIndex) => (
+                    <Label
+                      key={`${label}-${chipIndex}`}
+                      variant="secondary"
+                      size="small"
+                    >
+                      <Box
+                        as="span"
+                        sx={{
+                          display: 'inline-flex',
+                          gap: 1,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <ToolsIcon size={10} /> {label}
+                      </Box>
+                    </Label>
+                  ))}
+                </Box>
+              ) : null}
+              {isUser ? (
+                <Text
+                  sx={{
+                    fontSize: 1,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {getMessageText(message)}
+                </Text>
+              ) : message.live && !getMessageText(message) ? (
+                <TypingDots size={6} />
+              ) : (
+                <Box sx={streamdownMarkdownStyles}>
+                  <Streamdown>
+                    {normalizeAssistantMarkdown(
+                      getMessageText(message) || (isStreaming ? '...' : ''),
+                    )}
+                  </Streamdown>
+                </Box>
+              )}
+            </Box>
+            {renderMessageFooter ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  alignItems: 'center',
+                  mt: 1,
+                  flexWrap: 'wrap',
+                  flexDirection: isUser ? 'row-reverse' : 'row',
+                }}
+              >
+                {renderMessageFooter(message)}
+              </Box>
+            ) : null}
           </Box>
         </Box>
       </Box>
@@ -1067,36 +1311,13 @@ export function ChatMessageList({
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
                 p: 2,
                 borderRadius: 2,
                 bg: 'canvas.subtle',
                 minHeight: '32px',
               }}
             >
-              {[0, 0.2, 0.4].map((delay, i) => (
-                <Box
-                  key={i}
-                  sx={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    bg: 'fg.muted',
-                    animation: 'typingPulse 1.4s ease-in-out infinite',
-                    animationDelay: `${delay}s`,
-                    '@keyframes typingPulse': {
-                      '0%, 60%, 100%': {
-                        transform: 'scale(0.6)',
-                        opacity: 0.4,
-                      },
-                      '30%': {
-                        transform: 'scale(1)',
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                />
-              ))}
+              <TypingDots />
             </Box>
           </Box>
         </Box>
