@@ -20,6 +20,7 @@ as a worker's rather than passing for somebody's edit.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -117,6 +118,129 @@ def _lines(text: str) -> list[dict[str, Any]]:
     return children
 
 
+# ---------------------------------------------------------------------------
+# A worker's prose, read as the markdown it usually is (jupyter-lexical's own
+# `convert/markdown/MarkdownTransformers.ts` is the reference for both the
+# syntax and the priority a marker is tried in, so a heading or an emphasis a
+# worker wrote is a heading or an emphasis here too, not the literal `#` or
+# `**` characters a plain-text paragraph would have shown them as — found
+# live, 2026-09-13, on an execution's own committed answer.
+# ---------------------------------------------------------------------------
+
+_BOLD = 1
+_ITALIC = 2
+_STRIKETHROUGH = 4
+_CODE = 16
+
+#: Longest marker first: `**` must not be read as two `*`s, the same rule
+#: the js transformers' own comment states ("then longer tags match").
+_INLINE_FORMATS: tuple[tuple[Any, int], ...] = (
+    (re.compile(r"\*\*\*(?!\s)(.+?)(?<!\s)\*\*\*"), _BOLD | _ITALIC),
+    (re.compile(r"___(?!\s)(.+?)(?<!\s)___"), _BOLD | _ITALIC),
+    (re.compile(r"\*\*(?!\s)(.+?)(?<!\s)\*\*"), _BOLD),
+    (re.compile(r"__(?!\s)(.+?)(?<!\s)__"), _BOLD),
+    (re.compile(r"~~(?!\s)(.+?)(?<!\s)~~"), _STRIKETHROUGH),
+    (re.compile(r"`(.+?)`"), _CODE),
+    (re.compile(r"\*(?!\s)(.+?)(?<!\s)\*"), _ITALIC),
+    (re.compile(r"_(?!\s)(.+?)(?<!\s)_"), _ITALIC),
+)
+
+_HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
+_UNORDERED_ITEM = re.compile(r"^\s*[-*+]\s+(.*)$")
+_ORDERED_ITEM = re.compile(r"^\s*\d+\.\s+(.*)$")
+
+
+def _inline_nodes(text: str) -> list[dict[str, Any]]:
+    """One line, as the text runs its markdown means: a code span first —
+    nothing inside it is read as a marker — then the longest emphasis marker
+    left to right. Never empty, so a block always has something to render."""
+    nodes: list[dict[str, Any]] = []
+    rest = text
+    while rest:
+        found: tuple[Any, int] | None = None
+        for pattern, fmt in _INLINE_FORMATS:
+            match = pattern.search(rest)
+            if match and (found is None or match.start() < found[0].start()):
+                found = (match, fmt)
+        if found is None:
+            nodes.append(_text(rest))
+            break
+        match, fmt = found
+        if match.start() > 0:
+            nodes.append(_text(rest[: match.start()]))
+        nodes.append(_text(match.group(1), fmt))
+        rest = rest[match.end() :]
+    return nodes or [_text("")]
+
+
+def _markdown_blocks(body: str, mark: dict[str, Any]) -> list[dict[str, Any]]:
+    """A worker's whole answer, as headings, lists and paragraphs — a blank
+    line still separates paragraphs and a single one is still a soft break
+    within one, exactly as plain text was read before; a line is read as a
+    heading or a list item first, the same order `HEADING`, `UNORDERED_LIST`
+    and `ORDERED_LIST` are tried in `MarkdownTransformers.ts`."""
+    blocks: list[dict[str, Any]] = []
+    paragraph: list[str] = []
+    items: list[str] = []
+    list_kind: str | None = None
+
+    def flush_paragraph() -> None:
+        if not paragraph:
+            return
+        children: list[dict[str, Any]] = []
+        for index, line in enumerate(paragraph):
+            if index:
+                children.append({"type": "linebreak", "version": 1})
+            children.extend(_inline_nodes(line))
+        blocks.append(_block("paragraph", children, mark, textFormat=0, textStyle=""))
+        paragraph.clear()
+
+    def flush_list() -> None:
+        nonlocal list_kind
+        if not items:
+            return
+        made = [
+            _block("listitem", _inline_nodes(line), mark, value=index)
+            for index, line in enumerate(items, start=1)
+        ]
+        blocks.append(
+            _block(
+                "list", made, mark,
+                listType=list_kind, start=1, tag="ol" if list_kind == "number" else "ul",
+            )
+        )
+        items.clear()
+        list_kind = None
+
+    for raw in body.split("\n"):
+        line = raw.rstrip("\r")
+        if not line.strip():
+            flush_paragraph()
+            flush_list()
+            continue
+        heading = _HEADING.match(line)
+        if heading:
+            flush_paragraph()
+            flush_list()
+            blocks.append(_block("heading", _inline_nodes(heading.group(2)), mark, tag=f"h{len(heading.group(1))}"))
+            continue
+        ordered = _ORDERED_ITEM.match(line)
+        unordered = None if ordered else _UNORDERED_ITEM.match(line)
+        if ordered or unordered:
+            flush_paragraph()
+            kind = "number" if ordered else "bullet"
+            if items and list_kind != kind:
+                flush_list()
+            list_kind = kind
+            items.append((ordered or unordered).group(1))
+            continue
+        flush_list()
+        paragraph.append(line)
+    flush_paragraph()
+    flush_list()
+    return blocks
+
+
 def artifact_document(
     execution: Execution, artifact: Artifact, body: str
 ) -> dict[str, Any]:
@@ -169,13 +293,7 @@ def artifact_document(
             pretty = body
         children.append(_block("code", _lines(pretty), mark, language="json"))
     else:
-        for paragraph in (part.strip("\n") for part in body.split("\n\n")):
-            if paragraph.strip():
-                children.append(
-                    _block(
-                        "paragraph", _lines(paragraph), mark, textFormat=0, textStyle=""
-                    )
-                )
+        children.extend(_markdown_blocks(body, mark))
     return {
         "root": {
             "children": children,
