@@ -54,6 +54,7 @@ from agent_runtimes.commands.evals import app as evals_app
 from agent_runtimes.commands.events import app as events_app
 from agent_runtimes.commands.events import events_list, events_ls
 from agent_runtimes.commands.exec import main as exec_main
+from agent_runtimes.commands.executions import app as executions_app
 from agent_runtimes.commands.list_agents import (
     ListAgentsError,
     OutputFormat,
@@ -436,6 +437,7 @@ except Exception as exc:  # noqa: BLE001
 
 # Register events command group and root aliases.
 app.add_typer(events_app)
+app.add_typer(executions_app)
 app.add_typer(agents_app)
 app.add_typer(agent_nodes_app)
 app.add_typer(benchmarks_app)

@@ -56,6 +56,7 @@ _COMMAND_GROUPS: tuple[str, ...] = (
     "agent_runtimes.commands.envs",
     "agent_runtimes.commands.evals",
     "agent_runtimes.commands.events",
+    "agent_runtimes.commands.executions",
     "agent_runtimes.commands.memory",
     "agent_runtimes.commands.pools",
     "agent_runtimes.commands.ray",
