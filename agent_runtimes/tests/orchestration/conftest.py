@@ -24,9 +24,11 @@ from typing import Any
 import pytest
 
 from agent_runtimes.monitoring.orchestration_measures import (
+    CONFORMANCE_ONLY,
     FAILED,
     PASSED,
     REDUCED,
+    configure,
     conformance_rate,
     conformance_scenario,
     flush,
@@ -44,6 +46,25 @@ _SCENARIO_TEST = re.compile(
 
 #: The class that tests the harness rather than a scenario.
 _NOT_A_SCENARIO = "TheHarness"
+
+
+@pytest.fixture(autouse=True)
+def only_the_conformance_counter() -> Any:
+    """
+    Take no store measure while a scenario runs, only the suite's own counter.
+
+    The scenarios drive in-memory stores on test clocks, so their latencies and
+    settlements mean nothing as measurements. Harmless without a meter
+    provider; with one — the suite run against a deployment — they were
+    exported into a real account's dashboard. Everything restored after.
+
+    Yields
+    ------
+    None
+    """
+    configure(only=CONFORMANCE_ONLY)
+    yield
+    configure()
 
 
 @pytest.fixture(params=BINDINGS, ids=[entry.name for entry in BINDINGS])

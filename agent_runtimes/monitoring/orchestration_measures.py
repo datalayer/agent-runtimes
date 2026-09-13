@@ -159,10 +159,15 @@ def _instrument(
 class OrchestrationInstruments:
     """Every orchestration instrument, created once."""
 
-    def __init__(self, *, recording: bool = False) -> None:
+    def __init__(
+        self, *, recording: bool = False, only: Iterable[str] | None = None
+    ) -> None:
         meter = None if recording else _meter()
+        kept = None if only is None else frozenset(only)
 
         def counter(name: str, description: str) -> Any:
+            if kept is not None and name not in kept:
+                return _Noop(name)
             if recording:
                 return _Recording(name)
             return _instrument(
@@ -170,6 +175,8 @@ class OrchestrationInstruments:
             )
 
         def histogram(name: str, description: str) -> Any:
+            if kept is not None and name not in kept:
+                return _Noop(name)
             if recording:
                 return _Recording(name)
             return _instrument(
@@ -217,10 +224,17 @@ class OrchestrationInstruments:
         return list(vars(self).values())
 
 
-_state: dict[str, Any] = {"instruments": None, "recording": False}
+#: What the conformance suite exports when it runs in a process that has a
+#: meter provider: its own counter, and nothing its in-memory stores measure.
+#: Those stores run on test clocks — an execution created in a fixture's past
+#: and accepted now — so exporting them put acceptance times of days into a
+#: real account's dashboard on prod1 (2026-09-13).
+CONFORMANCE_ONLY: frozenset[str] = frozenset({"orchestration.conformance.scenarios"})
+
+_state: dict[str, Any] = {"instruments": None, "recording": False, "only": None}
 
 
-def configure(*, recording: bool = False) -> None:
+def configure(*, recording: bool = False, only: Iterable[str] | None = None) -> None:
     """
     Rebuild the instruments on next use.
 
@@ -228,8 +242,12 @@ def configure(*, recording: bool = False) -> None:
     ----------
     recording : bool
         Keep the points in memory, for a test, instead of exporting them.
+    only : Iterable[str] | None
+        The measures to take, by name; every other one is a no-op. ``None``,
+        the default, takes them all.
     """
     _state["recording"] = recording
+    _state["only"] = None if only is None else frozenset(only)
     _state["instruments"] = None
 
 
@@ -248,7 +266,9 @@ def instruments() -> OrchestrationInstruments:
     """
     current = _state["instruments"]
     if current is None:
-        current = OrchestrationInstruments(recording=bool(_state["recording"]))
+        current = OrchestrationInstruments(
+            recording=bool(_state["recording"]), only=_state["only"]
+        )
         _state["instruments"] = current
     return current
 

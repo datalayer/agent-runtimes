@@ -71,6 +71,41 @@ def _labels(points: list[tuple[float, dict[str, str]]], name: str) -> list[str]:
     return [attributes.get(name, "") for _, attributes in points]
 
 
+class TestOnlySomeMeasures:
+    @pytest.mark.asyncio
+    async def test_a_store_takes_nothing_while_only_the_conformance_counter_is_kept(
+        self,
+    ) -> None:
+        # What the conformance suite runs under: a delegation, a settlement
+        # and the scenario counter, and only the counter is taken.
+        measures.configure(recording=True, only=measures.CONFORMANCE_ONLY)
+        kept = measures.instruments()
+        store = InMemoryExecutionStore()
+        execution, _ = await _running(store)
+        await store.set_state(execution.execution_id, LifecycleEvent.COMPLETE)
+        measures.conformance_scenario(
+            scenario="delegation", binding="a2a", outcome=measures.PASSED
+        )
+
+        assert _labels(kept.conformance.points, "binding") == ["a2a"]
+        for instrument in (
+            kept.delegations,
+            kept.acceptance,
+            kept.settled,
+            kept.duration,
+            kept.artifacts,
+        ):
+            assert not getattr(instrument, "points", []), instrument.name
+
+    def test_every_measure_is_taken_again_once_configured_without_a_filter(
+        self,
+    ) -> None:
+        measures.configure(recording=True, only=measures.CONFORMANCE_ONLY)
+        measures.configure(recording=True)
+        taken = measures.instruments()
+        assert all(hasattr(instrument, "points") for instrument in taken.all())
+
+
 class TestDelegations:
     @pytest.mark.asyncio
     async def test_a_duplicate_is_told_apart_from_a_new_delegation(self, recording):
