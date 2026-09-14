@@ -75,6 +75,7 @@ export {
 export {
   InputPromptPlugin,
   INPUT_PROMPT_PLUGIN_NAME,
+  type InputPromptPluginConfig,
 } from './plugins/input-prompt';
 export {
   createChatExtrasPlugin,

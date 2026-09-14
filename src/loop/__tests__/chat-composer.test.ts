@@ -33,7 +33,10 @@ const CHAT_VIEW = readFileSync(
 function sendHandler(): string {
   const start = CHAT_VIEW.indexOf('const handleSend = useCallback(');
   expect(start).toBeGreaterThan(-1);
-  const end = CHAT_VIEW.indexOf('[workspace],', start);
+  const end = CHAT_VIEW.indexOf(
+    '[workspace, inputPromptConfig?.firstPromptHook],',
+    start,
+  );
   expect(end).toBeGreaterThan(start);
   return CHAT_VIEW.slice(start, end);
 }

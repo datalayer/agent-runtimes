@@ -72,6 +72,10 @@ const EMPTY_CHAT_EXTRAS = signal<LoopChatExtrasValue>({});
 import { useWorkspaceFullScreen } from '../../shell/useWorkspaceFullScreen';
 import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
 import {
+  INPUT_PROMPT_PLUGIN_NAME,
+  type InputPromptPluginConfig,
+} from '../input-prompt';
+import {
   type FooterAgent,
   type InputPromptProps,
 } from '../../../chat/prompt/InputPrompt';
@@ -109,7 +113,11 @@ import {
   type LoopViewProps,
 } from '../../core';
 import { turnWritersOf, type TurnFeed } from './turnState';
-import { orderToolContributions, toolsForChatView } from './chatViewTools';
+import {
+  isInactiveSurfaceContribution,
+  orderToolContributions,
+  toolsForChatView,
+} from './chatViewTools';
 import { useAgentCommandTools } from '../../../tools/adapters/commands';
 import {
   NONE_EDITOR,
@@ -152,6 +160,23 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const placeholder =
     config?.placeholder ?? 'Ask anything, type / for commands or @ for mention';
   const defaultSurface = config?.defaultSurface ?? 'notebook';
+  /*
+   * The input-prompt plugin's own configuration, read from here rather than
+   * from that plugin's component.
+   *
+   * `firstPromptHook` has to fire for *every* way a message reaches
+   * `handleSend` below — typed and sent through the composer, a suggestion
+   * chip clicked, or a host's own `suggestLoopPrompt(text, {submit: true})`
+   * arriving through the prompt store — and this view is the only thing all
+   * three of those already go through. The composer that renders is
+   * swappable (a host may contribute a different one to `LoopChatComposer`
+   * entirely) and does not see the other two paths at all, so watching for
+   * the first send from inside it would miss most of what "first prompt"
+   * needs to mean.
+   */
+  const inputPromptConfig = reactor.getConfig<InputPromptPluginConfig>(
+    INPUT_PROMPT_PLUGIN_NAME,
+  );
 
   /*
    * The default editor is the opening selection, not something switched on
@@ -416,8 +441,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     [workspace.prompts],
   );
 
+  /*
+   * Fired once, on the first real send, for the life of this mounted chat —
+   * a ref rather than a signal, because nothing here needs to re-render when
+   * it flips; the host's hook is the only thing that reacts.
+   */
+  const firstPromptFired = useRef(false);
   const handleSend = useCallback(
     async (message: string) => {
+      /*
+       * Every way a message reaches this view runs through here — typed and
+       * sent through the composer, a suggestion chip clicked, or a host's own
+       * `suggestLoopPrompt(text, {submit: true})` arriving through the prompt
+       * store (see the `suggestion.submit` effect below) — so this is the one
+       * place "the first prompt" means the same thing regardless of which one
+       * a person or a host used.
+       */
+      if (!firstPromptFired.current) {
+        firstPromptFired.current = true;
+        inputPromptConfig?.firstPromptHook?.();
+      }
       setTransient(null);
       // A new turn: whatever the panel showed is gone, this message is it.
       turnFeedRef.current?.begin(message);
@@ -449,7 +492,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         setTransient(outcome.result.content as ReactNode);
       }
     },
-    [workspace],
+    [workspace, inputPromptConfig?.firstPromptHook],
   );
 
   const active = useMemo(
@@ -832,10 +875,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     const owners = new Map<string, string>();
     // Tools a contribution vouched for in the chat view; see `chatView`.
     const keep = new Set<string>();
+    // See `isInactiveSurfaceContribution`: with an editor on screen, only
+    // its own `${surfaceId}-tools` contribution survives this filter.
+    const surfaceIds = new Set(surfaces.map(entry => entry.value.surfaceId));
     for (const entry of orderToolContributions(
       toolContributions,
       active?.surfaceId,
     )) {
+      if (
+        isInactiveSurfaceContribution(
+          entry.value.id,
+          surfaceIds,
+          active?.surfaceId,
+        )
+      ) {
+        continue;
+      }
       let tools: typeof merged;
       try {
         tools = entry.value.tools(workspace);
@@ -874,10 +929,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     }
     /*
      * The view decides the toolset. With an editor on screen the agent has
-     * everything; with none — the chat view — it keeps only what leaves the
-     * editors alone: the `executeCodeIn…` tools, whose outputs stream onto the
-     * conversation as surfaces, and the read tools. The editors stay
-     * mounted out of sight either way, so what it can still call, works.
+     * that editor's own tools (`belongsToInactiveSurface` above, plus
+     * whatever isn't tied to a surface at all); with none — the chat view —
+     * it keeps only what leaves the editors alone: the `executeCodeIn…`
+     * tools, whose outputs stream onto the conversation as surfaces, and
+     * the read tools. The editors stay mounted out of sight either way, so
+     * what it can still call, works.
      */
     return active ? merged : toolsForChatView(merged, keep);
     // The workspace object is rebuilt when its facts change; surfaceId is
@@ -889,6 +946,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     workspace.agentId,
     chatExtras.frontendTools,
     active?.surfaceId,
+    surfaces,
   ]);
 
   /*

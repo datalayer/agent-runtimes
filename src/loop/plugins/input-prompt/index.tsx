@@ -42,6 +42,29 @@ import {
 
 export const INPUT_PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-input-prompt';
 
+/**
+ * What a host may set on the composer.
+ */
+export type InputPromptPluginConfig = {
+  /**
+   * Called once — the first time a person actually sends a message through
+   * this composer — and never again after, for the life of the mounted
+   * workspace.
+   *
+   * Typing does not count, and neither does a suggestion merely landing in
+   * the box: only a real send. This is the one place that sees every send
+   * regardless of which surface is open beside the chat, which is what
+   * makes it the right point for a host to notice "the conversation has
+   * started" rather than each editor plugin guessing at it independently.
+   *
+   * The usual reason to want it: a page that shows something *around* the
+   * workspace before the first message — an empty-state layout, a column
+   * beside it — and wants to react (give the editor the room that layout
+   * was holding, say) exactly once, when the workspace stops being empty.
+   */
+  firstPromptHook?: () => void;
+};
+
 const LazyComposerView = lazy(() => import('./ComposerView'));
 
 /** The lazy boundary, so the point's consumers need no Suspense of theirs. */
@@ -53,8 +76,9 @@ function ComposerView(props: LoopChatComposerProps): JSX.Element {
   );
 }
 
-export const InputPromptPlugin = definePlugin({
+export const InputPromptPlugin = definePlugin<InputPromptPluginConfig>({
   name: INPUT_PROMPT_PLUGIN_NAME,
+  config: {},
   displayName: 'Input Prompt',
   description: 'The composer under (or over) the conversation.',
   octicon: 'pencil',

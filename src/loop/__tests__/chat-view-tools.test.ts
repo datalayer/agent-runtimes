@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isChatViewTool,
+  isInactiveSurfaceContribution,
   orderToolContributions,
   toolsForChatView,
 } from '../plugins/chat/chatViewTools';
@@ -90,5 +91,47 @@ describe('the chat view toolset', () => {
       'document-tools',
       'chat-extras',
     ]);
+  });
+
+  describe('isInactiveSurfaceContribution', () => {
+    const surfaceIds = new Set(['notebook', 'document']);
+
+    it('withholds the surface that is not on screen', () => {
+      expect(
+        isInactiveSurfaceContribution('notebook-tools', surfaceIds, 'document'),
+      ).toBe(true);
+      expect(
+        isInactiveSurfaceContribution('document-tools', surfaceIds, 'notebook'),
+      ).toBe(true);
+    });
+
+    it('keeps the active surface’s own tools', () => {
+      expect(
+        isInactiveSurfaceContribution('document-tools', surfaceIds, 'document'),
+      ).toBe(false);
+      expect(
+        isInactiveSurfaceContribution('notebook-tools', surfaceIds, 'notebook'),
+      ).toBe(false);
+    });
+
+    it('withholds nothing while no editor is on screen', () => {
+      expect(
+        isInactiveSurfaceContribution('notebook-tools', surfaceIds, undefined),
+      ).toBe(false);
+      expect(
+        isInactiveSurfaceContribution('document-tools', surfaceIds, undefined),
+      ).toBe(false);
+    });
+
+    it('never withholds a contribution that was never tied to a surface', () => {
+      // Not a `-tools` id at all.
+      expect(
+        isInactiveSurfaceContribution('chat-extras', surfaceIds, 'document'),
+      ).toBe(false);
+      // Ends in `-tools`, but names a surface this workspace doesn't have.
+      expect(
+        isInactiveSurfaceContribution('decks-tools', surfaceIds, 'document'),
+      ).toBe(false);
+    });
   });
 });

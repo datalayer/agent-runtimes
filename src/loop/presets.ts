@@ -171,6 +171,13 @@ export type LoopPresetOptions = {
    * Loop wants this on.
    */
   windowFrame?: boolean;
+  /**
+   * Called once, the first time a person sends a message through the
+   * composer. Passed straight through to `InputPromptPlugin`'s own config —
+   * see `InputPromptPluginConfig.firstPromptHook` for what it is for and
+   * when it fires.
+   */
+  firstPromptHook?: () => void;
 };
 
 /**
@@ -205,6 +212,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     commandPalette = false,
     pluginsPanel = false,
     windowFrame = false,
+    firstPromptHook,
   } = options;
 
   return [
@@ -224,7 +232,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // assembles their props, these render them. In the preset by default —
     // a chat without a composer is a demonstration, not a chat — and each is
     // still switched individually in the plugins panel.
-    InputPromptPlugin,
+    configurePlugin(InputPromptPlugin, { firstPromptHook }),
     ChatHeaderPlugin,
     // One footer icon per view, in the composer where the writing hand
     // already is. Each editor's icon withdraws while its editor is not

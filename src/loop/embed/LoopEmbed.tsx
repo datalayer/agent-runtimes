@@ -23,7 +23,7 @@
  * @module loop/embed/LoopEmbed
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useRef, type ReactNode } from 'react';
 import type { PluginRef } from '@datalayer/reactor';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor } from '@datalayer/reactor/react';
@@ -77,6 +77,23 @@ export function LoopEmbed({
   plugins = [],
   ...preset
 }: LoopEmbedProps): React.JSX.Element {
+  /*
+   * The latest `firstPromptHook`, kept in a ref rather than closed over
+   * directly.
+   *
+   * The reactor below is built once — see the comment on it — and a host's
+   * hook is exactly the kind of prop that is *not* stable across renders (it
+   * usually closes over the page's own state). Closing over it directly
+   * would either freeze the plugin config at whichever value happened to be
+   * current on the one render that built the reactor, or force this into the
+   * dependency array and restart every plugin whenever the host re-renders
+   * with a fresh inline function. The ref sidesteps both: the wrapper handed
+   * to `loopPlugins` below never changes identity, and it always reaches
+   * whatever the host most recently passed.
+   */
+  const firstPromptHookRef = useRef(preset.firstPromptHook);
+  firstPromptHookRef.current = preset.firstPromptHook;
+
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
     () =>
@@ -86,9 +103,11 @@ export function LoopEmbed({
           // A framed embed wants the title bar's slots open; a host that
           // asked for a frame should not also have to remember the plugin.
           windowFrame: preset.windowFrame || frameTitle !== undefined,
+          firstPromptHook: () => firstPromptHookRef.current?.(),
         }),
         ...plugins,
       ]),
+    // `preset.firstPromptHook` is deliberately absent — see the ref above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       preset.serverUrl,
