@@ -709,6 +709,20 @@ export type OpeningDocumentContribution = {
   id: string;
   /** The editor state to open on, built fresh per mount. */
   document: () => import('lexical').SerializedEditorState;
+  /**
+   * Whether the document takes the caret when it mounts. Defaults to `true`
+   * — the document's own long-standing behaviour, unconditional until this
+   * field existed.
+   *
+   * A host that also asks the *chat's* composer to focus on mount (see
+   * `LoopPresetOptions.autoFocusPrompt`) should set this to `false`: the
+   * chat's own autofocus runs the moment its composer paints, but the
+   * document waits on a sandbox and a kernel to start first, so its
+   * unconditional autofocus used to win the race by simply going second —
+   * moving the caret to the document a beat after the composer had already
+   * (and correctly) claimed it.
+   */
+  autoFocus?: boolean;
 };
 
 export const LoopOpeningDocument =

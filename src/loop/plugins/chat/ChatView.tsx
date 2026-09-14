@@ -44,7 +44,7 @@ import {
   useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
-import { SUGGESTION_CHIP_MAX_WIDTH } from '../../../chat/display/EmptyState';
+import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
 import { AnonymousKeyExpired } from '../../../components/anonymous/AnonymousKeyExpired';
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
@@ -1870,6 +1870,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               lineHeight: 1.25,
               px: '10px',
               py: '5px',
+              width: SUGGESTION_CHIP_WIDTH,
+              flex: `0 0 ${SUGGESTION_CHIP_WIDTH}px`,
               borderRadius: '999px',
               border: '1px solid',
               borderColor: 'border.default',
@@ -1884,8 +1886,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               '&:disabled': { opacity: 0.5, cursor: 'default' },
             }}
           >
-            {/* Capped, with the whole request in the title: see the width. */}
-            <Truncate title={item.title} maxWidth={SUGGESTION_CHIP_MAX_WIDTH}>
+            {/* Fixed, with the whole request in the title: see the width. */}
+            <Truncate title={item.title} maxWidth="100%" sx={{ minWidth: 0 }}>
               {item.title}
             </Truncate>
           </Box>

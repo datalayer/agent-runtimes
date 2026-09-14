@@ -210,6 +210,18 @@ export interface EphemeralDocumentProps {
    * border, and reads as broken rather than as absent.
    */
   showToolbar?: boolean;
+  /**
+   * Whether the document takes the caret once its editor mounts. Defaults to
+   * `true`.
+   *
+   * `false` for a host whose composer already asked for the caret on mount:
+   * this editor only exists once a sandbox — and, for the ephemeral case, a
+   * kernel — has finished starting, well after a chat composer's own
+   * `autoFocus` effect has already run and stopped watching, so the
+   * document's unconditional autofocus otherwise steals the caret back a
+   * moment later purely by mounting second.
+   */
+  autoFocus?: boolean;
 }
 
 /**
@@ -354,6 +366,7 @@ export function EphemeralDocument({
   toolbarExtraItems,
   showToolbar = true,
   inheritTheme = false,
+  autoFocus = true,
 }: EphemeralDocumentProps) {
   // Real-time collaboration is active only when both a WebSocket endpoint and a
   // room id are supplied. In that mode the shared Loro CRDT is the single source
@@ -597,20 +610,24 @@ export function EphemeralDocument({
 
   // The root extension, once per documentId: the shared Jupyter Lexical
   // document with the `commentTheme` the jupyter-lexical stylesheet styles,
-  // focus on mount, and no content — the document starts empty and is either
-  // restored or filled by the agent (LoadContentPlugin) or by the room.
+  // focus on mount unless the host asked otherwise, and no content — the
+  // document starts empty and is either restored or filled by the agent
+  // (LoadContentPlugin) or by the room.
   const extension = useMemo(
     () =>
       defineExtension({
         name: '@datalayer/agent-runtimes/EphemeralDocument',
         namespace: `ephemeral-document-${documentId}`,
         theme: commentTheme,
-        dependencies: [JupyterLexicalExtension, AutoFocusExtension],
+        dependencies: [
+          JupyterLexicalExtension,
+          ...(autoFocus ? [AutoFocusExtension] : []),
+        ],
         onError(error: Error) {
           console.error('[EphemeralDocument]', error);
         },
       }),
-    [documentId],
+    [documentId, autoFocus],
   );
 
   const handleChange = useCallback(

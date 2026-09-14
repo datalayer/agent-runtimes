@@ -29,17 +29,18 @@ import { groupSuggestions } from './groupSuggestions';
 export { groupSuggestions } from './groupSuggestions';
 
 /**
- * How wide a suggestion chip may grow, in pixels.
+ * How wide a suggestion chip stands, in pixels — fixed, not a cap.
  *
  * An opener is a whole request in the words somebody would type, and some
  * are a sentence long — "Explain this notebook cell by cell, as if I am new
- * to Python". As a chip that is a line across the page. Past this width the
- * chip shows an ellipsis and carries the whole sentence in its title, and a
- * short opener — "Analyze the dataset" — stays as wide as its words. One
- * number for every place that draws these chips: the empty state below and
- * the page layout's row under the composer.
+ * to Python" — while others are a few words — "Rerun with another model".
+ * Sized to their own words, a row of them read as uneven lines of text
+ * rather than as one set of options. One width, for every chip and every
+ * place that draws them (the empty state below and the page layout's row
+ * under the composer); past it the label truncates, and the chip's own
+ * title still carries the whole sentence on hover.
  */
-export const SUGGESTION_CHIP_MAX_WIDTH = 200;
+export const SUGGESTION_CHIP_WIDTH = 140;
 
 // ---------------------------------------------------------------------------
 // Props
@@ -117,6 +118,8 @@ export function ChatEmptyState({
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
+            width: SUGGESTION_CHIP_WIDTH,
+            flex: `0 0 ${SUGGESTION_CHIP_WIDTH}px`,
             '&:hover': {
               bg: 'accent.emphasis',
               color: 'var(--button-primary-fgColor-rest)',
@@ -125,9 +128,15 @@ export function ChatEmptyState({
           }}
           onClick={() => handleSuggestionClick(suggestion)}
         >
+          {/* `maxWidth="100%"` truncates to whatever room the chip's own
+              fixed width leaves once its padding is spoken for, rather than
+              a second, separately-guessed pixel figure; `minWidth: 0` is
+              what lets it actually shrink there instead of overflowing the
+              chip — a plain flex child defaults to its content's width. */}
           <Truncate
             title={suggestion.message}
-            maxWidth={SUGGESTION_CHIP_MAX_WIDTH}
+            maxWidth="100%"
+            sx={{ minWidth: 0 }}
           >
             {suggestion.title}
           </Truncate>

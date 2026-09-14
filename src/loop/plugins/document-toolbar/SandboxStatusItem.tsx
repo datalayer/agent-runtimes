@@ -32,7 +32,18 @@ const APPEARANCE: Record<string, { label: string; color: string }> = {
   error: { label: 'Sandbox failed', color: 'danger.fg' },
 };
 
-export function SandboxStatusItem(): JSX.Element | null {
+export function SandboxStatusItem({
+  iconOnly = false,
+}: {
+  /**
+   * Dot only, no words — set inside the "..." overflow menu, where this
+   * item sits in a column of icons and its own label was the one thing
+   * still forcing the whole menu wide. The dot's colour still says which
+   * state it is; the full sentence moves to `title`/`aria-label` instead of
+   * disappearing.
+   */
+  iconOnly?: boolean;
+} = {}): JSX.Element | null {
   // Optional: the document is usable without the sandbox plugin, and a status
   // item is the last thing that should insist on it.
   const service = useOptionalSandboxService();
@@ -46,7 +57,12 @@ export function SandboxStatusItem(): JSX.Element | null {
   const appearance = APPEARANCE[snapshot.state] ?? APPEARANCE.idle;
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2 }}>
+    <Box
+      role={iconOnly ? 'img' : undefined}
+      aria-label={iconOnly ? appearance.label : undefined}
+      title={iconOnly ? appearance.label : undefined}
+      sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2 }}
+    >
       <Box
         sx={{
           width: 8,
@@ -56,7 +72,9 @@ export function SandboxStatusItem(): JSX.Element | null {
           flexShrink: 0,
         }}
       />
-      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{appearance.label}</Text>
+      {iconOnly ? null : (
+        <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{appearance.label}</Text>
+      )}
     </Box>
   );
 }

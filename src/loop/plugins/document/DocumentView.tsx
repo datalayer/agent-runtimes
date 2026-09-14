@@ -61,6 +61,7 @@ export default function DocumentView({
     () => JSON.stringify((contributedOpening?.document ?? openingDocument)()),
     [contributedOpening],
   );
+  const autoFocus = contributedOpening?.autoFocus ?? true;
 
   if (snapshot.state !== 'running') {
     return (
@@ -101,6 +102,7 @@ export default function DocumentView({
         inheritTheme
         documentId={documentId}
         content={opening}
+        autoFocus={autoFocus}
         serviceManager={browserManager}
         showToolbar={toolbar.present}
         toolbarExtraItems={toolbar.items}

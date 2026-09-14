@@ -35,7 +35,7 @@ export const DocumentToolbarPlugin = definePlugin({
             type: 'custom',
             order: STATUS_ORDER,
             group: 'sandbox',
-            render: () => <SandboxStatusItem />,
+            render: ({ iconOnly }) => <SandboxStatusItem iconOnly={iconOnly} />,
           },
         ],
       },
