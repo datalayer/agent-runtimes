@@ -457,6 +457,33 @@ class A2AWorkerAdapter(WorkerAdapter):
                 return
             failure = relay.exception()
             if failure is not None:
+                # `relay_a2a_task` raises for two different reasons, and
+                # only one of them means the stream itself is fine: a task
+                # the worker's own stream explicitly ended 'failed',
+                # 'canceled' or 'rejected' already set `seen.state` to that
+                # before raising, so `_ending` below already has the real,
+                # authoritative answer — reattaching would only ask the
+                # worker to repeat what it already said. The other reason
+                # is the stream breaking before any such ending arrived
+                # (`seen.state` is still empty, 'submitted' or 'working'):
+                # the task itself may not have broken at all. Check over a
+                # fresh, short `tasks/get` before declaring the worker
+                # unreachable — the same recovery `subscribe` already does
+                # after a restart (decision 5's "no lease beyond polling"),
+                # reused here because a dropped long-lived connection is
+                # that same situation, just discovered inside the same
+                # attempt instead of a later one. Found live, 2026-09-14: a
+                # worker genuinely working for minutes had its stream's
+                # connection closed by something between it and here well
+                # before it finished, and this step reported a fabricated
+                # `worker_unreachable` for what a `tasks/get` moments later
+                # would have shown was either still running or already done.
+                if seen.task_id and seen.state not in TERMINAL_STATES:
+                    async for observation in self._reattach(
+                        remote, execution, attempt, worker, seen.task_id
+                    ):
+                        yield observation
+                    return
                 for observation in self._ending(seen, str(failure)):
                     yield observation
                 return
@@ -528,60 +555,106 @@ class A2AWorkerAdapter(WorkerAdapter):
                     )
                 )
                 return
+            async for observation in self._reattach(
+                remote, execution, attempt, worker, task_id
+            ):
+                yield observation
 
-            seen = _Seen(task_id=task_id)
-            first = True
-            while True:
-                task = await self._get_task(remote, task_id)
-                if task is None:
-                    yield Observation.failed(
-                        OrchestrationError(
-                            code=ErrorCode.WORKER_UNREACHABLE,
-                            message=f"The worker did not answer for task '{task_id}'.",
-                            retryable=True,
-                            source="adapter:a2a",
-                        )
+    async def _reattach(
+        self,
+        remote: A2ARemoteAgent,
+        execution: Execution,
+        attempt: Attempt,
+        worker: ResolvedWorker,
+        task_id: str,
+    ) -> AsyncIterator[Observation]:
+        """
+        Poll ``tasks/get`` until the task ends, reporting what changed.
+
+        The shared core of two callers that both mean "the stream watching
+        this task is gone, not necessarily the task": `subscribe`,
+        reattaching after a restart, and `dispatch`'s own recovery when its
+        *own* streaming connection drops mid-task. Declaring the worker
+        unreachable on a broken stream without checking first turns a
+        connection hiccup into a fabricated task failure — this is
+        decision 5's "no lease beyond polling" either way.
+
+        The first poll reports where the task stands as progress rather
+        than as a state change: a task that was running before the stream
+        broke is still running, and saying so again would be this method
+        inventing a transition. Only a change since then, and the ending,
+        are reported as moves.
+
+        Parameters
+        ----------
+        remote : A2ARemoteAgent
+            The worker.
+        execution : Execution
+            The execution.
+        attempt : Attempt
+            The attempt.
+        worker : ResolvedWorker
+            The worker, for its capabilities (whether it speaks the
+            extension, which changes how its ending is read).
+        task_id : str
+            The A2A task to poll.
+
+        Yields
+        ------
+        Observation
+            Where the task stands, and what it does next.
+        """
+        seen = _Seen(task_id=task_id)
+        first = True
+        while True:
+            task = await self._get_task(remote, task_id)
+            if task is None:
+                yield Observation.failed(
+                    OrchestrationError(
+                        code=ErrorCode.WORKER_UNREACHABLE,
+                        message=f"The worker did not answer for task '{task_id}'.",
+                        retryable=True,
+                        source="adapter:a2a",
                     )
-                    return
-                status = task.get("status") or {}
-                state = str(status.get("state") or "")
-                if state in TERMINAL_STATES:
-                    for artifact, body in _task_artifacts(task, execution, attempt):
-                        yield Observation.produced(artifact, data={"text": body})
-                    # The final status message says why it ended: the budget
-                    # that stopped it, or the checkpoint it paused at.
-                    message = status.get("message")
-                    metadata = (
-                        message.get("metadata") if isinstance(message, Mapping) else None
-                    )
-                    ended = _Seen(
-                        task_id=task_id,
-                        state=state,
-                        metadata=dict(metadata) if isinstance(metadata, Mapping) else None,
-                        extended=EXTENSION_URI in worker.capabilities.extensions,
-                    )
-                    for observation in self._ending(ended, None):
-                        yield observation
-                    return
-                if first:
-                    yield Observation.progress(
-                        f"Re-attached to A2A task '{task_id}', which is '{state}'.",
+                )
+                return
+            status = task.get("status") or {}
+            state = str(status.get("state") or "")
+            if state in TERMINAL_STATES:
+                for artifact, body in _task_artifacts(task, execution, attempt):
+                    yield Observation.produced(artifact, data={"text": body})
+                # The final status message says why it ended: the budget
+                # that stopped it, or the checkpoint it paused at.
+                message = status.get("message")
+                metadata = (
+                    message.get("metadata") if isinstance(message, Mapping) else None
+                )
+                ended = _Seen(
+                    task_id=task_id,
+                    state=state,
+                    metadata=dict(metadata) if isinstance(metadata, Mapping) else None,
+                    extended=EXTENSION_URI in worker.capabilities.extensions,
+                )
+                for observation in self._ending(ended, None):
+                    yield observation
+                return
+            if first:
+                yield Observation.progress(
+                    f"Re-attached to A2A task '{task_id}', which is '{state}'.",
+                    protocol_task_id=task_id,
+                )
+            elif state != seen.state:
+                observed = A2A_OBSERVED.get(state)
+                yield (
+                    Observation.moved(observed, message=state, protocol_task_id=task_id)
+                    if observed
+                    else Observation.progress(
+                        f"A2A task '{task_id}' is '{state}'.",
                         protocol_task_id=task_id,
                     )
-                elif state != seen.state:
-                    observed = A2A_OBSERVED.get(state)
-                    yield (
-                        Observation.moved(
-                            observed, message=state, protocol_task_id=task_id
-                        )
-                        if observed
-                        else Observation.progress(
-                            f"A2A task '{task_id}' is '{state}'.",
-                            protocol_task_id=task_id,
-                        )
-                    )
-                seen.state, first = state, False
-                await asyncio.sleep(self._poll_interval_seconds)
+                )
+            seen.state, first = state, False
+            await asyncio.sleep(self._poll_interval_seconds)
 
     async def cancel(
         self,

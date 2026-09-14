@@ -509,6 +509,120 @@ class TestRecoveryAndCancellation:
         assert only.error.code is ErrorCode.NOT_FOUND and only.error.retryable
 
     @pytest.mark.asyncio
+    async def test_a_dropped_stream_reattaches_instead_of_failing_outright(
+        self, monkeypatch
+    ):
+        """A live infra finding, 2026-09-14: a worker genuinely working had its
+        stream's connection closed by something between it and the control
+        plane, well before it finished — and the step reported a fabricated
+        `worker_unreachable` for what a `tasks/get` moments later would have
+        shown was still running. `dispatch` must not trust a broken stream
+        over a fresh poll when it has not yet seen a real ending.
+
+        The polling mock answers 'working' once, then 'completed' — a
+        natural end to the reattach loop, exercising the same recovery
+        `test_a_dropped_stream_that_actually_finished_is_collected` proves
+        without forcing the generator closed mid-iteration, which upsets
+        OTEL's context propagation across the two nested spans (a test
+        harness fragility, not a `dispatch` one).
+        """
+        _relay(
+            monkeypatch,
+            [
+                ("status", {"taskId": "task-1", "state": "submitted"}),
+                ("status", {"taskId": "task-1", "state": "working"}),
+            ],
+            raises=RuntimeError(
+                "peer closed connection without sending complete message body "
+                "(incomplete chunked read)"
+            ),
+        )
+        polls = iter(
+            [
+                {"status": {"state": "working"}},
+                {"status": {"state": "working"}},
+                {"status": {"state": "completed"}},
+            ]
+        )
+
+        async def get_task(self, remote, task_id):
+            return next(polls, {"status": {"state": "completed"}})
+
+        monkeypatch.setattr(A2AWorkerAdapter, "_get_task", get_task)
+        adapter = A2AWorkerAdapter(poll_interval_seconds=0)
+        store = InMemoryExecutionStore()
+
+        execution, attempt, observations = await _dispatch(adapter, store)
+
+        stored = await store.get(execution.execution_id)
+        assert stored.status is ExecutionState.COMPLETED
+        assert any(
+            observation.type is ExecutionEventType.PROGRESS
+            and "task-1" in (observation.message or "")
+            for observation in observations
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_dropped_stream_that_actually_finished_is_collected(
+        self, monkeypatch
+    ):
+        """The same drop, but the task had already completed by the time the
+        connection was lost: the reattach must collect its real artifacts
+        rather than report a failure the worker never had."""
+        _relay(
+            monkeypatch,
+            [("status", {"taskId": "task-1", "state": "working"})],
+            raises=RuntimeError("peer closed connection"),
+        )
+        _no_task_lookup(
+            monkeypatch,
+            {
+                "status": {"state": "completed"},
+                "artifacts": [
+                    {"name": "validation-report", "parts": [{"text": "clean"}]}
+                ],
+            },
+        )
+        adapter = A2AWorkerAdapter(poll_interval_seconds=0)
+        store = InMemoryExecutionStore()
+
+        execution, _, observations = await _dispatch(adapter, store)
+
+        stored = await store.get(execution.execution_id)
+        assert stored.status is ExecutionState.COMPLETED
+        assert any(
+            observation.type is ExecutionEventType.ARTIFACT_REGISTERED
+            for observation in observations
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_definitive_ending_does_not_bother_reattaching(self, monkeypatch):
+        """The worker's own stream already said 'failed' before raising: that
+        is the real ending, not a dropped connection, and asking again would
+        only be a redundant round trip to the same answer."""
+        asked = 0
+
+        async def get_task(self, remote, task_id):
+            nonlocal asked
+            asked += 1
+            return {"status": {"state": "failed"}}
+
+        monkeypatch.setattr(A2AWorkerAdapter, "_get_task", get_task)
+        _relay(
+            monkeypatch,
+            [
+                ("status", {"taskId": "task-1", "state": "working"}),
+                ("status", {"taskId": "task-1", "state": "failed"}),
+            ],
+            raises=RuntimeError("The remote agent's task ended failed: kernel died"),
+        )
+        store = InMemoryExecutionStore()
+
+        await _dispatch(A2AWorkerAdapter(), store)
+
+        assert asked == 0
+
+    @pytest.mark.asyncio
     async def test_cancelling_asks_the_worker_both_ways(self, monkeypatch):
         asked: list[str] = []
 
