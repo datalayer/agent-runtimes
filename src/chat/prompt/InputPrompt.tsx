@@ -15,7 +15,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
@@ -41,10 +41,24 @@ import {
   SuggestionsMenu,
 } from './menus';
 import type { PromptSuggestion } from './menus/SuggestionsMenu';
-import { ContextPie } from '../usage/ContextPie';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
 import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
+
+/*
+ * The context-window pie, fetched when there is usage to draw.
+ *
+ * It renders with ECharts — about 350 KiB compressed — and this composer is
+ * part of every embedded workspace, so a static import put ECharts in the
+ * first download of any page with a chat, whether or not it ever showed a
+ * figure. Usage arrives after the first turn at the earliest, and a host that
+ * hides the counters never draws it.
+ */
+const ContextPie = lazy(() =>
+  import('../usage/ContextPie').then(module => ({
+    default: module.ContextPie,
+  })),
+);
 
 // ---------------------------------------------------------------------------
 // Props
@@ -522,11 +536,13 @@ export function InputPrompt({
                   py: 0,
                   content:
                     hasContext && agentUsage ? (
-                      <ContextPie
-                        agentUsage={agentUsage}
-                        padding={padding}
-                        showContextRing={showContextRing}
-                      />
+                      <Suspense fallback={null}>
+                        <ContextPie
+                          agentUsage={agentUsage}
+                          padding={padding}
+                          showContextRing={showContextRing}
+                        />
+                      </Suspense>
                     ) : null,
                 },
               ]
