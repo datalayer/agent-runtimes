@@ -602,6 +602,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * answer than full screen and a better one than nothing.
    */
   const viewRef = useRef<HTMLDivElement>(null);
+  // A host's own fixed header, drawn outside this workspace entirely —
+  // reserved at the top of the overlay below, and forcing full screen onto
+  // the overlay door for good; see `ChatPluginConfig.fullScreenTopOffset`.
+  const fullScreenTopOffset = config?.fullScreenTopOffset ?? 0;
   /* Shared with the workspace header's icon — same machinery, two doors in.
      See `useWorkspaceFullScreen` for why it is the browser's API rather than
      a big box, and for the CSS fallback the styling below paints. */
@@ -609,7 +613,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     fullScreen,
     usingApi: usingFullscreenApi,
     toggle: toggleFullScreen,
-  } = useWorkspaceFullScreen(viewRef);
+    topOffsetPx: fullScreenTopOffsetPx,
+  } = useWorkspaceFullScreen(viewRef, {
+    forceOverlay: Boolean(fullScreenTopOffset),
+    topOffset: fullScreenTopOffset,
+  });
 
   /*
    * The full-screen control, pointed at from the first run onwards.
@@ -1988,10 +1996,24 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           canvas from an ancestor would arrive transparent over black.
         */
         ...(fullScreen ? { bg: 'canvas.default' } : null),
-        // The fallback, for a host where the API was refused. Covers as much
-        // as the nearest transformed ancestor allows; see the note above.
+        // The fallback, for a host where the API was refused, or where
+        // `fullScreenTopOffset` asked for the overlay outright. Covers as
+        // much as the nearest transformed ancestor allows; see the note
+        // above. `top` leaves room for a host's own fixed header rather than
+        // `inset: 0`'s full viewport — 0 (no offset given) is the same rect
+        // either way.
         ...(fullScreen && !usingFullscreenApi.current
-          ? { position: 'fixed', inset: 0, zIndex: 1000 }
+          ? {
+              position: 'fixed',
+              top: fullScreenTopOffsetPx,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              // Over the `height: '100%'` above, which would otherwise win
+              // over `top`/`bottom` and push the bottom off the window.
+              height: 'auto',
+              zIndex: 1000,
+            }
           : null),
       }}
     >

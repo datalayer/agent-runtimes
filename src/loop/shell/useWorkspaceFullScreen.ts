@@ -37,6 +37,68 @@ export type WorkspaceFullScreen = {
   usingApi: RefObject<boolean>;
   /** Enter or leave, whichever applies. */
   toggle: () => void;
+  /**
+   * The `topOffset` in pixels while the overlay is up — measured from a
+   * selector's element when `topOffset` is one — for a caller that paints
+   * its own overlay. 0 otherwise.
+   */
+  topOffsetPx: number;
+};
+
+/**
+ * A top offset as pixels: a number as given, or the bottom edge of the
+ * element a CSS selector names — a host's fixed header, whose height depends
+ * on the width it wraps at and is never a number worth hard-coding. A
+ * selector that matches nothing, or no document, is 0.
+ */
+export function resolveTopOffset(offset: number | string | undefined): number {
+  if (typeof offset === 'number') {
+    return offset;
+  }
+  if (!offset || typeof document === 'undefined') {
+    return 0;
+  }
+  const element = document.querySelector(offset);
+  return element
+    ? Math.max(0, Math.round(element.getBoundingClientRect().bottom))
+    : 0;
+}
+
+export type WorkspaceFullScreenOptions = {
+  /**
+   * Never ask the browser's API for full screen — go straight to the CSS
+   * overlay, every time.
+   *
+   * The API promotes the workspace above *everything* on the page, a fixed
+   * header the host drew around the workspace included: there is no partial
+   * form of it that leaves a sibling element on screen, because promoting an
+   * element removes the rest of the page from the compositor entirely. A
+   * host whose header must survive full screen has no choice but to give up
+   * the API's own benefits (see the module doc) and ask for the overlay
+   * outright. False (the default) keeps trying the API first, the way every
+   * other host wants it.
+   */
+  forceOverlay?: boolean;
+  /**
+   * Paint the CSS-overlay fallback itself, directly on the promoted node's
+   * own inline styles, for a caller with no overlay of its own to paint —
+   * `WorkspaceFullScreenAction`, which is a bare icon and never had one.
+   * Implies `forceOverlay`: painting an overlay is moot if the API took the
+   * workspace instead.
+   *
+   * `ChatView`'s own call leaves this off and keeps painting its own —
+   * scoped to its own view rather than the whole workspace — so the two
+   * never stack on top of one another.
+   */
+  paintOverlay?: boolean;
+  /**
+   * Room left clear at the top of the overlay, for a host's own fixed
+   * header: pixels, or a CSS selector for the header itself, whose bottom
+   * edge is measured when the overlay goes up and again on every resize.
+   * Painted by the hook when `paintOverlay` is set; reported as
+   * `topOffsetPx` for a caller that paints its own.
+   */
+  topOffset?: number | string;
 };
 
 /**
@@ -51,7 +113,9 @@ export type WorkspaceFullScreen = {
  */
 export function useWorkspaceFullScreen(
   anchorRef: RefObject<HTMLElement | null>,
+  options: WorkspaceFullScreenOptions = {},
 ): WorkspaceFullScreen {
+  const { forceOverlay = false, paintOverlay = false, topOffset = 0 } = options;
   const [fullScreen, setFullScreen] = useState(false);
   /* Which of the two doors is in play, so leaving uses the one it came in
      by. */
@@ -100,7 +164,7 @@ export function useWorkspaceFullScreen(
       }
       return;
     }
-    if (!node?.requestFullscreen) {
+    if (forceOverlay || paintOverlay || !node?.requestFullscreen) {
       setFullScreen(true);
       return;
     }
@@ -113,7 +177,64 @@ export function useWorkspaceFullScreen(
         setFullScreen(true);
       },
     );
-  }, [anchorRef, fullScreen]);
+  }, [anchorRef, fullScreen, forceOverlay, paintOverlay]);
+
+  /*
+   * The offset, measured while the overlay is up: on entry, and again when
+   * the window resizes and the header may wrap to a different height.
+   */
+  const [topOffsetPx, setTopOffsetPx] = useState(0);
+  useEffect(() => {
+    if (!fullScreen || usingApi.current) {
+      setTopOffsetPx(0);
+      return undefined;
+    }
+    const measure = () => setTopOffsetPx(resolveTopOffset(topOffset));
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [fullScreen, topOffset]);
+
+  /*
+   * The overlay itself, for a caller that asked the hook to paint one.
+   *
+   * Direct inline styles rather than a class: this hook has no stylesheet of
+   * its own to add one to, and the node being styled is found by DOM query
+   * in the first place — see `toggle` above, which the same lookup is
+   * copied from rather than shared, since memoising it would need `anchorRef`
+   * itself to change identity to notice a different anchor mounting, which
+   * it never does.
+   */
+  useEffect(() => {
+    if (!paintOverlay || !fullScreen || usingApi.current) {
+      return undefined;
+    }
+    const node =
+      (anchorRef.current?.closest(
+        '[data-loop-workspace]',
+      ) as HTMLElement | null) ?? anchorRef.current;
+    if (!node) {
+      return undefined;
+    }
+    const previous = node.getAttribute('style');
+    node.style.position = 'fixed';
+    node.style.top = `${topOffsetPx}px`;
+    node.style.right = '0';
+    node.style.bottom = '0';
+    node.style.left = '0';
+    // The workspace root sizes itself `height: 100%`; left in place, that
+    // height wins over `top`/`bottom` and the overlay runs `topOffset` pixels
+    // past the bottom of the window.
+    node.style.height = 'auto';
+    node.style.zIndex = '1000';
+    return () => {
+      if (previous === null) {
+        node.removeAttribute('style');
+      } else {
+        node.setAttribute('style', previous);
+      }
+    };
+  }, [paintOverlay, fullScreen, anchorRef, topOffsetPx]);
 
   /*
    * Escape leaves the fallback overlay, as it does from anything covering the
@@ -138,7 +259,7 @@ export function useWorkspaceFullScreen(
     return () => window.removeEventListener('keydown', leave);
   }, [fullScreen]);
 
-  return { fullScreen, usingApi, toggle };
+  return { fullScreen, usingApi, toggle, topOffsetPx };
 }
 
 export default useWorkspaceFullScreen;

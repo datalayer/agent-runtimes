@@ -161,6 +161,26 @@ export type ChatPluginConfig = {
    * them. Such a host passes `false` and lets the reader arrive at the prompt.
    */
   autoFocusPrompt: boolean;
+
+  /**
+   * Pixels to reserve at the top of the workspace when it goes full screen —
+   * room for a host's own fixed header, drawn outside the workspace
+   * entirely.
+   *
+   * Setting this also keeps full screen on the CSS-overlay door for good,
+   * never the browser's real Fullscreen API: the API promotes the workspace
+   * above *everything* on the page, that header included, and there is no
+   * partial form of it that leaves a sibling element on screen — see
+   * `useWorkspaceFullScreen`'s own `forceOverlay` for why. 0 (the default)
+   * leaves full screen trying the API first, the way most hosts want it, and
+   * filling the entire viewport when it falls back to the overlay.
+   */
+  /*
+   * Pixels, or a CSS selector naming the header itself — its bottom edge is
+   * measured when full screen opens and on resize, which is what a header
+   * whose height depends on the width it wraps at needs.
+   */
+  fullScreenTopOffset: number | string;
 };
 
 export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
@@ -177,6 +197,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     hidePrompt: false,
     promptPlacement: 'bottom',
     autoFocusPrompt: true,
+    fullScreenTopOffset: 0,
   },
   displayName: 'Chat',
   description: 'The conversation, the prompt, and the point editors plug into.',

@@ -77,6 +77,13 @@ export type LoopPresetOptions = {
    * does not scroll the reader into the middle of the page.
    */
   autoFocusPrompt?: boolean;
+  /**
+   * Pixels to reserve at the top of the workspace when it goes full screen,
+   * for a host's own fixed header. Passed through to the chat plugin — see
+   * `ChatPluginConfig.fullScreenTopOffset` for what it changes and why
+   * setting it also keeps full screen off the browser's real API.
+   */
+  fullScreenTopOffset?: number | string;
   /** Whether a person may choose between agent variants. */
   showAgentVariants?: boolean;
   /**
@@ -195,6 +202,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     hideChatHeader = false,
     promptPlacement,
     autoFocusPrompt = true,
+    fullScreenTopOffset = 0,
     showAgentVariants = false,
     agentSummary = true,
     teamId,
@@ -227,6 +235,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       hideHeader: hideChatHeader,
       promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
       autoFocusPrompt,
+      fullScreenTopOffset,
     }),
     // The composer and the title bar are plugins of their own: the chat
     // assembles their props, these render them. In the preset by default —

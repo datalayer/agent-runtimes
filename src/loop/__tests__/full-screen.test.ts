@@ -48,7 +48,7 @@ describe('entering full screen', () => {
     expect(HOOK).toContain('requestFullscreen()');
     expect(HOOK).toContain("document.addEventListener('fullscreenchange'");
     // And the chat actually uses that machinery rather than its own copy.
-    expect(CHAT_VIEW).toContain('useWorkspaceFullScreen(viewRef)');
+    expect(CHAT_VIEW).toContain('useWorkspaceFullScreen(viewRef, {');
   });
 
   it('promotes the workspace, so its controls come too', () => {
@@ -91,6 +91,73 @@ describe('what is on screen while it lasts', () => {
     expect(CHAT_VIEW).toContain(
       "...(fullScreen ? { bg: 'canvas.default' } : null)",
     );
+  });
+});
+
+describe('a host header that must survive full screen', () => {
+  // A host page can put a fixed header of its own outside the workspace
+  // entirely — this app's own anonymous layout does — and the browser's real
+  // Fullscreen API has no partial form that leaves it on screen: promoting an
+  // element removes everything else from the compositor. `fullScreenTopOffset`
+  // is how such a host asks for the overlay door specifically, with room
+  // reserved at its top.
+
+  it('turns the config into a request the hook understands', () => {
+    expect(CHAT_VIEW).toContain(
+      'const fullScreenTopOffset = config?.fullScreenTopOffset ?? 0;',
+    );
+    expect(CHAT_VIEW).toContain('forceOverlay: Boolean(fullScreenTopOffset)');
+  });
+
+  it('measures a header named by selector instead of trusting a hard-coded height', () => {
+    // A header's height depends on the width it wraps at; 72px left a band
+    // of page showing under a 48px header.
+    expect(HOOK).toContain(
+      'export function resolveTopOffset(offset: number | string | undefined): number {',
+    );
+    expect(HOOK).toContain('document.querySelector(offset)');
+    expect(HOOK).toContain('element.getBoundingClientRect().bottom');
+    expect(HOOK).toContain("window.addEventListener('resize', measure);");
+  });
+
+  it('leaves room for the header rather than covering it, in the overlay the chat paints', () => {
+    expect(CHAT_VIEW).toContain('top: fullScreenTopOffsetPx,');
+    // No longer the full-viewport shorthand: a header offset of 0 still
+    // reads the same rectangle, but a nonzero one must not be swallowed by
+    // `inset`, which has no way to leave only the top clear.
+    expect(CHAT_VIEW).not.toContain("position: 'fixed', inset: 0");
+  });
+
+  it('setting the offset never asks the API at all, not even once', () => {
+    const start = HOOK.indexOf('const toggle = useCallback(');
+    const end = HOOK.indexOf('}, [anchorRef, fullScreen, forceOverlay');
+    const body = HOOK.slice(start, end);
+    expect(body).toMatch(
+      /if \(forceOverlay \|\| paintOverlay \|\| !node\?\.requestFullscreen\)/,
+    );
+  });
+
+  it("paints the overlay itself for the workspace header's own icon, which has no view to paint one on", () => {
+    const action = readFileSync(
+      join(__dirname, '..', 'shell', 'WorkspaceFullScreenAction.tsx'),
+      'utf8',
+    );
+    expect(action).toContain('paintOverlay: Boolean(fullScreenTopOffset)');
+    expect(action).toContain('topOffset: fullScreenTopOffset');
+    expect(action).toContain(
+      'reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME)',
+    );
+    // The hook's own painted overlay, not a second copy of the chat's.
+    expect(HOOK).toContain('node.style.top = `${topOffsetPx}px`;');
+  });
+
+  it('restores exactly the style attribute the node had before, not a guess at clearing it', () => {
+    const start = HOOK.indexOf('const previous = node.getAttribute');
+    const end = HOOK.indexOf('}, [paintOverlay, fullScreen, anchorRef');
+    const body = HOOK.slice(start, end);
+    expect(body).toContain('if (previous === null) {');
+    expect(body).toContain('node.removeAttribute(');
+    expect(body).toContain('node.setAttribute(');
   });
 });
 
