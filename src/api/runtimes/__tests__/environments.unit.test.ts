@@ -339,6 +339,65 @@ const CALLS: Array<[string, () => Promise<unknown>, Sent]> = [
     { method: 'POST', url: `${API}/environment-versions/${VERSION}/deprecate` },
   ],
   [
+    'publishEnvironmentVersion',
+    () => environments.publishEnvironmentVersion(token, VERSION, {}, BASE),
+    { method: 'POST', url: `${API}/environment-versions/${VERSION}/publish` },
+  ],
+  [
+    'publishEnvironmentVersion with an If-Match',
+    () =>
+      environments.publishEnvironmentVersion(
+        token,
+        VERSION,
+        { ifMatch: '"7"' },
+        BASE,
+      ),
+    {
+      method: 'POST',
+      url: `${API}/environment-versions/${VERSION}/publish`,
+      headers: { 'If-Match': '"7"' },
+    },
+  ],
+  [
+    'unpublishEnvironmentVersion',
+    () => environments.unpublishEnvironmentVersion(token, VERSION, {}, BASE),
+    { method: 'POST', url: `${API}/environment-versions/${VERSION}/unpublish` },
+  ],
+  [
+    'getEnvironmentPublication',
+    () => environments.getEnvironmentPublication(token, VERSION, {}, BASE),
+    {
+      method: 'GET',
+      url: `${API}/environment-versions/${VERSION}/publication`,
+    },
+  ],
+  [
+    'forkEnvironmentVersion',
+    () =>
+      environments.forkEnvironmentVersion(
+        token,
+        VERSION,
+        { name: 'my-geo' },
+        { correlationId: 'trace-5' },
+        BASE,
+      ),
+    {
+      method: 'POST',
+      url: `${API}/environment-versions/${VERSION}/fork`,
+      body: { name: 'my-geo' },
+      headers: { 'X-Correlation-Id': 'trace-5' },
+    },
+  ],
+  [
+    'forkEnvironmentVersion with no name',
+    () => environments.forkEnvironmentVersion(token, VERSION, {}, {}, BASE),
+    {
+      method: 'POST',
+      url: `${API}/environment-versions/${VERSION}/fork`,
+      body: {},
+    },
+  ],
+  [
     'getEnvironmentBuild',
     () => environments.getEnvironmentBuild(token, BUILD, {}, BASE),
     { method: 'GET', url: `${API}/environment-builds/${BUILD}` },
@@ -400,6 +459,10 @@ const SECTION_9_ROUTES = [
   'GET /environment-versions/{uid}/artifacts',
   'POST /environment-versions/{uid}/trial',
   'POST /environment-versions/{uid}/deprecate',
+  'POST /environment-versions/{uid}/publish',
+  'POST /environment-versions/{uid}/unpublish',
+  'GET /environment-versions/{uid}/publication',
+  'POST /environment-versions/{uid}/fork',
   'GET /environment-builds/{uid}',
   'GET /environment-builds/{uid}/logs',
   'POST /environment-builds/{uid}/cancel',

@@ -442,6 +442,88 @@ export interface IEnvironmentArtifactRecord {
   etag: string;
 }
 
+/** How one variant of a published version is launched, and its provenance (E2-15). */
+export interface IEnvironmentPublicationVariant {
+  immutableReference: string;
+  region: string;
+  sbomRef: string;
+  signatureRef: string;
+}
+
+/** The lock a published version resolved to, as its immutable snapshot carries it. */
+export interface IEnvironmentPublicationLock {
+  digest: string;
+  format: string;
+  content: string;
+  packageCount?: number;
+}
+
+/**
+ * The immutable snapshot a publication freezes (D-12, E2-15): everything a
+ * public page shows, taken once from a version that is itself immutable, and
+ * never re-read — the spec, the lock, the SBOM and scan summary, the licenses
+ * the SBOM names, the size class, the variants with their artifact references,
+ * and the README.
+ */
+export interface IEnvironmentPublicationSnapshot {
+  environmentUid: string;
+  environmentName: string;
+  title: string;
+  ownerUid: string;
+  versionUid: string;
+  versionNumber: number | null;
+  spec: EnvironmentDocument | Record<string, unknown>;
+  lock: IEnvironmentPublicationLock;
+  sbomRef: string;
+  scanSummary: Record<string, unknown>;
+  licenses: string[];
+  sizeClass: string;
+  variants: Record<string, IEnvironmentPublicationVariant>;
+  readme: string;
+}
+
+/**
+ * A version's publication in the public Library (D-12, E2-15): its terms and
+ * its immutable `snapshot`. A withdrawn version keeps its snapshot — `status`
+ * is `unpublished` rather than the record being gone — and the world-visible
+ * `GET /environment-versions/{uid}/publication` answers only a `published`
+ * one.
+ */
+export interface IEnvironmentPublicationRecord {
+  versionUid: string;
+  environmentUid: string;
+  ownerUid: string;
+  status: 'published' | 'unpublished';
+  publishedBy: string;
+  publishedAt: string;
+  updatedAt: string;
+  snapshot: IEnvironmentPublicationSnapshot;
+  /** What a conditional write names in `If-Match`. */
+  etag: string;
+}
+
+/**
+ * What forking a published version answers (D-12, E2-15): the caller's own
+ * private environment the fork made, its version, and the Datalayer artifacts
+ * reused — the same immutable references, built once — so a fork of an
+ * unchanged public environment launches without a rebuild.
+ */
+export interface IEnvironmentFork {
+  environment: IEnvironmentRecord;
+  version: IEnvironmentVersionRecord;
+  reusedArtifacts: IEnvironmentArtifactRecord[];
+}
+
+/** `POST /environment-versions/{uid}/fork`. */
+export interface IForkEnvironmentVersionRequest {
+  /**
+   * A name for the fork; the source environment's name by default. A fork
+   * under a new name re-specialises the spec and builds fresh, rather than
+   * reusing the published artifact.
+   */
+  name?: string;
+}
+
 /** One chunk of a build's log, redacted before it was written (D-15). */
 export interface IEnvironmentBuildLogChunk {
   /** Dense from 0. */

@@ -46,6 +46,8 @@ import type {
   IEnvironmentBuildRecord,
   IEnvironmentBuildsCreated,
   IEnvironmentBuildsPage,
+  IEnvironmentFork,
+  IEnvironmentPublicationRecord,
   IEnvironmentRecord,
   IEnvironmentsError,
   IEnvironmentsPageQuery,
@@ -53,6 +55,7 @@ import type {
   IEnvironmentValidationReport,
   IEnvironmentVersionRecord,
   IEnvironmentVersionsPage,
+  IForkEnvironmentVersionRequest,
   IListEnvironmentsQuery,
   IPromoteEnvironmentVersionRequest,
   ITrialEnvironmentVersionRequest,
@@ -675,6 +678,131 @@ export const trialEnvironmentVersion = async (
     registryUrl(
       baseUrl,
       `/environment-versions/${segment(versionUid, 'Version UID')}/trial`,
+    ),
+    options,
+    request,
+  );
+};
+
+/**
+ * Publish a promoted version to the public Library (D-12, E2-15).
+ *
+ * Only an owner publishes (D-19), and only a version whose every input is
+ * public — no build secret, only public indexes — and whose Datalayer
+ * artifact passed its scan: otherwise the refusal is `DL_ENV_PUBLICATION_BLOCKED`.
+ * The snapshot frozen is immutable, so publishing the same version again reads
+ * it back and a withdrawal followed by a re-publish restores exactly what was
+ * public.
+ * @param token - Authentication token
+ * @param versionUid - The version's uid
+ * @param options - Optional If-Match, correlation id and abort signal
+ * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
+ * @returns Promise resolving to the publication, with its immutable snapshot
+ */
+export const publishEnvironmentVersion = async (
+  token: string,
+  versionUid: string,
+  options: IEnvironmentsConditionalOptions = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<IEnvironmentPublicationRecord> => {
+  validateToken(token);
+  return send<IEnvironmentPublicationRecord>(
+    token,
+    'POST',
+    registryUrl(
+      baseUrl,
+      `/environment-versions/${segment(versionUid, 'Version UID')}/publish`,
+    ),
+    options,
+  );
+};
+
+/**
+ * Withdraw a version from the public Library; running sandboxes keep it (D-12,
+ * E2-15). The snapshot is kept, so a later publish restores exactly what was
+ * public.
+ * @param token - Authentication token
+ * @param versionUid - The version's uid
+ * @param options - Correlation id and abort signal
+ * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
+ * @returns Promise resolving to the withdrawn publication
+ */
+export const unpublishEnvironmentVersion = async (
+  token: string,
+  versionUid: string,
+  options: IEnvironmentsRequestOptions = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<IEnvironmentPublicationRecord> => {
+  validateToken(token);
+  return send<IEnvironmentPublicationRecord>(
+    token,
+    'POST',
+    registryUrl(
+      baseUrl,
+      `/environment-versions/${segment(versionUid, 'Version UID')}/unpublish`,
+    ),
+    options,
+  );
+};
+
+/**
+ * A version's public publication and its immutable snapshot (D-12, E2-15), or
+ * a 404 when it is not public. The publication is world-visible, so any
+ * signed-in caller reads it; a version never published, or one withdrawn,
+ * reads 404.
+ * @param token - Authentication token
+ * @param versionUid - The version's uid
+ * @param options - Correlation id and abort signal
+ * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
+ * @returns Promise resolving to the publication, with its immutable snapshot
+ */
+export const getEnvironmentPublication = async (
+  token: string,
+  versionUid: string,
+  options: IEnvironmentsRequestOptions = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<IEnvironmentPublicationRecord> => {
+  validateToken(token);
+  return send<IEnvironmentPublicationRecord>(
+    token,
+    'GET',
+    registryUrl(
+      baseUrl,
+      `/environment-versions/${segment(versionUid, 'Version UID')}/publication`,
+    ),
+    options,
+  );
+};
+
+/**
+ * Fork a published version into the caller's own private environment (D-12,
+ * E2-15).
+ *
+ * Any signed-in caller forks. The fork is made from the published version's
+ * exact spec and reuses the published Datalayer artifact — the same immutable
+ * reference — when its inputs are unchanged, so it launches without a rebuild;
+ * a fork under a new `name` re-specialises the spec and builds fresh.
+ * @param token - Authentication token
+ * @param versionUid - The published version's uid
+ * @param request - `{name}`: the source environment's name by default
+ * @param options - Correlation id and abort signal
+ * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
+ * @returns Promise resolving to the fork: its environment, version and reused artifacts
+ */
+export const forkEnvironmentVersion = async (
+  token: string,
+  versionUid: string,
+  request: IForkEnvironmentVersionRequest = {},
+  options: IEnvironmentsRequestOptions = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<IEnvironmentFork> => {
+  validateToken(token);
+  return send<IEnvironmentFork>(
+    token,
+    'POST',
+    registryUrl(
+      baseUrl,
+      `/environment-versions/${segment(versionUid, 'Version UID')}/fork`,
     ),
     options,
     request,
