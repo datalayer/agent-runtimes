@@ -27,7 +27,7 @@ import { Box, Text } from '@primer/react';
    sign-in form and the whole in-page harness, and a plugin that only draws a
    countdown should not put either in the graph of every host that mounts
    it. */
-import { AnonymousKeyTimer } from '../../../components/anonymous/AnonymousKeyTimer';
+import { AnonymousKeyTimer } from '@datalayer/core/lib/components/anonymous/AnonymousKeyTimer';
 import {
   useAnonymousSession,
   useAnonymousSessionStore,

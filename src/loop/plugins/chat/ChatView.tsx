@@ -45,7 +45,8 @@ import {
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
 import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
-import { AnonymousKeyExpired } from '../../../components/anonymous/AnonymousKeyExpired';
+import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
+import { useAnonymousSessionStore } from '../../../runtimes/browser/anonymousToken';
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
 import { getAgentspecs } from '../../../specs/agents';
@@ -2099,6 +2100,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // unaffected and the panel may say so.
             sandboxStillRuns={inPage}
             temporary={expiredKeyIsTemporary}
+            // The trial key is spent once somebody signs in, and a session
+            // left `expired` would keep this panel over a working chat.
+            onSignedIn={() => useAnonymousSessionStore.getState().clear()}
           />
         </Box>
       ) : null}

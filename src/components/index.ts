@@ -5,7 +5,6 @@
 
 export * from './a2ui';
 export * from './agents';
-export * from './anonymous';
 export * from './cards';
 export * from './code-sandboxes';
 export * from './scheduler';

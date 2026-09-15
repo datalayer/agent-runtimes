@@ -6272,6 +6272,115 @@ WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1 = Agentspec(
     subagents=None,
 )
 
+WORKER_CMS_ASTRO_AGENTSPEC_0_0_1 = Agentspec(
+    id="worker-cms-astro",
+    version="0.0.1",
+    name="Astro CMS Author",
+    description="Imports public blog content and helps authenticated authors create and update pages in a Reactor CMS website rendered by Astro.",
+    tags=[
+        "personal-assistant",
+        "agent-worker",
+        "cms",
+        "astro",
+        "reactor",
+        "content-authoring",
+    ],
+    domain="personal-assistant",
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-6",
+    inference_provider=None,
+    mcp_servers=[],
+    skills=[],
+    tools=[],
+    frontend_tools=[],
+    environment_name="ai-agents-env",
+    icon="file-added",
+    emoji="✍️",
+    color="#8250DF",
+    suggestions=[
+        AgentSuggestion(
+            text="Crawl https://openteams.com/blog, show me the pages you found, then create polished draft posts from the first three.",
+            summary="Import OpenTeams posts",
+            emoji="🌐",
+        ),
+        AgentSuggestion(
+            text="Discover the public WordPress API for a blog I provide and prepare its latest posts for this site.",
+            summary="Import a WordPress blog",
+            emoji="📰",
+        ),
+        AgentSuggestion(
+            text="Create and publish an About page from the content I provide.",
+            summary="Create an About page",
+            emoji="✨",
+        ),
+        AgentSuggestion(
+            text="Update an existing post from revised content while preserving its URL.",
+            summary="Refresh an existing post",
+            emoji="✏️",
+        ),
+    ],
+    welcome_message="I can turn public blog material into drafts for this Astro site, use WordPress discovery when available, and create or update content with your CMS permissions. I will show what I find before I write anything.",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="browser",
+    harness="vercel-ai",
+    system_prompt="""You are the Reactor CMS authoring agent. You work only on the website the
+signed-in person is viewing. Every write is backed by their CMS session, so
+server-side site membership and author/editor permissions always apply.
+
+Your capabilities come from the CMS Core plugin as frontend tools:
+
+- `cms_crawl_blog` discovers same-origin pages linked by any public blog
+  index and returns clean title, excerpt, body, slug and source URL records.
+- `cms_crawl_wordpress` discovers WordPress through its
+  `https://api.w.org/` metadata and reads the public `wp/v2/posts` REST feed.
+- `cms_create_site_page` creates a post or page in the current site and may
+  publish it.
+- `cms_update_site_page` updates the explicitly identified entry and may
+  publish it.
+
+For an import, crawl first and summarize what was found before writing. Do
+not copy navigation, cookie notices, footers or repeated boilerplate.
+Preserve factual meaning and attribution, include `source_url`, and never
+claim imported work as original reporting. Ask which pages to import unless
+the person explicitly selected a number or named pages. Prefer drafts for
+bulk imports; publish only when explicitly asked. Use URL-safe lowercase
+slugs.
+
+Existing CMS content is private. Never ask to enumerate or read it through
+an undeclared tool. For an update, require the person to identify the exact
+CMS entry id or current slug and provide the revised content. Change only
+the fields they requested. Never invent a successful write: report the tool result,
+including authorization or validation errors. Use only tools actually
+provided to you.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    delegable=[
+        AgentCapability(id="document.author"),
+        AgentCapability(id="research.gather"),
+    ],
+    protocol="vercel-ai",
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    checkpoints=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    tool_hooks=None,
+    parameters=None,
+    subagents=None,
+)
+
 WORKER_CODING_TUTOR_AGENTSPEC_0_0_1 = Agentspec(
     id="worker-coding-tutor",
     version="0.0.1",
@@ -11788,6 +11897,7 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "worker-cat-exposure": WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1,
     "worker-change-detection": WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1,
     "worker-classify-route-emails": WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1,
+    "worker-cms-astro": WORKER_CMS_ASTRO_AGENTSPEC_0_0_1,
     "worker-coding-tutor": WORKER_CODING_TUTOR_AGENTSPEC_0_0_1,
     "worker-cohort-comparison": WORKER_COHORT_COMPARISON_AGENTSPEC_0_0_1,
     "worker-collections": WORKER_COLLECTIONS_AGENTSPEC_0_0_1,

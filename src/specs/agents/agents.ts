@@ -6849,6 +6849,112 @@ export const WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1: Agentspec = {
   subagents: undefined,
 };
 
+export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'worker-cms-astro',
+  version: '0.0.1',
+  name: 'Astro CMS Author',
+  description: `Imports public blog content and helps authenticated authors create and update pages in a Reactor CMS website rendered by Astro.`,
+  tags: [
+    'personal-assistant',
+    'agent-worker',
+    'cms',
+    'astro',
+    'reactor',
+    'content-authoring',
+  ],
+  domain: 'personal-assistant',
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'file-added',
+  emoji: '✍️',
+  color: '#8250DF',
+  suggestions: [
+    {
+      text: 'Crawl https://openteams.com/blog, show me the pages you found, then create polished draft posts from the first three.',
+      summary: 'Import OpenTeams posts',
+      emoji: '🌐',
+    },
+    {
+      text: 'Discover the public WordPress API for a blog I provide and prepare its latest posts for this site.',
+      summary: 'Import a WordPress blog',
+      emoji: '📰',
+    },
+    {
+      text: 'Create and publish an About page from the content I provide.',
+      summary: 'Create an About page',
+      emoji: '✨',
+    },
+    {
+      text: 'Update an existing post from revised content while preserving its URL.',
+      summary: 'Refresh an existing post',
+      emoji: '✏️',
+    },
+  ],
+  welcomeMessage:
+    'I can turn public blog material into drafts for this Astro site, use WordPress discovery when available, and create or update content with your CMS permissions. I will show what I find before I write anything.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'browser',
+  harness: 'vercel-ai',
+  systemPrompt: `You are the Reactor CMS authoring agent. You work only on the website the
+signed-in person is viewing. Every write is backed by their CMS session, so
+server-side site membership and author/editor permissions always apply.
+
+Your capabilities come from the CMS Core plugin as frontend tools:
+
+- \`cms_crawl_blog\` discovers same-origin pages linked by any public blog
+  index and returns clean title, excerpt, body, slug and source URL records.
+- \`cms_crawl_wordpress\` discovers WordPress through its
+  \`https://api.w.org/\` metadata and reads the public \`wp/v2/posts\` REST feed.
+- \`cms_create_site_page\` creates a post or page in the current site and may
+  publish it.
+- \`cms_update_site_page\` updates the explicitly identified entry and may
+  publish it.
+
+For an import, crawl first and summarize what was found before writing. Do
+not copy navigation, cookie notices, footers or repeated boilerplate.
+Preserve factual meaning and attribution, include \`source_url\`, and never
+claim imported work as original reporting. Ask which pages to import unless
+the person explicitly selected a number or named pages. Prefer drafts for
+bulk imports; publish only when explicitly asked. Use URL-safe lowercase
+slugs.
+
+Existing CMS content is private. Never ask to enumerate or read it through
+an undeclared tool. For an update, require the person to identify the exact
+CMS entry id or current slug and provide the revised content. Change only
+the fields they requested. Never invent a successful write: report the tool result,
+including authorization or validation errors. Use only tools actually
+provided to you.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  delegable: [{ id: 'document.author' }, { id: 'research.gather' }],
+  protocol: 'vercel-ai',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const WORKER_CODING_TUTOR_AGENTSPEC_0_0_1: Agentspec = {
   id: 'worker-coding-tutor',
   version: '0.0.1',
@@ -13261,6 +13367,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'worker-cat-exposure': WORKER_CAT_EXPOSURE_AGENTSPEC_0_0_1,
   'worker-change-detection': WORKER_CHANGE_DETECTION_AGENTSPEC_0_0_1,
   'worker-classify-route-emails': WORKER_CLASSIFY_ROUTE_EMAILS_AGENTSPEC_0_0_1,
+  'worker-cms-astro': WORKER_CMS_ASTRO_AGENTSPEC_0_0_1,
   'worker-coding-tutor': WORKER_CODING_TUTOR_AGENTSPEC_0_0_1,
   'worker-cohort-comparison': WORKER_COHORT_COMPARISON_AGENTSPEC_0_0_1,
   'worker-collections': WORKER_COLLECTIONS_AGENTSPEC_0_0_1,
