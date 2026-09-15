@@ -34,7 +34,7 @@ export const DATALAYER_LAUNCH_VARIANT = 'datalayer';
 
 /** Where an entry is listed. */
 export type CodeSandboxEnvironmentGroup =
-  'yours' | 'organizations' | 'platform';
+  'yours' | 'organizations' | 'library' | 'platform';
 
 /** The heading each group reads under. */
 export const CODE_SANDBOX_ENVIRONMENT_GROUP_TITLES: Record<
@@ -43,12 +43,17 @@ export const CODE_SANDBOX_ENVIRONMENT_GROUP_TITLES: Record<
 > = {
   yours: 'Your environments',
   organizations: "Your organizations' environments",
+  library: 'Library',
   platform: 'Platform environments',
 };
 
-/** The order the groups are offered in: what is yours first, the platform last. */
+/**
+ * The order the groups are offered in: what is yours first, then your
+ * organizations', then the environments you found in the Library, and the
+ * platform's own catalogue last, since it is the always-there fallback.
+ */
 export const CODE_SANDBOX_ENVIRONMENT_GROUP_ORDER: CodeSandboxEnvironmentGroup[] =
-  ['yours', 'organizations', 'platform'];
+  ['yours', 'organizations', 'library', 'platform'];
 
 /** Who is looking: an account uid and a handle, as the IAM store holds them. */
 export type ICodeSandboxEnvironmentViewer = {
@@ -59,17 +64,26 @@ export type ICodeSandboxEnvironmentViewer = {
 /**
  * Which group an entry belongs to.
  *
- * A platform entry says so with its `origin`. A user environment is the
- * caller's own when the account that owns it is theirs — by uid, or by the
- * handle its name is written with, `ada/geo`, since that is all an entry
- * carries when the uid is not at hand. Everything else a caller can see is an
- * environment of one of their organizations: the listing only ever offers them
- * their own accounts' (D-19).
+ * An entry that reached the picker through the public Library is a *library*
+ * entry, whoever owns it: a published environment is offered where a reader who
+ * came from its public page looks for it (D-12, E2-16). Otherwise a platform
+ * entry says so with its `origin`. A user environment is the caller's own when
+ * the account that owns it is theirs — by uid, or by the handle its name is
+ * written with, `ada/geo`, since that is all an entry carries when the uid is
+ * not at hand. Everything else a caller can see is an environment of one of
+ * their organizations: the listing only ever offers them their own accounts'
+ * (D-19).
  */
 export function codeSandboxEnvironmentGroupOf(
-  environment: Pick<IDatalayerEnvironment, 'name' | 'origin' | 'owner'>,
+  environment: Pick<
+    IDatalayerEnvironment,
+    'name' | 'origin' | 'owner' | 'fromLibrary'
+  >,
   viewer?: ICodeSandboxEnvironmentViewer,
 ): CodeSandboxEnvironmentGroup {
+  if (environment.fromLibrary) {
+    return 'library';
+  }
   if (environment.origin !== 'user') {
     return 'platform';
   }

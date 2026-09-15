@@ -58,6 +58,26 @@ const platform = (
     ...over,
   }) as unknown as IDatalayerEnvironment;
 
+/** A published environment reached through the Library, owned by a stranger. */
+const library = (
+  over: Partial<IDatalayerEnvironment> = {},
+): IDatalayerEnvironment =>
+  ({
+    name: 'grace/vision',
+    title: 'Vision',
+    language: 'python',
+    uid: '01LIB',
+    origin: 'user',
+    owner: '01GRACE',
+    fromLibrary: true,
+    promotedVersion: { uid: '01LIBVER', version: 3, status: 'ready' },
+    variants: ['datalayer'],
+    availableVariants: ['datalayer'],
+    sizeClass: 'small',
+    burning_rate: 0.0008,
+    ...over,
+  }) as unknown as IDatalayerEnvironment;
+
 describe('which group an entry reads under', () => {
   it('puts the platform last and what is yours first', () => {
     expect(codeSandboxEnvironmentGroupOf(platform(), VIEWER)).toBe('platform');
@@ -79,6 +99,17 @@ describe('which group an entry reads under', () => {
         VIEWER,
       ),
     ).toBe('organizations');
+  });
+
+  it('lists a published environment reached through the Library on its own', () => {
+    /* A published environment is offered where a reader who came from its
+       public page looks for it, whoever owns it (D-12, E2-16). */
+    expect(codeSandboxEnvironmentGroupOf(library(), VIEWER)).toBe('library');
+    expect(
+      codeSandboxEnvironmentGroupOf(library({ owner: '01OTHER' }), {
+        uid: '01OTHER',
+      }),
+    ).toBe('library');
   });
 });
 
@@ -151,6 +182,18 @@ describe('the order the dropdown reads in', () => {
     expect(
       codeSandboxEnvironmentOptions(entries, VIEWER).map(option => option.name),
     ).toEqual(['ada/geo', 'lab/geo', 'python-cpu-env']);
+  });
+
+  it('sets the Library between your organizations and the platform', () => {
+    const entries = [
+      platform(),
+      library(),
+      mine({ name: 'lab/geo', owner: '01LAB' }),
+      mine(),
+    ];
+    expect(
+      codeSandboxEnvironmentOptions(entries, VIEWER).map(option => option.name),
+    ).toEqual(['ada/geo', 'lab/geo', 'grace/vision', 'python-cpu-env']);
   });
 
   it('never opens a launcher on an entry that cannot be launched', () => {

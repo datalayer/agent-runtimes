@@ -202,6 +202,15 @@ export interface IDatalayerEnvironment {
    * and from a Runtimes older than E1-19.
    */
   availableVariants?: string[];
+
+  /**
+   * Set when this entry reached the picker through the public Library rather
+   * than the caller's own accounts (D-12, E2-16): a published environment
+   * someone can launch or fork without owning it. It is listed under its own
+   * *Library* heading, so a published environment is where a reader who came
+   * from its public page expects to find it.
+   */
+  fromLibrary?: boolean;
 }
 
 // -- The registry (PLAN_ENV.md, section 9) -------------------------------------
