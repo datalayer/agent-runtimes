@@ -8000,7 +8000,7 @@ export const WORKER_DECKS_AGENTSPEC_0_0_1: Agentspec = {
   frontendTools: [],
   environmentName: 'ai-agents-env',
   icon: 'project',
-  emoji: '📊',
+  emoji: '🖼️',
   color: '#8250DF',
   suggestions: [
     {

@@ -7241,7 +7241,7 @@ WORKER_DECKS_AGENTSPEC_0_0_1 = Agentspec(
     frontend_tools=[],
     environment_name="ai-agents-env",
     icon="project",
-    emoji="📊",
+    emoji="🖼️",
     color="#8250DF",
     suggestions=[
         AgentSuggestion(

@@ -34,9 +34,7 @@ export const DATALAYER_LAUNCH_VARIANT = 'datalayer';
 
 /** Where an entry is listed. */
 export type CodeSandboxEnvironmentGroup =
-  | 'yours'
-  | 'organizations'
-  | 'platform';
+  'yours' | 'organizations' | 'platform';
 
 /** The heading each group reads under. */
 export const CODE_SANDBOX_ENVIRONMENT_GROUP_TITLES: Record<

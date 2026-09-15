@@ -23,6 +23,11 @@ from agent_runtimes.types import AIModel
 class AIModels(str, Enum):
     """Enumeration of all available AI model IDs."""
 
+    ALIBABA_QWEN_MAX = "alibaba:qwen-max"
+    ALIBABA_QWEN3_32B = "alibaba:qwen3-32b"
+    ALIBABA_QWEN3_6_FLASH = "alibaba:qwen3.6-flash"
+    ALIBABA_QWEN3_6_PLUS = "alibaba:qwen3.6-plus"
+    ALIBABA_QWEN3_7_PLUS = "alibaba:qwen3.7-plus"
     ANTHROPIC_CLAUDE_3_5_HAIKU_20241022 = "anthropic:claude-3-5-haiku-20241022"
     ANTHROPIC_CLAUDE_OPUS_4_20250514 = "anthropic:claude-opus-4-20250514"
     ANTHROPIC_CLAUDE_SONNET_4_5_20250514 = "anthropic:claude-sonnet-4-5-20250514"
@@ -60,6 +65,71 @@ class AIModels(str, Enum):
 # ============================================================================
 # AI Model Definitions
 # ============================================================================
+
+ALIBABA_QWEN_MAX_0_0_1 = AIModel(
+    id="alibaba:qwen-max",
+    version="0.0.1",
+    name="Alibaba Qwen-Max",
+    description="Qwen-Max via Alibaba Cloud Model Studio - highest capability Qwen model",
+    provider="alibaba",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=32768,
+    capabilities=["chat", "tools", "codemode"],
+)
+
+ALIBABA_QWEN3_32B_0_0_1 = AIModel(
+    id="alibaba:qwen3-32b",
+    version="0.0.1",
+    name="Alibaba Qwen3-32B",
+    description="Qwen3-32B via Alibaba Cloud Model Studio - open-weight 32B model with tool calling",
+    provider="alibaba",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=16384,
+    capabilities=["chat", "tools", "codemode"],
+)
+
+ALIBABA_QWEN3_6_FLASH_0_0_1 = AIModel(
+    id="alibaba:qwen3.6-flash",
+    version="0.0.1",
+    name="Alibaba Qwen3.6-Flash",
+    description="Qwen3.6-Flash via Alibaba Cloud Model Studio - fast and low cost",
+    provider="alibaba",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=16384,
+    capabilities=["chat", "tools", "codemode"],
+)
+
+ALIBABA_QWEN3_6_PLUS_0_0_1 = AIModel(
+    id="alibaba:qwen3.6-plus",
+    version="0.0.1",
+    name="Alibaba Qwen3.6-Plus",
+    description="Qwen3.6-Plus via Alibaba Cloud Model Studio - balanced performance and cost",
+    provider="alibaba",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=32768,
+    capabilities=["chat", "tools", "codemode"],
+)
+
+ALIBABA_QWEN3_7_PLUS_0_0_1 = AIModel(
+    id="alibaba:qwen3.7-plus",
+    version="0.0.1",
+    name="Alibaba Qwen3.7-Plus",
+    description="Qwen3.7-Plus via Alibaba Cloud Model Studio - balanced flagship Qwen3 model",
+    provider="alibaba",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=32768,
+    capabilities=["chat", "tools", "codemode"],
+)
 
 ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1 = AIModel(
     id="anthropic:claude-3-5-haiku-20241022",
@@ -416,6 +486,11 @@ OPENAI_O3_MINI_0_0_1 = AIModel(
 # ============================================================================
 
 AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
+    "alibaba:qwen-max": ALIBABA_QWEN_MAX_0_0_1,
+    "alibaba:qwen3-32b": ALIBABA_QWEN3_32B_0_0_1,
+    "alibaba:qwen3.6-flash": ALIBABA_QWEN3_6_FLASH_0_0_1,
+    "alibaba:qwen3.6-plus": ALIBABA_QWEN3_6_PLUS_0_0_1,
+    "alibaba:qwen3.7-plus": ALIBABA_QWEN3_7_PLUS_0_0_1,
     "anthropic:claude-3-5-haiku-20241022": ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1,
     "anthropic:claude-opus-4-20250514": ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1,
     "anthropic:claude-sonnet-4-5-20250514": ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1,

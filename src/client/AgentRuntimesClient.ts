@@ -15,7 +15,10 @@ import {
   type DatalayerClientConfig,
 } from '@datalayer/core/lib/client';
 import type { HealthCheck } from '@datalayer/core/lib/models/HealthCheck';
-import { RuntimesMixin, type CreateRuntimeOptions } from './mixins/RuntimesMixin';
+import {
+  RuntimesMixin,
+  type CreateRuntimeOptions,
+} from './mixins/RuntimesMixin';
 import { SpacerMixin } from './mixins/SpacerMixin';
 import type { RuntimeDTO } from '../models/RuntimeDTO';
 import type { EnvironmentDTO } from '../models/EnvironmentDTO';
