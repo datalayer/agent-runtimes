@@ -239,11 +239,32 @@ app = typer.Typer(
 )
 
 
+def _quiet_the_logs(debug: bool) -> None:
+    """Keep library logging out of the terminal unless it is asked for.
+
+    `agent_runtimes.__main__` configures logging at INFO for the command-line
+    tools, and in this terminal that means every HTTP request the session
+    makes prints over the conversation. This is a reader's window, not a
+    developer's console: errors still surface, everything under them goes,
+    and `--debug` puts the lot back.
+    """
+    import logging
+
+    if debug or os.environ.get("AG_CHAT_DEBUG") == "1":
+        logging.getLogger().setLevel(logging.DEBUG)
+        return
+    logging.getLogger().setLevel(logging.ERROR)
+    # Named as well as inherited: a library that sets its own level is not
+    # quieted by the root's.
+    for noisy in ("httpx", "httpcore", "urllib3", "asyncio", "reactor"):
+        logging.getLogger(noisy).setLevel(logging.ERROR)
+
+
 def _show_version() -> None:
     """Display version information."""
-    from . import __version__
+    from .banner import LOOP_VERSION
 
-    typer.echo(f"{GREEN_LIGHT}Agent Runtimes Chat{RESET} v{__version__.__version__}")
+    typer.echo(f"{GREEN_LIGHT}Agent Runtimes Chat{RESET} v{LOOP_VERSION}")
     typer.echo(
         f"{GRAY}Powered by Datalayer • \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
     )
@@ -518,10 +539,16 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
 
 
 def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
-    """Return model IDs available from current env vars.
+    """Return model IDs offered here, and which of them the env vars reach.
+
+    A model whose spec says ``available: false`` is switched off in the
+    catalogue: it is not listed, not counted, and not a reason to let an
+    agent through. So the total is the number of models this build offers
+    at all, and the ids are those of them whose credentials are present —
+    the two figures the terminal prints as a ratio.
 
     Returns:
-        (available_ids, available_display_lines, total_model_specs)
+        (available_ids, available_display_lines, offered_model_specs)
     """
     try:
         from agent_runtimes.specs.models import check_env_vars_available, list_models
@@ -530,7 +557,7 @@ def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
 
     available_ids: set[str] = set()
     available_lines: list[str] = []
-    models = list_models()
+    models = [model for model in list_models() if model.available]
     for model in sorted(models, key=lambda m: m.id):
         if check_env_vars_available(list(model.required_env_vars or [])):
             available_ids.add(model.id)
@@ -853,6 +880,8 @@ def main_callback(
     # If a subcommand was invoked, don't run the default behavior
     if ctx.invoked_subcommand is not None:
         return
+
+    _quiet_the_logs(debug)
 
     if show_version:
         _show_version()

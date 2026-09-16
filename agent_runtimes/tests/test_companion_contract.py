@@ -49,6 +49,44 @@ def _routes() -> set[tuple[str, str]]:
     return exposed
 
 
+def _mounted() -> set[tuple[str, str]]:
+    """Every (method, path) the built application actually serves.
+
+    Declaring a route on a router is not serving it: `history_router` carried
+    `GET /history` for as long as nothing mounted it, and every call for the
+    conversation came back 404 while the check below stayed green.
+
+    Read off the application's own schema rather than `app.routes`, which
+    holds each included router as one opaque entry, not as the routes inside
+    it. Every path here is a public API route, so none is hidden from it.
+    """
+    from agent_runtimes.app import create_app
+
+    app = create_app()
+    prefix = "/api/v1"
+    mounted: set[tuple[str, str]] = set()
+    for path, operations in app.openapi().get("paths", {}).items():
+        if path.startswith(prefix):
+            path = path[len(prefix) :]
+        for method in operations:
+            mounted.add((method.upper(), path))
+    return mounted
+
+
+class TestMounted:
+    @pytest.mark.parametrize(
+        ("method", "path", "why"),
+        COMPANION_CALLS,
+        ids=[call[1] for call in COMPANION_CALLS],
+    )
+    def test_the_server_actually_serves_it(
+        self, method: str, path: str, why: str
+    ) -> None:
+        assert (method, path) in _mounted(), (
+            f"{method} {path} is declared but not mounted on the app ({why})"
+        )
+
+
 class TestInPodContract:
     @pytest.mark.parametrize(
         ("method", "path", "why"),
@@ -92,9 +130,7 @@ class TestInPodContract:
         # And the composition really happened before it was generated.
         assert payload["frontend_tools"] == ["jupyter-notebook-propose:0.0.1"]
 
-        request = ConfigureFromSpecRequest(
-            agent_spec_id=spec.id, agent_spec=payload
-        )
+        request = ConfigureFromSpecRequest(agent_spec_id=spec.id, agent_spec=payload)
         assert request.agent_spec is not None
         assert request.agent_spec["id"] == "jupyter-cell-fixer"
 

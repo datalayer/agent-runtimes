@@ -25,6 +25,7 @@ from rich.text import Text
 
 from agent_runtimes.loop import LoopSession, SessionSync, SlashCommandRegistry
 
+from .banner import LOOP_VERSION, LOOP_WORDMARK, TOKENS_DOWN, TOKENS_UP
 from .commands import SlashCommand, build_registry
 from .execution import TuxExecutionGateway
 
@@ -181,19 +182,6 @@ class CliTux:
         # end did.
         self.sync = SessionSync(server_url=self.server_url, agent_id=agent_id)
 
-    @property
-    def loop_session(self) -> LoopSession:
-        """This session, with the terminal's live values folded in.
-
-        `CliTux` mutates `agent_id` and `server_url` as the session goes on —
-        `/agents use` switches agent, a reconnect changes the URL — so the
-        session is refreshed on read rather than left to drift from the terminal
-        it describes. Commands should read this, not the attributes.
-        """
-        self.session.server_url = self.server_url
-        self.session.agent_id = self.agent_id or self.session.agent_id
-        return self.session
-
         # Initialize prompt session with slash command completer
         # Style for the completion menu matching Datalayer brand colors
         self.prompt_style = PTStyle.from_dict(
@@ -208,6 +196,19 @@ class CliTux:
             }
         )
         self.prompt_session: Optional[PromptSession] = None
+
+    @property
+    def loop_session(self) -> LoopSession:
+        """This session, with the terminal's live values folded in.
+
+        `CliTux` mutates `agent_id` and `server_url` as the session goes on —
+        `/agents use` switches agent, a reconnect changes the URL — so the
+        session is refreshed on read rather than left to drift from the terminal
+        it describes. Commands should read this, not the attributes.
+        """
+        self.session.server_url = self.server_url
+        self.session.agent_id = self.agent_id or self.session.agent_id
+        return self.session
 
     def _format_tokens(self, tokens: int) -> str:
         """Format token count with K suffix for thousands."""
@@ -431,9 +432,7 @@ class CliTux:
         display_name = self._get_display_name()
         cwd = self._get_cwd()
 
-        from . import __version__
-
-        version = __version__.__version__
+        version = LOOP_VERSION
 
         # ASCII art logo - Datalayer inspired (3 horizontal bars + feet)
         # Compact version: 6 chars wide
@@ -506,7 +505,7 @@ class CliTux:
         footer_right = Text(" Cheaper • Faster • Collaborative", style=STYLE_MUTED)
 
         # Create the main panel
-        title = f" ☰ LOOP ⟳ {version} "
+        title = f" ☰ {LOOP_WORDMARK} {version} "
 
         content = Group(
             Columns([left_panel, right_panel], equal=False, expand=True),
@@ -974,6 +973,12 @@ class CliTux:
             self.stats.total_input_tokens = input_tokens
             self.stats.total_output_tokens = output_tokens
 
+            # What this end just showed is not news from the other end: the
+            # session sync reads the same history back, and without this the
+            # reply the reader has watched arrive is announced to them a
+            # second time as something the browser did.
+            self.sync.note_local(response_text)
+
             # Show token usage line
             usage_line = Text()
             usage_line.append("─" * 80, style=STYLE_MUTED)
@@ -988,7 +993,8 @@ class CliTux:
                 time_str = f"{int(minutes)}m {secs:.0f}s"
             self.console.print(
                 f"  {self._format_tokens(total)} tokens used · "
-                f"{self._format_tokens(turn_input_tokens)} in / {self._format_tokens(turn_output_tokens)} out · "
+                f"{TOKENS_UP} {self._format_tokens(turn_input_tokens)} / "
+                f"{TOKENS_DOWN} {self._format_tokens(turn_output_tokens)} · "
                 f"{time_str}",
                 style=STYLE_MUTED,
             )

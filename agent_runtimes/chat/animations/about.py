@@ -12,6 +12,7 @@ from rich.panel import Panel
 from rich.style import Style
 from rich.text import Text
 
+from ..banner import LOOP_VERSION, LOOP_WORDMARK
 from .utils import check_escape_pressed, raw_terminal
 
 # Primary accent color (matches tux.py)
@@ -104,7 +105,7 @@ async def about_animation(console: Console) -> None:
         return Panel(
             initial,
             border_style=STYLE_PRIMARY,
-            title=" ☰ LOOP ⟳ 0.0.2 ",
+            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
             subtitle="",
         )
 
@@ -133,7 +134,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" ☰ LOOP ⟳ 0.0.2 ",
+                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -171,7 +172,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" ☰ LOOP ⟳ 0.0.2 ",
+                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -194,7 +195,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" ☰ LOOP ⟳ 0.0.2 ",
+                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -217,7 +218,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" ☰ LOOP ⟳ 0.0.2 ",
+                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -240,7 +241,7 @@ async def about_animation(console: Console) -> None:
                         Panel(
                             frame,
                             border_style=STYLE_PRIMARY,
-                            title=" ☰ LOOP ⟳ 0.0.2 ",
+                            title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
                             subtitle="",
                         )
                     )
@@ -318,7 +319,7 @@ async def about_animation(console: Console) -> None:
                             Panel(
                                 frame,
                                 border_style=STYLE_PRIMARY,
-                                title=" ☰ LOOP ⟳ 0.0.2 ",
+                                title=f" ☰ {LOOP_WORDMARK} {LOOP_VERSION} ",
                                 subtitle="",
                             )
                         )

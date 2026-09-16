@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 NAME = "tools-last"
 ALIASES = ["tl"]
 DESCRIPTION = "Show details of tool calls from last response"
-SHORTCUT = "escape l"
+# Its own key: three commands claimed `escape l`, so only the first of
+# them was ever bound (the last run's result; /tools itself has t).
+SHORTCUT = "escape r"
 
 
 async def execute(tux: "CliTux") -> Optional[str]:

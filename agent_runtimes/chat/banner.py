@@ -53,7 +53,24 @@ RESET = "\033[0m"
 # bars) is the Datalayer logo. Keep this centralized and render it everywhere
 # via ``print_goodbye`` so the message stays consistent.
 GOODBYE_URL = "https://datalayer.ai"
-GOODBYE_MESSAGE = "☰ Keep looping ⟳ Your agents stay warm. See you soon at Datalayer!"
+
+#: The Loop's wordmark, as the terminal writes it — the eyes are the two
+#: O's, which is the whole joke; it is one string so the banner, the panel
+#: title and the about screen cannot drift apart. The emoji is two columns
+#: wide in a terminal, so the banner's own padding counts it as two.
+LOOP_WORDMARK = "L\U0001f440P"
+#: The same mark as a verb, for a line that reads as a sentence.
+LOOP_WORDMARK_VERB = "L\U0001f440ping"
+#: The version the terminal shows: the library's own, so it cannot drift from
+#: what is installed. (`agent_runtimes.__init__` does not import this package,
+#: so reading it here is no cycle.)
+LOOP_VERSION = __import__("agent_runtimes").__version__
+#: Which way the tokens went: up to the server, back down from it.
+TOKENS_UP = "\u25b2"
+TOKENS_DOWN = "\u25bc"
+GOODBYE_MESSAGE = (
+    f"Keep {LOOP_WORDMARK_VERB} Your agents stay warm. See you soon at ☰ Datalayer!"
+)
 
 
 def _osc8_link(url: str, label: str | None = None) -> str:
@@ -88,7 +105,7 @@ def print_goodbye(console: Any = None) -> None:
 BANNER = f"""
 {GREEN_MEDIUM}{BOLD}╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║
-║   {GREEN_LIGHT}{BOLD}LOOP ⟳{WHITE}                                                      {GREEN_MEDIUM}║
+║   {GREEN_LIGHT}{BOLD}{LOOP_WORDMARK}{WHITE}                                                        {GREEN_MEDIUM}║
 ║                                                               ║
 ║   {GREEN_MEDIUM}AI-Powered Data Assistant                                   {GREEN_MEDIUM}║
 ║                                                               ║

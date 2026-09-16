@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 import httpx
 from rich.text import Text
 
+from ..banner import TOKENS_DOWN, TOKENS_UP
+
 if TYPE_CHECKING:
     from ..tux import CliTux
 
@@ -165,8 +167,8 @@ async def execute(tux: "CliTux") -> Optional[str]:
     tux.console.print(
         "  Session tokens: "
         f"{tux._format_tokens(tux.stats.total_tokens)} "
-        f"({tux._format_tokens(tux.stats.total_input_tokens)} in / "
-        f"{tux._format_tokens(tux.stats.total_output_tokens)} out)",
+        f"({TOKENS_UP} {tux._format_tokens(tux.stats.total_input_tokens)} / "
+        f"{TOKENS_DOWN} {tux._format_tokens(tux.stats.total_output_tokens)})",
         style=STYLE_MUTED,
     )
     tux.console.print(f"  Messages: {tux.stats.messages}", style=STYLE_MUTED)

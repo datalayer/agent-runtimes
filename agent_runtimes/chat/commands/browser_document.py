@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 NAME = "document"
 ALIASES: list[str] = ["browser-document", "browser-lexical"]
 DESCRIPTION = "Open the Agent Lexical UI in your browser"
-SHORTCUT = "escape l"
+# Its own key: three commands claimed `escape l`, so only the first of
+# them was ever bound (a document is a file; /browser has w and /notebook has n).
+SHORTCUT = "escape f"
 
 
 async def execute(tux: "CliTux") -> Optional[str]:
