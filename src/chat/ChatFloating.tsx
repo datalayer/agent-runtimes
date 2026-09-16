@@ -219,6 +219,8 @@ export function ChatFloating({
   showSkillsMenu = false,
   showTokenUsage = true,
   showContextRing = false,
+  themeVariant,
+  colorMode,
   runtimeId,
   historyEndpoint,
   authToken,
@@ -825,6 +827,8 @@ export function ChatFloating({
         showHeader={showHeader}
         useStore={useStoreMode}
         protocol={protocol}
+        themeVariant={themeVariant}
+        colorMode={colorMode}
         autoFocus={isOpen}
         focusTrigger={focusTrigger}
         launching={launching}

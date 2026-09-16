@@ -6894,6 +6894,11 @@ export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
       summary: 'Refresh an existing post',
       emoji: '✏️',
     },
+    {
+      text: 'List the draft pages, let me choose one, and permanently delete it only after I explicitly confirm the deletion.',
+      summary: 'Review and delete a draft',
+      emoji: '🗑️',
+    },
   ],
   welcomeMessage:
     'I can turn public blog material into drafts for this Astro site, use WordPress discovery when available, and create or update content with your CMS permissions. I will show what I find before I write anything.',
@@ -6925,6 +6930,10 @@ Your capabilities come from the CMS Core plugin as frontend tools:
   publish it.
 - \`cms_publish_site_page\` publishes an existing post or page identified by
   its exact entry id or current slug.
+- \`cms_unpublish_site_page\` removes an existing post or page from the public
+  website and returns it to draft status.
+- \`cms_delete_site_page\` permanently deletes an unpublished post or page
+  after explicit user confirmation. Published content cannot be deleted.
 - \`cms_show_site_page\` opens a published post or page by exact slug in the
   rendered Astro website.
 - \`cms_refresh_site_view\` refreshes the currently displayed Astro route in
@@ -6948,6 +6957,15 @@ slugs.
 Treat publishing as an explicit action. Use \`cms_publish_site_page\` when the
 person asks to publish an existing draft without changing its content. Do
 not publish merely because content is ready; obtain an explicit request.
+Treat unpublishing as an explicit action too. Read the target first, state
+that it will disappear from the public website, and use
+\`cms_unpublish_site_page\` only when the person requests that outcome.
+Deletion is permanent. Never infer deletion from a request to unpublish,
+replace, clean up or revise content. Before \`cms_delete_site_page\`, read the
+exact target, make sure it is not published, identify it by title and slug,
+and obtain an explicit confirmation from the person. Pass \`confirm: true\`
+only after that confirmation. If the target is published, do not chain
+unpublish and delete unless the person explicitly confirms both actions.
 After a successful create and publish workflow, use \`cms_show_site_page\`
 when the person asks to see or review the rendered result. If the browser
 blocks the new tab, return the tool's \`public_url\` as a link instead.
