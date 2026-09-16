@@ -18,30 +18,6 @@ import type { FrontendToolSpec } from '../types';
 // Frontend Tool Definitions
 // ============================================================================
 
-export const CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
-  id: 'cms-astro',
-  version: '0.0.1',
-  name: 'Reactor CMS for Astro',
-  description:
-    'Authenticated browser tools for crawling public blogs and reading, creating, updating, publishing, opening, and refreshing Reactor CMS website pages.',
-  tags: ['frontend', 'cms', 'astro', 'reactor', 'content-authoring'],
-  enabled: true,
-  toolset: [
-    'cms_crawl_blog',
-    'cms_crawl_wordpress',
-    'cms_create_site_page',
-    'cms_list_site_pages',
-    'cms_read_site_page',
-    'cms_get_current_site_page',
-    'cms_update_site_page',
-    'cms_publish_site_page',
-    'cms_show_site_page',
-    'cms_refresh_site_view',
-  ],
-  icon: 'file-added',
-  emoji: '✍️',
-};
-
 export const JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec =
   {
     id: 'jupyter-notebook-edit',
@@ -121,7 +97,6 @@ export const LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1: FrontendToolSpec = {
 // ============================================================================
 
 export const FRONTEND_TOOL_CATALOG: Record<string, FrontendToolSpec> = {
-  'cms-astro': CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-propose': JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-read': JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,

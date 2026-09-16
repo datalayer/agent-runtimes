@@ -81,9 +81,11 @@ export interface ToolCallCompleteContext {
  * View mode for the chat component.
  * - 'floating': Full-height floating panel (pinned to the right edge with offset)
  * - 'floating-small': Standard floating popup
- * - 'sidebar': Docked sidebar panel
+ * - 'floating-draggable': The popup with a handle, movable anywhere in the viewport
+ * - 'sidebar': Docked sidebar panel — offered only where the host has a mount point for it
  */
-export type ChatViewMode = 'floating' | 'floating-small' | 'sidebar';
+export type ChatViewMode =
+  'floating' | 'floating-small' | 'floating-draggable' | 'sidebar';
 
 /**
  * Companion "ephemeral surface" shown next to the chat.
@@ -716,6 +718,12 @@ export interface ChatCommonProps {
   /** Callback when user switches chat view mode */
   onChatViewModeChange?: (mode: ChatViewMode) => void;
 
+  /**
+   * Modes the toggle shows but does not let anyone pick — the sidebar, on a
+   * page that has no mount point for one. See `chat/viewModes`.
+   */
+  disabledViewModes?: readonly ChatViewMode[];
+
   // ============ External Data ============
 
   /** External context snapshot data for the token usage bar */
@@ -1070,7 +1078,8 @@ export interface ChatBaseProps {
   /**
    * Current chat view mode.
    * When provided, a segmented view-mode toggle is rendered in the header
-   * with icons for each mode: floating (popup), floating-small (compact), sidebar (docked).
+   * with icons for each mode: floating (popup), floating-small (compact),
+   * floating-draggable (movable popup), sidebar (docked).
    */
   chatViewMode?: ChatViewMode;
 
@@ -1078,6 +1087,12 @@ export interface ChatBaseProps {
    * Callback when the user clicks a different view mode in the header toggle.
    */
   onChatViewModeChange?: (mode: ChatViewMode) => void;
+
+  /**
+   * Modes the toggle shows but does not let anyone pick — the sidebar, on a
+   * page that has no mount point for one. See `chat/viewModes`.
+   */
+  disabledViewModes?: readonly ChatViewMode[];
 
   // ============ Mode Selection ============
 

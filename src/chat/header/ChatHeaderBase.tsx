@@ -32,8 +32,11 @@ import {
   CommentDiscussionIcon,
   DeviceMobileIcon,
   SidebarExpandIcon,
+  GrabberIcon,
   InfoIcon,
+  type Icon,
 } from '@primer/octicons-react';
+import { CHAT_VIEW_MODES, SIDEBAR_NEEDS_MOUNT_POINT } from '../viewModes';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import type {
@@ -83,6 +86,14 @@ export function toRuntimeExecutionState(
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
+
+/** The drawing of each mode in the header's toggle. */
+const VIEW_MODE_ICONS: Record<ChatViewMode, Icon> = {
+  floating: CommentDiscussionIcon,
+  'floating-small': DeviceMobileIcon,
+  'floating-draggable': GrabberIcon,
+  sidebar: SidebarExpandIcon,
+};
 
 export interface ChatBaseHeaderProps {
   title?: string;
@@ -136,6 +147,8 @@ export interface ChatBaseHeaderProps {
   chatViewMode?: ChatViewMode;
   /** Callback when view mode changes */
   onChatViewModeChange?: (mode: ChatViewMode) => void;
+  /** Modes shown greyed out: the sidebar, when the host has no mount point. */
+  disabledViewModes?: readonly ChatViewMode[];
   /** Show the companion-surface segmented control (None / Notebook / Document). */
   showEphemeralSurfaceControl?: boolean;
   /** Whether the Notebook option is available in the surface control. */
@@ -176,6 +189,7 @@ export function ChatBaseHeader({
   onClear,
   chatViewMode,
   onChatViewModeChange,
+  disabledViewModes = [],
   showEphemeralSurfaceControl = false,
   enableEphemeralNotebookOption = false,
   enableEphemeralDocumentOption = false,
@@ -364,60 +378,60 @@ export function ChatBaseHeader({
                 gap: '1px',
               }}
             >
-              {(
-                [
-                  {
-                    mode: 'floating' as const,
-                    icon: CommentDiscussionIcon,
-                    label: 'Full-height popup',
-                  },
-                  {
-                    mode: 'floating-small' as const,
-                    icon: DeviceMobileIcon,
-                    label: 'Floating popup',
-                  },
-                  {
-                    mode: 'sidebar' as const,
-                    icon: SidebarExpandIcon,
-                    label: 'Sidebar panel',
-                  },
-                ] as const
-              ).map(({ mode, icon: ModeIcon, label }) => (
-                <Tooltip key={mode} text={label} direction="n">
-                  <Box
-                    as="button"
-                    aria-label={label}
-                    onClick={() => onChatViewModeChange(mode)}
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 26,
-                      height: 24,
-                      borderRadius: '4px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      bg:
-                        chatViewMode === mode
-                          ? 'canvas.default'
-                          : 'transparent',
-                      boxShadow:
-                        chatViewMode === mode ? 'shadow.small' : 'none',
-                      color: chatViewMode === mode ? 'fg.default' : 'fg.muted',
-                      transition: 'all 0.15s ease',
-                      '&:hover': {
-                        color: 'fg.default',
-                        bg:
-                          chatViewMode === mode
-                            ? 'canvas.default'
-                            : 'neutral.subtle',
-                      },
-                    }}
+              {CHAT_VIEW_MODES.map(({ mode, label }) => {
+                const ModeIcon = VIEW_MODE_ICONS[mode];
+                const selected = chatViewMode === mode;
+                /* Greyed rather than left out: the person sees the mode
+                   exists, and that this page has no place for it. */
+                const disabled = disabledViewModes.includes(mode);
+                return (
+                  <Tooltip
+                    key={mode}
+                    text={
+                      disabled && mode === 'sidebar'
+                        ? `${label} — ${SIDEBAR_NEEDS_MOUNT_POINT}`
+                        : label
+                    }
+                    direction="n"
                   >
-                    <ModeIcon size={14} />
-                  </Box>
-                </Tooltip>
-              ))}
+                    <Box
+                      as="button"
+                      aria-label={label}
+                      aria-disabled={disabled || undefined}
+                      onClick={() => {
+                        if (!disabled) {
+                          onChatViewModeChange(mode);
+                        }
+                      }}
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 26,
+                        height: 24,
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: disabled ? 0.45 : 1,
+                        bg: selected ? 'canvas.default' : 'transparent',
+                        boxShadow: selected ? 'shadow.small' : 'none',
+                        color: selected ? 'fg.default' : 'fg.muted',
+                        transition: 'all 0.15s ease',
+                        '&:hover': disabled
+                          ? {}
+                          : {
+                              color: 'fg.default',
+                              bg: selected
+                                ? 'canvas.default'
+                                : 'neutral.subtle',
+                            },
+                      }}
+                    >
+                      <ModeIcon size={14} />
+                    </Box>
+                  </Tooltip>
+                );
+              })}
             </Box>
           )}
           {/* Custom header actions */}

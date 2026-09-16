@@ -51,7 +51,6 @@ import {
   RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 } from '../tools';
 import {
-  CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
@@ -158,8 +157,6 @@ const TOOL_MAP: Record<string, any> = {
  * Map frontend tool IDs to FrontendToolSpec objects.
  */
 const FRONTEND_TOOL_MAP: Record<string, any> = {
-  'cms-astro:0.0.1': CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1,
-  'cms-astro': CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit:0.0.1': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-propose:0.0.1':
@@ -6871,14 +6868,14 @@ export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [],
-  frontendTools: [FRONTEND_TOOL_MAP['cms-astro:0.0.1']],
+  frontendTools: [],
   environmentName: 'ai-agents-env',
   icon: 'file-added',
   emoji: '✍️',
   color: '#8250DF',
   suggestions: [
     {
-      text: 'Crawl https://openteams.com/blog, show me the pages you found, then create polished draft posts from the first three.',
+      text: 'Crawl the RSS feed https://openteams.com/feed/, show me the pages you found, then create polished draft posts from the first three.',
       summary: 'Import OpenTeams posts',
       emoji: '🌐',
     },
@@ -6912,6 +6909,8 @@ Your capabilities come from the CMS Core plugin as frontend tools:
 
 - \`cms_crawl_blog\` discovers same-origin pages linked by any public blog
   index and returns clean title, excerpt, body, slug and source URL records.
+- \`cms_crawl_feed\` reads RSS or Atom metadata and crawls the public article
+  pages linked by its entries, retaining authors, categories and dates.
 - \`cms_crawl_wordpress\` discovers WordPress through its
   \`https://api.w.org/\` metadata and reads the public \`wp/v2/posts\` REST feed.
 - \`cms_create_site_page\` creates a post or page in the current site and may

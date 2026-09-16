@@ -104,6 +104,7 @@ import {
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
+import { isFloatingChatViewMode } from '../viewModes';
 import {
   ToolApprovalBanner,
   ToolApprovalDialog,
@@ -799,6 +800,7 @@ function ChatBaseInner({
   colorMode,
   chatViewMode,
   onChatViewModeChange,
+  disabledViewModes,
   // Mode selection
   useStore: useStoreMode = true,
   protocol: protocolRaw,
@@ -1088,8 +1090,10 @@ function ChatBaseInner({
   // When a companion surface is shown, the chat can be docked as a sidebar
   // (default) or floated over it, driven by the header view-mode toggle.
   const surfaceChatFloating =
-    surfaceVisible &&
-    (chatViewMode === 'floating' || chatViewMode === 'floating-small');
+    surfaceVisible && isFloatingChatViewMode(chatViewMode);
+  // The two smaller floating modes share the compact card over a surface.
+  const compactFloating =
+    chatViewMode === 'floating-small' || chatViewMode === 'floating-draggable';
 
   // Notebook frontend tools are always created (hooks must be unconditional)
   // but only merged into the tools sent to the agent while the notebook is
@@ -4672,6 +4676,7 @@ function ChatBaseInner({
     onClear: handleClear,
     chatViewMode,
     onChatViewModeChange,
+    disabledViewModes,
     showEphemeralSurfaceControl:
       enableEphemeralNotebook || enableEphemeralDocument,
     enableEphemeralNotebookOption: enableEphemeralNotebook,
@@ -4873,9 +4878,9 @@ function ChatBaseInner({
                   ? {
                       position: 'absolute',
                       right: 16,
-                      width: chatViewMode === 'floating-small' ? 360 : 440,
+                      width: compactFloating ? 360 : 440,
                       maxWidth: 'calc(100% - 32px)',
-                      ...(chatViewMode === 'floating-small'
+                      ...(compactFloating
                         ? { bottom: 16, height: '62%' }
                         : { top: 16, bottom: 16 }),
                       display: 'flex',
