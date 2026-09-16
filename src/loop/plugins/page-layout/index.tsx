@@ -22,6 +22,12 @@
  *   `PageLayout` — the editors as the page, the transcript as the panel,
  *   the composer as the band — with what the agent is doing in the page,
  *   read from `LoopChatTurn`, pinned to the top of the sheet;
+ * - with the composer floating, the chat header's display-mode toggle in
+ *   the card's footer, through the input-prompt plugin's `promptAction`
+ *   slot: the card over the page, or the composer in the conversation panel
+ *   — beside the page, over its edge, or in its corner (`pageLayoutChatMode`,
+ *   `pageLayoutForChatMode`); the layout follows the mode, and the chat view
+ *   follows the composer's stance through `promptStance`;
  * - a button in the workspace header that opens and closes the conversation
  *   panel — primer-addons' toggle, labelled for a conversation; it shares
  *   the layout's `pageLayoutPanelOpen` signal with any host that wants to
@@ -49,7 +55,11 @@ import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import {
   PageLayout,
   PagePanelToggle,
+  openPagePanel,
+  type PageSize,
 } from '@datalayer/primer-addons/lib/reactor';
+import type { ChatViewMode } from '../../../types/chat';
+import { ChatViewModeToggle } from '../../../chat/header/ChatViewModeToggle';
 import {
   LoopChatLayout,
   LoopChatTurn,
@@ -71,6 +81,11 @@ export {
   openPagePanel as openConversationPanel,
 } from '@datalayer/primer-addons/lib/reactor';
 export type { TurnPanelFooter } from './TurnPanel';
+/* The sheet's size is primer-addons' type; a host names it without a second import. */
+export type {
+  PageSize,
+  PageSizeFormat,
+} from '@datalayer/primer-addons/lib/reactor';
 
 export const LOOP_PAGE_LAYOUT_PLUGIN_NAME =
   '@datalayer/loop-plugin-page-layout';
@@ -96,6 +111,20 @@ export type LoopPageLayoutConfig = {
    */
   prompt: 'docked' | 'floating';
   /**
+   * Which edge of the page a floating composer starts at: `top` (the
+   * default), where a document's title bar would be, or `bottom`, where a
+   * chat's composer waits. Either way it is dragged from there. Only read
+   * with a `floating` prompt.
+   */
+  promptAnchor?: 'top' | 'bottom';
+  /**
+   * The sheet's size: free (the default) at the layout's reading width, or
+   * a paper — `{ format: 'letter' }`, `{ format: 'a4' }` — whose width the
+   * sheet takes and whose height it is at least, with a free `width` or
+   * `height` over either. Omitted: free.
+   */
+  pageSize?: PageSize;
+  /**
    * What the turn panel draws under the reply.
    *
    * `full` (the default): the transcript's turn footer — the window's fill,
@@ -109,6 +138,69 @@ export type LoopPageLayoutConfig = {
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
 
 /**
+ * How the page layout shows the chat, when the composer is the floating
+ * card: the card itself over the page (`floating-draggable`, where it
+ * starts), or the conversation panel with the composer standing in it —
+ * beside the page (`sidebar`), over its right edge at full height
+ * (`floating`), or as a window in its corner (`floating-small`). The four
+ * modes of the chat header's toggle, which the card carries in its own
+ * footer. One signal for the workspace, as `pageLayoutPanelOpen` is: the
+ * mode is the person's, not a build's.
+ */
+export const pageLayoutChatMode = signal<ChatViewMode>('floating-draggable');
+
+/** The composer's stance for the chat view, following the mode above. */
+const promptStance = signal<'floating-top' | 'floating-bottom' | 'docked-top'>(
+  'floating-top',
+);
+
+/*
+ * Which edge the card returns to when the mode puts it back over the page:
+ * the build's own `promptAnchor`, kept here because the mode is picked
+ * through a module-level function, as `pageLayoutChatMode` itself is. One
+ * page layout to a page, the assumption that signal already makes.
+ */
+let floatingStance: 'floating-top' | 'floating-bottom' = 'floating-top';
+
+/** Where a mode puts the composer (the band) and the conversation (the panel). */
+export type PageLayoutChatPlacement = {
+  bandMode: 'floating' | 'panel';
+  panelMode: 'docked' | 'overlay' | 'popup';
+};
+
+export function pageLayoutForChatMode(
+  mode: ChatViewMode,
+): PageLayoutChatPlacement {
+  switch (mode) {
+    case 'sidebar':
+      return { bandMode: 'panel', panelMode: 'docked' };
+    case 'floating':
+      return { bandMode: 'panel', panelMode: 'overlay' };
+    case 'floating-small':
+      return { bandMode: 'panel', panelMode: 'popup' };
+    default:
+      return { bandMode: 'floating', panelMode: 'docked' };
+  }
+}
+
+/** Picks a mode: the layout follows, and so does the composer's stance. */
+export function setPageLayoutChatMode(mode: ChatViewMode): void {
+  pageLayoutChatMode.value = mode;
+  const { bandMode } = pageLayoutForChatMode(mode);
+  promptStance.value = bandMode === 'floating' ? floatingStance : 'docked-top';
+  // The composer went into the panel: the panel opens to show it.
+  if (bandMode === 'panel') {
+    openPagePanel();
+  }
+}
+
+/** The toggle in the floating composer's footer. */
+function ChatModeAction(): JSX.Element {
+  const mode = useSignalValue(pageLayoutChatMode);
+  return <ChatViewModeToggle value={mode} onChange={setPageLayoutChatMode} />;
+}
+
+/**
  * The chat view's parts on the page layout.
  *
  * The editors are the page, the transcript the panel, the composer the band;
@@ -118,12 +210,24 @@ const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
 function LoopPageLayout({
   parts,
   promptMode,
+  pageSize,
 }: {
   parts: ChatLayoutParts;
   promptMode: 'docked' | 'floating';
+  pageSize?: PageSize;
 }): JSX.Element {
   const turnEntries = useContributions(LoopChatTurn);
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
+  const chatMode = useSignalValue(pageLayoutChatMode);
+  // The display modes are the floating card's own; a docked composer stays
+  // docked above the page, whatever mode was picked elsewhere.
+  const placement: {
+    bandMode: 'docked' | 'floating' | 'panel';
+    panelMode: 'docked' | 'overlay' | 'popup';
+  } =
+    promptMode === 'floating'
+      ? pageLayoutForChatMode(chatMode)
+      : { bandMode: 'docked', panelMode: 'docked' };
   return (
     <PageLayout
       page={parts.editors}
@@ -134,7 +238,9 @@ function LoopPageLayout({
       picker={parts.picker}
       transient={parts.transient}
       activity={turn.activity}
-      bandMode={promptMode}
+      bandMode={placement.bandMode}
+      panelMode={placement.panelMode}
+      pageSize={pageSize}
     />
   );
 }
@@ -152,7 +258,13 @@ function ConversationToggle(): JSX.Element | null {
 
 export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
   name: LOOP_PAGE_LAYOUT_PLUGIN_NAME,
-  config: { turnPanel: 'below', turnPanelFooter: 'full', prompt: 'docked' },
+  config: {
+    turnPanel: 'below',
+    turnPanelFooter: 'full',
+    prompt: 'docked',
+    promptAnchor: 'top',
+    pageSize: undefined,
+  },
   displayName: 'Page layout',
   description:
     'The editor — or, in the chat view, the conversation — on a centred sheet, the prompt docked above it at the same width or floating over it as a draggable card, the current turn under the prompt, the conversation in a side panel.',
@@ -163,19 +275,32 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
       The layout, contributed per build because the composer's stance is
       configuration: `docked-top` means the layout owns the composer's width
       — `PageLayout` gives it a mount point the width of the sheet, so the
-      prompt and the page read as one column; `floating-top` is the draggable
+      prompt and the page read as one column; `floating-top` and
+      `floating-bottom` are the draggable
       card, sized by itself, over a strip of canvas kept clear for it. The
       component closes over the choice once, per build.
     */
     const promptMode = config.prompt;
+    const pageSize = config.pageSize;
+    floatingStance =
+      config.promptAnchor === 'bottom' ? 'floating-bottom' : 'floating-top';
+    if (promptMode === 'floating') {
+      promptStance.value = floatingStance;
+    }
     const ConfiguredLayout = (parts: ChatLayoutParts): JSX.Element => (
-      <LoopPageLayout parts={parts} promptMode={promptMode} />
+      <LoopPageLayout
+        parts={parts}
+        promptMode={promptMode}
+        pageSize={pageSize}
+      />
     );
     ctx.contribute(
       LoopChatLayout,
       {
         id: 'page-layout',
-        prompt: promptMode === 'floating' ? 'floating-top' : 'docked-top',
+        prompt: promptMode === 'floating' ? floatingStance : 'docked-top',
+        // Live only for the card: its display modes move the composer.
+        promptStance: promptMode === 'floating' ? promptStance : undefined,
         Component: ConfiguredLayout,
       },
       { id: 'page-layout' },
@@ -206,6 +331,17 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
           slot: LoopSlots.header,
           Component: ConversationToggle,
         },
+        // The display modes, in the floating card's footer — and only
+        // there: a docked composer has none to pick.
+        ...(promptMode === 'floating'
+          ? [
+              {
+                id: 'page-layout-chat-mode',
+                slot: LoopSlots.promptAction,
+                Component: ChatModeAction,
+              },
+            ]
+          : []),
       ],
     };
   },

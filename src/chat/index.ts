@@ -93,6 +93,11 @@ export {
   type FloatingBrandButtonProps,
 } from './display/FloatingBrandButton';
 export { ChatHeader, type ChatHeaderProps } from './header/ChatHeader';
+export {
+  ChatViewModeToggle,
+  VIEW_MODE_ICONS,
+  type ChatViewModeToggleProps,
+} from './header/ChatViewModeToggle';
 
 // Components - Message part renderers
 export {

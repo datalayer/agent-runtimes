@@ -126,6 +126,12 @@ export function LoopEmbed({
       preset.pageLayoutTurnPanel,
       preset.pageLayoutTurnPanelFooter,
       preset.pageLayoutPrompt,
+      preset.pageLayoutPromptAnchor,
+      // By its fields: a host that writes the size inline hands over a new
+      // object every render, and the reactor must not be rebuilt for that.
+      preset.pageLayoutSize?.format,
+      preset.pageLayoutSize?.width,
+      preset.pageLayoutSize?.height,
       preset.localAgentSpec,
       preset.floatingPrompt,
       preset.editorSelector,

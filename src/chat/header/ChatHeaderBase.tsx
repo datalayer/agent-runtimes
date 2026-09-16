@@ -14,14 +14,7 @@
  */
 
 import { type ReactNode } from 'react';
-import {
-  Heading,
-  IconButton,
-  Label,
-  Text,
-  Tooltip,
-  Truncate,
-} from '@primer/react';
+import { Heading, IconButton, Label, Text, Truncate } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { KernelIndicator, type ExecutionState } from '@datalayer/jupyter-react';
 import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
@@ -29,14 +22,9 @@ import {
   PlusIcon,
   TrashIcon,
   GearIcon,
-  CommentDiscussionIcon,
-  DeviceMobileIcon,
-  SidebarExpandIcon,
-  GrabberIcon,
   InfoIcon,
-  type Icon,
 } from '@primer/octicons-react';
-import { CHAT_VIEW_MODES, SIDEBAR_NEEDS_MOUNT_POINT } from '../viewModes';
+import { ChatViewModeToggle } from './ChatViewModeToggle';
 import { AiAgentIcon } from '@datalayer/icons-react';
 
 import type {
@@ -86,14 +74,6 @@ export function toRuntimeExecutionState(
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
-
-/** The drawing of each mode in the header's toggle. */
-const VIEW_MODE_ICONS: Record<ChatViewMode, Icon> = {
-  floating: CommentDiscussionIcon,
-  'floating-small': DeviceMobileIcon,
-  'floating-draggable': GrabberIcon,
-  sidebar: SidebarExpandIcon,
-};
 
 export interface ChatBaseHeaderProps {
   title?: string;
@@ -366,73 +346,14 @@ export function ChatBaseHeader({
               enableDocument={enableEphemeralDocumentOption}
             />
           )}
-          {/* View mode segmented toggle */}
+          {/* View mode segmented toggle — the same control a floating
+              composer carries in its footer; see `ChatViewModeToggle`. */}
           {chatViewMode && onChatViewModeChange && (
-            <Box
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                bg: 'neutral.muted',
-                borderRadius: '6px',
-                p: '2px',
-                gap: '1px',
-              }}
-            >
-              {CHAT_VIEW_MODES.map(({ mode, label }) => {
-                const ModeIcon = VIEW_MODE_ICONS[mode];
-                const selected = chatViewMode === mode;
-                /* Greyed rather than left out: the person sees the mode
-                   exists, and that this page has no place for it. */
-                const disabled = disabledViewModes.includes(mode);
-                return (
-                  <Tooltip
-                    key={mode}
-                    text={
-                      disabled && mode === 'sidebar'
-                        ? `${label} — ${SIDEBAR_NEEDS_MOUNT_POINT}`
-                        : label
-                    }
-                    direction="n"
-                  >
-                    <Box
-                      as="button"
-                      aria-label={label}
-                      aria-disabled={disabled || undefined}
-                      onClick={() => {
-                        if (!disabled) {
-                          onChatViewModeChange(mode);
-                        }
-                      }}
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 26,
-                        height: 24,
-                        borderRadius: '4px',
-                        border: 'none',
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        opacity: disabled ? 0.45 : 1,
-                        bg: selected ? 'canvas.default' : 'transparent',
-                        boxShadow: selected ? 'shadow.small' : 'none',
-                        color: selected ? 'fg.default' : 'fg.muted',
-                        transition: 'all 0.15s ease',
-                        '&:hover': disabled
-                          ? {}
-                          : {
-                              color: 'fg.default',
-                              bg: selected
-                                ? 'canvas.default'
-                                : 'neutral.subtle',
-                            },
-                      }}
-                    >
-                      <ModeIcon size={14} />
-                    </Box>
-                  </Tooltip>
-                );
-              })}
-            </Box>
+            <ChatViewModeToggle
+              value={chatViewMode}
+              onChange={onChatViewModeChange}
+              disabledModes={disabledViewModes}
+            />
           )}
           {/* Custom header actions */}
           {headerActions}

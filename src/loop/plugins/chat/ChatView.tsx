@@ -34,6 +34,12 @@ import {
 import { useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { signal } from '@datalayer/reactor';
+import type { ChatLayoutContribution } from '../../core';
+
+/* A signal to read when the layout publishes no live stance: the hook needs one. */
+const NO_STANCE = signal<ChatLayoutContribution['prompt'] | undefined>(
+  undefined,
+);
 import {
   useContributions,
   useSignalValue,
@@ -225,6 +231,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      its own way; first contribution wins. */
   const layoutEntries = useContributions(LoopChatLayout);
   const layout = layoutEntries[0]?.value;
+  // The composer's stance: live when the layout publishes one (the page
+  // layout, moving the composer as the display mode changes), its starting
+  // stance otherwise.
+  const liveStance = useSignalValue(layout?.promptStance ?? NO_STANCE);
+  const promptStance = liveStance ?? layout?.prompt;
   /* The current turn, kept for whoever shows the conversation without the
      transcript. The chat plugin contributed the feed at build; this view is
      its writer — begin on send, the reply as it arrives, end when it stops. */
@@ -1432,13 +1443,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     // floating placement; the dragging is the prompt's own feature.
     placement:
       floatingPrompt ||
-      layout?.prompt === 'floating' ||
-      layout?.prompt === 'floating-top'
+      promptStance === 'floating' ||
+      promptStance === 'floating-top' ||
+      promptStance === 'floating-bottom'
         ? 'floating'
         : 'docked',
     // Where a floating card starts: the page layout wants it over the top
     // of the sheet, like a document's title bar; everyone else, bottom.
-    floatingAnchor: layout?.prompt === 'floating-top' ? 'top' : 'bottom',
+    floatingAnchor: promptStance === 'floating-top' ? 'top' : 'bottom',
     // The agent is working: `isLoading` disables the editor and turns the
     // send button into a stop — the person keeps a way out.
     isLoading: busy,
@@ -1456,8 +1468,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     // the page, one docked above it — so both take the tighter padding.
     padding:
       topPrompt ||
-      layout?.prompt === 'floating-top' ||
-      layout?.prompt === 'docked-top'
+      promptStance === 'floating-top' ||
+      promptStance === 'floating-bottom' ||
+      promptStance === 'docked-top'
         ? 2
         : 3,
     promptVariant: 'lexical',

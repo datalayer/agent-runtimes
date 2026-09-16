@@ -999,14 +999,26 @@ export type ChatLayoutContribution = {
   /**
    * How this layout wants the composer built.
    *
-   * `floating-top` is a floating card anchored to the top edge rather than
+   * `floating-top` and `floating-bottom` are a floating card anchored to
+   * that edge of the layout rather than
    * the bottom — a command line over the document, sized by the card.
    * `docked-top` is that same command line standing in the flow instead: the
    * layout gives it a mount point and the composer fills it, so its width is
    * the layout's to decide and the page below starts under it rather than
    * behind it.
    */
-  prompt?: 'docked' | 'floating' | 'floating-top' | 'docked-top';
+  prompt?:
+    'docked' | 'floating' | 'floating-top' | 'floating-bottom' | 'docked-top';
+  /**
+   * The same, live, for a layout whose stance changes while it is on
+   * screen — the page layout moves the composer between a floating card
+   * and its side panel as the person picks a display mode. Read over
+   * `prompt` by the chat view whenever it is given; `prompt` is then only
+   * the stance the layout starts in.
+   */
+  promptStance?: ReadonlySignal<
+    'docked' | 'floating' | 'floating-top' | 'floating-bottom' | 'docked-top'
+  >;
 };
 
 export const LoopChatLayout =

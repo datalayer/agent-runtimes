@@ -49,7 +49,7 @@ import { ModelsPlugin } from './plugins/models';
 import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
-import { LoopPageLayoutPlugin } from './plugins/page-layout';
+import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -110,6 +110,19 @@ export type LoopPresetOptions = {
    * as a draggable card over the top of the canvas.
    */
   pageLayoutPrompt?: 'docked' | 'floating';
+  /**
+   * Which edge a floating composer starts at: `top` (the default) or
+   * `bottom`. It is dragged from there either way. Only read with
+   * `pageLayoutPrompt: 'floating'`.
+   */
+  pageLayoutPromptAnchor?: 'top' | 'bottom';
+  /**
+   * The page layout's sheet: free (the default) at its reading width, or a
+   * paper — `{ format: 'letter' }`, `{ format: 'a4' }` — whose width it
+   * takes and whose height it is at least; a free `width` or `height` over
+   * either. Only read with `pageLayout`.
+   */
+  pageLayoutSize?: PageSize;
   /**
    * What the turn panel draws under the reply: the full turn footer
    * (counters, copy, dismiss — the default), `actions` only, or `none`.
@@ -210,6 +223,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     pageLayout = false,
     pageLayoutTurnPanel = 'below',
     pageLayoutPrompt = 'docked',
+    pageLayoutPromptAnchor = 'top',
+    pageLayoutSize,
     pageLayoutTurnPanelFooter = 'full',
     localAgent,
     localAgentSpec,
@@ -299,6 +314,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
             turnPanel: pageLayoutTurnPanel,
             turnPanelFooter: pageLayoutTurnPanelFooter,
             prompt: pageLayoutPrompt,
+            promptAnchor: pageLayoutPromptAnchor,
+            pageSize: pageLayoutSize,
           }),
         ]
       : []),
