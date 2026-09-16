@@ -860,6 +860,56 @@ def test_diff_names_the_versions_that_have_no_lock_yet(registry: Registry) -> No
     assert (answer["from"]["version"], answer["to"]["lockDigest"]) == (1, "")
 
 
+def test_diff_reads_each_lock_from_its_own_route(registry: Registry) -> None:
+    """A version's answer names its lock by digest only — a lock is tens of
+    kilobytes and every listing would carry it — so `diff` reads the document
+    itself. Before that route existed it could only say "whose content the
+    service does not answer yet", which is what it said on r1 on 2026-09-16
+    (PLAN_ENVS.md E1-20)."""
+    before = locked(1, ["geopandas==1.1.1"], None)
+    after = locked(2, ["geopandas==1.1.2"], None)
+    registry.on("GET", f"/environment-versions/{before['uid']}", ok(before))
+    registry.on("GET", f"/environment-versions/{after['uid']}", ok(after))
+    for version, lock in ((before, LOCK_V1), (after, LOCK_V2)):
+        registry.on(
+            "GET",
+            f"/environment-versions/{version['uid']}/lock",
+            ok(
+                {
+                    "versionUid": version["uid"],
+                    "digest": version["lockDigest"],
+                    "format": "uv-pip-compile",
+                    "content": lock,
+                    "size": len(lock),
+                    "pythonVersion": "3.13.14",
+                    "packageCount": 3,
+                }
+            ),
+        )
+
+    answer = json.loads(
+        invoke("diff", before["uid"], after["uid"], "-o", "json").stdout
+    )
+    assert answer["notes"] == []
+    assert answer["diff"]["upgraded"] == [
+        {"name": "geopandas", "before": "1.1.1", "after": "1.1.2"}
+    ]
+
+
+def test_diff_says_what_it_could_not_read_rather_than_failing(
+    registry: Registry,
+) -> None:
+    """A lock route that refuses leaves the version as it was: `diff` reports
+    what it could not compare, and still exits 0."""
+    before = locked(1, ["geopandas==1.1.1"], None)
+    after = locked(2, ["geopandas==1.1.2"], None)
+    registry.on("GET", f"/environment-versions/{before['uid']}", ok(before))
+    registry.on("GET", f"/environment-versions/{after['uid']}", ok(after))
+    result = invoke("diff", before["uid"], after["uid"])
+    assert result.exit_code == 0, result.output
+    assert "does not answer" in result.stdout
+
+
 def test_diff_lists_the_top_level_packages_added_removed_upgraded_and_downgraded(
     registry: Registry,
 ) -> None:

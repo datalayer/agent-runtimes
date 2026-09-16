@@ -20,7 +20,7 @@ command exits 1.
 
 from functools import wraps
 from pathlib import Path
-from typing import Annotated, Any, Callable, Iterator, List, Optional, TypeVar
+from typing import Annotated, Any, Callable, Iterator, List, Mapping, Optional, TypeVar
 
 import click
 import typer
@@ -52,6 +52,7 @@ from agent_runtimes.displays.environments import (
     emit_record,
     validation_report_data,
     version_lock_summary,
+    version_lock_text,
     write_log_chunk,
 )
 from agent_runtimes.models.environment import (
@@ -177,6 +178,28 @@ def _version(client: AgentClient, reference: str) -> EnvironmentVersionRecord:
         if version.version == int(number):
             return version
     raise EnvironmentsCommandError(f"{environment} has no version {number}")
+
+
+def _with_lock(
+    client: AgentClient, version: EnvironmentVersionRecord
+) -> EnvironmentVersionRecord:
+    """The version with its lock's text attached, when it has one.
+
+    A version's own answer names the lock by digest only — a lock is tens of
+    kilobytes and every listing would carry it — so `diff` reads the document
+    itself, which is what `version_lock_text` looks for under `lock`. A lock
+    that cannot be read leaves the version as it was, and `diff` says what it
+    could not compare rather than failing.
+    """
+    if not version.lock_digest or version_lock_text(version) is not None:
+        return version
+    try:
+        lock = client.get_environment_version_lock(version.uid)
+    except Exception:  # noqa: BLE001 - a lock that cannot be read is a note, not a crash
+        return version
+    if not isinstance(lock, Mapping) or not isinstance(lock.get("content"), str):
+        return version
+    return version.model_copy(update={"lock": dict(lock)})
 
 
 def _version_uid(client: AgentClient, reference: str) -> str:
@@ -586,7 +609,9 @@ def diff(
     A version with no lock yet is named, and nothing is compared.
     """
     client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
-    old, new = _version(client, before), _version(client, after)
+    old, new = _with_lock(client, _version(client, before)), _with_lock(
+        client, _version(client, after)
+    )
     changes, notes = compare_version_locks(old, new)
     data = {
         "from": version_lock_summary(old),

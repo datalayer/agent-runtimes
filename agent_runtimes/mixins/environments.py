@@ -794,6 +794,35 @@ class EnvironmentsListMixin:
         )
         return EnvironmentValidationReport.model_validate(answer)
 
+    def get_environment_version_lock(
+        self, version_uid: str, *, correlation_id: Optional[str] = None
+    ) -> Any:
+        """
+        A version's lock: its digest, its format and its text (D-3).
+
+        A version's own answer names the lock by digest only, since a lock is
+        tens of kilobytes and every listing would carry it. A version with no
+        lock yet answers ``404``.
+
+        Parameters
+        ----------
+        version_uid : str
+            The version's uid.
+        correlation_id : Optional[str]
+            Sent as ``X-Correlation-Id``.
+
+        Returns
+        -------
+        Any
+            ``{versionUid, digest, format, content, size, pythonVersion,
+            packageCount}``.
+        """
+        return self._environments_request(
+            "GET",
+            f"/environment-versions/{_segment(version_uid, 'version_uid')}/lock",
+            correlation_id=correlation_id,
+        )
+
     def resolve_environment_version(
         self, version_uid: str, *, correlation_id: Optional[str] = None
     ) -> Any:
