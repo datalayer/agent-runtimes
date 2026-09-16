@@ -638,32 +638,72 @@ def test_validate_exits_0_when_every_variant_can_build(registry: Registry) -> No
     assert call["json"] == {}
 
 
-def test_resolve_prints_its_501_until_e1_04_lands(registry: Registry) -> None:
-    registry.on(
-        "POST",
-        f"/environment-versions/{READY_UID}/resolve",
-        answered("resolve_version"),
-    )
-    result = invoke("resolve", READY_UID)
-    assert result.exit_code == 1
-    assert result.stderr.startswith("HTTP 501: ") and "E1-04" in result.stderr
-
-    as_yaml = invoke("resolve", READY_UID, "-o", "yaml")
-    assert as_yaml.exit_code == 1
-    assert yaml.safe_load(as_yaml.stderr)["error"]["status"] == 501
-
-
-def test_resolve_prints_what_the_service_answers(registry: Registry) -> None:
+def test_resolve_of_a_version_that_has_a_lock_answers_it_and_starts_nothing(
+    registry: Registry,
+) -> None:
+    """The question behind `envs resolve` is "what does this lock to", and a
+    version that has an answer is given it rather than refused (E1-26)."""
     registry.on(
         "GET", f"/environments/{ENV_UID}/versions", ok({"versions": [READY, DRAFT]})
     )
-    answer = {"versionUid": READY_UID, "status": "accepted"}
+    answer = {"resolved": True, "build": None, "version": READY}
     registry.on("POST", f"/environment-versions/{READY_UID}/resolve", ok(answer))
     result = invoke("resolve", f"{ENV_UID}@2", "-o", "json")
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout) == answer
     table = invoke("resolve", READY_UID)
-    assert table.exit_code == 0 and "accepted" in table.stdout
+    assert table.exit_code == 0 and "resolved" in table.stdout.lower()
+    # Nothing was followed: there is no build to follow.
+    assert registry.sent("GET", f"/environment-builds/{BUILD_UID}/logs") == []
+
+
+def test_resolve_follows_the_build_that_resolves(registry: Registry) -> None:
+    """The solve runs on the platform, in the version's own base image, so it
+    is queued as a build that stops once the lock is stored. `--follow` is on
+    by default because a solve takes minutes, and its log is where it says why
+    it refused (PLAN_ENVS.md E1-26)."""
+    follow_routes(registry)
+    queued = {
+        "resolved": False,
+        "build": record(LOGGED, kind="resolve", status="queued"),
+        "version": READY,
+    }
+    registry.on("POST", f"/environment-versions/{READY_UID}/resolve", ok(queued))
+    result = invoke("resolve", READY_UID)
+    assert result.exit_code == 0, result.output
+    assert f"Resolving, as build {LOGGED_UID}" in result.stdout
+    assert "".join(BUILD_LOG) in result.stdout
+    assert result.stderr == ""
+
+    # --no-follow answers and returns, for a script that does its own waiting.
+    quiet = invoke("resolve", READY_UID, "--no-follow", "-o", "json")
+    assert quiet.exit_code == 0, quiet.output
+    assert json.loads(quiet.stdout)["build"]["uid"] == LOGGED_UID
+
+
+def test_resolve_exits_1_when_the_resolve_refused(registry: Registry) -> None:
+    """A lock that cannot be made is the whole answer, so the command says so
+    in its exit code as well as in the log it just streamed."""
+    follow_routes(
+        registry,
+        status="failed",
+        errorCode="DL_ENV_RESOLVE_CONFLICT",
+        errorDetail="geopandas and rasterio disagree about numpy",
+    )
+    registry.on(
+        "POST",
+        f"/environment-versions/{READY_UID}/resolve",
+        ok(
+            {
+                "resolved": False,
+                "build": record(LOGGED, kind="resolve", status="queued"),
+                "version": READY,
+            }
+        ),
+    )
+    result = invoke("resolve", READY_UID)
+    assert result.exit_code == 1
+    assert "DL_ENV_RESOLVE_CONFLICT" in result.stderr
 
 
 def test_try_sends_its_credits_limit_and_renders_the_runtime_launched(

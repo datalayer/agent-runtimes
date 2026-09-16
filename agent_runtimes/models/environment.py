@@ -203,6 +203,10 @@ class EnvironmentBuildRecord(_RegistryRecord):
     variant: str
     region: str
     attempt: int = 1
+    #: What this build is for: ``build``, or ``resolve`` — a build that stops
+    #: once the version has its lock (PLAN_ENVS.md E1-26). A build recorded
+    #: before the term existed has none, and every one of them is a build.
+    kind: str = "build"
     idempotency_key: str = ""
     #: ``queued`` when created; ``succeeded``, ``failed`` and ``cancelled`` end it.
     status: str

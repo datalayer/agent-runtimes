@@ -523,16 +523,41 @@ def validate(
 @_refusals
 def resolve(
     version: VersionArgument,
+    follow: Annotated[
+        bool,
+        typer.Option(
+            "--follow/--no-follow",
+            help="Stream the resolve's log until it ends, and exit with its outcome. "
+            "On by default: a solve takes minutes, and its log is where it says why "
+            "it refused.",
+        ),
+    ] = True,
     token: ApiKeyOption = None,
     iam_url: IamUrlOption = None,
     runtimes_url: RuntimesUrlOption = None,
     output: OutputOption = OutputFormat.TABLE,
 ) -> None:
-    """Resolve a version into its lock."""
+    """
+    Resolve a version into its lock.
+
+    The solve runs on the platform, in the version's own base image, so it is
+    queued as a build that stops once the lock is stored — `--follow` streams
+    that build's log. A version that is resolved already is answered with its
+    lock rather than resolved again.
+    """
     client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
     answer = client.resolve_environment_version(_version_uid(client, version))
-    if not emit(answer, output):
-        display_answer("Resolve", answer)
+    queued = (answer or {}).get("build") if isinstance(answer, dict) else None
+    build_uid = str((queued or {}).get("uid") or "")
+    if not follow or not build_uid:
+        if not emit(answer, output):
+            display_answer("Resolve", answer)
+        return
+    if output is OutputFormat.TABLE:
+        typer.echo(f"Resolving, as build {build_uid}")
+    else:
+        emit_record({"build": queued}, output)
+    _exit_with_outcome(_follow(client, [build_uid], output))
 
 
 @app.command(name="diff")

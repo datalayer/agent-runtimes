@@ -424,6 +424,13 @@ export interface IEnvironmentBuildRecord {
   region: string;
   /** Counted from 1; a retry is the next attempt. */
   attempt: number;
+  /**
+   * What this build is for: `build`, or `resolve` — a build that stops once
+   * the version has its lock (PLAN_ENVS.md E1-26). Absent from a Runtimes
+   * before that, and from every build recorded before the term existed, each
+   * of which is a build.
+   */
+  kind?: string;
   /** The request's key, suffixed with the variant and region. */
   idempotencyKey: string;
   /** `queued` when created; see `TERMINAL_ENVIRONMENT_BUILD_STATUSES`. */

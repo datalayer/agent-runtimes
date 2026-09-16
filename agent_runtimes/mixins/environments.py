@@ -800,7 +800,14 @@ class EnvironmentsListMixin:
         """
         Resolve a version into its lock.
 
-        The service answers 501 until PLAN_ENV.md E1-04 builds the resolver.
+        The resolver runs a BuildKit solve `FROM` the version's base digest,
+        which is a build's work, so this queues a build with ``kind: resolve``
+        that stops once the lock is stored (PLAN_ENVS.md E1-26). The answer
+        names it, so the caller can follow its log like any other build's:
+        ``{"resolved": false, "build": {...}, "version": {...}}``.
+
+        A version that is resolved already is answered rather than refused,
+        with ``resolved`` true and no ``build``.
 
         Parameters
         ----------
