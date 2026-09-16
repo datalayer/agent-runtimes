@@ -50,9 +50,9 @@ DATALAYER_AGENT_RUNTIMES_URL ?= $(DATALAYER_RUNTIMES_URL)
 DATALAYER_SPACER_URL       ?= $(DATALAYER_DEFAULT_URL)
 DATALAYER_LIBRARY_URL      ?= $(DATALAYER_DEFAULT_URL)
 DATALAYER_MANAGER_URL      ?= $(DATALAYER_DEFAULT_URL)
-DATALAYER_AI_AGENTS_URL    ?= $(DATALAYER_DEFAULT_URL)
-DATALAYER_AI_INFERENCE_URL ?= $(DATALAYER_DEFAULT_URL)
-DATALAYER_JUPYTER_MCP_SERVER_URL ?= https://mcp.datalayer.run/mcp
+DATALAYER_AI_AGENTS_URL    ?= https://r1.datalayer.run
+DATALAYER_AI_INFERENCE_URL ?= https://r1.datalayer.run
+DATALAYER_JUPYTER_MCP_SERVER_URL ?= https://r1.datalayer.run/mcp
 # DATALAYER_OTEL_URL is the *export* endpoint (where runtimes/agents SEND
 # telemetry). DATALAYER_OTEL_IN_URL is the *consume* endpoint (where the UI
 # READS telemetry from). They usually match, but differ for local dev: when

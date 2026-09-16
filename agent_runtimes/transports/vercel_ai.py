@@ -193,7 +193,7 @@ async def _emit_interactive_live_eval_event(
     base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or "https://prod1.datalayer.run"
+        or "https://r1.datalayer.run"
     ).rstrip("/")
     url = f"{base_url}/api/ai-agents/v1/evals/live/events"
     params: dict[str, Any] = {}
@@ -1283,7 +1283,7 @@ class VercelAITransport(BaseTransport):
                                 os.environ.get("DATALAYER_AI_AGENTS_URL")
                                 or os.environ.get("AI_AGENTS_URL")
                                 or os.environ.get("DATALAYER_AI_AGENTS_URL")
-                                or "https://prod1.datalayer.run"
+                                or "https://r1.datalayer.run"
                             )
                             create_event(
                                 token=token_value,

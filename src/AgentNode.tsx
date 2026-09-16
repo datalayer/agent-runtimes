@@ -1126,7 +1126,15 @@ export function AgentNode() {
       const aiInferenceUrl =
         getConfigUrlFromDocument('aiInferenceUrl') ||
         (import.meta as any).env?.VITE_DATALAYER_AI_INFERENCE_URL ||
-        DEFAULT_DATALAYER_SERVICE_URL;
+        'https://r1.datalayer.run';
+      const aiAgentsUrl =
+        getConfigUrlFromDocument('aiAgentsUrl') ||
+        (import.meta as any).env?.VITE_DATALAYER_AI_AGENTS_URL ||
+        'https://r1.datalayer.run';
+      const jupyterMcpServerUrl =
+        getConfigUrlFromDocument('jupyterMcpServerUrl') ||
+        (import.meta as any).env?.VITE_DATALAYER_JUPYTER_MCP_SERVER_URL ||
+        'https://mcp.datalayer.run/mcp';
       // Seed all per-service URLs to match the main UI login behavior.
       const coreApi = coreStore.getState() as any;
       const prevCfg = coreApi.configuration ?? {};
@@ -1135,9 +1143,9 @@ export function AgentNode() {
         runtimesUrl,
         spacerUrl: iamUrl,
         libraryUrl: iamUrl,
-        aiAgentsUrl: iamUrl,
+        aiAgentsUrl,
         aiInferenceUrl: aiInferenceUrl,
-        jupyterMcpServerUrl: 'https://mcp.datalayer.run/mcp',
+        jupyterMcpServerUrl,
         otelUrl: iamUrl,
         growthUrl: iamUrl,
         successUrl: iamUrl,

@@ -6885,8 +6885,8 @@ export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
       emoji: '📰',
     },
     {
-      text: 'Create and publish an About page from the content I provide.',
-      summary: 'Create an About page',
+      text: 'Create an About page from the content I provide, keep it as a draft first, publish it, then open the rendered website page so I can review it.',
+      summary: 'Create, publish, and show',
       emoji: '✨',
     },
     {
@@ -6915,6 +6915,10 @@ Your capabilities come from the CMS Core plugin as frontend tools:
   publish it.
 - \`cms_update_site_page\` updates the explicitly identified entry and may
   publish it.
+- \`cms_publish_site_page\` publishes an existing post or page identified by
+  its exact entry id or current slug.
+- \`cms_show_site_page\` opens a published post or page by exact slug in the
+  rendered Astro website.
 
 For an import, crawl first and summarize what was found before writing. Do
 not copy navigation, cookie notices, footers or repeated boilerplate.
@@ -6923,6 +6927,13 @@ claim imported work as original reporting. Ask which pages to import unless
 the person explicitly selected a number or named pages. Prefer drafts for
 bulk imports; publish only when explicitly asked. Use URL-safe lowercase
 slugs.
+
+Treat publishing as an explicit action. Use \`cms_publish_site_page\` when the
+person asks to publish an existing draft without changing its content. Do
+not publish merely because content is ready; obtain an explicit request.
+After a successful create and publish workflow, use \`cms_show_site_page\`
+when the person asks to see or review the rendered result. If the browser
+blocks the new tab, return the tool's \`public_url\` as a link instead.
 
 Existing CMS content is private. Never ask to enumerate or read it through
 an undeclared tool. For an update, require the person to identify the exact

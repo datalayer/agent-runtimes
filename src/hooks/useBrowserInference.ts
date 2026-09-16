@@ -34,14 +34,8 @@ import {
   type BrowserModelOptions,
 } from '../runtimes/browser';
 
-/**
- * The control plane, not the runtimes plane.
- *
- * Used only when nothing is configured. r1 serves runtimes and does not serve
- * this route at all, so a browser agent pointed there fails its CORS preflight
- * on a host that was never going to answer.
- */
-const DEFAULT_INFERENCE_URL = 'https://prod1.datalayer.run';
+/** The inference plane used when the host provides no configuration. */
+const DEFAULT_INFERENCE_URL = 'https://r1.datalayer.run';
 
 export type BrowserInference = {
   /** Where to reach the inference service, and with whose token. */

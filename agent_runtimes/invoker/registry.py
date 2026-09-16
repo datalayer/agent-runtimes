@@ -28,7 +28,7 @@ def get_invoker(
     agent_id: str,
     agent_spec_id: str,
     token: str,
-    base_url: str = "https://prod1.datalayer.run",
+    base_url: str = "https://r1.datalayer.run",
     runtime_base_url: str | None = None,
     runtime_id: str | None = None,
 ) -> BaseInvoker | None:

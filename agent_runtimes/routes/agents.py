@@ -4072,7 +4072,7 @@ def _emit_agent_assigned_event(
     base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or "https://prod1.datalayer.run"
+        or "https://r1.datalayer.run"
     )
     assigned_at = datetime.now(timezone.utc).isoformat()
     try:
@@ -4905,7 +4905,7 @@ async def trigger_run(
     events_base_url = (
         os.environ.get("DATALAYER_AI_AGENTS_URL")
         or os.environ.get("AI_AGENTS_URL")
-        or "https://prod1.datalayer.run"
+        or "https://r1.datalayer.run"
     )
     runtimes_base_url = (
         os.environ.get("DATALAYER_RUNTIMES_URL")

@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-DEFAULT_AI_AGENTS_BASE_URL = "https://prod1.datalayer.run"
+DEFAULT_AI_AGENTS_BASE_URL = "https://r1.datalayer.run"
 
 
 def _auth_headers(token: str) -> dict[str, str]:
