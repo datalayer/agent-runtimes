@@ -635,17 +635,26 @@ def display_validation_report(report: EnvironmentValidationReport) -> None:
 def display_environment_builds(
     builds: Sequence[EnvironmentBuildRecord], title: str = "Builds"
 ) -> None:
-    """Display builds: one per variant and region."""
+    """Display builds: one per variant and region.
+
+    A `Kind` column appears only when one of these is not a build — a resolve
+    is a build record that makes no artifact (PLAN_ENVS.md E1-26), and a
+    `succeeded` row that built nothing needs saying. Nothing else grows a
+    column it has no use for.
+    """
+    kinds = any((build.kind or "build") != "build" for build in builds)
     table = Table(title=title)
-    for column in (
+    columns = [
         "Build",
         "Variant",
         "Region",
         "Attempt",
+        *(["Kind"] if kinds else []),
         "Status",
         "Cache hit",
         "Error",
-    ):
+    ]
+    for column in columns:
         table.add_column(column, no_wrap=column != "Error")
     for build in builds:
         error = ": ".join(
@@ -659,6 +668,7 @@ def display_environment_builds(
                     build.variant,
                     build.region,
                     str(build.attempt),
+                    *([build.kind or "build"] if kinds else []),
                     build.status,
                     "yes" if build.cache_hit else "no",
                     error or "-",

@@ -657,6 +657,38 @@ def test_resolve_of_a_version_that_has_a_lock_answers_it_and_starts_nothing(
     assert registry.sent("GET", f"/environment-builds/{BUILD_UID}/logs") == []
 
 
+def test_the_builds_table_names_a_kind_only_when_one_is_not_a_build(
+    registry: Registry, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A resolve is a build record that makes no artifact, and a `succeeded`
+    row that built nothing needs saying. An ordinary listing grows no column
+    it has no use for."""
+    import io
+    import contextlib
+
+    from agent_runtimes.displays.environments import display_environment_builds
+    from agent_runtimes.models.environment import EnvironmentBuildRecord
+
+    # Rich takes its width from the terminal, and a narrow one abbreviates the
+    # cell this test is about to `res…`.
+    monkeypatch.setenv("COLUMNS", "200")
+
+    def drawn(**changes: Any) -> str:
+        build = EnvironmentBuildRecord.model_validate(
+            {**record(LOGGED, status="succeeded"), **changes}
+        )
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            display_environment_builds([build])
+        return out.getvalue()
+
+    assert "resolve" in drawn(kind="resolve")
+    assert "Kind" in drawn(kind="resolve")
+    assert "Kind" not in drawn()
+    # A build recorded before the term existed carries none, and is a build.
+    assert "Kind" not in drawn(kind="")
+
+
 def test_resolve_follows_the_build_that_resolves(registry: Registry) -> None:
     """The solve runs on the platform, in the version's own base image, so it
     is queued as a build that stops once the lock is stored. `--follow` is on
