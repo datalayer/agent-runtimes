@@ -177,6 +177,14 @@ export interface InputPromptProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
+  /**
+   * What was sent to this agent before this page loaded, oldest first.
+   *
+   * The runtime's own memory of it, read with the rest of the initial state;
+   * the arrow keys walk back through it, and through whatever is sent here
+   * afterwards.
+   */
+  promptHistory?: readonly string[];
   /** Rendered inside the prompt, above where the typing goes. */
   headerContent?: ReactNode;
 
@@ -327,6 +335,7 @@ export function InputPrompt({
   disableInputPrompt = false,
   promptVariant,
   mentionableAgents,
+  promptHistory,
   headerContent,
   showAgentsMenu = false,
   showInlineAgentsMenu = true,
@@ -458,6 +467,7 @@ export function InputPrompt({
       <InputPromptBase
         variant={promptVariant}
         mentionableAgents={mentionableAgents}
+        promptHistory={promptHistory}
         /*
           Whatever the host puts inside the prompt, and the agent chip beside
           it. Both, rather than either: a host contributing its own controls

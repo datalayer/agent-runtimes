@@ -277,6 +277,13 @@ export interface IEnvironmentVersionRecord {
   requiredVariants: string[];
   optionalVariants: string[];
   validationSummary: Record<string, unknown>;
+  /**
+   * Every variant's Appendix B check 5 (its installed package versions), as
+   * `{ variant: { package: version } }`, once a variant's smoke test has
+   * reported it (PLAN_ENV E2-08). Absent from a Runtimes before E1-29 and
+   * `{}` until the first variant reports.
+   */
+  packageReport?: Record<string, Record<string, string>>;
   failureCode: string;
   createdBy: string;
   createdAt: string;
@@ -385,6 +392,29 @@ export interface IEnvironmentTrial extends CreateRuntimeResponse {
 }
 
 /** One build of one version, on one variant and region. */
+/** One conformance check of a build's smoke test, redacted for the record (E1-29). */
+export interface IEnvironmentConformanceCheck {
+  /** `conformance:<n>`, or the doctor's own id. */
+  id: string;
+  name: string;
+  passed: boolean;
+  /** Whether its failure blocks the version; the extended tier records without gating. */
+  gating: boolean;
+  /** The one-line reason a check gives, above all for a failure; `null` when it passed silently. */
+  detail: string | null;
+}
+
+/**
+ * The smoke test's per-check report, as the build records it (E1-29): the
+ * gating tier's checks with their pass/fail and reason, without each check's
+ * raw probe output, which the build log keeps and the record does not.
+ */
+export interface IEnvironmentConformanceReport {
+  contractVersion: string;
+  passed: boolean;
+  checks: IEnvironmentConformanceCheck[];
+}
+
 export interface IEnvironmentBuildRecord {
   uid: string;
   environmentUid: string;
@@ -400,6 +430,12 @@ export interface IEnvironmentBuildRecord {
   status: string;
   errorCode: string;
   errorDetail: string;
+  /**
+   * The smoke test's per-check conformance report (PLAN_ENV E1-29). Absent
+   * from a Runtimes before E1-29 and `{}` until the build's smoke test ran; a
+   * report with `passed: false` names the checks that failed and why.
+   */
+  conformanceReport?: IEnvironmentConformanceReport | Record<string, never>;
   cacheHit: boolean;
   correlationId: string;
   requestedBy: string;

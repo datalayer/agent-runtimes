@@ -1063,6 +1063,14 @@ class FrontendConfig(BaseModel):
         description="Welcome message shown when the chat is empty",
         alias="welcomeMessage",
     )
+    prompt_history: List[str] = Field(
+        default_factory=list,
+        description=(
+            "What has been sent to this agent, oldest first, for the composer's "
+            "arrow keys to walk back through"
+        ),
+        alias="promptHistory",
+    )
 
 
 class A2ASubagentConfig(BaseModel):

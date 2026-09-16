@@ -623,6 +623,13 @@ async def get_configuration(
                         if isinstance(item, str) and str(item).strip()
                     ]
 
+            # What has been sent to this agent so far, for the composer's arrow
+            # keys: part of the initial state, so a reloaded page walks back
+            # through the same prompts as the one before it.
+            from agent_runtimes.context.prompt_history import get_prompt_history
+
+            config.prompt_history = get_prompt_history(agent_id)
+
         return config
 
     except Exception as e:

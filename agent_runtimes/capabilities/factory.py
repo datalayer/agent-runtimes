@@ -483,6 +483,14 @@ def build_capabilities_from_agent_spec(
             )
         )
 
+    # The prompt history the composer's arrow keys walk. Recorded here, on the
+    # run, rather than in each protocol route: every protocol ends in this
+    # agent running, so one capability sees them all.
+    if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_PROMPT_HISTORY", True) and agent_id:
+        from ..context.prompt_history import PromptHistoryCapability
+
+        capabilities.append(PromptHistoryCapability(agent_id=agent_id))
+
     # Monitoring snapshot broadcast (pushes to WebSocket after each run).
     if _env_bool("AGENT_RUNTIMES_ENABLE_CAPABILITY_MONITORING", True) and agent_id:
         capabilities.append(

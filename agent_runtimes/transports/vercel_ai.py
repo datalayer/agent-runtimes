@@ -1185,25 +1185,13 @@ class VercelAITransport(BaseTransport):
         if metric_user_id and not metric_user_provider:
             metric_user_provider = "jwt"
 
-        # Extract the last user message for OTEL prompt recording
-        request_prompt = ""
-        if body and isinstance(body, dict):
-            prompt_candidate = body.get("prompt")
-            if isinstance(prompt_candidate, str):
-                request_prompt = prompt_candidate
-            if not request_prompt:
-                messages_candidate = body.get("messages")
-                if isinstance(messages_candidate, list):
-                    for msg in reversed(messages_candidate):
-                        if not isinstance(msg, dict):
-                            continue
-                        role = msg.get("role")
-                        if role not in ("user", "input"):
-                            continue
-                        content = msg.get("content")
-                        if isinstance(content, str):
-                            request_prompt = content
-                            break
+        # The last user message, for the OTEL span. Read by a helper that also
+        # knows the newer `parts` form of a message the loop here used to
+        # miss. (The prompt history is not recorded here: the agent's own
+        # `PromptHistoryCapability` sees the run, whichever protocol started it.)
+        from ..context.prompt_history import last_user_prompt
+
+        request_prompt = last_user_prompt(body)
 
         # Create on_complete callback to track usage
         agent_id = self._agent_id

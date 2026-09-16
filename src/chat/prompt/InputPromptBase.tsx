@@ -14,6 +14,9 @@
  * The component is wrapped in a rounded container with a subtle border,
  * giving it a more integrated visual appearance.
  *
+ * It also keeps the prompt history the arrow keys walk: seeded from the
+ * runtime, extended by what is sent from here.
+ *
  * @module chat/prompt/InputPromptBase
  */
 
@@ -27,6 +30,7 @@ import type { PromptStack } from './stack';
 import { InputPromptText } from './InputPromptText';
 import { InputPromptLexical } from './InputPromptLexical';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
+import { usePromptHistory, type HistoryDirection } from './promptHistory';
 
 /** Input variant type. */
 export type InputPromptVariant = 'text' | 'lexical';
@@ -87,6 +91,14 @@ export interface InputPromptBaseProps {
    * suggestion a person cannot see is worse than none.
    */
   mentionableAgents?: MentionableAgent[];
+  /**
+   * What was sent to this agent before this composer mounted, oldest first.
+   *
+   * Seeds the history the arrow keys walk: up shows the previous prompt, down
+   * the next, and past the newest whatever was being typed. Whatever is sent
+   * from here joins the list as it goes.
+   */
+  promptHistory?: readonly string[];
   /** Additional sx props for the outer container */
   sx?: Record<string, unknown>;
   /** Controlled input value (external state) */
@@ -129,6 +141,7 @@ export function InputPromptBase({
   disabled = false,
   readOnly = false,
   mentionableAgents,
+  promptHistory,
   sx,
   value: controlledValue,
   onChange: controlledOnChange,
@@ -143,6 +156,44 @@ export function InputPromptBase({
   const input = controlledValue !== undefined ? controlledValue : internalInput;
   const setInput =
     controlledOnChange !== undefined ? controlledOnChange : setInternalInput;
+
+  // ---- Prompt history ----------------------------------------------------
+  const { remember, edited, navigate } = usePromptHistory(promptHistory);
+  /*
+   * The value as of now, for handlers that must not be rebuilt on every
+   * keystroke: the Lexical variant registers its arrow-key commands afresh
+   * whenever its handler changes, and a handler closing over `input` would
+   * change on each character typed.
+   */
+  const valueRef = useRef(input);
+  valueRef.current = input;
+  /*
+   * Typing ends a walk through the history — but this component's own
+   * writes are not typing. The editors report back whatever value is pushed
+   * into them, and that report says the same text that was just set, which
+   * is how the two are told apart.
+   */
+  const handleChange = useCallback(
+    (next: string) => {
+      if (next !== valueRef.current) {
+        edited();
+      }
+      setInput(next);
+    },
+    [edited, setInput],
+  );
+  /** A step through the history: the box shows it, or the key is left alone. */
+  const navigateHistory = useCallback(
+    (direction: HistoryDirection) => {
+      const text = navigate(direction, valueRef.current);
+      if (text === null) {
+        return false;
+      }
+      setInput(text);
+      return true;
+    },
+    [navigate, setInput],
+  );
 
   // ---- Refs (text variant only) ------------------------------------------
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -260,11 +311,22 @@ export function InputPromptBase({
   const handleSend = useCallback(() => {
     if (!input.trim() || isLoading || disabled || readOnly) return;
     const message = input.trim();
+    // Newest in the history from now on, whatever the runtime records.
+    remember(message);
     if (controlledValue === undefined) {
       setInput('');
     }
     onSend(message);
-  }, [input, isLoading, disabled, readOnly, onSend, setInput, controlledValue]);
+  }, [
+    input,
+    isLoading,
+    disabled,
+    readOnly,
+    onSend,
+    setInput,
+    controlledValue,
+    remember,
+  ]);
 
   const handleStop = useCallback(() => {
     onStop?.();
@@ -329,11 +391,12 @@ export function InputPromptBase({
           {variant === 'lexical' ? (
             <InputPromptLexical
               value={input}
-              onChange={setInput}
+              onChange={handleChange}
               placeholder={animatedPlaceholder}
               disabled={isLoading || disabled}
               readOnly={readOnly}
               onSubmit={handleSend}
+              onHistory={navigateHistory}
               autoFocus={autoFocus}
               focusSignal={lexicalFocusSignal}
               mentionableAgents={mentionableAgents}
@@ -341,11 +404,12 @@ export function InputPromptBase({
           ) : (
             <InputPromptText
               value={input}
-              onChange={setInput}
+              onChange={handleChange}
               placeholder={animatedPlaceholder}
               disabled={isLoading || disabled}
               readOnly={readOnly}
               onSubmit={handleSend}
+              onHistory={navigateHistory}
               inputRef={inputRef}
             />
           )}

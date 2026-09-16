@@ -90,6 +90,8 @@ export interface FrontendConfig {
   builtinTools: BuiltinTool[];
   /** Configured MCP servers */
   mcpServers: MCPServer[];
+  /** What has been sent to the agent so far, oldest first. */
+  promptHistory?: string[];
 }
 
 /**

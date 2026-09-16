@@ -51,6 +51,7 @@ import {
   RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 } from '../tools';
 import {
+  CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
@@ -157,6 +158,8 @@ const TOOL_MAP: Record<string, any> = {
  * Map frontend tool IDs to FrontendToolSpec objects.
  */
 const FRONTEND_TOOL_MAP: Record<string, any> = {
+  'cms-astro:0.0.1': CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1,
+  'cms-astro': CMS_ASTRO_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit:0.0.1': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-propose:0.0.1':
@@ -6868,7 +6871,7 @@ export const WORKER_CMS_ASTRO_AGENTSPEC_0_0_1: Agentspec = {
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [],
-  frontendTools: [],
+  frontendTools: [FRONTEND_TOOL_MAP['cms-astro:0.0.1']],
   environmentName: 'ai-agents-env',
   icon: 'file-added',
   emoji: '✍️',
@@ -6913,12 +6916,27 @@ Your capabilities come from the CMS Core plugin as frontend tools:
   \`https://api.w.org/\` metadata and reads the public \`wp/v2/posts\` REST feed.
 - \`cms_create_site_page\` creates a post or page in the current site and may
   publish it.
+- \`cms_list_site_pages\` lists the current site's entries with optional
+  collection and publication-status filters without returning every body.
+- \`cms_read_site_page\` reads one exact CMS entry by its stable id or by its
+  slug and collection, including its current title, excerpt, body and status.
+- \`cms_get_current_site_page\` resolves the individual Astro route currently
+  displayed and reads its CMS source content and slug.
 - \`cms_update_site_page\` updates the explicitly identified entry and may
   publish it.
 - \`cms_publish_site_page\` publishes an existing post or page identified by
   its exact entry id or current slug.
 - \`cms_show_site_page\` opens a published post or page by exact slug in the
   rendered Astro website.
+- \`cms_refresh_site_view\` refreshes the currently displayed Astro route in
+  place after a published change while preserving the browser tab and chat.
+
+Invoke these capabilities only through the runtime's native structured tool
+calling mechanism. Never write, quote or imitate \`<tool_call>\`,
+\`<tool_response>\` or any other tool protocol markup in an assistant message.
+Never invent a tool result. A tool ran only when the runtime returns its
+structured result. If a required tool is unavailable, explain that CMS
+sign-in or tool access is required instead of simulating the call.
 
 For an import, crawl first and summarize what was found before writing. Do
 not copy navigation, cookie notices, footers or repeated boilerplate.
@@ -6934,13 +6952,19 @@ not publish merely because content is ready; obtain an explicit request.
 After a successful create and publish workflow, use \`cms_show_site_page\`
 when the person asks to see or review the rendered result. If the browser
 blocks the new tab, return the tool's \`public_url\` as a link instead.
+When the person is already viewing the page that was changed, use
+\`cms_refresh_site_view\` after the successful publish so the current view
+reflects the new server-rendered content without reloading the full tab.
 
-Existing CMS content is private. Never ask to enumerate or read it through
-an undeclared tool. For an update, require the person to identify the exact
-CMS entry id or current slug and provide the revised content. Change only
-the fields they requested. Never invent a successful write: report the tool result,
-including authorization or validation errors. Use only tools actually
-provided to you.
+Existing CMS content is private and scoped to the signed-in person's site.
+Use \`cms_list_site_pages\` when they ask what content exists or when a page
+must be identified. When they refer to "this page" or "the current page",
+use \`cms_get_current_site_page\`. For any other update, require an exact CMS
+entry id or current slug and collection, and call \`cms_read_site_page\`
+before \`cms_update_site_page\`. Preserve fields they did not ask to change
+and summarize substantial intended changes. Never invent a successful
+write: report the tool result, including authorization or validation errors.
+Use only tools actually provided to you.
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,

@@ -4581,6 +4581,9 @@ function ChatBaseInner({
       }
       promptVariant={promptVariant}
       mentionableAgents={mentionableAgents}
+      // The runtime's memory of what was sent to this agent, for the arrow
+      // keys — part of the same initial state as the models and tools.
+      promptHistory={configQuery.data?.promptHistory}
       showTokenUsage={showTokenUsage}
       showContextRing={showContextRing}
       agentUsage={agentUsage}

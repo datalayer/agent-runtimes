@@ -82,6 +82,11 @@ export interface RemoteConfig {
    */
   suggestions?: (string | AgentSuggestion)[];
   welcomeMessage?: string;
+  /**
+   * What has been sent to this agent so far, oldest first — the runtime's
+   * memory of it, for the composer's arrow keys to walk back through.
+   */
+  promptHistory?: string[];
 }
 
 /**

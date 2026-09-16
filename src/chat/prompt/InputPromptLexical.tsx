@@ -8,7 +8,8 @@
  *
  * Uses a minimal Lexical setup (plain text only) as an alternative
  * to the plain textarea.  Enter-to-submit and Shift+Enter for newline
- * are handled via a custom Lexical plugin.
+ * are handled via a custom Lexical plugin, and the arrow keys walk the
+ * prompt history from the text's edges via another.
  *
  * IMPORTANT: This file imports from the light `@lexical/*` packages only — it does NOT
  * import from `@datalayer/jupyter-lexical` to avoid pulling in heavy
@@ -20,11 +21,18 @@
 import { useCallback, useEffect, useRef } from 'react';
 import {
   $getRoot,
+  $getSelection,
   $createParagraphNode,
   $createTextNode,
+  $isElementNode,
+  $isRangeSelection,
+  KEY_ARROW_DOWN_COMMAND,
+  KEY_ARROW_UP_COMMAND,
   KEY_ENTER_COMMAND,
   COMMAND_PRIORITY_HIGH,
+  COMMAND_PRIORITY_LOW,
   defineExtension,
+  type LexicalNode,
 } from 'lexical';
 import { LexicalExtensionComposer } from '@lexical/react/LexicalExtensionComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
@@ -40,6 +48,7 @@ import {
   type MentionableAgent,
 } from './plugins/AgentMentionPlugin';
 import { CommandPlugin, PROMPT_COMMANDS } from './plugins/CommandPlugin';
+import type { HistoryDirection } from './promptHistory';
 
 // ---- Lexical extension (plain-text only) ---------------------------------
 
@@ -89,6 +98,140 @@ function EnterSubmitPlugin({
   return null;
 }
 
+// ---- History plugin: the arrow keys over what was sent ------------------
+
+/**
+ * The text before and after the caret, over the whole editor — or `null`
+ * when there is no caret to speak of: nothing focused, or a range selected.
+ *
+ * Lines decide whether an arrow key walks the history — up from the first
+ * line, down from the last — and a plain-text editor keeps its lines as
+ * line-break nodes inside paragraphs, and as paragraphs, so the text is
+ * gathered by walking the tree rather than read off one node.
+ */
+function $textAroundCaret(): { before: string; after: string } | null {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+    return null;
+  }
+  const { anchor } = selection;
+  const anchorNode = anchor.getNode();
+  let before = '';
+  let after = '';
+  let passed = false;
+  const take = (text: string) => {
+    if (passed) {
+      after += text;
+    } else {
+      before += text;
+    }
+  };
+  const visit = (node: LexicalNode) => {
+    if (node.is(anchorNode)) {
+      if ($isElementNode(node)) {
+        // The caret sits between children, and the offset counts them.
+        node.getChildren().forEach((child, index) => {
+          if (index === anchor.offset) {
+            passed = true;
+          }
+          take(child.getTextContent());
+        });
+      } else {
+        const text = node.getTextContent();
+        before += text.slice(0, anchor.offset);
+        after += text.slice(anchor.offset);
+      }
+      passed = true;
+      return;
+    }
+    if ($isElementNode(node)) {
+      node.getChildren().forEach(visit);
+      return;
+    }
+    take(node.getTextContent());
+  };
+  $getRoot()
+    .getChildren()
+    .forEach((paragraph, index) => {
+      if (index > 0) {
+        take('\n');
+      }
+      visit(paragraph);
+    });
+  return passed ? { before, after } : null;
+}
+
+/**
+ * Up from the first line and down from the last walk the prompt history;
+ * anywhere else the keys move the caret, as in any editor.
+ *
+ * Registered at a low priority, and mounted after the `@` and `/` menus, so
+ * that a menu which is open takes the arrow keys first — it answers them
+ * and this never hears them.
+ */
+function HistoryPlugin({
+  onHistory,
+  disabled,
+  readOnly,
+}: {
+  onHistory?: (direction: HistoryDirection) => boolean;
+  disabled?: boolean;
+  readOnly?: boolean;
+}) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    if (!onHistory) {
+      return undefined;
+    }
+    const handle =
+      (direction: HistoryDirection) => (event: KeyboardEvent | null) => {
+        if (disabled || readOnly) {
+          return false;
+        }
+        // A modifier means something else is being asked for.
+        if (
+          event &&
+          (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey)
+        ) {
+          return false;
+        }
+        let atEdge = false;
+        editor.getEditorState().read(() => {
+          const around = $textAroundCaret();
+          if (!around) {
+            return;
+          }
+          atEdge =
+            direction === 'up'
+              ? !around.before.includes('\n')
+              : !around.after.includes('\n');
+        });
+        if (!atEdge || !onHistory(direction)) {
+          return false;
+        }
+        event?.preventDefault();
+        return true;
+      };
+    const unregisterUp = editor.registerCommand(
+      KEY_ARROW_UP_COMMAND,
+      handle('up'),
+      COMMAND_PRIORITY_LOW,
+    );
+    const unregisterDown = editor.registerCommand(
+      KEY_ARROW_DOWN_COMMAND,
+      handle('down'),
+      COMMAND_PRIORITY_LOW,
+    );
+    return () => {
+      unregisterUp();
+      unregisterDown();
+    };
+  }, [editor, onHistory, disabled, readOnly]);
+
+  return null;
+}
+
 // ---- Sync plugin (controlled component bridge) --------------------------
 
 function SyncPlugin({
@@ -116,6 +259,9 @@ function SyncPlugin({
         p.append($createTextNode(value));
       }
       root.append(p);
+      // The caret after what was put there — a history entry, a suggestion —
+      // where typing on from it is expected to continue.
+      p.selectEnd();
     });
   }, [editor, value]);
 
@@ -230,6 +376,12 @@ export interface InputPromptLexicalProps {
   readOnly?: boolean;
   /** Callback when the user presses Enter (without Shift) */
   onSubmit?: () => void;
+  /**
+   * Up or down through the prompt history, asked when the caret is on the
+   * first or last line. Answers whether it had somewhere to go; when it did
+   * not, the key moves the caret as it normally would.
+   */
+  onHistory?: (direction: HistoryDirection) => boolean;
   /** Auto-focus the editor on mount */
   autoFocus?: boolean;
   /** Bumped by the parent to ask for the caret back — see `AutoFocusPlugin`. */
@@ -250,6 +402,7 @@ export function InputPromptLexical({
   disabled = false,
   readOnly = false,
   onSubmit,
+  onHistory,
   autoFocus = false,
   focusSignal,
   mentionableAgents,
@@ -259,7 +412,7 @@ export function InputPromptLexical({
       sx={{
         /*
           The placeholder is positioned against this box.
-          
+
           It is `position: absolute` and this was `static`, so it resolved
           against whatever ancestor happened to be positioned — which put
           "Type a message..." up in the header, nowhere near the box it
@@ -345,6 +498,12 @@ export function InputPromptLexical({
         {mentionableAgents?.length ? (
           <AgentMentionPlugin agents={mentionableAgents} />
         ) : null}
+        {/* Last, so the menus above answer the arrow keys first while open. */}
+        <HistoryPlugin
+          onHistory={onHistory}
+          disabled={disabled}
+          readOnly={readOnly}
+        />
       </LexicalExtensionComposer>
     </Box>
   );
