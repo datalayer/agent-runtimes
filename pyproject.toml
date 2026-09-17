@@ -49,9 +49,10 @@ dependencies = [
     # descriptor: `from_agentspec` reads the contract and gives it an A2A
     # endpoint (ORCHESTRATOR.md, O2-07). Below it, every capability query
     # answers nothing.
-    # 1.2.7 sends a secret's value as it is rather than base64, which is what
+    # 1.2.8 sends a secret's value as it is, with no marker and nothing to
+    # decode: one representation end to end, which is what
     # `datalayer secrets create` writes with (PLAN_ENVS.md E3-05).
-    "datalayer-core>=1.2.7",
+    "datalayer-core>=1.2.8",
     "fastapi",
     "filelock>=3.20.3",
     "httpx",
