@@ -30,11 +30,13 @@ from rich.text import Text
 
 from agent_runtimes.mixins.environments import EnvironmentsRequestError
 from agent_runtimes.models.environment import (
+    EnvironmentArtifactRecord,
     EnvironmentBuildLogChunk,
     EnvironmentBuildRecord,
+    EnvironmentFork,
     EnvironmentPromotionRecord,
-    EnvironmentRecord,
     EnvironmentPublicationRecord,
+    EnvironmentRecord,
     EnvironmentTrial,
     EnvironmentValidationReport,
     EnvironmentVersionRecord,
@@ -558,7 +560,9 @@ def _promotion_summary(version: EnvironmentVersionRecord) -> str:
         return "-"
     summary = f"{promotion.promoted_at} by {promotion.promoted_by}"
     if promotion.acknowledged_unavailable_variants:
-        summary += f", acknowledging {_names(promotion.acknowledged_unavailable_variants)}"
+        summary += (
+            f", acknowledging {_names(promotion.acknowledged_unavailable_variants)}"
+        )
     return summary
 
 
@@ -694,6 +698,69 @@ def write_log_chunk(chunk: EnvironmentBuildLogChunk) -> None:
     typer.echo(chunk.text, nl=False)
 
 
+def display_environment_artifacts(
+    artifacts: Sequence[EnvironmentArtifactRecord], title: str = "Artifacts"
+) -> None:
+    """A version's artifacts: what exists, where, and whether retention still keeps it.
+
+    The immutable reference is the column that matters — it is what a launch
+    actually runs and what a publication freezes — so it is the one allowed to
+    wrap.
+    """
+    table = Table(title=title)
+    for column in (
+        "Artifact",
+        "Variant",
+        "Region",
+        "Status",
+        "Retention",
+        "Used",
+        "Reference",
+    ):
+        table.add_column(column, no_wrap=column != "Reference")
+    for artifact in artifacts:
+        table.add_row(
+            artifact.uid,
+            artifact.variant,
+            artifact.region or "-",
+            artifact.status or "-",
+            artifact.retention_state or "-",
+            str(artifact.reference_count),
+            artifact.immutable_reference or "-",
+        )
+    _print(table)
+
+
+def display_fork(fork: EnvironmentFork) -> None:
+    """What a fork made, and what it did not have to build.
+
+    A fork whose spec, lock and base are unchanged reuses the published
+    artifact, so the reused count is the whole point of the answer: it is the
+    difference between launching now and waiting for a build.
+    """
+    environment = fork.environment
+    version = fork.version
+    reused = fork.reused_artifacts
+    _print(
+        _fields_table(
+            "Fork",
+            [
+                ("Environment", environment.name or environment.uid),
+                ("UID", environment.uid),
+                ("Version", version.version and str(version.version)),
+                ("Version UID", version.uid),
+                ("Status", version.status.value if version.status else None),
+                (
+                    "Reused artifacts",
+                    f"{len(reused)} ({', '.join(sorted({a.variant for a in reused}))})"
+                    if reused
+                    else "none — this fork builds fresh",
+                ),
+            ],
+        )
+    )
+
+
 def display_publication(publication: EnvironmentPublicationRecord) -> None:
     """A publication and what its snapshot froze (D-12, E2-15).
 
@@ -714,7 +781,10 @@ def display_publication(publication: EnvironmentPublicationRecord) -> None:
             "Publication",
             [
                 ("Status", publication.status),
-                ("Environment", snapshot.environment_name or publication.environment_uid),
+                (
+                    "Environment",
+                    snapshot.environment_name or publication.environment_uid,
+                ),
                 ("Title", snapshot.title),
                 ("Version", version),
                 ("Published", publication.published_at),
@@ -722,11 +792,19 @@ def display_publication(publication: EnvironmentPublicationRecord) -> None:
                 # What the snapshot carries, which is what becomes public.
                 ("Variants", variants),
                 ("Size class", snapshot.size_class),
-                ("Lock", " ".join(part for part in (_short_digest(lock.digest), packages) if part)),
+                (
+                    "Lock",
+                    " ".join(
+                        part for part in (_short_digest(lock.digest), packages) if part
+                    ),
+                ),
                 ("Scan", scan),
                 ("SBOM", snapshot.sbom_ref),
                 ("Licenses", ", ".join(snapshot.licenses) or "none named"),
-                ("README", f"{len(snapshot.readme)} characters" if snapshot.readme else "none"),
+                (
+                    "README",
+                    f"{len(snapshot.readme)} characters" if snapshot.readme else "none",
+                ),
             ],
         )
     )

@@ -38,6 +38,7 @@ from agent_runtimes.models.environment import (
     EnvironmentBuildLogChunk,
     EnvironmentBuildLogPage,
     EnvironmentBuildRecord,
+    EnvironmentFork,
     EnvironmentLiveRuntime,
     EnvironmentPublicationRecord,
     EnvironmentRecord,
@@ -709,6 +710,46 @@ class EnvironmentsListMixin:
             correlation_id=correlation_id,
         )
         return EnvironmentPublicationRecord.model_validate(answer)
+
+    def fork_environment_version(
+        self,
+        version_uid: str,
+        *,
+        name: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+    ) -> EnvironmentFork:
+        """
+        Fork a published version into an environment of your own (D-12, E2-15).
+
+        A fork whose spec, lock and base are unchanged reuses the published
+        Datalayer artifact rather than building again — the same immutable
+        references, built once — so it launches without a rebuild. A fork under
+        a new ``name`` re-specialises the spec and builds fresh.
+
+        Parameters
+        ----------
+        version_uid : str
+            The published version's uid.
+        name : Optional[str]
+            A name for the fork; the source environment's name by default.
+        correlation_id : Optional[str]
+            Sent as ``X-Correlation-Id``.
+
+        Returns
+        -------
+        EnvironmentFork
+            The new environment, its version, and the artifacts reused.
+        """
+        body: dict[str, Any] = {}
+        if name is not None:
+            body["name"] = name
+        answer = self._environments_request(
+            "POST",
+            f"/environment-versions/{_segment(version_uid, 'version_uid')}/fork",
+            body=body,
+            correlation_id=correlation_id,
+        )
+        return EnvironmentFork.model_validate(answer)
 
     # -- versions ------------------------------------------------------------
 

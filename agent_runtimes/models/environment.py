@@ -348,6 +348,19 @@ class EnvironmentPublicationRecord(_RegistryRecord):
     etag: str = ""
 
 
+class EnvironmentFork(_RegistryRecord):
+    """What forking a published version answers (D-12, E2-15).
+
+    The caller's own private environment the fork made, its version, and the
+    Datalayer artifacts reused — the same immutable references, built once —
+    so a fork of an unchanged public environment launches without a rebuild.
+    """
+
+    environment: EnvironmentRecord
+    version: EnvironmentVersionRecord
+    reused_artifacts: List[EnvironmentArtifactRecord] = Field(default_factory=list)
+
+
 class EnvironmentValidationReport(_RegistryRecord):
     """What validating a version answers: a capability report per variant."""
 

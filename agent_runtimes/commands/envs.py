@@ -40,10 +40,12 @@ from agent_runtimes.displays.environments import (
     compare_version_locks,
     display_answer,
     display_environment,
+    display_environment_artifacts,
     display_environment_builds,
     display_environment_version,
     display_environment_versions,
     display_environments,
+    display_fork,
     display_lock_diff,
     display_publication,
     display_refusal,
@@ -151,19 +153,30 @@ def _environment_uid(client: AgentClient, reference: str) -> str:
     raise EnvironmentsCommandError(f"No user environment {reference} that you may use")
 
 
-def _versions(
-    client: AgentClient, environment_uid: str
-) -> Iterator[EnvironmentVersionRecord]:
-    """Every version of an environment, newest first, page after page."""
+def _paged(read: Callable[[Optional[str]], Any]) -> Iterator[Any]:
+    """Every item of a listing, page after page.
+
+    A cursor already read ends the walk: a service that answered the same
+    cursor twice would otherwise be followed forever.
+    """
     cursor: Optional[str] = None
     cursors_read: set[str] = set()
     while True:
-        page = client.list_environment_versions(environment_uid, cursor=cursor)
+        page = read(cursor)
         yield from page.items
         cursor = page.next_cursor
         if not cursor or cursor in cursors_read:
             return
         cursors_read.add(cursor)
+
+
+def _versions(
+    client: AgentClient, environment_uid: str
+) -> Iterator[EnvironmentVersionRecord]:
+    """Every version of an environment, newest first, page after page."""
+    return _paged(
+        lambda cursor: client.list_environment_versions(environment_uid, cursor=cursor)
+    )
 
 
 def _version(client: AgentClient, reference: str) -> EnvironmentVersionRecord:
@@ -610,8 +623,9 @@ def diff(
     A version with no lock yet is named, and nothing is compared.
     """
     client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
-    old, new = _with_lock(client, _version(client, before)), _with_lock(
-        client, _version(client, after)
+    old, new = (
+        _with_lock(client, _version(client, before)),
+        _with_lock(client, _version(client, after)),
     )
     changes, notes = compare_version_locks(old, new)
     data = {
@@ -674,6 +688,125 @@ def build(
         for queued in builds:
             emit_record({"build": queued}, output)
     _exit_with_outcome(_follow(client, [queued.uid for queued in builds], output))
+
+
+@app.command(name="builds")
+@_refusals
+def builds(
+    version: VersionArgument,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """Every build of a version, one row per variant and region."""
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    records = list(
+        _paged(
+            lambda cursor: client.list_environment_builds(
+                _version_uid(client, version), cursor=cursor
+            )
+        )
+    )
+    if not emit(records, output):
+        display_environment_builds(records)
+
+
+@app.command(name="artifacts")
+@_refusals
+def artifacts(
+    version: VersionArgument,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """
+    The artifacts a version has, and whether retention still keeps them.
+
+    The immutable reference is what a launch runs and what a publication
+    freezes.
+    """
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    records = list(
+        _paged(
+            lambda cursor: client.list_environment_artifacts(
+                _version_uid(client, version), cursor=cursor
+            )
+        )
+    )
+    if not emit(records, output):
+        display_environment_artifacts(records)
+
+
+@app.command(name="cancel")
+@_refusals
+def cancel(
+    build_uid: Annotated[str, typer.Argument(help="The build's uid.")],
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """
+    Stop a build that is still running.
+
+    A build already finished is left as it is; the answer says which it was.
+    """
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    record = client.cancel_environment_build(build_uid.strip())
+    if not emit(record, output):
+        display_environment_builds([record], title="Cancelled")
+
+
+@app.command(name="retry")
+@_refusals
+def retry(
+    build_uid: Annotated[str, typer.Argument(help="The build's uid.")],
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """
+    Build again after a failure, as the next attempt of the same build.
+
+    The attempt number is what tells one try from the next; the version and
+    the lock are unchanged, so a retry is not a new build record.
+    """
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    record = client.retry_environment_build(build_uid.strip())
+    if not emit(record, output):
+        display_environment_builds([record], title="Retried")
+
+
+@app.command(name="fork")
+@_refusals
+def fork(
+    version: VersionArgument,
+    name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--name",
+            help="A name for the fork; the source environment's name by default. "
+            "A new name re-specialises the spec and builds fresh.",
+        ),
+    ] = None,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """
+    Fork a published version into an environment of your own.
+
+    A fork whose spec, lock and base are unchanged reuses the published
+    artifact rather than building again, so it launches without a rebuild.
+    """
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    forked = client.fork_environment_version(_version_uid(client, version), name=name)
+    if not emit(forked, output):
+        display_fork(forked)
 
 
 @app.command(name="logs")

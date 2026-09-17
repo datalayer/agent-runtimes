@@ -96,6 +96,11 @@ COMMANDS = {
     "resolve",
     "diff",
     "build",
+    "builds",
+    "artifacts",
+    "cancel",
+    "retry",
+    "fork",
     "logs",
     "try",
     "promote",
@@ -1524,3 +1529,108 @@ def test_publication_reads_what_a_version_made_public(registry: Registry) -> Non
     assert result.exit_code == 0, result.output
     assert "published" in result.stdout and "geo" in result.stdout
     assert registry.sent("POST", f"/environment-versions/{READY_UID}/publish") == []
+
+
+
+# -- builds, artifacts, cancel, retry, fork ----------------------------------------------------
+#
+# The five routes no `envs` command could reach until E4-07's parity test was
+# written: a version's builds and artifacts could not be listed, a running
+# build could not be stopped, a failed one could not be tried again, and a
+# published environment could not be forked.
+
+
+AN_ARTIFACT = {
+    "uid": "01M2NGAB17PTQZPX5F7GX2A3T5",
+    "environmentUid": ENV_UID,
+    "versionUid": READY_UID,
+    "ownerUid": "01JV1VE1T5VG22Z05F6EFBMW8E",
+    "variant": "datalayer",
+    "region": "r1",
+    "status": "ready",
+    "retentionState": "retained",
+    "referenceCount": 2,
+    "immutableReference": "registry/environments/u/owner/geo@sha256:abc",
+}
+
+
+def test_builds_lists_every_build_of_a_version(registry: Registry) -> None:
+    registry.on(
+        "GET",
+        f"/environment-versions/{READY_UID}/builds",
+        ok({"builds": [QUEUED], "nextCursor": None}),
+    )
+    result = invoke("builds", READY_UID)
+    assert result.exit_code == 0, result.output
+    assert BUILD_UID in result.stdout
+
+
+def test_artifacts_says_whether_retention_still_keeps_one(registry: Registry) -> None:
+    registry.on(
+        "GET",
+        f"/environment-versions/{READY_UID}/artifacts",
+        ok({"artifacts": [AN_ARTIFACT], "nextCursor": None}),
+    )
+    result = invoke("artifacts", READY_UID)
+    assert result.exit_code == 0, result.output
+    # What it runs, and whether it is still kept: both are the point.
+    assert "retained" in result.stdout and "datalayer" in result.stdout
+
+
+def test_cancel_stops_a_running_build(registry: Registry) -> None:
+    registry.on(
+        "POST",
+        f"/environment-builds/{BUILD_UID}/cancel",
+        ok({**QUEUED, "status": "cancelled"}),
+    )
+    result = invoke("cancel", BUILD_UID)
+    assert result.exit_code == 0, result.output
+    assert "cancelled" in result.stdout
+
+
+def test_retry_is_the_next_attempt_of_the_same_build(registry: Registry) -> None:
+    registry.on(
+        "POST",
+        f"/environment-builds/{BUILD_UID}/retry",
+        ok({**QUEUED, "status": "queued", "attempt": 2}),
+    )
+    answer = json.loads(invoke("retry", BUILD_UID, "-o", "json").stdout)
+    # The version and the lock are unchanged, so a retry is not a new record:
+    # the attempt number is what tells one try from the next.
+    assert answer["uid"] == BUILD_UID and answer["attempt"] == 2
+
+
+def test_fork_reuses_the_published_artifact_rather_than_building(registry: Registry) -> None:
+    registry.on(
+        "POST",
+        f"/environment-versions/{READY_UID}/fork",
+        ok(
+            {
+                "environment": {**ENVIRONMENT, "name": "forked"},
+                "version": READY,
+                "reusedArtifacts": [AN_ARTIFACT],
+            }
+        ),
+    )
+    result = invoke("fork", READY_UID, "--name", "forked")
+    assert result.exit_code == 0, result.output
+    assert "forked" in result.stdout
+    # The reused count is the difference between launching now and waiting.
+    assert "1 (datalayer)" in result.stdout
+
+    (sent,) = registry.sent("POST", f"/environment-versions/{READY_UID}/fork")
+    assert sent["json"] == {"name": "forked"}
+
+
+def test_fork_without_a_name_asks_for_nothing(registry: Registry) -> None:
+    """The source environment's name is the default, so the body stays empty."""
+    registry.on(
+        "POST",
+        f"/environment-versions/{READY_UID}/fork",
+        ok({"environment": ENVIRONMENT, "version": READY, "reusedArtifacts": []}),
+    )
+    result = invoke("fork", READY_UID)
+    assert result.exit_code == 0, result.output
+    assert "none — this fork builds fresh" in result.stdout
+    (sent,) = registry.sent("POST", f"/environment-versions/{READY_UID}/fork")
+    assert sent["json"] == {}
