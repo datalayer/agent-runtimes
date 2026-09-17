@@ -58,6 +58,9 @@ class SkillSpec(BaseModel):
     version: str = Field(default="0.0.1", description="Skill version")
     name: str = Field(..., description="Display name for the skill")
     description: str = Field(default="", description="Skill description")
+    enabled: bool = Field(
+        default=False, description="Whether the platform offers this skill today"
+    )
     # Variant 1: module-based discovery
     module: Optional[str] = Field(
         default=None, description="Python module path for name-based discovery"
@@ -742,6 +745,9 @@ class OutputSpec(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Output description")
     icon: str = Field(default="", description="Icon identifier")
+    enabled: bool = Field(
+        default=False, description="Whether the platform offers this output today"
+    )
     supports_template: bool = Field(
         default=False, description="Whether this output supports templating"
     )

@@ -115,7 +115,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    tags={_fmt_list(spec.get('tags', []))},",
                 f"    icon={icon},",
                 f"    emoji={emoji},",
-                f"    enabled={spec.get('enabled', True)},",
+                f"    enabled={spec.get('enabled', False)},",
                 ")",
                 "",
             ]
@@ -279,7 +279,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  tags: {tags_json},",
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
-                f"  enabled: {str(spec.get('enabled', True)).lower()},",
+                f"  enabled: {str(spec.get('enabled', False)).lower()},",
                 "};",
                 "",
             ]

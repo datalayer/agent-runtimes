@@ -116,7 +116,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    command="{spec["command"]}",',
                 f"    args={args_formatted},",
                 f'    transport="{spec.get("transport", "stdio")}",',
-                f"    enabled={spec.get('enabled', True)},",
+                f"    enabled={spec.get('enabled', False)},",
                 "    tools=[],",
             ]
         )
@@ -279,7 +279,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  command: '{spec['command']}',",
                 f"  args: {args_formatted},",
                 f"  transport: '{spec.get('transport', 'stdio')}',",
-                f"  enabled: {str(spec.get('enabled', True)).lower()},",
+                f"  enabled: {str(spec.get('enabled', False)).lower()},",
                 "  isAvailable: false,",
                 "  tools: [],",
                 f"  requiredEnvVars: {envvars_formatted},",

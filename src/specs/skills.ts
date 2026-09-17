@@ -34,7 +34,7 @@ export const ACCOUNTING_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['accounting', 'finance', 'reconciliation', 'close'],
   icon: 'book',
   emoji: '🧮',
-  enabled: true,
+  enabled: false,
 };
 
 export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -52,7 +52,7 @@ export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['web', 'crawl', 'scraping'],
   icon: 'globe',
   emoji: '🌐',
-  enabled: true,
+  enabled: false,
 };
 
 export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -70,7 +70,7 @@ export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['events', 'orchestration', 'automation'],
   icon: 'bell',
   emoji: '📅',
-  enabled: true,
+  enabled: false,
 };
 
 export const GITHUB_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -88,7 +88,7 @@ export const GITHUB_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['github', 'git', 'code'],
   icon: 'mark-github',
   emoji: '🐙',
-  enabled: true,
+  enabled: false,
 };
 
 export const JOKES_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -106,7 +106,7 @@ export const JOKES_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['fun', 'humor', 'demo'],
   icon: 'smiley',
   emoji: '😄',
-  enabled: true,
+  enabled: false,
 };
 
 export const PDF_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -124,7 +124,7 @@ export const PDF_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['pdf', 'documents', 'extraction'],
   icon: 'file',
   emoji: '📄',
-  enabled: true,
+  enabled: false,
 };
 
 export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
@@ -143,7 +143,7 @@ export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['nlp', 'summarization', 'text-processing'],
   icon: 'note',
   emoji: '📝',
-  enabled: true,
+  enabled: false,
 };
 
 // ============================================================================

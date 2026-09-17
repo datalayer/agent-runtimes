@@ -843,7 +843,7 @@ export const JUPYTER_TEAM_SPEC_0_0_1: TeamSpec = {
     {
       id: 'decks',
       name: 'Jupyter Decks',
-      ref: 'worker-decks:0.0.1',
+      ref: 'example-decks:0.0.1',
       role: 'contributor',
       goal: `Turn what the notebook found into a deck — a title, the numbers as metrics or a chart, the conclusion — open it beside the conversation, and step through it on request.`,
       dependsOn: [],

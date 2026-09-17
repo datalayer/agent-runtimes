@@ -33,7 +33,7 @@ ALPHAVANTAGE_MCP_SERVER_0_0_1 = MCPServer(
         "${ALPHAVANTAGE_API_KEY}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "MAX_RESPONSE_TOKENS": "100000",
@@ -54,7 +54,7 @@ CHART_MCP_SERVER_0_0_1 = MCPServer(
         "@antv/mcp-server-chart",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=[],
 )
@@ -93,7 +93,7 @@ EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
         "earthdata-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "EARTHDATA_USERNAME": "${EARTHDATA_USERNAME}",
@@ -112,7 +112,7 @@ EURUS_MCP_SERVER_0_0_1 = MCPServer(
     command="eurus-mcp",
     args=[],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=[],
 )
@@ -131,7 +131,7 @@ FILESYSTEM_MCP_SERVER_0_0_1 = MCPServer(
         "${TMPDIR}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=[],
 )
@@ -153,7 +153,7 @@ GITHUB_MCP_SERVER_0_0_1 = MCPServer(
         "ghcr.io/github/github-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}",
@@ -173,7 +173,7 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
         "workspace-mcp",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "GOOGLE_OAUTH_CLIENT_ID": "${GOOGLE_OAUTH_CLIENT_ID}",
@@ -202,7 +202,7 @@ HUGGINGFACE_MCP_SERVER_0_0_1 = MCPServer(
         "Authorization: Bearer ${HF_TOKEN}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=["HF_TOKEN:0.0.1"],
 )
@@ -223,7 +223,7 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
         "Authorization: Bearer ${KAGGLE_API_TOKEN}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=["KAGGLE_API_TOKEN:0.0.1"],
 )
@@ -240,7 +240,7 @@ ODOO_MCP_SERVER_0_0_1 = MCPServer(
         "mcp-server-odoo",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "ODOO_URL": "${ODOO_URL}",
@@ -264,7 +264,7 @@ SALESFORCE_MCP_SERVER_0_0_1 = MCPServer(
         "@anthropic/salesforce-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "SALESFORCE_ACCESS_TOKEN": "${SALESFORCE_ACCESS_TOKEN}",
@@ -289,7 +289,7 @@ SLACK_MCP_SERVER_0_0_1 = MCPServer(
         "@datalayer/slack-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
@@ -316,7 +316,7 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
         "tavily-mcp",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "TAVILY_API_KEY": "${TAVILY_API_KEY}",
