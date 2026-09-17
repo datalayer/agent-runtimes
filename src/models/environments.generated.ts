@@ -11,7 +11,7 @@ export const ENVIRONMENT_SCHEMA_ID =
 
 /** The sha256 of the schema text these types are generated from. */
 export const ENVIRONMENT_SCHEMA_SHA256 =
-  '76eb8c80d1e27f7c6519946a6f7022b53a717ff2645d993b34aaa54dea658201';
+  'df0f8dc57cd82b8b0a77727071cb9a084a64c099703a8b9747ebe0f0958fe8f0';
 
 /** The `apiVersion` an Environment document carries. */
 export const ENVIRONMENT_API_VERSION = 'environments.datalayer.io/v1alpha1';
@@ -41,6 +41,8 @@ export interface BuildSecret {
 }
 
 export interface BuildSpec {
+  dependencyFile?: DependencyFileSpec | null;
+  image?: ImageSourceSpec | null;
   /** Default: `"packages"`. */
   source?: 'packages' | 'dependencyFile' | 'dockerfile' | 'image';
 }
@@ -54,12 +56,33 @@ export interface Compatibility {
   variants?: VariantSet;
 }
 
+/** One immutable file the Environment bakes from an external source. */
+export interface ContentsBuildEntry {
+  path: string;
+  /** Pattern: `^[0-9a-f]{64}$`. */
+  sha256: string;
+  /** Minimum: 0. */
+  sizeBytes?: number | null;
+  source: string;
+}
+
+/** A `requirements.txt`, a `pyproject.toml` with its `uv.lock`, or a conda `environment.yml` (E3-01, E3-02). */
+export interface DependencyFileSpec {
+  /** Default: `""`. */
+  content?: string;
+  /** Default: `""`. */
+  lockContent?: string;
+  /** Default: `"requirements"`. */
+  sourceFormat?: 'requirements' | 'pyproject' | 'conda';
+}
+
 export interface EnvironmentSpec {
   base: Base;
   build?: BuildSpec;
   buildSecrets?: BuildSecret[];
   commands?: Commands;
   compatibility?: Compatibility;
+  contentsBuild?: ContentsBuildEntry[];
   /** Default: `"sandbox-contract/v1"`. */
   contract?: string;
   env?: Record<string, string>;
@@ -77,6 +100,14 @@ export interface FileEntry {
   sha256?: string | null;
   /** Minimum: 0. */
   sizeBytes?: number | null;
+}
+
+/** An existing OCI image, imported as the build's base (E3-04). */
+export interface ImageSourceSpec {
+  /** Pattern: `^dlsec_[0-9A-Za-z]+$`. */
+  credentialSecretId?: string | null;
+  /** Default: `""`. */
+  reference?: string;
 }
 
 export interface Language {
