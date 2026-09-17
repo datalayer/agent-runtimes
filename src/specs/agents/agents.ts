@@ -51,6 +51,7 @@ import {
   RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
 } from '../tools';
 import {
+  DECKS_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_PROPOSE_FRONTEND_TOOL_SPEC_0_0_1,
   JUPYTER_NOTEBOOK_READ_FRONTEND_TOOL_SPEC_0_0_1,
@@ -157,6 +158,8 @@ const TOOL_MAP: Record<string, any> = {
  * Map frontend tool IDs to FrontendToolSpec objects.
  */
 const FRONTEND_TOOL_MAP: Record<string, any> = {
+  'decks:0.0.1': DECKS_FRONTEND_TOOL_SPEC_0_0_1,
+  decks: DECKS_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit:0.0.1': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-edit': JUPYTER_NOTEBOOK_EDIT_FRONTEND_TOOL_SPEC_0_0_1,
   'jupyter-notebook-propose:0.0.1':
@@ -1521,7 +1524,7 @@ export const EXAMPLE_DECKS_AGENTSPEC_0_0_1: Agentspec = {
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [],
-  frontendTools: [],
+  frontendTools: [FRONTEND_TOOL_MAP['decks:0.0.1']],
   environmentName: 'ai-agents-env',
   icon: 'project',
   emoji: '🖼️',
@@ -1578,7 +1581,11 @@ Your tools come in two kinds, and all of them run on the person's page.
 in the page, and on the server when there is one.
 \`decks_get_deck\` answers with the full spec and an \`outline\` (slide
 number, type, title), which is how you find "the metrics slide" or
-"slide 3" before you open or change it. The others drive the deck on the
+"slide 3" before you open or change it. Beside an open deck, three tools
+need no \`id\` at all: \`decks_list_slides\` (the outline), \`decks_get_slide\`
+(one slide, whole) and \`decks_add_slide\` (append a slide and show it) —
+reach for these first when the person is looking at a deck and asks
+about its slides. The others drive the deck on the
 person's screen: \`decks_open\` opens a deck by id, optionally at a slide,
 \`decks_go_to_slide\`, \`decks_next_slide\` and \`decks_previous_slide\` move
 through it, \`decks_present\` goes fullscreen, \`decks_print\` opens the print
@@ -11183,7 +11190,7 @@ export const WORKER_PITCHER_AGENTSPEC_0_0_1: Agentspec = {
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [],
-  frontendTools: [],
+  frontendTools: [FRONTEND_TOOL_MAP['decks:0.0.1']],
   environmentName: 'ai-agents-env',
   icon: 'rocket',
   emoji: '🚀',
@@ -11285,7 +11292,11 @@ Your tools come in two kinds, and all of them run on the person's page.
 in the page, and on the server when there is one.
 \`decks_get_deck\` answers with the full spec and an \`outline\` (slide
 number, type, title), which is how you find "the traction slide" or
-"slide 3" before you open or change it. The others drive the deck on the
+"slide 3" before you open or change it. Beside an open deck, three tools
+need no \`id\` at all: \`decks_list_slides\` (the outline), \`decks_get_slide\`
+(one slide, whole) and \`decks_add_slide\` (append a slide and show it) —
+reach for these first when the person is looking at a deck and asks
+about its slides. The others drive the deck on the
 person's screen: \`decks_open\` opens a deck by id, optionally at a slide,
 \`decks_go_to_slide\`, \`decks_next_slide\` and \`decks_previous_slide\` move
 through it, \`decks_present\` goes fullscreen, \`decks_print\` opens the print
