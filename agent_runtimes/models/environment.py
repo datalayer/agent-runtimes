@@ -282,6 +282,72 @@ class EnvironmentBuildLogPage(_RegistryRecord):
     complete: bool = False
 
 
+class EnvironmentPublicationVariant(_RegistryRecord):
+    """One variant's artifact, as a publication's snapshot froze it."""
+
+    immutable_reference: str = ""
+    region: str = ""
+    sbom_ref: str = ""
+    signature_ref: str = ""
+
+
+class EnvironmentPublicationLock(_RegistryRecord):
+    """The lock a published version resolved to, whole."""
+
+    digest: str = ""
+    format: str = ""
+    content: str = ""
+    package_count: Optional[int] = None
+
+
+class EnvironmentPublicationSnapshot(_RegistryRecord):
+    """What a publication freezes (D-12, E2-15).
+
+    Everything a public page shows, taken once from a version that is itself
+    immutable and never re-read: the spec, the lock, the SBOM and scan
+    summary, the licenses the SBOM names, the size class, the variants with
+    their artifact references, and the README.
+    """
+
+    environment_uid: str = ""
+    environment_name: str = ""
+    title: str = ""
+    owner_uid: str = ""
+    version_uid: str = ""
+    version_number: Optional[int] = None
+    spec: Dict[str, Any] = Field(default_factory=dict)
+    lock: EnvironmentPublicationLock = Field(default_factory=EnvironmentPublicationLock)
+    sbom_ref: str = ""
+    scan_summary: Dict[str, Any] = Field(default_factory=dict)
+    licenses: List[str] = Field(default_factory=list)
+    size_class: str = ""
+    variants: Dict[str, EnvironmentPublicationVariant] = Field(default_factory=dict)
+    readme: str = ""
+
+
+class EnvironmentPublicationRecord(_RegistryRecord):
+    """A version's publication in the public Library (D-12, E2-15).
+
+    A withdrawn version keeps its snapshot — ``status`` becomes
+    ``unpublished`` rather than the record being gone — so a re-publish
+    restores exactly what was public.
+    """
+
+    version_uid: str
+    environment_uid: str = ""
+    owner_uid: str = ""
+    #: ``published``, or ``unpublished`` once withdrawn.
+    status: str = ""
+    published_by: str = ""
+    published_at: str = ""
+    updated_at: Optional[str] = None
+    snapshot: EnvironmentPublicationSnapshot = Field(
+        default_factory=EnvironmentPublicationSnapshot
+    )
+    #: What a conditional write names in ``if_match``.
+    etag: str = ""
+
+
 class EnvironmentValidationReport(_RegistryRecord):
     """What validating a version answers: a capability report per variant."""
 

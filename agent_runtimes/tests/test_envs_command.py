@@ -100,6 +100,9 @@ COMMANDS = {
     "try",
     "promote",
     "rollback",
+    "publish",
+    "unpublish",
+    "publication",
     "deprecate",
     "archive",
     "rm",
@@ -1427,3 +1430,97 @@ def test_rm_prints_the_503_when_the_runtimes_cannot_be_read(registry: Registry) 
         f"DL_ENV_UNAVAILABLE: {unavailable['message']}",
         f"  correlation id: {unavailable['correlationId']}",
     ]
+
+
+
+# -- publish, unpublish, publication ----------------------------------------------------------
+
+
+A_PUBLICATION = {
+    "versionUid": READY_UID,
+    "environmentUid": ENV_UID,
+    "ownerUid": "01JV1VE1T5VG22Z05F6EFBMW8E",
+    "status": "published",
+    "publishedBy": "01JV1VE1T5VG22Z05F6EFBMW8E",
+    "publishedAt": "2026-09-16T17:37:29Z",
+    "snapshot": {
+        "environmentUid": ENV_UID,
+        "environmentName": "geo",
+        "title": "Geospatial analysis",
+        "ownerUid": "01JV1VE1T5VG22Z05F6EFBMW8E",
+        "versionUid": READY_UID,
+        "versionNumber": 2,
+        "spec": {},
+        "lock": {"digest": "sha256:" + "3d" * 32, "format": "uv-pip-compile", "content": "", "packageCount": 320},
+        "sbomRef": "registry/environments/u/owner/geo@sha256:abc.sbom",
+        "scanSummary": {"decision": "pass", "blocking": []},
+        "licenses": [],
+        "sizeClass": "small",
+        "variants": {
+            "datalayer": {
+                "immutableReference": "registry/environments/u/owner/geo@sha256:abc",
+                "region": "r1",
+                "sbomRef": "registry/environments/u/owner/geo@sha256:abc.sbom",
+                "signatureRef": "registry/environments/u/owner/geo@sha256:abc",
+            }
+        },
+        "readme": "",
+    },
+    "etag": '"1876"',
+}
+
+
+def test_publish_names_everything_that_becomes_public(registry: Registry) -> None:
+    """A version is made public once and the snapshot is frozen at that moment,
+    so the command prints the list rather than a confirmation — section 14.5 of
+    PLAN_BENCHMARKS.md publishes nothing by implication (PLAN_ENVS.md E2-16)."""
+    registry.on("GET", f"/environment-versions/{READY_UID}", ok(READY))
+    registry.on("POST", f"/environment-versions/{READY_UID}/publish", ok(A_PUBLICATION))
+
+    result = invoke("publish", READY_UID)
+    assert result.exit_code == 0, result.output
+    out = result.stdout
+    for expected in ("published", "datalayer", "small", "320 packages", "pass"):
+        assert expected in out, expected
+    # The two things this snapshot does not carry are said, not left blank.
+    assert "none named" in out and "none" in out
+
+    # The version's own etag is what the write names, so nobody types one.
+    (sent,) = registry.sent("POST", f"/environment-versions/{READY_UID}/publish")
+    assert sent["headers"]["If-Match"] == READY["etag"]
+
+
+def test_publish_prints_the_refusal_and_exits_1(registry: Registry) -> None:
+    registry.on("GET", f"/environment-versions/{READY_UID}", ok(READY))
+    registry.on(
+        "POST",
+        f"/environment-versions/{READY_UID}/publish",
+        (
+            409,
+            {
+                "code": "DL_ENV_PUBLICATION_BLOCKED",
+                "message": "spec: this version's Datalayer artifact did not pass its security scan",
+            },
+        ),
+    )
+    result = invoke("publish", READY_UID)
+    assert result.exit_code == 1
+    assert "DL_ENV_PUBLICATION_BLOCKED" in result.stderr
+    assert "security scan" in result.stderr
+
+
+def test_unpublish_keeps_the_snapshot(registry: Registry) -> None:
+    withdrawn = {**A_PUBLICATION, "status": "unpublished"}
+    registry.on("POST", f"/environment-versions/{READY_UID}/unpublish", ok(withdrawn))
+    answer = json.loads(invoke("unpublish", READY_UID, "-o", "json").stdout)
+    assert answer["status"] == "unpublished"
+    # Kept, so publishing again restores exactly what was public.
+    assert answer["snapshot"]["lock"]["digest"] == A_PUBLICATION["snapshot"]["lock"]["digest"]
+
+
+def test_publication_reads_what_a_version_made_public(registry: Registry) -> None:
+    registry.on("GET", f"/environment-versions/{READY_UID}/publication", ok(A_PUBLICATION))
+    result = invoke("publication", READY_UID)
+    assert result.exit_code == 0, result.output
+    assert "published" in result.stdout and "geo" in result.stdout
+    assert registry.sent("POST", f"/environment-versions/{READY_UID}/publish") == []

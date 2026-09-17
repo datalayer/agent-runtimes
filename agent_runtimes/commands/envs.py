@@ -45,6 +45,7 @@ from agent_runtimes.displays.environments import (
     display_environment_versions,
     display_environments,
     display_lock_diff,
+    display_publication,
     display_refusal,
     display_trial,
     display_validation_report,
@@ -778,6 +779,71 @@ def promote(
     if not emit(promoted, output):
         typer.echo(f"Version {record.version} of {environment.name} is promoted.")
         display_environment(promoted)
+
+
+@app.command(name="publish")
+@_refusals
+def publish(
+    version: VersionArgument,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """
+    Publish a promoted version to the public Library.
+
+    Everything the publication makes world-visible is listed in the answer —
+    the spec, the lock, the variants and their artifact references, the scan,
+    the SBOM, the licenses and the README — because a version is made public
+    once and the snapshot is immutable afterwards.
+
+    Refused with `DL_ENV_PUBLICATION_BLOCKED` unless every input is public: no
+    build secret, only public indexes, an approved base, and a Datalayer
+    artifact that passed its scan.
+    """
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    record = _version(client, version)
+    published = client.publish_environment_version(record.uid, if_match=record.etag)
+    if not emit(published, output):
+        display_publication(published)
+
+
+@app.command(name="unpublish")
+@_refusals
+def unpublish(
+    version: VersionArgument,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """
+    Withdraw a published version from the public Library.
+
+    The snapshot is kept, so publishing again restores exactly what was
+    public. Sandboxes already running the version are untouched.
+    """
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    withdrawn = client.unpublish_environment_version(_version_uid(client, version))
+    if not emit(withdrawn, output):
+        display_publication(withdrawn)
+
+
+@app.command(name="publication")
+@_refusals
+def publication(
+    version: VersionArgument,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """What a version's publication made public, and whether it still is."""
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    record = client.get_environment_publication(_version_uid(client, version))
+    if not emit(record, output):
+        display_publication(record)
 
 
 @app.command(name="rollback")

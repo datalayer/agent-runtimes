@@ -39,6 +39,7 @@ from agent_runtimes.models.environment import (
     EnvironmentBuildLogPage,
     EnvironmentBuildRecord,
     EnvironmentLiveRuntime,
+    EnvironmentPublicationRecord,
     EnvironmentRecord,
     EnvironmentsPage,
     EnvironmentTrial,
@@ -615,6 +616,99 @@ class EnvironmentsListMixin:
             correlation_id=correlation_id,
         )
         return EnvironmentRecord.model_validate(answer)
+
+    def publish_environment_version(
+        self,
+        version_uid: str,
+        *,
+        if_match: str,
+        correlation_id: Optional[str] = None,
+    ) -> EnvironmentPublicationRecord:
+        """
+        Publish a promoted version to the public Library (D-12, E2-15).
+
+        Owners only. Refused with ``DL_ENV_PUBLICATION_BLOCKED`` unless every
+        input is public — no build secret, only public indexes, an approved
+        base — and the Datalayer artifact passed its scan. The snapshot frozen
+        is immutable, so a re-publish restores exactly what was public.
+
+        Parameters
+        ----------
+        version_uid : str
+            The version's uid.
+        if_match : str
+            The ``etag`` of the version read.
+        correlation_id : Optional[str]
+            Sent as ``X-Correlation-Id``.
+
+        Returns
+        -------
+        EnvironmentPublicationRecord
+            The publication and the snapshot it froze.
+        """
+        answer = self._environments_request(
+            "POST",
+            f"/environment-versions/{_segment(version_uid, 'version_uid')}/publish",
+            body={},
+            if_match=_required(if_match, "if_match"),
+            correlation_id=correlation_id,
+        )
+        return EnvironmentPublicationRecord.model_validate(answer)
+
+    def unpublish_environment_version(
+        self, version_uid: str, *, correlation_id: Optional[str] = None
+    ) -> EnvironmentPublicationRecord:
+        """
+        Withdraw a published version from the public Library (D-12, E2-15).
+
+        The snapshot is kept — the publication's ``status`` becomes
+        ``unpublished`` rather than the record being gone — so a re-publish
+        restores exactly what was public. Sandboxes already running it are
+        untouched.
+
+        Parameters
+        ----------
+        version_uid : str
+            The version's uid.
+        correlation_id : Optional[str]
+            Sent as ``X-Correlation-Id``.
+
+        Returns
+        -------
+        EnvironmentPublicationRecord
+            The publication, now ``unpublished``.
+        """
+        answer = self._environments_request(
+            "POST",
+            f"/environment-versions/{_segment(version_uid, 'version_uid')}/unpublish",
+            correlation_id=correlation_id,
+        )
+        return EnvironmentPublicationRecord.model_validate(answer)
+
+    def get_environment_publication(
+        self, version_uid: str, *, correlation_id: Optional[str] = None
+    ) -> EnvironmentPublicationRecord:
+        """
+        A version's publication and the snapshot it froze (D-12, E2-15).
+
+        Parameters
+        ----------
+        version_uid : str
+            The version's uid.
+        correlation_id : Optional[str]
+            Sent as ``X-Correlation-Id``.
+
+        Returns
+        -------
+        EnvironmentPublicationRecord
+            The publication; a version that was never published answers 404.
+        """
+        answer = self._environments_request(
+            "GET",
+            f"/environment-versions/{_segment(version_uid, 'version_uid')}/publication",
+            correlation_id=correlation_id,
+        )
+        return EnvironmentPublicationRecord.model_validate(answer)
 
     # -- versions ------------------------------------------------------------
 

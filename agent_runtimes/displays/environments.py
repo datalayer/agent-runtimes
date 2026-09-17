@@ -34,6 +34,7 @@ from agent_runtimes.models.environment import (
     EnvironmentBuildRecord,
     EnvironmentPromotionRecord,
     EnvironmentRecord,
+    EnvironmentPublicationRecord,
     EnvironmentTrial,
     EnvironmentValidationReport,
     EnvironmentVersionRecord,
@@ -691,6 +692,44 @@ def build_outcome(build: EnvironmentBuildRecord) -> str:
 def write_log_chunk(chunk: EnvironmentBuildLogChunk) -> None:
     """Write a chunk of a build's log as it was written."""
     typer.echo(chunk.text, nl=False)
+
+
+def display_publication(publication: EnvironmentPublicationRecord) -> None:
+    """A publication and what its snapshot froze (D-12, E2-15).
+
+    Every line is something the publication makes world-visible, named rather
+    than implied: section 14.5 of `PLAN_BENCHMARKS.md` publishes nothing by
+    implication, and a person about to make a version public is owed the list.
+    """
+    snapshot = publication.snapshot
+    version = snapshot.version_uid or publication.version_uid
+    if snapshot.version_number is not None:
+        version = f"{snapshot.version_number} ({snapshot.version_uid})"
+    variants = ", ".join(sorted(snapshot.variants)) or "-"
+    lock = snapshot.lock
+    packages = f"{lock.package_count} packages" if lock.package_count else ""
+    scan = str((snapshot.scan_summary or {}).get("decision") or "") or "-"
+    _print(
+        _fields_table(
+            "Publication",
+            [
+                ("Status", publication.status),
+                ("Environment", snapshot.environment_name or publication.environment_uid),
+                ("Title", snapshot.title),
+                ("Version", version),
+                ("Published", publication.published_at),
+                ("By", publication.published_by),
+                # What the snapshot carries, which is what becomes public.
+                ("Variants", variants),
+                ("Size class", snapshot.size_class),
+                ("Lock", " ".join(part for part in (_short_digest(lock.digest), packages) if part)),
+                ("Scan", scan),
+                ("SBOM", snapshot.sbom_ref),
+                ("Licenses", ", ".join(snapshot.licenses) or "none named"),
+                ("README", f"{len(snapshot.readme)} characters" if snapshot.readme else "none"),
+            ],
+        )
+    )
 
 
 def display_trial(trial: EnvironmentTrial) -> None:
