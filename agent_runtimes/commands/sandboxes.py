@@ -323,7 +323,7 @@ def create_sandbox(
     """Create a sandbox."""
     options: dict[str, Any] = {}
     if environment:
-        options["environment_name"] = environment
+        options["environment"] = environment
     if name:
         options["name"] = name
     try:
