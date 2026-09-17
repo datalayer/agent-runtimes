@@ -35,6 +35,7 @@ import {
   QuestionIcon,
   PersonIcon,
   MailIcon,
+  ProjectIcon,
   ZapIcon,
 } from '@primer/octicons-react';
 import {
@@ -55,6 +56,7 @@ const ARTIFACT_ICONS = new Map<IItemType, Icon>([
   ['credits', NumberIcon],
   ['dataset', StackIcon],
   ['datasource', DatabaseIcon],
+  ['deck', ProjectIcon],
   ['document', FileIcon],
   ['documentation', BookOpenIcon],
   ['environment', ContainerIcon],

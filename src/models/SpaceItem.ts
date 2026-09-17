@@ -5,6 +5,7 @@
 
 import { INotebook } from './Notebook';
 import { IDocument } from './Document';
+import { IDeck } from './Deck';
 import { ICell } from './Cell';
 import { IEnvironment } from './Environment';
 import { ILesson } from './Lesson';
@@ -18,6 +19,7 @@ export type ISpaceItem =
   | ILesson
   | IExercise
   | IAssignment
-  | IDocument;
+  | IDocument
+  | IDeck;
 
 export default ISpaceItem;

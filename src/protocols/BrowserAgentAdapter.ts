@@ -186,8 +186,15 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
    */
   async sendToolResult(): Promise<void> {}
 
-  /** The model this agent asks, resolved once per request. */
-  private resolveModel(): LanguageModel {
+  /**
+   * The model this agent asks, resolved once per request.
+   *
+   * The chat's model menu sends its choice with each message, as it does to
+   * a server-side harness; here it names the model the inference service is
+   * asked for, over the one the agent was built with. A ready-made
+   * `languageModel` is the host's own choice and is not swapped out.
+   */
+  private resolveModel(requested?: string): LanguageModel {
     const { languageModel, inference, model } = this.browserConfig;
     if (languageModel) {
       return languageModel;
@@ -197,7 +204,7 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
         'A browser agent needs either a `languageModel` or an `inference` endpoint to reach one.',
       );
     }
-    return createBrowserModel({ ...inference, model });
+    return createBrowserModel({ ...inference, model: requested || model });
   }
 
   /**
@@ -209,7 +216,7 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
    */
   async sendMessage(
     message: ChatMessage,
-    options?: { messages?: ChatMessage[] },
+    options?: { messages?: ChatMessage[]; model?: string },
   ): Promise<void> {
     this.abortController?.abort();
     const abortController = new AbortController();
@@ -264,7 +271,7 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
 
     try {
       const result = streamText({
-        model: this.resolveModel(),
+        model: this.resolveModel(options?.model),
         system: this.browserConfig.instructions,
         messages: history,
         tools: this.tools,

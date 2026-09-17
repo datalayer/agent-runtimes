@@ -12,6 +12,7 @@ export * from './CodeSandboxSnapshot';
 export * from './CodeSandboxSnapshotDTO';
 export * from './Content';
 export * from './Course';
+export * from './Deck';
 export * from './Document';
 export * from './Environment';
 export * from './EnvironmentDTO';

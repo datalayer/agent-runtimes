@@ -331,6 +331,37 @@ describe('the browser adapter as a protocol adapter', () => {
     expect(error.error.message).toMatch(/control plane/);
   });
 
+  it('asks the inference service for the model the chat picked', async () => {
+    /*
+     * The chat's model menu sends its choice with every message, as it does
+     * to a server-side harness. In the page that choice has to reach the
+     * request to the inference service, over the model the agent was built
+     * with — and fall back to that one when the chat names none.
+     */
+    const asked: string[] = [];
+    const adapter = new BrowserAgentAdapter({
+      protocol: 'browser-vercel-ai',
+      baseUrl: '',
+      inference: {
+        inferenceUrl: 'https://inference.example',
+        token: 'tok',
+        fetch: async (_input, init) => {
+          asked.push(JSON.parse(String(init?.body)).model);
+          throw new TypeError('Failed to fetch');
+        },
+      },
+      model: 'bedrock:built-with',
+    });
+    adapter.subscribe(() => undefined);
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      model: 'bedrock:picked-in-the-chat',
+    });
+    await adapter.sendMessage(userMessage('hello'), { messages: [] });
+
+    expect(asked).toEqual(['bedrock:picked-in-the-chat', 'bedrock:built-with']);
+  });
+
   it('says what went wrong instead of throwing at the chat', async () => {
     const adapter = new BrowserAgentAdapter({
       protocol: 'browser-vercel-ai',
