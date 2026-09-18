@@ -50,6 +50,7 @@ manifest = PluginManifest(
 _COMMAND_GROUPS: tuple[str, ...] = (
     "agent_runtimes.commands.agents",
     "agent_runtimes.commands.agent_nodes",
+    "agent_runtimes.commands.agent_teams",
     "agent_runtimes.commands.benchmarks",
     "agent_runtimes.commands.checkpoints",
     "agent_runtimes.commands.console",

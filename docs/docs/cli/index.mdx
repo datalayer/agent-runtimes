@@ -223,6 +223,7 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `stop-mcp-servers` | Stop MCP servers for a running agent |
 | `agents` | Agent runtime lifecycle commands |
 | `agent-nodes` | Agent Node commands |
+| `agent-teams` | Catalogued agent teams: `list`, `show <team>`; `start <team> --goal …` a run; `runs [<team>]` and `status <run>` seat by seat; `monitor`, `steer`, `pause`, `resume`, `cancel`, `terminate` and `artifacts` a run — see [Agent teams](#agent-teams-command) |
 | `benchmarks` | Benchmarking commands |
 | `checkpoints` | Runtime checkpoint commands |
 | `console` | Runtime console commands |
@@ -241,6 +242,47 @@ agent-runtimes --help
 # Or using the Python module directly
 python -m agent_runtimes --help
 ```
+
+## `agent-teams` Command
+
+A team is a set of agents with a supervisor, catalogued in the agentspecs
+library (`agentspecs/teams/*.yaml`). A run of a team is one root execution on
+the orchestration control plane: the supervisor answers it, and each seat the
+team schedules is a child execution under it. `agent-teams` is the
+team-shaped way to that — it names a team by its id and a run by its root
+execution, and acts on the whole tree through the same implementation as
+`executions`.
+
+| Command | What it does |
+|---------|--------------|
+| `agent-teams list [--prefix …]` | The catalogued teams: id, name, mode (`sequential`, `parallel`, `supervisor`) and how many seats |
+| `agent-teams show <team>` | Its supervisor and its seats in order: name, role, what each waits on, its goal |
+| `agent-teams start <team> --goal … [--instructions …] [--criterion …] [--deadline …] [--watch]` | Start a run: the team's root execution, delegated the way a benchmark's team task is. `--watch` follows it until it is over |
+| `agent-teams runs [<team>] [--active] [-n 20]` | A team's runs (every team's without one), latest first |
+| `agent-teams status <run>` | The run's tree, seat by seat: status, attempts, when it last moved, and any error |
+| `agent-teams monitor <run>` | Stream every event of the run's tree until every execution in it is over |
+| `agent-teams steer <run> "<instructions>"` | Add instructions while the team works |
+| `agent-teams pause <run> [--reason …]` / `resume <run> [--checkpoint …]` | Stop at the next checkpoint without losing anything, and go on |
+| `agent-teams cancel <run> [--no-cascade]` | Stop the run and, by default, every seat under it; its history is kept |
+| `agent-teams terminate <run> [--keep-worker]` | End the run for good and release its workers |
+| `agent-teams artifacts <run>` | What the run produced, with every seat's by default |
+
+Every command takes `--account` to act in an organization and `-o json` for a
+machine-readable answer. A mutating command derives its idempotency key from
+what it asks, so running the same `start` twice is the same run; pass
+`--idempotency-key` to start another.
+
+```bash
+agent-runtimes agent-teams show notebook-benchmark
+agent-runtimes agent-teams start notebook-benchmark --goal "Profile customers.csv and report the duplicates" --watch
+agent-runtimes agent-teams runs notebook-benchmark --active
+agent-runtimes agent-teams status exec_5b8da50a4c83498d86a0b308bfb94909
+agent-runtimes agent-teams pause exec_5b8da50a4c83498d86a0b308bfb94909 --reason "Waiting for the data owner"
+```
+
+The group is `agent-teams` rather than `teams` because the Datalayer CLI's
+`teams` lists the people's teams an account belongs to. Installed beside it,
+the same commands are `datalayer agent-teams …`.
 
 ## Extending, and Being an Extension
 
