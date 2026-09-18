@@ -118,6 +118,9 @@ export function ChatEmptyState({
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
+            // A short opener sits in the middle of its fixed-width chip, not
+            // against its left edge with the rest of the chip empty.
+            justifyContent: 'center',
             width: SUGGESTION_CHIP_WIDTH,
             flex: `0 0 ${SUGGESTION_CHIP_WIDTH}px`,
             '&:hover': {
@@ -132,8 +135,13 @@ export function ChatEmptyState({
               fixed width leaves once its padding is spoken for, rather than
               a second, separately-guessed pixel figure; `minWidth: 0` is
               what lets it actually shrink there instead of overflowing the
-              chip — a plain flex child defaults to its content's width. */}
+              chip — a plain flex child defaults to its content's width.
+              `inline` makes it a block box: without it, Truncate takes
+              `display: inherit` and becomes the Label's `inline-flex`, a
+              flex container, where `text-overflow` does not apply — a long
+              opener was cut mid-letter instead of ending in an ellipsis. */}
           <Truncate
+            inline
             title={suggestion.message}
             maxWidth="100%"
             sx={{ minWidth: 0 }}

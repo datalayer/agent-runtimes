@@ -90,6 +90,28 @@ describe('ChatEmptyState', () => {
     expect(chip?.textContent).not.toContain('by region');
   });
 
+  it('centres a short opener in its chip, and ends a long one in an ellipsis', () => {
+    const { container } = render(
+      <ChatEmptyState
+        description="d"
+        suggestions={[{ title: 'Hi', message: 'Say hi to the agent' }]}
+        onSuggestionSubmit={vi.fn()}
+      />,
+    );
+    // The chip and its text both carry the whole request as their title.
+    const [chip, text] = Array.from(
+      container.querySelectorAll('[title="Say hi to the agent"]'),
+    ) as HTMLElement[];
+    expect(chip).toBeDefined();
+    expect(text).toBeDefined();
+    // Every chip is one fixed width; a short title sits in its middle.
+    expect(getComputedStyle(chip).justifyContent).toBe('center');
+    // Truncate's `inline` makes the text a block box. Without it the text
+    // inherits the chip's inline-flex, and text-overflow does not apply to a
+    // flex container: a long title was cut mid-letter, with no ellipsis.
+    expect(text.hasAttribute('data-inline')).toBe(true);
+  });
+
   it('draws no heading when nothing is grouped', () => {
     const { container } = render(
       <ChatEmptyState description="d" suggestions={openers.slice(0, 2)} />,
