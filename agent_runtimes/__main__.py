@@ -45,7 +45,6 @@ from agent_runtimes.commands.agent_mcp_servers import (
     stop_agent_mcp_servers,
 )
 from agent_runtimes.commands.agent_nodes import app as agent_nodes_app
-from agent_runtimes.commands.agent_teams import app as agent_teams_app
 from agent_runtimes.commands.agents import app as agents_app
 from agent_runtimes.commands.benchmarks import app as benchmarks_app
 from agent_runtimes.commands.checkpoints import app as checkpoints_app
@@ -441,7 +440,6 @@ app.add_typer(events_app)
 app.add_typer(executions_app)
 app.add_typer(agents_app)
 app.add_typer(agent_nodes_app)
-app.add_typer(agent_teams_app)
 app.add_typer(benchmarks_app)
 app.add_typer(checkpoints_app)
 app.add_typer(sandboxes_app)
