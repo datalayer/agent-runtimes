@@ -35,6 +35,7 @@ import {
 import { AiAgentIcon } from '@datalayer/icons-react';
 import { createPortal } from 'react-dom';
 import { ChatBase } from './base/ChatBase';
+import { ButtonGlow } from './display/ButtonGlow';
 import { useViewportDrag } from './useViewportDrag';
 import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import {
@@ -96,6 +97,14 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /** Brand color override. Defaults to the theme's `accent.emphasis` token. */
   brandColor?: string;
+
+  /**
+   * A soft light breathing around the button while the chat is closed, as
+   * if it were alive (see `ButtonGlow`). Still, and dimmer, for a reader who
+   * asks the system for reduced motion.
+   * @default true
+   */
+  buttonGlow?: boolean;
 
   /** Offset from edge (in pixels) */
   offset?: number;
@@ -201,6 +210,7 @@ export function ChatFloating({
   buttonIcon,
   buttonTooltip = 'Chat with AI',
   brandColor,
+  buttonGlow = true,
   offset = 20,
   animationDuration = 200,
   renderToolResult,
@@ -907,10 +917,13 @@ export function ChatFloating({
             sx={{
               position: 'relative',
               display: 'inline-flex',
+              // The glow's halos go behind the button, not behind the page.
+              isolation: 'isolate',
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
+            {buttonGlow && <ButtonGlow color={brandColor} />}
             <Tooltip
               text={`${buttonTooltip}${shortcutHint ? ` (${shortcutHint})` : ''}`}
               direction={position.includes('right') ? 'w' : 'e'}
