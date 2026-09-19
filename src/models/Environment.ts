@@ -415,6 +415,17 @@ export interface IEnvironmentConformanceReport {
   checks: IEnvironmentConformanceCheck[];
 }
 
+/** One step of a build as its workflow ran it (E2-19). */
+export interface IEnvironmentBuildStep {
+  name: string;
+  status: 'running' | 'succeeded' | 'failed' | 'skipped';
+  startedAt?: string;
+  finishedAt?: string;
+  /** For a failure: its section 10 code. */
+  code?: string;
+  message?: string;
+}
+
 export interface IEnvironmentBuildRecord {
   uid: string;
   environmentUid: string;
@@ -450,6 +461,12 @@ export interface IEnvironmentBuildRecord {
    * Absent from a Runtimes before 1.0.36.
    */
   retryable?: boolean;
+  /**
+   * The build's steps as its workflow ran them (E2-19), each kept by its
+   * name: `resolve`, `build`, `attest`, `smoke_test`… Absent from a Runtimes
+   * before 1.0.37 and from a build nothing reported for.
+   */
+  steps?: IEnvironmentBuildStep[];
   cacheHit: boolean;
   correlationId: string;
   requestedBy: string;
