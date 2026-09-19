@@ -438,6 +438,14 @@ const CALLS: Array<[string, () => Promise<unknown>, Sent]> = [
     { method: 'POST', url: `${API}/environment-builds/${BUILD}/retry` },
   ],
   [
+    'getEnvironmentVersionSandboxes',
+    () => environments.getEnvironmentVersionSandboxes(token, VERSION, {}, BASE),
+    {
+      method: 'GET',
+      url: `${API}/environment-versions/${VERSION}/sandboxes`,
+    },
+  ],
+  [
     "getEnvironmentQuotas (the caller's own)",
     () => environments.getEnvironmentQuotas(token, {}, {}, BASE),
     { method: 'GET', url: `${API}/environment-quotas` },
@@ -488,6 +496,8 @@ const SECTION_9_ROUTES = [
   'POST /environment-builds/{uid}/retry',
   // An owner's quotas and holdings, read before a refusal quotes them (E2-19).
   'GET /environment-quotas',
+  // The sandboxes running a version (E2-19).
+  'GET /environment-versions/{uid}/sandboxes',
 ];
 
 describe('Runtimes Environments API', () => {

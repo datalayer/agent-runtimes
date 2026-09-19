@@ -783,3 +783,27 @@ export interface IEnvironmentQuotas {
   limits: IEnvironmentQuotaLimits;
   holdings: IEnvironmentQuotaHoldings;
 }
+
+// -- The sandboxes a version runs (E2-19) --------------------------------------------
+
+/**
+ * One sandbox running a version. The caller's own carries its runtime uid,
+ * its digest and why it waits, if it does — the scheduler's own words, such
+ * as `Unschedulable: 0/6 nodes are available: 4 Insufficient cpu.`; anybody
+ * else's only its phase and start, so a page counts it without naming it.
+ */
+export interface IEnvironmentVersionSandbox {
+  /** `Pending` or `Running`: Kubernetes' phase of the sandbox's pod. */
+  phase: string;
+  startedAt: string;
+  yours: boolean;
+  runtimeUid?: string;
+  digest?: string;
+  waiting?: string;
+}
+
+/** `GET /environment-versions/{uid}/sandboxes`. */
+export interface IEnvironmentVersionSandboxes {
+  versionUid: string;
+  sandboxes: IEnvironmentVersionSandbox[];
+}

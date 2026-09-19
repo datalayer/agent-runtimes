@@ -50,6 +50,7 @@ import type {
   IEnvironmentPublicationRecord,
   IEnvironmentQuotas,
   IEnvironmentRecord,
+  IEnvironmentVersionSandboxes,
   IEnvironmentsError,
   IEnvironmentsPageQuery,
   IEnvironmentTrial,
@@ -615,6 +616,32 @@ export const listEnvironmentBuilds = async (
       baseUrl,
       `/environment-versions/${segment(versionUid, 'Version UID')}/builds`,
       { ...page },
+    ),
+    options,
+  );
+};
+
+/**
+ * The sandboxes running a version now: yours by uid, anybody else's counted (E2-19).
+ * @param token - Authentication token
+ * @param versionUid - The version's uid
+ * @param options - Correlation id and abort signal
+ * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
+ * @returns Promise resolving to the version's live sandboxes
+ */
+export const getEnvironmentVersionSandboxes = async (
+  token: string,
+  versionUid: string,
+  options: IEnvironmentsRequestOptions = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<IEnvironmentVersionSandboxes> => {
+  validateToken(token);
+  return send<IEnvironmentVersionSandboxes>(
+    token,
+    'GET',
+    registryUrl(
+      baseUrl,
+      `/environment-versions/${segment(versionUid, 'Version UID')}/sandboxes`,
     ),
     options,
   );
