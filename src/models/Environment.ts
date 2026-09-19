@@ -443,6 +443,13 @@ export interface IEnvironmentBuildRecord {
    * report with `passed: false` names the checks that failed and why.
    */
   conformanceReport?: IEnvironmentConformanceReport | Record<string, never>;
+  /**
+   * Whether the retry route takes this build: cancelled, or failed under a
+   * code another attempt can pass (section 10). Said by Runtimes with the
+   * build, so a page offers Retry only where it would be taken (E2-19).
+   * Absent from a Runtimes before 1.0.36.
+   */
+  retryable?: boolean;
   cacheHit: boolean;
   correlationId: string;
   requestedBy: string;
