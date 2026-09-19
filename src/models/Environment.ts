@@ -479,6 +479,15 @@ export interface IEnvironmentBuildRecord {
    * before 1.0.37 and from a build nothing reported for.
    */
   steps?: IEnvironmentBuildStep[];
+  /**
+   * What the build spent (E2-19): its minutes by the daily quota's own rule —
+   * from its claim to its end, or to now while it runs — and those minutes at
+   * its variant's rate, in credits. `metered` is false where the provider
+   * bills the owner's own account (D-8). Absent from a Runtimes before them.
+   */
+  buildMinutes?: number;
+  credits?: number;
+  metered?: boolean;
   cacheHit: boolean;
   correlationId: string;
   requestedBy: string;
@@ -829,6 +838,8 @@ export interface IEnvironmentVersionSandbox {
   runtimeUid?: string;
   digest?: string;
   waiting?: string;
+  /** Credits a second, for the caller's own: what it burns while it runs. */
+  burningRate?: number;
 }
 
 /** `GET /environment-versions/{uid}/sandboxes`. */
