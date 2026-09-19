@@ -344,6 +344,10 @@ class EnvironmentPublicationRecord(_RegistryRecord):
     snapshot: EnvironmentPublicationSnapshot = Field(
         default_factory=EnvironmentPublicationSnapshot
     )
+    #: What a second of the snapshot's size class costs, priced by Runtimes
+    #: when the publication is read: what a launch of it reserves by, since a
+    #: stranger has no listing entry of it to read a rate from.
+    burning_rate: Optional[float] = None
     #: What a conditional write names in ``if_match``.
     etag: str = ""
 

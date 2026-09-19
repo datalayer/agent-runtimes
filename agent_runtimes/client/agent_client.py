@@ -34,7 +34,10 @@ from agent_runtimes.mixins.evals import EvalsMixin
 from agent_runtimes.mixins.events import EventsMixin
 from agent_runtimes.mixins.ray import RayMixin
 from agent_runtimes.mixins.sandbox_snapshots import SandboxSnapshotsMixin
-from agent_runtimes.models.environment import EnvironmentModel
+from agent_runtimes.models.environment import (
+    EnvironmentModel,
+    EnvironmentPublicationRecord,
+)
 from agent_runtimes.models.sandbox_snapshot import SandboxSnapshotModel
 from agent_runtimes.runtimes import RuntimeService
 from agent_runtimes.runtimes.client import RuntimesMixin
@@ -836,6 +839,40 @@ class AgentClient(
             )
         return env_objs
 
+    def _publication_to_launch(
+        self, environment: str, version: Optional[Union[int, str]]
+    ) -> Optional[EnvironmentPublicationRecord]:
+        """The publication a stranger's launch names, or ``None`` when it names none.
+
+        Only a version uid finds one: a version number means something only
+        inside an environment the caller can already see. The publication
+        must still be public, and must be of the environment named, by its
+        uid or by its name after the account (``<account>/<name>``).
+        """
+        if (
+            version is None
+            or isinstance(version, int)
+            or str(version).strip().isdigit()
+        ):
+            return None
+        try:
+            publication = self.get_environment_publication(str(version).strip())
+        except Exception:  # noqa: BLE001 - not a publication this caller can read
+            return None
+        if publication.status != "published":
+            return None
+        named = environment.strip()
+        if (
+            named
+            not in (
+                publication.environment_uid,
+                publication.snapshot.environment_name,
+            )
+            and named.rsplit("/", 1)[-1] != publication.snapshot.environment_name
+        ):
+            return None
+        return publication
+
     def create_runtime(
         self,
         name: Optional[str] = None,
@@ -895,25 +932,31 @@ class AgentClient(
             A runtime object for code execution.
         """
         envs = self.list_environments()
-        if environment not in self._available_environments_names:
-            raise ValueError(
-                f"Environment '{environment}' not found. Available environments: {self._available_environments_names}"
-            )
-
         entry = next((env for env in envs if env.name == environment), None)
-        if entry is None:
+        if entry is not None:
+            # What a second costs is READ FROM THE LISTING, never written
+            # here: a platform entry carries its pool's rate, and a user
+            # environment the rate of the size class its promoted version
+            # names (PLAN_ENV.md, D-4, E1-19).
+            burning_rate, size_class = entry.burning_rate, entry.size_class
+        else:
+            # Somebody else's published version is in nobody's listing but
+            # its owner's: it is launched by its version uid, priced by the
+            # rate its publication carries (D-12, E2-15).
+            publication = self._publication_to_launch(environment, version)
+            if publication is None:
+                raise ValueError(
+                    f"Environment '{environment}' not found. Available environments: "
+                    f"{self._available_environments_names}"
+                )
+            environment = publication.environment_uid
+            burning_rate = publication.burning_rate
+            size_class = publication.snapshot.size_class
+        # A class nothing prices is refused rather than reserved at zero,
+        # which would ask the platform for a runtime it will not start.
+        if size_class and not burning_rate:
             raise ValueError(
-                f"Environment '{environment}' not found in environments list. Available: {[env.name for env in envs]}"
-            )
-        # What a second costs is READ FROM THE LISTING, never written here: a
-        # platform entry carries its pool's rate, and a user environment the
-        # rate of the size class its promoted version names (PLAN_ENV.md, D-4,
-        # E1-19). A class nothing prices is refused rather than reserved at
-        # zero, which would ask the platform for a runtime it will not start.
-        burning_rate = entry.burning_rate
-        if entry.size_class and not burning_rate:
-            raise ValueError(
-                f"Environment '{environment}' runs on the size class '{entry.size_class}', "
+                f"Environment '{environment}' runs on the size class '{size_class}', "
                 "which has no burning rate: it cannot be priced, so no runtime is created."
             )
         credits_limit = burning_rate * 60.0 * time_reservation
@@ -1163,7 +1206,9 @@ class AgentClient(
         dict[str, Any]
             The snapshot payload, or a failure with its message.
         """
-        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        runtime_name = (
+            runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        )
         if not runtime_name:
             return {"success": False, "message": "No pod name to snapshot."}
         return self._runtimes_as(api_key).snapshot(runtime_name, name)
@@ -1185,7 +1230,9 @@ class AgentClient(
         The three verbs differ only in which word they send, so they say so
         here rather than each repeating the same unwrapping.
         """
-        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        runtime_name = (
+            runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        )
         if not runtime_name:
             return False
         response = getattr(self._runtimes_as(api_key), verb)(runtime_name)
@@ -1210,7 +1257,9 @@ class AgentClient(
         RuntimeError
             If the runtime cannot be retrieved.
         """
-        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        runtime_name = (
+            runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        )
         if not runtime_name:
             raise RuntimeError("A pod name is required to get a runtime.")
 
@@ -1266,7 +1315,9 @@ class AgentClient(
         RuntimeError
             If the update fails.
         """
-        runtime_name = runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        runtime_name = (
+            runtime.runtime_name if isinstance(runtime, RuntimeService) else runtime
+        )
         if not runtime_name:
             raise RuntimeError("A pod name is required to update a runtime.")
 
