@@ -424,6 +424,18 @@ export interface IEnvironmentBuildStep {
   /** For a failure: its section 10 code. */
   code?: string;
   message?: string;
+  /**
+   * What the step found, for a page to list rather than leave in the log:
+   * `{kind: 'egress_refused', subject: 'github.com'}` for a host the build
+   * pool's egress proxy refused.
+   */
+  findings?: IEnvironmentBuildFinding[];
+}
+
+/** One finding of a build's step (E2-19): what it found, and what about. */
+export interface IEnvironmentBuildFinding {
+  kind: string;
+  subject: string;
 }
 
 export interface IEnvironmentBuildRecord {
