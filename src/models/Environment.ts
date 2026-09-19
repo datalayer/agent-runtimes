@@ -211,6 +211,13 @@ export interface IDatalayerEnvironment {
    * from its public page expects to find it.
    */
   fromLibrary?: boolean;
+
+  /**
+   * How a reader is shown an entry whose launch name is not its name: a
+   * Library entry is launched by its environment's uid, and shown as the
+   * name its owner gave it, `steps-drill`, rather than that uid (E2-19).
+   */
+  label?: string;
 }
 
 // -- The registry (PLAN_ENV.md, section 9) -------------------------------------

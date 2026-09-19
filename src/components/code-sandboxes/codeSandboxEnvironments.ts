@@ -193,7 +193,7 @@ export function codeSandboxEnvironmentOption(
   return {
     key: environment.name,
     title: environment.title || environment.name,
-    name: environment.name,
+    name: environment.label || environment.name,
     group: CODE_SANDBOX_ENVIRONMENT_GROUP_TITLES[group],
     version: version === undefined ? undefined : `v${version}`,
     sizeClass: environment.sizeClass || undefined,
@@ -260,6 +260,7 @@ export function libraryEnvironmentOf(
   const version = snapshot.versionNumber;
   return {
     name: publication.environmentUid,
+    label: snapshot.environmentName || undefined,
     uid: publication.environmentUid,
     title: snapshot.title || snapshot.environmentName,
     description: snapshot.readme ?? '',

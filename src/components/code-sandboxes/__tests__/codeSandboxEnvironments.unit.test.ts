@@ -245,6 +245,13 @@ describe('a publication offered to a stranger (E2-19)', () => {
     expect(codeSandboxEnvironmentVersion(entry)).toBe(2);
   });
 
+  it('is shown by the name its owner gave it, not the uid it launches by', () => {
+    const entry = libraryEnvironmentOf(publication())!;
+    const option = codeSandboxEnvironmentOption(entry, VIEWER);
+    expect(option.name).toBe('backfill-drill');
+    expect(option.key).toBe('01ENVIRONMENT');
+  });
+
   it('is listed under Library, whoever owns it', () => {
     const entry = libraryEnvironmentOf(publication())!;
     expect(codeSandboxEnvironmentGroupOf(entry, VIEWER)).toBe('library');
