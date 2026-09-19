@@ -287,6 +287,14 @@ class RuntimesClient:
                             delay_seconds,
                         )
                         time.sleep(delay_seconds)
+                        # A create that timed out may have been made all the
+                        # same: one launch that took longer than the read
+                        # timeout became four sandboxes, each reserving
+                        # credits (found live, 2026-09-19). The runtime this
+                        # request named is looked for before another is asked.
+                        made = self._made_as(body.get("given_name"))
+                        if made is not None:
+                            return made
                         continue
                     raise
 
@@ -322,6 +330,20 @@ class RuntimesClient:
 
         except Exception as e:
             return _failure(f"Unexpected error during runtime creation: {str(e)}")
+
+    def _made_as(self, given_name: Optional[str]) -> Optional[dict[str, Any]]:
+        """The runtime a create named ``given_name``, answered as a create answers, or ``None``."""
+        if not given_name:
+            return None
+        listed = self.list()
+        for runtime in listed.get("runtimes") or []:
+            if isinstance(runtime, dict) and runtime.get("given_name") == given_name:
+                return {
+                    "success": True,
+                    "message": "Runtime created.",
+                    "runtime": runtime,
+                }
+        return None
 
     def list(self) -> dict[str, Any]:
         """Every runtime this caller can see — ``GET /runtimes``."""
@@ -367,7 +389,9 @@ class RuntimesClient:
                 return _failure(f"Failed to parse runtime response: {str(e)}")
 
         except Exception as e:
-            return _failure(f"Unexpected error getting runtime {runtime_name}: {str(e)}")
+            return _failure(
+                f"Unexpected error getting runtime {runtime_name}: {str(e)}"
+            )
 
     def update(self, runtime_name: str, capabilities: list[str]) -> dict[str, Any]:
         """Change a runtime in place — ``PUT /runtimes/{runtime_name}``."""
@@ -397,7 +421,9 @@ class RuntimesClient:
                 return _failure(f"Failed to parse runtime update response: {str(e)}")
 
         except Exception as e:
-            return _failure(f"Unexpected error updating runtime {runtime_name}: {str(e)}")
+            return _failure(
+                f"Unexpected error updating runtime {runtime_name}: {str(e)}"
+            )
 
     # -- instance verbs ----------------------------------------------------
 
@@ -426,7 +452,9 @@ class RuntimesClient:
             )
 
         except Exception as e:
-            return _failure(f"Unexpected error stopping runtime {runtime_name}: {str(e)}")
+            return _failure(
+                f"Unexpected error stopping runtime {runtime_name}: {str(e)}"
+            )
 
     def pause(self, runtime_name: str, **body: Any) -> dict[str, Any]:
         """Suspend a runtime, keeping its state — ``POST /runtimes/{runtime_name}/pause``.
@@ -477,7 +505,9 @@ class RuntimesClient:
             return result
 
         except Exception as e:
-            return _failure(f"Unexpected error during {verb} of {runtime_name}: {str(e)}")
+            return _failure(
+                f"Unexpected error during {verb} of {runtime_name}: {str(e)}"
+            )
 
     def snapshot(self, runtime_name: str, name: str, **kwargs: Any) -> dict[str, Any]:
         """Capture a runtime's state under a name — ``POST /sandbox-snapshots``.
