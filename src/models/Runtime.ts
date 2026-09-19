@@ -108,6 +108,12 @@ export interface IRuntimeRecord {
    * Runtime credits reservation expiration timestamp
    */
   expired_at?: string;
+  /**
+   * Why the runtime's pod does not run yet, in Kubernetes' own words — the
+   * scheduler's `Unschedulable: 0/6 nodes are available: 4 Insufficient
+   * cpu.`, or an image that cannot be pulled — or empty once it runs.
+   */
+  waiting?: string;
 }
 
 /**
