@@ -89,3 +89,16 @@ def test_the_csv_keeps_the_cli_columns_first_and_adds_blocks_and_decisions(tmp_p
     assert rows[3]["block_type"] == "table" and rows[3]["block_is_evidence"] == "true"
     assert (rows[-1]["decision_kind"], rows[-1]["decision_scope_ref"], rows[-1]["decision_note"]) == ("expected_change", "launch-128", "As planned.")
     assert not list(tmp_path.glob("*.runs.csv"))
+
+
+def test_a_case_whose_agent_never_answered_says_why_in_the_report():
+    """A sandbox that answered HTTP 503 is not "output not captured": the report says
+    the agent did not answer, and why, when the run's case row carries it."""
+    from agent_runtimes.evals.report import _no_output_words
+
+    assert _no_output_words(
+        {"failure_stage": "infrastructure", "explanation": "Cloud agent chat failed (HTTP 503)"}
+    ) == "(no output: the agent did not answer — Cloud agent chat failed (HTTP 503))"
+    assert _no_output_words({"failure_stage": "infrastructure"}) == "(no output: the agent did not answer)"
+    # A row from before rows carried outputs: nothing more is known.
+    assert _no_output_words({"status": "passed"}) == "(per-case output not captured for this run)"

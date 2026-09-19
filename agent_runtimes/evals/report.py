@@ -2614,6 +2614,16 @@ def _extract_case_output_from_result(case_result: dict[str, Any]) -> Any:
     return None
 
 
+def _no_output_words(case_result: dict[str, Any]) -> str:
+    """Why a case has no output, when its row says: a task the agent never
+    answered (a sandbox's HTTP 503, a sandbox lost, a task that never ran)
+    carries its reason. Otherwise, the row predates rows carrying outputs."""
+    if str(case_result.get("failure_stage") or "") == "infrastructure":
+        reason = str(case_result.get("explanation") or "").strip()
+        return f"(no output: the agent did not answer — {reason})" if reason else "(no output: the agent did not answer)"
+    return "(per-case output not captured for this run)"
+
+
 def _is_synthetic_run(run: dict[str, Any]) -> bool:
     summary = _as_dict(run.get("summary"))
     report = _as_dict(run.get("report"))
@@ -2748,7 +2758,7 @@ def _run_detail_block_lines(
             else:
                 output_value = _extract_case_output_from_result(case_result)
                 if output_value is None:
-                    output_value = "(per-case output not captured for this run)"
+                    output_value = _no_output_words(case_result)
             expected_value = (
                 case_record.get("expected_output")
                 if isinstance(case_record, dict)
