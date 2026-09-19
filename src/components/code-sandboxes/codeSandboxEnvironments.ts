@@ -20,7 +20,10 @@
  * @module components/code-sandboxes/codeSandboxEnvironments
  */
 
-import type { IDatalayerEnvironment } from '../../models';
+import type {
+  IDatalayerEnvironment,
+  IEnvironmentPublicationRecord,
+} from '../../models';
 import type { ICodeSandboxEnvironmentOption } from './CodeSandboxEnvironmentSelect';
 
 /**
@@ -233,4 +236,44 @@ export function firstLaunchableCodeSandboxEnvironment(
   environments: readonly IDatalayerEnvironment[],
 ): IDatalayerEnvironment | undefined {
   return environments.find(isCodeSandboxEnvironmentLaunchable);
+}
+
+/**
+ * A publication, as the picker offers it to somebody who does not own it
+ * (D-12, E2-19).
+ *
+ * Nobody's listing holds another account's environment, so a reader who came
+ * from its Library page is offered it from the publication itself: launched by
+ * its environment uid and the version the publication froze, listed under
+ * *Library*, and priced by the rate the publication carries. `undefined` for a
+ * publication that has been withdrawn, which is no longer anyone's to launch.
+ */
+export function libraryEnvironmentOf(
+  publication: IEnvironmentPublicationRecord,
+): IDatalayerEnvironment | undefined {
+  if (publication.status !== 'published') {
+    return undefined;
+  }
+  const snapshot = publication.snapshot;
+  const spec = (snapshot.spec as { spec?: { language?: { name?: string } } })
+    ?.spec;
+  const version = snapshot.versionNumber;
+  return {
+    name: publication.environmentUid,
+    uid: publication.environmentUid,
+    title: snapshot.title || snapshot.environmentName,
+    description: snapshot.readme ?? '',
+    language: spec?.language?.name ?? 'python',
+    origin: 'user',
+    owner: publication.ownerUid,
+    fromLibrary: true,
+    sizeClass: snapshot.sizeClass,
+    burning_rate: publication.burningRate ?? undefined,
+    promotedVersion:
+      version === null || version === undefined
+        ? null
+        : { uid: publication.versionUid, version, status: 'ready' },
+    variants: Object.keys(snapshot.variants ?? {}),
+    availableVariants: Object.keys(snapshot.variants ?? {}),
+  };
 }

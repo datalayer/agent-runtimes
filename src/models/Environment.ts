@@ -557,6 +557,13 @@ export interface IEnvironmentPublicationRecord {
   publishedAt: string;
   updatedAt: string;
   snapshot: IEnvironmentPublicationSnapshot;
+  /**
+   * What a second of the snapshot's size class costs, priced by Runtimes when
+   * the publication is read (E2-15, E2-19): what a launch of it reserves by,
+   * since a stranger has no listing entry of it to read a rate from. Absent
+   * from a Runtimes before 1.0.35, and `null` for a class nothing prices.
+   */
+  burningRate?: number | null;
   /** What a conditional write names in `If-Match`. */
   etag: string;
 }

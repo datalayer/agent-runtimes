@@ -22,7 +22,9 @@ import {
   environmentVersionHref,
   firstLaunchableCodeSandboxEnvironment,
   isCodeSandboxEnvironmentLaunchable,
+  libraryEnvironmentOf,
 } from '../codeSandboxEnvironments';
+import type { IEnvironmentPublicationRecord } from '../../../models';
 
 const VIEWER = { uid: '01ADA', handle: 'ada' };
 
@@ -201,5 +203,66 @@ describe('the order the dropdown reads in', () => {
     expect(
       firstLaunchableCodeSandboxEnvironment([unbuilt, platform()])?.name,
     ).toBe('python-cpu-env');
+  });
+});
+
+describe('a publication offered to a stranger (E2-19)', () => {
+  const publication = (
+    changes: Partial<IEnvironmentPublicationRecord> = {},
+  ): IEnvironmentPublicationRecord =>
+    ({
+      versionUid: '01VERSION',
+      environmentUid: '01ENVIRONMENT',
+      ownerUid: '01SOMEBODYELSE',
+      status: 'published',
+      publishedBy: '01SOMEBODYELSE',
+      publishedAt: '2026-09-19T03:01:58Z',
+      updatedAt: '2026-09-19T03:01:58Z',
+      burningRate: 0.0008,
+      etag: '1',
+      snapshot: {
+        environmentUid: '01ENVIRONMENT',
+        environmentName: 'backfill-drill',
+        title: 'Backfill drill',
+        ownerUid: '01SOMEBODYELSE',
+        versionUid: '01VERSION',
+        versionNumber: 2,
+        spec: { spec: { language: { name: 'python' } } },
+        lock: {},
+        sbomRef: '',
+        scanSummary: {},
+        licenses: [],
+        sizeClass: 'small',
+        variants: { datalayer: {}, daytona: {} },
+        readme: '',
+      },
+      ...changes,
+    }) as unknown as IEnvironmentPublicationRecord;
+
+  it('launches by environment uid, at the version the publication froze', () => {
+    const entry = libraryEnvironmentOf(publication())!;
+    expect(entry.name).toBe('01ENVIRONMENT');
+    expect(codeSandboxEnvironmentVersion(entry)).toBe(2);
+  });
+
+  it('is listed under Library, whoever owns it', () => {
+    const entry = libraryEnvironmentOf(publication())!;
+    expect(codeSandboxEnvironmentGroupOf(entry, VIEWER)).toBe('library');
+    expect(CODE_SANDBOX_ENVIRONMENT_GROUP_TITLES.library).toBe('Library');
+  });
+
+  it('is priced by the rate the publication carries, and launchable only when it has one', () => {
+    expect(libraryEnvironmentOf(publication())!.burning_rate).toBe(0.0008);
+    expect(
+      isCodeSandboxEnvironmentLaunchable(libraryEnvironmentOf(publication())!),
+    ).toBe(true);
+    const unpriced = libraryEnvironmentOf(publication({ burningRate: null }))!;
+    expect(isCodeSandboxEnvironmentLaunchable(unpriced)).toBe(false);
+  });
+
+  it('is not offered once it has been withdrawn', () => {
+    expect(
+      libraryEnvironmentOf(publication({ status: 'unpublished' })),
+    ).toBeUndefined();
   });
 });

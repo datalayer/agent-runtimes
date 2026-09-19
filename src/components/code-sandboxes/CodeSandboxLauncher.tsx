@@ -37,7 +37,10 @@ import {
   codeSandboxEnvironmentOptions,
   codeSandboxEnvironmentVersion,
   firstLaunchableCodeSandboxEnvironment,
+  libraryEnvironmentOf,
 } from './codeSandboxEnvironments';
+import { getEnvironmentPublication } from '../../api/runtimes/environments';
+import type { IDatalayerEnvironment } from '../../models';
 import {
   getCodeSandboxGivenName,
   listCodeSandboxGivenNames,
@@ -153,6 +156,15 @@ export interface ICodeSandboxLauncherProps {
    * Optional submit button label override.
    */
   submitLabel?: string;
+
+  /**
+   * A published environment to offer and select: the version uid of its
+   * publication, as the Library page that sent the reader here names it.
+   * Nobody's listing holds another account's environment, so it is read from
+   * the publication, offered under *Library* and priced by the rate the
+   * publication carries (D-12, E2-19).
+   */
+  libraryVersionUid?: string;
 }
 
 /**
@@ -172,6 +184,7 @@ export function CodeSandboxLauncher(
     usageRoute = '/plans',
     submitLabel,
     startRuntime = true,
+    libraryVersionUid,
   } = props;
 
   const hasExample = startRuntime === 'with-example';
@@ -191,7 +204,57 @@ export function CodeSandboxLauncher(
     'local',
     runtimesStore.getState().multiServiceManager,
   );
-  const environments = manager.environments.get();
+  const listed = manager.environments.get();
+  /*
+   * A publication somebody else owns, which no listing of the viewer's holds
+   * (D-12, E2-19): read by its version uid, offered under *Library* beside
+   * the rest, priced by the rate the publication carries, and selected below,
+   * since it is what the reader came here to launch.
+   */
+  const [libraryEntry, setLibraryEntry] = useState<IDatalayerEnvironment>();
+  const [libraryRefusal, setLibraryRefusal] = useState('');
+  useEffect(() => {
+    if (!libraryVersionUid) {
+      return undefined;
+    }
+    let current = true;
+    getEnvironmentPublication(
+      iamStore.getState().token ?? '',
+      libraryVersionUid,
+      {},
+      runtimesStore.getState().runtimesUrl,
+    )
+      .then(publication => {
+        if (!current) {
+          return;
+        }
+        const entry = libraryEnvironmentOf(publication);
+        if (entry) {
+          setLibraryEntry(entry);
+        } else {
+          setLibraryRefusal(
+            'This environment is no longer published, so it cannot be launched from the Library.',
+          );
+        }
+      })
+      .catch(() => {
+        if (current) {
+          setLibraryRefusal(
+            'This published environment could not be read, so it cannot be launched from here.',
+          );
+        }
+      });
+    return () => {
+      current = false;
+    };
+  }, [libraryVersionUid]);
+  const environments = useMemo(
+    () =>
+      libraryEntry && !listed.some(entry => entry.name === libraryEntry.name)
+        ? [...listed, libraryEntry]
+        : listed,
+    [listed, libraryEntry],
+  );
   /*
    * The sandboxes of this Jupyter Server, offered beside those of the platform.
    *
@@ -331,6 +394,17 @@ export function CodeSandboxLauncher(
   );
   // Whether the runtim name has been changed by the user or not
   const [hasCustomRuntimeName, setHasCustomRuntimeName] = useState(false);
+  // The publication the reader came to launch, selected once it is read.
+  useEffect(() => {
+    if (!libraryEntry) {
+      return;
+    }
+    setSelection(libraryEntry.name);
+    if (!hasCustomRuntimeName) {
+      setRuntimeName(givenNameFor(libraryEntry));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryEntry]);
   const [homeFolder, setHomeFolder] = useState(false);
   const [openExample, setOpenExample] = useState(false);
   const [waitingForRuntime, setWaitingForRuntime] = useState(false);
@@ -467,7 +541,6 @@ export function CodeSandboxLauncher(
           setWaitingForRuntime(false);
         }
       } else if (shouldStartRuntime) {
-        success = false;
         let availableTrial = 1;
         let retryDelay = NOT_AVAILABLE_INIT_RETRY;
         // Should return success status.
@@ -648,6 +721,15 @@ export function CodeSandboxLauncher(
           }
         }}
       >
+        {libraryRefusal ? (
+          <Text
+            as="p"
+            sx={{ color: 'attention.fg' }}
+            data-testid="library-refusal"
+          >
+            {libraryRefusal}
+          </Text>
+        ) : null}
         <FormControl
           disabled={!!kernelSnapshot?.environment || environments.length === 0}
         >
