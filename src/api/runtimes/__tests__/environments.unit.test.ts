@@ -437,6 +437,25 @@ const CALLS: Array<[string, () => Promise<unknown>, Sent]> = [
     () => environments.retryEnvironmentBuild(token, BUILD, {}, BASE),
     { method: 'POST', url: `${API}/environment-builds/${BUILD}/retry` },
   ],
+  [
+    "getEnvironmentQuotas (the caller's own)",
+    () => environments.getEnvironmentQuotas(token, {}, {}, BASE),
+    { method: 'GET', url: `${API}/environment-quotas` },
+  ],
+  [
+    "getEnvironmentQuotas (an organization's)",
+    () =>
+      environments.getEnvironmentQuotas(
+        token,
+        { ownerType: 'organization', ownerUid: '01ORG' },
+        {},
+        BASE,
+      ),
+    {
+      method: 'GET',
+      url: `${API}/environment-quotas?ownerType=organization&ownerUid=01ORG`,
+    },
+  ],
 ];
 
 /** The routes of section 9, as E1-01 serves them; the log's `follow` is `subscribeToBuildLogs`. */
@@ -467,6 +486,8 @@ const SECTION_9_ROUTES = [
   'GET /environment-builds/{uid}/logs',
   'POST /environment-builds/{uid}/cancel',
   'POST /environment-builds/{uid}/retry',
+  // An owner's quotas and holdings, read before a refusal quotes them (E2-19).
+  'GET /environment-quotas',
 ];
 
 describe('Runtimes Environments API', () => {

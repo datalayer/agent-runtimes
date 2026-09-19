@@ -745,3 +745,41 @@ export interface IEnvironmentBuildLogPage {
 }
 
 export default IEnvironment;
+
+// -- Quotas (E1-13, E2-19) --------------------------------------------------------
+
+/** Section 13's preview limits, per owner. */
+export interface IEnvironmentQuotaLimits {
+  concurrentBuilds: number;
+  buildMinutesPerDay: number;
+  retainedVersions: number;
+  storedGib: number;
+}
+
+/** What an owner stores, and how it was measured. */
+export interface IEnvironmentStoredHoldings {
+  gib: number;
+  bytes: number;
+  source: string;
+  meteredArtifacts: number;
+  unmeteredArtifacts: number;
+}
+
+/** What an owner holds against each limit right now. */
+export interface IEnvironmentQuotaHoldings {
+  openBuilds: number;
+  buildMinutesToday: number;
+  retainedVersions: number;
+  storage: IEnvironmentStoredHoldings;
+}
+
+/**
+ * An owner's build quotas and holdings, `GET /environment-quotas`: the numbers
+ * a `DL_ENV_QUOTA_EXCEEDED` refusal quotes, read before one (E2-19).
+ */
+export interface IEnvironmentQuotas {
+  ownerType: 'user' | 'organization';
+  ownerUid: string;
+  limits: IEnvironmentQuotaLimits;
+  holdings: IEnvironmentQuotaHoldings;
+}

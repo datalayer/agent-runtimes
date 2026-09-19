@@ -48,6 +48,7 @@ import type {
   IEnvironmentBuildsPage,
   IEnvironmentFork,
   IEnvironmentPublicationRecord,
+  IEnvironmentQuotas,
   IEnvironmentRecord,
   IEnvironmentsError,
   IEnvironmentsPageQuery,
@@ -615,6 +616,36 @@ export const listEnvironmentBuilds = async (
       `/environment-versions/${segment(versionUid, 'Version UID')}/builds`,
       { ...page },
     ),
+    options,
+  );
+};
+
+/**
+ * An owner's build quotas and what it holds against each (E1-13, E2-19).
+ * @param token - Authentication token
+ * @param owner - The caller's own when empty; an organization's by its uid
+ * @param options - Correlation id and abort signal
+ * @param baseUrl - Base URL for the API (defaults to production Runtimes URL)
+ * @returns Promise resolving to the limits and the holdings
+ */
+export const getEnvironmentQuotas = async (
+  token: string,
+  owner: { ownerType?: 'user' | 'organization'; ownerUid?: string } = {},
+  options: IEnvironmentsRequestOptions = {},
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<IEnvironmentQuotas> => {
+  validateToken(token);
+  const query: Record<string, string> = {};
+  if (owner.ownerType) {
+    query.ownerType = owner.ownerType;
+  }
+  if (owner.ownerUid) {
+    query.ownerUid = owner.ownerUid;
+  }
+  return send<IEnvironmentQuotas>(
+    token,
+    'GET',
+    registryUrl(baseUrl, '/environment-quotas', query),
     options,
   );
 };
