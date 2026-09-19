@@ -151,6 +151,29 @@ export async function getRuntimes(): Promise<IRuntimeRecord[]> {
 }
 
 /**
+ * One runtime as the platform answers it now — why its pod waits included —
+ * or `null` when there is none by that uid (E2-19).
+ */
+export async function getRuntimeRecord(
+  id: string,
+): Promise<IRuntimeRecord | null> {
+  try {
+    const data = await requestDatalayerAPI<{ runtime?: IRuntimeRecord }>({
+      url: runtimeUrl(runtimesStore.getState().runtimesUrl, id),
+      token: iamStore.getState().token,
+    });
+    return data.runtime ?? null;
+  } catch (error) {
+    if (
+      (error as { response?: { status?: number } }).response?.status === 404
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
  * Delete a Runtime
  */
 export async function deleteRuntime(options: {
