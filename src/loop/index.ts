@@ -108,6 +108,9 @@ export {
   openConversationPanel,
   pageLayoutSheet,
   pageLayoutPanelOpen,
+  // How a host moves the composer: `sidebar` stands it in the conversation
+  // panel, under what was said, and opens the panel to show it.
+  setPageLayoutChatMode,
   type LoopPageLayoutConfig,
 } from './plugins/page-layout';
 export { useOptionalTeamSelection } from './plugins/agents/useTeamSelection';

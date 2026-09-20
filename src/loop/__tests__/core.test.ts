@@ -89,11 +89,35 @@ describe('parseCommand', () => {
 });
 
 describe('the prompt channel', () => {
-  it('reports that nothing was listening', () => {
+  it('holds what was said before anything was listening, and hands it to the first view', async () => {
+    // The composer is ready before the editor and its sandbox are. A message
+    // sent in that moment used to be dropped: it appeared in the conversation
+    // and was never answered, and sending it again was the only way to find
+    // out.
     const channel = createPromptChannel();
+    const seen: string[] = [];
 
-    // The shell needs to know, so it can say so instead of swallowing input.
-    expect(channel.submit('hello')).toBe(false);
+    expect(channel.submit('hi')).toBe(true);
+    expect(channel.submit('and again')).toBe(true);
+    channel.subscribe(message => seen.push(message));
+
+    expect(seen).toEqual([]);
+    await Promise.resolve();
+    expect(seen).toEqual(['hi', 'and again']);
+  });
+
+  it('hands what was held to the first view only, and only once', async () => {
+    const channel = createPromptChannel();
+    const first: string[] = [];
+    const second: string[] = [];
+
+    channel.submit('hi');
+    channel.subscribe(message => first.push(message));
+    channel.subscribe(message => second.push(message));
+    await Promise.resolve();
+
+    expect(first).toEqual(['hi']);
+    expect(second).toEqual([]);
   });
 
   it('delivers to every subscriber', () => {
@@ -106,15 +130,21 @@ describe('the prompt channel', () => {
     expect(seen).toEqual(['a:hello', 'b:hello']);
   });
 
-  it('stops delivering once unsubscribed', () => {
+  it('stops delivering once unsubscribed, and holds what comes after', async () => {
     const channel = createPromptChannel();
     const seen: string[] = [];
     const stop = channel.subscribe(message => seen.push(message));
 
     channel.submit('first');
     stop();
-    expect(channel.submit('second')).toBe(false);
+    channel.submit('second');
     expect(seen).toEqual(['first']);
+
+    // Held for whatever view comes next, the way the first message is.
+    const later: string[] = [];
+    channel.subscribe(message => later.push(message));
+    await Promise.resolve();
+    expect(later).toEqual(['second']);
   });
 
   it('delivers the same text as often as it is sent', () => {

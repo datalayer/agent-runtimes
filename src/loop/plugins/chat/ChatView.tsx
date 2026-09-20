@@ -442,16 +442,44 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   // button for something that is no longer there.
   useEffect(() => () => setViewControls(null), [setViewControls]);
 
+  /*
+   * Said before the adapter could take it.
+   *
+   * The composer is live while the chat is still starting — the shell shows
+   * it as soon as the view mounts — and a message sent in that moment used
+   * to be dropped, on the grounds that sending it late and out of context
+   * would be worse. It was worse: the message stood in the conversation with
+   * no reply and no reason, and the only way to find out was to send it
+   * again. Held instead, and sent the moment the adapter is ready, which is
+   * the next second or two rather than minutes.
+   */
+  const heldForAdapter = useRef<string[]>([]);
   useEffect(
     () =>
       workspace.prompts.subscribe(message => {
-        // A prompt typed before the adapter is ready is dropped rather than
-        // queued: silently sending it minutes later, out of context, is worse
-        // than saying nothing happened.
-        controlsRef.current?.send(message);
+        const send = controlsRef.current?.send;
+        if (!send) {
+          heldForAdapter.current.push(message);
+          return;
+        }
+        send(message);
       }),
     [workspace.prompts],
   );
+
+  // The adapter arrived: whatever was said while it was starting goes now.
+  useEffect(() => {
+    if (!sendReady || heldForAdapter.current.length === 0) {
+      return;
+    }
+    const held = heldForAdapter.current.splice(
+      0,
+      heldForAdapter.current.length,
+    );
+    for (const message of held) {
+      controlsRef.current?.send(message);
+    }
+  }, [sendReady]);
 
   /*
    * Fired once, on the first real send, for the life of this mounted chat —

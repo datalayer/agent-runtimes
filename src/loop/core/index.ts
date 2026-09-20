@@ -222,19 +222,37 @@ export type LoopWorkspaceContext = {
  * publishes, a mounted view subscribes, and neither imports the other.
  */
 export type PromptChannel = {
-  /** Publish a prompt. Returns whether anything was listening. */
+  /**
+   * Publish a prompt. Returns whether it will be answered: `false` only when
+   * nothing is listening and nothing is coming — a view that has not mounted
+   * yet holds the message instead (see {@link createPromptChannel}).
+   */
   submit: (message: string) => boolean;
   /** Listen for prompts. Returns an unsubscribe. */
   subscribe: (listener: (message: string) => void) => () => void;
 };
 
-/** Create a prompt channel. The shell owns one per workspace. */
+/**
+ * Create a prompt channel. The shell owns one per workspace.
+ *
+ * The shell's composer is on screen before the view that answers it: the
+ * editor and its sandbox are megabytes and take a moment, and the prompt is
+ * ready to type into immediately. A message sent in that moment used to be
+ * dropped — it appeared in the conversation and was never answered, and the
+ * only way to find out was to send it again — so an unheard message is held
+ * and handed to the first view that subscribes, in the order it was sent.
+ */
 export function createPromptChannel(): PromptChannel {
   const listeners = new Set<(message: string) => void>();
+  /** Said before anything was listening, waiting for the first view. */
+  const waiting: string[] = [];
   return {
     submit(message: string) {
       if (listeners.size === 0) {
-        return false;
+        waiting.push(message);
+        // Heard, as far as the sender is concerned: it is going to be
+        // answered, so the composer clears and no failure is reported.
+        return true;
       }
       for (const listener of [...listeners]) {
         listener(message);
@@ -243,6 +261,19 @@ export function createPromptChannel(): PromptChannel {
     },
     subscribe(listener) {
       listeners.add(listener);
+      if (waiting.length > 0) {
+        const held = waiting.splice(0, waiting.length);
+        /*
+         * Next tick, not now: `subscribe` is called from an effect as the
+         * view mounts, and a listener that started answering inside it would
+         * be setting state on a component in the middle of mounting.
+         */
+        queueMicrotask(() => {
+          for (const message of held) {
+            listener(message);
+          }
+        });
+      }
       return () => {
         listeners.delete(listener);
       };
