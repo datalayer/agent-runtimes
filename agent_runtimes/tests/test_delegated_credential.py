@@ -182,7 +182,7 @@ class TestTheGatewayIsReachedAsTheRun:
             return httpx.AsyncClient(headers=headers)
 
         monkeypatch.setattr(datalayer_gateway, "tracing_client", client)
-        monkeypatch.setenv("DATALAYER_JUPYTER_MCP_SERVER_URL", "http://localhost:4404/mcp/")
+        monkeypatch.setenv("DATALAYER_MCP_SERVER_URL", "http://localhost:4404/mcp/")
         chart = SimpleNamespace(id="chart")
         process = SimpleNamespace(id="datalayer")
         toolsets = toolsets_for_the_run([chart, process], TOKEN)

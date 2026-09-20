@@ -47,7 +47,7 @@ TOKEN_ENV_VARS = ("DATALAYER_TOKEN", "DATALAYER_API_KEY")
 
 def _mcp_url() -> str:
     return (
-        os.environ.get("DATALAYER_JUPYTER_MCP_SERVER_URL") or DEFAULT_MCP_URL
+        os.environ.get("DATALAYER_MCP_SERVER_URL") or DEFAULT_MCP_URL
     ).rstrip("/")
 
 

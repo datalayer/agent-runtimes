@@ -583,7 +583,7 @@ import {
 } from '@datalayer/agent-runtimes';
 
 // Example: Agent discovers a new MCP server that requires OAuth
-async function connectToMcpServer(jupyterMcpServerUrl: string) {
+async function connectToMcpServer(datalayerMcpServerUrl: string) {
   // 1. Discover the authorization server metadata
   const issuerUrl = 'https://auth.example.com';
   const metadata = await discoverAuthorizationServer(issuerUrl);

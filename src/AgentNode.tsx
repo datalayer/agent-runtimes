@@ -1131,8 +1131,8 @@ export function AgentNode() {
         getConfigUrlFromDocument('aiAgentsUrl') ||
         (import.meta as any).env?.VITE_DATALAYER_AI_AGENTS_URL ||
         'https://r1.datalayer.run';
-      const jupyterMcpServerUrl =
-        getConfigUrlFromDocument('jupyterMcpServerUrl') ||
+      const datalayerMcpServerUrl =
+        getConfigUrlFromDocument('datalayerMcpServerUrl') ||
         (import.meta as any).env?.VITE_DATALAYER_JUPYTER_MCP_SERVER_URL ||
         'https://mcp.datalayer.run/mcp';
       // Seed all per-service URLs to match the main UI login behavior.
@@ -1145,7 +1145,7 @@ export function AgentNode() {
         libraryUrl: iamUrl,
         aiAgentsUrl,
         aiInferenceUrl: aiInferenceUrl,
-        jupyterMcpServerUrl,
+        datalayerMcpServerUrl,
         otelUrl: iamUrl,
         growthUrl: iamUrl,
         successUrl: iamUrl,

@@ -1576,7 +1576,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
                 "libraryUrl": urls.library_url,
                 "aiAgentsUrl": urls.ai_agents_url,
                 "aiInferenceUrl": urls.ai_inference_url,
-                "jupyterMcpServerUrl": urls.jupyter_mcp_server_url,
+                "datalayerMcpServerUrl": urls.datalayer_mcp_server_url,
                 "otelUrl": urls.otel_url,
                 "growthUrl": urls.growth_url,
                 "successUrl": urls.success_url,

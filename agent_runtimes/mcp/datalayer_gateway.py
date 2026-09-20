@@ -38,9 +38,9 @@ def gateway_url() -> str:
     Returns
     -------
     str
-        ``DATALAYER_JUPYTER_MCP_SERVER_URL``, or the hosted endpoint.
+        ``DATALAYER_MCP_SERVER_URL``, or the hosted endpoint.
     """
-    return (os.environ.get("DATALAYER_JUPYTER_MCP_SERVER_URL") or DEFAULT_GATEWAY_URL).rstrip("/")
+    return (os.environ.get("DATALAYER_MCP_SERVER_URL") or DEFAULT_GATEWAY_URL).rstrip("/")
 
 
 def toolsets_for_the_run(toolsets: list[Any], token: str) -> list[Any]:
