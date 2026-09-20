@@ -3932,13 +3932,6 @@ function ChatBaseInner({
   ]);
 
   // ---- handleStop ----
-  useEffect(() => {
-    const w = window as unknown as { __m?: number };
-    w.__m = (w.__m ?? 0) + 1;
-    console.debug('[probe] ChatBase MOUNT #', w.__m);
-    return () => console.debug('[probe] ChatBase UNMOUNT');
-  }, []);
-
   const handleStop = useCallback(() => {
     stoppedRef.current = true;
     abortControllerRef.current?.abort();
