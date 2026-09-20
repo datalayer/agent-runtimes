@@ -193,7 +193,7 @@ class TestTheGatewayIsReachedAsTheRun:
         assert datalayer_gateway.gateway_url() == "http://localhost:4404/mcp"
 
     def test_the_chat_commands_server_gives_way_too(self) -> None:
-        command = SimpleNamespace(id="datalayer-jupyter-mcp")
+        command = SimpleNamespace(id="datalayer-mcp")
         [gateway] = toolsets_for_the_run([command], TOKEN)
         assert isinstance(gateway, MCPToolset)
 

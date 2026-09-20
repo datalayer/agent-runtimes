@@ -39,7 +39,7 @@ DEFAULT_MCP_URL = "https://mcp.datalayer.run/mcp"
 
 #: The identifier the server is registered under, so a second invocation
 #: updates the connection rather than adding a duplicate.
-SERVER_ID = "datalayer-jupyter-mcp"
+SERVER_ID = "datalayer-mcp"
 
 #: Where the token is looked for, in order.
 TOKEN_ENV_VARS = ("DATALAYER_TOKEN", "DATALAYER_API_KEY")

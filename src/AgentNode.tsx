@@ -1133,7 +1133,7 @@ export function AgentNode() {
         'https://r1.datalayer.run';
       const datalayerMcpServerUrl =
         getConfigUrlFromDocument('datalayerMcpServerUrl') ||
-        (import.meta as any).env?.VITE_DATALAYER_JUPYTER_MCP_SERVER_URL ||
+        (import.meta as any).env?.VITE_DATALAYER_MCP_SERVER_URL ||
         'https://mcp.datalayer.run/mcp';
       // Seed all per-service URLs to match the main UI login behavior.
       const coreApi = coreStore.getState() as any;

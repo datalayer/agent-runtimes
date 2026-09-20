@@ -28,7 +28,7 @@ DEFAULT_GATEWAY_URL = "https://mcp.datalayer.run/mcp"
 
 #: The ids a Datalayer gateway server is registered under: the catalog's, and
 #: the `/datalayer` chat command's.
-GATEWAY_SERVER_IDS = frozenset({"datalayer", "datalayer-jupyter-mcp"})
+GATEWAY_SERVER_IDS = frozenset({"datalayer", "datalayer-mcp"})
 
 
 def gateway_url() -> str:

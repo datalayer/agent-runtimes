@@ -289,8 +289,8 @@ export default defineConfig(({ mode, command }) => {
                   'https://r1.datalayer.run',
               )
               .replaceAll(
-                '%VITE_DATALAYER_JUPYTER_MCP_SERVER_URL%',
-                env.VITE_DATALAYER_JUPYTER_MCP_SERVER_URL ||
+                '%VITE_DATALAYER_MCP_SERVER_URL%',
+                env.VITE_DATALAYER_MCP_SERVER_URL ||
                   'https://mcp.datalayer.run/mcp',
               )
               .replaceAll(
