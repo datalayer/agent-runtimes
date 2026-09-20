@@ -833,7 +833,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const suggestionEntries = useContributions(LoopChatSuggestion);
   const hiddenOpeners = chatExtras.hiddenOpeners;
+  const hideOpeners = chatExtras.hideOpeners;
   const suggestions = useMemo((): (AgentSuggestion & { group?: string })[] => {
+    if (hideOpeners) {
+      return [];
+    }
     // What the host took off this page, by the chip's words — the same key
     // the two-group merge below uses to tell openers apart.
     const hidden = new Set(hiddenOpeners ?? []);
@@ -861,7 +865,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         .filter(item => !listed.has(item.text))
         .map(item => ({ ...item, group: memberName })),
     ];
-  }, [suggestionEntries, team, spec, member, agentId, hiddenOpeners]);
+  }, [
+    suggestionEntries,
+    team,
+    spec,
+    member,
+    agentId,
+    hiddenOpeners,
+    hideOpeners,
+  ]);
 
   /*
    * The same openers in the shape the chat's empty state asks for.

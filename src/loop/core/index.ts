@@ -677,6 +677,15 @@ export type LoopChatExtrasValue = {
    */
   hiddenOpeners?: string[];
   /**
+   * Every opener off, however many there are.
+   *
+   * `hiddenOpeners` takes a page's exceptions by name; this is the page that
+   * wants none of them — a landing page whose composer has moved under a
+   * conversation that has started, where a row of openers over it would be
+   * offering a first question to somebody who has already asked one.
+   */
+  hideOpeners?: boolean;
+  /**
    * Told what the agent has used, each time the chat learns it.
    *
    * The composer's usage band is for a reader who wants the numbers in the
