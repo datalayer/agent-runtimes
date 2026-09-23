@@ -122,7 +122,10 @@ export function createA2uiSurfacePlugin(
 
   const tools = surfaceToolNames();
   // A failed call is the chat's to draw: its default card says what went
-  // wrong, and a spinner that never ends would say nothing at all.
+  // wrong, and a spinner that never ends would say nothing at all. So is
+  // every tool that is not a surface: this renderer is the chat's only one,
+  // and returning nothing for a tool it does not own hid every other tool
+  // row — the notebook reads, the cell runs — from the transcript.
   const renderToolResult = (context: ToolCallRenderContext): ReactNode =>
     tools.has(context.toolName) && context.status !== 'error' ? (
       <SurfaceToolResult
@@ -132,7 +135,9 @@ export function createA2uiSurfacePlugin(
         onRendered={options.onRendered}
         onSubmitted={options.onSubmitted}
       />
-    ) : undefined;
+    ) : (
+      context.defaultUI
+    );
 
   const plugin = definePlugin({
     name:
