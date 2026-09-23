@@ -442,6 +442,11 @@ const A2UiAgentExample: React.FC = () => {
               <LoopEmbed
                 serverUrl={baseUrl}
                 target="local"
+                // What lets the target take: without the choice the agents
+                // plugin pins the sandbox to the page, whatever `target` says,
+                // and the chat then turns in-page, where the server's tools
+                // do not exist.
+                showAgentVariants
                 agentId={agentId}
                 defaultEditor="none"
                 showHeader

@@ -121,8 +121,10 @@ export function createA2uiSurfacePlugin(
   }
 
   const tools = surfaceToolNames();
+  // A failed call is the chat's to draw: its default card says what went
+  // wrong, and a spinner that never ends would say nothing at all.
   const renderToolResult = (context: ToolCallRenderContext): ReactNode =>
-    tools.has(context.toolName) ? (
+    tools.has(context.toolName) && context.status !== 'error' ? (
       <SurfaceToolResult
         key={context.toolCallId}
         context={context}

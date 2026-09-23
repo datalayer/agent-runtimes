@@ -64,7 +64,7 @@ import type {
 } from '../../types/chat';
 import { AgentDetails } from '../../agents/AgentDetails';
 import type { BuiltinTool } from '../../types/models';
-import { AI_MODEL_CATALOGUE } from '../../specs/models';
+import { AI_MODEL_CATALOGUE, DEFAULT_MODEL } from '../../specs/models';
 import type { ContextSnapshotData } from '../../types/context';
 import type { FrontendToolDefinition } from '../../types/tools';
 import {
@@ -2431,9 +2431,13 @@ function ChatBaseInner({
     if (offeredModels.length === 0 || isOffered(offeredModels, selectedModel)) {
       return;
     }
+    // The host's word first, then the server's default, then the platform's:
+    // the first row of a catalogue is an order of listing, not a choice, and
+    // opening on it sent the first message to Alibaba while the footer —
+    // drawn from the host's own model — said Claude.
     const opening = initialModelId(
       offeredModels,
-      initialModel || configQuery.data?.defaultModel,
+      initialModel || configQuery.data?.defaultModel || DEFAULT_MODEL,
     );
     if (opening && opening !== selectedModel) {
       setSelectedModel(opening);

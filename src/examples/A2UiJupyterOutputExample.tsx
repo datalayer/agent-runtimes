@@ -1182,9 +1182,18 @@ const A2UiJupyterOutputExample: React.FC = () => {
                       <LoopEmbed
                         serverUrl={serverUrl}
                         target="local"
+                        // No `showAgentVariants` on purpose: without the choice the
+                        // agents plugin pins the sandbox to the page, and this chat is
+                        // meant to turn in the page. The server agent above speaks
+                        // vercel-ai and only runs the code; it has no AG-UI route, so a
+                        // chat addressing it on the server got "404 Not Found". The
+                        // demo tool below is a frontend tool, and the in-page loop
+                        // calls it.
                         agentId={agentId}
                         defaultEditor="none"
                         showHeader
+                        // A reader asks for one demonstration after another: `+` starts over.
+                        chatHeaderButtons
                         plugins={chatPlugins}
                       />
                     ) : (

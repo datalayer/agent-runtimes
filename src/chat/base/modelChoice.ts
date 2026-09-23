@@ -59,3 +59,47 @@ export function initialModelId(
   const first = offered.find(isUsable) ?? offered[0];
   return first?.id;
 }
+
+/**
+ * One row of `/api/v1/configure/models`, as the server writes it.
+ *
+ * Snake case and its own flag names: the route is read by more than this
+ * chat, and its shape is the server's to keep.
+ */
+export type ServerCatalogueModel = {
+  id: string;
+  name?: string;
+  available?: boolean;
+  missing_env_vars?: string[];
+  reason?: string;
+  warning?: string | null;
+};
+
+/**
+ * The server's catalogue in the chat's shape.
+ *
+ * The route says `available`; the chat, the menu and the rules above read
+ * `isAvailable`. Handed over unmapped, every row looked usable, the menu
+ * offered all thirty-one, and the first message of a chat that opened before
+ * its spec was known went to the first row — Alibaba, and its missing key.
+ */
+export function readServerCatalogue(
+  payload: { models?: ServerCatalogueModel[] } | null | undefined,
+): ModelConfig[] {
+  return (payload?.models ?? []).map(model => {
+    const missing = model.missing_env_vars ?? [];
+    const reason =
+      model.reason ??
+      (missing.length > 0 ? `Set ${missing.join(', ')}` : undefined) ??
+      model.warning ??
+      undefined;
+    return {
+      id: model.id,
+      name: model.name ?? model.id,
+      isAvailable: model.available !== false,
+      ...(reason && model.available === false
+        ? { unavailableReason: reason }
+        : {}),
+    };
+  });
+}

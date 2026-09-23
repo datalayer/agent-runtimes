@@ -14,7 +14,12 @@
 
 import { describe, expect, it } from 'vitest';
 import type { ModelConfig } from '../../types/chat';
-import { initialModelId, isOffered, usableModels } from './modelChoice';
+import {
+  initialModelId,
+  isOffered,
+  readServerCatalogue,
+  usableModels,
+} from './modelChoice';
 
 const model = (id: string, isAvailable?: boolean): ModelConfig => ({
   id,
@@ -71,5 +76,49 @@ describe('whether a selection may stand', () => {
     expect(isOffered([sonnet46], alibaba.id)).toBe(false);
     expect(isOffered([alibaba, sonnet46], alibaba.id)).toBe(false);
     expect(isOffered([sonnet46], '')).toBe(false);
+  });
+});
+
+describe("the server's catalogue, read", () => {
+  it('turns `available` into the flag the chat reads', () => {
+    const offered = readServerCatalogue({
+      models: [
+        {
+          id: 'alibaba:qwen-max',
+          name: 'Alibaba Qwen-Max',
+          available: false,
+          missing_env_vars: ['ALIBABA_API_KEY'],
+        },
+        {
+          id: 'bedrock:us.anthropic.claude-sonnet-4-6',
+          name: 'Bedrock Claude Sonnet 4.6',
+          available: true,
+          missing_env_vars: [],
+        },
+        {
+          id: 'ollama:qwen3',
+          available: false,
+          reason: 'ollama is not running',
+        },
+      ],
+    });
+    expect(offered.map(m => [m.id, m.isAvailable])).toEqual([
+      ['alibaba:qwen-max', false],
+      ['bedrock:us.anthropic.claude-sonnet-4-6', true],
+      ['ollama:qwen3', false],
+    ]);
+    expect(offered[0].unavailableReason).toBe('Set ALIBABA_API_KEY');
+    expect(offered[1].unavailableReason).toBeUndefined();
+    expect(offered[2].unavailableReason).toBe('ollama is not running');
+    // And the opening pick is the one usable row, whatever came first.
+    expect(initialModelId(offered)).toBe(
+      'bedrock:us.anthropic.claude-sonnet-4-6',
+    );
+    expect(usableModels(offered)).toHaveLength(1);
+  });
+
+  it('reads nothing from no catalogue', () => {
+    expect(readServerCatalogue(null)).toEqual([]);
+    expect(readServerCatalogue({})).toEqual([]);
   });
 });

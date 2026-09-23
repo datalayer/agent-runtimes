@@ -50,6 +50,7 @@ import {
   useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
+import { readServerCatalogue } from '../../../chat/base/modelChoice';
 import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
 import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
 import { useAnonymousSessionStore } from '../../../runtimes/browser/anonymousToken';
@@ -998,13 +999,18 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     }
     // A host example's own frontend tools, folded in last (first name wins),
     // so a bespoke client tool like A2UI's run_jupyter_output_demo joins the
-    // agent's toolset without a plugin of its own.
+    // agent's toolset without a plugin of its own. Vouched for in the chat
+    // view as well: the filter below keeps the tools that leave the editors
+    // alone, and a host's tool touches no editor — the Jupyter Output
+    // example's chat had lost its one tool to that filter and answered
+    // "use the demo button" instead of running the demonstration.
     for (const tool of chatExtras.frontendTools ?? []) {
       if (owners.has(tool.name)) {
         continue;
       }
       owners.set(tool.name, 'chat-extras');
       merged.push(tool);
+      keep.add(tool.name);
     }
     /*
      * The view decides the toolset. With an editor on screen the agent has
@@ -1365,7 +1371,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       .then(response => (response.ok ? response.json() : { models: [] }))
       .then(payload => {
         if (!cancelled) {
-          setCatalogModels(payload.models ?? []);
+          // In the chat's shape: the route says `available`, the menu and
+          // the opening pick read `isAvailable`, and an unmapped row passes
+          // for usable. See `readServerCatalogue`.
+          setCatalogModels(readServerCatalogue(payload));
         }
       })
       // No catalogue is not an error worth a banner: the menu simply has
@@ -1750,6 +1759,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             disabled={chatDisabled}
             disableReason={disabledReason}
             protocol={protocol}
+            /*
+                The model this view is on, as the chat's opening pick.
+
+                `ChatBase` keeps the model it sends with, and opened on the
+                first row of whatever catalogue it had before the server
+                answered — Alibaba — while the footer, drawn from
+                `activeModel`, said Claude. Told the same model, both agree
+                from the first message.
+            */
+            initialModel={activeModel || undefined}
             /*
                 Who is answering, in the words its spec uses.
 
