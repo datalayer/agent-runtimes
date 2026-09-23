@@ -15,7 +15,7 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from versioning import ensure_spec_version, version_suffix
@@ -39,6 +39,31 @@ def _make_const_name(model_id: str) -> str:
     E.g. 'anthropic:claude-sonnet-4-5-20250514' -> 'ANTHROPIC_CLAUDE_SONNET_4_5_20250514'
     """
     return model_id.upper().replace(":", "_").replace("-", "_").replace(".", "_")
+
+
+def _pick_default(specs: list[dict]) -> Optional[dict]:
+    """The spec the generated DEFAULT_MODEL points at.
+
+    Among the specs that claim `default`, an **available** one wins. The two
+    flags answer different questions — which model to open on, and whether
+    this deployment may call it at all — and nothing stopped a spec set from
+    claiming the first and denying the second. When that happened the chat
+    opened on a model it could not use, and fell back to whatever was listed
+    first, which is how a Bedrock deployment ended up calling Alibaba.
+    """
+    claimed = [spec for spec in specs if spec.get("default", False)]
+    if not claimed:
+        return None
+    usable = [spec for spec in claimed if spec.get("available", False)]
+    if len(claimed) > 1:
+        print(
+            "  ! more than one model claims the default: "
+            + ", ".join(spec["id"] for spec in claimed)
+        )
+    if not usable:
+        print("  ! the default model is not available: " + claimed[0]["id"])
+        return claimed[0]
+    return usable[0]
 
 
 def _make_enum_name(model_id: str) -> str:
@@ -163,9 +188,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     )
 
     # Find default model
-    default_specs = [s for s in specs if s.get("default", False)]
-    if default_specs:
-        default_id = default_specs[0]["id"]
+    default_spec = _pick_default(specs)
+    if default_spec:
+        default_id = default_spec["id"]
         default_enum = _make_enum_name(default_id)
         lines.extend(
             [
@@ -365,11 +390,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     )
 
     # Default model
-    default_specs = [s for s in specs if s.get("default", False)]
-    if default_specs:
-        default_id = default_specs[0]["id"]
+    default_spec = _pick_default(specs)
+    if default_spec:
+        default_id = default_spec["id"]
         default_const = _make_const_name(default_id) + version_suffix(
-            default_specs[0]["version"]
+            default_spec["version"]
         )
         lines.extend(
             [

@@ -325,7 +325,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
     name="Bedrock Claude Sonnet 4.5",
     description="Claude Sonnet 4.5 via AWS Bedrock - balanced performance",
     provider="bedrock",
-    default=True,
+    default=False,
     available=False,
     required_env_vars=[
         "AWS_ACCESS_KEY_ID",
@@ -520,7 +520,7 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
 }
 
 
-DEFAULT_MODEL: AIModels = AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0
+DEFAULT_MODEL: AIModels = AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6
 
 
 def check_env_vars_available(env_vars: list[str]) -> bool:

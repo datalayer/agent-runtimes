@@ -391,6 +391,7 @@ async def list_catalog_models() -> dict[str, Any]:
         discover_installed_models,
         split_model_id,
     )
+    from agent_runtimes.models.models import credentials_ready
     from agent_runtimes.specs.models import AI_MODEL_CATALOGUE
 
     installed = discover_installed_models()
@@ -404,6 +405,11 @@ async def list_catalog_models() -> dict[str, Any]:
             for name in model.required_env_vars
             if not os.getenv(name.split(":")[0])
         ]
+        # The spec's variables are not the whole answer: a model whose
+        # credentials live in datalayer-ai-inference lists none, and needs its
+        # provider's own key when this process calls the provider directly.
+        # `credentials_ready` knows which of the two we are doing.
+        ready = not missing and credentials_ready(model)
         entry: dict[str, Any] = {
             "id": model.id,
             "name": model.name,
@@ -443,7 +449,7 @@ async def list_catalog_models() -> dict[str, Any]:
             # set of AWS credentials, so the whole family read as available and
             # Bedrock answered `AccessDeniedException` when one was picked.
             entitled = getattr(model, "available", True)
-            entry["available"] = bool(not missing and entitled)
+            entry["available"] = bool(ready and entitled)
             if not entitled:
                 entry["reason"] = "Not enabled for this deployment"
 

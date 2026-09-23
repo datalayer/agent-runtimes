@@ -329,7 +329,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel
     name: 'Bedrock Claude Sonnet 4.5',
     description: 'Claude Sonnet 4.5 via AWS Bedrock - balanced performance',
     provider: 'bedrock',
-    default: true,
+    default: false,
     available: false,
     requiredEnvVars: [
       'AWS_ACCESS_KEY_ID',
@@ -539,6 +539,6 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
 };
 
 export const DEFAULT_MODEL: AIModelId =
-  AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0;
+  AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6;
 export const DEFAULT_MODEL_SPEC: AIModel =
-  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1;
+  BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1;

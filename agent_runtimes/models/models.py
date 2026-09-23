@@ -9,17 +9,79 @@ from typing import Any, Sequence
 
 from pydantic_ai.settings import ModelSettings
 
-from agent_runtimes.specs.models import (
-    AI_MODEL_CATALOGUE as AI_MODEL_CATALOGUE_DICT,
-)
 from agent_runtimes.models.local import (
     LOCAL_PROVIDERS,
     build_local_model,
     is_local_model,
 )
+from agent_runtimes.specs.models import (
+    AI_MODEL_CATALOGUE as AI_MODEL_CATALOGUE_DICT,
+)
 from agent_runtimes.types import AIModelRuntime
 
 logger = logging.getLogger(__name__)
+
+
+#: What a provider needs **in this process** when the runtime calls it itself.
+#:
+#: A model spec lists the environment variables its provider needs, and most
+#: do. One kind cannot: a model whose credentials are held by
+#: datalayer-ai-inference needs nothing here *when the runtime routes through
+#: that service*, and its own key when the runtime calls the provider
+#: directly — which is what the local inference provider does. The spec has
+#: one field for two deployments, so it says "nothing needed" and this fills
+#: the other half in.
+#:
+#: Alibaba's Qwen models are the case that showed it: the menu offered them as
+#: ready on a machine with no key, and pydantic-ai answered "Set the
+#: `ALIBABA_API_KEY` environment variable" when one was picked.
+#:
+#: Any one of the names is enough — they are alternatives, not a set.
+DIRECT_PROVIDER_CREDENTIALS: dict[str, tuple[str, ...]] = {
+    "alibaba": ("ALIBABA_API_KEY", "DASHSCOPE_API_KEY"),
+}
+
+
+def effective_inference_provider() -> str:
+    """Where inference is sent: `local` (the provider itself) or `datalayer`."""
+    try:
+        # Imported here, not above: the routes import this module.
+        from agent_runtimes.routes.configure import (  # noqa: PLC0415
+            get_effective_inference_provider,
+        )
+
+        return str(get_effective_inference_provider())
+    except Exception:  # noqa: BLE001 - a missing route is not a credential answer
+        configured = (
+            (os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "")
+            .strip()
+            .lower()
+        )
+        return configured if configured in {"local", "datalayer"} else "local"
+
+
+def credentials_ready(spec_model: Any, inference_provider: str | None = None) -> bool:
+    """Whether this model can be called right now, credentials-wise.
+
+    The spec's own environment variables, and — when the runtime calls the
+    provider directly — the provider's key as well (see
+    {@link DIRECT_PROVIDER_CREDENTIALS}). A local model answers on
+    reachability instead, which its own discovery does.
+    """
+    if not check_env_vars_available(list(getattr(spec_model, "required_env_vars", ()))):
+        return False
+    provider = inference_provider or effective_inference_provider()
+    if provider == "datalayer":
+        # The inference service holds the keys; this process needs none.
+        return True
+    if is_local_model(getattr(spec_model, "id", "")):
+        return True
+    alternatives = DIRECT_PROVIDER_CREDENTIALS.get(
+        str(getattr(spec_model, "provider", "")), ()
+    )
+    if not alternatives:
+        return True
+    return any(os.environ.get(name) for name in alternatives)
 
 
 def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
@@ -334,7 +396,7 @@ def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
         fix, and a model we are not entitled to is not, so telling them the
         second is the first sends them off to do something pointless.
         """
-        env_ready = check_env_vars_available(spec_model.required_env_vars)
+        env_ready = credentials_ready(spec_model)
         entitled = getattr(spec_model, "available", True)
         is_available = env_ready and entitled
 

@@ -111,6 +111,7 @@ import {
   type PendingApproval,
 } from '../tools';
 import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+import { initialModelId, isOffered, usableModels } from './modelChoice';
 // EphemeralDocument statically imports `@datalayer/jupyter-lexical` (which
 // initialises Lumino-backed nodes on load). Lazy-load it so notebook-only chats
 // never pull lexical into the bundle or trigger its module side effects.
@@ -1985,9 +1986,10 @@ function ChatBaseInner({
       ? ((protocol?.options as { model?: string }).model as string)
       : undefined;
   const offeredModels = useMemo<ModelConfig[]>(() => {
+    // Only what can actually be called — see `modelChoice` for the rule.
     const fromConfig = availableModels || configQuery.data?.models;
     if (fromConfig?.length) {
-      return fromConfig;
+      return usableModels(fromConfig);
     }
     /*
      * The catalogue, filtered to what is worth offering.
@@ -2009,7 +2011,7 @@ function ChatBaseInner({
         provider: model.provider,
       }));
     if (catalogued.length > 0) {
-      return catalogued;
+      return usableModels(catalogued);
     }
     return browserModel
       ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
@@ -2405,7 +2407,7 @@ function ChatBaseInner({
     return () => clearTimeout(timer);
   }, [adjustTextareaHeight]);
 
-  // ---- Initialize model and tools when config is available ----
+  // ---- The model, whenever what is offered changes ----
   useEffect(() => {
     /*
      * `offeredModels`, not the two sources it is built from.
@@ -2415,28 +2417,40 @@ function ChatBaseInner({
      * sources, so that model was offered by the menu and never selected. The
      * menu draws nothing without a selection, so a browser agent had a model
      * list of one and no model control at all.
+     *
+     * Re-picked, not picked once. Before the server has answered, the offer
+     * is the browser's catalogue, and the chat chose from it — the first row,
+     * Alibaba, which the catalogue marks available because the platform is
+     * entitled to it. The server then answered with the one model this
+     * process can call, the guess was not in it, and nothing looked again:
+     * the trigger read "none selected" while every turn was still sent to
+     * Alibaba and came back asking for its key. A selection stands only while
+     * it is offered and usable; otherwise the preferred model — the agent's
+     * own, from the server — or the first usable one takes its place.
      */
-    if (offeredModels.length > 0 && !selectedModel) {
-      const modelsList = offeredModels;
-      const preferredModel = initialModel || configQuery.data?.defaultModel;
-      if (preferredModel) {
-        const modelExists = modelsList.some(m => m.id === preferredModel);
-        if (modelExists) {
-          setSelectedModel(preferredModel);
-        } else {
-          const firstAvailableModel = modelsList.find(
-            m => m.isAvailable !== false,
-          );
-          const firstModel = firstAvailableModel || modelsList[0];
-          if (firstModel) setSelectedModel(firstModel.id);
-        }
-      } else {
-        const firstAvailableModel = modelsList.find(
-          m => m.isAvailable !== false,
-        );
-        const firstModel = firstAvailableModel || modelsList[0];
-        if (firstModel) setSelectedModel(firstModel.id);
-      }
+    if (offeredModels.length === 0 || isOffered(offeredModels, selectedModel)) {
+      return;
+    }
+    const opening = initialModelId(
+      offeredModels,
+      initialModel || configQuery.data?.defaultModel,
+    );
+    if (opening && opening !== selectedModel) {
+      setSelectedModel(opening);
+    }
+  }, [
+    offeredModels,
+    selectedModel,
+    initialModel,
+    configQuery.data?.defaultModel,
+  ]);
+
+  // ---- Initialize tools when config is available ----
+  const toolsInitializedRef = useRef(false);
+  useEffect(() => {
+    // Once: a later change to the offer must not undo what the reader toggled.
+    if (offeredModels.length > 0 && !toolsInitializedRef.current) {
+      toolsInitializedRef.current = true;
 
       const allToolIds =
         configQuery.data?.builtinTools?.map(tool => tool.id) || [];

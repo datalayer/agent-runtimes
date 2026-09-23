@@ -410,6 +410,84 @@ screen — do not apologise for it or offer to fix the code.
     subagents=None,
 )
 
+EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1 = Agentspec(
+    id="example-a2ui-viewer",
+    version="0.0.1",
+    name="A2UI Viewer Agent",
+    description="Answers beside the A2UI Viewer, whose scenes — a recipe card, a booking form, a sales snapshot and a shipping status — it can be asked to describe or rebuild.",
+    tags=["a2ui", "viewer", "loop"],
+    domain=None,
+    enabled=True,
+    model="bedrock:us.anthropic.claude-sonnet-4-6",
+    inference_provider=None,
+    mcp_servers=[],
+    skills=[],
+    tools=[],
+    frontend_tools=[],
+    environment_name="ai-agents-env",
+    icon="browser",
+    emoji="🔍",
+    color="#6366F1",
+    suggestions=[
+        AgentSuggestion(
+            text="Show a recipe card for a Mediterranean quinoa bowl, with a photo, its rating and review count, prep and cook time, and how many it serves.",
+            summary="Recipe Card",
+            emoji="🍲",
+        ),
+        AgentSuggestion(
+            text="Build a table booking form with party size, date and time, dietary requirements and a Submit Reservation button.",
+            summary="Booking Form",
+            emoji="📅",
+        ),
+        AgentSuggestion(
+            text="Show a Q2 sales snapshot by category — Apparel, Electronics, Home Goods and Health & Beauty — as KPI tiles under one headline.",
+            summary="Sales Snapshot",
+            emoji="📈",
+        ),
+        AgentSuggestion(
+            text="Show a package status card with the tracking number, the steps from placed to shipped to out for delivery, and the ETA.",
+            summary="Shipping Status",
+            emoji="📦",
+        ),
+    ],
+    welcome_message="This is the A2UI Viewer. Pick a scene above to see a surface drawn from A2UI messages, or ask me for one of them here.",
+    welcome_notebook=None,
+    welcome_document=None,
+    sandbox_variant="browser",
+    harness="vercel-ai",
+    system_prompt="""You answer beside the A2UI Viewer, an example that renders A2UI surfaces
+from pasted protocol messages: a recipe card, a table booking form, a sales
+snapshot of KPI tiles, and a shipping status timeline.
+
+When asked for one of those, describe the surface precisely — its
+components, the data each shows, and the actions it offers — in the shape
+an A2UI surface would take. Keep answers short; the Viewer shows the real
+thing.
+""",
+    system_prompt_codemode_addons=None,
+    goal=None,
+    delegable=[],
+    protocol="vercel-ai",
+    ui_extension=None,
+    trigger=None,
+    model_configuration=None,
+    mcp_server_tools=None,
+    guardrails=None,
+    evals=None,
+    codemode=None,
+    output=None,
+    advanced=None,
+    checkpoints=None,
+    authorization_policy=None,
+    notifications=None,
+    memory="ephemeral",
+    pre_hooks=None,
+    post_hooks=None,
+    tool_hooks=None,
+    parameters=None,
+    subagents=None,
+)
+
 EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1 = Agentspec(
     id="example-agent-critic-loop-for-analysis",
     version="0.0.1",
@@ -12052,6 +12130,7 @@ AGENTSPECS: Dict[str, Agentspec] = {
     "example-a2a": EXAMPLE_A2A_AGENTSPEC_0_0_1,
     "example-a2ui-agent": EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
     "example-a2ui-jupyter-output": EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1,
+    "example-a2ui-viewer": EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1,
     "example-agent-critic-loop-for-analysis": EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1,
     "example-agentic-chat": EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
     "example-agentic-generative-ui": EXAMPLE_AGENTIC_GENERATIVE_UI_AGENTSPEC_0_0_1,

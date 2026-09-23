@@ -27,6 +27,15 @@ export function ModelSelector({
   isA2AProtocol: boolean;
 }) {
   const active = models.find(model => model.id === selectedModel);
+  /*
+   * A count, not a name — the same trigger as tools, skills, agents and
+   * suggestions beside it. The name is the longest label on the row and it
+   * changes width as the model changes, which pushed everything beside it
+   * about; the tooltip says which one, and how many there are to choose from.
+   */
+  const summary = isA2AProtocol
+    ? 'set by the agent config'
+    : `${active?.name ?? 'none selected'} · ${models.length} to choose from`;
 
   return (
     <Box
@@ -38,19 +47,12 @@ export function ModelSelector({
     >
       <ActionMenu>
         <ActionMenu.Anchor>
-          <Tooltip
-            text={
-              isA2AProtocol
-                ? 'This protocol does not take a model override'
-                : `Model — ${active?.name ?? 'none selected'}`
-            }
-            direction="n"
-          >
+          <Tooltip text={`Model — ${summary}`} direction="n">
             <Button
               type="button"
               variant="invisible"
               size="small"
-              aria-label={`Model — ${active?.name ?? 'none selected'}`}
+              aria-label={`Model — ${summary}`}
               leadingVisual={AiModelIcon}
               disabled={isA2AProtocol}
               sx={
@@ -59,9 +61,7 @@ export function ModelSelector({
                   : undefined
               }
             >
-              {/* No name beside the icon. A model id is the longest label on
-                the row and it changes width as the model changes, which
-                pushes everything beside it about; the tooltip says which. */}
+              <Text sx={{ fontSize: 0 }}>{models.length}</Text>
             </Button>
           </Tooltip>
         </ActionMenu.Anchor>

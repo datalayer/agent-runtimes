@@ -360,6 +360,23 @@ const ensureLocalJupyterToken = (): void => {
   }
 };
 
+/**
+ * Whether somebody signed in to this browser and is still signed in.
+ *
+ * The shell's own persisted sign-in, or the token core stored at sign-in —
+ * either one is a person, and a configured key must not stand in for them.
+ */
+const hasPersistedSignIn = (): boolean => {
+  try {
+    if (useSimpleAuthStore.getState().token) {
+      return true;
+    }
+    return Boolean(window.localStorage.getItem(DATALAYER_IAM_TOKEN_KEY));
+  } catch {
+    return false;
+  }
+};
+
 // Load configurations from DOM
 const loadConfigurations = () => {
   // Load Datalayer configuration
@@ -387,39 +404,22 @@ const loadConfigurations = () => {
         );
         coreStore.getState().setConfiguration(datalayerConfig);
 
-        // Also set the token in the IAM store for API authentication
-        if (datalayerConfig.token) {
-          // Use the setLogin method to set the token in IAM store
-          // For now, we'll just set a minimal user object since we don't have full user data
-          iamStore.getState().setLogin(
-            {
-              id: 'example-id',
-              handle: 'example-user',
-              email: 'example@datalayer.com',
-              firstName: 'Example',
-              lastName: 'User',
-              initials: 'EU',
-              displayName: 'Example User',
-              avatarUrl: '',
-              roles: [],
-              setRoles: () => {},
-              iamProviders: [],
-              settings: {},
-              unsubscribedFromOutbounds: false,
-              onboarding: {
-                clients: {
-                  Platform: 0,
-                  JupyterLab: 0,
-                  CLI: 0,
-                  VSCode: 0,
-                },
-                position: 'top' as const,
-                tours: {},
-              },
-              events: [],
-            },
-            datalayerConfig.token,
-          );
+        /*
+          A configured token — `VITE_DATALAYER_API_KEY` — is for a browser
+          nobody has signed in to. Somebody's own sign-in wins over it.
+
+          This used to sign the configured token in as a made-up user,
+          `example-id`, on every load. Core claims the browser's session for
+          whoever signs in and forgets it when a *different* person appears —
+          and a made-up user is a different person from whoever really signed
+          in, so every refresh wiped the real session: token, user and the
+          persisted sign-in of the shell. Now the token is only set, and core
+          asks IAM who it belongs to, which claims the session under the real
+          identity or logs the token out if IAM refuses it.
+        */
+        if (datalayerConfig.token && !hasPersistedSignIn()) {
+          iamStore.setState({ token: datalayerConfig.token });
+          void iamStore.getState().refreshUserByToken(datalayerConfig.token);
         }
       }
     } catch (e) {
@@ -625,13 +625,12 @@ const AgentRuntimesIAMCallback: React.FC = () => {
     const providerAccessToken = provider
       ? params.get(`${provider}_access_token`)
       : null;
+    // Only the providers whose token the browser is handed. A LinkedIn or
+    // Bluesky token never leaves IAM (IBrowserTokenProviderName), so there is
+    // nothing of theirs to keep here.
     if (
       providerAccessToken &&
-      (provider === 'github' ||
-        provider === 'google' ||
-        provider === 'linkedin' ||
-        provider === 'okta' ||
-        provider === 'bluesky')
+      (provider === 'github' || provider === 'google' || provider === 'okta')
     ) {
       iamStore
         .getState()

@@ -563,6 +563,84 @@ screen — do not apologise for it or offer to fix the code.
   subagents: undefined,
 };
 
+export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-a2ui-viewer',
+  version: '0.0.1',
+  name: 'A2UI Viewer Agent',
+  description: `Answers beside the A2UI Viewer, whose scenes — a recipe card, a booking form, a sales snapshot and a shipping status — it can be asked to describe or rebuild.`,
+  tags: ['a2ui', 'viewer', 'loop'],
+  domain: undefined,
+  enabled: true,
+  model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  mcpServers: [],
+  skills: [].filter(Boolean) as SkillSpec[],
+  tools: [],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'browser',
+  emoji: '🔍',
+  color: '#6366F1',
+  suggestions: [
+    {
+      text: 'Show a recipe card for a Mediterranean quinoa bowl, with a photo, its rating and review count, prep and cook time, and how many it serves.',
+      summary: 'Recipe Card',
+      emoji: '🍲',
+    },
+    {
+      text: 'Build a table booking form with party size, date and time, dietary requirements and a Submit Reservation button.',
+      summary: 'Booking Form',
+      emoji: '📅',
+    },
+    {
+      text: 'Show a Q2 sales snapshot by category — Apparel, Electronics, Home Goods and Health & Beauty — as KPI tiles under one headline.',
+      summary: 'Sales Snapshot',
+      emoji: '📈',
+    },
+    {
+      text: 'Show a package status card with the tracking number, the steps from placed to shipped to out for delivery, and the ETA.',
+      summary: 'Shipping Status',
+      emoji: '📦',
+    },
+  ],
+  welcomeMessage:
+    'This is the A2UI Viewer. Pick a scene above to see a surface drawn from A2UI messages, or ask me for one of them here.',
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'browser',
+  harness: 'vercel-ai',
+  systemPrompt: `You answer beside the A2UI Viewer, an example that renders A2UI surfaces
+from pasted protocol messages: a recipe card, a table booking form, a sales
+snapshot of KPI tiles, and a shipping status timeline.
+
+When asked for one of those, describe the surface precisely — its
+components, the data each shows, and the actions it offers — in the shape
+an A2UI surface would take. Keep answers short; the Viewer shows the real
+thing.
+`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  delegable: [],
+  protocol: 'vercel-ai',
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1: Agentspec =
   {
     id: 'example-agent-critic-loop-for-analysis',
@@ -13497,6 +13575,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'example-a2a': EXAMPLE_A2A_AGENTSPEC_0_0_1,
   'example-a2ui-agent': EXAMPLE_A2UI_AGENT_SPEC_0_0_1,
   'example-a2ui-jupyter-output': EXAMPLE_A2UI_JUPYTER_OUTPUT_AGENTSPEC_0_0_1,
+  'example-a2ui-viewer': EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1,
   'example-agent-critic-loop-for-analysis':
     EXAMPLE_AGENT_CRITIC_LOOP_FOR_ANALYSIS_AGENTSPEC_0_0_1,
   'example-agentic-chat': EXAMPLE_AGENTIC_CHAT_AGENTSPEC_0_0_1,
