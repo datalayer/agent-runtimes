@@ -33,7 +33,7 @@ import {
 } from '@primer/react';
 import { useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
-import { signal } from '@datalayer/reactor';
+import { computed, signal } from '@datalayer/reactor';
 import type { ChatLayoutContribution } from '../../core';
 
 /* A signal to read when the layout publishes no live stance: the hook needs one. */
@@ -249,8 +249,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      handler memoised with empty deps. Set once the spec is resolved below. */
   const agentNameRef = useRef<string>('');
   const extrasEntries = useContributions(LoopChatExtras);
+  /*
+   * Every contribution, merged, a later one winning a key both set.
+   *
+   * Only the first used to be read, which made the extras the property of
+   * whichever plugin registered first: the loop's own surface plugin
+   * contributes a tool-result renderer, and a host example contributing a
+   * banner beside it would have silenced one or the other.
+   */
+  const mergedExtras = useMemo(
+    () =>
+      computed<LoopChatExtrasValue>(() =>
+        extrasEntries.reduce<LoopChatExtrasValue>(
+          (merged, entry) => ({ ...merged, ...entry.value.extras.value }),
+          {},
+        ),
+      ),
+    [extrasEntries],
+  );
   const chatExtras = useSignalValue(
-    extrasEntries[0]?.value.extras ?? EMPTY_CHAT_EXTRAS,
+    extrasEntries.length > 0 ? mergedExtras : EMPTY_CHAT_EXTRAS,
   );
   /* Which editors have ever been mounted; they are never unmounted after —
      see the render below. A ref, not state: adding to it during render is
@@ -433,6 +451,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             busy,
             stop: controlsRef.current?.stop,
             newChat: controlsRef.current?.newChat,
+            send: controlsRef.current?.send,
           }
         : null,
     );
@@ -1802,6 +1821,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 that set `hideHeader` — means no bar.
               */
             showHeader={!config?.hideHeader && !!HeaderComponent}
+            // The `+` and the bin in the title bar, when the host asked for
+            // them; the header draws whatever `ChatBase` assembles here.
+            headerButtons={{
+              showNewChat: config?.headerButtons?.newChat ?? false,
+              showClear: config?.headerButtons?.clear ?? false,
+            }}
             renderHeader={
               HeaderComponent
                 ? headerProps => (

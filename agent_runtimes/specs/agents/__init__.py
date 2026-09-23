@@ -8,7 +8,6 @@ THIS FILE IS AUTO-GENERATED. DO NOT EDIT MANUALLY.
 """
 
 from typing import Dict
-
 from agent_runtimes.types import Agentspec
 
 from .agents import AGENTSPECS as ROOT_AGENTS

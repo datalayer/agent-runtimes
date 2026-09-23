@@ -296,6 +296,15 @@ export type ViewControls = {
   stop?: () => void;
   /** Start the view's work over — the chat resets its conversation. */
   newChat?: () => void;
+  /**
+   * Say something as the reader: the chat sends it as the next turn.
+   *
+   * For whatever speaks on the reader's behalf — a form pressed on a
+   * rendered surface, whose values the agent should answer. The chat had
+   * this control from the start and kept it to itself; a host with a
+   * message had no way in.
+   */
+  send?: (message: string) => void;
 };
 
 /** Props every view receives. */

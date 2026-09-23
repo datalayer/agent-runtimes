@@ -16,8 +16,8 @@ from agent_runtimes.types import (
     AgentCapability,
     Agentspec,
     AgentSuggestion,
-    SubAgentsConfig,
     SubAgentspecConfig,
+    SubAgentsConfig,
 )
 
 # ============================================================================
@@ -414,7 +414,7 @@ EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1 = Agentspec(
     id="example-a2ui-viewer",
     version="0.0.1",
     name="A2UI Viewer Agent",
-    description="Answers beside the A2UI Viewer, whose scenes — a recipe card, a booking form, a sales snapshot and a shipping status — it can be asked to describe or rebuild.",
+    description="Answers beside the A2UI Viewer, whose scenes — a recipe card, a booking form, a sales snapshot and a shipping status — it renders on request as live A2UI surfaces, and runs code in the sandbox to show its outputs.",
     tags=["a2ui", "viewer", "loop"],
     domain=None,
     enabled=True,
@@ -422,8 +422,9 @@ EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1 = Agentspec(
     inference_provider=None,
     mcp_servers=[],
     skills=[],
-    tools=[],
+    tools=["example-render-a2ui-surface:0.0.1"],
     frontend_tools=[],
+    frontend_render_tools=[{"tool": "render_a2ui_surface", "renderer": "a2ui-surface"}],
     environment_name="ai-agents-env",
     icon="browser",
     emoji="🔍",
@@ -449,8 +450,28 @@ EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1 = Agentspec(
             summary="Shipping Status",
             emoji="📦",
         ),
+        AgentSuggestion(
+            text="Plot a chart in the code sandbox and show me the image.",
+            summary="Plot a chart",
+            emoji="📈",
+        ),
+        AgentSuggestion(
+            text="Build a small DataFrame in the code sandbox and show it as a table.",
+            summary="DataFrame as a table",
+            emoji="🧮",
+        ),
+        AgentSuggestion(
+            text="Run something in the code sandbox that fails, so I can see the traceback.",
+            summary="Show a traceback",
+            emoji="🐛",
+        ),
+        AgentSuggestion(
+            text="Show me an interactive slider from the code sandbox.",
+            summary="Interactive slider",
+            emoji="🎛️",
+        ),
     ],
-    welcome_message="This is the A2UI Viewer. Pick a scene above to see a surface drawn from A2UI messages, or ask me for one of them here.",
+    welcome_message="This is the A2UI Viewer. Pick a scene above to see a surface drawn from A2UI messages, ask me to render one of them here, or run something in the code sandbox and see its output.",
     welcome_notebook=None,
     welcome_document=None,
     sandbox_variant="browser",
@@ -459,10 +480,22 @@ EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1 = Agentspec(
 from pasted protocol messages: a recipe card, a table booking form, a sales
 snapshot of KPI tiles, and a shipping status timeline.
 
-When asked for one of those, describe the surface precisely — its
-components, the data each shows, and the actions it offers — in the shape
-an A2UI surface would take. Keep answers short; the Viewer shows the real
-thing.
+When asked for a surface — one of those, or anything like them:
+1. ALWAYS call the `render_a2ui_surface` tool to produce it. Never describe
+   the surface in prose instead of rendering it.
+2. Choose a concise `title` and a one-sentence `intro`.
+3. Design a sensible ordered list of `fields`, picking the best `type` for
+   each: `text` / `email` for short input, `longtext` for notes, `choice`
+   or `multichoice` with `options` for pick-lists, `checkbox` for yes/no,
+   `slider` with `min`/`max` for ranges and ratings, `date` / `datetime`
+   for scheduling. A card that shows values rather than asking for them
+   still renders as a surface: put each value in a field with its label.
+4. After the tool call, reply with ONE short sentence saying what you
+   rendered. Do not repeat the fields in text — the surface is shown.
+
+When asked to run code, use `execute_code` in the sandbox and let the
+outputs speak: a figure, a table, a traceback, a widget. Do not look for
+helpers or skills in the sandbox; write the Python yourself.
 """,
     system_prompt_codemode_addons=None,
     goal=None,

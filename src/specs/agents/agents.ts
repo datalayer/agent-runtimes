@@ -567,15 +567,18 @@ export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-a2ui-viewer',
   version: '0.0.1',
   name: 'A2UI Viewer Agent',
-  description: `Answers beside the A2UI Viewer, whose scenes — a recipe card, a booking form, a sales snapshot and a shipping status — it can be asked to describe or rebuild.`,
+  description: `Answers beside the A2UI Viewer, whose scenes — a recipe card, a booking form, a sales snapshot and a shipping status — it renders on request as live A2UI surfaces, and runs code in the sandbox to show its outputs.`,
   tags: ['a2ui', 'viewer', 'loop'],
   domain: undefined,
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
-  tools: [],
+  tools: [TOOL_MAP['example-render-a2ui-surface:0.0.1']],
   frontendTools: [],
+  frontendRenderTools: [
+    { tool: 'render_a2ui_surface', renderer: 'a2ui-surface' },
+  ],
   environmentName: 'ai-agents-env',
   icon: 'browser',
   emoji: '🔍',
@@ -601,9 +604,29 @@ export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
       summary: 'Shipping Status',
       emoji: '📦',
     },
+    {
+      text: 'Plot a chart in the code sandbox and show me the image.',
+      summary: 'Plot a chart',
+      emoji: '📈',
+    },
+    {
+      text: 'Build a small DataFrame in the code sandbox and show it as a table.',
+      summary: 'DataFrame as a table',
+      emoji: '🧮',
+    },
+    {
+      text: 'Run something in the code sandbox that fails, so I can see the traceback.',
+      summary: 'Show a traceback',
+      emoji: '🐛',
+    },
+    {
+      text: 'Show me an interactive slider from the code sandbox.',
+      summary: 'Interactive slider',
+      emoji: '🎛️',
+    },
   ],
   welcomeMessage:
-    'This is the A2UI Viewer. Pick a scene above to see a surface drawn from A2UI messages, or ask me for one of them here.',
+    'This is the A2UI Viewer. Pick a scene above to see a surface drawn from A2UI messages, ask me to render one of them here, or run something in the code sandbox and see its output.',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'browser',
@@ -612,10 +635,22 @@ export const EXAMPLE_A2UI_VIEWER_AGENTSPEC_0_0_1: Agentspec = {
 from pasted protocol messages: a recipe card, a table booking form, a sales
 snapshot of KPI tiles, and a shipping status timeline.
 
-When asked for one of those, describe the surface precisely — its
-components, the data each shows, and the actions it offers — in the shape
-an A2UI surface would take. Keep answers short; the Viewer shows the real
-thing.
+When asked for a surface — one of those, or anything like them:
+1. ALWAYS call the \`render_a2ui_surface\` tool to produce it. Never describe
+   the surface in prose instead of rendering it.
+2. Choose a concise \`title\` and a one-sentence \`intro\`.
+3. Design a sensible ordered list of \`fields\`, picking the best \`type\` for
+   each: \`text\` / \`email\` for short input, \`longtext\` for notes, \`choice\`
+   or \`multichoice\` with \`options\` for pick-lists, \`checkbox\` for yes/no,
+   \`slider\` with \`min\`/\`max\` for ranges and ratings, \`date\` / \`datetime\`
+   for scheduling. A card that shows values rather than asking for them
+   still renders as a surface: put each value in a field with its label.
+4. After the tool call, reply with ONE short sentence saying what you
+   rendered. Do not repeat the fields in text — the surface is shown.
+
+When asked to run code, use \`execute_code\` in the sandbox and let the
+outputs speak: a figure, a table, a traceback, a widget. Do not look for
+helpers or skills in the sandbox; write the Python yourself.
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,

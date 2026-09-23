@@ -40,6 +40,8 @@ import {
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
 import { TurnFooter } from './TurnFooter';
 import { normalizeAssistantMarkdown } from './assistantMarkdown';
+import { parseFormSubmission } from './formSubmission';
+import { FormSubmissionMessage } from './FormSubmissionMessage';
 
 import { isToolCallMessage, getMessageText } from '../../utils';
 import { A2AAgentDialog, a2aAgentDetails } from '../tools/A2AAgentDialog';
@@ -1213,15 +1215,25 @@ export function ChatMessageList({
                 </Box>
               ) : null}
               {isUser ? (
-                <Text
-                  sx={{
-                    fontSize: 1,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {getMessageText(message)}
-                </Text>
+                (() => {
+                  // A submitted form is drawn as the form, not as the JSON
+                  // the agent reads — see `formSubmission`.
+                  const text = getMessageText(message);
+                  const submission = parseFormSubmission(text);
+                  return submission ? (
+                    <FormSubmissionMessage submission={submission} />
+                  ) : (
+                    <Text
+                      sx={{
+                        fontSize: 1,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {text}
+                    </Text>
+                  );
+                })()
               ) : message.live && !getMessageText(message) ? (
                 <TypingDots size={6} />
               ) : (

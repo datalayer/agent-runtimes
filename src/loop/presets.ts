@@ -39,6 +39,7 @@ import {
 } from './plugins/agents';
 import { ChatPlugin, type ChatPluginConfig } from './plugins/chat';
 import { ChatHeaderPlugin } from './plugins/chat-header';
+import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
 import { ChatViewPlugin } from './plugins/chat-view';
 import { DocumentViewPlugin } from './plugins/document-view';
 import { InputPromptPlugin } from './plugins/input-prompt';
@@ -68,6 +69,11 @@ export type LoopPresetOptions = {
   showViewSelector?: boolean;
   /** Whether the chat draws its own header. */
   hideChatHeader?: boolean;
+  /**
+   * Whether the chat's header offers `+` (a new chat) and the bin (clear).
+   * Off by default; see `ChatPluginConfig.headerButtons`.
+   */
+  chatHeaderButtons?: boolean;
   /** Where the prompt sits. Passed through to the chat plugin. */
   promptPlacement?: ChatPluginConfig['promptPlacement'];
   /**
@@ -213,6 +219,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     defaultEditor = 'notebook',
     showViewSelector = true,
     hideChatHeader = false,
+    chatHeaderButtons = false,
     promptPlacement,
     autoFocusPrompt = true,
     fullScreenTopOffset = 0,
@@ -248,6 +255,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       // to choose.
       showSurfaceSelector: editors && showViewSelector && !editorSelector,
       hideHeader: hideChatHeader,
+      headerButtons: { newChat: chatHeaderButtons, clear: chatHeaderButtons },
       promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
       autoFocusPrompt,
       fullScreenTopOffset,
@@ -258,6 +266,10 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // still switched individually in the plugins panel.
     configurePlugin(InputPromptPlugin, { firstPromptHook }),
     ChatHeaderPlugin,
+    // An agent whose spec binds a tool to the `a2ui-surface` renderer gets
+    // its surfaces drawn and submitted without a line of host code. Idle
+    // for every other agent: it answers only for tools some spec bound.
+    A2uiSurfacePlugin,
     // One footer icon per view, in the composer where the writing hand
     // already is. Each editor's icon withdraws while its editor is not
     // contributed, so mounting these unconditionally costs an absent editor

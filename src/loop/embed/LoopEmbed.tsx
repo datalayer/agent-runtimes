@@ -115,6 +115,7 @@ export function LoopEmbed({
       preset.defaultEditor,
       preset.showViewSelector,
       preset.hideChatHeader,
+      preset.chatHeaderButtons,
       preset.promptPlacement,
       preset.autoFocusPrompt,
       preset.fullScreenTopOffset,

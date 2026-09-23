@@ -165,7 +165,9 @@ def _with_subagents(
     """
     if request.subagents is None:
         return spec
-    base = spec or Agentspec(id=agent_id, name=request.name, description=request.description)
+    base = spec or Agentspec(
+        id=agent_id, name=request.name, description=request.description
+    )
     return base.model_copy(update={"subagents": request.subagents})
 
 
@@ -732,7 +734,9 @@ def _sandbox_variant_note(variant: str) -> str:
     return _SANDBOX_VARIANT_NOTES.get(variant, _DEFAULT_SANDBOX_VARIANT_NOTE)
 
 
-def _build_sandbox_only_system_prompt(variant: str) -> str:
+def _build_sandbox_only_system_prompt(
+    variant: str, skills_enabled: bool = False
+) -> str:
     """
     Build a system-prompt section that tells the LLM it has a sandbox available
     with ``execute_code`` but without MCP discovery tools (list_servers,
@@ -742,13 +746,26 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
     is not.  The agent can call ``execute_code`` directly; MCP server discovery
     tools are disabled.
 
+    Skills are mentioned only when the agent has them. The line used to be
+    unconditional, and an agent with no skills read it as a promise: asked for
+    a surface, it ran ``await list_skills()`` in the sandbox to find one, and
+    the sandbox answered ``NameError: name 'list_skills' is not defined`` —
+    the bindings that define it are generated only for an agent with skills.
+
     Args:
         variant: The effective sandbox variant.
+        skills_enabled: Whether the agent has skills to run from the sandbox.
 
     Returns:
         A Markdown string suitable for appending to the system prompt.
     """
     variant_note = _sandbox_variant_note(variant)
+    skills_line = (
+        "- Skills can read, transform, and return results from sandbox state.\n"
+        if skills_enabled
+        else "- There are no skills and no skill helpers here: write the Python "
+        "yourself, and nothing else runs in the sandbox but execute_code.\n"
+    )
     return (
         "## Sandbox\n"
         "\n"
@@ -757,8 +774,8 @@ def _build_sandbox_only_system_prompt(variant: str) -> str:
         "\n"
         "Use **execute_code** to run Python directly in the sandbox. Key points:\n"
         "- Variables set by pre-launch hooks are already defined — read them directly.\n"
-        "- Skills can read, transform, and return results from sandbox state.\n"
-        "- MCP server discovery tools (list_servers, search_tools) are not available "
+        + skills_line
+        + "- MCP server discovery tools (list_servers, search_tools) are not available "
         "in this mode.\n"
     )
 
@@ -2060,7 +2077,7 @@ async def create_agent(
             final_system_prompt = (
                 final_system_prompt
                 + "\n\n"
-                + _build_sandbox_only_system_prompt(effective_variant)
+                + _build_sandbox_only_system_prompt(effective_variant, skills_enabled)
             )
         # Codemode: append execute_code / codemode tool instructions.
         if request.enable_codemode and request.system_prompt_codemode_addons:

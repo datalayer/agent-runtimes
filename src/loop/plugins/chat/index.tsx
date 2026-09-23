@@ -114,6 +114,17 @@ export type ChatPluginConfig = {
    */
   hideHeader: boolean;
   /**
+   * Whether the title bar offers a way to start over.
+   *
+   * `newChat` is the `+`: a fresh thread, the transcript emptied. `clear`
+   * is the bin: the same emptying, behind a confirmation, and drawn only
+   * while there is something to empty. Both off by default — a workspace
+   * embedded in a page is usually one conversation — and on for an example
+   * whose reader will ask for one surface after another and want the last
+   * one gone.
+   */
+  headerButtons: { newChat: boolean; clear: boolean };
+  /**
    * Whether the chat renders a prompt at all.
    *
    * False by default: the prompt is most of what a chat is. True is for a
@@ -194,6 +205,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     defaultSurface: 'notebook',
     showSurfaceSelector: true,
     hideHeader: false,
+    headerButtons: { newChat: false, clear: false },
     hidePrompt: false,
     promptPlacement: 'bottom',
     autoFocusPrompt: true,
