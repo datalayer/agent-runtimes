@@ -106,6 +106,11 @@ export const DocumentPlugin = definePlugin({
           { id: 'document-tools' },
         );
       },
+      error => {
+        // The chunk did not load, or the page went away while it did: the
+        // chat simply has no document tools.
+        console.warn('The document tools could not be loaded', error);
+      },
     );
     return {};
   },

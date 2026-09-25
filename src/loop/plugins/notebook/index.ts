@@ -111,6 +111,11 @@ export const NotebookPlugin = definePlugin({
           { id: 'notebook-tools' },
         );
       },
+      error => {
+        // The chunk did not load, or the page went away while it did: the
+        // chat simply has no notebook tools.
+        console.warn('The notebook tools could not be loaded', error);
+      },
     );
     return {};
   },

@@ -282,6 +282,13 @@ function useDocumentRows(
         };
         refresh();
         unsubscribe = lexicalStore.subscribe(refresh);
+      })
+      .catch(() => {
+        // Lexical could not load (or the page went away while it did): the
+        // document offers no preview, which is all this hook was for.
+        if (!cancelled) {
+          setRows(null);
+        }
       });
 
     return () => {
