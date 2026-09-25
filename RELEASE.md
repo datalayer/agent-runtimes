@@ -1,5 +1,33 @@
 # Making a new release of datalayer
 
+## Automated release (tags)
+
+A pushed tag `vX.Y.Z` publishes `agent-runtimes` to PyPI and `@datalayer/agent-runtimes` to npm, through [`.github/workflows/release.yml`](.github/workflows/release.yml). No token is stored: both registries trust that workflow (trusted publishing, OIDC).
+
+1. Bump the version to `X.Y.Z` in `package.json`. The Python version is the same number: `hatch-nodejs-version` reads it from `package.json` and writes `agent_runtimes/_version.py` (`__version__ = VERSION = 'X.Y.Z'`) at build time, so after a local build both say `X.Y.Z`. The file is generated and not committed.
+2. Merge the bump to `main`.
+3. Tag the merged commit on `main` and push the tag:
+
+   ```bash
+   git checkout main && git pull
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+
+What the workflow does:
+
+- **build**: checks that the tag matches `package.json`; installs with `npm install --workspaces --include-workspace-root`; builds with `npm run build`, which writes `lib/` for npm and the Vite app in `dist/` for the wheel; packs `@datalayer/agent-runtimes` with `npm pack`; builds the sdist and the wheel with `python -m build`. The hatch build hook copies `dist/` into `agent_runtimes/static/dist`, so the wheel serves the frontend. The build job then checks that the generated `_version.py` matches the tag and that the wheel contains `agent_runtimes/static/dist/index.html`, and uploads both packages as artifacts.
+- **pypi**: publishes the sdist and the wheel with `pypa/gh-action-pypi-publish`, in the `pypi` environment, with `id-token: write`.
+- **npm**: upgrades npm to the latest version (trusted publishing needs npm 11.5.1 or later), then runs `npm publish <tarball> --access public --provenance`.
+
+The pypi and npm jobs run independently: if one fails, the other still publishes. Re-running the failed job publishes the same artifacts.
+
+One-time setup, done once per registry:
+
+- **PyPI**: on <https://pypi.org/manage/project/agent-runtimes/settings/publishing/>, add a GitHub trusted publisher with owner `datalayer`, repository `agent-runtimes`, workflow `release.yml` and environment `pypi`. The `pypi` environment already exists in the repository settings.
+- **npm**: on the `@datalayer/agent-runtimes` package settings on npmjs.com, under *Trusted Publisher*, add GitHub Actions with organization `datalayer`, repository `agent-runtimes` and workflow `release.yml`, with no environment.
+
+The manual instructions below still work, for example for a release cut from a machine.
+
 The extension can be published to `PyPI` and `npm` manually or using the [Jupyter Releaser](https://github.com/jupyter-server/jupyter_releaser).
 
 ## Manual release
