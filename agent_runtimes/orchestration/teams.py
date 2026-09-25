@@ -211,9 +211,12 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
         supervisor = team.supervisor
         assert supervisor is not None
         ref, model = supervisor.ref, supervisor.model
-        prompt = supervisor.instructions or (
-            f"You are {supervisor.name}, supervising the {team.name}.\n\n{supervisor.goal}"
-        ).strip()
+        prompt = (
+            supervisor.instructions
+            or (
+                f"You are {supervisor.name}, supervising the {team.name}.\n\n{supervisor.goal}"
+            ).strip()
+        )
     fields: dict[str, Any] = (
         {"agent_spec_id": ref.split(":", 1)[0]} if ref else {"system_prompt": prompt}
     )
@@ -241,12 +244,16 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
                 from ..specs.agents import get_agent_spec
 
                 referenced = get_agent_spec(ref.split(":", 1)[0])
-                base = (referenced.system_prompt if referenced is not None else "") or ""
+                base = (
+                    referenced.system_prompt if referenced is not None else ""
+                ) or ""
             fields["system_prompt"] = f"{base}\n\n{team.routing_instructions}".strip()
     if member is not None and member.tools:
         fields["tools"] = list(member.tools)
     if member is not None and member.mcp_server:
-        fields["selected_mcp_servers"] = [{"id": member.mcp_server, "origin": "catalog"}]
+        fields["selected_mcp_servers"] = [
+            {"id": member.mcp_server, "origin": "catalog"}
+        ]
     return fields
 
 
@@ -268,4 +275,7 @@ def briefing(produced: list[tuple[TeamAgentspec, str]]) -> str:
         f"### {member.name or member.id} ({member.role})\n\n{text.strip() or '(nothing)'}"
         for member, text in produced
     ]
-    return "Your team's members have finished. What each of them produced:\n\n" + "\n\n".join(sections)
+    return (
+        "Your team's members have finished. What each of them produced:\n\n"
+        + "\n\n".join(sections)
+    )

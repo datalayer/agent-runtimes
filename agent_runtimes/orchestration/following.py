@@ -29,7 +29,7 @@ from datalayer_core.orchestration import (
 
 def orchestration_client(token: str) -> Any:
     """
-    Core's orchestration client, asking as whoever holds ``token``.
+    Build core's orchestration client, asking as whoever holds ``token``.
 
     A worker's execution token, when a run asks for a child (O2-06); the
     person's, when the orchestrator delegates a turn (O2-08).

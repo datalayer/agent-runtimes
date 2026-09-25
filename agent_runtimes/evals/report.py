@@ -17,17 +17,22 @@ import math
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from agent_runtimes.client import AgentClient
+from agent_runtimes.evals.common import as_dict
 
 console = Console()
 
-from agent_runtimes.evals.links import agentspec_url, benchmark_url, run_url  # noqa: E402 — the product's addresses (B4-08)
+from agent_runtimes.evals.links import (  # noqa: E402 — the product's addresses (B4-08)
+    agentspec_url,
+    benchmark_url,
+    run_url,
+)
 
 
 def _now_iso() -> str:
@@ -54,11 +59,7 @@ def _status_style(status: str) -> str:
     return "white"
 
 
-def _as_dict(value: Any) -> dict[str, Any]:
-    """Return ``value`` when it's a dict, else an empty dict."""
-    if isinstance(value, dict):
-        return cast(dict[str, Any], value)
-    return {}
+_as_dict = as_dict
 
 
 def _run_pass_rate(run: dict[str, Any]) -> float | None:
@@ -356,11 +357,14 @@ def _recent_run_heatmap(experiments: list[dict[str, Any]]) -> dict[str, Any]:
         row: list[float | None] = []
         for run in recent:
             pass_rate = run.get("pass_rate")
-            row.append(float(pass_rate) if isinstance(pass_rate, (int, float)) else None)
+            row.append(
+                float(pass_rate) if isinstance(pass_rate, (int, float)) else None
+            )
         # Left-padded, so the last column is every experiment's latest run and
         # a column reads down as "the most recent", not as "the fourth of
         # however many this one happened to have".
-        row = [None] * (HEATMAP_RUNS - len(row)) + row
+        padding: list[float | None] = [None] * (HEATMAP_RUNS - len(row))
+        row = padding + row
         rows.append(str(experiment.get("name") or experiment.get("id") or ""))
         values.append(row)
     columns = [f"-{HEATMAP_RUNS - index - 1}" for index in range(HEATMAP_RUNS)]
@@ -2327,7 +2331,9 @@ def _report_markdown(
                 token_timeline_values.append(float(total_tokens))
             cause_text = _format_failure_cause(run.get("failure_cause"))
             run_id = str(run.get("id", ""))
-            run_link = run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
+            run_link = (
+                run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
+            )
             run_rows.append(
                 [
                     str(idx),
@@ -2617,10 +2623,15 @@ def _extract_case_output_from_result(case_result: dict[str, Any]) -> Any:
 def _no_output_words(case_result: dict[str, Any]) -> str:
     """Why a case has no output, when its row says: a task the agent never
     answered (a sandbox's HTTP 503, a sandbox lost, a task that never ran)
-    carries its reason. Otherwise, the row predates rows carrying outputs."""
+    carries its reason. Otherwise, the row predates rows carrying outputs.
+    """
     if str(case_result.get("failure_stage") or "") == "infrastructure":
         reason = str(case_result.get("explanation") or "").strip()
-        return f"(no output: the agent did not answer — {reason})" if reason else "(no output: the agent did not answer)"
+        return (
+            f"(no output: the agent did not answer — {reason})"
+            if reason
+            else "(no output: the agent did not answer)"
+        )
     return "(per-case output not captured for this run)"
 
 
@@ -3084,7 +3095,9 @@ def _report_appendix_lines(
             metrics = _as_dict(run.get("metrics"))
             usage = _extract_run_usage(run)
             run_id = str(run.get("id", ""))
-            run_link = run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
+            run_link = (
+                run_url(str(run.get("launch_id") or ""), run_id) or evalset_runs_url
+            )
             pass_rate = run.get("pass_rate")
             passed = _appendix_metric_int(metrics, "passed", "passed_cases")
             total = _appendix_metric_int(metrics, "total_cases", "total", "cases")
@@ -3904,7 +3917,9 @@ def render_decisions_markdown(decisions: list[dict[str, Any]]) -> str:
     for decision in decisions:
         kind = str(decision.get("kind") or "")
         outcome = str(decision.get("outcome") or "")
-        about = f"{decision.get('scope') or ''} {decision.get('scope_ref') or ''}".strip()
+        about = (
+            f"{decision.get('scope') or ''} {decision.get('scope_ref') or ''}".strip()
+        )
         cells = (
             str(decision.get("decided_at") or "")[:10],
             DECISION_KIND_LABELS.get(kind, kind),
@@ -3925,7 +3940,8 @@ def render_eval_report_markdown(
     decisions: list[dict[str, Any]] | None = None,
 ) -> str:
     """Render a structured eval report as markdown, with the decisions made
-    about it as its last section when there are any."""
+    about it as its last section when there are any.
+    """
     markdown = _report_markdown(report, run_limit=run_limit, colorize=colorize)
     appendix = render_decisions_markdown(decisions or [])
     return f"{markdown.rstrip()}\n\n{appendix}" if appendix else markdown

@@ -57,7 +57,9 @@ class ProtocolStateCheckpointStore(CheckpointStore):
         return f"{self._scope}/{checkpoint_id}"
 
     async def save(self, checkpoint: ConversationCheckpoint) -> None:
-        await self._backing().put(CHECKPOINT, self._key(checkpoint.id), checkpoint.to_dict())
+        await self._backing().put(
+            CHECKPOINT, self._key(checkpoint.id), checkpoint.to_dict()
+        )
 
     async def get(self, checkpoint_id: str) -> ConversationCheckpoint | None:
         record = await self._backing().get(CHECKPOINT, self._key(checkpoint_id))

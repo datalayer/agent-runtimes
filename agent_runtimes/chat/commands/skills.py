@@ -37,7 +37,9 @@ ARGS = (
         description="enable, disable, add or info",
         choices=("enable", "disable", "add", "info"),
     ),
-    CommandArgSpec(name="skill-id", description="Skill to act on", choices=_catalog_ids),
+    CommandArgSpec(
+        name="skill-id", description="Skill to act on", choices=_catalog_ids
+    ),
 )
 
 
@@ -115,7 +117,9 @@ async def _show(tux: "CliTux") -> None:
         marker = "[green]●[/green]" if on else "○"
         state = ""
         if on and running:
-            state = " [green](active)[/green]" if live else " [yellow](not loaded)[/yellow]"
+            state = (
+                " [green](active)[/green]" if live else " [yellow](not loaded)[/yellow]"
+            )
         elif on:
             state = " [dim](enabled)[/dim]"
 

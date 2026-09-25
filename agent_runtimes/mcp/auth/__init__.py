@@ -3,6 +3,15 @@
 
 """Authenticating to MCP servers, once, for every front-end."""
 
+from agent_runtimes.mcp.auth.machine import (
+    CLIENT_ASSERTION_TYPE,
+    ClientCredentials,
+    MachineAuthError,
+    MachineTokenProvider,
+    build_assertion,
+    exchange_for_subagent,
+    fetch_token,
+)
 from agent_runtimes.mcp.auth.oauth import (
     CLIENT_NAME,
     OAuthError,
@@ -16,15 +25,6 @@ from agent_runtimes.mcp.auth.oauth import (
     refresh_token,
     register_client,
     revoke,
-)
-from agent_runtimes.mcp.auth.machine import (
-    CLIENT_ASSERTION_TYPE,
-    ClientCredentials,
-    MachineAuthError,
-    MachineTokenProvider,
-    build_assertion,
-    exchange_for_subagent,
-    fetch_token,
 )
 from agent_runtimes.mcp.auth.tokens import (
     KEYRING_SERVICE,

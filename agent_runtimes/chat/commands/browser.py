@@ -17,7 +17,9 @@ if TYPE_CHECKING:
 
 NAME = "browser"
 ALIASES: list[str] = ["chat"]
-DESCRIPTION = "Open this session in your browser (chat, notebook, document, sandbox, a2ui)"
+DESCRIPTION = (
+    "Open this session in your browser (chat, notebook, document, sandbox, a2ui)"
+)
 SHORTCUT = "escape w"
 GROUP = "Open"
 

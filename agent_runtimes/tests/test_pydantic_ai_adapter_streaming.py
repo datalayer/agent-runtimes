@@ -25,7 +25,12 @@ from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
 
 async def _events(agent: Agent) -> list[StreamEvent]:
     adapter = PydanticAIAdapter(agent)
-    return [event async for event in adapter.stream("Profile the notebook", AgentContext(session_id="s"))]
+    return [
+        event
+        async for event in adapter.stream(
+            "Profile the notebook", AgentContext(session_id="s")
+        )
+    ]
 
 
 def _text(events: list[StreamEvent]) -> str:

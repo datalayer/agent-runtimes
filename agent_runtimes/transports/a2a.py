@@ -255,7 +255,7 @@ try:
     FASTA2A_AVAILABLE = True
 except ImportError:  # pragma: no cover - fasta2a is optional
     FASTA2A_AVAILABLE = False
-    _FastA2AWorker = object  # type: ignore[assignment,misc]
+    _FastA2AWorker = object
 
 
 A2AContext = list[dict[str, Any]]
@@ -342,7 +342,7 @@ def _short(value: Any, limit: int = 2000) -> str:
 
 
 @dataclass
-class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
+class A2AWorker(_FastA2AWorker):
     """Runs a `BaseAgent` for the tasks a FastA2A app receives, streaming as it goes.
 
     The A2A server side of agent-runtimes. Where fasta2a's pydantic-ai bridge
@@ -531,7 +531,9 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                         task_id,
                         context_id,
                         Artifact(
-                            artifact_id=artifact_id, name="result", parts=[Part(text=delta)]
+                            artifact_id=artifact_id,
+                            name="result",
+                            parts=[Part(text=delta)],
                         ),
                         append=True,
                         last_chunk=False,
@@ -553,14 +555,18 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                         "working",
                         _agent_message(
                             context_id,
-                            Part(data={"tool_result": _tool_result_payload(event.data)}),
+                            Part(
+                                data={"tool_result": _tool_result_payload(event.data)}
+                            ),
                         ),
                     )
                 elif event.type == "output":
                     final_output = str(event.data) if event.data is not None else None
                 elif event.type == "done":
                     turn.reported(
-                        event.data.get("usage") if isinstance(event.data, dict) else None
+                        event.data.get("usage")
+                        if isinstance(event.data, dict)
+                        else None
                     )
                 elif event.type == "error":
                     from ..guardrails.model_budget import (
@@ -582,13 +588,25 @@ class A2AWorker(_FastA2AWorker):  # type: ignore[misc]
                 messages = [*conversation, {"role": "user", "content": prompt}]
                 if text:
                     messages.append({"role": "assistant", "content": text})
-                checkpoint = await ProtocolStateCheckpointStore(execution_id).create_checkpoint(
-                    "paused", turn=len(messages), messages=messages, metadata={"task_id": task_id}
+                checkpoint = await ProtocolStateCheckpointStore(
+                    execution_id
+                ).create_checkpoint(
+                    "paused",
+                    turn=len(messages),
+                    messages=messages,
+                    metadata={"task_id": task_id},
                 )
-                logger.info("A2A task %s for agent %s paused at %s", task_id, self.agent.name, checkpoint.id)
+                logger.info(
+                    "A2A task %s for agent %s paused at %s",
+                    task_id,
+                    self.agent.name,
+                    checkpoint.id,
+                )
                 await self.storage.update_task(task_id, state="canceled")
                 stopped = _agent_message(context_id, Part(text="Paused."))
-                kept = merged_meta(paused_meta(checkpoint.id), spent_meta(turn.settle()))
+                kept = merged_meta(
+                    paused_meta(checkpoint.id), spent_meta(turn.settle())
+                )
                 if kept:
                     stopped["metadata"] = kept
                 await self.publish_status(task_id, context_id, "canceled", stopped)

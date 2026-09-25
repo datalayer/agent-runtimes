@@ -20,7 +20,7 @@ repository can ship a slash command without editing this file.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeAlias
 
 from agent_runtimes.loop.commands import (
     CommandArgSpec,
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 #: The registry's spec is the command type. The old name is kept because the
 #: terminal UI and its completer are written against it.
-SlashCommand = SlashCommandSpec
+SlashCommand: TypeAlias = SlashCommandSpec
 
 __all__ = [
     "CommandArgSpec",
@@ -56,7 +56,17 @@ _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Context", ("context", "context_export")),
     ("Agents", ("agents", "models", "tools", "tools_last", "codemode_toggle")),
     ("Capabilities", ("mcp_servers", "skills", "code_sandbox")),
-    ("Open", ("browser", "browser_notebook", "browser_document", "jupyter", "datalayer", "surface")),
+    (
+        "Open",
+        (
+            "browser",
+            "browser_notebook",
+            "browser_document",
+            "jupyter",
+            "datalayer",
+            "surface",
+        ),
+    ),
     ("Fun", ("rain", "about", "gif")),
 )
 

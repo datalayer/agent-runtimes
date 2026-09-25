@@ -27,7 +27,7 @@ ARGS = (
     CommandArgSpec(
         name="action",
         description="auth, logout, tools, refresh, add, remove, enable or disable",
-        choices=ACTIONS
+        choices=ACTIONS,
     ),
     CommandArgSpec(name="server", description="MCP server id"),
 )
@@ -83,7 +83,9 @@ async def _show(tux: "CliTux") -> None:
         else:
             marker, note = "○", status
 
-        tux.console.print(f"  {marker} {name} [dim]({server_id})[/dim]", style=STYLE_ACCENT)
+        tux.console.print(
+            f"  {marker} {name} [dim]({server_id})[/dim]", style=STYLE_ACCENT
+        )
         tux.console.print(f"      {note} · {len(tools)} tools", style=STYLE_MUTED)
         if status in {"needs_auth", "expired"}:
             tux.console.print(f"      /mcp auth {server_id}", style=STYLE_WARNING)
@@ -92,9 +94,7 @@ async def _show(tux: "CliTux") -> None:
     tux.console.print()
     if store:
         tux.console.print(f"  Credentials are held by: {store}", style=STYLE_MUTED)
-    tux.console.print(
-        "  /mcp auth|logout|refresh|tools <server>", style=STYLE_MUTED
-    )
+    tux.console.print("  /mcp auth|logout|refresh|tools <server>", style=STYLE_MUTED)
     tux.console.print()
 
 
@@ -280,7 +280,9 @@ async def _remove(tux: "CliTux", server_id: str) -> None:
 
     tux.console.print()
     tux.console.print(f"● {server_id} removed", style=STYLE_PRIMARY)
-    tux.console.print("  Its credentials were revoked and forgotten.", style=STYLE_MUTED)
+    tux.console.print(
+        "  Its credentials were revoked and forgotten.", style=STYLE_MUTED
+    )
     tux.console.print()
 
 

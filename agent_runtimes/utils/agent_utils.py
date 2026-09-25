@@ -225,11 +225,15 @@ def stop_cloud_agent_runtime(
     if isinstance(runtime_or_runtime_name, str):
         runtime_name = runtime_or_runtime_name.strip()
     else:
-        runtime_name = str(getattr(runtime_or_runtime_name, "runtime_name", "") or "").strip()
+        runtime_name = str(
+            getattr(runtime_or_runtime_name, "runtime_name", "") or ""
+        ).strip()
 
     if not runtime_name:
         if raise_on_error:
-            raise RuntimeError("Cannot terminate cloud runtime: runtime_name is missing.")
+            raise RuntimeError(
+                "Cannot terminate cloud runtime: runtime_name is missing."
+            )
         return False
 
     try:

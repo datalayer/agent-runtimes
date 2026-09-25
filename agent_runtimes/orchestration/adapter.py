@@ -509,10 +509,13 @@ class AdapterCapabilities:
                 for entry in self.unsupported
                 if entry.operation not in EXTENSION_OPERATIONS
             ),
-            acknowledgements=self.acknowledgements
-            | {AcknowledgementKind.CHECKPOINTED},
+            acknowledgements=self.acknowledgements | {AcknowledgementKind.CHECKPOINTED},
             reductions=(
-                *(reduction for reduction in self.reductions if reduction not in without),
+                *(
+                    reduction
+                    for reduction in self.reductions
+                    if reduction not in without
+                ),
                 *reductions,
             ),
             extensions=(*self.extensions, EXTENSION_URI),

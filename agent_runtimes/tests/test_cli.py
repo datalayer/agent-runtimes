@@ -682,7 +682,9 @@ class TestServeOrchestrator:
 
     def test_an_agentspec_root_is_handed_to_the_app(self) -> None:
         with patch.dict(os.environ, {}, clear=False), patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["serve", "--orchestrator-root", VALID_AGENT_ID])
+            result = runner.invoke(
+                app, ["serve", "--orchestrator-root", VALID_AGENT_ID]
+            )
             assert result.exit_code == 0
             assert os.environ.get("AGENT_RUNTIMES_ORCHESTRATOR_ROOT") == VALID_AGENT_ID
             mock_run.assert_called_once()
@@ -696,6 +698,8 @@ class TestServeOrchestrator:
 
     def test_a_root_the_library_does_not_have_is_refused(self) -> None:
         with patch.dict(os.environ, {}, clear=False), patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, ["serve", "--orchestrator-root", "no-such-agent"])
+            result = runner.invoke(
+                app, ["serve", "--orchestrator-root", "no-such-agent"]
+            )
             assert result.exit_code == 1
             mock_run.assert_not_called()

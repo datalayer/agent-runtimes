@@ -29,7 +29,9 @@ from datalayer_core.orchestration import (
     ArtifactProvenance,
     ArtifactStatus,
     ArtifactType,
+    Attempt,
     ErrorCode,
+    Execution,
     ExecutionEventType,
     ExecutionState,
     InvalidTransition,
@@ -46,7 +48,7 @@ from agent_runtimes.orchestration.store import (
 from agent_runtimes.tests.orchestration_records import an_attempt, an_execution
 
 
-async def _running(store: ExecutionStore):
+async def _running(store: ExecutionStore) -> tuple[Execution, Attempt]:
     """
     An execution with one attempt, dispatched and running.
 
@@ -57,7 +59,7 @@ async def _running(store: ExecutionStore):
 
     Returns
     -------
-    tuple
+    tuple[Execution, Attempt]
         The execution and its attempt.
     """
     execution = await store.create(an_execution())
@@ -76,7 +78,7 @@ async def _running(store: ExecutionStore):
 
 class CreatingContract:
     @pytest.mark.asyncio
-    async def test_a_created_execution_starts_its_own_event_stream(self):
+    async def test_a_created_execution_starts_its_own_event_stream(self) -> None:
         store = self.make_store()
 
         execution = await store.create(an_execution())
@@ -91,12 +93,12 @@ class CreatingContract:
         assert event.traceparent is not None
 
     @pytest.mark.asyncio
-    async def test_an_unknown_execution_is_refused_not_returned_as_none(self):
+    async def test_an_unknown_execution_is_refused_not_returned_as_none(self) -> None:
         with pytest.raises(ExecutionNotFound):
             await self.make_store().get("exec_nope")
 
     @pytest.mark.asyncio
-    async def test_the_same_identifier_twice_is_a_conflict(self):
+    async def test_the_same_identifier_twice_is_a_conflict(self) -> None:
         store = self.make_store()
         await store.create(an_execution())
 
@@ -104,7 +106,7 @@ class CreatingContract:
             await store.create(an_execution())
 
     @pytest.mark.asyncio
-    async def test_a_duplicate_delivery_finds_the_first_execution(self):
+    async def test_a_duplicate_delivery_finds_the_first_execution(self) -> None:
         """Conformance scenario 6, in the small.
 
         A retried delegation must not become a second execution, and the
@@ -122,7 +124,7 @@ class CreatingContract:
         assert len(await store.list_executions()) == 1
 
     @pytest.mark.asyncio
-    async def test_a_key_reused_for_other_work_is_a_conflict(self):
+    async def test_a_key_reused_for_other_work_is_a_conflict(self) -> None:
         store = self.make_store()
         await store.create(an_execution(), idempotency_key="key-1")
 
@@ -133,7 +135,7 @@ class CreatingContract:
             )
 
     @pytest.mark.asyncio
-    async def test_an_execution_keeps_its_place_in_its_tree(self):
+    async def test_an_execution_keeps_its_place_in_its_tree(self) -> None:
         """O2-01: the root, the parent and the depth are set when an execution
         is created, and no write rewrites them — a tree is one query on its
         root, and moving one execution would move its subtree with it."""
@@ -165,7 +167,7 @@ class CreatingContract:
 
 class ListingContract:
     @pytest.mark.asyncio
-    async def test_a_tree_lists_by_root_and_children_by_parent(self):
+    async def test_a_tree_lists_by_root_and_children_by_parent(self) -> None:
         store = self.make_store()
         root = await store.create(an_execution())
         for index in (2, 3):
@@ -192,7 +194,7 @@ class ListingContract:
         }
 
     @pytest.mark.asyncio
-    async def test_listing_filters_on_state(self):
+    async def test_listing_filters_on_state(self) -> None:
         store = self.make_store()
         await _running(store)
         await store.create(an_execution(execution_id="exec_2"))
@@ -209,7 +211,7 @@ class ListingContract:
 
 class StateContract:
     @pytest.mark.asyncio
-    async def test_a_move_is_stored_and_said_on_the_stream(self):
+    async def test_a_move_is_stored_and_said_on_the_stream(self) -> None:
         store = self.make_store()
         execution, attempt = await _running(store)
 
@@ -221,7 +223,7 @@ class StateContract:
         assert events[-1].lifecycle_event is LifecycleEvent.START
 
     @pytest.mark.asyncio
-    async def test_the_attempt_moves_with_the_execution(self):
+    async def test_the_attempt_moves_with_the_execution(self) -> None:
         store = self.make_store()
         execution, attempt = await _running(store)
 
@@ -239,7 +241,7 @@ class StateContract:
         assert finished.ended_at is not None
 
     @pytest.mark.asyncio
-    async def test_a_terminal_execution_absorbs(self):
+    async def test_a_terminal_execution_absorbs(self) -> None:
         store = self.make_store()
         execution, _ = await _running(store)
         await store.set_state(execution.execution_id, LifecycleEvent.CANCEL)
@@ -248,7 +250,7 @@ class StateContract:
             await store.set_state(execution.execution_id, LifecycleEvent.COMPLETE)
 
     @pytest.mark.asyncio
-    async def test_the_store_has_no_opinion_of_its_own_about_a_move(self):
+    async def test_the_store_has_no_opinion_of_its_own_about_a_move(self) -> None:
         """The state came from the lifecycle, not from a table here.
 
         Assigning a created execution and then starting it is what
@@ -274,7 +276,7 @@ class StateContract:
 
 class RecordsContract:
     @pytest.mark.asyncio
-    async def test_a_second_attempt_becomes_the_current_one(self):
+    async def test_a_second_attempt_becomes_the_current_one(self) -> None:
         store = self.make_store()
         execution = await store.create(an_execution())
         await store.record_attempt(an_attempt(execution))
@@ -286,7 +288,7 @@ class RecordsContract:
         assert len(await store.attempts(execution.execution_id)) == 2
 
     @pytest.mark.asyncio
-    async def test_a_milestone_is_kept_and_shown(self):
+    async def test_a_milestone_is_kept_and_shown(self) -> None:
         store = self.make_store()
         execution, attempt = await _running(store)
 
@@ -306,7 +308,9 @@ class RecordsContract:
         ].type is ExecutionEventType.ACKNOWLEDGED
 
     @pytest.mark.asyncio
-    async def test_a_registration_promoted_to_committed_says_who_committed_it(self):
+    async def test_a_registration_promoted_to_committed_says_who_committed_it(
+        self,
+    ) -> None:
         """A status and its committer move together.
 
         `model_copy` does not re-run the model's validators, so a merge that
@@ -342,7 +346,7 @@ class RecordsContract:
     @pytest.mark.asyncio
     async def test_two_attempts_at_one_artifact_are_one_record_with_two_provenances(
         self,
-    ):
+    ) -> None:
         """Conformance scenario 13 in miniature (19.8, decision 4).
 
         Nothing is overwritten and nothing is dropped: the second attempt's
@@ -413,7 +417,7 @@ def _provenance(attempt_id: str) -> ArtifactProvenance:
 
 class RecordingObservationsContract:
     @pytest.mark.asyncio
-    async def test_an_observed_move_becomes_a_state_change(self):
+    async def test_an_observed_move_becomes_a_state_change(self) -> None:
         store = self.make_store()
         execution = await store.create(an_execution())
         attempt = await store.record_attempt(an_attempt(execution))
@@ -428,7 +432,9 @@ class RecordingObservationsContract:
         assert (await store.get("exec_1")).status is ExecutionState.ASSIGNED
 
     @pytest.mark.asyncio
-    async def test_a_worker_cannot_talk_an_execution_out_of_a_terminal_state(self):
+    async def test_a_worker_cannot_talk_an_execution_out_of_a_terminal_state(
+        self,
+    ) -> None:
         """Conformance scenario 9: a cancellation racing a completion.
 
         The worker's report is kept, as the refusal it is, and the
@@ -451,7 +457,7 @@ class RecordingObservationsContract:
         assert (await store.get("exec_1")).status is ExecutionState.CANCELLED
 
     @pytest.mark.asyncio
-    async def test_an_observed_milestone_is_recorded_as_one(self):
+    async def test_an_observed_milestone_is_recorded_as_one(self) -> None:
         store = self.make_store()
         execution, attempt = await _running(store)
 
@@ -470,7 +476,7 @@ class RecordingObservationsContract:
         ] == [AcknowledgementKind.STARTED]
 
     @pytest.mark.asyncio
-    async def test_a_protocol_handle_lands_on_the_attempt_and_the_binding(self):
+    async def test_a_protocol_handle_lands_on_the_attempt_and_the_binding(self) -> None:
         """What a re-attach after a disconnect needs (scenario 4).
 
         The handle is learnt mid-stream; if it were only on the event
@@ -494,7 +500,7 @@ class RecordingObservationsContract:
         assert (await store.get("exec_1")).agent.session_id == "sess-1"
 
     @pytest.mark.asyncio
-    async def test_an_error_observation_is_kept_without_moving_anything(self):
+    async def test_an_error_observation_is_kept_without_moving_anything(self) -> None:
         store = self.make_store()
         execution, attempt = await _running(store)
 
@@ -513,7 +519,7 @@ class RecordingObservationsContract:
         assert (await store.get("exec_1")).status is ExecutionState.RUNNING
 
     @pytest.mark.asyncio
-    async def test_events_are_numbered_so_a_reconnect_loses_nothing(self):
+    async def test_events_are_numbered_so_a_reconnect_loses_nothing(self) -> None:
         store = self.make_store()
         execution, attempt = await _running(store)
         for index in range(3):

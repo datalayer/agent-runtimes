@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, cast
+
 import pytest
 
 # The SDK is an opt-in extra (`agent-runtimes[a2ui]`), because it drags in
@@ -19,6 +21,9 @@ from a2ui.schema.constants import VERSION_0_9
 
 from agent_runtimes.a2ui import A2UI_VERSION, ExecutionResult, execution_to_a2ui
 from agent_runtimes.a2ui.executions import A2UI_BASIC_CATALOG_ID, MAX_TEXT_CHARS
+
+if TYPE_CHECKING:
+    from agent_runtimes.chat.tux import CliTux
 
 
 def _components(messages: list[dict]) -> dict[str, dict]:
@@ -238,12 +243,12 @@ class TestTerminalRendering:
         import httpx
 
         original = httpx.AsyncClient
-        httpx.AsyncClient = Client  # type: ignore[assignment]
+        httpx.AsyncClient = Client
         try:
             tux = SimpleNamespace(console=Console(), server_url="http://server")
-            asyncio.run(surface_cmd.execute(tux, "print('hi')"))
+            asyncio.run(surface_cmd.execute(cast("CliTux", tux), "print('hi')"))
         finally:
-            httpx.AsyncClient = original  # type: ignore[assignment]
+            httpx.AsyncClient = original
         return "\n".join(lines)
 
     def test_text_survives_the_terminal(self) -> None:
@@ -277,7 +282,11 @@ class TestTerminalRendering:
 
         asyncio.run(
             surface_cmd.execute(
-                SimpleNamespace(console=Console(), server_url="http://server"), ""
+                cast(
+                    "CliTux",
+                    SimpleNamespace(console=Console(), server_url="http://server"),
+                ),
+                "",
             )
         )
         assert any("/surface <code>" in line for line in lines)
@@ -296,6 +305,7 @@ class TestInteractionRoundTrip:
         """
         from agent_runtimes.routes.sandbox import _bind_action
 
+        empty: dict[str, Any] | None
         for empty in (None, {}):
             namespace: dict[str, object] = {"a2ui_action": {"name": "errors"}}
             exec(_bind_action("value = a2ui_action", empty), namespace)

@@ -14,8 +14,8 @@ from typing import Any, Optional
 from prompt_toolkit import PromptSession
 from prompt_toolkit.cursor_shapes import CursorShape
 from prompt_toolkit.formatted_text import HTML
-from reactor.repl import build_completer, build_key_bindings
 from prompt_toolkit.styles import Style as PTStyle
+from reactor.repl import build_completer, build_key_bindings
 from rich.box import ROUNDED
 from rich.columns import Columns
 from rich.console import Console, Group
@@ -199,7 +199,7 @@ class CliTux:
 
     @property
     def loop_session(self) -> LoopSession:
-        """This session, with the terminal's live values folded in.
+        """Return this session, with the terminal's live values folded in.
 
         `CliTux` mutates `agent_id` and `server_url` as the session goes on —
         `/agents use` switches agent, a reconnect changes the URL — so the

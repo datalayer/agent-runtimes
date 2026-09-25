@@ -1197,6 +1197,65 @@ class EnvironmentsListMixin:
             items=answer.get("artifacts") or [], next_cursor=answer.get("nextCursor")
         )
 
+    def list_environment_version_sandboxes(
+        self, version_uid: str, *, correlation_id: Optional[str] = None
+    ) -> dict[str, Any]:
+        """
+        The sandboxes running a version (E2-19).
+
+        The caller's own carry their runtime uid, digest, burning rate and why
+        they wait, if they do; anybody else's only their phase and start.
+
+        Parameters
+        ----------
+        version_uid : str
+            The version's uid.
+        correlation_id : Optional[str]
+            Sent as ``X-Correlation-Id``.
+
+        Returns
+        -------
+        dict[str, Any]
+            ``versionUid`` and ``sandboxes``, as the service answers them.
+        """
+        return self._environments_request(
+            "GET",
+            f"/environment-versions/{_segment(version_uid, 'version_uid')}/sandboxes",
+            correlation_id=correlation_id,
+        )
+
+    def get_environment_quotas(
+        self,
+        *,
+        owner_type: Optional[str] = None,
+        owner_uid: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """
+        An owner's build quotas and what it holds against each (E1-13, E2-19).
+
+        Parameters
+        ----------
+        owner_type : Optional[str]
+            ``user`` or ``organization``; the caller's own when None.
+        owner_uid : Optional[str]
+            An organization's uid, with ``owner_type="organization"``.
+        correlation_id : Optional[str]
+            Sent as ``X-Correlation-Id``.
+
+        Returns
+        -------
+        dict[str, Any]
+            ``ownerType``, ``ownerUid``, ``limits`` and ``holdings``, as the
+            service answers them.
+        """
+        return self._environments_request(
+            "GET",
+            "/environment-quotas",
+            params={"ownerType": owner_type, "ownerUid": owner_uid},
+            correlation_id=correlation_id,
+        )
+
     def get_environment_build(
         self, build_uid: str, *, correlation_id: Optional[str] = None
     ) -> EnvironmentBuildRecord:

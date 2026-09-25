@@ -48,10 +48,23 @@ from agent_runtimes.context.delegation import (
 
 class TestWhatADelegationNames:
     def test_its_execution_and_the_checkpoint_it_resumes_from(self) -> None:
-        meta = {"datalayer": {"execution": {"executionId": "exec_1", "rootExecutionId": "exec_1"}, "checkpoint": {"checkpointId": "ckpt_1"}}}
+        meta = {
+            "datalayer": {
+                "execution": {"executionId": "exec_1", "rootExecutionId": "exec_1"},
+                "checkpoint": {"checkpointId": "ckpt_1"},
+            }
+        }
         assert (execution_of(meta), checkpoint_of(meta)) == ("exec_1", "ckpt_1")
 
-    @pytest.mark.parametrize("meta", (None, {}, {"datalayer": {}}, {"datalayer": {"execution": "exec_1", "checkpoint": {"checkpointId": ""}}}))
+    @pytest.mark.parametrize(
+        "meta",
+        (
+            None,
+            {},
+            {"datalayer": {}},
+            {"datalayer": {"execution": "exec_1", "checkpoint": {"checkpointId": ""}}},
+        ),
+    )
     def test_nothing_when_it_names_nothing(self, meta: Any) -> None:
         assert (execution_of(meta), checkpoint_of(meta)) == (None, None)
 
@@ -69,9 +82,16 @@ class TestWhatADelegationNames:
 
     @pytest.mark.parametrize(
         "meta",
-        (None, {"datalayer": {}}, {"datalayer": {"usage": "lots"}}, {"datalayer": {"usage": {"inputTokens": "many"}}}),
+        (
+            None,
+            {"datalayer": {}},
+            {"datalayer": {"usage": "lots"}},
+            {"datalayer": {"usage": {"inputTokens": "many"}}},
+        ),
     )
-    def test_nothing_is_spent_when_a_worker_says_nothing_readable(self, meta: Any) -> None:
+    def test_nothing_is_spent_when_a_worker_says_nothing_readable(
+        self, meta: Any
+    ) -> None:
         assert spent_of(meta) is None
 
 
@@ -101,16 +121,28 @@ class TestASteer:
     async def test_joins_the_request_about_to_be_sent(self) -> None:
         open_steering("task-joins")
         try:
-            request = ModelRequest(parts=[UserPromptPart(content="Profile the notebook")])
-            context = ModelRequestContext(
-                model=TestModel(), messages=[request], model_settings=None, model_request_parameters=ModelRequestParameters()
+            request = ModelRequest(
+                parts=[UserPromptPart(content="Profile the notebook")]
             )
-            unchanged = await SteerCapability("task-joins").before_model_request(None, context)
+            context = ModelRequestContext(
+                model=TestModel(),
+                messages=[request],
+                model_settings=None,
+                model_request_parameters=ModelRequestParameters(),
+            )
+            unchanged = await SteerCapability("task-joins").before_model_request(
+                None, context
+            )
             assert unchanged is context
             deliver_steer("task-joins", "Check the plots")
-            steered = await SteerCapability("task-joins").before_model_request(None, context)
+            steered = await SteerCapability("task-joins").before_model_request(
+                None, context
+            )
             [last] = steered.messages
-            assert [type(part).__name__ for part in last.parts] == ["UserPromptPart", "UserPromptPart"]
+            assert [type(part).__name__ for part in last.parts] == [
+                "UserPromptPart",
+                "UserPromptPart",
+            ]
             assert "Check the plots" in last.parts[-1].content
         finally:
             close_steering("task-joins")
@@ -123,7 +155,9 @@ class TestASteer:
         def model(messages: list[Any], info: AgentInfo) -> ModelResponse:
             seen.append(list(messages))
             if len(seen) == 1:
-                return ModelResponse(parts=[ToolCallPart(tool_name="read_cells", args={})])
+                return ModelResponse(
+                    parts=[ToolCallPart(tool_name="read_cells", args={})]
+                )
             return ModelResponse(parts=[TextPart(content="Done")])
 
         agent = Agent(FunctionModel(model))
@@ -135,11 +169,19 @@ class TestASteer:
 
         open_steering("task-mid-run")
         try:
-            result = await agent.run("Profile the notebook", capabilities=[SteerCapability("task-mid-run")])
+            result = await agent.run(
+                "Profile the notebook", capabilities=[SteerCapability("task-mid-run")]
+            )
         finally:
             close_steering("task-mid-run")
         assert result.output == "Done"
         second = seen[1]
-        prompts = [part.content for message in second if isinstance(message, ModelRequest) for part in message.parts if isinstance(part, UserPromptPart)]
+        prompts = [
+            part.content
+            for message in second
+            if isinstance(message, ModelRequest)
+            for part in message.parts
+            if isinstance(part, UserPromptPart)
+        ]
         assert any("Check the plots too" in str(prompt) for prompt in prompts)
         assert delegation.take_steers("task-mid-run") == []

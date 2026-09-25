@@ -32,6 +32,7 @@ render "no output" for work that is still running.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Optional
@@ -182,7 +183,7 @@ async def call_tool_as_task(
         CallToolRequest(params=params),
         # The union, because which one comes back is the server's decision
         # and both are legitimate answers to this request.
-        CreateTaskResult | CallToolResult,  # type: ignore[arg-type]
+        CreateTaskResult | CallToolResult,
     )
     if isinstance(answer, CreateTaskResult):
         return _handle_of(answer.task)
@@ -214,7 +215,8 @@ async def list_tasks(session: Any, *, cursor: str | None = None) -> list[TaskHan
 async def cancel_task(session: Any, task_id: str) -> TaskHandle:
     """Stop a task. Idempotent: a finished one is answered as it is."""
     answer = await session.send_request(
-        CancelTaskRequest(params=CancelTaskRequestParams(task_id=task_id)), CancelTaskResult
+        CancelTaskRequest(params=CancelTaskRequestParams(task_id=task_id)),
+        CancelTaskResult,
     )
     return _handle_of(answer)
 
@@ -295,7 +297,7 @@ async def await_task(
     while True:
         if on_status is not None:
             outcome = on_status(handle)
-            if hasattr(outcome, "__await__"):
+            if inspect.isawaitable(outcome):
                 await outcome
         if handle.is_terminal:
             break
@@ -316,7 +318,9 @@ async def await_task(
     if handle.status == "failed":
         raise TaskFailed(task_id, handle.status_message or f"Task {task_id} failed")
     if handle.status == "cancelled":
-        raise TaskCancelled(task_id, handle.status_message or f"Task {task_id} was cancelled")
+        raise TaskCancelled(
+            task_id, handle.status_message or f"Task {task_id} was cancelled"
+        )
     return await task_result(session, task_id)
 
 
@@ -363,7 +367,9 @@ class StartedCall:
 
     @classmethod
     def from_record(cls, stored: dict[str, Any]) -> "StartedCall":
-        return cls(task_id=str(stored.get("task_id") or ""), result=stored.get("result"))
+        return cls(
+            task_id=str(stored.get("task_id") or ""), result=stored.get("result")
+        )
 
 
 #: What a workflow engine gives this module: run `factory` and remember the

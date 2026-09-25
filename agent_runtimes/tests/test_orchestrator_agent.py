@@ -71,7 +71,9 @@ class FakePlane:
     async def tree(self, *, ending: LifecycleEvent = LifecycleEvent.COMPLETE) -> None:
         """A root and the child under it, recorded as the durable worker records them."""
         store = InMemoryExecutionStore()
-        root = await store.create(an_execution(execution_id="exec_root", agent_id="parent"))
+        root = await store.create(
+            an_execution(execution_id="exec_root", agent_id="parent")
+        )
         child = await store.create(
             an_execution(
                 execution_id="exec_child",
@@ -83,48 +85,78 @@ class FakePlane:
         self.receipt = Receipt(
             execution=root,
             acknowledgement=Acknowledgement(
-                kind=AcknowledgementKind.RECEIVED, execution_id=root.execution_id, acknowledged_at=now()
+                kind=AcknowledgementKind.RECEIVED,
+                execution_id=root.execution_id,
+                acknowledged_at=now(),
             ),
             delivered=True,
         )
-        for one, text, end in ((child, "Three facts.", LifecycleEvent.COMPLETE), (root, "The facts hold.", ending)):
-            attempt = await store.record_attempt(an_attempt(one, attempt_id=f"att_{one.execution_id}"))
+        for one, text, end in (
+            (child, "Three facts.", LifecycleEvent.COMPLETE),
+            (root, "The facts hold.", ending),
+        ):
+            attempt = await store.record_attempt(
+                an_attempt(one, attempt_id=f"att_{one.execution_id}")
+            )
             await store.set_state(one.execution_id, LifecycleEvent.ASSIGN)
             for observation in (
                 Observation.moved(LifecycleEvent.START, protocol_task_id="task-1"),
-                Observation.produced(answer_artifact(one, attempt, text), data={"text": text}),
+                Observation.produced(
+                    answer_artifact(one, attempt, text), data={"text": text}
+                ),
             ):
-                await store.record(one.execution_id, observation, attempt_id=attempt.attempt_id)
+                await store.record(
+                    one.execution_id, observation, attempt_id=attempt.attempt_id
+                )
             failure = (
-                OrchestrationError(code=ErrorCode.WORKER_REJECTED, message="The worker refused it.", retryable=False)
+                OrchestrationError(
+                    code=ErrorCode.WORKER_REJECTED,
+                    message="The worker refused it.",
+                    retryable=False,
+                )
                 if end is LifecycleEvent.FAIL
                 else None
             )
-            await store.record(one.execution_id, Observation.moved(end, error=failure), attempt_id=attempt.attempt_id)
-        self.events = [*await store.events("exec_child"), *await store.events("exec_root")]
+            await store.record(
+                one.execution_id,
+                Observation.moved(end, error=failure),
+                attempt_id=attempt.attempt_id,
+            )
+        self.events = [
+            *await store.events("exec_child"),
+            *await store.events("exec_root"),
+        ]
         self.collection = Collection(
             execution=await store.get("exec_root"),
             artifacts=await store.artifacts("exec_root"),
             children=[await store.get("exec_child")],
         )
 
-    def delegate_execution(self, command: ExecutionsDelegate, *, account_uid: str | None = None) -> Receipt:
+    def delegate_execution(
+        self, command: ExecutionsDelegate, *, account_uid: str | None = None
+    ) -> Receipt:
         self.delegated.append(command)
         assert self.receipt is not None
         return self.receipt
 
-    def subscribe_execution(self, execution_id: str, **options: Any) -> Iterator[tuple[Any, str]]:
+    def subscribe_execution(
+        self, execution_id: str, **options: Any
+    ) -> Iterator[tuple[Any, str]]:
         if self.working:
             self._released.wait(timeout=5)
             return
         for event in self.events:
             yield event, str(event.sequence)
 
-    def collect_execution(self, command: Any, *, account_uid: str | None = None) -> Collection:
+    def collect_execution(
+        self, command: Any, *, account_uid: str | None = None
+    ) -> Collection:
         assert self.collection is not None
         return self.collection
 
-    def cancel_execution(self, command: ExecutionsCancel, *, account_uid: str | None = None) -> None:
+    def cancel_execution(
+        self, command: ExecutionsCancel, *, account_uid: str | None = None
+    ) -> None:
         self.cancelled.append(command)
         self._released.set()
 
@@ -161,7 +193,11 @@ class TestTheAgentItDelegatesTo:
     def test_an_agentspec_is_brought_up_and_reached_over_a2a(self) -> None:
         spec = next(iter(AGENTSPECS))
         binding = root_binding(spec)
-        assert (binding.agent_id, binding.protocol, binding.endpoint) == (spec, AgentProtocol.A2A, None)
+        assert (binding.agent_id, binding.protocol, binding.endpoint) == (
+            spec,
+            AgentProtocol.A2A,
+            None,
+        )
 
     def test_a_name_that_is_neither_is_refused(self) -> None:
         with pytest.raises(ValueError, match="neither an endpoint nor an agentspec"):
@@ -175,28 +211,43 @@ class TestTheAgentItDelegatesTo:
 
 class TestATurnIsARootExecution:
     @pytest.mark.asyncio
-    async def test_it_delegates_as_the_person_and_answers_with_what_the_root_produced(self, plane: FakePlane) -> None:
+    async def test_it_delegates_as_the_person_and_answers_with_what_the_root_produced(
+        self, plane: FakePlane
+    ) -> None:
         await plane.tree()
 
         said = await _said(OrchestratorAgent(PARENT))
 
         [command] = plane.delegated
-        assert (command.agent, command.objective.goal, command.parent_execution_id) == (PARENT, PROMPT, None)
-        assert command.idempotency_key == turn_key("sess-1", PROMPT) and plane.tokens == ["tok-person"]
+        assert (command.agent, command.objective.goal, command.parent_execution_id) == (
+            PARENT,
+            PROMPT,
+            None,
+        )
+        assert command.idempotency_key == turn_key(
+            "sess-1", PROMPT
+        ) and plane.tokens == ["tok-person"]
         thoughts = [data for kind, data in said if kind == "thought"]
         assert "researcher: completed" in thoughts and "parent: completed" in thoughts
         assert said[-2:] == [("text", "The facts hold."), ("done", {})]
 
     @pytest.mark.asyncio
-    async def test_a_root_that_did_not_complete_is_the_turns_error(self, plane: FakePlane) -> None:
+    async def test_a_root_that_did_not_complete_is_the_turns_error(
+        self, plane: FakePlane
+    ) -> None:
         await plane.tree(ending=LifecycleEvent.FAIL)
 
         said = await _said(OrchestratorAgent(PARENT))
 
-        assert said[-1] == ("error", "Execution 'exec_root' ended failed: The worker refused it.")
+        assert said[-1] == (
+            "error",
+            "Execution 'exec_root' ended failed: The worker refused it.",
+        )
 
     @pytest.mark.asyncio
-    async def test_a_connection_naming_nobody_delegates_nothing(self, plane: FakePlane) -> None:
+    async def test_a_connection_naming_nobody_delegates_nothing(
+        self, plane: FakePlane
+    ) -> None:
         set_request_user_jwt(None)
 
         said = await _said(OrchestratorAgent(PARENT))
@@ -216,4 +267,7 @@ class TestATurnIsARootExecution:
             await waiting
 
         [cancel] = plane.cancelled
-        assert (cancel.execution_id, cancel.idempotency_key) == ("exec_root", f"{turn_key('sess-1', PROMPT)}:cancel")
+        assert (cancel.execution_id, cancel.idempotency_key) == (
+            "exec_root",
+            f"{turn_key('sess-1', PROMPT)}:cancel",
+        )

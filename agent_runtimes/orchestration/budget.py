@@ -160,7 +160,8 @@ def budget_refusal(
         or error.get("code") != ErrorCode.BUDGET_EXHAUSTED.value
     ):
         return None
-    details = error.get("details") if isinstance(error.get("details"), Mapping) else {}
+    raw_details = error.get("details")
+    details = raw_details if isinstance(raw_details, Mapping) else {}
     return OrchestrationError(
         code=ErrorCode.BUDGET_EXHAUSTED,
         message=str(error.get("message") or "The worker's model budget was reached."),

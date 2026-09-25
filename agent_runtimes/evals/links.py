@@ -44,7 +44,11 @@ def _segment(value: str) -> str:
 
 def benchmark_url(evalset_id: str) -> str:
     """The benchmark's page, which is what the product calls an evalset."""
-    return f"{ui_base_url()}/benchmarks/{_segment(evalset_id)}" if _named(evalset_id) else ""
+    return (
+        f"{ui_base_url()}/benchmarks/{_segment(evalset_id)}"
+        if _named(evalset_id)
+        else ""
+    )
 
 
 def benchmark_report_url(evalset_id: str) -> str:
@@ -66,4 +70,8 @@ def run_url(launch_id: str, run_id: str) -> str:
 
 def agentspec_url(agent_spec_id: str) -> str:
     """The agentspec's page."""
-    return f"{ui_base_url()}/settings/agentspecs/{_segment(agent_spec_id)}" if _named(agent_spec_id) else ""
+    return (
+        f"{ui_base_url()}/settings/agentspecs/{_segment(agent_spec_id)}"
+        if _named(agent_spec_id)
+        else ""
+    )

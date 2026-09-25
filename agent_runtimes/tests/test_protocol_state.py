@@ -65,11 +65,17 @@ class TestTheStore:
     ) -> None:
         for name in (*AGENT_MEMORIES, "KUBERNETES_SERVICE_HOST"):
             monkeypatch.delenv(name, raising=False)
-        monkeypatch.setenv("AGENT_RUNTIMES_PROTOCOL_STATE_PATH", str(tmp_path / "local.sqlite"))
+        monkeypatch.setenv(
+            "AGENT_RUNTIMES_PROTOCOL_STATE_PATH", str(tmp_path / "local.sqlite")
+        )
         assert isinstance(create_protocol_state_store(), SqliteProtocolStateStore)
         monkeypatch.setenv("KUBERNETES_SERVICE_HOST", "10.0.0.1")
-        monkeypatch.setenv("DATALAYER_POSTGRESQL_AGENT_MEMORIES_HOST", "agent-memories.datalayer")
-        monkeypatch.setenv("DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD", "not-a-real-password")
+        monkeypatch.setenv(
+            "DATALAYER_POSTGRESQL_AGENT_MEMORIES_HOST", "agent-memories.datalayer"
+        )
+        monkeypatch.setenv(
+            "DATALAYER_POSTGRESQL_AGENT_MEMORIES_PASSWORD", "not-a-real-password"
+        )
         chosen = create_protocol_state_store()
         assert isinstance(chosen, PostgresProtocolStateStore)
         assert "host=agent-memories.datalayer" in chosen._conninfo
@@ -81,9 +87,13 @@ class TestA2ATasks:
         self, store: SqliteProtocolStateStore
     ) -> None:
         first = DurableStorage(store, "agent-1")
-        task = await first.submit_task("ctx-1", a_message("m1"))  # type: ignore[arg-type]
-        reply = {"role": "agent", "parts": [{"text": "It profiles cleanly."}], "message_id": "m2"}
-        await first.update_task(task["id"], "working", new_messages=[reply])  # type: ignore[list-item]
+        task = await first.submit_task("ctx-1", a_message("m1"))
+        reply = {
+            "role": "agent",
+            "parts": [{"text": "It profiles cleanly."}],
+            "message_id": "m2",
+        }
+        await first.update_task(task["id"], "working", new_messages=[reply])
         await first.update_context("ctx-1", [a_message("m1"), reply])
 
         again = DurableStorage(store, "agent-1")
@@ -91,22 +101,29 @@ class TestA2ATasks:
         assert loaded is not None and loaded["status"]["state"] == "working"
         assert [message["message_id"] for message in loaded["history"]] == ["m1", "m2"]
         assert await again.load_context("ctx-1") == [a_message("m1"), reply]
-        assert await DurableStorage(store, "agent-2").load_task(task["id"]) is None, "one agent's tasks"
+        assert await DurableStorage(store, "agent-2").load_task(task["id"]) is None, (
+            "one agent's tasks"
+        )
 
     @pytest.mark.asyncio
     async def test_the_work_left_unfinished_is_run_again_and_what_ended_is_not(
         self, store: SqliteProtocolStateStore
     ) -> None:
         storage = DurableStorage(store, "agent-1")
-        running = await storage.submit_task("ctx-1", a_message("m1"))  # type: ignore[arg-type]
-        finished = await storage.submit_task("ctx-1", a_message("m2"))  # type: ignore[arg-type]
+        running = await storage.submit_task("ctx-1", a_message("m1"))
+        finished = await storage.submit_task("ctx-1", a_message("m2"))
 
         def run_of(task: Any) -> Any:
-            return {"id": task["id"], "context_id": "ctx-1", "message": task["history"][0]}
+            return {
+                "id": task["id"],
+                "context_id": "ctx-1",
+                "message": task["history"][0],
+            }
 
         first = DurableBroker(store, "agent-1")
         received: list[str] = []
         async with first:
+
             async def consume() -> None:
                 async for operation in first.receive_task_operations():
                     received.append(operation["params"]["id"])
@@ -147,18 +164,27 @@ class TestACPSessions:
         await sessions.append_turn("sess-1", "agent", "It profiles cleanly.", store)
 
         loaded = await sessions.load_session("sess-1", store)
-        assert loaded is not None
-        assert (loaded.cwd, loaded.agent_id, loaded.context.user_id, loaded.metadata) == (
+        assert loaded is not None and loaded.context is not None
+        assert (
+            loaded.cwd,
+            loaded.agent_id,
+            loaded.context.user_id,
+            loaded.metadata,
+        ) == (
             "/work",
             "coder",
             "u-1",
             {"origin": "test"},
         )
-        assert [(turn["role"], turn["text"]) for turn in await sessions.turns("sess-1", store)] == [
+        assert [
+            (turn["role"], turn["text"])
+            for turn in await sessions.turns("sess-1", store)
+        ] == [
             ("user", "Profile the notebook"),
             ("agent", "It profiles cleanly."),
         ]
-        assert (await sessions.set_session_status("sess-1", "disconnected", store)).status == "disconnected"
+        updated = await sessions.set_session_status("sess-1", "disconnected", store)
+        assert updated is not None and updated.status == "disconnected"
         assert [one.id for one in await sessions.list_sessions(store)] == ["sess-1"]
         assert await sessions.close_session("sess-1", store) is True
         assert await sessions.load_session("sess-1", store) is None

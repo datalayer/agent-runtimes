@@ -316,7 +316,7 @@ class TestDelegation:
         from agent_runtimes import streams
 
         original = streams.enqueue_stream_message
-        streams.enqueue_stream_message = lambda agent_id, message: emitted.append(  # type: ignore[assignment]
+        streams.enqueue_stream_message = lambda agent_id, message: emitted.append(
             message.payload
         )
         try:
@@ -398,7 +398,7 @@ class TestStop:
         from agent_runtimes import streams
 
         original = streams.enqueue_stream_message
-        streams.enqueue_stream_message = lambda agent_id, message: emitted.append(  # type: ignore[assignment]
+        streams.enqueue_stream_message = lambda agent_id, message: emitted.append(
             message.payload
         )
         try:
@@ -612,7 +612,7 @@ class TestWorker:
         storage: InMemoryStorage[Any] = InMemoryStorage()
         broker = InMemoryBroker()
         worker = A2AWorker(broker=broker, storage=storage, agent=agent)
-        task = await storage.submit_task("c1", message)  # type: ignore[arg-type]
+        task = await storage.submit_task("c1", message)
         params = {
             "id": task["id"],
             "context_id": "c1",
@@ -622,7 +622,7 @@ class TestWorker:
         events: list[Any] = []
         async with broker, worker.run():
             async with broker.event_bus.subscribe(task["id"]) as receive:
-                await broker.run_task(params)  # type: ignore[arg-type]
+                await broker.run_task(params)
                 async for event in receive:
                     events.append(event)
         return events, storage, task["id"]
@@ -687,7 +687,8 @@ class TestWorker:
         statuses = [
             event["status_update"]["status"]
             for event in events
-            if "status_update" in event and "message" in event["status_update"]["status"]
+            if "status_update" in event
+            and "message" in event["status_update"]["status"]
         ]
         tool_messages = [
             status["message"]["parts"][0]["data"]
@@ -792,12 +793,20 @@ class TestWorker:
         from agent_runtimes.transports.a2a import A2AWorker, TaskCancellation
 
         events_registry: dict[str, asyncio.Event] = {}
+
+        def unregister(task_id: str) -> None:
+            events_registry.pop(task_id, None)
+
+        def cancel(task_id: str) -> bool:
+            events_registry[task_id].set()
+            return True
+
         cancellation = TaskCancellation(
             register=lambda task_id: events_registry.setdefault(
                 task_id, asyncio.Event()
             ),
-            unregister=lambda task_id: events_registry.pop(task_id, None) and None,
-            cancel=lambda task_id: bool(events_registry[task_id].set()) or True,
+            unregister=unregister,
+            cancel=cancel,
         )
 
         def stream_events():
@@ -820,12 +829,12 @@ class TestWorker:
             "message_id": "m3",
             "context_id": "c1",
         }
-        task = await storage.submit_task("c1", message)  # type: ignore[arg-type]
+        task = await storage.submit_task("c1", message)
         params = {"id": task["id"], "context_id": "c1", "message": message}
         events: list[Any] = []
         async with broker, worker.run():
             async with broker.event_bus.subscribe(task["id"]) as receive:
-                await broker.run_task(params)  # type: ignore[arg-type]
+                await broker.run_task(params)
                 async for event in receive:
                     events.append(event)
 
@@ -856,16 +865,13 @@ class TestFasta2aClientSignature:
     """
 
     def test_the_real_client_accepts_what_relay_a2a_task_passes(self) -> None:
-        from fasta2a.client import A2AClient
-
         # Raises TypeError on its own if the signature drifts again; the
         # http_client is real too, so this is the actual constructor path,
         # not a mock of it.
         import httpx
+        from fasta2a.client import A2AClient
 
-        client = A2AClient(
-            agent="http://worker.test", http_client=httpx.AsyncClient()
-        )
+        client = A2AClient(agent="http://worker.test", http_client=httpx.AsyncClient())
         assert client.http_client.base_url == "http://worker.test"
 
     def test_the_renamed_argument_is_gone(self) -> None:

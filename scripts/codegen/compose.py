@@ -145,9 +145,7 @@ def _lookup(
     spec = catalogue.get(base) or catalogue.get(ref)
     if spec is None:
         known = ", ".join(sorted(catalogue)[:8]) or "nothing"
-        raise CompositionError(
-            f"{kind} {ref!r} is not defined (known: {known}…)"
-        )
+        raise CompositionError(f"{kind} {ref!r} is not defined (known: {known}…)")
     return spec
 
 
@@ -179,7 +177,9 @@ def resolve_spec(
 
     for include in spec.get("includes") or []:
         fragment = _lookup(str(include), fragments, "Fragment")
-        resolved = merge_spec(resolved, {k: v for k, v in fragment.items() if k != "id"})
+        resolved = merge_spec(
+            resolved, {k: v for k, v in fragment.items() if k != "id"}
+        )
 
     parent_ref = spec.get("extends")
     if parent_ref:

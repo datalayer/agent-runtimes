@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
@@ -22,9 +23,12 @@ from agent_runtimes.loop import (
     spec_from_module,
 )
 
+if TYPE_CHECKING:
+    from agent_runtimes.chat.tux import CliTux
+
 
 def _spec(name: str, **kwargs: object) -> SlashCommandSpec:
-    return SlashCommandSpec(name=name, **kwargs)  # type: ignore[arg-type]
+    return SlashCommandSpec(name=name, **kwargs)
 
 
 class TestRegistry:
@@ -127,16 +131,16 @@ class TestModuleAdapter:
 
 
 class TestDiscovery:
-    def test_a_plugin_registers_its_commands(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_a_plugin_registers_its_commands(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         class Plugin:
             def provide_slash_commands(self, registry: SlashCommandRegistry) -> None:
                 registry.try_register(
                     SlashCommandSpec(name="deploy", source="plugin:acme")
                 )
 
-        entry_point = SimpleNamespace(
-            name="acme", load=lambda: (object(), Plugin())
-        )
+        entry_point = SimpleNamespace(name="acme", load=lambda: (object(), Plugin()))
         monkeypatch.setattr(
             "reactor.repl._entry_points",
             lambda group: (entry_point,),
@@ -214,7 +218,9 @@ class TestBuiltins:
     def test_builtin_commands_register_without_collisions(self) -> None:
         from agent_runtimes.chat.commands import build_registry
 
-        registry = build_registry(SimpleNamespace(), eggs=True, discover=False)
+        registry = build_registry(
+            cast("CliTux", SimpleNamespace()), eggs=True, discover=False
+        )
 
         names = registry.names()
         for expected in ("help", "status", "agents", "mcp", "skills", "browser"):
@@ -227,7 +233,9 @@ class TestBuiltins:
     def test_help_groups_are_populated(self) -> None:
         from agent_runtimes.chat.commands import build_registry
 
-        grouped = build_registry(SimpleNamespace(), discover=False).by_group()
+        grouped = build_registry(
+            cast("CliTux", SimpleNamespace()), discover=False
+        ).by_group()
         assert "Session" in grouped
         assert "Capabilities" in grouped
         assert all(specs for specs in grouped.values())
@@ -244,14 +252,14 @@ class TestBuiltins:
             return "done"
 
         tux = SimpleNamespace()
-        registry = build_registry(tux, discover=False)
+        registry = build_registry(cast("CliTux", tux), discover=False)
         spec = registry.resolve("help")
         assert spec is not None and spec.handler is not None
 
         # Swap in a probe to prove the closure carries the right instance.
         probe = spec_from_module(
             SimpleNamespace(NAME="probe", execute=fake_execute),
-            lambda: fake_execute(tux),  # type: ignore[arg-type,return-value]
+            lambda: fake_execute(tux),
         )
         assert asyncio.run(probe.handler()) == "done"
         assert seen == [tux]
@@ -259,7 +267,7 @@ class TestBuiltins:
     def test_build_commands_still_returns_the_name_and_alias_mapping(self) -> None:
         from agent_runtimes.chat.commands import build_commands
 
-        mapping = build_commands(SimpleNamespace())
+        mapping = build_commands(cast("CliTux", SimpleNamespace()))
         assert mapping["mcp-servers"].name == "mcp"
         assert mapping["mcp-servers"] is mapping["mcp"]
 

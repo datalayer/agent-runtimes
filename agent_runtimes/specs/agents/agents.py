@@ -16,8 +16,8 @@ from agent_runtimes.types import (
     AgentCapability,
     Agentspec,
     AgentSuggestion,
-    SubAgentspecConfig,
     SubAgentsConfig,
+    SubAgentspecConfig,
 )
 
 # ============================================================================
@@ -1510,9 +1510,7 @@ invent a tool name.
 """,
     system_prompt_codemode_addons=None,
     goal=None,
-    delegable=[
-        AgentCapability(id="document.author"),
-    ],
+    delegable=[],
     protocol="vercel-ai",
     ui_extension=None,
     trigger=None,

@@ -692,7 +692,9 @@ class TurnSpend:
                 if self.output_tokens is None:
                     self.output_tokens = sum(item.output_tokens for item in grown)
         cost: float | None = None
-        costs = get_cost_store().get_agent_usage(self.agent_id) if self.agent_id else None
+        costs = (
+            get_cost_store().get_agent_usage(self.agent_id) if self.agent_id else None
+        )
         if (
             costs is not None
             and costs.request_count > self.priced_runs_before

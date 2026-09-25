@@ -155,7 +155,7 @@ class SqliteProtocolStateStore(ProtocolStateStore):
     async def put(self, kind: str, key: str, value: dict[str, Any]) -> None:
         await asyncio.to_thread(
             self._run,
-            f"INSERT INTO {TABLE} (kind, key, value, updated_at) VALUES (?, ?, ?, ?) "
+            f"INSERT INTO {TABLE} (kind, key, value, updated_at) VALUES (?, ?, ?, ?) "  # nosec B608 - TABLE is a module constant; values are bound parameters
             "ON CONFLICT(kind, key) DO UPDATE SET value = excluded.value, "
             "updated_at = excluded.updated_at",
             (kind, key, json.dumps(value, default=str), time.time()),
@@ -164,7 +164,7 @@ class SqliteProtocolStateStore(ProtocolStateStore):
     async def get(self, kind: str, key: str) -> dict[str, Any] | None:
         rows = await asyncio.to_thread(
             self._run,
-            f"SELECT value FROM {TABLE} WHERE kind = ? AND key = ?",
+            f"SELECT value FROM {TABLE} WHERE kind = ? AND key = ?",  # nosec B608 - TABLE is a module constant; values are bound parameters
             (kind, key),
             fetch=True,
         )
@@ -173,7 +173,7 @@ class SqliteProtocolStateStore(ProtocolStateStore):
     async def list(self, kind: str, *, prefix: str = "") -> list[dict[str, Any]]:
         rows = await asyncio.to_thread(
             self._run,
-            f"SELECT value FROM {TABLE} WHERE kind = ? AND substr(key, 1, ?) = ? "
+            f"SELECT value FROM {TABLE} WHERE kind = ? AND substr(key, 1, ?) = ? "  # nosec B608 - TABLE is a module constant; values are bound parameters
             "ORDER BY updated_at",
             (kind, len(prefix), prefix),
             fetch=True,
@@ -182,7 +182,9 @@ class SqliteProtocolStateStore(ProtocolStateStore):
 
     async def delete(self, kind: str, key: str) -> None:
         await asyncio.to_thread(
-            self._run, f"DELETE FROM {TABLE} WHERE kind = ? AND key = ?", (kind, key)
+            self._run,
+            f"DELETE FROM {TABLE} WHERE kind = ? AND key = ?",  # nosec B608 - TABLE is a module constant; values are bound parameters
+            (kind, key),
         )
 
 
@@ -224,7 +226,7 @@ class PostgresProtocolStateStore(ProtocolStateStore):
 
     async def put(self, kind: str, key: str, value: dict[str, Any]) -> None:
         await self._execute(
-            f"INSERT INTO {TABLE} (kind, key, value, updated_at) "
+            f"INSERT INTO {TABLE} (kind, key, value, updated_at) "  # nosec B608 - TABLE is a module constant; values are bound parameters
             "VALUES (%s, %s, %s::jsonb, %s) ON CONFLICT (kind, key) DO UPDATE "
             "SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at",
             (kind, key, json.dumps(value, default=str), time.time()),
@@ -232,7 +234,7 @@ class PostgresProtocolStateStore(ProtocolStateStore):
 
     async def get(self, kind: str, key: str) -> dict[str, Any] | None:
         rows = await self._execute(
-            f"SELECT value FROM {TABLE} WHERE kind = %s AND key = %s",
+            f"SELECT value FROM {TABLE} WHERE kind = %s AND key = %s",  # nosec B608 - TABLE is a module constant; values are bound parameters
             (kind, key),
             fetch=True,
         )
@@ -240,7 +242,7 @@ class PostgresProtocolStateStore(ProtocolStateStore):
 
     async def list(self, kind: str, *, prefix: str = "") -> list[dict[str, Any]]:
         rows = await self._execute(
-            f"SELECT value FROM {TABLE} WHERE kind = %s AND starts_with(key, %s) "
+            f"SELECT value FROM {TABLE} WHERE kind = %s AND starts_with(key, %s) "  # nosec B608 - TABLE is a module constant; values are bound parameters
             "ORDER BY updated_at",
             (kind, prefix),
             fetch=True,
@@ -249,7 +251,8 @@ class PostgresProtocolStateStore(ProtocolStateStore):
 
     async def delete(self, kind: str, key: str) -> None:
         await self._execute(
-            f"DELETE FROM {TABLE} WHERE kind = %s AND key = %s", (kind, key)
+            f"DELETE FROM {TABLE} WHERE kind = %s AND key = %s",  # nosec B608 - TABLE is a module constant; values are bound parameters
+            (kind, key),
         )
 
     async def close(self) -> None:

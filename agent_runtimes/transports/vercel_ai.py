@@ -117,7 +117,8 @@ def _extract_eval_identifiers(prompt: str) -> tuple[str | None, str | None]:
 def _extract_eval_binding(prompt: str) -> tuple[str | None, str | None, str | None]:
     """The experiment, evalset and case a prompt names on its own lines
     (`experiment_id=`, `evalset_id=`, `case_id=`): what binds the live event
-    to the experiment the platform evaluates it for (BENCHMARK.md, B2-13)."""
+    to the experiment the platform evaluates it for (BENCHMARK.md, B2-13).
+    """
     experiment_id: str | None = None
     evalset_id: str | None = None
     case_id: str | None = None

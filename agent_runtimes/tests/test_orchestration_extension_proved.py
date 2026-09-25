@@ -113,7 +113,10 @@ class Runtime:
         a2a_routes.register_a2a_agent(
             agent,
             a2a_routes.A2AAgentCard(
-                id=AGENT, name=AGENT, description="Profiles notebooks", url=endpoint(AgentProtocol.A2A, self.port)
+                id=AGENT,
+                name=AGENT,
+                description="Profiles notebooks",
+                url=endpoint(AgentProtocol.A2A, self.port),
             ),
         )
         acp_routes.register_agent(agent, acp_routes.AgentInfo(id=AGENT, name=AGENT))
@@ -131,7 +134,9 @@ class Runtime:
         app.include_router(acp_routes.router, prefix="/api/v1")
         for mount in a2a_routes.get_a2a_mounts():
             app.routes.append(Mount(f"/api/v1/a2a/agents{mount.path}", app=mount.app))
-        self.server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=self.port, log_level="warning"))
+        self.server = uvicorn.Server(
+            uvicorn.Config(app, host="127.0.0.1", port=self.port, log_level="warning")
+        )
         self.serving = asyncio.create_task(self.server.serve())
         while not self.server.started:
             if self.serving.done():
@@ -176,17 +181,27 @@ def _said(messages: list[Any]) -> list[tuple[str, str]]:
 
 
 async def _watch(
-    adapter: WorkerAdapter, worker: ResolvedWorker, store: InMemoryExecutionStore, execution: Execution, attempt: Attempt
+    adapter: WorkerAdapter,
+    worker: ResolvedWorker,
+    store: InMemoryExecutionStore,
+    execution: Execution,
+    attempt: Attempt,
 ) -> None:
     """The dispatch, recorded observation by observation, as the durable worker records it."""
     async for observation in adapter.dispatch(worker, execution, attempt):
-        await store.record(execution.execution_id, observation, attempt_id=attempt.attempt_id)
+        await store.record(
+            execution.execution_id, observation, attempt_id=attempt.attempt_id
+        )
 
 
 async def _named(store: InMemoryExecutionStore, attempt: Attempt) -> Attempt:
     """The attempt once the worker has named its task or session."""
     for _ in range(500):
-        [latest] = [one for one in await store.attempts(attempt.execution_id) if one.attempt_id == attempt.attempt_id]
+        [latest] = [
+            one
+            for one in await store.attempts(attempt.execution_id)
+            if one.attempt_id == attempt.attempt_id
+        ]
         if latest.protocol_task_id or latest.session_id:
             return latest
         await asyncio.sleep(0.01)
@@ -195,11 +210,21 @@ async def _named(store: InMemoryExecutionStore, attempt: Attempt) -> Attempt:
 
 @pytest.fixture
 def isolated(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Routes registered on no app of another test, and the process's store put back after.
+    """Register routes on no app of another test, and put the process's store back after.
 
     No credential of the shell's either: the adapters call with the caller's
     key, and a route handed a real one sets up the process-wide telemetry that
     exports its turns, which every later test in the session then inherits.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Clears the shell's credential.
+
+    Yields
+    ------
+    None
+        Control to the test, with the routes and store isolated.
     """
     monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
     app = a2a_routes._app
@@ -216,9 +241,18 @@ def isolated(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 async def test_paused_before_a_restart_it_resumes_from_its_checkpoint(
     protocol: AgentProtocol, tmp_path: Path, isolated: None
 ) -> None:
-    port, path, store = _free_port(), tmp_path / "state.sqlite", InMemoryExecutionStore()
+    port, path, store = (
+        _free_port(),
+        tmp_path / "state.sqlite",
+        InMemoryExecutionStore(),
+    )
     execution = await store.create(
-        an_execution(protocol=protocol, agent_id=AGENT, endpoint=endpoint(protocol, port), references=())
+        an_execution(
+            protocol=protocol,
+            agent_id=AGENT,
+            endpoint=endpoint(protocol, port),
+            references=(),
+        )
     )
     attempt = await store.record_attempt(an_attempt(execution))
     execution = await store.set_state(execution.execution_id, LifecycleEvent.ASSIGN)
@@ -228,7 +262,9 @@ async def test_paused_before_a_restart_it_resumes_from_its_checkpoint(
         adapter = _adapter(protocol)
         worker = await adapter.resolve(execution.agent)
         assert worker.capabilities.supports(WorkerOperation.PAUSE)
-        watching = asyncio.create_task(_watch(adapter, worker, store, execution, attempt))
+        watching = asyncio.create_task(
+            _watch(adapter, worker, store, execution, attempt)
+        )
         await asyncio.wait_for(first.reached.wait(), 10)
         asked = await adapter.pause(worker, execution, await _named(store, attempt))
         assert isinstance(asked, Performed), asked
@@ -255,14 +291,25 @@ async def test_paused_before_a_restart_it_resumes_from_its_checkpoint(
 
     assert (await store.get(execution.execution_id)).status is ExecutionState.COMPLETED
     events = await store.events(execution.execution_id)
-    assert [event.state for event in events if event.type is ExecutionEventType.STATE_CHANGED] == [
-        ExecutionState.CREATED, ExecutionState.ASSIGNED, ExecutionState.RUNNING,
-        ExecutionState.PAUSED, ExecutionState.RUNNING, ExecutionState.COMPLETED,
+    assert [
+        event.state
+        for event in events
+        if event.type is ExecutionEventType.STATE_CHANGED
+    ] == [
+        ExecutionState.CREATED,
+        ExecutionState.ASSIGNED,
+        ExecutionState.RUNNING,
+        ExecutionState.PAUSED,
+        ExecutionState.RUNNING,
+        ExecutionState.COMPLETED,
     ]
     # The restarted runtime's model was given the conversation kept at the
     # pause, then the prompt to carry on — once.
     said = _said(second.requests[0])
-    assert said[:2] == [("user", objective_prompt(execution)), ("assistant", "Reading the cells. ")]
+    assert said[:2] == [
+        ("user", objective_prompt(execution)),
+        ("assistant", "Reading the cells. "),
+    ]
     assert said[2:] == [("user", objective_prompt(execution, resumed))]
 
 
@@ -273,7 +320,12 @@ async def test_a_steer_sent_while_it_works_reaches_its_model_within_the_turn(
 ) -> None:
     port, store = _free_port(), InMemoryExecutionStore()
     execution = await store.create(
-        an_execution(protocol=protocol, agent_id=AGENT, endpoint=endpoint(protocol, port), references=())
+        an_execution(
+            protocol=protocol,
+            agent_id=AGENT,
+            endpoint=endpoint(protocol, port),
+            references=(),
+        )
     )
     attempt = await store.record_attempt(an_attempt(execution))
     execution = await store.set_state(execution.execution_id, LifecycleEvent.ASSIGN)
@@ -282,9 +334,16 @@ async def test_a_steer_sent_while_it_works_reaches_its_model_within_the_turn(
     async with Runtime(tmp_path / "state.sqlite", model, port):
         adapter = _adapter(protocol)
         worker = await adapter.resolve(execution.agent)
-        watching = asyncio.create_task(_watch(adapter, worker, store, execution, attempt))
+        watching = asyncio.create_task(
+            _watch(adapter, worker, store, execution, attempt)
+        )
         await asyncio.wait_for(model.reached.wait(), 10)
-        steered = await adapter.steer(worker, execution, await _named(store, attempt), instructions="Check the plots")
+        steered = await adapter.steer(
+            worker,
+            execution,
+            await _named(store, attempt),
+            instructions="Check the plots",
+        )
         assert isinstance(steered, Performed), steered
         # An ACP notification is not answered: the steer is in once the runtime holds it.
         for _ in range(500):
@@ -295,4 +354,6 @@ async def test_a_steer_sent_while_it_works_reaches_its_model_within_the_turn(
         await asyncio.wait_for(watching, 10)
 
     assert (await store.get(execution.execution_id)).status is ExecutionState.COMPLETED
-    assert ("user", "Steering from the orchestrator:\nCheck the plots") in _said(model.requests[1])
+    assert ("user", "Steering from the orchestrator:\nCheck the plots") in _said(
+        model.requests[1]
+    )

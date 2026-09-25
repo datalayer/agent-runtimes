@@ -20,7 +20,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any, Iterable, Iterator, cast
 
 import pytest
 import requests
@@ -117,7 +117,10 @@ class _Response:
 def refused(url: str, status: int, body: Any) -> RuntimeError:
     """What ``datalayer_core``'s ``_fetch`` raises for an HTTP error: a RuntimeError from it."""
     try:
-        raise requests.HTTPError(response=_Response(status, body))
+        # The stand-in carries what the client reads of a real response.
+        raise requests.HTTPError(
+            response=cast(requests.Response, _Response(status, body))
+        )
     except requests.HTTPError as error:
         try:
             raise RuntimeError(
@@ -305,7 +308,7 @@ def test_a_refusal_carries_the_callers_correlation_id() -> None:
 
 def test_delete_environment_answers_nothing() -> None:
     client, record = replaying("delete_environment")
-    assert client.delete_environment(DELETED) is None
+    client.delete_environment(DELETED)
     assert_sent(client.calls[0], record)
 
 
@@ -367,7 +370,9 @@ def test_promote_a_version_and_then_none() -> None:
     assert none.promoted_version_uid is None
 
 
-def test_a_wrong_acknowledgement_raises_the_409_naming_the_unavailable_variants() -> None:
+def test_a_wrong_acknowledgement_raises_the_409_naming_the_unavailable_variants() -> (
+    None
+):
     client, record = replaying("promote_version_wrong_acknowledgement")
     with pytest.raises(EnvironmentsRequestError) as raised:
         client.promote_environment_version(
@@ -499,7 +504,9 @@ def test_a_promoted_version_carries_its_promotion_record() -> None:
     )
     # E1-08 made no decision for the e2b artifact: the record says so.
     assert decisions["e2b"].policy_decision is None
-    assert promotion.model_dump(by_alias=True, mode="json") == record["body"]["promotion"]
+    assert (
+        promotion.model_dump(by_alias=True, mode="json") == record["body"]["promotion"]
+    )
 
 
 @pytest.mark.parametrize("name", ["get_partially_ready_version", "get_version"])

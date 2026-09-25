@@ -19,7 +19,13 @@ import httpx
 import pytest
 from pydantic_ai.mcp import MCPToolset
 
-from agent_runtimes.context.delegation import WITHHELD, hold, release, take_credential, was_delegated
+from agent_runtimes.context.delegation import (
+    WITHHELD,
+    hold,
+    release,
+    take_credential,
+    was_delegated,
+)
 from agent_runtimes.mcp import datalayer_gateway
 from agent_runtimes.mcp.datalayer_gateway import toolsets_for_the_run
 from agent_runtimes.orchestration.budget import delegation_meta
@@ -62,7 +68,9 @@ class TestTheWorkerTakesItOut:
         assert take_credential(meta) is None
 
     def test_a_delegation_without_one_was_not_delegated_one(self) -> None:
-        assert not was_delegated({"datalayer": {"budget": BUDGET}}) and not was_delegated(None)
+        assert not was_delegated(
+            {"datalayer": {"budget": BUDGET}}
+        ) and not was_delegated(None)
 
     def test_held_for_its_run_and_forgotten_once_taken(self) -> None:
         hold("task-held", TOKEN)
@@ -81,7 +89,9 @@ def _delegated_message() -> dict[str, Any]:
 
 
 def _storage(tmp_path: Any) -> DurableStorage:
-    return DurableStorage(SqliteProtocolStateStore(tmp_path / "state.sqlite"), "agent-1")
+    return DurableStorage(
+        SqliteProtocolStateStore(tmp_path / "state.sqlite"), "agent-1"
+    )
 
 
 def _nothing_kept(tmp_path: Any) -> None:
@@ -93,10 +103,13 @@ def _nothing_kept(tmp_path: Any) -> None:
 async def test_a_submitted_task_keeps_no_credential(tmp_path: Any) -> None:
     """Not in the task, not in the file: the run takes it from process memory."""
     storage = _storage(tmp_path)
-    task = await storage.submit_task("c1", _delegated_message())  # type: ignore[arg-type]
+    task = await storage.submit_task("c1", _delegated_message())
     kept = await storage.load_task(task["id"])
+    assert kept is not None
     assert TOKEN not in json.dumps(kept)
-    assert kept["history"][0]["metadata"] == {"datalayer": {"credential": WITHHELD, "budget": BUDGET}}
+    assert kept["history"][0]["metadata"] == {
+        "datalayer": {"credential": WITHHELD, "budget": BUDGET}
+    }
     _nothing_kept(tmp_path)
     assert release(task["id"]) == TOKEN
 
@@ -109,7 +122,7 @@ def _worker_agent(seen: dict[str, Any]) -> Any:
         async def run(self, prompt: str, context: Any) -> Any:  # pragma: no cover
             raise NotImplementedError
 
-        async def stream(self, prompt: str, context: Any):  # type: ignore[override]
+        async def stream(self, prompt: str, context: Any):
             seen["user_token"] = context.metadata.get("user_token")
             seen["jwt"] = get_request_user_jwt()
             yield StreamEvent(type="output", data="done")
@@ -133,7 +146,9 @@ def _worker_agent(seen: dict[str, Any]) -> Any:
     return Worker()
 
 
-async def _run(storage: DurableStorage, agent: Any, task_id: str, message: dict[str, Any]) -> None:
+async def _run(
+    storage: DurableStorage, agent: Any, task_id: str, message: dict[str, Any]
+) -> None:
     from fasta2a.broker import InMemoryBroker
 
     from agent_runtimes.transports.a2a import A2AWorker
@@ -143,7 +158,7 @@ async def _run(storage: DurableStorage, agent: Any, task_id: str, message: dict[
     params = {"id": task_id, "context_id": "c1", "message": message}
     async with broker, worker.run():
         async with broker.event_bus.subscribe(task_id) as receive:
-            await broker.run_task(params)  # type: ignore[arg-type]
+            await broker.run_task(params)
             async for _event in receive:
                 pass
 
@@ -151,9 +166,10 @@ async def _run(storage: DurableStorage, agent: Any, task_id: str, message: dict[
 @pytest.mark.asyncio
 async def test_the_a2a_worker_runs_as_the_delegated_credential(tmp_path: Any) -> None:
     """Taken out of the message at submission, put on the run, and kept nowhere."""
-    storage, seen = _storage(tmp_path), {}
+    storage = _storage(tmp_path)
+    seen: dict[str, Any] = {}
     message = _delegated_message()
-    task = await storage.submit_task("c1", message)  # type: ignore[arg-type]
+    task = await storage.submit_task("c1", message)
     await _run(storage, _worker_agent(seen), task["id"], message)
     assert seen == {"user_token": TOKEN, "jwt": TOKEN}
     assert TOKEN not in json.dumps(await storage.load_task(task["id"]))
@@ -162,22 +178,30 @@ async def test_the_a2a_worker_runs_as_the_delegated_credential(tmp_path: Any) ->
 
 
 @pytest.mark.asyncio
-async def test_a_run_whose_credential_did_not_survive_a_restart_fails_unstarted(tmp_path: Any) -> None:
+async def test_a_run_whose_credential_did_not_survive_a_restart_fails_unstarted(
+    tmp_path: Any,
+) -> None:
     """Owed after a restart: run as the runtime, it would reach whatever the runtime's key does."""
-    storage, seen = _storage(tmp_path), {}
+    storage = _storage(tmp_path)
+    seen: dict[str, Any] = {}
     message = _delegated_message()
-    task = await storage.submit_task("c1", message)  # type: ignore[arg-type]
+    task = await storage.submit_task("c1", message)
     release(task["id"])  # The process that held it is gone.
     await _run(storage, _worker_agent(seen), task["id"], message)
     assert seen == {}, "the agent never ran"
-    assert (await storage.load_task(task["id"]))["status"]["state"] == "failed"
+    failed = await storage.load_task(task["id"])
+    assert failed is not None and failed["status"]["state"] == "failed"
 
 
 class TestTheGatewayIsReachedAsTheRun:
-    def test_the_process_server_gives_way_to_one_holding_the_runs_token(self, monkeypatch: Any) -> None:
+    def test_the_process_server_gives_way_to_one_holding_the_runs_token(
+        self, monkeypatch: Any
+    ) -> None:
         seen: dict[str, Any] = {}
 
-        def client(headers: dict[str, str] | None = None, **kwargs: Any) -> httpx.AsyncClient:
+        def client(
+            headers: dict[str, str] | None = None, **kwargs: Any
+        ) -> httpx.AsyncClient:
             seen["headers"] = dict(headers or {})
             return httpx.AsyncClient(headers=headers)
 
@@ -197,7 +221,9 @@ class TestTheGatewayIsReachedAsTheRun:
         [gateway] = toolsets_for_the_run([command], TOKEN)
         assert isinstance(gateway, MCPToolset)
 
-    def test_an_agent_not_given_the_gateway_is_not_given_it_by_a_delegation(self) -> None:
+    def test_an_agent_not_given_the_gateway_is_not_given_it_by_a_delegation(
+        self,
+    ) -> None:
         chart = SimpleNamespace(id="chart")
         assert toolsets_for_the_run([chart], TOKEN) == [chart]
 
@@ -217,12 +243,16 @@ class TestTheAdapterBuildsTheRunsToolset:
         return adapter
 
     @pytest.mark.asyncio
-    async def test_a_run_with_its_own_token_reaches_the_gateway_with_it(self, monkeypatch: Any) -> None:
+    async def test_a_run_with_its_own_token_reaches_the_gateway_with_it(
+        self, monkeypatch: Any
+    ) -> None:
         from agent_runtimes.adapters.base import AgentContext
         from agent_runtimes.tests.test_pydantic_ai_adapter_model_budget import _Agent
 
         agent = _Agent()
-        await self._adapter(monkeypatch, agent).run("go", AgentContext(session_id="s1", metadata={"user_token": TOKEN}))
+        await self._adapter(monkeypatch, agent).run(
+            "go", AgentContext(session_id="s1", metadata={"user_token": TOKEN})
+        )
         [gateway] = agent.calls[0]["toolsets"]
         assert isinstance(gateway, MCPToolset) and gateway.id == "datalayer"
 
@@ -233,12 +263,19 @@ class TestTheAdapterBuildsTheRunsToolset:
 
         agent = _Agent(raises=RuntimeError("stopped once its toolsets were seen"))
         adapter = self._adapter(monkeypatch, agent)
-        [event async for event in adapter.stream("go", AgentContext(session_id="s1", metadata={"user_token": TOKEN}))]
+        [
+            event
+            async for event in adapter.stream(
+                "go", AgentContext(session_id="s1", metadata={"user_token": TOKEN})
+            )
+        ]
         [gateway] = agent.calls[0]["toolsets"]
         assert isinstance(gateway, MCPToolset)
 
     @pytest.mark.asyncio
-    async def test_a_run_without_one_keeps_the_process_server(self, monkeypatch: Any) -> None:
+    async def test_a_run_without_one_keeps_the_process_server(
+        self, monkeypatch: Any
+    ) -> None:
         from agent_runtimes.adapters.base import AgentContext
         from agent_runtimes.tests.test_pydantic_ai_adapter_model_budget import _Agent
 

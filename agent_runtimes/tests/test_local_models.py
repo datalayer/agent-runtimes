@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
@@ -22,6 +23,9 @@ from agent_runtimes.models.local import (
     split_model_id,
 )
 from agent_runtimes.types import AIModel
+
+if TYPE_CHECKING:
+    from agent_runtimes.chat.tux import CliTux
 
 
 class TestProviderTable:
@@ -279,7 +283,7 @@ class TestModelsCommand:
         captured: list[dict] = []
         tux = self._tux(captured)
         monkeypatch.setattr("httpx.AsyncClient", tux._client)
-        asyncio.run(models_cmd.execute(tux, model_id))
+        asyncio.run(models_cmd.execute(cast("CliTux", tux), model_id))
         assert captured, "the agent was never reconfigured"
         return captured[0]
 
@@ -308,6 +312,6 @@ class TestModelsCommand:
         tux = self._tux(captured)
         monkeypatch.setattr("httpx.AsyncClient", tux._client)
 
-        asyncio.run(models_cmd.execute(tux, "openai:does-not-exist"))
+        asyncio.run(models_cmd.execute(cast("CliTux", tux), "openai:does-not-exist"))
 
         assert captured == []

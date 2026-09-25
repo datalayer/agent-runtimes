@@ -45,7 +45,14 @@ from agent_runtimes.tests.orchestration_records import an_attempt, an_execution
 
 @pytest.fixture(autouse=True)
 def recording() -> Any:
-    """Recording instruments for each test, and exporting ones restored after."""
+    """
+    Record the instruments for each test, and restore exporting ones after.
+
+    Yields
+    ------
+    Any
+        The recording instruments.
+    """
     measures.configure(recording=True)
     yield measures.instruments()
     measures.configure()

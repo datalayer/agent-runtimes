@@ -26,20 +26,32 @@ def test_the_deployment_is_the_one_named_and_datalayers_otherwise(monkeypatch):
 
 
 def test_the_benchmark_and_its_live_report():
-    assert links.benchmark_url("evalset-1") == "https://datalayer.example/benchmarks/evalset-1"
-    assert links.benchmark_report_url("evalset-1") == "https://datalayer.example/benchmarks/evalset-1/report"
+    assert (
+        links.benchmark_url("evalset-1")
+        == "https://datalayer.example/benchmarks/evalset-1"
+    )
+    assert (
+        links.benchmark_report_url("evalset-1")
+        == "https://datalayer.example/benchmarks/evalset-1/report"
+    )
     assert links.benchmark_url("") == "" and links.benchmark_report_url("") == ""
 
 
 def test_the_run_and_one_of_its_experiment_runs():
     assert links.launch_url("launch-128") == "https://datalayer.example/runs/launch-128"
-    assert links.run_url("launch-128", "run-9") == "https://datalayer.example/runs/launch-128/experiments/run-9"
+    assert (
+        links.run_url("launch-128", "run-9")
+        == "https://datalayer.example/runs/launch-128/experiments/run-9"
+    )
     # A run is reached through its launch: without one there is no run page.
     assert links.run_url("", "run-9") == "" and links.run_url("launch-128", "") == ""
 
 
 def test_the_agentspec():
-    assert links.agentspec_url("jupyter-data-analyst") == "https://datalayer.example/settings/agentspecs/jupyter-data-analyst"
+    assert (
+        links.agentspec_url("jupyter-data-analyst")
+        == "https://datalayer.example/settings/agentspecs/jupyter-data-analyst"
+    )
     assert links.agentspec_url("") == ""
 
 

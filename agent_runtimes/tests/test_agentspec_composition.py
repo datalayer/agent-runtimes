@@ -166,15 +166,32 @@ class TestSubagentRefs:
         # what this checks.
         config = SimpleNamespace(
             subagents=[
-                SimpleNamespace(name="NotebookCompactor", description="", instructions="", ref="jupyter-notebook-compactor:0.0.1"),
-                SimpleNamespace(name="CellFixer", description="", instructions="", ref="jupyter-cell-fixer:0.0.1"),
-                SimpleNamespace(name="NotebookReproducer", description="", instructions="", ref="jupyter-notebook-reproducer:0.0.1"),
+                SimpleNamespace(
+                    name="NotebookCompactor",
+                    description="",
+                    instructions="",
+                    ref="jupyter-notebook-compactor:0.0.1",
+                ),
+                SimpleNamespace(
+                    name="CellFixer",
+                    description="",
+                    instructions="",
+                    ref="jupyter-cell-fixer:0.0.1",
+                ),
+                SimpleNamespace(
+                    name="NotebookReproducer",
+                    description="",
+                    instructions="",
+                    ref="jupyter-notebook-reproducer:0.0.1",
+                ),
             ],
             include_general_purpose=True,
             max_nesting_depth=2,
             default_model=None,
         )
-        capability = build_subagents_capability(config, "bedrock:model", agent_id="loop-shell")
+        capability = build_subagents_capability(
+            config, "bedrock:model", agent_id="loop-shell"
+        )
         assert capability is not None
 
         by_name = {d.name: d for d in capability.subagents}
@@ -203,6 +220,7 @@ class TestSubagentRefs:
         )
 
         capability = build_subagents_capability(config, "bedrock:model")
+        assert capability is not None
 
         # A specialist that is not installed costs that subagent, not the agent.
         assert [d.name for d in capability.subagents] == ["Real"]

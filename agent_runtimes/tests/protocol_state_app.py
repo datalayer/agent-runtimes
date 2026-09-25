@@ -44,11 +44,17 @@ class SlowAgent(BaseAgent):
 
     async def run(self, prompt: str, context: AgentContext) -> AgentResponse:
         text = "".join(
-            [event.data async for event in self.stream(prompt, context) if event.type == "text"]
+            [
+                event.data
+                async for event in self.stream(prompt, context)
+                if event.type == "text"
+            ]
         )
         return AgentResponse(content=text)
 
-    async def stream(self, prompt: str, context: AgentContext) -> AsyncIterator[StreamEvent]:
+    async def stream(
+        self, prompt: str, context: AgentContext
+    ) -> AsyncIterator[StreamEvent]:
         yield StreamEvent(type="text", data=f"First half of {prompt}. ")
         while not GATE.exists():
             await asyncio.sleep(0.05)

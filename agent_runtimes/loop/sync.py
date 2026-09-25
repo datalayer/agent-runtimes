@@ -78,7 +78,9 @@ class SessionSync:
             return False
         return True
 
-    async def poll(self, fetch: Optional[Callable[..., Any]] = None) -> list[ForeignTurn]:
+    async def poll(
+        self, fetch: Optional[Callable[..., Any]] = None
+    ) -> list[ForeignTurn]:
         """Look once. Returns turns that arrived from another front-end.
 
         The first call establishes the baseline and reports nothing: whatever

@@ -156,7 +156,7 @@ class TestCodeSandboxManagerSidecarGuard:
                 return cls()
 
         fake_package = types.ModuleType("code_sandboxes")
-        fake_package.CodeSandboxClient = DummyClient  # type: ignore[attr-defined]
+        fake_package.CodeSandboxClient = DummyClient
         monkeypatch.setitem(sys.modules, "code_sandboxes", fake_package)
         return DummySandbox
 
@@ -217,7 +217,9 @@ class TestCodeSandboxManagerSidecarGuard:
         self, monkeypatch: Any
     ) -> None:
         manager = CodeSandboxManager()
-        monkeypatch.setitem(sys.modules, "code_sandboxes", types.ModuleType("code_sandboxes"))
+        monkeypatch.setitem(
+            sys.modules, "code_sandboxes", types.ModuleType("code_sandboxes")
+        )
 
         with pytest.raises(ImportError):
             manager._create_sandbox(variant="eval")

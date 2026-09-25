@@ -21,7 +21,12 @@ from pydantic_ai.mcp import MCPToolset
 
 from agent_runtimes.mcp.tracing import tracing_client
 
-__all__ = ["DEFAULT_GATEWAY_URL", "GATEWAY_SERVER_IDS", "gateway_url", "toolsets_for_the_run"]
+__all__ = [
+    "DEFAULT_GATEWAY_URL",
+    "GATEWAY_SERVER_IDS",
+    "gateway_url",
+    "toolsets_for_the_run",
+]
 
 #: The hosted endpoint, overridable for a staging deployment or a local gateway.
 DEFAULT_GATEWAY_URL = "https://mcp.datalayer.run/mcp"
@@ -40,7 +45,9 @@ def gateway_url() -> str:
     str
         ``DATALAYER_MCP_SERVER_URL``, or the hosted endpoint.
     """
-    return (os.environ.get("DATALAYER_MCP_SERVER_URL") or DEFAULT_GATEWAY_URL).rstrip("/")
+    return (os.environ.get("DATALAYER_MCP_SERVER_URL") or DEFAULT_GATEWAY_URL).rstrip(
+        "/"
+    )
 
 
 def toolsets_for_the_run(toolsets: list[Any], token: str) -> list[Any]:
@@ -61,7 +68,11 @@ def toolsets_for_the_run(toolsets: list[Any], token: str) -> list[Any]:
         otherwise without the process's Datalayer server, and with a gateway
         toolset authenticated by the run's token in its place.
     """
-    kept = [toolset for toolset in toolsets if getattr(toolset, "id", None) not in GATEWAY_SERVER_IDS]
+    kept = [
+        toolset
+        for toolset in toolsets
+        if getattr(toolset, "id", None) not in GATEWAY_SERVER_IDS
+    ]
     if len(kept) == len(toolsets):
         # An agent not given the gateway is not given it by a delegation.
         return toolsets

@@ -101,8 +101,7 @@ def test_every_field_a_worker_answers_with_is_described(schema):
         assert answer is not None
         for field in answer[DELEGATION_META_KEY]:
             assert field in described, (
-                f"A worker answers with {field!r} and the schema does not "
-                "describe it."
+                f"A worker answers with {field!r} and the schema does not describe it."
             )
 
 
@@ -164,11 +163,11 @@ def test_every_catalogued_capability_is_in_the_closed_vocabulary():
     from agent_runtimes.types import AGENT_CAPABILITIES
 
     specs = list_agentspecs()
-    declared = {
-        capability.id for spec in specs for capability in spec.delegable
-    }
+    declared = {capability.id for spec in specs for capability in spec.delegable}
     assert declared, "no spec declares delegable work, so discovery matches nothing"
-    assert declared <= set(AGENT_CAPABILITIES), sorted(declared - set(AGENT_CAPABILITIES))
+    assert declared <= set(AGENT_CAPABILITIES), sorted(
+        declared - set(AGENT_CAPABILITIES)
+    )
 
     # A demonstration discovered as something to hand work to is worse than
     # one that cannot be discovered at all.

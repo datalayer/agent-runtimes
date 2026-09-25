@@ -11,6 +11,7 @@ as such rather than pretended.
 
 from __future__ import annotations
 
+import builtins
 import logging
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -138,14 +139,14 @@ class NotificationStore:
         body: str,
         *,
         level: Level = "info",
-        channels: list[str] | None = None,
+        channels: builtins.list[str] | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> list[Notification]:
+    ) -> builtins.list[Notification]:
         """Send through the enabled channels (or the ones named), one record each."""
         wanted = [
             c for c in (channels or self.enabled_channels()) if c in self._channels
         ]
-        records: list[Notification] = []
+        records: builtins.list[Notification] = []
         for name in wanted:
             config = self._channels[name]
             if channels is None and not config.enabled:

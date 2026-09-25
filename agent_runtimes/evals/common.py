@@ -15,9 +15,10 @@ coercion, and token-usage aggregation logic across runners.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 __all__ = [
+    "as_dict",
     "case_prompt",
     "compose_case_prompt",
     "extract_text",
@@ -26,6 +27,25 @@ __all__ = [
     "usage_number",
     "usage_pick_number",
 ]
+
+
+def as_dict(value: Any) -> dict[str, Any]:
+    """
+    Return ``value`` when it is a dict, else an empty dict.
+
+    Parameters
+    ----------
+    value : Any
+        A field read from a service record, which may be missing or malformed.
+
+    Returns
+    -------
+    dict[str, Any]
+        The field itself, or ``{}``.
+    """
+    if isinstance(value, dict):
+        return cast(dict[str, Any], value)
+    return {}
 
 
 def case_prompt(case: dict[str, Any]) -> str:

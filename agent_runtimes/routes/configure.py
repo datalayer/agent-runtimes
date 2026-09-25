@@ -29,7 +29,7 @@ from agent_runtimes.mcp import (
     get_mcp_manager,
 )
 from agent_runtimes.node_mode import is_node_enabled, set_node_enabled
-from agent_runtimes.types import FrontendConfig
+from agent_runtimes.types import AgentSuggestion, FrontendConfig
 
 logger = logging.getLogger(__name__)
 
@@ -525,7 +525,7 @@ async def list_catalog_skills(agent_id: str | None = None) -> dict[str, Any]:
     active: list[str] = []
     sandbox: dict[str, Any] = {}
     try:
-        status = await get_codemode_status(agent_id=agent_id)  # type: ignore[call-arg]
+        status = await get_codemode_status(agent_id=agent_id)
         if isinstance(status, dict):
             sandbox = status.get("sandbox") or {}
             active = [
@@ -623,10 +623,18 @@ async def get_configuration(
 
                 raw_suggestions = spec.get("suggestions")
                 if isinstance(raw_suggestions, list):
+                    # A spec's suggestion is a bare string or, since openers
+                    # carry marks, an `AgentSuggestion` record.
                     config.suggestions = [
-                        str(item).strip()
+                        AgentSuggestion(text=item.strip())
+                        if isinstance(item, str)
+                        else AgentSuggestion.model_validate(item)
                         for item in raw_suggestions
-                        if isinstance(item, str) and str(item).strip()
+                        if (isinstance(item, str) and item.strip())
+                        or (
+                            isinstance(item, dict)
+                            and str(item.get("text") or "").strip()
+                        )
                     ]
 
             # What has been sent to this agent so far, for the composer's arrow

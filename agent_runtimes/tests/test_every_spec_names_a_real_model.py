@@ -46,9 +46,7 @@ def _catalogued() -> set[str]:
 
 
 def test_every_agentspec_names_a_catalogued_model(catalogued):
-    named = {
-        (spec.id, spec.model) for spec in list_agentspecs() if spec.model
-    }
+    named = {(spec.id, spec.model) for spec in list_agentspecs() if spec.model}
     unknown = sorted((spec, model) for spec, model in named if model not in catalogued)
     assert not unknown, unknown
 

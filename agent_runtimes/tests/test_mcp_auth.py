@@ -41,7 +41,9 @@ def _metadata(**overrides: Any) -> ServerMetadata:
 
 
 class _Response:
-    def __init__(self, payload: Any = None, status_code: int = 200, text: str = "") -> None:
+    def __init__(
+        self, payload: Any = None, status_code: int = 200, text: str = ""
+    ) -> None:
         self.status_code = status_code
         self._payload = payload if payload is not None else {}
         self.text = text
@@ -107,7 +109,8 @@ class TestTokens:
         store = MemoryTokenStore()
         store.put("srv", OAuthToken(access_token="a"))
 
-        assert store.get("srv").access_token == "a"
+        token = store.get("srv")
+        assert token is not None and token.access_token == "a"
         assert store.list_servers() == ("srv",)
         store.delete("srv")
         assert store.get("srv") is None
@@ -292,7 +295,9 @@ class TestTokenExchange:
             )
 
         monkeypatch.setattr(oauth_module.httpx, "AsyncClient", _fake_client(handler))
-        token = asyncio.run(oauth_module.exchange_code(self._flow(), "code-1", now=1000.0))
+        token = asyncio.run(
+            oauth_module.exchange_code(self._flow(), "code-1", now=1000.0)
+        )
 
         assert token.access_token == "at"
         # Absolute, because a stored `expires_in` means nothing later.
@@ -318,7 +323,9 @@ class TestTokenExchange:
         monkeypatch.setattr(
             oauth_module.httpx,
             "AsyncClient",
-            _fake_client(lambda *a: _Response({"access_token": "new", "expires_in": 60})),
+            _fake_client(
+                lambda *a: _Response({"access_token": "new", "expires_in": 60})
+            ),
         )
         old = OAuthToken(
             access_token="old",
@@ -406,7 +413,8 @@ class TestEndpoints:
             mcp_auth.auth_callback(code="code-1", state=started.state)
         )
         assert response.status_code == 200
-        assert _store.get("srv").access_token == "at"
+        token = _store.get("srv")
+        assert token is not None and token.access_token == "at"
         # The flow is consumed: a replayed callback finds nothing.
         assert mcp_auth._pending == {}
 
@@ -473,7 +481,11 @@ class TestPlatformStore:
             if method == "POST":
                 body = kwargs["json"]
                 state["secrets"].append(
-                    {"uid": "uid-1", "name_s": body["name"], "variant_s": body["variant"]}
+                    {
+                        "uid": "uid-1",
+                        "name_s": body["name"],
+                        "variant_s": body["variant"],
+                    }
                 )
                 state["values"][body["name"]] = body["value"]
                 return {"success": True}

@@ -161,7 +161,10 @@ class FakeChannel(ACPChannel):
             for message in self.script:
                 for handler in list(self._handlers):
                     handler(dict(message))
-            return {"stopReason": self.stop_reason, **({"_meta": self.meta} if self.meta else {})}
+            return {
+                "stopReason": self.stop_reason,
+                **({"_meta": self.meta} if self.meta else {}),
+            }
         return {}
 
     async def notify(self, method, params):
@@ -406,7 +409,10 @@ class TestDelegation:
             _adapter(FakeChannel(script=ROUTE_UPDATES)), store
         )
 
-        assert [artifact.summary for artifact in await store.artifacts(execution.execution_id)] in ([], [""], [None])
+        assert [
+            artifact.summary
+            for artifact in await store.artifacts(execution.execution_id)
+        ] in ([], [""], [None])
 
     @pytest.mark.asyncio
     async def test_the_objective_is_prompted_as_the_schema_spells_it(self):

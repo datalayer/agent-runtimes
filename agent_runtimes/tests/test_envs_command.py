@@ -24,15 +24,14 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import requests
 import yaml
-from click.testing import Result
 from code_sandboxes.environments.spec import Environment, parse_environment
 from typer.main import get_command
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 
 from agent_runtimes.client import AgentClient
 from agent_runtimes.commands import envs
@@ -98,6 +97,8 @@ COMMANDS = {
     "build",
     "builds",
     "artifacts",
+    "sandboxes",
+    "quotas",
     "cancel",
     "retry",
     "fork",
@@ -152,7 +153,10 @@ class _Arriving:
 def refused(url: str, status: int, body: Any) -> RuntimeError:
     """What ``datalayer_core``'s ``_fetch`` raises for an HTTP error: a RuntimeError from it."""
     try:
-        raise requests.HTTPError(response=_Response(status, body))
+        # The stand-in carries what the client reads of a real response.
+        raise requests.HTTPError(
+            response=cast(requests.Response, _Response(status, body))
+        )
     except requests.HTTPError as error:
         try:
             raise RuntimeError(
@@ -270,7 +274,7 @@ def test_the_group_has_every_command_and_each_takes_the_three_outputs() -> None:
 def test_core_defines_no_envs_group_to_merge_over_this_one() -> None:
     from datalayer_core.cli.__main__ import app as core_app
 
-    assert "envs" not in get_command(core_app).commands  # type: ignore[attr-defined]
+    assert "envs" not in get_command(core_app).commands
 
 
 # -- ls -------------------------------------------------------------------------------
@@ -671,8 +675,8 @@ def test_the_builds_table_names_a_kind_only_when_one_is_not_a_build(
     """A resolve is a build record that makes no artifact, and a `succeeded`
     row that built nothing needs saying. An ordinary listing grows no column
     it has no use for."""
-    import io
     import contextlib
+    import io
 
     from agent_runtimes.displays.environments import display_environment_builds
     from agent_runtimes.models.environment import EnvironmentBuildRecord
@@ -1028,7 +1032,7 @@ LOGS = f"/environment-builds/{LOGGED_UID}/logs"
 
 
 def follow_routes(registry: Registry, size: int = 64, **changes: Any) -> None:
-    """E1-16's recorded answers: the build queued, its log's stream, and the build as it ended, with ``changes``."""
+    """Answer as E1-16 recorded: the build queued, its log's stream, and the build as it ended, with ``changes``."""
     registry.on(
         "POST",
         f"/environment-versions/{LOGGED_VERSION_UID}/builds",
@@ -1281,7 +1285,7 @@ def test_promote_prints_the_unavailable_variants_a_wrong_acknowledgement_missed(
 
 
 def history(*states: str) -> list[dict[str, Any]]:
-    """Versions newest first, the last state being version 1's."""
+    """List the versions newest first, the last state being version 1's."""
     count = len(states)
     return [
         record(
@@ -1437,7 +1441,6 @@ def test_rm_prints_the_503_when_the_runtimes_cannot_be_read(registry: Registry) 
     ]
 
 
-
 # -- publish, unpublish, publication ----------------------------------------------------------
 
 
@@ -1456,7 +1459,12 @@ A_PUBLICATION = {
         "versionUid": READY_UID,
         "versionNumber": 2,
         "spec": {},
-        "lock": {"digest": "sha256:" + "3d" * 32, "format": "uv-pip-compile", "content": "", "packageCount": 320},
+        "lock": {
+            "digest": "sha256:" + "3d" * 32,
+            "format": "uv-pip-compile",
+            "content": "",
+            "packageCount": 320,
+        },
         "sbomRef": "registry/environments/u/owner/geo@sha256:abc.sbom",
         "scanSummary": {"decision": "pass", "blocking": []},
         "licenses": [],
@@ -1520,16 +1528,20 @@ def test_unpublish_keeps_the_snapshot(registry: Registry) -> None:
     answer = json.loads(invoke("unpublish", READY_UID, "-o", "json").stdout)
     assert answer["status"] == "unpublished"
     # Kept, so publishing again restores exactly what was public.
-    assert answer["snapshot"]["lock"]["digest"] == A_PUBLICATION["snapshot"]["lock"]["digest"]
+    assert (
+        answer["snapshot"]["lock"]["digest"]
+        == A_PUBLICATION["snapshot"]["lock"]["digest"]
+    )
 
 
 def test_publication_reads_what_a_version_made_public(registry: Registry) -> None:
-    registry.on("GET", f"/environment-versions/{READY_UID}/publication", ok(A_PUBLICATION))
+    registry.on(
+        "GET", f"/environment-versions/{READY_UID}/publication", ok(A_PUBLICATION)
+    )
     result = invoke("publication", READY_UID)
     assert result.exit_code == 0, result.output
     assert "published" in result.stdout and "geo" in result.stdout
     assert registry.sent("POST", f"/environment-versions/{READY_UID}/publish") == []
-
 
 
 # -- builds, artifacts, cancel, retry, fork ----------------------------------------------------
@@ -1577,6 +1589,44 @@ def test_artifacts_says_whether_retention_still_keeps_one(registry: Registry) ->
     assert "retained" in result.stdout and "datalayer" in result.stdout
 
 
+def test_sandboxes_lists_what_runs_a_version(registry: Registry) -> None:
+    mine = {
+        "phase": "Pending",
+        "startedAt": "2026-09-20T10:00:00Z",
+        "yours": True,
+        "runtimeUid": "01JV1VE1T5VG22Z05F6EFBMW8R",
+        "waiting": "Unschedulable: 0/6 nodes are available: 4 Insufficient cpu.",
+    }
+    registry.on(
+        "GET",
+        f"/environment-versions/{READY_UID}/sandboxes",
+        ok({"versionUid": READY_UID, "sandboxes": [mine]}),
+    )
+    result = invoke("sandboxes", READY_UID)
+    assert result.exit_code == 0, result.output
+    assert "Unschedulable" in result.stdout and "Pending" in result.stdout
+    answer = yaml.safe_load(invoke("sandboxes", READY_UID, "-o", "json").stdout)
+    assert answer["sandboxes"] == [mine]
+
+
+def test_quotas_reads_an_organizations_when_asked(registry: Registry) -> None:
+    quotas: dict[str, Any] = {
+        "ownerType": "organization",
+        "ownerUid": "01JV1VE1T5VG22Z05F6EFBMW8O",
+        "limits": {"concurrentBuilds": 2},
+        "holdings": {"concurrentBuilds": 1},
+    }
+    registry.on("GET", "/environment-quotas", ok(quotas))
+    result = invoke("quotas", "--organization", quotas["ownerUid"], "-o", "json")
+    assert result.exit_code == 0, result.output
+    assert yaml.safe_load(result.stdout) == quotas
+    (sent,) = registry.sent("GET", "/environment-quotas")
+    assert sent["params"] == {
+        "ownerType": "organization",
+        "ownerUid": quotas["ownerUid"],
+    }
+
+
 def test_cancel_stops_a_running_build(registry: Registry) -> None:
     registry.on(
         "POST",
@@ -1600,7 +1650,9 @@ def test_retry_is_the_next_attempt_of_the_same_build(registry: Registry) -> None
     assert answer["uid"] == BUILD_UID and answer["attempt"] == 2
 
 
-def test_fork_reuses_the_published_artifact_rather_than_building(registry: Registry) -> None:
+def test_fork_reuses_the_published_artifact_rather_than_building(
+    registry: Registry,
+) -> None:
     registry.on(
         "POST",
         f"/environment-versions/{READY_UID}/fork",

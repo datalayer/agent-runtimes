@@ -105,7 +105,9 @@ async def open_shadow_execution(
         return existing
     execution_id = f"exec_{uuid.uuid4().hex}"
     stamp = now()
-    agent = AgentBinding(agent_id=f"mcp:{tool}", capability=tool, protocol=AgentProtocol.DATALAYER)
+    agent = AgentBinding(
+        agent_id=f"mcp:{tool}", capability=tool, protocol=AgentProtocol.DATALAYER
+    )
     execution = Execution(
         execution_id=execution_id,
         root_execution_id=execution_id,

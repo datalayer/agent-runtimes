@@ -75,7 +75,9 @@ def _token_handler(recorder: list, payload: dict | None = None, status: int = 20
     def handler(method: str, url: str, kwargs: dict) -> _Response:
         recorder.append((method, url, kwargs))
         return _Response(
-            payload if payload is not None else {"access_token": "at", "expires_in": 3600},
+            payload
+            if payload is not None
+            else {"access_token": "at", "expires_in": 3600},
             status_code=status,
             text="refused",
         )
@@ -93,7 +95,9 @@ class TestConfiguration:
         """A client with both would silently pick one, and which one it picked
         is what somebody debugging a refused token needs to know."""
         with pytest.raises(MachineAuthError):
-            ClientCredentials(client_id="agent", client_secret=SECRET, private_key=rsa_key)
+            ClientCredentials(
+                client_id="agent", client_secret=SECRET, private_key=rsa_key
+            )
 
     def test_neither_is_also_refused(self) -> None:
         with pytest.raises(MachineAuthError):
@@ -115,13 +119,21 @@ class TestConfiguration:
             ClientCredentials(client_id="agent", private_key=rsa_key, algorithm="none")
 
     def test_the_method_is_named_truthfully(self, rsa_key: str) -> None:
-        assert ClientCredentials(client_id="a", client_secret=SECRET).method == "client_secret_post"
-        assert ClientCredentials(client_id="a", private_key=rsa_key).method == "private_key_jwt"
+        assert (
+            ClientCredentials(client_id="a", client_secret=SECRET).method
+            == "client_secret_post"
+        )
+        assert (
+            ClientCredentials(client_id="a", private_key=rsa_key).method
+            == "private_key_jwt"
+        )
 
     def test_the_repr_carries_no_credential(self, rsa_key: str) -> None:
         """This object ends up in tracebacks. A credential printed once is a
         credential in a log aggregator forever."""
-        assert SECRET not in repr(ClientCredentials(client_id="a", client_secret=SECRET))
+        assert SECRET not in repr(
+            ClientCredentials(client_id="a", client_secret=SECRET)
+        )
         printed = repr(ClientCredentials(client_id="a", private_key=rsa_key))
         assert "PRIVATE KEY" not in printed and "MII" not in printed
 
@@ -135,9 +147,15 @@ class TestAssertion:
     def _claims(self, assertion: str) -> dict:
         import jwt
 
-        return jwt.decode(assertion, options={"verify_signature": False}, audience="https://as.example/token")
+        return jwt.decode(
+            assertion,
+            options={"verify_signature": False},
+            audience="https://as.example/token",
+        )
 
-    def test_the_audience_is_the_token_endpoint_not_the_issuer(self, rsa_key: str) -> None:
+    def test_the_audience_is_the_token_endpoint_not_the_issuer(
+        self, rsa_key: str
+    ) -> None:
         """The binding that stops an assertion captured at one authorization
         server being presented at another that trusts the same key."""
         credentials = ClientCredentials(client_id="agent", private_key=rsa_key)
@@ -159,24 +177,35 @@ class TestAssertion:
     def test_an_assertion_is_short_lived(self, rsa_key: str) -> None:
         """One captured in transit is worthless before it can be read."""
         credentials = ClientCredentials(client_id="agent", private_key=rsa_key)
-        claims = self._claims(build_assertion(credentials, "https://as.example/token", now=1000))
+        claims = self._claims(
+            build_assertion(credentials, "https://as.example/token", now=1000)
+        )
         assert claims["exp"] - claims["iat"] == ASSERTION_LIFETIME_SECONDS
         assert claims["exp"] <= 1000 + 300
 
-    def test_a_key_id_travels_in_the_header_when_there_is_one(self, rsa_key: str) -> None:
+    def test_a_key_id_travels_in_the_header_when_there_is_one(
+        self, rsa_key: str
+    ) -> None:
         import jwt
 
-        credentials = ClientCredentials(client_id="a", private_key=rsa_key, private_key_id="k1")
+        credentials = ClientCredentials(
+            client_id="a", private_key=rsa_key, private_key_id="k1"
+        )
         assertion = build_assertion(credentials, "https://as.example/token")
         assert jwt.get_unverified_header(assertion)["kid"] == "k1"
 
-    def test_an_assertion_without_a_token_endpoint_is_refused(self, rsa_key: str) -> None:
+    def test_an_assertion_without_a_token_endpoint_is_refused(
+        self, rsa_key: str
+    ) -> None:
         credentials = ClientCredentials(client_id="a", private_key=rsa_key)
         with pytest.raises(MachineAuthError):
             build_assertion(credentials, "")
 
     def test_a_broken_key_is_reported_without_printing_the_key(self) -> None:
-        credentials = ClientCredentials(client_id="a", private_key="-----BEGIN PRIVATE KEY-----\nnope\n-----END PRIVATE KEY-----")
+        credentials = ClientCredentials(
+            client_id="a",
+            private_key="-----BEGIN PRIVATE KEY-----\nnope\n-----END PRIVATE KEY-----",
+        )
         with pytest.raises(MachineAuthError) as refused:
             build_assertion(credentials, "https://as.example/token")
         assert "nope" not in str(refused.value)
@@ -198,7 +227,9 @@ class TestClientCredentials:
             machine_module.httpx, "AsyncClient", _fake_client(_token_handler(recorder))
         )
         token = await fetch_token(
-            ClientCredentials(client_id="agent", client_secret=SECRET, scope="code:execute"),
+            ClientCredentials(
+                client_id="agent", client_secret=SECRET, scope="code:execute"
+            ),
             _metadata(),
             now=1000,
         )
@@ -269,7 +300,8 @@ class TestClientCredentials:
             "AsyncClient",
             _fake_client(
                 _token_handler(
-                    recorder, {"access_token": "at", "refresh_token": "rt", "expires_in": 60}
+                    recorder,
+                    {"access_token": "at", "refresh_token": "rt", "expires_in": 60},
                 )
             ),
         )
@@ -305,7 +337,8 @@ class TestClientCredentials:
         )
         with pytest.raises(MachineAuthError) as refused:
             await fetch_token(
-                ClientCredentials(client_id="agent-7", client_secret=SECRET), _metadata()
+                ClientCredentials(client_id="agent-7", client_secret=SECRET),
+                _metadata(),
             )
         message = str(refused.value)
         assert "agent-7" in message and "client_secret_post" in message
@@ -343,7 +376,10 @@ class TestSubAgentExchange:
         )
         parent = OAuthToken(access_token="parent-at", client_id="agent")
         await exchange_for_subagent(
-            parent, _metadata(), audience="https://mcp.example/mcp", scope="notebooks:read"
+            parent,
+            _metadata(),
+            audience="https://mcp.example/mcp",
+            scope="notebooks:read",
         )
         body = _posted(recorder)
         assert body["grant_type"] == "urn:ietf:params:oauth:grant-type:token-exchange"
@@ -362,7 +398,9 @@ class TestSubAgentExchange:
             machine_module.httpx,
             "AsyncClient",
             _fake_client(
-                _token_handler(recorder, {"access_token": "child", "refresh_token": "rt"})
+                _token_handler(
+                    recorder, {"access_token": "child", "refresh_token": "rt"}
+                )
             ),
         )
         issued = await exchange_for_subagent(

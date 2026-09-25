@@ -95,7 +95,9 @@ def test_a_card_with_more_than_one_endpoint_names_the_rest_as_additional() -> No
     second = _ENDPOINT.model_copy(
         update={"url": "https://example.datalayer.run/a2a/agent-2", "transport": "GRPC"}
     )
-    descriptor = mapping.descriptor.model_copy(update={"endpoints": [_ENDPOINT, second]})
+    descriptor = mapping.descriptor.model_copy(
+        update={"endpoints": [_ENDPOINT, second]}
+    )
     card = to_agent_card(descriptor)
 
     validated = AgentCard.model_validate(card.card)

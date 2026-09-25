@@ -59,7 +59,9 @@ class OAuthToken:
     token_endpoint: Optional[str] = None
     revocation_endpoint: Optional[str] = None
 
-    def is_expired(self, *, now: Optional[float] = None, margin: float = EXPIRY_MARGIN_SECONDS) -> bool:
+    def is_expired(
+        self, *, now: Optional[float] = None, margin: float = EXPIRY_MARGIN_SECONDS
+    ) -> bool:
         """Whether this token is past use, counting the safety margin."""
         if self.expires_at is None:
             return False
@@ -67,10 +69,12 @@ class OAuthToken:
         return self.expires_at - margin <= moment
 
     def to_json(self) -> str:
+        """Serialize the token as JSON."""
         return json.dumps(asdict(self))
 
     @classmethod
     def from_json(cls, raw: str) -> "OAuthToken":
+        """Parse a token serialized by ``to_json``, ignoring unknown fields."""
         data = json.loads(raw)
         known = {f for f in cls.__dataclass_fields__}
         return cls(**{k: v for k, v in data.items() if k in known})
@@ -85,13 +89,17 @@ class TokenStore(Protocol):
     def available(self) -> bool:
         """Whether this store can actually be used right now."""
 
-    def get(self, server_id: str) -> Optional[OAuthToken]: ...
+    def get(self, server_id: str) -> Optional[OAuthToken]:
+        """Return the token kept for a server, if any."""
 
-    def put(self, server_id: str, token: OAuthToken) -> None: ...
+    def put(self, server_id: str, token: OAuthToken) -> None:
+        """Keep the token of a server."""
 
-    def delete(self, server_id: str) -> None: ...
+    def delete(self, server_id: str) -> None:
+        """Forget the token of a server."""
 
-    def list_servers(self) -> tuple[str, ...]: ...
+    def list_servers(self) -> tuple[str, ...]:
+        """List the servers a token is kept for."""
 
 
 @dataclass
@@ -107,18 +115,23 @@ class MemoryTokenStore:
     _tokens: dict[str, OAuthToken] = field(default_factory=dict)
 
     def available(self) -> bool:
+        """Report that memory is always available."""
         return True
 
     def get(self, server_id: str) -> Optional[OAuthToken]:
+        """Return the token kept for a server, if any."""
         return self._tokens.get(server_id)
 
     def put(self, server_id: str, token: OAuthToken) -> None:
+        """Keep the token of a server."""
         self._tokens[server_id] = token
 
     def delete(self, server_id: str) -> None:
+        """Forget the token of a server."""
         self._tokens.pop(server_id, None)
 
     def list_servers(self) -> tuple[str, ...]:
+        """List the servers a token is kept for."""
         return tuple(sorted(self._tokens))
 
 
@@ -153,9 +166,11 @@ class KeyringTokenStore:
         return keyring
 
     def available(self) -> bool:
+        """Report whether a usable keyring backend is installed."""
         return self._keyring() is not None
 
     def get(self, server_id: str) -> Optional[OAuthToken]:
+        """Return the token kept for a server, if any."""
         keyring = self._keyring()
         if keyring is None:
             return None
@@ -169,10 +184,13 @@ class KeyringTokenStore:
         try:
             return OAuthToken.from_json(raw)
         except Exception as error:  # noqa: BLE001
-            logger.warning("Stored credentials for %s are unreadable: %s", server_id, error)
+            logger.warning(
+                "Stored credentials for %s are unreadable: %s", server_id, error
+            )
             return None
 
     def put(self, server_id: str, token: OAuthToken) -> None:
+        """Keep the token of a server."""
         keyring = self._keyring()
         if keyring is None:
             raise RuntimeError(
@@ -183,6 +201,7 @@ class KeyringTokenStore:
         self._index_add(server_id)
 
     def delete(self, server_id: str) -> None:
+        """Forget the token of a server."""
         keyring = self._keyring()
         if keyring is None:
             return
@@ -193,6 +212,7 @@ class KeyringTokenStore:
         self._index_remove(server_id)
 
     def list_servers(self) -> tuple[str, ...]:
+        """List the servers a token is kept for."""
         return tuple(sorted(self._index()))
 
     def _index(self) -> set[str]:
@@ -209,7 +229,9 @@ class KeyringTokenStore:
         keyring = self._keyring()
         if keyring is None:
             return
-        keyring.set_password(self._service, self._INDEX_KEY, json.dumps(sorted(servers)))
+        keyring.set_password(
+            self._service, self._INDEX_KEY, json.dumps(sorted(servers))
+        )
 
     def _index_add(self, server_id: str) -> None:
         servers = self._index()
@@ -225,6 +247,7 @@ class KeyringTokenStore:
 #: Marks a secret as an MCP login rather than a user's own API key, so the two
 #: never collide in one vault and a listing can tell them apart.
 PLATFORM_SECRET_VARIANT = "mcp-oauth"
+
 
 #: Secret name for a server's credentials.
 def _secret_name(server_id: str) -> str:
@@ -247,7 +270,7 @@ class PlatformTokenStore:
 
     name = "platform"
 
-    def __init__(self, base_url: str = "", token: str = "") -> None:
+    def __init__(self, base_url: str = "", token: str | None = None) -> None:
         self._base_url = (base_url or os.getenv("DATALAYER_IAM_URL") or "").rstrip("/")
         self._token = token or os.getenv("DATALAYER_API_KEY") or ""
 
@@ -280,7 +303,8 @@ class PlatformTokenStore:
             secret
             for secret in (secrets or [])
             if isinstance(secret, dict)
-            and secret.get("variant_s", secret.get("variant")) == PLATFORM_SECRET_VARIANT
+            and secret.get("variant_s", secret.get("variant"))
+            == PLATFORM_SECRET_VARIANT
         ]
 
     # -- the store --------------------------------------------------------
@@ -294,6 +318,7 @@ class PlatformTokenStore:
         return bool(self._base_url and self._token)
 
     def get(self, server_id: str) -> Optional[OAuthToken]:
+        """Return the token kept for a server, if any."""
         name = _secret_name(server_id)
         try:
             values = self._request("GET", f"{self._secrets_url}/values")
@@ -307,10 +332,13 @@ class PlatformTokenStore:
         try:
             return OAuthToken.from_json(_decode(raw))
         except Exception as error:  # noqa: BLE001
-            logger.warning("Stored credentials for %s are unreadable: %s", server_id, error)
+            logger.warning(
+                "Stored credentials for %s are unreadable: %s", server_id, error
+            )
             return None
 
     def put(self, server_id: str, token: OAuthToken) -> None:
+        """Keep the token of a server."""
         name = _secret_name(server_id)
         body = {
             "name": name,
@@ -330,12 +358,14 @@ class PlatformTokenStore:
             self._request("POST", self._secrets_url, json=body)
 
     def delete(self, server_id: str) -> None:
+        """Forget the token of a server."""
         name = _secret_name(server_id)
         for secret in self._secrets():
             if secret.get("name_s", secret.get("name")) == name and secret.get("uid"):
                 self._request("DELETE", f"{self._secrets_url}/{secret['uid']}")
 
     def list_servers(self) -> tuple[str, ...]:
+        """List the servers a token is kept for."""
         prefix = _secret_name("")
         names = [
             str(secret.get("name_s", secret.get("name", "")))

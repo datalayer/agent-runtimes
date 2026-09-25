@@ -23,7 +23,7 @@ import logging
 import uuid
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from fasta2a.broker import InMemoryBroker, TaskOperation, _RunTask
 from fasta2a.schema import (
@@ -56,7 +56,7 @@ def _key(scope: str, identifier: str) -> str:
 
 class DurableStorage(Storage[Any]):
     """
-    fasta2a's storage, kept in the protocol state store under one agent.
+    The fasta2a storage, kept in the protocol state store under one agent.
 
     Parameters
     ----------
@@ -79,7 +79,7 @@ class DurableStorage(Storage[Any]):
             return None
         if history_length and "history" in task:
             task["history"] = task["history"][-history_length:]
-        return task  # type: ignore[return-value]
+        return cast(Task, task)
 
     async def submit_task(self, context_id: str, message: Message) -> Task:
         from agent_runtimes.context.delegation import hold, take_credential
@@ -126,7 +126,7 @@ class DurableStorage(Storage[Any]):
             # Finished, failed, cancelled, or waiting on the client: nothing is
             # owed any more, and a restart must not run it again.
             await self._store.delete(OWED, key)
-        return task  # type: ignore[no-any-return]
+        return task
 
     async def load_context(self, context_id: str) -> Any | None:
         record = await self._store.get(CONTEXT, _key(self._scope, context_id))
@@ -140,7 +140,7 @@ class DurableStorage(Storage[Any]):
 
 class DurableBroker(InMemoryBroker):
     """
-    fasta2a's in-process broker, which remembers the work it still owes.
+    The fasta2a in-process broker, which remembers the work it still owes.
 
     Every run it is given is written down before the worker is told, and
     written off when the task stops being unfinished. What was owed when the
@@ -179,7 +179,9 @@ class DurableBroker(InMemoryBroker):
     async def receive_task_operations(self) -> AsyncIterator[TaskOperation]:
         owed, self._owed_at_start = self._owed_at_start, []
         for params in owed:
-            yield _RunTask(operation="run", params=params, _current_span=get_current_span())
+            yield _RunTask(
+                operation="run", params=params, _current_span=get_current_span()
+            )
         async for operation in super().receive_task_operations():
             yield operation
 
@@ -192,5 +194,5 @@ class DurableBroker(InMemoryBroker):
             if task is None or task["status"]["state"] not in UNFINISHED:
                 await self._store.delete(OWED, key)
                 continue
-            owed.append(params)  # type: ignore[arg-type]
+            owed.append(cast(TaskSendParams, params))
         return owed

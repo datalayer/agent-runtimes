@@ -109,7 +109,9 @@ class TestMerging:
 
         token = otel_context.attach(_in_a_span())
         try:
-            merged = with_trace({"traceparent": "00-aaaa-bbbb-01", "Authorization": "token x"})
+            merged = with_trace(
+                {"traceparent": "00-aaaa-bbbb-01", "Authorization": "token x"}
+            )
         finally:
             otel_context.detach(token)
         assert merged["traceparent"] == "00-aaaa-bbbb-01"

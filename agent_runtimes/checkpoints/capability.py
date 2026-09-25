@@ -121,7 +121,7 @@ class CheckpointsCapability(AbstractCapability[Any]):
     async def before_tool_execute(
         self, ctx: RunContext[Any], *, call: Any, tool_def: Any, args: Any
     ) -> Any:
-        name = getattr(tool_def, "name", None) or getattr(call, "tool_name", "")
+        name = str(getattr(tool_def, "name", None) or getattr(call, "tool_name", ""))
         if name not in _OWN_TOOLS:
             try:
                 await self.middleware.on_tool_call(name, _serialize(ctx.messages))

@@ -44,7 +44,7 @@ def _agent(script: Callable[[str, Any], AsyncIterator[StreamEvent]]) -> BaseAgen
         async def run(self, prompt: str, context: Any) -> Any:  # pragma: no cover
             raise NotImplementedError
 
-        async def stream(self, prompt: str, context: Any):  # type: ignore[override]
+        async def stream(self, prompt: str, context: Any):
             async for event in script(prompt, context):
                 yield event
 
@@ -93,17 +93,23 @@ async def _run(
         storage=storage,
         agent=agent,
         cancellation=TaskCancellation(
-            register=a2a_routes.register_task, unregister=a2a_routes.unregister_task, cancel=a2a_routes.cancel_task
+            register=a2a_routes.register_task,
+            unregister=a2a_routes.unregister_task,
+            cancel=a2a_routes.cancel_task,
         ),
     )
-    task = await storage.submit_task("ctx-1", message)  # type: ignore[arg-type]
+    task = await storage.submit_task("ctx-1", message)
     events: list[dict[str, Any]] = []
     async with broker, worker.run():
         async with broker.event_bus.subscribe(task["id"]) as receive:
-            await broker.run_task({"id": task["id"], "context_id": "ctx-1", "message": message})  # type: ignore[arg-type]
+            await broker.run_task(
+                {"id": task["id"], "context_id": "ctx-1", "message": message}
+            )
             # Beside the reading, not before it: the worker waits on a reader
             # for each event it publishes.
-            helper = asyncio.create_task(during(task["id"])) if during is not None else None
+            helper = (
+                asyncio.create_task(during(task["id"])) if during is not None else None
+            )
             async for event in receive:
                 events.append(event)
             if helper is not None:
@@ -112,11 +118,15 @@ async def _run(
 
 
 def _final_status(events: list[dict[str, Any]]) -> dict[str, Any]:
-    return [event for event in events if "status_update" in event][-1]["status_update"]["status"]
+    return [event for event in events if "status_update" in event][-1]["status_update"][
+        "status"
+    ]
 
 
 @pytest.mark.asyncio
-async def test_a_paused_task_keeps_its_conversation_and_names_the_checkpoint(state: Any) -> None:
+async def test_a_paused_task_keeps_its_conversation_and_names_the_checkpoint(
+    state: Any,
+) -> None:
     reached, go = asyncio.Event(), asyncio.Event()
 
     async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
@@ -132,7 +142,9 @@ async def test_a_paused_task_keeps_its_conversation_and_names_the_checkpoint(sta
         assert answer.success
         go.set()
 
-    _, events = await _run(state, _agent(script), _message("Profile the notebook"), during=pause)
+    _, events = await _run(
+        state, _agent(script), _message("Profile the notebook"), during=pause
+    )
     final = _final_status(events)
     assert final["state"] == "canceled"
     checkpoint_id = paused_at(final["message"]["metadata"])
@@ -143,7 +155,9 @@ async def test_a_paused_task_keeps_its_conversation_and_names_the_checkpoint(sta
 
 @pytest.mark.asyncio
 async def test_a_delegation_naming_the_checkpoint_resumes_from_it(state: Any) -> None:
-    kept = await ProtocolStateCheckpointStore("exec_1").create_checkpoint("paused", turn=2, messages=CONVERSATION)
+    kept = await ProtocolStateCheckpointStore("exec_1").create_checkpoint(
+        "paused", turn=2, messages=CONVERSATION
+    )
     seen: dict[str, Any] = {}
 
     async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
@@ -151,7 +165,11 @@ async def test_a_delegation_naming_the_checkpoint_resumes_from_it(state: Any) ->
         yield StreamEvent(type="output", data="Done")
         yield StreamEvent(type="done", data=None)
 
-    _, events = await _run(state, _agent(script), _message("Carry on", checkpoint={"checkpointId": kept.id}))
+    _, events = await _run(
+        state,
+        _agent(script),
+        _message("Carry on", checkpoint={"checkpointId": kept.id}),
+    )
     assert _final_status(events)["state"] == "completed"
     assert (seen["history"], seen["prompt"]) == (CONVERSATION, "Carry on")
 
@@ -161,20 +179,32 @@ async def test_a_finished_task_says_what_it_spent(state: Any) -> None:
     # O2-10: on the status that ends the task, where the control plane reads it.
     async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
         yield StreamEvent(type="output", data="Done")
-        yield StreamEvent(type="done", data={"usage": {"input_tokens": 12, "output_tokens": 5}})
+        yield StreamEvent(
+            type="done", data={"usage": {"input_tokens": 12, "output_tokens": 5}}
+        )
 
     _, events = await _run(state, _agent(script), _message("Profile the notebook"))
     final = _final_status(events)
     assert final["state"] == "completed"
-    assert spent_of(final["message"]["metadata"]) == Usage(input_tokens=12, output_tokens=5)
+    assert spent_of(final["message"]["metadata"]) == Usage(
+        input_tokens=12, output_tokens=5
+    )
 
 
 @pytest.mark.asyncio
-async def test_a_checkpoint_this_runtime_does_not_keep_fails_the_task(state: Any) -> None:
-    async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:  # pragma: no cover
+async def test_a_checkpoint_this_runtime_does_not_keep_fails_the_task(
+    state: Any,
+) -> None:
+    async def script(
+        prompt: str, context: Any
+    ) -> AsyncIterator[StreamEvent]:  # pragma: no cover
         yield StreamEvent(type="output", data="Never reached")
 
-    _, events = await _run(state, _agent(script), _message("Carry on", checkpoint={"checkpointId": "ckpt_nowhere"}))
+    _, events = await _run(
+        state,
+        _agent(script),
+        _message("Carry on", checkpoint={"checkpointId": "ckpt_nowhere"}),
+    )
     assert _final_status(events)["state"] == "failed"
 
 
@@ -184,7 +214,9 @@ async def test_a_working_task_is_steered_and_a_finished_one_is_not(state: Any) -
 
     async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
         task_id = context.metadata["a2a"]["task_id"]
-        answer = await a2a_routes.steer_task(a2a_routes.SteerRequest(task_id=task_id, instructions="Check the plots"))
+        answer = await a2a_routes.steer_task(
+            a2a_routes.SteerRequest(task_id=task_id, instructions="Check the plots")
+        )
         during_the_run["delivered"] = answer.success
         # What the model's next request would be given (`SteerCapability`).
         during_the_run["taken"] = take_steers(context.metadata["steer_run"])
@@ -192,7 +224,9 @@ async def test_a_working_task_is_steered_and_a_finished_one_is_not(state: Any) -
         yield StreamEvent(type="done", data=None)
 
     task_id, _ = await _run(state, _agent(script), _message("Profile the notebook"))
-    after = await a2a_routes.steer_task(a2a_routes.SteerRequest(task_id=task_id, instructions="Too late"))
+    after = await a2a_routes.steer_task(
+        a2a_routes.SteerRequest(task_id=task_id, instructions="Too late")
+    )
     assert during_the_run == {"delivered": True, "taken": ["Check the plots"]}
     assert after.success is False
 
@@ -201,19 +235,29 @@ def test_the_agent_card_advertises_the_extension_and_its_routes(state: Any) -> N
     """What the card is built from; serving it needs the mounted app's lifespan."""
     from agent_runtimes.context.delegation import EXTENSION_URI
 
-    async def script(prompt: str, context: Any) -> AsyncIterator[StreamEvent]:  # pragma: no cover
+    async def script(
+        prompt: str, context: Any
+    ) -> AsyncIterator[StreamEvent]:  # pragma: no cover
         yield StreamEvent(type="done", data=None)
 
     a2a_routes.register_a2a_agent(
         _agent(script),
         a2a_routes.A2AAgentCard(
-            id="card-agent", name="Card agent", description="Speaks the extension", url="/api/v1/a2a/agents/card-agent"
+            id="card-agent",
+            name="Card agent",
+            description="Speaks the extension",
+            url="/api/v1/a2a/agents/card-agent",
         ),
     )
     try:
-        extensions = list(a2a_routes._a2a_agents["card-agent"].app.extensions)
+        app = a2a_routes._a2a_agents["card-agent"].app
+        assert app is not None
+        extensions = list(app.extensions)
     finally:
         a2a_routes.unregister_a2a_agent("card-agent")
     [extension] = [one for one in extensions if one.get("uri") == EXTENSION_URI]
-    assert extension["params"] == {"pause": "/api/v1/a2a/pause", "steer": "/api/v1/a2a/steer"}
+    assert extension["params"] == {
+        "pause": "/api/v1/a2a/pause",
+        "steer": "/api/v1/a2a/steer",
+    }
     assert extension.get("required") is False

@@ -32,10 +32,7 @@ from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 
 #: The specification form, beside the package that documents it.
 SPECS = (
-    Path(__file__).resolve().parents[2]
-    / "agentspecs"
-    / "agentspecs"
-    / "mcp-servers"
+    Path(__file__).resolve().parents[2] / "agentspecs" / "agentspecs" / "mcp-servers"
 )
 
 #: The prose list, which is the copy a reader meets first.
@@ -51,7 +48,7 @@ DOCS = (
 
 
 def _comparable(args) -> list[str]:
-    """Arguments with the one runtime-resolved value put back in its box.
+    """Put the one runtime-resolved argument value back in its box.
 
     `filesystem` serves the system temp directory: the specification says
     `${TMPDIR}` and the runtime calls `tempfile.gettempdir()`, so the two are
@@ -75,6 +72,10 @@ def specifications() -> dict[str, dict]:
     }
 
 
+@pytest.mark.skipif(
+    not SPECS.is_dir(),
+    reason="needs the agentspecs checkout beside the package (make specs-clone)",
+)
 class TestTheThreeCopiesAgree:
     def test_every_runtime_server_has_a_specification(self) -> None:
         missing = sorted(set(MCP_SERVER_CATALOG) - set(specifications()))
@@ -95,9 +96,7 @@ class TestTheThreeCopiesAgree:
         """
         import re  # noqa: PLC0415
 
-        listed = set(
-            re.findall(r"^- \*\*`([a-z0-9-]+)`\*\*", DOCS.read_text(), re.M)
-        )
+        listed = set(re.findall(r"^- \*\*`([a-z0-9-]+)`\*\*", DOCS.read_text(), re.M))
         missing = sorted(set(MCP_SERVER_CATALOG) - listed)
         assert missing == [], f"in the catalogue, absent from the docs list: {missing}"
         gone = sorted(listed - set(MCP_SERVER_CATALOG))
@@ -126,7 +125,9 @@ class TestTheSpecificationsAreWellFormed:
             assert spec.get(field), f"{server_id}.yaml has no {field}"
         # `args` may legitimately be empty — `eurus-mcp` takes none — so this
         # asks that the key is *there*, which is what the schema requires.
-        assert "args" in spec and spec["args"] is not None, f"{server_id}.yaml has no args"
+        assert "args" in spec and spec["args"] is not None, (
+            f"{server_id}.yaml has no args"
+        )
 
     @pytest.mark.parametrize("server_id", sorted(specifications()))
     def test_the_id_matches_the_file_name(self, server_id: str) -> None:

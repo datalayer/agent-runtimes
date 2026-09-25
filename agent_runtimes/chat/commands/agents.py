@@ -32,7 +32,9 @@ def _agent_ids() -> list[str]:
 
 ARGS = (
     CommandArgSpec(name="action", description="use", choices=("use",)),
-    CommandArgSpec(name="agent-id", description="Agent to switch to", choices=_agent_ids),
+    CommandArgSpec(
+        name="agent-id", description="Agent to switch to", choices=_agent_ids
+    ),
 )
 
 
@@ -56,7 +58,9 @@ async def _use(tux: "CliTux", agent_id: str) -> None:
             )
             if response.status_code == 404:
                 tux.console.print(f"[red]Unknown agent: {agent_id}[/red]")
-                tux.console.print("  /agents to see what is available.", style=STYLE_MUTED)
+                tux.console.print(
+                    "  /agents to see what is available.", style=STYLE_MUTED
+                )
                 return
             response.raise_for_status()
             payload = response.json()

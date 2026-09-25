@@ -15,7 +15,6 @@ from urllib.parse import urljoin
 from pydantic_ai.mcp import MCPToolset
 
 from agent_runtimes.mcp.tracing import tracing_client
-
 from agent_runtimes.types import BuiltinTool
 
 logger = logging.getLogger(__name__)

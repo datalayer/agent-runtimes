@@ -222,7 +222,9 @@ def execution_of(meta: Any) -> str | None:
     """
     ours = _ours(meta)
     execution = ours.get(EXECUTION_FIELD) if ours is not None else None
-    execution_id = execution.get("executionId") if isinstance(execution, Mapping) else None
+    execution_id = (
+        execution.get("executionId") if isinstance(execution, Mapping) else None
+    )
     return execution_id if isinstance(execution_id, str) and execution_id else None
 
 
@@ -240,8 +242,10 @@ def enter_execution(meta: Any) -> None:
     """
     ours = _ours(meta)
     execution = ours.get(EXECUTION_FIELD) if ours is not None else None
-    named = execution_of(meta) is not None and isinstance(execution, Mapping)
-    _run_execution.set(dict(execution) if named else None)
+    named = execution_of(meta) is not None
+    _run_execution.set(
+        dict(execution) if named and isinstance(execution, Mapping) else None
+    )
 
 
 def run_execution() -> dict[str, Any] | None:
@@ -273,7 +277,9 @@ def checkpoint_of(meta: Any) -> str | None:
     """
     ours = _ours(meta)
     checkpoint = ours.get(CHECKPOINT_FIELD) if ours is not None else None
-    checkpoint_id = checkpoint.get("checkpointId") if isinstance(checkpoint, Mapping) else None
+    checkpoint_id = (
+        checkpoint.get("checkpointId") if isinstance(checkpoint, Mapping) else None
+    )
     return checkpoint_id if isinstance(checkpoint_id, str) and checkpoint_id else None
 
 
@@ -329,7 +335,11 @@ def spent_meta(usage: Usage | None) -> dict[str, Any] | None:
         The A2A status message's ``metadata``, or the ACP response's ``_meta``;
         nothing when nothing was counted.
     """
-    return {DELEGATION_META_KEY: {SPENT_FIELD: usage.to_wire()}} if usage is not None else None
+    return (
+        {DELEGATION_META_KEY: {SPENT_FIELD: usage.to_wire()}}
+        if usage is not None
+        else None
+    )
 
 
 def spent_of(meta: Any) -> Usage | None:
@@ -537,10 +547,14 @@ class SteerCapability(AbstractCapability[Any]):
         steers = take_steers(self.run_id)
         if not steers:
             return request_context
-        part = UserPromptPart(content="Steering from the orchestrator:\n" + "\n\n".join(steers))
+        part = UserPromptPart(
+            content="Steering from the orchestrator:\n" + "\n\n".join(steers)
+        )
         messages = list(request_context.messages)
         if messages and isinstance(messages[-1], ModelRequest):
-            messages[-1] = dataclasses.replace(messages[-1], parts=[*messages[-1].parts, part])
+            messages[-1] = dataclasses.replace(
+                messages[-1], parts=[*messages[-1].parts, part]
+            )
         else:
             messages.append(ModelRequest(parts=[part]))
         return dataclasses.replace(request_context, messages=messages)

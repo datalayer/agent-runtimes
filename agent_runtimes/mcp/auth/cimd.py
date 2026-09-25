@@ -47,7 +47,7 @@ SYMMETRIC_AUTH = ("client_secret_basic", "client_secret_post", "client_secret_jw
 
 
 def public_base_url(override: Optional[str] = None) -> Optional[str]:
-    """This deployment's public URL, or `None` when it has not been told."""
+    """Return this deployment's public URL, or `None` when it has not been told."""
     base = (override or os.getenv("AGENT_RUNTIMES_PUBLIC_URL") or "").strip()
     return base.rstrip("/") or None
 

@@ -260,7 +260,10 @@ def register_a2a_agent(
                         "Pause at a checkpoint and resume from it; steer a task while it works."
                     ),
                     required=False,
-                    params={"pause": f"{_api_prefix}/a2a/pause", "steer": f"{_api_prefix}/a2a/steer"},
+                    params={
+                        "pause": f"{_api_prefix}/a2a/pause",
+                        "steer": f"{_api_prefix}/a2a/steer",
+                    },
                 )
             ],
             lifespan=lifespan,
@@ -540,7 +543,9 @@ async def pause_task(request: PauseRequest) -> TerminateResponse:
     request_pause(request.task_id)
     if cancel_task(request.task_id):
         return TerminateResponse(
-            success=True, message=f"Task {request.task_id} is pausing", task_id=request.task_id
+            success=True,
+            message=f"Task {request.task_id} is pausing",
+            task_id=request.task_id,
         )
     forget_pause(request.task_id)
     return TerminateResponse(
@@ -562,10 +567,14 @@ async def steer_task(request: SteerRequest) -> TerminateResponse:
 
     if deliver_steer(request.task_id, request.instructions):
         return TerminateResponse(
-            success=True, message=f"Task {request.task_id} was steered", task_id=request.task_id
+            success=True,
+            message=f"Task {request.task_id} was steered",
+            task_id=request.task_id,
         )
     return TerminateResponse(
-        success=False, message=f"Task {request.task_id} is not working", task_id=request.task_id
+        success=False,
+        message=f"Task {request.task_id} is not working",
+        task_id=request.task_id,
     )
 
 

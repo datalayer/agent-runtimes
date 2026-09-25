@@ -53,7 +53,11 @@ from typing import Any, Optional
 
 import httpx
 
-from agent_runtimes.mcp.auth.oauth import OAuthError, ServerMetadata, _token_from_payload
+from agent_runtimes.mcp.auth.oauth import (
+    OAuthError,
+    ServerMetadata,
+    _token_from_payload,
+)
 from agent_runtimes.mcp.auth.tokens import OAuthToken
 
 logger = logging.getLogger(__name__)
@@ -69,7 +73,9 @@ ASSERTION_LIFETIME_SECONDS = 120
 #: The signing algorithms this will use. Asymmetric only — an `HS256`
 #: assertion is signed with a shared secret, which is the thing private-key
 #: JWT exists to stop sending. `none` is not a signature.
-ASSERTION_ALGORITHMS = frozenset({"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256"})
+ASSERTION_ALGORITHMS = frozenset(
+    {"RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256"}
+)
 
 
 class MachineAuthError(OAuthError):
@@ -124,7 +130,9 @@ class ClientCredentials:
         debugger somebody attaches. A credential printed once is a credential
         in a log aggregator forever.
         """
-        return f"ClientCredentials(client_id={self.client_id!r}, method={self.method!r})"
+        return (
+            f"ClientCredentials(client_id={self.client_id!r}, method={self.method!r})"
+        )
 
 
 def build_assertion(
@@ -165,10 +173,15 @@ def build_assertion(
         "iat": moment,
         "exp": moment + int(lifetime),
     }
-    headers = {"kid": credentials.private_key_id} if credentials.private_key_id else None
+    headers = (
+        {"kid": credentials.private_key_id} if credentials.private_key_id else None
+    )
     try:
         return jwt.encode(
-            claims, credentials.private_key, algorithm=credentials.algorithm, headers=headers
+            claims,
+            credentials.private_key,
+            algorithm=credentials.algorithm,
+            headers=headers,
         )
     except Exception as error:  # noqa: BLE001
         # The key itself must not reach the message. "Bad key" plus the
@@ -287,7 +300,9 @@ async def exchange_for_subagent(
     is describing what it wanted rather than what it got.
     """
     if not metadata.token_endpoint:
-        raise MachineAuthError("the authorization server metadata names no token endpoint")
+        raise MachineAuthError(
+            "the authorization server metadata names no token endpoint"
+        )
     if not token.access_token:
         raise MachineAuthError("there is no token to exchange")
 
@@ -303,7 +318,9 @@ async def exchange_for_subagent(
         body["scope"] = scope
     if credentials is not None:
         body["client_id"] = credentials.client_id
-        body.update(_authentication_fields(credentials, metadata.token_endpoint, now=now))
+        body.update(
+            _authentication_fields(credentials, metadata.token_endpoint, now=now)
+        )
     elif token.client_id:
         body["client_id"] = token.client_id
 

@@ -22,7 +22,6 @@ from functools import wraps
 from pathlib import Path
 from typing import Annotated, Any, Callable, Iterator, List, Mapping, Optional, TypeVar
 
-import click
 import typer
 from code_sandboxes.environments.lifecycle import VersionState, can_promote
 from code_sandboxes.environments.spec import (
@@ -62,6 +61,13 @@ from agent_runtimes.models.environment import (
     EnvironmentBuildRecord,
     EnvironmentVersionRecord,
 )
+
+#: From 0.22 on typer carries its own copy of click instead of depending on
+#: it, so what a command raises to exit, or to refuse its arguments, is
+#: typer's, and ``click`` may be another copy or absent. Both classes are
+#: taken from typer, which names them the same way on either side.
+_UsageError: type[Exception] = typer.BadParameter.__mro__[1]
+_ClickException: type[Exception] = typer.BadParameter.__mro__[2]
 
 # Create a Typer app for environment commands
 app = typer.Typer(
@@ -128,7 +134,7 @@ def _refusals(function: _Command) -> _Command:
     def wrapped(*args: Any, **kwargs: Any) -> Any:
         try:
             return function(*args, **kwargs)
-        except (click.exceptions.Exit, click.exceptions.Abort, click.ClickException):
+        except (typer.Exit, typer.Abort, _ClickException):
             raise
         except Exception as error:  # noqa: BLE001
             display_refusal(error, kwargs.get("output", OutputFormat.TABLE))
@@ -487,7 +493,7 @@ def edit(
         value is not None for value in (title, description, visibility)
     )
     if version_edit == environment_edit:
-        raise click.UsageError(
+        raise _UsageError(
             "Edit a version with --file or --label, or an environment with "
             "--title, --description or --visibility; not both, and not neither."
         )
@@ -737,6 +743,53 @@ def artifacts(
     )
     if not emit(records, output):
         display_environment_artifacts(records)
+
+
+@app.command(name="sandboxes")
+@_refusals
+def sandboxes(
+    version: VersionArgument,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """The sandboxes running a version: yours in full, others counted."""
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    answer = client.list_environment_version_sandboxes(_version_uid(client, version))
+    if emit(answer, output):
+        return
+    running = answer.get("sandboxes") or []
+    if not running:
+        typer.echo("No sandbox runs this version.")
+    for index, sandbox in enumerate(running, start=1):
+        display_answer(f"Sandbox {index}", sandbox)
+
+
+@app.command(name="quotas")
+@_refusals
+def quotas(
+    organization: Annotated[
+        Optional[str],
+        typer.Option(
+            "--organization",
+            help="The uid of an organization you own, to read its quotas.",
+        ),
+    ] = None,
+    token: ApiKeyOption = None,
+    iam_url: IamUrlOption = None,
+    runtimes_url: RuntimesUrlOption = None,
+    output: OutputOption = OutputFormat.TABLE,
+) -> None:
+    """Your build quotas, or an organization's, and what is held against each."""
+    client = _make_client(token=token, iam_url=iam_url, runtimes_url=runtimes_url)
+    answer = client.get_environment_quotas(
+        owner_type="organization" if organization else None,
+        owner_uid=organization,
+    )
+    if not emit(answer, output):
+        display_answer("Quotas", answer.get("limits") or {})
+        display_answer("Holdings", answer.get("holdings") or {})
 
 
 @app.command(name="cancel")

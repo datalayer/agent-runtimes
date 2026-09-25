@@ -38,6 +38,6 @@ def test_a2ui_jupyter_output_chat_spec_drives_the_frontend_demo_tool() -> None:
         assert "kind" not in suggestion.text.lower()
 
     # They point at the thing being demonstrated instead.
-    assert sum(
-        "code sandbox" in suggestion.text for suggestion in spec.suggestions
-    ) >= 4
+    assert (
+        sum("code sandbox" in suggestion.text for suggestion in spec.suggestions) >= 4
+    )

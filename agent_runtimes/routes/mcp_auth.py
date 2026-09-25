@@ -20,16 +20,10 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from agent_runtimes.mcp.auth.cimd import (
-    CLIENT_DOCUMENT_PATH,
-    client_id_metadata_document,
-    public_base_url,
-    refuse_if_unpublishable,
-)
-from agent_runtimes.mcp.auth.oauth import CLIENT_NAME, CLIENT_URI
 from agent_runtimes.mcp.auth import (
     OAuthError,
     PendingFlow,
+    TokenStore,
     authorization_url,
     choose_scope,
     discover,
@@ -39,6 +33,13 @@ from agent_runtimes.mcp.auth import (
     register_client,
     revoke,
 )
+from agent_runtimes.mcp.auth.cimd import (
+    CLIENT_DOCUMENT_PATH,
+    client_id_metadata_document,
+    public_base_url,
+    refuse_if_unpublishable,
+)
+from agent_runtimes.mcp.auth.oauth import CLIENT_NAME, CLIENT_URI
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ def _callback_url() -> str:
     return f"{base.rstrip('/')}/api/v1/mcp/auth/callback"
 
 
-def _store():
+def _store() -> TokenStore:
     return get_token_store()
 
 
@@ -119,7 +120,7 @@ def _server_url(server_id: str, override: str = "") -> str:
 
 @router.get("/client")
 async def client_id_metadata() -> dict:
-    """This client's own Client ID Metadata Document.
+    """Serve this client's own Client ID Metadata Document.
 
     An authorization server fetches this URL to learn who is asking, and
     validates that the `client_id` inside equals the URL it fetched — so the
@@ -143,7 +144,9 @@ async def client_id_metadata() -> dict:
         redirect_uris=(_callback_url(),),
     )
     if document is None:  # pragma: no cover - guarded by the check above
-        raise HTTPException(status_code=503, detail="No client document could be built.")
+        raise HTTPException(
+            status_code=503, detail="No client document could be built."
+        )
     # Held to the rules an authorization server applies after publication, so
     # a mistake is found here rather than on somebody's login.
     refuse_if_unpublishable(document, f"{base}{CLIENT_DOCUMENT_PATH}")
@@ -232,7 +235,9 @@ async def auth_callback(
         token = await exchange_code(flow, code)
         _store().put(flow.server_id, token)
     except (OAuthError, RuntimeError) as failure:
-        return HTMLResponse(_page("Could not complete the login", str(failure)), status_code=400)
+        return HTMLResponse(
+            _page("Could not complete the login", str(failure)), status_code=400
+        )
 
     logger.info("Stored credentials for MCP server %s", flow.server_id)
     return HTMLResponse(
@@ -252,7 +257,10 @@ async def refresh_auth(server_id: str) -> AuthStatusResponse:
         renewed = await refresh_token(token)
     except OAuthError as error:
         return AuthStatusResponse(
-            server_id=server_id, status="needs_auth", store=store.name, detail=str(error)
+            server_id=server_id,
+            status="needs_auth",
+            store=store.name,
+            detail=str(error),
         )
 
     store.put(server_id, renewed)

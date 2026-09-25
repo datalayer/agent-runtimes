@@ -43,7 +43,9 @@ class TestForeignTurns:
         messages = _history(("user", "hello"))
         _poll(sync, messages)
 
-        messages.extend(_history(("user", "typed in the browser"), ("assistant", "sure")))
+        messages.extend(
+            _history(("user", "typed in the browser"), ("assistant", "sure"))
+        )
         turns = _poll(sync, messages)
 
         assert [(t.role, t.content) for t in turns] == [

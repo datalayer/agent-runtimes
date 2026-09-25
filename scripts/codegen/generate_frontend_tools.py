@@ -32,7 +32,6 @@ def load_frontend_tool_specs(specs_dir: Path) -> list[dict[str, Any]]:
     return specs
 
 
-
 def _fmt_toolset(value):
     """A toolset is `"all"` or a list of tool names — emit whichever it is.
 
@@ -49,6 +48,7 @@ def _fmt_toolset_ts(value):
     if isinstance(value, (list, tuple)):
         return "[" + ", ".join(f"'{name}'" for name in value) + "]"
     return f"'{value}'"
+
 
 def _py_literal(value: Any) -> str:
     return (

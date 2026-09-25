@@ -153,7 +153,8 @@ _ORDERED_ITEM = re.compile(r"^\s*\d+\.\s+(.*)$")
 def _inline_nodes(text: str) -> list[dict[str, Any]]:
     """One line, as the text runs its markdown means: a code span first —
     nothing inside it is read as a marker — then the longest emphasis marker
-    left to right. Never empty, so a block always has something to render."""
+    left to right. Never empty, so a block always has something to render.
+    """
     nodes: list[dict[str, Any]] = []
     rest = text
     while rest:
@@ -178,7 +179,8 @@ def _markdown_blocks(body: str, mark: dict[str, Any]) -> list[dict[str, Any]]:
     line still separates paragraphs and a single one is still a soft break
     within one, exactly as plain text was read before; a line is read as a
     heading or a list item first, the same order `HEADING`, `UNORDERED_LIST`
-    and `ORDERED_LIST` are tried in `MarkdownTransformers.ts`."""
+    and `ORDERED_LIST` are tried in `MarkdownTransformers.ts`.
+    """
     blocks: list[dict[str, Any]] = []
     paragraph: list[str] = []
     items: list[str] = []
@@ -205,8 +207,12 @@ def _markdown_blocks(body: str, mark: dict[str, Any]) -> list[dict[str, Any]]:
         ]
         blocks.append(
             _block(
-                "list", made, mark,
-                listType=list_kind, start=1, tag="ol" if list_kind == "number" else "ul",
+                "list",
+                made,
+                mark,
+                listType=list_kind,
+                start=1,
+                tag="ol" if list_kind == "number" else "ul",
             )
         )
         items.clear()
@@ -222,7 +228,14 @@ def _markdown_blocks(body: str, mark: dict[str, Any]) -> list[dict[str, Any]]:
         if heading:
             flush_paragraph()
             flush_list()
-            blocks.append(_block("heading", _inline_nodes(heading.group(2)), mark, tag=f"h{len(heading.group(1))}"))
+            blocks.append(
+                _block(
+                    "heading",
+                    _inline_nodes(heading.group(2)),
+                    mark,
+                    tag=f"h{len(heading.group(1))}",
+                )
+            )
             continue
         ordered = _ORDERED_ITEM.match(line)
         unordered = None if ordered else _UNORDERED_ITEM.match(line)
@@ -232,7 +245,9 @@ def _markdown_blocks(body: str, mark: dict[str, Any]) -> list[dict[str, Any]]:
             if items and list_kind != kind:
                 flush_list()
             list_kind = kind
-            items.append((ordered or unordered).group(1))
+            match = ordered or unordered
+            assert match is not None  # one of the two matched, just above
+            items.append(match.group(1))
             continue
         flush_list()
         paragraph.append(line)

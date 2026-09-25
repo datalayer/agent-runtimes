@@ -21,6 +21,7 @@ The client says so through `supports("execute")` rather than by failing late.
 
 from __future__ import annotations
 
+import builtins
 import logging
 import os
 import sys
@@ -58,12 +59,22 @@ def _is_transient_runtime_create_error(message: str) -> bool:
     )
 
 
+class _Response(Protocol):
+    """What the client reads of an HTTP response."""
+
+    status_code: int
+
+    def json(self) -> Any:
+        """Parse the body as JSON."""
+
+
 class _Transport(Protocol):
     """What the client needs from whoever owns the credentials."""
 
     urls: Any
 
-    def _fetch(self, request: str, **kwargs: Any) -> requests.Response: ...
+    def _fetch(self, request: str, **kwargs: Any) -> _Response:
+        """Send an authenticated request."""
 
 
 def _failure(message: str) -> dict[str, Any]:
@@ -71,7 +82,7 @@ def _failure(message: str) -> dict[str, Any]:
     return {"success": False, "message": message}
 
 
-def _with_details(message: str, response: requests.Response) -> str:
+def _with_details(message: str, response: _Response) -> str:
     """Append the server's own explanation, when it gave one."""
     try:
         details = response.json()
@@ -104,7 +115,7 @@ class RuntimesClient:
         """A runtimes URL, spelled where the vocabulary spells it."""
         return f"{runtimes_url(self._urls.runtimes_url)}{path}"
 
-    def _fetch(self, url: str, **kwargs: Any) -> requests.Response:
+    def _fetch(self, url: str, **kwargs: Any) -> _Response:
         return self._transport._fetch(url, **kwargs)
 
     def supports(self, operation: str) -> bool:
@@ -204,19 +215,19 @@ class RuntimesClient:
                 credits_query = {}
                 if resolved_billing_entity_uid:
                     credits_query["billing_entity_uid"] = resolved_billing_entity_uid
-                response = self._fetch(
+                credits_response = self._fetch(
                     "{}/api/iam/v1/usage/credits".format(self._urls.iam_url),
                     method="GET",
                     params=credits_query or None,
                 )
 
-                if response.status_code != 200:
+                if credits_response.status_code != 200:
                     return _failure(
-                        f"Failed to fetch credits: HTTP {response.status_code}"
+                        f"Failed to fetch credits: HTTP {credits_response.status_code}"
                     )
 
                 try:
-                    raw_credits = response.json()
+                    raw_credits = credits_response.json()
                 except Exception as e:
                     return _failure(f"Failed to parse credits response: {str(e)}")
 
@@ -266,7 +277,7 @@ class RuntimesClient:
             )
             logger.debug("Runtime create payload: %s", body)
 
-            response = None
+            response: _Response | None = None
             max_attempts = 4
             for attempt in range(1, max_attempts + 1):
                 try:
@@ -393,7 +404,9 @@ class RuntimesClient:
                 f"Unexpected error getting runtime {runtime_name}: {str(e)}"
             )
 
-    def update(self, runtime_name: str, capabilities: list[str]) -> dict[str, Any]:
+    def update(
+        self, runtime_name: str, capabilities: builtins.list[str]
+    ) -> dict[str, Any]:
         """Change a runtime in place — ``PUT /runtimes/{runtime_name}``."""
         try:
             response = self._fetch(
@@ -587,7 +600,7 @@ class RuntimeHandle:
         raise unsupported("execute", "runtimes")
 
     def get(self) -> dict[str, Any]:
-        """This runtime's current state."""
+        """Fetch this runtime's current state."""
         return self._client.get(self.runtime_name)
 
 
@@ -604,7 +617,7 @@ class RuntimesMixin:
     """
 
     @property
-    def runtimes(self) -> RuntimesClient:
+    def runtimes(self: _Transport) -> RuntimesClient:
         """The Runtimes API, borrowing this object's credentials."""
         cached = getattr(self, "_runtimes_client", None)
         if cached is None:

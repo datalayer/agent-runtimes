@@ -1,6 +1,5 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
+# Distributed under the terms of the Modified BSD License.
 
 """A stranger launches somebody else's publication by its version uid (D-12, E2-15).
 

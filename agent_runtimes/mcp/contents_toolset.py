@@ -49,7 +49,8 @@ TokenProvider = Callable[[], str | None]
 class ContentsMcpApi(Protocol):
     """What the toolset and the proxy need from Contents."""
 
-    async def get_session(self, session_uid: str, *, token: str) -> dict[str, Any]: ...
+    async def get_session(self, session_uid: str, *, token: str) -> dict[str, Any]:
+        """Read a session with the caller's token."""
 
     async def create_session(
         self,
@@ -59,9 +60,11 @@ class ContentsMcpApi(Protocol):
         tools: list[str] | None = None,
         sandbox_uid: str | None = None,
         expires_in: int | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Open a session on a source, limited to ``tools`` when given."""
 
-    async def discover_tools(self, source_uid: str, *, token: str) -> dict[str, Any]: ...
+    async def discover_tools(self, source_uid: str, *, token: str) -> dict[str, Any]:
+        """List the tools a source offers, with their schemas."""
 
     async def call_tool(
         self,
@@ -71,15 +74,18 @@ class ContentsMcpApi(Protocol):
         *,
         token: str,
         destination_uri: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Call a tool through a session."""
 
     async def get_call(
         self, session_uid: str, call_uid: str, *, token: str
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Read a call made through a session."""
 
     async def decide_approval(
         self, approval_uid: str, decision: str, *, token: str, note: str | None = None
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Approve or deny a call waiting on an approval."""
 
 
 class ContentsMcpError(RuntimeError):
@@ -89,9 +95,7 @@ class ContentsMcpError(RuntimeError):
 class ContentsMcpClient:
     """The Contents MCP endpoints over HTTP, one token per request."""
 
-    def __init__(
-        self, base_url: str | None = None, *, timeout: float = 60.0
-    ) -> None:
+    def __init__(self, base_url: str | None = None, *, timeout: float = 60.0) -> None:
         self._base_url = (base_url or _contents_url()).rstrip("/")
         self._timeout = timeout
 
@@ -130,6 +134,7 @@ class ContentsMcpClient:
         return response.json()
 
     async def get_session(self, session_uid: str, *, token: str) -> dict[str, Any]:
+        """Read a session with the caller's token."""
         return await self._request("GET", f"/mcp-sessions/{session_uid}", token=token)
 
     async def create_session(
@@ -141,6 +146,7 @@ class ContentsMcpClient:
         sandbox_uid: str | None = None,
         expires_in: int | None = None,
     ) -> dict[str, Any]:
+        """Open a session on a source, limited to ``tools`` when given."""
         payload: dict[str, Any] = {"source_uid": source_uid}
         if tools is not None:
             payload["tools"] = list(tools)
@@ -151,6 +157,7 @@ class ContentsMcpClient:
         return await self._request("POST", "/mcp-sessions", token=token, json=payload)
 
     async def discover_tools(self, source_uid: str, *, token: str) -> dict[str, Any]:
+        """List the tools a source offers, with their schemas."""
         return await self._request(
             "GET", f"/sources/{source_uid}/mcp/tools", token=token
         )
@@ -164,6 +171,7 @@ class ContentsMcpClient:
         token: str,
         destination_uri: str | None = None,
     ) -> dict[str, Any]:
+        """Call a tool through a session."""
         payload: dict[str, Any] = {"tool": tool, "arguments": arguments}
         if destination_uri is not None:
             payload["destination_uri"] = destination_uri
@@ -174,6 +182,7 @@ class ContentsMcpClient:
     async def get_call(
         self, session_uid: str, call_uid: str, *, token: str
     ) -> dict[str, Any]:
+        """Read a call made through a session."""
         return await self._request(
             "GET", f"/mcp-sessions/{session_uid}/calls/{call_uid}", token=token
         )
@@ -181,6 +190,7 @@ class ContentsMcpClient:
     async def decide_approval(
         self, approval_uid: str, decision: str, *, token: str, note: str | None = None
     ) -> dict[str, Any]:
+        """Approve or deny a call waiting on an approval."""
         if decision not in {"approve", "reject"}:
             raise ValueError(f"decision must be approve or reject, not {decision!r}")
         return await self._request(
@@ -215,6 +225,7 @@ def get_contents_mcp_client() -> ContentsMcpApi:
 
 
 def set_contents_mcp_client(client: ContentsMcpApi | None) -> None:
+    """Replace the process-wide Contents client; ``None`` resets it."""
     global _client
     _client = client
 
@@ -252,7 +263,15 @@ def _result_content(call: dict[str, Any]) -> Any:
             key: value
             for key, value in artifact.items()
             if key
-            in {"name", "size", "media_type", "transfer_uid", "object_uid", "version_uid", "url"}
+            in {
+                "name",
+                "size",
+                "media_type",
+                "transfer_uid",
+                "object_uid",
+                "version_uid",
+                "url",
+            }
             and value is not None
         }
         for artifact in artifacts
@@ -269,19 +288,19 @@ class ContentsMcpToolset(AbstractToolset[Any]):
 
     Parameters
     ----------
-    session_uid
+    session_uid : str
         The session the calls go through. Its ``allowed_tools`` is the whole
         toolset: a tool the session does not allow is not offered, and a call
         to one is refused before it reaches Contents.
-    source_uid
+    source_uid : str | None
         The source the session is on; used to discover tool schemas. Read from
         the session when not given.
-    client
+    client : ContentsMcpApi | None
         The Contents API; the process-wide one when not given.
-    token_provider
+    token_provider : TokenProvider | None
         Where the caller's token comes from. Defaults to the per-request
         context the transports set, falling back to ``static_token``.
-    approval_manager
+    approval_manager : Any
         The runtime's ``ToolApprovalManager`` (or a stand-in) to raise the
         approval flow with when a call is ``pending-approval``. Built from
         the environment when not given.
@@ -297,17 +316,21 @@ class ContentsMcpToolset(AbstractToolset[Any]):
     poll_timeout: float = 600.0
     max_retries: int = 1
     _session: dict[str, Any] | None = field(default=None, init=False, repr=False)
-    _tools: dict[str, ToolDefinition] = field(default_factory=dict, init=False, repr=False)
+    _tools: dict[str, ToolDefinition] = field(
+        default_factory=dict, init=False, repr=False
+    )
     _sleep: Callable[[float], Awaitable[None]] = field(
         default=asyncio.sleep, init=False, repr=False
     )
 
     @property
     def id(self) -> str | None:
+        """Name the toolset after its session."""
         return f"contents-mcp:{self.session_uid}"
 
     @property
     def label(self) -> str:
+        """Describe the toolset for people."""
         return f"Contents MCP session {self.session_uid}"
 
     # -- plumbing ----------------------------------------------------------
@@ -341,6 +364,7 @@ class ContentsMcpToolset(AbstractToolset[Any]):
         return self._session
 
     async def allowed_tools(self, *, token: str | None = None) -> set[str]:
+        """Return the tools the session allows."""
         session = await self.session(token=token)
         return {str(name) for name in session.get("allowed_tools") or []}
 
@@ -349,7 +373,9 @@ class ContentsMcpToolset(AbstractToolset[Any]):
         allowed = await self.allowed_tools()
         if not self.source_uid:
             return {}
-        discovered = await self._api().discover_tools(self.source_uid, token=self._token())
+        discovered = await self._api().discover_tools(
+            self.source_uid, token=self._token()
+        )
         definitions: dict[str, ToolDefinition] = {}
         for tool in discovered.get("tools") or []:
             name = str(tool.get("name") or "")
@@ -357,12 +383,19 @@ class ContentsMcpToolset(AbstractToolset[Any]):
                 continue
             schema = tool.get("input_schema") or tool.get("inputSchema") or {}
             if not isinstance(schema, dict) or not schema:
-                schema = {"type": "object", "properties": {}, "additionalProperties": True}
+                schema = {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": True,
+                }
             definitions[name] = ToolDefinition(
                 name=name,
                 description=tool.get("description") or None,
                 parameters_json_schema=schema,
-                metadata={"contents_session_uid": self.session_uid, "source_uid": self.source_uid},
+                metadata={
+                    "contents_session_uid": self.session_uid,
+                    "source_uid": self.source_uid,
+                },
             )
         missing = allowed - set(definitions)
         if missing:
@@ -377,6 +410,7 @@ class ContentsMcpToolset(AbstractToolset[Any]):
     # -- AbstractToolset ---------------------------------------------------
 
     async def get_tools(self, ctx: RunContext[Any]) -> dict[str, ToolsetTool[Any]]:
+        """Offer the allowed tools, validated against their schemas."""
         from pydantic_ai.mcp import TOOL_SCHEMA_VALIDATOR
 
         definitions = await self._discover()
@@ -397,7 +431,10 @@ class ContentsMcpToolset(AbstractToolset[Any]):
         ctx: RunContext[Any],
         tool: ToolsetTool[Any],
     ) -> Any:
-        tool_call_id = getattr(getattr(ctx, "tool_call_id", None), "__str__", lambda: None)()
+        """Call a tool through the session, waiting out an approval."""
+        tool_call_id = getattr(
+            getattr(ctx, "tool_call_id", None), "__str__", lambda: None
+        )()
         return await self.direct_call_tool(name, tool_args, tool_call_id=tool_call_id)
 
     async def direct_call_tool(
@@ -432,7 +469,9 @@ class ContentsMcpToolset(AbstractToolset[Any]):
             destination_uri=destination_uri,
         )
         if call.get("status") == "pending-approval":
-            call = await self._await_approval(call, name, arguments, tool_call_id, caller_token)
+            call = await self._await_approval(
+                call, name, arguments, tool_call_id, caller_token
+            )
         call = await self._await_terminal(call, caller_token)
         status = call.get("status")
         if status == "succeeded":
@@ -462,7 +501,8 @@ class ContentsMcpToolset(AbstractToolset[Any]):
             decision = await manager.request_and_wait(
                 name,
                 {**arguments, "contents_approval_uid": approval_uid},
-                tool_call_id=tool_call_id or (f"contents-approval:{approval_uid}" if approval_uid else None),
+                tool_call_id=tool_call_id
+                or (f"contents-approval:{approval_uid}" if approval_uid else None),
             )
         except Exception as error:
             # The reviewer said no (or the wait ran out). Tell Contents, then
@@ -481,8 +521,12 @@ class ContentsMcpToolset(AbstractToolset[Any]):
             raise
         note = decision.get("note") if isinstance(decision, dict) else None
         if approval_uid:
-            await self._api().decide_approval(approval_uid, "approve", token=token, note=note)
-        return await self._api().get_call(self.session_uid, str(call["uid"]), token=token)
+            await self._api().decide_approval(
+                approval_uid, "approve", token=token, note=note
+            )
+        return await self._api().get_call(
+            self.session_uid, str(call["uid"]), token=token
+        )
 
     async def _await_terminal(self, call: dict[str, Any], token: str) -> dict[str, Any]:
         deadline = time.monotonic() + self.poll_timeout
@@ -493,7 +537,9 @@ class ContentsMcpToolset(AbstractToolset[Any]):
                     f"after {self.poll_timeout:.0f}s"
                 )
             await self._sleep(self.poll_interval)
-            call = await self._api().get_call(self.session_uid, str(call["uid"]), token=token)
+            call = await self._api().get_call(
+                self.session_uid, str(call["uid"]), token=token
+            )
         return call
 
     def _approval_manager(self) -> Any:
@@ -518,14 +564,17 @@ _toolsets_by_session: dict[str, ContentsMcpToolset] = {}
 
 
 def register_contents_toolset(toolset: ContentsMcpToolset) -> None:
+    """Register a toolset under its session."""
     _toolsets_by_session[toolset.session_uid] = toolset
 
 
 def unregister_contents_toolset(session_uid: str) -> None:
+    """Forget the toolset of a session."""
     _toolsets_by_session.pop(session_uid, None)
 
 
 def get_contents_toolset(session_uid: str) -> ContentsMcpToolset | None:
+    """Return the toolset registered for a session, if any."""
     return _toolsets_by_session.get(session_uid)
 
 

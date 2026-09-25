@@ -69,7 +69,9 @@ class ServerMetadata:
     client_id_metadata_document_supported: bool = False
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any], resource: Optional[str] = None) -> "ServerMetadata":
+    def from_payload(
+        cls, payload: dict[str, Any], resource: Optional[str] = None
+    ) -> "ServerMetadata":
         missing = [
             key
             for key in ("issuer", "authorization_endpoint", "token_endpoint")
@@ -138,7 +140,9 @@ async def discover(server_url: str, *, timeout: float = 10.0) -> ServerMetadata:
         issuer_candidates: list[str] = []
 
         try:
-            response = await client.get(_well_known(server_url, "oauth-protected-resource"))
+            response = await client.get(
+                _well_known(server_url, "oauth-protected-resource")
+            )
             if response.status_code == 200:
                 payload = response.json()
                 issuer_candidates.extend(payload.get("authorization_servers") or [])

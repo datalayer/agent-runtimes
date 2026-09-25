@@ -59,7 +59,7 @@ def sum_test(x: float, y: float, z: float = 1) -> float:
     not bool(TEST_DATALAYER_API_KEY),
     reason="TEST_DATALAYER_API_KEY is not set, skipping secret tests.",
 )
-def test_decorator(args, expected_output, decorator):  # type: ignore
+def test_decorator(args, expected_output, decorator):
     """
     Test the Datalayer decorator.
     """

@@ -7,10 +7,14 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
 from agent_runtimes.chat.commands import skills as skills_cmd
+
+if TYPE_CHECKING:
+    from agent_runtimes.chat.tux import CliTux
 
 
 class _Console:
@@ -120,7 +124,7 @@ class TestToggle:
 
         monkeypatch.setattr(skills_cmd, "_read_spec", read_spec)
         monkeypatch.setattr("httpx.AsyncClient", FakeClient)
-        asyncio.run(skills_cmd.execute(tux, argv))
+        asyncio.run(skills_cmd.execute(cast("CliTux", tux), argv))
         return posted, console
 
     def test_enabling_adds_a_versioned_ref_to_the_spec(
@@ -134,7 +138,9 @@ class TestToggle:
     def test_disabling_removes_it_whatever_version_was_pinned(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        posted, _ = self._run(monkeypatch, "disable events", ["events:9.9.9", "pdf:0.0.1"])
+        posted, _ = self._run(
+            monkeypatch, "disable events", ["events:9.9.9", "pdf:0.0.1"]
+        )
 
         assert posted[0]["agent_spec"]["skills"] == ["pdf:0.0.1"]
 

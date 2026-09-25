@@ -438,7 +438,9 @@ def serve_server(
         except ValueError as error:
             raise ServeError(str(error)) from error
         os.environ["AGENT_RUNTIMES_ORCHESTRATOR_ROOT"] = orchestrator_root
-        logger.info(f"Will register the orchestrator, delegating to: {orchestrator_root}")
+        logger.info(
+            f"Will register the orchestrator, delegating to: {orchestrator_root}"
+        )
 
     # Ensure env vars are set for uvicorn (which loads app.py in separate context)
     if no_config_mcp_servers:

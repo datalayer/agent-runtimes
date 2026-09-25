@@ -2150,8 +2150,7 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
             ),
         )
         logger.debug(
-            "get_agent_context_snapshot: last run in=%d out=%d over %d "
-            "recorded run(s)",
+            "get_agent_context_snapshot: last run in=%d out=%d over %d recorded run(s)",
             turn_usage.input_tokens,
             turn_usage.output_tokens,
             len(stats.request_usage_history),
@@ -2348,9 +2347,7 @@ def get_agent_context_snapshot(agent_id: str) -> ContextSnapshot | None:
             # twice, once labelled "session" and once "turn", and no reading
             # of it could be right.
             last = (
-                snapshot.per_request_usage[-1]
-                if snapshot.per_request_usage
-                else None
+                snapshot.per_request_usage[-1] if snapshot.per_request_usage else None
             )
             snapshot.turn_usage = TurnUsage(
                 input_tokens=last.input_tokens if last else 0,

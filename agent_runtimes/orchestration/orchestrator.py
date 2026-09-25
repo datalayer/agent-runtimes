@@ -98,7 +98,9 @@ def root_binding(root: str) -> AgentBinding:
     if scheme in ("http", "https", "ws", "wss"):
         agent_id = root.rstrip("/").rsplit("/", 1)[-1]
         protocol = AgentProtocol.ACP if scheme in ("ws", "wss") else AgentProtocol.A2A
-        return AgentBinding(agent_id=agent_id, capability=agent_id, protocol=protocol, endpoint=root)
+        return AgentBinding(
+            agent_id=agent_id, capability=agent_id, protocol=protocol, endpoint=root
+        )
     if get_agent_spec(root) is None:
         raise ValueError(
             f"The orchestrator's root '{root}' is neither an endpoint nor an agentspec of the library."
@@ -131,7 +133,8 @@ class OrchestratorAgent(BaseAgent):
         self.root = root
         self._name = name
         self._description = (
-            description or f"Delegates each turn to {root.agent_id}, and what it delegates on."
+            description
+            or f"Delegates each turn to {root.agent_id}, and what it delegates on."
         )
 
     @property
@@ -174,7 +177,9 @@ class OrchestratorAgent(BaseAgent):
             client.delegate_execution,
             command_with_trace(
                 ExecutionsDelegate(
-                    idempotency_key=key, agent=self.root, objective=Objective(goal=prompt)
+                    idempotency_key=key,
+                    agent=self.root,
+                    objective=Objective(goal=prompt),
                 )
             ),
         )
@@ -182,8 +187,13 @@ class OrchestratorAgent(BaseAgent):
         thoughts: asyncio.Queue[str] = asyncio.Queue()
 
         def told(event: ExecutionEvent) -> None:
-            if event.type is ExecutionEventType.STATE_CHANGED and event.state is not None:
-                thoughts.put_nowait(f"{event.agent_id or 'A worker'}: {event.state.value}")
+            if (
+                event.type is ExecutionEventType.STATE_CHANGED
+                and event.state is not None
+            ):
+                thoughts.put_nowait(
+                    f"{event.agent_id or 'A worker'}: {event.state.value}"
+                )
 
         answer = asyncio.ensure_future(
             following.follow_execution(
@@ -202,7 +212,9 @@ class OrchestratorAgent(BaseAgent):
         try:
             while not answer.done() or not thoughts.empty():
                 thought = asyncio.ensure_future(thoughts.get())
-                await asyncio.wait({thought, answer}, return_when=asyncio.FIRST_COMPLETED)
+                await asyncio.wait(
+                    {thought, answer}, return_when=asyncio.FIRST_COMPLETED
+                )
                 if thought.done():
                     yield StreamEvent(type="thought", data=thought.result())
                 else:

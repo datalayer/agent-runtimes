@@ -137,14 +137,13 @@ def build_local_model(model_id: str, timeout: float = 60.0) -> Any:
     if provider_spec is None:
         return None
 
-    from pydantic_ai.models.openai import OpenAIChatModel
-    from pydantic_ai.providers.openai import OpenAIProvider
-    from pydantic_ai.settings import ModelSettings
-
     # httpx2, not httpx: pydantic-ai deprecated httpx clients for
     # OpenAI-compatible providers, and a local runtime is a new code path with
     # no reason to inherit that.
     import httpx2
+    from pydantic_ai.models.openai import OpenAIChatModel
+    from pydantic_ai.providers.openai import OpenAIProvider
+    from pydantic_ai.settings import ModelSettings
 
     _, model_name = split_model_id(model_id)
     base_url = provider_spec.base_url()
@@ -202,7 +201,9 @@ def discover_installed_models(
             response.raise_for_status()
             payload = response.json()
         except Exception as error:  # noqa: BLE001
-            logger.debug("%s did not answer at %s: %s", spec.label, spec.tags_url(), error)
+            logger.debug(
+                "%s did not answer at %s: %s", spec.label, spec.tags_url(), error
+            )
             continue
 
         entries = payload.get(spec.tags_key) if isinstance(payload, dict) else None

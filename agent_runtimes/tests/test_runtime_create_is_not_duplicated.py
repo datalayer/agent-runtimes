@@ -1,6 +1,5 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
+# Distributed under the terms of the Modified BSD License.
 
 """A create that timed out is looked for before another is asked.
 
@@ -46,7 +45,7 @@ class _Transport:
         self.made = made
         self.posts = 0
 
-    def _fetch(self, url: str, **kwargs: Any) -> _Answer:
+    def _fetch(self, request: str, **kwargs: Any) -> _Answer:
         """A POST times out; a GET lists what the timed-out POST made, if anything."""
         if kwargs.get("method") == "POST":
             self.posts += 1

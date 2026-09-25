@@ -28,7 +28,7 @@ def _format_shortcut(shortcut: Optional[str]) -> str:
 
 
 def _grouped(tux: "CliTux") -> "dict[str, list]":
-    """Commands by group, from the registry when there is one.
+    """Group the commands, from the registry when there is one.
 
     A session built before the registry existed — or a test double — still has
     the name-and-alias mapping, so fall back to a single group rather than

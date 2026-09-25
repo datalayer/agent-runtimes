@@ -517,7 +517,7 @@ def _share(part: int, of: int, *, nothing: str) -> str:
 
 def _milliseconds(by_protocol: dict[str, float]) -> str:
     """
-    Latencies by protocol, in milliseconds.
+    Spell the latencies by protocol, in milliseconds.
 
     Parameters
     ----------

@@ -64,11 +64,19 @@ class FakeContents:
 
     async def get_session(self, session_uid: str, *, token: str) -> dict[str, Any]:
         if self.owner_token.get(session_uid) != token:
-            raise ContentsMcpError(f"Contents answered 403 to GET /mcp-sessions/{session_uid}")
+            raise ContentsMcpError(
+                f"Contents answered 403 to GET /mcp-sessions/{session_uid}"
+            )
         return dict(self.sessions[session_uid])
 
-    async def create_session(self, source_uid: str, *, token: str, **kwargs: Any) -> dict[str, Any]:
-        return {"uid": "01NEWSESSION", "source_uid": source_uid, "allowed_tools": ALLOWED}
+    async def create_session(
+        self, source_uid: str, *, token: str, **kwargs: Any
+    ) -> dict[str, Any]:
+        return {
+            "uid": "01NEWSESSION",
+            "source_uid": source_uid,
+            "allowed_tools": ALLOWED,
+        }
 
     async def discover_tools(self, source_uid: str, *, token: str) -> dict[str, Any]:
         assert source_uid == SOURCE
@@ -86,7 +94,10 @@ class FakeContents:
                 {
                     "name": "download_earth_data_granules",
                     "description": "Acquire granules",
-                    "input_schema": {"type": "object", "properties": {"short_name": {"type": "string"}}},
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"short_name": {"type": "string"}},
+                    },
                 },
                 {
                     "name": "delete_everything",
@@ -121,12 +132,19 @@ class FakeContents:
         return {
             "content": [{"type": "text", "text": "2 granules selected"}],
             "artifacts": [
-                {"name": "a.nc", "size": 1024, "transfer_uid": "01TRANSFER", "url": None},
+                {
+                    "name": "a.nc",
+                    "size": 1024,
+                    "transfer_uid": "01TRANSFER",
+                    "url": None,
+                },
                 {"name": "b.nc", "object_uid": "01OBJECT"},
             ],
         }
 
-    async def get_call(self, session_uid: str, call_uid: str, *, token: str) -> dict[str, Any]:
+    async def get_call(
+        self, session_uid: str, call_uid: str, *, token: str
+    ) -> dict[str, Any]:
         self.polls.append(call_uid)
         record = self.records[call_uid]
         # Approved calls run for one poll, then finish.
@@ -145,7 +163,10 @@ class FakeContents:
                 record["status"] = "approved" if decision == "approve" else "denied"
                 if decision == "reject":
                     record["error"] = note
-        return {"uid": approval_uid, "status": "approved" if decision == "approve" else "rejected"}
+        return {
+            "uid": approval_uid,
+            "status": "approved" if decision == "approve" else "rejected",
+        }
 
 
 class FakeApprovals:
@@ -204,17 +225,22 @@ async def test_the_toolset_offers_exactly_the_sessions_allowed_tools() -> None:
     contents = FakeContents()
     toolset = _toolset(contents)
 
-    tools = await toolset.get_tools(None)  # type: ignore[arg-type]
+    tools = await toolset.get_tools(None)
 
     assert set(tools) == set(ALLOWED)
     definition = tools["search_earth_datasets"].tool_def
     assert definition.description == "Search datasets"
     assert definition.parameters_json_schema["required"] == ["search_keywords"]
-    assert definition.metadata == {"contents_session_uid": SESSION, "source_uid": SOURCE}
+    assert definition.metadata == {
+        "contents_session_uid": SESSION,
+        "source_uid": SOURCE,
+    }
 
 
 @pytest.mark.asyncio
-async def test_a_call_goes_over_with_the_callers_token_and_comes_back_as_handles() -> None:
+async def test_a_call_goes_over_with_the_callers_token_and_comes_back_as_handles() -> (
+    None
+):
     contents = FakeContents()
     toolset = _toolset(contents)
 
@@ -225,7 +251,13 @@ async def test_a_call_goes_over_with_the_callers_token_and_comes_back_as_handles
     )
 
     assert contents.calls == [
-        (SESSION, "download_earth_data_granules", {"short_name": "MUR", "mode": "manifest"}, TOKEN, "home-folder:///earthdata")
+        (
+            SESSION,
+            "download_earth_data_granules",
+            {"short_name": "MUR", "mode": "manifest"},
+            TOKEN,
+            "home-folder:///earthdata",
+        )
     ]
     # Text becomes text; artifacts are handles, and nothing in them is bytes.
     assert result == {
@@ -238,7 +270,9 @@ async def test_a_call_goes_over_with_the_callers_token_and_comes_back_as_handles
 
 
 @pytest.mark.asyncio
-async def test_a_tool_outside_the_allowlist_is_refused_before_contents_is_asked() -> None:
+async def test_a_tool_outside_the_allowlist_is_refused_before_contents_is_asked() -> (
+    None
+):
     contents = FakeContents()
     toolset = _toolset(contents)
 
@@ -249,7 +283,9 @@ async def test_a_tool_outside_the_allowlist_is_refused_before_contents_is_asked(
 
 
 @pytest.mark.asyncio
-async def test_pending_approval_raises_the_runtime_flow_and_relays_the_approval() -> None:
+async def test_pending_approval_raises_the_runtime_flow_and_relays_the_approval() -> (
+    None
+):
     contents = FakeContents()
     contents.pending = True
     approvals = FakeApprovals("approve")
@@ -261,7 +297,11 @@ async def test_pending_approval_raises_the_runtime_flow_and_relays_the_approval(
 
     # The reviewer saw the tool, its arguments and the Contents approval uid.
     assert approvals.requests == [
-        ("download_earth_data_granules", {"short_name": "MUR", "contents_approval_uid": "appr-1"}, "tc-1")
+        (
+            "download_earth_data_granules",
+            {"short_name": "MUR", "contents_approval_uid": "appr-1"},
+            "tc-1",
+        )
     ]
     # The decision reached Contents, the call was polled to its end.
     assert contents.decisions == [("appr-1", "approve", "looks fine")]
@@ -276,7 +316,9 @@ async def test_a_rejection_is_relayed_to_contents_and_raised_to_the_model() -> N
     toolset = _toolset(contents, FakeApprovals("reject"))
 
     with pytest.raises(RuntimeError, match="rejected by the reviewer"):
-        await toolset.direct_call_tool("download_earth_data_granules", {"short_name": "MUR"})
+        await toolset.direct_call_tool(
+            "download_earth_data_granules", {"short_name": "MUR"}
+        )
 
     assert contents.decisions == [("appr-1", "reject", "rejected by the reviewer")]
     assert contents.records["call-1"]["status"] == "denied"
@@ -287,13 +329,28 @@ async def test_a_call_that_ends_denied_or_failed_is_an_error_not_a_result() -> N
     contents = FakeContents()
     toolset = _toolset(contents)
 
-    async def failing(session_uid: str, tool: str, arguments: dict[str, Any], *, token: str, destination_uri: str | None = None) -> dict[str, Any]:
-        return {"uid": "call-x", "session_uid": session_uid, "tool": tool, "status": "failed", "error": "server went away"}
+    async def failing(
+        session_uid: str,
+        tool: str,
+        arguments: dict[str, Any],
+        *,
+        token: str,
+        destination_uri: str | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "uid": "call-x",
+            "session_uid": session_uid,
+            "tool": tool,
+            "status": "failed",
+            "error": "server went away",
+        }
 
     contents.call_tool = failing  # type: ignore[method-assign]
 
     with pytest.raises(ContentsMcpError, match="ended failed: server went away"):
-        await toolset.direct_call_tool("search_earth_datasets", {"search_keywords": "sst"})
+        await toolset.direct_call_tool(
+            "search_earth_datasets", {"search_keywords": "sst"}
+        )
 
 
 # -- the proxy ----------------------------------------------------------------
@@ -358,7 +415,10 @@ def test_the_proxy_forwards_an_allowed_call_with_the_callers_token(proxy: Any) -
 
     response = client.post(
         f"/api/v1/mcp/proxy/contents/{SESSION}/tools/download_earth_data_granules",
-        json={"arguments": {"short_name": "MUR"}, "destination_uri": "home-folder:///earthdata"},
+        json={
+            "arguments": {"short_name": "MUR"},
+            "destination_uri": "home-folder:///earthdata",
+        },
         headers={"Authorization": f"Bearer {TOKEN}"},
     )
 
@@ -368,7 +428,13 @@ def test_the_proxy_forwards_an_allowed_call_with_the_callers_token(proxy: Any) -
     assert body["result"]["content"] == "2 granules selected"
     assert body["result"]["artifacts"][0]["transfer_uid"] == "01TRANSFER"
     assert contents.calls == [
-        (SESSION, "download_earth_data_granules", {"short_name": "MUR"}, TOKEN, "home-folder:///earthdata")
+        (
+            SESSION,
+            "download_earth_data_granules",
+            {"short_name": "MUR"},
+            TOKEN,
+            "home-folder:///earthdata",
+        )
     ]
 
 
@@ -396,8 +462,14 @@ async def test_stopping_an_agent_whose_source_is_reached_through_contents_stops_
     from agent_runtimes.routes.agents import _stop_mcp_servers_for_agent
 
     class Adapter:
-        _selected_mcp_servers = [McpServerSelection(id="earthdata", origin="contents", session_uid=SESSION)]
+        _selected_mcp_servers = [
+            McpServerSelection(id="earthdata", origin="contents", session_uid=SESSION)
+        ]
 
     monkeypatch.setitem(acp_routes._agents, "agent-contents", (Adapter(), object()))
 
-    assert await _stop_mcp_servers_for_agent("agent-contents") == ([], ["earthdata"], [])
+    assert await _stop_mcp_servers_for_agent("agent-contents") == (
+        [],
+        ["earthdata"],
+        [],
+    )

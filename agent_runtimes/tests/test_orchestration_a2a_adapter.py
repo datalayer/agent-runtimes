@@ -232,10 +232,19 @@ class TestDelegation:
     @pytest.mark.asyncio
     async def test_the_attempt_keeps_what_the_worker_says_it_spent(self, monkeypatch):
         # O2-10: the status that ends the task says what the task spent.
-        spent = {"inputTokens": 1200, "outputTokens": 340, "cost": 0.0123, "currency": "USD"}
+        spent = {
+            "inputTokens": 1200,
+            "outputTokens": 340,
+            "cost": 0.0123,
+            "currency": "USD",
+        }
         ended = (
             "status",
-            {"taskId": "task-1", "state": "completed", "metadata": {"datalayer": {"usage": spent}}},
+            {
+                "taskId": "task-1",
+                "state": "completed",
+                "metadata": {"datalayer": {"usage": spent}},
+            },
         )
         _relay(monkeypatch, [*GOOD_RUN[:-1], ended])
         _no_task_lookup(monkeypatch)

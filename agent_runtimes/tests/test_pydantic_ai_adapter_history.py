@@ -68,9 +68,18 @@ def _adapter(seen: list[list[Any]]) -> PydanticAIAdapter:
 class TestTheConversationAModelIsGiven:
     def test_each_message_becomes_pydantic_ais_own(self) -> None:
         messages = model_messages(
-            [{"role": "system", "content": "Be brief"}, *HISTORY, {"role": "agent", "content": "Done reading"}]
+            [
+                {"role": "system", "content": "Be brief"},
+                *HISTORY,
+                {"role": "agent", "content": "Done reading"},
+            ]
         )
-        assert [type(message) for message in messages] == [ModelRequest, ModelRequest, ModelResponse, ModelResponse]
+        assert [type(message) for message in messages] == [
+            ModelRequest,
+            ModelRequest,
+            ModelResponse,
+            ModelResponse,
+        ]
         assert _said(messages) == [
             ("system", "Be brief"),
             ("user", "Profile the notebook"),
@@ -95,7 +104,9 @@ class TestTheConversationAModelIsGiven:
             model_messages([message])
 
     @pytest.mark.asyncio
-    async def test_a_streamed_run_is_given_the_conversation_then_its_prompt_once(self) -> None:
+    async def test_a_streamed_run_is_given_the_conversation_then_its_prompt_once(
+        self,
+    ) -> None:
         seen: list[list[Any]] = []
         context = AgentContext(session_id="s", conversation_history=list(HISTORY))
 

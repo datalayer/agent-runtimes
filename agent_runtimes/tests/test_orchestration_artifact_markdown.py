@@ -52,8 +52,16 @@ class TestHeadings:
 class TestLists:
     def test_dash_lines_become_one_bullet_list(self):
         [_, _produced, block] = _blocks("- first\n- second\n- third")
-        assert block["type"] == "list" and block["listType"] == "bullet" and block["tag"] == "ul"
-        assert [_words(item) for item in block["children"]] == ["first", "second", "third"]
+        assert (
+            block["type"] == "list"
+            and block["listType"] == "bullet"
+            and block["tag"] == "ul"
+        )
+        assert [_words(item) for item in block["children"]] == [
+            "first",
+            "second",
+            "third",
+        ]
 
     def test_numbered_lines_become_one_ordered_list(self):
         [_, _produced, block] = _blocks("1. first\n2. second")
@@ -113,4 +121,6 @@ class TestEveryBlockCarriesTheEvidence:
     def test_a_heading_and_a_list_are_marked_evidence_too(self):
         blocks = _blocks("# Title\n\n- one\n- two")
         marks = {block["$"]["evidence"]["artifact"] for block in blocks}
-        assert len(marks) == 1, "every block, old and new kinds alike, names the same artifact"
+        assert len(marks) == 1, (
+            "every block, old and new kinds alike, names the same artifact"
+        )

@@ -83,11 +83,11 @@ async def _show(tux: "CliTux") -> None:
         for model in local:
             marker = "[green]●[/green]" if model.get("reachable") else "○"
             selected = " [green](active)[/green]" if model["id"] == active else ""
-            tux.console.print(f"    {marker} {model['id']}{selected}", style=STYLE_MUTED)
-            detail = model.get("reason") or "ready"
             tux.console.print(
-                f"        {model['name']} — {detail}", style=STYLE_MUTED
+                f"    {marker} {model['id']}{selected}", style=STYLE_MUTED
             )
+            detail = model.get("reason") or "ready"
+            tux.console.print(f"        {model['name']} — {detail}", style=STYLE_MUTED)
             if model.get("warning"):
                 tux.console.print(f"        {model['warning']}", style=STYLE_WARNING)
 
@@ -114,7 +114,9 @@ async def _show(tux: "CliTux") -> None:
         for model in hosted:
             marker = "[green]●[/green]" if model.get("available") else "○"
             selected = " [green](active)[/green]" if model["id"] == active else ""
-            tux.console.print(f"    {marker} {model['id']}{selected}", style=STYLE_MUTED)
+            tux.console.print(
+                f"    {marker} {model['id']}{selected}", style=STYLE_MUTED
+            )
             missing = model.get("missing_env_vars") or []
             if missing:
                 tux.console.print(
@@ -144,9 +146,7 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
 
     model = get_model(model_id)
     if model is None:
-        tux.console.print(
-            f"[red]Unknown model: {model_id}[/red]", style=STYLE_MUTED
-        )
+        tux.console.print(f"[red]Unknown model: {model_id}[/red]", style=STYLE_MUTED)
         tux.console.print("  /models to see what is available.", style=STYLE_MUTED)
         return
 

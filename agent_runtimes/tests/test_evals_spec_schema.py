@@ -16,17 +16,19 @@ from pathlib import Path
 
 import pytest
 
+from agent_runtimes.evals.remote.evals import load_evalset_spec
 from agent_runtimes.evals.spec_schema import (
     EvalsetSpecError,
     evalset_payload_from_spec,
     validate_evalset_spec,
 )
-from agent_runtimes.evals.remote.evals import load_evalset_spec
 from agent_runtimes.mixins.evals import EvalsMixin
 
 FIXTURES = Path(__file__).resolve().parents[1] / "evals" / "fixtures"
 REFERENCE = FIXTURES / "data-analysis-agent.evalset.json"
-EXAMPLES = Path(__file__).resolve().parents[3] / "tech" / "datalayer" / "examples" / "evals"
+EXAMPLES = (
+    Path(__file__).resolve().parents[3] / "tech" / "datalayer" / "examples" / "evals"
+)
 
 
 def _specs() -> list[Path]:
@@ -73,12 +75,18 @@ def test_the_reference_fixture_is_what_the_plan_says():
     assert "duplicate-customers" in names and "duplicate-rows" in names
     # Every case can be graded by an evaluator the platform runs.
     for case in spec["cases"]:
-        assert {ref["name"] for ref in case["evaluators"]} <= {"contains", "equals_expected", "equals"}
+        assert {ref["name"] for ref in case["evaluators"]} <= {
+            "contains",
+            "equals_expected",
+            "equals",
+        }
 
 
 def test_a_bad_spec_names_the_path():
     with pytest.raises(EvalsetSpecError, match=r"cases/1/name"):
-        validate_evalset_spec({"name": "x", "cases": [{"name": "ok"}, {"name": ""}]}, source="bad.json")
+        validate_evalset_spec(
+            {"name": "x", "cases": [{"name": "ok"}, {"name": ""}]}, source="bad.json"
+        )
     with pytest.raises(EvalsetSpecError, match=r"kind"):
         validate_evalset_spec({"name": "x", "kind": "streaming"})
     with pytest.raises(EvalsetSpecError, match=r"\(root\)"):
@@ -99,7 +107,9 @@ class _Client(EvalsMixin):
 def test_the_sdk_sends_the_derived_body_with_overrides():
     spec = json.loads(REFERENCE.read_text())
     client = _Client()
-    client.evals_create_eval_from_spec(spec=spec, run_environment="ui", account_uid="org-1")
+    client.evals_create_eval_from_spec(
+        spec=spec, run_environment="ui", account_uid="org-1"
+    )
     body = client.sent
     assert body["name"] == spec["name"]
     assert body["run_environment"] == "ui"

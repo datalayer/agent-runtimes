@@ -2,7 +2,8 @@
 # Distributed under the terms of the Modified BSD License.
 
 """The prompt history an agent keeps for the arrow keys: the hook that
-records it on every run, and how it reaches the frontend."""
+records it on every run, and how it reaches the frontend.
+"""
 
 from types import SimpleNamespace
 

@@ -35,9 +35,29 @@ def test_every_observed_run_word_maps_into_the_vocabulary():
 
 
 def test_the_finished_words_are_finished_and_the_others_are_not():
-    for word in ("completed", "success", "succeeded", "passed", "done", "failed", "error", "cancelled", "canceled"):
+    for word in (
+        "completed",
+        "success",
+        "succeeded",
+        "passed",
+        "done",
+        "failed",
+        "error",
+        "cancelled",
+        "canceled",
+    ):
         assert status.is_terminal_run_status(word), word
-    for word in ("queued", "init", "pending", "running", "scoring", "provisioning", "review", "blocked", ""):
+    for word in (
+        "queued",
+        "init",
+        "pending",
+        "running",
+        "scoring",
+        "provisioning",
+        "review",
+        "blocked",
+        "",
+    ):
         assert not status.is_terminal_run_status(word), word
 
 

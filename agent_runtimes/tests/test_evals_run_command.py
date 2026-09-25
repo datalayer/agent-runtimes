@@ -12,7 +12,7 @@ client, so what is checked is the conversation, not the service.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 from typer.testing import CliRunner
@@ -21,6 +21,9 @@ from agent_runtimes.__main__ import app
 from agent_runtimes.commands import evals as evals_commands
 from agent_runtimes.evals.remote import runner as runner_module
 from agent_runtimes.evals.remote.runner import execute_evalset_spec
+
+if TYPE_CHECKING:
+    from agent_runtimes.client import AgentClient
 
 runner = CliRunner(
     env={"NO_COLOR": "1", "TERM": "dumb", "_TYPER_STANDARD_TRACEBACK": "1"}
@@ -403,7 +406,9 @@ def clock(monkeypatch) -> Clock:
     return clock
 
 
-def test_a_launch_nobody_takes_is_given_up_on_with_the_reason(fake: FakeClient, clock: Clock):
+def test_a_launch_nobody_takes_is_given_up_on_with_the_reason(
+    fake: FakeClient, clock: Clock
+):
     """The launch the platform accepted and then nobody started: `queued`
     with no tasks, poll after poll. Waiting the full hour for that read as a
     hang — no error, no line — so it ends at the queued timeout, naming the
@@ -412,12 +417,20 @@ def test_a_launch_nobody_takes_is_given_up_on_with_the_reason(fake: FakeClient, 
     lines: list[str] = []
     with pytest.raises(RuntimeError) as refused:
         runner_module.watch_launch(
-            fake, "launch-1", queued_timeout_seconds=180, interval_seconds=5, log=lines.append
+            cast("AgentClient", fake),
+            "launch-1",
+            queued_timeout_seconds=180,
+            interval_seconds=5,
+            log=lines.append,
         )
     assert "still queued after" in str(refused.value)
-    assert "durable service" in str(refused.value) and "/runs/launch-1" in str(refused.value)
+    assert "durable service" in str(refused.value) and "/runs/launch-1" in str(
+        refused.value
+    )
     assert clock.now - 1_000.0 < 200  # gave up at the queued timeout, not the hour
-    assert lines[0].startswith("Launch 128: queued tasks=0/1, waiting for the executor to take it")
+    assert lines[0].startswith(
+        "Launch 128: queued tasks=0/1, waiting for the executor to take it"
+    )
 
 
 def test_the_watch_is_never_silent(fake: FakeClient, clock: Clock):
@@ -426,7 +439,11 @@ def test_the_watch_is_never_silent(fake: FakeClient, clock: Clock):
     fake.statuses = ["running"] * 20 + ["completed"]
     lines: list[str] = []
     runner_module.watch_launch(
-        fake, "launch-1", interval_seconds=5, heartbeat_seconds=30, log=lines.append
+        cast("AgentClient", fake),
+        "launch-1",
+        interval_seconds=5,
+        heartbeat_seconds=30,
+        log=lines.append,
     )
     changes = [line for line in lines if "(t+" in line]
     heartbeats = [line for line in lines if "still running" in line]
@@ -484,14 +501,20 @@ def test_the_runner_cloud_target_is_a_launch(fake: FakeClient):
     submits a launch and watches it rather than driving runtimes itself."""
     lines: list[str] = []
     result = execute_evalset_spec(
-        fake,
+        cast("AgentClient", fake),
         spec=SPEC,
         agentspec_ids=["jupyter-data-analyst"],
         execution_target="cloud",
         run_limit=1,
         concurrency=3,
         credits_limit=8.0,
-        git={"sha": "abc123", "ref": "refs/pull/7/merge", "pr_number": "7", "run_id": "", "repository": None},
+        git={
+            "sha": "abc123",
+            "ref": "refs/pull/7/merge",
+            "pr_number": "7",
+            "run_id": "",
+            "repository": None,
+        },
         log=lines.append,
     )
     assert (
@@ -515,7 +538,11 @@ def test_the_runner_cloud_target_is_a_launch(fake: FakeClient):
         launched["config"]["concurrency"] == 3 and launched["config"]["budget"] == 8.0
     )
     # Where CI made it from rides on the launch (B6-02); empty values do not.
-    assert launched["config"]["git"] == {"sha": "abc123", "ref": "refs/pull/7/merge", "pr_number": "7"}
+    assert launched["config"]["git"] == {
+        "sha": "abc123",
+        "ref": "refs/pull/7/merge",
+        "pr_number": "7",
+    }
     assert any("Launch 128 submitted" in line for line in lines) and any(
         "completed" in line for line in lines
     )
@@ -532,24 +559,44 @@ def test_the_report_names_where_a_ci_launch_came_from():
     assert _from_ci({}) == ""
     assert _from_ci({"config": {"git": {}}}) == ""
     line = _from_ci(
-        {"config": {"git": {"sha": "0123456789abcdef", "ref": "main", "pr_number": "7", "repository": "datalayer/x", "run_id": "42"}}}
+        {
+            "config": {
+                "git": {
+                    "sha": "0123456789abcdef",
+                    "ref": "main",
+                    "pr_number": "7",
+                    "repository": "datalayer/x",
+                    "run_id": "42",
+                }
+            }
+        }
     )
-    assert line == "From CI: commit 0123456789ab, on main, pull request #7, of datalayer/x, action run 42"
-
+    assert (
+        line
+        == "From CI: commit 0123456789ab, on main, pull request #7, of datalayer/x, action run 42"
+    )
 
 
 def test_a_failed_launch_says_why_run_by_run(fake: FakeClient):
-    """"Launch 1 failed" alone sent people to the page to learn that every
+    """ "Launch 1 failed" alone sent people to the page to learn that every
     run was refused at its first step; the cause is in the answer already."""
     fake.statuses = ["running", "failed"]
     lines: list[str] = []
     result = execute_evalset_spec(
-        fake, spec=SPEC, agentspec_ids=["a"], execution_target="cloud", run_limit=1, log=lines.append
+        cast("AgentClient", fake),
+        spec=SPEC,
+        agentspec_ids=["a"],
+        execution_target="cloud",
+        run_limit=1,
+        log=lines.append,
     )
     assert result["launch_statuses"] == {"launch-1": "failed"}
     said = "\n".join(lines)
     assert "Launch 128 failed" in said
-    assert "run run-1 (agentspec a) failed: infrastructure — mint_eval_credential: iam refused" in said
+    assert (
+        "run run-1 (agentspec a) failed: infrastructure — mint_eval_credential: iam refused"
+        in said
+    )
     # The CLI says the same.
     fake.statuses = ["running", "failed"]
     answer = runner.invoke(app, ["evals", "run", "evalset-1", "--agent-spec-ids", "a"])

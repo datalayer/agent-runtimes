@@ -131,7 +131,11 @@ class ACPMessage(BaseModel):
                 if dumped.get(key) is not None
             }
         member = "error" if self.error is not None else "result"
-        return {"jsonrpc": dumped["jsonrpc"], "id": dumped["id"], member: dumped[member]}
+        return {
+            "jsonrpc": dumped["jsonrpc"],
+            "id": dumped["id"],
+            member: dumped[member],
+        }
 
 
 class ACPError(BaseModel):
@@ -564,9 +568,16 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                 steered = message.params or {}
                 steered_session_id = steered.get("sessionId")
                 instructions = steered.get("instructions")
-                if steered_session_id and isinstance(instructions, str) and instructions:
+                if (
+                    steered_session_id
+                    and isinstance(instructions, str)
+                    and instructions
+                ):
                     if not deliver_steer(steered_session_id, instructions):
-                        logger.info("ACP session %s is not working; its steer was dropped", steered_session_id)
+                        logger.info(
+                            "ACP session %s is not working; its steer was dropped",
+                            steered_session_id,
+                        )
 
             elif message.method == "acp.permission.respond":
                 # Handle permission response
@@ -1004,12 +1015,21 @@ async def _handle_prompt(
                     # kept where a resume finds it, in whichever process (O2-05).
                     kept = [*history, {"role": "user", "content": prompt}]
                     if response_chunks:
-                        kept.append({"role": "assistant", "content": "".join(response_chunks)})
-                    checkpoint = await ProtocolStateCheckpointStore(execution_id).create_checkpoint(
-                        "paused", turn=len(kept), messages=kept, metadata={"session_id": session_id}
+                        kept.append(
+                            {"role": "assistant", "content": "".join(response_chunks)}
+                        )
+                    checkpoint = await ProtocolStateCheckpointStore(
+                        execution_id
+                    ).create_checkpoint(
+                        "paused",
+                        turn=len(kept),
+                        messages=kept,
+                        metadata={"session_id": session_id},
                     )
                     paused = paused_meta(checkpoint.id)
-                    logger.info("ACP session %s paused at %s", session_id, checkpoint.id)
+                    logger.info(
+                        "ACP session %s paused at %s", session_id, checkpoint.id
+                    )
                 else:
                     logger.warning(
                         "ACP session %s was asked to pause and names no execution to keep a "

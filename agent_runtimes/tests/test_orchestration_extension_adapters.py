@@ -173,14 +173,20 @@ async def _paused(store: InMemoryExecutionStore, execution: Execution) -> Any:
     """The execution paused at ``ckpt_1`` by its first attempt, and the attempt resuming it."""
     first = await store.record_attempt(an_attempt(execution))
     for event in (LifecycleEvent.ASSIGN, LifecycleEvent.START, LifecycleEvent.PAUSE):
-        await store.set_state(execution.execution_id, event, attempt_id=first.attempt_id)
+        await store.set_state(
+            execution.execution_id, event, attempt_id=first.attempt_id
+        )
     return await store.record_attempt(
         an_attempt(execution, attempt_id="att_2", number=2, resumed_from="ckpt_1")
     )
 
 
 def _states(events: list[Any]) -> list[ExecutionState]:
-    return [event.state for event in events if event.type is ExecutionEventType.STATE_CHANGED]
+    return [
+        event.state
+        for event in events
+        if event.type is ExecutionEventType.STATE_CHANGED
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -200,7 +206,9 @@ class TestTheReport:
             assert AcknowledgementKind.CHECKPOINTED in extended.acknowledgements
             assert AcknowledgementKind.CHECKPOINTED not in plain.acknowledgements
             assert (extended.extensions, plain.extensions) == ((EXTENSION_URI,), ())
-            assert not any("'checkpointed'" in reduction for reduction in extended.reductions)
+            assert not any(
+                "'checkpointed'" in reduction for reduction in extended.reductions
+            )
             assert extended.to_wire()["extensions"] == [EXTENSION_URI]
 
     @pytest.mark.asyncio
@@ -209,7 +217,9 @@ class TestTheReport:
         execution = await store.create(an_execution())
         assert recorded_capabilities(await store.events(execution.execution_id)) is None
         await store.record(execution.execution_id, capability_report(A2A_CAPABILITIES))
-        await store.record(execution.execution_id, capability_report(A2A_EXTENDED_CAPABILITIES))
+        await store.record(
+            execution.execution_id, capability_report(A2A_EXTENDED_CAPABILITIES)
+        )
         await store.record(execution.execution_id, Observation.progress("Working."))
         report = recorded_capabilities(await store.events(execution.execution_id))
         assert report is not None and report["extensions"] == [EXTENSION_URI]
@@ -217,7 +227,9 @@ class TestTheReport:
 
     def test_only_a_checkpointed_milestone_names_a_checkpoint(self):
         with pytest.raises(ValueError, match="checkpointed"):
-            Observation.acknowledged(AcknowledgementKind.STARTED, checkpoint_id="ckpt_1")
+            Observation.acknowledged(
+                AcknowledgementKind.STARTED, checkpoint_id="ckpt_1"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -235,19 +247,26 @@ class TestAnA2AWorkerSpeakingTheExtension:
         ):
 
             async def ensure_remote_agent(agent_id, description, target, card=card):
-                return A2ARemoteAgent(name=agent_id, url=WORKER, launch="remote", card=card)
+                return A2ARemoteAgent(
+                    name=agent_id, url=WORKER, launch="remote", card=card
+                )
 
             monkeypatch.setattr(a2a_binding, "ensure_remote_agent", ensure_remote_agent)
             worker = await A2AWorkerAdapter().resolve(an_execution().agent)
             assert worker.capabilities == expected
 
     @pytest.mark.asyncio
-    async def test_a_task_canceled_at_its_checkpoint_pauses_the_execution(self, monkeypatch):
+    async def test_a_task_canceled_at_its_checkpoint_pauses_the_execution(
+        self, monkeypatch
+    ):
         sent = _relay(
             monkeypatch,
             [
                 ("status", {"taskId": "task-1", "state": "working"}),
-                ("status", {"taskId": "task-1", "state": "canceled", "metadata": PAUSED}),
+                (
+                    "status",
+                    {"taskId": "task-1", "state": "canceled", "metadata": PAUSED},
+                ),
             ],
             raises=RuntimeError("The remote agent's task ended canceled"),
         )
@@ -256,7 +275,9 @@ class TestAnA2AWorkerSpeakingTheExtension:
         attempt = await store.record_attempt(an_attempt(execution))
         execution = await store.set_state(execution.execution_id, LifecycleEvent.ASSIGN)
 
-        observations = await _dispatch(A2AWorkerAdapter(), _a2a_worker(_card()), store, execution, attempt)
+        observations = await _dispatch(
+            A2AWorkerAdapter(), _a2a_worker(_card()), store, execution, attempt
+        )
 
         assert (await store.get(execution.execution_id)).status is ExecutionState.PAUSED
         [kept] = [
@@ -267,10 +288,18 @@ class TestAnA2AWorkerSpeakingTheExtension:
         assert (kept.checkpoint_id, kept.attempt_id) == ("ckpt_1", attempt.attempt_id)
         [stored] = await store.attempts(execution.execution_id)
         assert stored.state is ExecutionState.PAUSED
-        assert not any(o.type is ExecutionEventType.ARTIFACT_REGISTERED for o in observations)
+        assert not any(
+            o.type is ExecutionEventType.ARTIFACT_REGISTERED for o in observations
+        )
         # The delegation named the execution, the scope its checkpoints are kept under.
         assert sent[0] == {
-            "datalayer": {"execution": {"executionId": "exec_1", "rootExecutionId": "exec_1", "depth": 0}}
+            "datalayer": {
+                "execution": {
+                    "executionId": "exec_1",
+                    "rootExecutionId": "exec_1",
+                    "depth": 0,
+                }
+            }
         }
 
     @pytest.mark.asyncio
@@ -279,7 +308,10 @@ class TestAnA2AWorkerSpeakingTheExtension:
             monkeypatch,
             [
                 ("status", {"taskId": "task-1", "state": "working"}),
-                ("status", {"taskId": "task-1", "state": "canceled", "metadata": PAUSED}),
+                (
+                    "status",
+                    {"taskId": "task-1", "state": "canceled", "metadata": PAUSED},
+                ),
             ],
             raises=RuntimeError("The remote agent's task ended canceled"),
         )
@@ -288,13 +320,19 @@ class TestAnA2AWorkerSpeakingTheExtension:
         attempt = await store.record_attempt(an_attempt(execution))
         execution = await store.set_state(execution.execution_id, LifecycleEvent.ASSIGN)
 
-        await _dispatch(A2AWorkerAdapter(), _a2a_worker(None), store, execution, attempt)
+        await _dispatch(
+            A2AWorkerAdapter(), _a2a_worker(None), store, execution, attempt
+        )
 
-        assert (await store.get(execution.execution_id)).status is ExecutionState.CANCELLED
+        assert (
+            await store.get(execution.execution_id)
+        ).status is ExecutionState.CANCELLED
         assert sent == [None]
 
     @pytest.mark.asyncio
-    async def test_a_resumed_attempt_names_its_checkpoint_and_resumes_the_execution(self, monkeypatch):
+    async def test_a_resumed_attempt_names_its_checkpoint_and_resumes_the_execution(
+        self, monkeypatch
+    ):
         sent = _relay(
             monkeypatch,
             [
@@ -306,53 +344,90 @@ class TestAnA2AWorkerSpeakingTheExtension:
         execution = await store.create(an_execution())
         attempt = await _paused(store, execution)
 
-        await _dispatch(A2AWorkerAdapter(), _a2a_worker(_card()), store, await store.get("exec_1"), attempt)
+        await _dispatch(
+            A2AWorkerAdapter(),
+            _a2a_worker(_card()),
+            store,
+            await store.get("exec_1"),
+            attempt,
+        )
 
         assert sent[0]["datalayer"]["checkpoint"] == {"checkpointId": "ckpt_1"}
         events = await store.events(execution.execution_id)
-        assert _states(events)[-3:] == [ExecutionState.PAUSED, ExecutionState.RUNNING, ExecutionState.COMPLETED]
+        assert _states(events)[-3:] == [
+            ExecutionState.PAUSED,
+            ExecutionState.RUNNING,
+            ExecutionState.COMPLETED,
+        ]
         assert not [event for event in events if event.error is not None]
 
     @pytest.mark.asyncio
-    async def test_a_resumed_attempt_is_not_sent_to_a_worker_without_the_extension(self, monkeypatch):
+    async def test_a_resumed_attempt_is_not_sent_to_a_worker_without_the_extension(
+        self, monkeypatch
+    ):
         sent = _relay(monkeypatch, [])
         store = InMemoryExecutionStore()
         execution = await store.create(an_execution())
         attempt = await _paused(store, execution)
 
-        await _dispatch(A2AWorkerAdapter(), _a2a_worker(None), store, await store.get("exec_1"), attempt)
+        await _dispatch(
+            A2AWorkerAdapter(),
+            _a2a_worker(None),
+            store,
+            await store.get("exec_1"),
+            attempt,
+        )
 
         assert sent == []
         failed = await store.get(execution.execution_id)
         assert failed.status is ExecutionState.FAILED
-        assert failed.error.code is ErrorCode.UNSUPPORTED_OPERATION and "ckpt_1" in failed.error.message
+        assert (
+            failed.error.code is ErrorCode.UNSUPPORTED_OPERATION
+            and "ckpt_1" in failed.error.message
+        )
 
     @pytest.mark.asyncio
-    async def test_pausing_and_steering_post_to_the_cards_routes_on_the_workers_origin(self, monkeypatch):
+    async def test_pausing_and_steering_post_to_the_cards_routes_on_the_workers_origin(
+        self, monkeypatch
+    ):
         posted = _posts(monkeypatch)
         execution = an_execution()
         attempt = an_attempt(execution, protocol_task_id="task-1")
         adapter, worker = A2AWorkerAdapter(), _a2a_worker(_card())
 
         paused = await adapter.pause(worker, execution, attempt)
-        steered = await adapter.steer(worker, execution, attempt, instructions="Check the plots")
+        steered = await adapter.steer(
+            worker, execution, attempt, instructions="Check the plots"
+        )
 
         assert posted == [
             ("http://worker.test/api/v1/a2a/pause", {"task_id": "task-1"}),
-            ("http://worker.test/api/v1/a2a/steer", {"task_id": "task-1", "instructions": "Check the plots"}),
+            (
+                "http://worker.test/api/v1/a2a/steer",
+                {"task_id": "task-1", "instructions": "Check the plots"},
+            ),
         ]
-        assert isinstance(paused, Performed) and paused.operation is WorkerOperation.PAUSE
-        assert isinstance(steered, Performed) and steered.operation is WorkerOperation.STEER
+        assert (
+            isinstance(paused, Performed) and paused.operation is WorkerOperation.PAUSE
+        )
+        assert (
+            isinstance(steered, Performed)
+            and steered.operation is WorkerOperation.STEER
+        )
 
     @pytest.mark.asyncio
     async def test_a_route_the_card_points_elsewhere_is_not_followed(self, monkeypatch):
         posted = _posts(monkeypatch)
         execution = an_execution()
         attempt = an_attempt(execution, protocol_task_id="task-1")
-        card = _card({"pause": "https://elsewhere.test/pause", "steer": "//elsewhere.test/steer"})
+        card = _card(
+            {"pause": "https://elsewhere.test/pause", "steer": "//elsewhere.test/steer"}
+        )
 
         paused = await A2AWorkerAdapter().pause(_a2a_worker(card), execution, attempt)
-        steered = await A2AWorkerAdapter().steer(_a2a_worker(card), execution, attempt, instructions="x")
+        steered = await A2AWorkerAdapter().steer(
+            _a2a_worker(card), execution, attempt, instructions="x"
+        )
 
         assert posted == []
         for outcome in (paused, steered):
@@ -360,24 +435,38 @@ class TestAnA2AWorkerSpeakingTheExtension:
 
     @pytest.mark.asyncio
     async def test_a_worker_that_does_not_take_the_pause_says_so(self, monkeypatch):
-        _posts(monkeypatch, {"success": False, "message": "Task task-1 not found or already completed"})
+        _posts(
+            monkeypatch,
+            {"success": False, "message": "Task task-1 not found or already completed"},
+        )
         execution = an_execution()
 
         outcome = await A2AWorkerAdapter().pause(
-            _a2a_worker(_card()), execution, an_attempt(execution, protocol_task_id="task-1")
+            _a2a_worker(_card()),
+            execution,
+            an_attempt(execution, protocol_task_id="task-1"),
         )
 
         assert isinstance(outcome, Performed)
-        assert outcome.detail == "The worker did not take the pause: Task task-1 not found or already completed"
+        assert (
+            outcome.detail
+            == "The worker did not take the pause: Task task-1 not found or already completed"
+        )
 
     @pytest.mark.asyncio
     async def test_a_task_not_yet_named_is_not_asked(self, monkeypatch):
         posted = _posts(monkeypatch)
         execution = an_execution()
 
-        outcome = await A2AWorkerAdapter().pause(_a2a_worker(_card()), execution, an_attempt(execution))
+        outcome = await A2AWorkerAdapter().pause(
+            _a2a_worker(_card()), execution, an_attempt(execution)
+        )
 
-        assert posted == [] and isinstance(outcome, Unsupported) and "no A2A task yet" in outcome.reason
+        assert (
+            posted == []
+            and isinstance(outcome, Unsupported)
+            and "no A2A task yet" in outcome.reason
+        )
 
     @pytest.mark.asyncio
     async def test_a_plain_worker_is_refused_pause_resume_and_steer(self, monkeypatch):
@@ -403,17 +492,26 @@ class TestAnA2AWorkerSpeakingTheExtension:
         attempt = an_attempt(execution, protocol_task_id="task-1")
         adapter, worker = A2AWorkerAdapter(), _a2a_worker(_card())
 
-        resumed = await adapter.resume(worker, execution, attempt, checkpoint_id="ckpt_1")
+        resumed = await adapter.resume(
+            worker, execution, attempt, checkpoint_id="ckpt_1"
+        )
         nothing = await adapter.resume(worker, execution, attempt)
 
-        assert isinstance(resumed, Performed) and "a new A2A task" in resumed.detail and "ckpt_1" in resumed.detail
+        assert (
+            isinstance(resumed, Performed)
+            and "a new A2A task" in resumed.detail
+            and "ckpt_1" in resumed.detail
+        )
         assert isinstance(nothing, Unsupported) and "none is known" in nothing.reason
 
     @pytest.mark.asyncio
     async def test_re_attaching_to_a_paused_task_reads_the_pause(self, monkeypatch):
         task = {
             "id": "task-1",
-            "status": {"state": "canceled", "message": {"role": "agent", "parts": [], "metadata": PAUSED}},
+            "status": {
+                "state": "canceled",
+                "message": {"role": "agent", "parts": [], "metadata": PAUSED},
+            },
         }
 
         async def get_task(self, remote, task_id):
@@ -425,16 +523,22 @@ class TestAnA2AWorkerSpeakingTheExtension:
         observations = [
             observation
             async for observation in A2AWorkerAdapter().subscribe(
-                _a2a_worker(_card()), execution, an_attempt(execution, protocol_task_id="task-1")
+                _a2a_worker(_card()),
+                execution,
+                an_attempt(execution, protocol_task_id="task-1"),
             )
         ]
 
-        assert [o.lifecycle_event for o in observations if o.type is ExecutionEventType.STATE_CHANGED] == [
-            LifecycleEvent.PAUSE
-        ]
-        assert [o.checkpoint_id for o in observations if o.acknowledgement is AcknowledgementKind.CHECKPOINTED] == [
-            "ckpt_1"
-        ]
+        assert [
+            o.lifecycle_event
+            for o in observations
+            if o.type is ExecutionEventType.STATE_CHANGED
+        ] == [LifecycleEvent.PAUSE]
+        assert [
+            o.checkpoint_id
+            for o in observations
+            if o.acknowledgement is AcknowledgementKind.CHECKPOINTED
+        ] == ["ckpt_1"]
 
 
 # ---------------------------------------------------------------------------
@@ -457,8 +561,10 @@ class PausingChannel(FakeChannel):
 
 
 def _prompted(channel: FakeChannel) -> dict[str, Any]:
-    [params] = [params for method, params in channel.requests if method == "session/prompt"]
-    return params
+    [params] = [
+        params for method, params in channel.requests if method == "session/prompt"
+    ]
+    return dict(params)
 
 
 class TestAnACPAgentSpeakingTheExtension:
@@ -466,31 +572,46 @@ class TestAnACPAgentSpeakingTheExtension:
     async def test_resolving_reads_the_extension_from_initialize(self):
         binding = _acp_worker(extended=False).binding
         declared = AgentCapabilities.model_validate(
-            {"loadSession": True, "_meta": {"datalayer": {"extensions": [EXTENSION_URI]}}}
+            {
+                "loadSession": True,
+                "_meta": {"datalayer": {"extensions": [EXTENSION_URI]}},
+            }
         )
 
         worker = await acp_adapter(FakeChannel(capabilities=declared)).resolve(binding)
         plain = await acp_adapter(
-            FakeChannel(capabilities=AgentCapabilities.model_validate({"loadSession": True}))
+            FakeChannel(
+                capabilities=AgentCapabilities.model_validate({"loadSession": True})
+            )
         ).resolve(binding)
 
         assert worker.capabilities.extensions == (EXTENSION_URI,)
         assert worker.capabilities.supports(WorkerOperation.PAUSE)
         assert worker.details["extensions"] == [EXTENSION_URI]
         # Still narrowed by what else the agent declares.
-        assert any("session/fork" in reduction for reduction in worker.capabilities.reductions)
+        assert any(
+            "session/fork" in reduction for reduction in worker.capabilities.reductions
+        )
         assert plain.capabilities.extensions == ()
         assert not plain.capabilities.supports(WorkerOperation.PAUSE)
 
     @pytest.mark.asyncio
     async def test_a_turn_cancelled_at_its_checkpoint_pauses_the_execution(self):
-        channel = PausingChannel(script=SPEC_UPDATES, stop_reason="cancelled", meta=PAUSED)
+        channel = PausingChannel(
+            script=SPEC_UPDATES, stop_reason="cancelled", meta=PAUSED
+        )
         store = InMemoryExecutionStore()
-        execution = await store.create(an_execution(protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT))
+        execution = await store.create(
+            an_execution(
+                protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT
+            )
+        )
         attempt = await store.record_attempt(an_attempt(execution))
         execution = await store.set_state(execution.execution_id, LifecycleEvent.ASSIGN)
 
-        observations = await _dispatch(acp_adapter(channel), _acp_worker(extended=True), store, execution, attempt)
+        observations = await _dispatch(
+            acp_adapter(channel), _acp_worker(extended=True), store, execution, attempt
+        )
 
         assert (await store.get(execution.execution_id)).status is ExecutionState.PAUSED
         assert [
@@ -499,44 +620,89 @@ class TestAnACPAgentSpeakingTheExtension:
             if known.kind is AcknowledgementKind.CHECKPOINTED
         ] == ["ckpt_1"]
         # What it had said is in the checkpoint; the attempt that resumes registers the answer.
-        assert not any(o.type is ExecutionEventType.ARTIFACT_REGISTERED for o in observations)
-        assert _prompted(channel)["_meta"]["datalayer"]["execution"]["executionId"] == "exec_1"
+        assert not any(
+            o.type is ExecutionEventType.ARTIFACT_REGISTERED for o in observations
+        )
+        assert (
+            _prompted(channel)["_meta"]["datalayer"]["execution"]["executionId"]
+            == "exec_1"
+        )
 
     @pytest.mark.asyncio
     async def test_a_plain_agents_cancelled_turn_is_a_cancellation(self):
-        channel = PausingChannel(script=SPEC_UPDATES, stop_reason="cancelled", meta=PAUSED)
+        channel = PausingChannel(
+            script=SPEC_UPDATES, stop_reason="cancelled", meta=PAUSED
+        )
         store = InMemoryExecutionStore()
-        execution = await store.create(an_execution(protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT))
+        execution = await store.create(
+            an_execution(
+                protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT
+            )
+        )
         attempt = await store.record_attempt(an_attempt(execution))
         execution = await store.set_state(execution.execution_id, LifecycleEvent.ASSIGN)
 
-        await _dispatch(acp_adapter(channel), _acp_worker(extended=False), store, execution, attempt)
+        await _dispatch(
+            acp_adapter(channel), _acp_worker(extended=False), store, execution, attempt
+        )
 
-        assert (await store.get(execution.execution_id)).status is ExecutionState.CANCELLED
+        assert (
+            await store.get(execution.execution_id)
+        ).status is ExecutionState.CANCELLED
         assert "_meta" not in _prompted(channel)
 
     @pytest.mark.asyncio
-    async def test_a_resumed_attempt_names_its_checkpoint_and_resumes_the_execution(self):
+    async def test_a_resumed_attempt_names_its_checkpoint_and_resumes_the_execution(
+        self,
+    ):
         channel = FakeChannel(script=SPEC_UPDATES)
         store = InMemoryExecutionStore()
-        execution = await store.create(an_execution(protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT))
+        execution = await store.create(
+            an_execution(
+                protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT
+            )
+        )
         attempt = await _paused(store, execution)
 
-        await _dispatch(acp_adapter(channel), _acp_worker(extended=True), store, await store.get("exec_1"), attempt)
+        await _dispatch(
+            acp_adapter(channel),
+            _acp_worker(extended=True),
+            store,
+            await store.get("exec_1"),
+            attempt,
+        )
 
-        assert _prompted(channel)["_meta"]["datalayer"]["checkpoint"] == {"checkpointId": "ckpt_1"}
+        assert _prompted(channel)["_meta"]["datalayer"]["checkpoint"] == {
+            "checkpointId": "ckpt_1"
+        }
         events = await store.events(execution.execution_id)
-        assert _states(events)[-3:] == [ExecutionState.PAUSED, ExecutionState.RUNNING, ExecutionState.COMPLETED]
+        assert _states(events)[-3:] == [
+            ExecutionState.PAUSED,
+            ExecutionState.RUNNING,
+            ExecutionState.COMPLETED,
+        ]
         assert not [event for event in events if event.error is not None]
 
     @pytest.mark.asyncio
-    async def test_a_resumed_attempt_is_not_sent_to_an_agent_without_the_extension(self):
+    async def test_a_resumed_attempt_is_not_sent_to_an_agent_without_the_extension(
+        self,
+    ):
         channel = FakeChannel(script=SPEC_UPDATES)
         store = InMemoryExecutionStore()
-        execution = await store.create(an_execution(protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT))
+        execution = await store.create(
+            an_execution(
+                protocol=AgentProtocol.ACP, agent_id="coder", endpoint=ENDPOINT
+            )
+        )
         attempt = await _paused(store, execution)
 
-        await _dispatch(acp_adapter(channel), _acp_worker(extended=False), store, await store.get("exec_1"), attempt)
+        await _dispatch(
+            acp_adapter(channel),
+            _acp_worker(extended=False),
+            store,
+            await store.get("exec_1"),
+            attempt,
+        )
 
         assert channel.requests == []
         assert (await store.get(execution.execution_id)).status is ExecutionState.FAILED
@@ -547,13 +713,21 @@ class TestAnACPAgentSpeakingTheExtension:
         execution = an_execution(protocol=AgentProtocol.ACP, endpoint=ENDPOINT)
 
         outcome = await acp_adapter(channel).pause(
-            _acp_worker(extended=True), execution, an_attempt(execution, session_id="sess-1")
+            _acp_worker(extended=True),
+            execution,
+            an_attempt(execution, session_id="sess-1"),
         )
 
         assert channel.notifications == [
-            ("session/cancel", {"sessionId": "sess-1", "_meta": {"datalayer": {"pause": True}}})
+            (
+                "session/cancel",
+                {"sessionId": "sess-1", "_meta": {"datalayer": {"pause": True}}},
+            )
         ]
-        assert isinstance(outcome, Performed) and outcome.operation is WorkerOperation.PAUSE
+        assert (
+            isinstance(outcome, Performed)
+            and outcome.operation is WorkerOperation.PAUSE
+        )
 
     @pytest.mark.asyncio
     async def test_steering_reaches_the_running_turn(self):
@@ -568,7 +742,10 @@ class TestAnACPAgentSpeakingTheExtension:
         )
 
         assert channel.notifications == [
-            ("_datalayer/steer", {"sessionId": "sess-1", "instructions": "Check the plots"})
+            (
+                "_datalayer/steer",
+                {"sessionId": "sess-1", "instructions": "Check the plots"},
+            )
         ]
         assert channel.requests == [] and isinstance(outcome, Performed)
 

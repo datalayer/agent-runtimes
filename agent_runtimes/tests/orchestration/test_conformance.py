@@ -545,22 +545,16 @@ class TestWorkerCrashAndRecovery:
         successor = await delivered.store.record_attempt(
             an_attempt(delivered.execution, attempt_id="att_2", number=2)
         )
-        second = replace(
-            delivered, adapter=adapter, worker=worker, attempt=successor
-        )
+        second = replace(delivered, adapter=adapter, worker=worker, attempt=successor)
 
         await dispatch(second)
 
         stored = await delivered.store.get(delivered.execution.execution_id)
         assert stored.status is ExecutionState.COMPLETED
-        artifacts = await delivered.store.artifacts(
-            delivered.execution.execution_id
-        )
+        artifacts = await delivered.store.artifacts(delivered.execution.execution_id)
         assert artifacts, "A recovered execution with no result recovered nothing."
         produced_by = {
-            entry.attempt_id
-            for artifact in artifacts
-            for entry in artifact.provenance
+            entry.attempt_id for artifact in artifacts for entry in artifact.provenance
         }
         assert produced_by == {successor.attempt_id}, (
             "The crashed attempt produced nothing, so nothing may carry its "

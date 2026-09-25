@@ -17,7 +17,7 @@ from agent_runtimes.routes import sandbox as sandbox_route
 
 
 class _FakeManager:
-    def get_agent_sandbox(self, _agent_id: str) -> None:
+    def get_agent_sandbox(self, _agent_id: str) -> object | None:
         return None
 
     def get_managed_sandbox(self) -> object:

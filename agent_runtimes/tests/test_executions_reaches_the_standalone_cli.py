@@ -15,7 +15,9 @@ from agent_runtimes.__main__ import app
 from agent_runtimes.commands.executions import app as executions_app
 from agent_runtimes.reactor_extension import _COMMAND_GROUPS
 
-runner = CliRunner(env={"NO_COLOR": "1", "TERM": "dumb", "_TYPER_STANDARD_TRACEBACK": "1"})
+runner = CliRunner(
+    env={"NO_COLOR": "1", "TERM": "dumb", "_TYPER_STANDARD_TRACEBACK": "1"}
+)
 
 
 def test_it_is_core_s_own_app_not_a_copy():

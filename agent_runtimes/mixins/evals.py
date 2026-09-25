@@ -146,7 +146,8 @@ class EvalsMixin:
         """Import an ``*.evalset.json`` spec through the service's own import
         route — the one the wizard uses — so the derivation from the spec
         happens once, server-side. The answer carries the evalset and the
-        ``unsupported_evaluators`` the platform dropped."""
+        ``unsupported_evaluators`` the platform dropped.
+        """
         body: dict[str, Any] = {"spec": spec}
         if run_environment:
             body["run_environment"] = str(run_environment)
@@ -182,7 +183,8 @@ class EvalsMixin:
         account_uid: Optional[str] = None,
     ) -> dict[str, Any]:
         """What an experiment can run: the subject kinds, which execute, and
-        the models AI Inference offers (BENCHMARK.md, B2-11)."""
+        the models AI Inference offers (BENCHMARK.md, B2-11).
+        """
         return self._evals_request(
             "/subjects",
             method="GET",
@@ -488,7 +490,8 @@ class EvalsMixin:
     ) -> dict[str, Any]:
         """The plan of a launch before it is made: estimated duration and
         cost, the compute, and the problems that would stop it. Nothing is
-        created."""
+        created.
+        """
         return self._evals_request(
             f"/evalsets/{evalset_id}/launches/validate",
             method="POST",
@@ -512,7 +515,8 @@ class EvalsMixin:
         """One submission of a benchmark across its experiments: one queued
         run per experiment, executed by the platform. ``config`` carries
         ``concurrency``, ``environment``, ``time_reservation`` (minutes),
-        ``request_timeout_seconds``, ``budget`` (credits) and ``retention``."""
+        ``request_timeout_seconds``, ``budget`` (credits) and ``retention``.
+        """
         return self._evals_request(
             f"/evalsets/{evalset_id}/launches",
             method="POST",

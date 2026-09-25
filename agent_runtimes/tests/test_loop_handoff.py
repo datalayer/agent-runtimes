@@ -7,10 +7,14 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
 from agent_runtimes.routes.loop import HANDOFF_TTL_SECONDS, HandoffStore
+
+if TYPE_CHECKING:
+    from agent_runtimes.chat.tux import CliTux
 
 
 class TestHandoffStore:
@@ -115,8 +119,10 @@ class TestBrowserCommand:
             return code
 
         monkeypatch.setattr(browser_cmd, "_mint_handoff", mint)
-        monkeypatch.setattr(browser_cmd.webbrowser, "open", lambda url: opened.append(url))
-        asyncio.run(browser_cmd.execute(tux, argv))
+        monkeypatch.setattr(
+            browser_cmd.webbrowser, "open", lambda url: opened.append(url)
+        )
+        asyncio.run(browser_cmd.execute(cast("CliTux", tux), argv))
         return opened
 
     def test_opens_the_workspace_with_the_handoff_code(

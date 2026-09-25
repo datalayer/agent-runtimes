@@ -1122,9 +1122,9 @@ class A2AWorkerAdapter(WorkerAdapter):
                 # the same rename. Caught here by the surrounding try, so
                 # only a broken re-attach was masked, silently, as an
                 # unreachable worker.
-                response = await A2AClient(
-                    agent=remote.url, http_client=http
-                ).get_task(task_id)
+                response = await A2AClient(agent=remote.url, http_client=http).get_task(
+                    task_id
+                )
         except Exception:  # noqa: BLE001 - an unreachable worker is an observation
             logger.debug("tasks/get failed for %s", task_id, exc_info=True)
             return None
@@ -1356,12 +1356,11 @@ def _notebook_part(raw: Mapping[str, Any]) -> str | None:
         if not isinstance(part, dict):
             continue
         file = part.get("file")
-        media_type = (
-            (file.get("mimeType") or file.get("mime_type"))
-            if isinstance(file, dict)
-            else None
-        )
-        if media_type == NOTEBOOK_MEDIA_TYPE and file.get("bytes"):
+        if (
+            isinstance(file, dict)
+            and (file.get("mimeType") or file.get("mime_type")) == NOTEBOOK_MEDIA_TYPE
+            and file.get("bytes")
+        ):
             try:
                 text = base64.b64decode(str(file["bytes"])).decode("utf-8")
             except (ValueError, UnicodeDecodeError):

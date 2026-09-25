@@ -16,14 +16,13 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
+from compose import resolve_spec  # noqa: E402  (sibling module, same folder)
 from versioning import (
     ensure_spec_version,
     split_spec_ref,
     version_suffix,
     versioned_ref,
 )
-
-from compose import resolve_spec  # noqa: E402  (sibling module, same folder)
 
 
 def _fmt_list(items: list[str]) -> str:

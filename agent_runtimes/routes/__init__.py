@@ -52,7 +52,6 @@ from .agui import (
     unregister_thread as unregister_agui_thread,
 )
 from .checkpoints import router as checkpoints_router
-from .notifications import router as notifications_router
 from .configure import router as configure_router
 from .health import router as health_router
 from .history import router as history_router
@@ -63,6 +62,7 @@ from .mcp_auth import router as mcp_auth_router
 from .mcp_proxy import router as mcp_proxy_router
 from .mcp_ui import register_mcp_ui_agent, unregister_mcp_ui_agent
 from .mcp_ui import router as mcp_ui_router
+from .notifications import router as notifications_router
 from .sandbox import router as sandbox_router
 from .tool_approvals import legacy_router as tool_approvals_legacy_router
 from .tool_approvals import router as tool_approvals_router

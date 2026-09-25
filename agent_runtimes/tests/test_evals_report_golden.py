@@ -53,7 +53,9 @@ EVALSET: dict[str, Any] = {
     "run_environment": "sdk",
     "kind": "batch",
     "schema": {},
-    "evalset_evaluators": [{"name": "pass_rate_threshold", "arguments": {"threshold": 0.6}}],
+    "evalset_evaluators": [
+        {"name": "pass_rate_threshold", "arguments": {"threshold": 0.6}}
+    ],
     "report_evaluators": [],
     "tags": ["reference"],
     "metadata": {"agentspec_ids": ["jupyter-data-analyst", "example-evals"]},
@@ -83,7 +85,11 @@ def _experiment(index: int, agent_spec_id: str) -> dict[str, Any]:
         "name": agent_spec_id,
         "description": "",
         "status": "completed",
-        "config": {"run_mode": "batch", "agent_spec_id": agent_spec_id, "execution_target": "cloud"},
+        "config": {
+            "run_mode": "batch",
+            "agent_spec_id": agent_spec_id,
+            "execution_target": "cloud",
+        },
         "summary": {"agent_spec_id": agent_spec_id},
         "tags": [],
         "created_at": "2026-09-01T00:00:00Z",
@@ -92,7 +98,9 @@ def _experiment(index: int, agent_spec_id: str) -> dict[str, Any]:
     }
 
 
-def _run(experiment_index: int, run_index: int, outcomes: list[bool], agent_spec_id: str) -> dict[str, Any]:
+def _run(
+    experiment_index: int, run_index: int, outcomes: list[bool], agent_spec_id: str
+) -> dict[str, Any]:
     case_results = [
         {
             "name": name,
@@ -155,7 +163,11 @@ def _run(experiment_index: int, run_index: int, outcomes: list[bool], agent_spec
             "run_mode": "batch",
             "launch_source": "datalayer-core",
         },
-        "report": {"interaction": [{"case": name, "prompt": "…", "output": "…"} for name, *_ in CASES]},
+        "report": {
+            "interaction": [
+                {"case": name, "prompt": "…", "output": "…"} for name, *_ in CASES
+            ]
+        },
         "created_at": f"2026-09-0{run_index}T10:18:24Z",
         "updated_at": f"2026-09-0{run_index}T10:18:24Z",
     }
@@ -215,7 +227,9 @@ def test_the_latest_run_is_the_newest_one_and_drift_points_the_right_way():
     assert baseline == 0.3, "the baseline is what it drifted from"
     assert drift == pytest.approx(0.6), "improving is a positive drift"
 
-    one_run = report_module._compute_baseline_and_drift([{"metrics": {"pass_rate": 0.5}}])
+    one_run = report_module._compute_baseline_and_drift(
+        [{"metrics": {"pass_rate": 0.5}}]
+    )
     assert one_run == (0.5, 0.5, 0.0), "one run has drifted from nothing"
     assert report_module._compute_baseline_and_drift([]) == (None, None, None)
 
@@ -248,7 +262,10 @@ def _check(name: str, produced: str) -> None:
 
 def test_the_report_data_is_the_golden_json(frozen_report):
     report, _, _ = frozen_report
-    _check("evals-report.json", json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+    _check(
+        "evals-report.json",
+        json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+    )
 
 
 def test_the_markdown_is_the_golden_markdown(frozen_report):
@@ -263,18 +280,31 @@ def test_the_decisions_are_the_last_section_of_the_markdown(frozen_report):
     assert "## Decisions" not in markdown
     decisions = [
         {
-            "decided_at": "2026-09-10T09:00:00Z", "kind": "accepted_regression", "outcome": "accepted_with_limitations",
-            "scope": "case", "scope_ref": "duplicate-customers", "decided_by_uid": "reviewer-1", "note": "Misses 3 of 157 | known gap",
+            "decided_at": "2026-09-10T09:00:00Z",
+            "kind": "accepted_regression",
+            "outcome": "accepted_with_limitations",
+            "scope": "case",
+            "scope_ref": "duplicate-customers",
+            "decided_by_uid": "reviewer-1",
+            "note": "Misses 3 of 157 | known gap",
         },
         {
-            "decided_at": "2026-09-10T10:00:00Z", "kind": "evaluator_issue", "outcome": "blocked",
-            "scope": "run", "scope_ref": "run-1-3", "decided_by_uid": "reviewer-2", "note": "",
+            "decided_at": "2026-09-10T10:00:00Z",
+            "kind": "evaluator_issue",
+            "outcome": "blocked",
+            "scope": "run",
+            "scope_ref": "run-1-3",
+            "decided_by_uid": "reviewer-2",
+            "note": "",
         },
     ]
     decided = render_eval_report_markdown(report, run_limit=10, decisions=decisions)
     assert decided.startswith(markdown.rstrip())
     appendix = decided.split("## Decisions", 1)[1]
-    assert "| 2026-09-10 | Accepted regression | Accepted with limitations | case duplicate-customers | reviewer-1 | Misses 3 of 157 \\| known gap |" in appendix
+    assert (
+        "| 2026-09-10 | Accepted regression | Accepted with limitations | case duplicate-customers | reviewer-1 | Misses 3 of 157 \\| known gap |"
+        in appendix
+    )
     assert appendix.index("Accepted regression") < appendix.index("Evaluator issue")
 
 
@@ -286,7 +316,10 @@ def test_the_csv_is_the_golden_csv(frozen_report):
 def test_the_report_reads_the_fixture(frozen_report):
     report, markdown, csv_text = frozen_report
     assert report["evalset_id"] == EVALSET_ID
-    assert [experiment["id"] for experiment in report["experiments"]] == ["experiment-1", "experiment-2"]
+    assert [experiment["id"] for experiment in report["experiments"]] == [
+        "experiment-1",
+        "experiment-2",
+    ]
     assert report["experiments"][0]["runs_fetched"] == 3
     assert report["generated_at"] == FROZEN_NOW
     assert "## Comparison Combinations" in markdown
@@ -302,8 +335,19 @@ def test_the_report_reads_the_fixture(frozen_report):
 # --- The report as a Lexical document (B3-03) --------------------------------
 
 
-LAUNCH = {"id": "launch-128", "number": 128, "status": "completed", "evalset_version": 3, "evalset_id": EVALSET_ID}
-EVALSET_WITH_DATASET = {**EVALSET, "version": 3, "category": "data", "dataset_ref": {"source_uid": "src-customers", "revision_uid": "rev-7"}}
+LAUNCH = {
+    "id": "launch-128",
+    "number": 128,
+    "status": "completed",
+    "evalset_version": 3,
+    "evalset_id": EVALSET_ID,
+}
+EVALSET_WITH_DATASET = {
+    **EVALSET,
+    "version": 3,
+    "category": "data",
+    "dataset_ref": {"source_uid": "src-customers", "revision_uid": "rev-7"},
+}
 
 
 @pytest.fixture
@@ -311,11 +355,17 @@ def lexical_document(frozen_report):
     from agent_runtimes.evals.report import build_eval_report_lexical
 
     report, _, _ = frozen_report
-    return build_eval_report_lexical(report, evalset=EVALSET_WITH_DATASET, launch=LAUNCH)
+    return build_eval_report_lexical(
+        report, evalset=EVALSET_WITH_DATASET, launch=LAUNCH
+    )
 
 
 def test_the_lexical_document_is_the_golden_fixture(lexical_document):
-    _check("evals-report.lexical.json", json.dumps(lexical_document, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+    _check(
+        "evals-report.lexical.json",
+        json.dumps(lexical_document, indent=2, sort_keys=True, ensure_ascii=False)
+        + "\n",
+    )
 
 
 def test_the_document_reads_in_the_order_of_section_13(lexical_document):
@@ -340,10 +390,30 @@ def test_every_block_carries_its_provenance(lexical_document):
     # the first time the document is opened (B4-04).
     assert not any("provenance" in block for block in blocks)
     evidence = [block["$"]["evidence"] for block in blocks]
-    assert all(set(mark) == {"evalset", "version", "launch", "experiment", "run", "case", "analysis", "block"} for mark in evidence)
+    assert all(
+        set(mark)
+        == {
+            "evalset",
+            "version",
+            "launch",
+            "experiment",
+            "run",
+            "case",
+            "analysis",
+            "block",
+        }
+        for mark in evidence
+    )
     # Each block has its own anchor, in document order (B4-07).
-    assert [mark["block"] for mark in evidence] == [f"block-{index}" for index in range(1, len(blocks) + 1)]
-    assert all(mark["evalset"] == EVALSET_ID and mark["launch"] == "launch-128" and mark["version"] == 3 for mark in evidence)
+    assert [mark["block"] for mark in evidence] == [
+        f"block-{index}" for index in range(1, len(blocks) + 1)
+    ]
+    assert all(
+        mark["evalset"] == EVALSET_ID
+        and mark["launch"] == "launch-128"
+        and mark["version"] == 3
+        for mark in evidence
+    )
     # Tables are Lexical tables; lines and comparisons are Jupyter outputs carrying the analysis.
     tables = [block for block in blocks if block["type"] == "table"]
     outputs = [block for block in blocks if block["type"] == "jupyter-output"]
@@ -359,14 +429,38 @@ def test_a_run_document_narrows_to_its_experiment_and_reads_its_tasks(frozen_rep
     from agent_runtimes.evals.report import build_eval_report_lexical
 
     report, _, _ = frozen_report
-    run = {"id": "run-1-3", "experiment_id": "experiment-1", "launch_id": "launch-128", "status": "completed", "evalset_version": 3}
+    run = {
+        "id": "run-1-3",
+        "experiment_id": "experiment-1",
+        "launch_id": "launch-128",
+        "status": "completed",
+        "evalset_version": 3,
+    }
     cases = [
-        {"name": "row-count", "category": "counting", "status": "passed", "score": 1.0, "explanation": ""},
-        {"name": "duplicate-customers", "category": "duplicates", "status": "failed", "score": 0.2, "explanation": "It answered 0; 157 customers repeat.", "failure_mode": "wrong_answer"},
+        {
+            "name": "row-count",
+            "category": "counting",
+            "status": "passed",
+            "score": 1.0,
+            "explanation": "",
+        },
+        {
+            "name": "duplicate-customers",
+            "category": "duplicates",
+            "status": "failed",
+            "score": 0.2,
+            "explanation": "It answered 0; 157 customers repeat.",
+            "failure_mode": "wrong_answer",
+        },
     ]
-    document = build_eval_report_lexical(report, evalset=EVALSET_WITH_DATASET, run=run, cases=cases)
+    document = build_eval_report_lexical(
+        report, evalset=EVALSET_WITH_DATASET, run=run, cases=cases
+    )
     text = json.dumps(document, ensure_ascii=False)
-    assert "wrong_answer · 1 task" in text and "It answered 0; 157 customers repeat." in text
+    assert (
+        "wrong_answer · 1 task" in text
+        and "It answered 0; 157 customers repeat." in text
+    )
     assert "example-evals" not in text.split("Pairwise deltas")[0]
     assert document["root"]["children"][0]["$"]["evidence"]["run"] == "run-1-3"
 

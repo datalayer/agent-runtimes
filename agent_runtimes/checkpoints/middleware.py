@@ -61,7 +61,7 @@ class AutoCheckpointMiddleware:
 
     @property
     def turn(self) -> int:
-        """Turns seen so far."""
+        """Count the turns seen so far."""
         return self._turn_counter
 
     async def on_turn_start(

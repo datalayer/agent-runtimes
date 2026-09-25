@@ -26,18 +26,19 @@ from agent_runtimes.client.agent_client import (
     wait_for_local_runtime,
 )
 from agent_runtimes.evals.common import (
+    as_dict,
     compose_case_prompt,
     extract_case_usage,
     extract_text,
     merge_run_usage,
 )
+from agent_runtimes.evals.links import benchmark_url, launch_url
 from agent_runtimes.evals.remote.evals import (
     load_evalset_spec,
     now_iso,
     timestamp_slug,
     write_eval_reports,
 )
-from agent_runtimes.evals.links import benchmark_url, launch_url
 from agent_runtimes.evals.remote.evaluators import evaluate_evalset
 from agent_runtimes.utils.agent_utils import teardown_agent_execution_resources
 
@@ -113,7 +114,7 @@ def resolve_evalset(
         billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
-    evalset = payload.get("evalset") if isinstance(payload.get("evalset"), dict) else {}
+    evalset = as_dict(payload.get("evalset"))
     evalset_id = str(evalset.get("id") or "").strip()
     if not evalset_id:
         raise RuntimeError(
@@ -136,12 +137,8 @@ def resolve_evalset(
 
 def subject_of_experiment(experiment: dict[str, Any]) -> dict[str, str]:
     """The kind and ref an experiment runs, from its record or its config."""
-    subject = (
-        experiment.get("subject") if isinstance(experiment.get("subject"), dict) else {}
-    )
-    config = (
-        experiment.get("config") if isinstance(experiment.get("config"), dict) else {}
-    )
+    subject = as_dict(experiment.get("subject"))
+    config = as_dict(experiment.get("config"))
     if not subject and isinstance(config.get("subject"), dict):
         subject = config["subject"]
     if not subject and config.get("agent_spec_id"):
@@ -166,7 +163,8 @@ def ensure_experiments(
     """One experiment per subject on the evalset: the existing one that runs
     that subject, else a new one (B2-11). Experiments are the durable objects
     runs compare across, so a second launch of the same agent lands on the
-    same experiment rather than a fresh one."""
+    same experiment rather than a fresh one.
+    """
     listing = client.evals_list_experiments(
         evalset_id=evalset_id,
         limit=200,
@@ -255,7 +253,9 @@ def launch_config(
     }
     if budget is not None:
         config["budget"] = float(budget)
-    context = {key: str(value) for key, value in (git or {}).items() if value not in (None, "")}
+    context = {
+        key: str(value) for key, value in (git or {}).items() if value not in (None, "")
+    }
     if context:
         config["git"] = context
     return config
@@ -284,7 +284,7 @@ def submit_launch(
         billing_entity_uid=billing_entity_uid,
         account_uid=account_uid,
     )
-    launch = payload.get("launch") if isinstance(payload.get("launch"), dict) else {}
+    launch = as_dict(payload.get("launch"))
     if not launch.get("id"):
         raise RuntimeError(
             f"Unable to create the launch: {payload.get('message') or payload}"
@@ -306,7 +306,7 @@ def launch_outcome_lines(payload: dict[str, Any]) -> list[str]:
     was refused at its first step; the run's failure cause is in the answer
     already, so it is said here.
     """
-    launch = payload.get("launch") if isinstance(payload.get("launch"), dict) else {}
+    launch = as_dict(payload.get("launch"))
     lines: list[str] = []
     reason = str(launch.get("blocked_reason") or "")
     if reason:
@@ -317,13 +317,24 @@ def launch_outcome_lines(payload: dict[str, Any]) -> list[str]:
         status = str(run.get("status") or "")
         if status in {"completed", "running", "queued"}:
             continue
-        summary = run.get("summary") if isinstance(run.get("summary"), dict) else {}
-        cause = summary.get("failure_cause") if isinstance(summary.get("failure_cause"), dict) else {}
-        subject = str(summary.get("agent_spec_id") or (summary.get("subject") or {}).get("model") or run.get("experiment_id") or "")
-        where = f" ({summary.get('agent_spec_id') and 'agentspec ' or 'experiment '}{subject})" if subject else ""
+        summary = as_dict(run.get("summary"))
+        cause = as_dict(summary.get("failure_cause"))
+        subject = str(
+            summary.get("agent_spec_id")
+            or (summary.get("subject") or {}).get("model")
+            or run.get("experiment_id")
+            or ""
+        )
+        where = (
+            f" ({summary.get('agent_spec_id') and 'agentspec ' or 'experiment '}{subject})"
+            if subject
+            else ""
+        )
         why = ""
         if cause:
-            why = f": {cause.get('stage') or 'failure'} — {cause.get('message') or ''}".rstrip(" —")
+            why = f": {cause.get('stage') or 'failure'} — {cause.get('message') or ''}".rstrip(
+                " —"
+            )
         # A blocked run says why on itself: `no_compute` when no sandbox of
         # its pool came up, `budget_reached` when it stopped taking tasks.
         blocked = str(run.get("blocked_reason") or summary.get("blocked_reason") or "")
@@ -366,13 +377,9 @@ def watch_launch(
         payload = client.evals_get_launch(
             launch_id, billing_entity_uid=billing_entity_uid, account_uid=account_uid
         )
-        launch = (
-            payload.get("launch") if isinstance(payload.get("launch"), dict) else {}
-        )
+        launch = as_dict(payload.get("launch"))
         status = str(launch.get("status") or "unknown").lower()
-        progress = (
-            launch.get("progress") if isinstance(launch.get("progress"), dict) else {}
-        )
+        progress = as_dict(launch.get("progress"))
         waited = int(time.time() - started)
         total = int(progress.get("total_cases") or 0)
         # Taken means a task has started, finished or failed. The total is
@@ -660,9 +667,7 @@ def execute_evalset_spec(
                 account_uid=account_uid,
                 log=_emit,
             )
-            final = (
-                watched.get("launch") if isinstance(watched.get("launch"), dict) else {}
-            )
+            final = as_dict(watched.get("launch"))
             status = str(final.get("status") or "unknown")
             launch_statuses[launch_id] = status
             run_ids.extend(

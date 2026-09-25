@@ -49,7 +49,9 @@ class TestItIsWrittenToTheProtocol:
         assert isinstance(RuntimesClient(_Transport()), SandboxManagerLifecycle)
 
     def test_a_handle_is_one_sandbox(self) -> None:
-        assert isinstance(RuntimesClient(_Transport()).handle("runtime-1"), SandboxLifecycle)
+        assert isinstance(
+            RuntimesClient(_Transport()).handle("runtime-1"), SandboxLifecycle
+        )
 
     def test_it_supports_every_verb_but_execute(self) -> None:
         client = RuntimesClient(_Transport())
@@ -69,12 +71,17 @@ class TestARuntimeOfAnExecutionTree:
 
     def _posted(self, **kwargs: Any) -> dict[str, Any]:
         transport = _Transport(_Response(payload={"success": True, "runtime": {}}))
-        RuntimesClient(transport).create(environment_name="ai-agents-env", credits_limit=6.0, **kwargs)
+        RuntimesClient(transport).create(
+            environment_name="ai-agents-env", credits_limit=6.0, **kwargs
+        )
         [posted] = [call for call in transport.calls if call.get("method") == "POST"]
         return posted["json"]
 
     def test_it_names_the_tree(self) -> None:
-        assert self._posted(parent_reservation_uid="exec_root")["parent_reservation_uid"] == "exec_root"
+        assert (
+            self._posted(parent_reservation_uid="exec_root")["parent_reservation_uid"]
+            == "exec_root"
+        )
 
     def test_a_runtime_of_no_tree_names_none(self) -> None:
         assert "parent_reservation_uid" not in self._posted()
@@ -88,8 +95,14 @@ class TestTheVerbsReachTheRightUrls:
         client = RuntimesClient(transport)
         client.list()
         client.get("runtime-1")
-        assert transport.calls[0]["url"] == "https://runtimes.example/api/runtimes/v1/runtimes"
-        assert transport.calls[1]["url"] == "https://runtimes.example/api/runtimes/v1/runtimes/runtime-1"
+        assert (
+            transport.calls[0]["url"]
+            == "https://runtimes.example/api/runtimes/v1/runtimes"
+        )
+        assert (
+            transport.calls[1]["url"]
+            == "https://runtimes.example/api/runtimes/v1/runtimes/runtime-1"
+        )
 
     def test_stop_is_one_verb_for_running_and_paused(self) -> None:
         transport = _Transport(_Response(status_code=200))
@@ -105,7 +118,9 @@ class TestTheVerbsReachTheRightUrls:
         RuntimesClient(transport).stop("runtime-1", reason="done")
         assert transport.calls[0]["params"] == {"reason": "done"}
 
-    @pytest.mark.parametrize("verb,suffix", [("pause", "/pause"), ("resume", "/resume")])
+    @pytest.mark.parametrize(
+        "verb,suffix", [("pause", "/pause"), ("resume", "/resume")]
+    )
     def test_pause_and_resume(self, verb: str, suffix: str) -> None:
         transport = _Transport(_Response(status_code=202, payload={"success": True}))
         getattr(RuntimesClient(transport), verb)("runtime-1")
@@ -144,7 +159,7 @@ class TestItRefusesRatherThanFailsLate:
     def test_starting_a_created_runtime_is_a_no_op(self) -> None:
         transport = _Transport()
         # It already started when it was created; saying so beats a stray call.
-        assert RuntimesClient(transport).handle("runtime-1").start() is None
+        RuntimesClient(transport).handle("runtime-1").start()
         assert transport.calls == []
 
 

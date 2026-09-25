@@ -78,7 +78,9 @@ def _answers(base: str) -> bool:
         return False
 
 
-def _until(condition: Callable[[], bool], *, seconds: float = 20.0, what: str = "the condition") -> None:
+def _until(
+    condition: Callable[[], bool], *, seconds: float = 20.0, what: str = "the condition"
+) -> None:
     deadline = time.monotonic() + seconds
     while not condition():
         assert time.monotonic() < deadline, f"waited for {what} for {seconds} s"
@@ -106,18 +108,35 @@ class ACP:
         self.websocket = websocket
         self.counter = 0
 
-    def request(self, method: str, params: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    def request(
+        self, method: str, params: dict[str, Any]
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         self.counter += 1
         identifier = self.counter
-        self.websocket.send(json.dumps({"jsonrpc": "2.0", "id": identifier, "method": method, "params": params}))
+        self.websocket.send(
+            json.dumps(
+                {"jsonrpc": "2.0", "id": identifier, "method": method, "params": params}
+            )
+        )
         return self.answer(identifier)
 
     def notify(self, method: str, params: dict[str, Any]) -> None:
-        self.websocket.send(json.dumps({"jsonrpc": "2.0", "method": method, "params": params}))
+        self.websocket.send(
+            json.dumps({"jsonrpc": "2.0", "method": method, "params": params})
+        )
 
     def send(self, method: str, params: dict[str, Any]) -> int:
         self.counter += 1
-        self.websocket.send(json.dumps({"jsonrpc": "2.0", "id": self.counter, "method": method, "params": params}))
+        self.websocket.send(
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": self.counter,
+                    "method": method,
+                    "params": params,
+                }
+            )
+        )
         return self.counter
 
     def answer(self, identifier: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -146,7 +165,9 @@ def _text(updates: list[dict[str, Any]], kind: str = "agent_message_chunk") -> s
 
 
 class TestA2A:
-    def test_a_task_killed_mid_run_is_found_and_finished_by_the_next_process(self, tmp_path: Path) -> None:
+    def test_a_task_killed_mid_run_is_found_and_finished_by_the_next_process(
+        self, tmp_path: Path
+    ) -> None:
         state, gate = tmp_path / "state.sqlite", tmp_path / "gate"
         with runtime(state, gate) as base:
             # `message/send` answers the task under `task`, as A2A 1.0 does;
@@ -154,29 +175,52 @@ class TestA2A:
             task = a2a(
                 base,
                 "message/send",
-                {"message": {"role": "user", "parts": [{"text": "the notebook"}], "messageId": "m1"}},
+                {
+                    "message": {
+                        "role": "user",
+                        "parts": [{"text": "the notebook"}],
+                        "messageId": "m1",
+                    }
+                },
             )["task"]
-            _until(lambda: _state_of(base, task["id"]) == "working", what="the task to start")
+            _until(
+                lambda: _state_of(base, task["id"]) == "working",
+                what="the task to start",
+            )
         # Killed mid-run: the gate was closed, so the task was working.
         gate.touch()
         with runtime(state, gate) as base:
-            assert _state_of(base, task["id"]) in {"submitted", "working", "completed"}, "the next process knows it"
-            _until(lambda: _state_of(base, task["id"]) == "completed", what="the next process to finish it")
+            assert _state_of(base, task["id"]) in {
+                "submitted",
+                "working",
+                "completed",
+            }, "the next process knows it"
+            _until(
+                lambda: _state_of(base, task["id"]) == "completed",
+                what="the next process to finish it",
+            )
             finished = a2a(base, "tasks/get", {"id": task["id"]})
             assert "Second half." in json.dumps(finished.get("artifacts") or [])
 
 
 class TestACP:
-    def test_a_session_is_loaded_with_its_conversation_by_the_next_process(self, tmp_path: Path) -> None:
+    def test_a_session_is_loaded_with_its_conversation_by_the_next_process(
+        self, tmp_path: Path
+    ) -> None:
         state, gate = tmp_path / "state.sqlite", tmp_path / "gate"
         gate.touch()
         with runtime(state, gate) as base, acp(base) as connection:
             connection.request("initialize", {"protocolVersion": 1})
-            _, created = connection.request("session/new", {"cwd": "/work", "mcpServers": []})
+            _, created = connection.request(
+                "session/new", {"cwd": "/work", "mcpServers": []}
+            )
             session_id = created["sessionId"]
             updates, answered = connection.request(
                 "session/prompt",
-                {"sessionId": session_id, "prompt": [{"type": "text", "text": "the notebook"}]},
+                {
+                    "sessionId": session_id,
+                    "prompt": [{"type": "text", "text": "the notebook"}],
+                },
             )
             assert answered["stopReason"] == "end_turn"
             assert _text(updates) == "First half of the notebook. Second half."
@@ -184,9 +228,15 @@ class TestACP:
         with runtime(state, gate) as base, acp(base) as connection:
             _, initialized = connection.request("initialize", {"protocolVersion": 1})
             assert initialized["agentCapabilities"]["loadSession"] is True
-            replayed, _ = connection.request("session/load", {"sessionId": session_id, "cwd": "/work", "mcpServers": []})
+            replayed, _ = connection.request(
+                "session/load",
+                {"sessionId": session_id, "cwd": "/work", "mcpServers": []},
+            )
             assert [
-                (update["params"]["update"]["sessionUpdate"], update["params"]["update"]["content"]["text"])
+                (
+                    update["params"]["update"]["sessionUpdate"],
+                    update["params"]["update"]["content"]["text"],
+                )
                 for update in replayed
             ] == [
                 ("user_message_chunk", "the notebook"),
@@ -194,18 +244,31 @@ class TestACP:
             ]
             updates, answered = connection.request(
                 "session/prompt",
-                {"sessionId": session_id, "prompt": [{"type": "text", "text": "the plots"}]},
+                {
+                    "sessionId": session_id,
+                    "prompt": [{"type": "text", "text": "the plots"}],
+                },
             )
-            assert answered["stopReason"] == "end_turn" and _text(updates).startswith("First half of the plots.")
+            assert answered["stopReason"] == "end_turn" and _text(updates).startswith(
+                "First half of the plots."
+            )
 
-    def test_a_cancel_is_a_notification_that_ends_the_running_prompt(self, tmp_path: Path) -> None:
+    def test_a_cancel_is_a_notification_that_ends_the_running_prompt(
+        self, tmp_path: Path
+    ) -> None:
         state, gate = tmp_path / "state.sqlite", tmp_path / "gate"
         with runtime(state, gate) as base, acp(base) as connection:
             connection.request("initialize", {"protocolVersion": 1})
-            _, created = connection.request("session/new", {"cwd": "/work", "mcpServers": []})
+            _, created = connection.request(
+                "session/new", {"cwd": "/work", "mcpServers": []}
+            )
             session_id = created["sessionId"]
             prompted = connection.send(
-                "session/prompt", {"sessionId": session_id, "prompt": [{"type": "text", "text": "the notebook"}]}
+                "session/prompt",
+                {
+                    "sessionId": session_id,
+                    "prompt": [{"type": "text", "text": "the notebook"}],
+                },
             )
             # The gate stays closed: the agent is waiting in the middle of its answer.
             first = json.loads(connection.websocket.recv(timeout=20))

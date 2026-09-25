@@ -88,7 +88,7 @@ class A2ARemoteAgent:
 
     @property
     def terminate_url(self) -> str | None:
-        """agent-runtimes' out-of-band stop for a task, when the agent is one of ours.
+        """The out-of-band stop agent-runtimes offers for a task, when the agent is ours.
 
         A2A's own ``tasks/cancel`` reaches a worker only between tasks; this
         endpoint interrupts the running one.
@@ -132,7 +132,8 @@ def local_agent_runtimes_url() -> str:
     if explicit:
         return explicit.rstrip("/")
     host = (os.environ.get("AGENT_RUNTIMES_HOST") or "").strip() or "127.0.0.1"
-    if host in {"0.0.0.0", "::", "[::]"}:
+    # A wildcard bind is replaced by loopback to be dialled; nothing binds here.
+    if host in {"0.0.0.0", "::", "[::]"}:  # nosec B104 - compared, not bound
         host = "127.0.0.1"
     port = (os.environ.get("AGENT_RUNTIMES_PORT") or "").strip()
     if not port:
@@ -291,7 +292,9 @@ async def request_child(
         data = dict(event.data or {})
         if event.type is ExecutionEventType.STATE_CHANGED and event.state is not None:
             emit("status", state=event.state.value, executionId=child)
-        elif event.type is ExecutionEventType.PROGRESS and isinstance(data.get("phase"), str):
+        elif event.type is ExecutionEventType.PROGRESS and isinstance(
+            data.get("phase"), str
+        ):
             # A relayed phase of the child's worker, told as its own.
             emit(data.pop("phase"), **data)
 
@@ -656,16 +659,16 @@ async def relay_stream(
         status_update = result.get("status_update")
         if isinstance(status_update, dict):
             status = status_update.get("status") or {}
-            message = status.get("message")
+            status_message = status.get("message")
             outcome.task_id = status_update.get("task_id") or outcome.task_id
             outcome.state = status.get("state") or outcome.state
             if outcome.state in TERMINAL_STATES:
                 # The message on a final status is the agent's last word — the
                 # reason, when it failed — not more of the answer.
-                if isinstance(message, dict):
-                    outcome.detail = _message_text(message) or None
-                    if isinstance(message.get("metadata"), dict):
-                        outcome.metadata = dict(message["metadata"])
+                if isinstance(status_message, dict):
+                    outcome.detail = _message_text(status_message) or None
+                    if isinstance(status_message.get("metadata"), dict):
+                        outcome.metadata = dict(status_message["metadata"])
                 emit(
                     "status",
                     taskId=outcome.task_id,
@@ -673,8 +676,8 @@ async def relay_stream(
                     **({"metadata": outcome.metadata} if outcome.metadata else {}),
                 )
                 break
-            if isinstance(message, dict):
-                _relay_message(message, emit)
+            if isinstance(status_message, dict):
+                _relay_message(status_message, emit)
             emit("status", taskId=outcome.task_id, state=outcome.state)
 
         artifact_update = result.get("artifact_update")
@@ -688,9 +691,9 @@ async def relay_stream(
             elif text:
                 outcome.final = text
 
-        message = result.get("message")
-        if isinstance(message, dict):
-            _relay_message(message, emit)
+        reply = result.get("message")
+        if isinstance(reply, dict):
+            _relay_message(reply, emit)
     return outcome
 
 

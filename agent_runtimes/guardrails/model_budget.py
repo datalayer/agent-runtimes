@@ -89,7 +89,7 @@ def usage_limits_for(budget: Mapping[str, Any] | None) -> UsageLimits | None:
     Returns
     -------
     UsageLimits | None
-        pydantic-ai's limits, its request limit left as its default.
+        The pydantic-ai limits, its request limit left as its default.
     """
     if not budget:
         return None

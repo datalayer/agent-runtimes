@@ -39,7 +39,9 @@ def test_the_runs_own_count_is_what_the_turn_spent() -> None:
 
 def test_otherwise_what_the_agents_counters_grew_by_during_the_turn() -> None:
     tracker = get_usage_tracker()
-    tracker.update_usage("spend-counted", input_tokens=100, output_tokens=40, requests=1)
+    tracker.update_usage(
+        "spend-counted", input_tokens=100, output_tokens=40, requests=1
+    )
     _priced_run("spend-counted", 0.5)
     turn = TurnSpend.begin("spend-counted")
     tracker.update_usage("spend-counted", input_tokens=30, output_tokens=10, requests=1)
@@ -52,7 +54,9 @@ def test_otherwise_what_the_agents_counters_grew_by_during_the_turn() -> None:
 
 def test_a_model_nobody_priced_is_not_free() -> None:
     turn = TurnSpend.begin("spend-unpriced")
-    get_usage_tracker().update_usage("spend-unpriced", input_tokens=30, output_tokens=10, requests=1)
+    get_usage_tracker().update_usage(
+        "spend-unpriced", input_tokens=30, output_tokens=10, requests=1
+    )
     _priced_run("spend-unpriced", 0.0, priced=False)
     spent = turn.settle()
     assert spent is not None

@@ -16,10 +16,9 @@ of the underlying sandbox variant.
 
 from __future__ import annotations
 
-import logging
-from typing import Any, Optional
-
 import json
+import logging
+from typing import Any, AsyncIterator, Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -161,7 +160,7 @@ def _sse(payload: Any) -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
 
-async def _stream_surface(request: "SurfaceExecuteRequest"):
+async def _stream_surface(request: "SurfaceExecuteRequest") -> AsyncIterator[str]:
     """Yield the surface as the kernel produces it.
 
     The protocol already allows this and the conversion already exists; what
@@ -175,9 +174,20 @@ async def _stream_surface(request: "SurfaceExecuteRequest"):
     knowable once the run has finished, and re-sending the whole surface at
     the end means a reader who watched it grow and a reader who arrived late
     are looking at exactly the same thing.
+
+    Parameters
+    ----------
+    request : SurfaceExecuteRequest
+        The code to run and the surface it renders into.
+
+    Yields
+    ------
+    str
+        One server-sent event per A2UI message, then the final execution.
     """
-    from agent_runtimes.a2ui import ExecutionResult, execution_to_a2ui
     from code_sandboxes import CodeSandboxClient
+
+    from agent_runtimes.a2ui import ExecutionResult, execution_to_a2ui
 
     from ..services.code_sandbox_manager import get_code_sandbox_manager
 

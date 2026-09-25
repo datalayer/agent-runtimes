@@ -654,7 +654,9 @@ def get_agent_runtime(
                     label = f"{runtime.runtime_name}  ({runtime.name})"
                 if runtime.environment:
                     label += f"  [{runtime.environment}]"
-                choices.append(questionary.Choice(title=label, value=runtime.runtime_name))
+                choices.append(
+                    questionary.Choice(title=label, value=runtime.runtime_name)
+                )
 
             selected = questionary.select(
                 "Select the agent runtime to read:",
@@ -778,7 +780,9 @@ def update_agent_runtime(
                     label = f"{runtime.runtime_name}  ({runtime.name})"
                 if runtime.environment:
                     label += f"  [{runtime.environment}]"
-                choices.append(questionary.Choice(title=label, value=runtime.runtime_name))
+                choices.append(
+                    questionary.Choice(title=label, value=runtime.runtime_name)
+                )
 
             selected = questionary.select(
                 "Select the agent runtime to update:",
@@ -858,7 +862,9 @@ def terminate_agent_runtime(
                     label = f"{runtime.runtime_name}  ({runtime.name})"
                 if runtime.environment:
                     label += f"  [{runtime.environment}]"
-                choices.append(questionary.Choice(title=label, value=runtime.runtime_name))
+                choices.append(
+                    questionary.Choice(title=label, value=runtime.runtime_name)
+                )
 
             selected = questionary.select(
                 "Select the agent runtime to terminate:",
@@ -874,7 +880,9 @@ def terminate_agent_runtime(
                 f"[green]Agent runtime '{runtime_name}' terminated successfully![/green]"
             )
         else:
-            console.print(f"[red]Failed to terminate agent runtime '{runtime_name}'[/red]")
+            console.print(
+                f"[red]Failed to terminate agent runtime '{runtime_name}'[/red]"
+            )
             raise typer.Exit(1)
 
     except typer.Exit:
@@ -1050,7 +1058,9 @@ def inspect_agent_runtime(
 
         _print_runtime_summary_panel(
             title="Agent Runtime Inspection",
-            identifier=str(refreshed.runtime_name or refreshed.uid or refreshed.name or ""),
+            identifier=str(
+                refreshed.runtime_name or refreshed.uid or refreshed.name or ""
+            ),
             agentspec=_resolve_agentspec_label(runtime_payload),
             url=endpoint,
         )

@@ -65,7 +65,7 @@ def runs(recorded: Any) -> list[Any]:
     """
     sys.path.insert(0, str(EXAMPLE))
     try:
-        from orchestrate import (  # type: ignore[import-not-found]
+        from orchestrate import (
             descriptor_for,
             local_workers,
             orchestrate,

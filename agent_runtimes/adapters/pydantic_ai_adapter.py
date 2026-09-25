@@ -96,7 +96,9 @@ def model_messages(history: list[Any]) -> list[ModelMessage]:
         elif role == "system":
             messages.append(ModelRequest(parts=[SystemPromptPart(content=content)]))
         else:
-            raise ValueError(f"A conversation message names a role nobody speaks in: {role!r}")
+            raise ValueError(
+                f"A conversation message names a role nobody speaks in: {role!r}"
+            )
     return messages
 
 
@@ -718,7 +720,9 @@ class PydanticAIAdapter(BaseAgent):
 
                 # A run with an identity of its own reaches the Datalayer MCP
                 # gateway with it, never with the process's key (O1-17).
-                runtime_toolsets = toolsets_for_the_run(runtime_toolsets, user_token_override)
+                runtime_toolsets = toolsets_for_the_run(
+                    runtime_toolsets, user_token_override
+                )
             # Always pass toolsets to override any default toolsets on the agent.
             # Even an empty list should be passed to ensure no tools are available.
             run_kwargs_base: dict[str, Any] = {
@@ -911,7 +915,9 @@ class PydanticAIAdapter(BaseAgent):
 
                 # A run with an identity of its own reaches the Datalayer MCP
                 # gateway with it, never with the process's key (O1-17).
-                runtime_toolsets = toolsets_for_the_run(runtime_toolsets, user_token_override)
+                runtime_toolsets = toolsets_for_the_run(
+                    runtime_toolsets, user_token_override
+                )
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )
@@ -931,7 +937,9 @@ class PydanticAIAdapter(BaseAgent):
                     # every round is the stream's; a part's first chunk arrives
                     # as the part's start, and the rest as deltas.
                     async for ev in events:
-                        if isinstance(ev, PartStartEvent) and isinstance(ev.part, TextPart):
+                        if isinstance(ev, PartStartEvent) and isinstance(
+                            ev.part, TextPart
+                        ):
                             if ev.part.content:
                                 await text_queue.put(ev.part.content)
                         elif isinstance(ev, PartDeltaEvent) and isinstance(
@@ -958,7 +966,9 @@ class PydanticAIAdapter(BaseAgent):
                 )
                 if usage_limits is not None:
                     run_kwargs["usage_limits"] = usage_limits
-                steer_run = context.metadata.get("steer_run") if context.metadata else None
+                steer_run = (
+                    context.metadata.get("steer_run") if context.metadata else None
+                )
                 if steer_run:
                     from ..context.delegation import SteerCapability
 

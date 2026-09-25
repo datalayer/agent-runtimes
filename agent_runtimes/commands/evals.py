@@ -15,6 +15,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
 
+from agent_runtimes.evals.links import benchmark_report_url, launch_url
 from agent_runtimes.evals.remote.evals import (
     load_evalset_spec,
 )
@@ -30,10 +31,8 @@ from agent_runtimes.evals.remote.evals import (
 from agent_runtimes.evals.remote.evals import (
     parse_json_value as _parse_json_value,
 )
-from agent_runtimes.evals.links import benchmark_report_url, launch_url
 from agent_runtimes.evals.remote.evaluators import evaluate_evalset
 from agent_runtimes.evals.remote.runner import (
-    launch_outcome_lines,
     DEFAULT_CONCURRENCY,
     DEFAULT_LOCAL_AGENT_BASE_URL,
     DEFAULT_REQUEST_TIMEOUT_SECONDS,
@@ -42,6 +41,7 @@ from agent_runtimes.evals.remote.runner import (
     ensure_experiments,
     execute_evalset_spec,
     launch_config,
+    launch_outcome_lines,
     resolve_evalset,
     submit_launch,
     watch_launch,
@@ -840,7 +840,9 @@ def evals_run(
             f"failed={progress.get('failed_cases', 0)} credits={float(progress.get('cost_credits') or 0.0):.2f}"
         )
         for line in launch_outcome_lines(watched):
-            console.print(f"[yellow]{line}[/yellow]" if line.startswith("Blocked") else line)
+            console.print(
+                f"[yellow]{line}[/yellow]" if line.startswith("Blocked") else line
+            )
         for run in watched.get("runs") or []:
             metrics = run.get("metrics") or {}
             pass_rate = metrics.get("pass_rate")

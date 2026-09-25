@@ -93,7 +93,9 @@ def validate_evalset_spec(spec: Any, *, source: str = "spec") -> dict[str, Any]:
     if not isinstance(spec, dict):
         raise EvalsetSpecError(f"{source}: an evalset spec is a JSON object")
     validator = jsonschema.Draft202012Validator(EVALSET_SPEC_SCHEMA)
-    errors = sorted(validator.iter_errors(spec), key=lambda error: list(error.absolute_path))
+    errors = sorted(
+        validator.iter_errors(spec), key=lambda error: list(error.absolute_path)
+    )
     if errors:
         first = errors[0]
         path = "/".join(str(part) for part in first.absolute_path) or "(root)"
@@ -115,8 +117,12 @@ def evalset_payload_from_spec(spec: dict[str, Any]) -> dict[str, Any]:
         "run_environment": str(spec.get("run_environment") or "sdk"),
         "kind": str(spec.get("kind") or "batch"),
         "schema": dict(spec.get("schema") or {}),
-        "evalset_evaluators": [dict(item) for item in (spec.get("evalset_evaluators") or [])],
-        "report_evaluators": [dict(item) for item in (spec.get("report_evaluators") or [])],
+        "evalset_evaluators": [
+            dict(item) for item in (spec.get("evalset_evaluators") or [])
+        ],
+        "report_evaluators": [
+            dict(item) for item in (spec.get("report_evaluators") or [])
+        ],
         "tags": [str(tag) for tag in (spec.get("tags") or []) if str(tag).strip()],
         "metadata": dict(spec.get("metadata") or {}),
         "cases": [dict(item) for item in (spec.get("cases") or [])],

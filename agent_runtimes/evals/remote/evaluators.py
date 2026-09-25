@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from agent_runtimes.evals.common import as_dict
+
 CaseEvaluator = Callable[[Any, Any, dict[str, Any]], dict[str, Any]]
 ReportEvaluator = Callable[[list[dict[str, Any]], dict[str, Any]], dict[str, Any]]
 
@@ -171,7 +173,10 @@ def make_judge(*, url: str, token: str, timeout: float = 60.0) -> JudgeCall:
 
         body: dict[str, Any] = {
             "messages": [
-                {"role": "system", "content": "You answer with one JSON object and nothing else."},
+                {
+                    "role": "system",
+                    "content": "You answer with one JSON object and nothing else.",
+                },
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0,
@@ -179,24 +184,42 @@ def make_judge(*, url: str, token: str, timeout: float = 60.0) -> JudgeCall:
         }
         if model:
             body["model"] = model
-        headers = {"Authorization": f"Bearer {token}", "X-API-Key": token} if token else {}
+        headers = (
+            {"Authorization": f"Bearer {token}", "X-API-Key": token} if token else {}
+        )
         with httpx.Client(timeout=timeout) as client:
-            response = client.post(f"{url.rstrip('/')}/api/ai-inference/v1/chat/completions", json=body, headers=headers)
+            response = client.post(
+                f"{url.rstrip('/')}/api/ai-inference/v1/chat/completions",
+                json=body,
+                headers=headers,
+            )
         if response.status_code >= 400:
-            raise RuntimeError(f"the judge refused: HTTP {response.status_code} {response.text[:200]}")
+            raise RuntimeError(
+                f"the judge refused: HTTP {response.status_code} {response.text[:200]}"
+            )
         payload = response.json() if response.content else {}
-        data = payload.get("data") if isinstance(payload, dict) and isinstance(payload.get("data"), dict) else payload
+        data = (
+            payload.get("data")
+            if isinstance(payload, dict) and isinstance(payload.get("data"), dict)
+            else payload
+        )
         text = data.get("response") if isinstance(data, dict) else None
         if not text and isinstance(data, dict):
             # The assistant's whole message, under the name the service can
             # actually answer with: a payload field called `message` collided
             # with the envelope's own and was never delivered.
-            message = data.get("assistant_message") if isinstance(data.get("assistant_message"), dict) else {}
+            message = as_dict(data.get("assistant_message"))
             text = message.get("content")
             if not text:
-                choices = data.get("choices") if isinstance(data.get("choices"), list) else []
+                choices = (
+                    data.get("choices") if isinstance(data.get("choices"), list) else []
+                )
                 first = choices[0] if choices and isinstance(choices[0], dict) else {}
-                text = ((first.get("message") or {}).get("content") if isinstance(first.get("message"), dict) else None) or first.get("text")
+                text = (
+                    (first.get("message") or {}).get("content")
+                    if isinstance(first.get("message"), dict)
+                    else None
+                ) or first.get("text")
         return str(text or "")
 
     return call
@@ -211,7 +234,11 @@ def _default_judge() -> JudgeCall | None:
         import os  # noqa: PLC0415
 
         url = str(os.environ.get("DATALAYER_AI_INFERENCE_URL") or "").strip()
-        token = str(os.environ.get("DATALAYER_API_KEY") or os.environ.get("DATALAYER_TOKEN") or "").strip()
+        token = str(
+            os.environ.get("DATALAYER_API_KEY")
+            or os.environ.get("DATALAYER_TOKEN")
+            or ""
+        ).strip()
     else:
         token = str(_judge_state.get("token") or "")
     if not url:
@@ -219,7 +246,9 @@ def _default_judge() -> JudgeCall | None:
     return make_judge(url=url, token=token)
 
 
-def _judge_prompt(*, output_text: str, expected_text: str, rubric: str, failure_modes: tuple[str, ...]) -> str:
+def _judge_prompt(
+    *, output_text: str, expected_text: str, rubric: str, failure_modes: tuple[str, ...]
+) -> str:
     return (
         f"{rubric}\n\n"
         f"Expected output:\n{expected_text or '(none given)'}\n\n"
@@ -252,7 +281,9 @@ def _first_json_object(text: str) -> dict[str, Any] | None:
     return None
 
 
-def _evaluate_llm_judge(output: Any, expected: Any, arguments: dict[str, Any]) -> dict[str, Any]:
+def _evaluate_llm_judge(
+    output: Any, expected: Any, arguments: dict[str, Any]
+) -> dict[str, Any]:
     """An LLM judges the answer against the expected output and a rubric.
 
     Answers a score in [0, 1], a pass against the threshold, the judge's
@@ -261,10 +292,14 @@ def _evaluate_llm_judge(output: Any, expected: Any, arguments: dict[str, Any]) -
     scorer failure: a benchmark must not claim a judge it did not have.
     """
     judge: JudgeCall | None = arguments.get("_judge") or _default_judge()
-    threshold = float(arguments.get("threshold", DEFAULT_JUDGE_THRESHOLD) or DEFAULT_JUDGE_THRESHOLD)
+    threshold = float(
+        arguments.get("threshold", DEFAULT_JUDGE_THRESHOLD) or DEFAULT_JUDGE_THRESHOLD
+    )
     model = str(arguments.get("model") or _judge_state.get("model") or "")
     rubric = str(arguments.get("rubric") or DEFAULT_JUDGE_RUBRIC)
-    modes = tuple(str(mode) for mode in (arguments.get("failure_modes") or JUDGE_FAILURE_MODES))
+    modes = tuple(
+        str(mode) for mode in (arguments.get("failure_modes") or JUDGE_FAILURE_MODES)
+    )
     if judge is None:
         return {
             "passed": False,
@@ -274,15 +309,30 @@ def _evaluate_llm_judge(output: Any, expected: Any, arguments: dict[str, Any]) -
             "failure_stage": "scorer",
         }
     prompt = _judge_prompt(
-        output_text=_coerce_text(output).strip(), expected_text=_coerce_text(expected).strip(), rubric=rubric, failure_modes=modes
+        output_text=_coerce_text(output).strip(),
+        expected_text=_coerce_text(expected).strip(),
+        rubric=rubric,
+        failure_modes=modes,
     )
     try:
         reply = judge(prompt, model)
     except Exception as error:  # noqa: BLE001 - the judge not answering is the outcome
-        return {"passed": False, "score": 0.0, "reason": f"the judge could not be asked: {error}", "failure_mode": "other", "failure_stage": "scorer"}
+        return {
+            "passed": False,
+            "score": 0.0,
+            "reason": f"the judge could not be asked: {error}",
+            "failure_mode": "other",
+            "failure_stage": "scorer",
+        }
     verdict = _first_json_object(str(reply or ""))
     if not verdict:
-        return {"passed": False, "score": 0.0, "reason": "the judge did not answer with a JSON verdict", "failure_mode": "other", "failure_stage": "scorer"}
+        return {
+            "passed": False,
+            "score": 0.0,
+            "reason": "the judge did not answer with a JSON verdict",
+            "failure_mode": "other",
+            "failure_stage": "scorer",
+        }
     try:
         score = max(0.0, min(1.0, float(verdict.get("score", 0.0))))
     except (TypeError, ValueError):
@@ -420,9 +470,20 @@ def evaluate_run(
         if _status_for(idx) in {"failed", "error"}:
             case_passed = False
             score = 0.0
-        records = [item for item in (outcome.get("evaluators") or []) if isinstance(item, dict)]
-        explanation = "; ".join(str(item.get("reason") or "") for item in records if item.get("reason"))
-        failure_mode = next((str(item.get("failure_mode")) for item in records if item.get("failure_mode")), "")
+        records = [
+            item for item in (outcome.get("evaluators") or []) if isinstance(item, dict)
+        ]
+        explanation = "; ".join(
+            str(item.get("reason") or "") for item in records if item.get("reason")
+        )
+        failure_mode = next(
+            (
+                str(item.get("failure_mode"))
+                for item in records
+                if item.get("failure_mode")
+            ),
+            "",
+        )
         case_results.append(
             {
                 "name": case.get("name"),

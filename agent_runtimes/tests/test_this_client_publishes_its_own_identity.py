@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import pytest
 
-from agent_runtimes.routes import mcp_auth
 from agent_runtimes.mcp.auth.cimd import (
     CLIENT_DOCUMENT_PATH,
     client_id_metadata_document,
@@ -48,6 +47,7 @@ from agent_runtimes.mcp.auth.oauth import (
     ServerMetadata,
     register_client,
 )
+from agent_runtimes.routes import mcp_auth
 
 PUBLIC = "https://runtimes.datalayer.run"
 CALLBACK = f"{PUBLIC}/api/v1/mcp/auth/callback"
@@ -132,7 +132,9 @@ class TestWhatItRefusesToPublish:
             refuse_if_unpublishable(document, f"{PUBLIC}{CLIENT_DOCUMENT_PATH}")
 
     @pytest.mark.parametrize("required", ["client_name", "redirect_uris"])
-    def test_a_document_missing_what_a_person_is_shown_is_refused(self, told_its_url, required):
+    def test_a_document_missing_what_a_person_is_shown_is_refused(
+        self, told_its_url, required
+    ):
         """The consent page shows `client_name`; `redirect_uris` is what the
         request is matched against, exactly and never by prefix."""
         document = {**_document()}

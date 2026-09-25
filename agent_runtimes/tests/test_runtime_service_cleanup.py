@@ -62,7 +62,7 @@ class _Service(RuntimeService):
     in for.
     """
 
-    runtimes: Any = None  # type: ignore[assignment]
+    runtimes: Any = None
 
 
 def _service(**model: Any) -> RuntimeService:

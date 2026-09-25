@@ -14,9 +14,8 @@ import typer
 from datalayer_core.utils.urls import DatalayerURLs
 
 from agent_runtimes.client import AgentClient
-
-from agent_runtimes.evals.status import is_terminal_run_status
 from agent_runtimes.evals.spec_schema import validate_evalset_spec
+from agent_runtimes.evals.status import is_terminal_run_status
 
 
 def parse_json_value(raw: Optional[str], flag_name: str) -> dict[str, Any]:

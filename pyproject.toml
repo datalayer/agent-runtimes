@@ -80,6 +80,9 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.44.0,<2.0.0",
     "opentelemetry-exporter-otlp-proto-grpc>=1.44.0,<2.0.0",
     "opentelemetry-instrumentation>=0.65b0,<1.0",
+    # `instrument_worker_transports` patches httpx through it, so the A2A
+    # relay and the ACP client carry the trace out to the worker.
+    "opentelemetry-instrumentation-httpx>=0.65b0,<1.0",
     # The agent-memories PostgreSQL a runtime on Kubernetes keeps its A2A
     # tasks and ACP sessions in (`protocol_state`); the runtime image installs
     # only these dependencies.
@@ -234,7 +237,9 @@ test = [
     # resolves those through the provider SDK -- without it they fail on import.
     # CLI tests also import the ACP client, so keep the test dependency explicit
     # instead of promoting agent-client-protocol to a core runtime dependency.
-    "agent_runtimes[cli,openai]",
+    # The A2A worker and protocol-state tests import fasta2a and a2a-sdk, and
+    # the default agentspecs name `bedrock:` models, which need boto3.
+    "agent_runtimes[a2a,aws,cli,openai]",
     "coverage>=7.9.2",
     "mypy>=1.16.1",
     "pytest>=8.4.1",
@@ -302,6 +307,12 @@ disable_error_code = ["attr-defined"]
 [[tool.mypy.overrides]]
 module = "tornado.*"
 ignore_errors = true
+
+# Tests are type-checked, but a test function or fixture need not annotate
+# its return: pytest calls it, nothing else does.
+[[tool.mypy.overrides]]
+module = "agent_runtimes.tests.*"
+disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = "agent_runtimes.handlers.chat.*"

@@ -38,7 +38,9 @@ A2UI_VERSION = "v0.9"
 #: not for itself. Making one string the price of holding every OTEL package a
 #: release behind is a poor trade, so the SDK is an opt-in extra (`a2ui`) and
 #: this module works without it.
-A2UI_BASIC_CATALOG_ID = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+A2UI_BASIC_CATALOG_ID = (
+    "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+)
 
 try:
     from a2ui.basic_catalog.provider import BasicCatalog

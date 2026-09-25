@@ -74,7 +74,10 @@ def section_9_routes() -> list[str]:
     ).read_text()
     block = re.search(r"const SECTION_9_ROUTES = \[(.*?)\];", source, re.S)
     assert block, "the TypeScript parity test no longer lists SECTION_9_ROUTES"
-    return sorted(re.findall(r"'([^']+)'", block.group(1)))
+    # Line comments first: an apostrophe in one ("An owner's quotas") would
+    # otherwise open a quoted "route".
+    entries = re.sub(r"//[^\n]*", "", block.group(1))
+    return sorted(re.findall(r"'([^']+)'", entries))
 
 
 #: Every environments call the Python SDK offers, and the route it issues.
@@ -116,6 +119,11 @@ SDK_CALLS: list[tuple[str, Callable[[AgentClient], Any]]] = [
     ),
     ("list_environment_builds", lambda c: c.list_environment_builds(UID)),
     ("list_environment_artifacts", lambda c: c.list_environment_artifacts(UID)),
+    (
+        "list_environment_version_sandboxes",
+        lambda c: c.list_environment_version_sandboxes(UID),
+    ),
+    ("get_environment_quotas", lambda c: c.get_environment_quotas()),
     ("get_environment_build", lambda c: c.get_environment_build(UID)),
     ("read_environment_build_logs", lambda c: c.read_environment_build_logs(UID)),
     ("cancel_environment_build", lambda c: c.cancel_environment_build(UID)),

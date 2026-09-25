@@ -34,13 +34,13 @@ from agent_runtimes.mcp.tasks import (
     DEFAULT_POLL_SECONDS,
     MIN_POLL_SECONDS,
     TASKS_EXTENSION,
+    StartedCall,
     TaskCancelled,
     TaskFailed,
     TaskHandle,
     TaskTimeout,
     TaskUnsupported,
     TaskWatcher,
-    StartedCall,
     await_task,
     call_tool_and_wait,
     call_tool_as_task,
@@ -167,7 +167,12 @@ class TestWaiting:
         )
         answer = await await_task(session, "tsk_1")
         assert answer.content[0].text == "42"
-        assert session.methods == ["tasks/get", "tasks/get", "tasks/get", "tasks/result"]
+        assert session.methods == [
+            "tasks/get",
+            "tasks/get",
+            "tasks/get",
+            "tasks/result",
+        ]
 
     @pytest.mark.asyncio
     async def test_a_task_already_finished_is_not_polled_again(self):
@@ -176,7 +181,9 @@ class TestWaiting:
         assert session.methods == ["tasks/get", "tasks/result"]
 
     @pytest.mark.asyncio
-    async def test_the_wait_polls_at_the_interval_the_server_asked_for(self, instant_sleep):
+    async def test_the_wait_polls_at_the_interval_the_server_asked_for(
+        self, instant_sleep
+    ):
         """The interval is the server saying how much polling it can afford.
 
         A client that picks its own is answering a question it was not asked.
@@ -231,7 +238,11 @@ class TestEndings:
         """Returning an empty result here renders as "the tool produced
         nothing" for work that broke."""
         session = Session(
-            [GetTaskResult(**task("failed", status_message="the kernel is dead").model_dump())]
+            [
+                GetTaskResult(
+                    **task("failed", status_message="the kernel is dead").model_dump()
+                )
+            ]
         )
         with pytest.raises(TaskFailed) as raised:
             await await_task(session, "tsk_1")
@@ -242,7 +253,7 @@ class TestEndings:
 
     @pytest.mark.asyncio
     async def test_a_cancelled_task_raises_something_else(self):
-        """"You cancelled this" and "this broke" are different things to tell
+        """ "You cancelled this" and "this broke" are different things to tell
         a person, and a caller that retries on failure must not retry here."""
         session = Session([GetTaskResult(**task("cancelled").model_dump())])
         with pytest.raises(TaskCancelled):
@@ -263,7 +274,9 @@ class TestEndings:
         moments = iter([0.0, 0.0, 100.0, 200.0, 300.0])
         session = Session([GetTaskResult(**task("working").model_dump())] * 5)
         with pytest.raises(TaskTimeout) as raised:
-            await await_task(session, "tsk_1", deadline_seconds=10, now=lambda: next(moments))
+            await await_task(
+                session, "tsk_1", deadline_seconds=10, now=lambda: next(moments)
+            )
         assert raised.value.task_id == "tsk_1"
         # The message has to stop somebody from starting the work again.
         assert "still running" in str(raised.value)
@@ -310,14 +323,18 @@ class TestTheWatcher:
     @pytest.mark.asyncio
     async def test_the_watcher_remembers_the_last_status_it_saw(self):
         watcher = TaskWatcher()
-        await watcher.on_status(TaskStatusNotificationParams(**task("failed").model_dump()))
+        await watcher.on_status(
+            TaskStatusNotificationParams(**task("failed").model_dump())
+        )
         assert watcher.last_seen("tsk_1").status == "failed"
         assert watcher.last_seen("tsk_missing") is None
 
     @pytest.mark.asyncio
     async def test_a_notification_without_a_task_id_is_ignored(self):
         watcher = TaskWatcher()
-        await watcher.on_status(TaskStatusNotificationParams(**task(task_id="").model_dump()))
+        await watcher.on_status(
+            TaskStatusNotificationParams(**task(task_id="").model_dump())
+        )
         assert watcher.last_seen("") is None
 
 
@@ -444,7 +461,9 @@ class TestInsideADurableWorkflow:
         assert session.methods == calls_first_time, "the replay reached the server"
 
     @pytest.mark.asyncio
-    async def test_a_replay_after_the_start_but_before_the_wait_follows_the_same_task(self):
+    async def test_a_replay_after_the_start_but_before_the_wait_follows_the_same_task(
+        self,
+    ):
         """The crash a durable workflow is actually for: the worker died
         while the cell was running. The task id is recorded, so the second
         worker follows the work rather than starting it again."""
@@ -456,14 +475,19 @@ class TestInsideADurableWorkflow:
 
         await start_only("mcp:execute_cell:start", lambda: _start_of(session))
 
-        session.answers = [GetTaskResult(**task("completed").model_dump()), output("42")]
+        session.answers = [
+            GetTaskResult(**task("completed").model_dump()),
+            output("42"),
+        ]
         answer = await durable_call_tool(session, "execute_cell", record=journal)
         assert answer.content[0].text == "42"
         # One `tools/call`, from before the crash.
         assert session.methods.count("tools/call") == 1
 
     @pytest.mark.asyncio
-    async def test_a_synchronous_server_records_the_answer_and_never_replays_the_call(self):
+    async def test_a_synchronous_server_records_the_answer_and_never_replays_the_call(
+        self,
+    ):
         journal = Journal()
         session = Session([output("done")])
         answer = await durable_call_tool(session, "execute_cell", record=journal)
@@ -490,8 +514,12 @@ class TestInsideADurableWorkflow:
                 output("b"),
             ]
         )
-        first = await durable_call_tool(session, "execute_cell", record=journal, key="cell-1")
-        second = await durable_call_tool(session, "execute_cell", record=journal, key="cell-2")
+        first = await durable_call_tool(
+            session, "execute_cell", record=journal, key="cell-1"
+        )
+        second = await durable_call_tool(
+            session, "execute_cell", record=journal, key="cell-2"
+        )
         assert (first.content[0].text, second.content[0].text) == ("a", "b")
 
     @pytest.mark.asyncio
@@ -500,7 +528,9 @@ class TestInsideADurableWorkflow:
         session = Session(
             [
                 CreateTaskResult(task=task("working")),
-                GetTaskResult(**task("failed", status_message="the kernel is dead").model_dump()),
+                GetTaskResult(
+                    **task("failed", status_message="the kernel is dead").model_dump()
+                ),
             ]
         )
         with pytest.raises(TaskFailed):
