@@ -8,8 +8,8 @@ on:
       - 'src/**/*.tsx'
       - 'tsconfig*.json'
       - 'package.json'
-      - '.github/workflows/ts-typing.yml'
-      - '.github/workflows/reusable-typescript.yml'
+      - '.github/workflows/ts-typing.yaml'
+      - '.github/workflows/reusable-typescript.yaml'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -17,12 +17,12 @@ on:
       - 'src/**/*.tsx'
       - 'tsconfig*.json'
       - 'package.json'
-      - '.github/workflows/ts-typing.yml'
-      - '.github/workflows/reusable-typescript.yml'
+      - '.github/workflows/ts-typing.yaml'
+      - '.github/workflows/reusable-typescript.yaml'
 
 jobs:
   type-check:
-    uses: ./.github/workflows/reusable-typescript.yml
+    uses: ./.github/workflows/reusable-typescript.yaml
     with:
       node-version: '22.x'
       install-command: 'npm install --workspaces --include-workspace-root --no-audit --no-fund'
