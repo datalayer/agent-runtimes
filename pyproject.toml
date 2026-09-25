@@ -52,7 +52,7 @@ dependencies = [
     # 1.2.8 sends a secret's value as it is, with no marker and nothing to
     # decode: one representation end to end, which is what
     # `datalayer secrets create` writes with (PLAN_ENVS.md E3-05).
-    "datalayer-core>=1.2.8",
+    "datalayer-core>=1.2.12",
     "fastapi",
     "filelock>=3.20.3",
     "httpx",
