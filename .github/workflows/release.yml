@@ -136,5 +136,7 @@ jobs:
         run: |
           set -euo pipefail
           for tarball in dist/*.tgz; do
-            npm publish "$tarball" --access public --provenance
+            # "./": npm reads a bare "dist/x.tgz" as the GitHub shorthand
+            # github:dist/x.tgz and refuses to fetch it (EALLOWGIT).
+            npm publish "./$tarball" --access public --provenance
           done
