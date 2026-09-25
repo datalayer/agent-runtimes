@@ -17,14 +17,14 @@ What the workflow does:
 
 - **build**: checks that the tag matches `package.json`; installs with `npm install --workspaces --include-workspace-root`; builds with `npm run build`, which writes `lib/` for npm and the Vite app in `dist/` for the wheel; packs `@datalayer/agent-runtimes` with `npm pack`; builds the sdist and the wheel with `python -m build`. The hatch build hook copies `dist/` into `agent_runtimes/static/dist`, so the wheel serves the frontend. The build job then checks that the generated `_version.py` matches the tag and that the wheel contains `agent_runtimes/static/dist/index.html`, and uploads both packages as artifacts.
 - **pypi**: publishes the sdist and the wheel with `pypa/gh-action-pypi-publish`, in the `pypi` environment, with `id-token: write`.
-- **npm**: upgrades npm to the latest version (trusted publishing needs npm 11.5.1 or later), then runs `npm publish <tarball> --access public --provenance`.
+- **npm**: in the `npm` environment, with `id-token: write`, upgrades npm to the latest version (trusted publishing needs npm 11.5.1 or later), then runs `npm publish <tarball> --access public --provenance`.
 
 The pypi and npm jobs run independently: if one fails, the other still publishes. Re-running the failed job publishes the same artifacts.
 
 One-time setup, done once per registry:
 
 - **PyPI**: on <https://pypi.org/manage/project/agent-runtimes/settings/publishing/>, add a GitHub trusted publisher with owner `datalayer`, repository `agent-runtimes`, workflow `release.yml` and environment `pypi`. The `pypi` environment already exists in the repository settings.
-- **npm**: on the `@datalayer/agent-runtimes` package settings on npmjs.com, under *Trusted Publisher*, add GitHub Actions with organization `datalayer`, repository `agent-runtimes` and workflow `release.yml`, with no environment.
+- **npm**: on the `@datalayer/agent-runtimes` package settings on npmjs.com, under *Trusted Publisher*, add GitHub Actions with organization `datalayer`, repository `agent-runtimes`, workflow `release.yml` and environment `npm`. The `npm` environment already exists in the repository settings.
 
 The manual instructions below still work, for example for a release cut from a machine.
 

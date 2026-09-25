@@ -117,6 +117,7 @@ jobs:
   npm:
     needs: build
     runs-on: ubuntu-latest
+    environment: npm
     permissions:
       id-token: write
     steps:
