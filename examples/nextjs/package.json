@@ -17,7 +17,7 @@
   "dependencies": {
     "@datalayer/core": "file:../..",
     "@datalayer/icons-react": "^1.0.6",
-    "@datalayer/jupyter-react": "^2.0.7",
+    "@datalayer/jupyter-react": "^2.0.15",
     "@datalayer/primer-addons": "^1.0.12",
     "@humanwhocodes/config-array": "^0.13.0",
     "@jupyterlab/coreutils": "^6.0.0",

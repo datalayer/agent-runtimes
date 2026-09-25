@@ -1,6 +1,6 @@
 {
     "name": "@datalayer/agent-runtimes",
-    "version": "1.3.12",
+    "version": "1.3.13",
     "type": "module",
     "workspaces": [
         ".",
@@ -145,8 +145,8 @@
         "@datalayer/core": "^1.1.57",
         "@datalayer/decks": "^1.0.0",
         "@datalayer/icons-react": "^1.0.7",
-        "@datalayer/jupyter-lexical": "^1.0.16",
-        "@datalayer/jupyter-react": "^2.0.7",
+        "@datalayer/jupyter-lexical": "^1.0.24",
+        "@datalayer/jupyter-react": "^2.0.15",
         "@datalayer/jupyter-server-nbmodel": "^0.2.8",
         "@datalayer/lexical-loro": "^1.0.0",
         "@datalayer/primer-addons": "^1.0.15",
