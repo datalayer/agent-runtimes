@@ -2,7 +2,7 @@
 
 ## Automated release (tags)
 
-A pushed tag `vX.Y.Z` publishes `agent-runtimes` to PyPI and `@datalayer/agent-runtimes` to npm, through [`.github/workflows/release.yml`](.github/workflows/release.yml). No token is stored: both registries trust that workflow (trusted publishing, OIDC).
+A pushed tag `vX.Y.Z` publishes `agent-runtimes` to PyPI and `@datalayer/agent-runtimes` to npm, through [`.github/workflows/release.yaml`](.github/workflows/release.yaml). No token is stored: both registries trust that workflow (trusted publishing, OIDC).
 
 1. Bump the version to `X.Y.Z` in `package.json`. The Python version is the same number: `hatch-nodejs-version` reads it from `package.json` and writes `agent_runtimes/_version.py` (`__version__ = VERSION = 'X.Y.Z'`) at build time, so after a local build both say `X.Y.Z`. The file is generated and not committed.
 2. Merge the bump to `main`.
@@ -23,8 +23,8 @@ The pypi and npm jobs run independently: if one fails, the other still publishes
 
 One-time setup, done once per registry:
 
-- **PyPI**: on <https://pypi.org/manage/project/agent-runtimes/settings/publishing/>, add a GitHub trusted publisher with owner `datalayer`, repository `agent-runtimes`, workflow `release.yml` and environment `pypi`. The `pypi` environment already exists in the repository settings.
-- **npm**: on the `@datalayer/agent-runtimes` package settings on npmjs.com, under *Trusted Publisher*, add GitHub Actions with organization `datalayer`, repository `agent-runtimes`, workflow `release.yml` and environment `npm`. The `npm` environment already exists in the repository settings.
+- **PyPI**: on <https://pypi.org/manage/project/agent-runtimes/settings/publishing/>, add a GitHub trusted publisher with owner `datalayer`, repository `agent-runtimes`, workflow `release.yaml` and environment `pypi`. The `pypi` environment already exists in the repository settings.
+- **npm**: on the `@datalayer/agent-runtimes` package settings on npmjs.com, under *Trusted Publisher*, add GitHub Actions with organization `datalayer`, repository `agent-runtimes`, workflow `release.yaml` and environment `npm`. The `npm` environment already exists in the repository settings.
 
 The manual instructions below still work, for example for a release cut from a machine.
 
