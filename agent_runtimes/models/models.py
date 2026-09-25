@@ -9,12 +9,79 @@ from typing import Any, Sequence
 
 from pydantic_ai.settings import ModelSettings
 
+from agent_runtimes.models.local import (
+    LOCAL_PROVIDERS,
+    build_local_model,
+    is_local_model,
+)
 from agent_runtimes.specs.models import (
     AI_MODEL_CATALOGUE as AI_MODEL_CATALOGUE_DICT,
 )
 from agent_runtimes.types import AIModelRuntime
 
 logger = logging.getLogger(__name__)
+
+
+#: What a provider needs **in this process** when the runtime calls it itself.
+#:
+#: A model spec lists the environment variables its provider needs, and most
+#: do. One kind cannot: a model whose credentials are held by
+#: datalayer-ai-inference needs nothing here *when the runtime routes through
+#: that service*, and its own key when the runtime calls the provider
+#: directly — which is what the local inference provider does. The spec has
+#: one field for two deployments, so it says "nothing needed" and this fills
+#: the other half in.
+#:
+#: Alibaba's Qwen models are the case that showed it: the menu offered them as
+#: ready on a machine with no key, and pydantic-ai answered "Set the
+#: `ALIBABA_API_KEY` environment variable" when one was picked.
+#:
+#: Any one of the names is enough — they are alternatives, not a set.
+DIRECT_PROVIDER_CREDENTIALS: dict[str, tuple[str, ...]] = {
+    "alibaba": ("ALIBABA_API_KEY", "DASHSCOPE_API_KEY"),
+}
+
+
+def effective_inference_provider() -> str:
+    """Where inference is sent: `local` (the provider itself) or `datalayer`."""
+    try:
+        # Imported here, not above: the routes import this module.
+        from agent_runtimes.routes.configure import (  # noqa: PLC0415
+            get_effective_inference_provider,
+        )
+
+        return str(get_effective_inference_provider())
+    except Exception:  # noqa: BLE001 - a missing route is not a credential answer
+        configured = (
+            (os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "")
+            .strip()
+            .lower()
+        )
+        return configured if configured in {"local", "datalayer"} else "local"
+
+
+def credentials_ready(spec_model: Any, inference_provider: str | None = None) -> bool:
+    """Whether this model can be called right now, credentials-wise.
+
+    The spec's own environment variables, and — when the runtime calls the
+    provider directly — the provider's key as well (see
+    {@link DIRECT_PROVIDER_CREDENTIALS}). A local model answers on
+    reachability instead, which its own discovery does.
+    """
+    if not check_env_vars_available(list(getattr(spec_model, "required_env_vars", ()))):
+        return False
+    provider = inference_provider or effective_inference_provider()
+    if provider == "datalayer":
+        # The inference service holds the keys; this process needs none.
+        return True
+    if is_local_model(getattr(spec_model, "id", "")):
+        return True
+    alternatives = DIRECT_PROVIDER_CREDENTIALS.get(
+        str(getattr(spec_model, "provider", "")), ()
+    )
+    if not alternatives:
+        return True
+    return any(os.environ.get(name) for name in alternatives)
 
 
 def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
@@ -215,6 +282,14 @@ def create_model_with_provider(
             provider=openai_provider,
             settings=ModelSettings(parallel_tool_calls=False, temperature=0),
         )
+    elif model_provider.lower() in LOCAL_PROVIDERS:
+        # Ollama, LM Studio, vLLM and llama.cpp all speak OpenAI-compatible
+        # HTTP, so one branch serves every local runtime.
+        from agent_runtimes.models.local import build_local_model
+
+        return build_local_model(
+            f"{model_provider.lower()}:{model_name}", timeout=timeout
+        )
     else:
         # For other providers, use the standard string format
         # Note: String format doesn't allow custom timeout configuration
@@ -232,6 +307,14 @@ def resolve_model_for_inference_provider(
     - ``datalayer``: routes OpenAI-compatible requests through the
       datalayer-ai-inference service URL.
     """
+    # A local model is routed to the machine it runs on, whatever inference
+    # provider was requested: sending a prompt meant for Ollama to a hosted
+    # gateway is never what the person choosing it wanted.
+    if is_local_model(model):
+        local_model = build_local_model(model, timeout=timeout)
+        if local_model is not None:
+            return local_model
+
     provider = (inference_provider or "local").strip().lower()
     if provider in {"", "local"}:
         logger.info(
@@ -297,7 +380,32 @@ def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
     # Build AIModelRuntime instances from the generated catalogue
     models = []
     for spec_model in AI_MODEL_CATALOGUE_DICT.values():
-        is_available = check_env_vars_available(spec_model.required_env_vars)
+        """
+        Two questions, and only one of them used to be asked.
+
+        `check_env_vars_available` answers readiness — are the credentials for
+        this provider set — and the registry's own `available` answers
+        entitlement, whether this deployment may call the model at all. Every
+        Bedrock model shares one set of AWS credentials, so readiness said yes
+        to all of them the moment those were present, and the menu offered
+        Fable 5 and the whole Opus family to an account entitled to none of
+        them. Picking one returned `AccessDeniedException` from Bedrock.
+
+        A model has to pass both to be selectable, and the reason it failed
+        travels with it: a missing API key is something the reader can go and
+        fix, and a model we are not entitled to is not, so telling them the
+        second is the first sends them off to do something pointless.
+        """
+        env_ready = credentials_ready(spec_model)
+        entitled = getattr(spec_model, "available", True)
+        is_available = env_ready and entitled
+
+        if entitled and not env_ready:
+            reason = "Missing API key"
+        elif not entitled:
+            reason = "Not enabled for this deployment"
+        else:
+            reason = None
 
         model = AIModelRuntime(
             id=spec_model.id,
@@ -305,6 +413,7 @@ def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
             builtin_tools=tool_ids,
             required_env_vars=spec_model.required_env_vars,
             is_available=is_available,
+            unavailable_reason=reason,
         )
         models.append(model)
 
@@ -312,9 +421,7 @@ def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
         if is_available:
             logger.info(f"Model {spec_model.name} is available")
         else:
-            logger.debug(
-                f"Model {spec_model.name} is unavailable (missing: {', '.join(spec_model.required_env_vars)})"
-            )
+            logger.debug(f"Model {spec_model.name} is unavailable ({reason})")
 
     # Log summary
     available_count = sum(1 for m in models if m.is_available)

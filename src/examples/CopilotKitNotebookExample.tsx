@@ -13,6 +13,7 @@
  * You also will need to connect copilotkit to some sort of LLM Add LLM Provider API Key
  */
 
+import type { JSX } from 'react';
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
@@ -30,6 +31,7 @@ import { ActionRegistrar } from '../tools/adapters/copilotkit/CopilotKitToolAdap
 
 // Import Matplotlib notebook
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agui-notebook-example';
@@ -89,6 +91,7 @@ const NotebookUI = React.memo(function NotebookUI({
               <Notebook
                 nbformat={NOTEBOOK_CONTENT}
                 id={NOTEBOOK_ID}
+                Toolbar={ExampleNotebookToolbar}
                 serviceManager={serviceManager}
                 height="600px"
                 cellSidebarMargin={120}

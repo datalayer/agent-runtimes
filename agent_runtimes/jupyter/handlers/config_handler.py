@@ -22,7 +22,8 @@ class ConfigHandler(ExtensionHandlerMixin, APIHandler):
         """Return the configuration of the server extension."""
         settings = self.settings["datalayer"]
         configuration = dict(
-            datalayer_url=settings.datalayer_url,
+            # One URL per service; there is no single base any more.
+            **settings.service_urls,
             launcher={
                 "category": settings.launcher.category,
                 "name": settings.launcher.name,

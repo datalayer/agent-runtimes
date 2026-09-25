@@ -22,7 +22,8 @@
  * - `useAgUi` - AG-UI protocol (Pydantic AI's native protocol)
  * - `useA2A` - A2A protocol (Agent-to-Agent with JSON-RPC)
  * - `useAcp` - ACP protocol (Agent Client Protocol via WebSocket)
- * - `useVercelAI` - Vercel AI SDK chat protocol
+ * - `useVercelAI` - Vercel AI SDK chat protocol, spoken to a runtime
+ * - `useBrowserAgent` - the loop itself, running in the page
  *
  * ## Datalayer-Specific Hooks
  * Hooks for Datalayer platform integration.
@@ -60,11 +61,18 @@ export {
  * ChatBase infrastructure hooks.
  */
 export { useConfig } from './useConfig';
-export {
-  useSkills,
-  useSkillActions,
-  useAgentRuntimeLoadedSkills as useAgentLoadedSkills,
-} from './useSkills';
+export { useSkills, useSkillActions } from './useSkills';
+/*
+ * Straight from the store it lives in, not forwarded through `useSkills`.
+ *
+ * `useSkills` only re-exported it, so this barrel was the third hop of a
+ * chain — hooks → useSkills → stores → agentRuntimeStore. Webpack resolves a
+ * re-exported binding by following that chain through the built files, and it
+ * gave up here: "`useAgentRuntimeLoadedSkills` was not found in
+ * `./useSkills`", which is true of the source it reads even though every file
+ * in the chain is correct. One hop cannot be misread.
+ */
+export { useAgentRuntimeLoadedSkills as useAgentLoadedSkills } from '../stores';
 export { useContextSnapshot } from './useContextSnapshot';
 export { useSandbox } from './useSandbox';
 
@@ -96,6 +104,13 @@ export * from './useAcp';
  */
 export { useVercelAI } from './useVercelAI';
 
+// The browser harness. Same `useChat` helpers as `useVercelAI` — the branch is
+// one transport, so every chat component downstream is shared.
+export {
+  useBrowserAgent,
+  type UseBrowserAgentOptions,
+} from './useBrowserAgent';
+
 // =============================================================================
 // Datalayer Platform Hooks
 // =============================================================================
@@ -103,7 +118,14 @@ export { useVercelAI } from './useVercelAI';
 /**
  * Unified hook for managing agents — both ephemeral and durable.
  */
-export { useAgentRuntimes } from './useAgentRuntimes';
+export {
+  useAgentRuntimes,
+  type AgentRuntimeConnectionOptions,
+  type AgentRuntimeVariant,
+  type RuntimeCreationTarget,
+  type UseAgentOptions,
+  type UseAgentReturn,
+} from './useAgentRuntimes';
 
 /**
  * Runtime query and mutation hooks.
@@ -111,7 +133,7 @@ export { useAgentRuntimes } from './useAgentRuntimes';
 export {
   useAgentsRuntimes,
   useAgentRuntimesQuery,
-  useAgentRuntimeByPodName,
+  useAgentRuntimeByName,
   useCreateAgentRuntime,
   useDeleteAgentRuntime,
   useRefreshAgentRuntimes,
@@ -119,8 +141,8 @@ export {
   AGENT_QUERY_OPTIONS,
   useAgentLifecycleStore,
   getAgentLifecycleKey,
-  markRuntimePodDeleted,
-  clearRuntimePodDeleted,
+  markRuntimeDeleted,
+  clearRuntimeDeleted,
 } from './useAgentRuntimes';
 
 /**
@@ -159,7 +181,6 @@ export {
   useCheckpoints,
   useCheckpointsQuery,
   useRefreshCheckpoints,
-  useDeletePausedAgentRuntime,
   useResumePausedAgentRuntime,
   usePauseAgent,
   useResumeAgent,

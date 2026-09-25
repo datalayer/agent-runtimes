@@ -45,21 +45,21 @@ export const getRunningAgents = async (
 /**
  * Get detailed status for a specific agent.
  * @param token - Authentication token
- * @param podName - Pod name hosting the agent
+ * @param runtimeName - The uid of the runtime hosting the agent
  * @param agentId - Agent ID within the pod (optional, defaults to primary)
  * @param baseUrl - Base URL
  * @returns Promise resolving to agent status
  */
 export const getAgentStatus = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   agentId?: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<RunningAgent> => {
   validateToken(token);
   const query = agentId ? `?agent_id=${encodeURIComponent(agentId)}` : '';
   return requestDatalayerAPI<RunningAgent>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(podName)}${query}`,
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(runtimeName)}${query}`,
     method: 'GET',
     token,
   });
@@ -68,17 +68,17 @@ export const getAgentStatus = async (
 /**
  * Pause a running agent (light checkpoint by default, CRIU optional).
  * @param token - Authentication token
- * @param podName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param baseUrl - Base URL
  */
 export const pauseAgent = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<void> => {
   validateToken(token);
   await requestDatalayerAPI<void>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(podName)}/pause`,
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(runtimeName)}/pause`,
     method: 'POST',
     token,
   });
@@ -87,17 +87,17 @@ export const pauseAgent = async (
 /**
  * Resume a paused/checkpointed agent.
  * @param token - Authentication token
- * @param podName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param baseUrl - Base URL
  */
 export const resumeAgent = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<void> => {
   validateToken(token);
   await requestDatalayerAPI<void>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(podName)}/resume`,
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(runtimeName)}/resume`,
     method: 'POST',
     token,
   });
@@ -106,20 +106,20 @@ export const resumeAgent = async (
 /**
  * Get conversation checkpoints for an agent.
  * @param token - Authentication token
- * @param podName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param agentId - Agent ID
  * @param baseUrl - Base URL
  */
 export const getAgentCheckpoints = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   agentId?: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<ConversationCheckpoint[]> => {
   validateToken(token);
   const query = agentId ? `?agent_id=${encodeURIComponent(agentId)}` : '';
   return requestDatalayerAPI<ConversationCheckpoint[]>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(podName)}/checkpoints${query}`,
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(runtimeName)}/checkpoints${query}`,
     method: 'GET',
     token,
   });
@@ -128,20 +128,20 @@ export const getAgentCheckpoints = async (
 /**
  * Get usage summary for an agent.
  * @param token - Authentication token
- * @param podName - Pod name
+ * @param runtimeName - The uid of the runtime
  * @param agentId - Agent ID
  * @param baseUrl - Base URL
  */
 export const getAgentUsage = async (
   token: string,
-  podName: string,
+  runtimeName: string,
   agentId?: string,
   baseUrl: string = DEFAULT_SERVICE_URLS.AI_AGENTS,
 ): Promise<AgentUsageSummary> => {
   validateToken(token);
   const query = agentId ? `?agent_id=${encodeURIComponent(agentId)}` : '';
   return requestDatalayerAPI<AgentUsageSummary>({
-    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(podName)}/usage${query}`,
+    url: `${baseUrl}${API_BASE_PATHS.AI_AGENTS}/agents/${encodeURIComponent(runtimeName)}/usage${query}`,
     method: 'GET',
     token,
   });

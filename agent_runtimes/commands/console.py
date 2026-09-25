@@ -29,14 +29,14 @@ def console_callback(ctx: typer.Context) -> None:
 
 @app.command(name="connect")
 def console_connect(
-    runtime_name: Optional[str] = typer.Option(
+    given_name: Optional[str] = typer.Option(
         None,
         "--agent",
         help="The name of the Agent to connect to",
     ),
-    datalayer_url: Optional[str] = typer.Option(
+    runtimes_url: Optional[str] = typer.Option(
         None,
-        "--datalayer-url",
+        "--runtimes-url",
         help="Datalayer URL",
     ),
     token: Optional[str] = typer.Option(
@@ -76,21 +76,21 @@ def console_connect(
     """Connect to a Datalayer agent console."""
     try:
         # Get URLs configuration
-        urls = DatalayerURLs.from_environment(datalayer_url=datalayer_url)
+        urls = DatalayerURLs.from_environment(runtimes_url=runtimes_url)
 
         console.print("[green]Starting Datalayer agent console...[/green]")
-        console.print(f"Datalayer URL: {urls.datalayer_url}")
-        if runtime_name:
-            console.print(f"Agent: {runtime_name}")
+        console.print(f"Datalayer Runtimes URL: {urls.runtimes_url}")
+        if given_name:
+            console.print(f"Agent: {given_name}")
         console.print("[yellow]Press Ctrl+D or Ctrl+C to exit the console[/yellow]")
 
         # Prepare sys.argv for the RuntimesConsoleApp
         args = []
 
-        if runtime_name:
-            args.extend(["--agent", runtime_name])
-        if urls.datalayer_url:
-            args.extend(["--datalayer-url", urls.datalayer_url])
+        if given_name:
+            args.extend(["--agent", given_name])
+        if urls.runtimes_url:
+            args.extend(["--runtimes-url", urls.runtimes_url])
         if token:
             args.extend(["--api-key", token])
         if external_token:
@@ -132,14 +132,14 @@ def console_connect(
 @app.callback(invoke_without_command=True)
 def console_callback_default(
     ctx: typer.Context,
-    runtime_name: Optional[str] = typer.Option(
+    given_name: Optional[str] = typer.Option(
         None,
         "--agent",
         help="The name of the Agent to connect to",
     ),
-    datalayer_url: Optional[str] = typer.Option(
+    runtimes_url: Optional[str] = typer.Option(
         None,
-        "--datalayer-url",
+        "--runtimes-url",
         help="Datalayer URL",
     ),
     token: Optional[str] = typer.Option(
@@ -183,8 +183,8 @@ def console_callback_default(
 
         # Call console_connect with the parameters
         console_connect(
-            runtime_name=runtime_name,
-            datalayer_url=datalayer_url,
+            given_name=given_name,
+            runtimes_url=runtimes_url,
             token=token,
             external_token=external_token,
             no_browser=no_browser,

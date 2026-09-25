@@ -438,7 +438,7 @@ def create_restaurant_agent(base_url: str) -> Agent[RestaurantDeps, str]:
             "PYDANTIC_AI_MODEL", "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
         ),
         deps_type=RestaurantDeps,
-        system_prompt="""You are a helpful restaurant finding assistant.
+        instructions="""You are a helpful restaurant finding assistant.
 
 When users ask about restaurants, use the get_restaurants tool to search.
 When users want to book a restaurant, acknowledge their request.

@@ -302,7 +302,7 @@ export interface TokenProviderConfig {
  * Kaggle token-based provider configuration.
  * Generate token at: https://www.kaggle.com/settings/account (API section)
  */
-export const KAGGLE_TOKEN_PROVIDER: TokenProviderConfig = {
+export const KAGGLE_API_TOKEN_PROVIDER: TokenProviderConfig = {
   provider: 'kaggle',
   displayName: 'Kaggle',
   iconUrl: 'https://www.kaggle.com/static/images/favicon.ico',

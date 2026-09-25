@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Slash command: /tools-last - Show tool call details from last response."""
 
 from __future__ import annotations
@@ -18,7 +14,9 @@ if TYPE_CHECKING:
 NAME = "tools-last"
 ALIASES = ["tl"]
 DESCRIPTION = "Show details of tool calls from last response"
-SHORTCUT = "escape l"
+# Its own key: three commands claimed `escape l`, so only the first of
+# them was ever bound (the last run's result; /tools itself has t).
+SHORTCUT = "escape r"
 
 
 async def execute(tux: "CliTux") -> Optional[str]:

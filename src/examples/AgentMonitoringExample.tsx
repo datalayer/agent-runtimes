@@ -16,14 +16,21 @@
 
 /// <reference types="vite/client" />
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, Spinner, Heading, Label } from '@primer/react';
+import { Text, Heading, Label } from '@primer/react';
 import { GraphIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
+import { waitForAgent } from './utils/waitForAgent';
 import {
   ContextPanel,
   type ContextSnapshotResponse,
@@ -43,16 +50,17 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentMonitoringPlugin } from '../loop/plugins/agent-monitoring';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-example-agent';
-const AGENTSPEC_ID = 'example-monitoring';
 const OTEL_BASE_URL_ENV = import.meta.env.VITE_OTEL_BASE_URL;
 // Consume-side OTEL override (DATALAYER_OTEL_IN_URL). When set, telemetry is
 // read from here instead of VITE_OTEL_BASE_URL (e.g. prod during local dev).
 const OTEL_IN_BASE_URL_ENV = import.meta.env.VITE_OTEL_IN_BASE_URL;
-const DATALAYER_URL_ENV = import.meta.env.VITE_DATALAYER_URL;
+const OTEL_URL_ENV = import.meta.env.VITE_DATALAYER_OTEL_URL;
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -77,6 +85,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [agentId, setAgentId] = useState<string>(agentName);
   const [isReconnectedAgent, setIsReconnectedAgent] = useState(false);
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
+  void alerts;
   const [liveContext, setLiveContext] = useState<
     ContextSnapshotResponse | undefined
   >(undefined);
@@ -89,6 +98,19 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   const [liveMcpStatus, setLiveMcpStatus] = useState<
     McpToolsetsStatusResponse | undefined
   >(undefined);
+  // The chat column is the shared loop; the live MCP status the footer shows
+  // reaches it through the chat-extras channel.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentMonitoringPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({ mcpStatusData: liveMcpStatus ?? null });
+  }, [liveMcpStatus, setExtras]);
   const [monitorLastSnapshotAt, setMonitorLastSnapshotAt] = useState<
     number | null
   >(null);
@@ -98,19 +120,19 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const otelBaseUrl =
-    configuration?.otelInUrl ||
     OTEL_IN_BASE_URL_ENV ||
     configuration?.otelUrl ||
-    configuration?.datalayerUrl ||
+    configuration?.otelUrl ||
     OTEL_BASE_URL_ENV ||
-    DATALAYER_URL_ENV ||
-    'https://prod1.datalayer.run';
-  const podName = agentId;
+    OTEL_URL_ENV ||
+    agentBaseUrl;
+  const runtimeName = agentId;
   // The OTEL service_name resource attribute is 'agent-runtimes' (the
   // application name), NOT the individual agent ID.  Use the correct value
   // so the TokenUsageChart WS filter and HTTP query match actual rows.
   const otelServiceName = 'agent-runtimes';
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -127,6 +149,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const createLocalAgent = async () => {
       setRuntimeStatus('launching');
@@ -135,55 +158,21 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       setIsReconnectedAgent(false);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'MCP monitoring example – web crawling via Tavily with live cost/token metrics',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_skills: true,
-            tools: [],
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint as
+        // it mounts; the page only waits until the server has it, so its own
+        // sockets and reads address an agent that exists.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create local agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
+        setAgentId(agentName);
+        setIsReady(true);
+        setRuntimeStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setHookError(
@@ -198,6 +187,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [agentBaseUrl, agentName, authFetch]);
 
@@ -363,26 +353,6 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
     setAlerts([]);
   }, [isReady, agentId]);
 
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>
-          Launching local monitoring example agent...
-        </Text>
-      </Box>
-    );
-  }
-
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
   }
@@ -409,7 +379,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
       >
         <GraphIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
-          Monitoring — {podName}
+          Monitoring — {runtimeName}
         </Heading>
         {isReconnectedAgent && (
           <Label variant="secondary" size="small">
@@ -460,7 +430,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               serviceName={otelServiceName}
               agentId={agentId}
               apiKey={token ?? undefined}
-              datalayerUrl={otelBaseUrl}
+              otelUrl={otelBaseUrl}
               liveSystemPromptTokens={liveContextSnapshot?.systemPromptTokens}
               liveUserMessageTokens={liveContextSnapshot?.userMessageTokens}
               liveAgentMessageTokens={
@@ -486,7 +456,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
               serviceName={otelServiceName}
               agentId={agentId}
               apiKey={token ?? undefined}
-              datalayerUrl={otelBaseUrl}
+              otelUrl={otelBaseUrl}
               liveCumulativeUsd={liveCost?.cumulativeCostUsd}
               liveTimestampMs={monitorLastSnapshotAt}
               height={180}
@@ -532,68 +502,14 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
+            showAgentVariants
             agentId={agentId}
-            authToken={chatAuthToken}
-            title="Monitoring Agent"
-            brandIcon={<GraphIcon size={16} />}
-            placeholder="Ask for cost, token usage, and turn-level monitoring insights..."
-            description={`${alerts.length} active alert${alerts.length !== 1 ? 's' : ''}`}
-            showHeader={true}
-            showTokenUsage={true}
-            showToolsMenu={true}
-            showSkillsMenu={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            suggestions={[
-              {
-                title: '▶ No-tool turn',
-                message:
-                  'Briefly introduce yourself without calling any tool or skill — produces a linear Start → Model → Decision → End graph.',
-              },
-              {
-                title: '🔍 Single tool call',
-                message:
-                  'Use the Tavily web search tool to find the latest news about pydantic-graph. Make a single search call.',
-              },
-              {
-                title: '🌀 Parallel tool fan-out',
-                message:
-                  'Use Tavily to search the web in parallel for these three topics in the same turn: (1) OpenTelemetry traces, (2) agent observability, (3) LLM cost monitoring. Issue all three searches together so the turn graph fans out (Broadcast → Spread → Join).',
-              },
-              {
-                title: '🧩 Skill call',
-                message:
-                  'Use the datalayer-whoami skill to identify my profile, then summarize it.',
-              },
-              {
-                title: '😄 Joke skill',
-                message:
-                  'Use the jokes skill to tell me a random dad joke, then wrap it in one-sentence commentary.',
-              },
-              {
-                title: '🧪 Mixed tools + skills',
-                message:
-                  'In one turn: (a) use Tavily to search for "OTEL traces best practices", (b) call the datalayer-whoami skill, (c) call the jokes skill. Summarize all three results together. This should produce a Broadcast → three Spread nodes → Join in the Turn Execution Graph.',
-              },
-              {
-                title: 'Monitoring summary',
-                message:
-                  'Summarize my current token usage, cost status, and recent turn activity.',
-              },
-              {
-                title: 'Turn usage analysis',
-                message:
-                  'Analyze the last turn usage and explain which parts drove input and output tokens.',
-              },
-            ]}
-            submitOnSuggestionClick
-            contextSnapshot={liveContextSnapshot}
-            mcpStatusData={liveMcpStatus}
+            editors={false}
+            showHeader
+            plugins={chatPlugins}
           />
         </Box>
 
@@ -686,7 +602,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             <TurnGraphChart
               serviceName={otelServiceName}
               agentId={agentId}
-              datalayerUrl={otelBaseUrl}
+              otelUrl={otelBaseUrl}
               apiKey={token ?? undefined}
               autoRefreshMs={10_000}
               height={280}

@@ -27,19 +27,19 @@
  * @module examples/AgentLoopExample
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
-import { Notebook, useJupyter } from '@datalayer/jupyter-react';
+import { Notebook } from '@datalayer/jupyter-react';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
-import { ThemedJupyterProvider } from './utils/themedProvider';
+import { ThemedJupyterProvider, ThemedProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
-import type { LoopSpec, ProtocolConfig } from '../types';
-import { DEFAULT_MODEL, listLoops, getLoop, DEFAULT_LOOP } from '../specs';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import type { LoopSpec } from '../types';
+import { listLoops, getLoop, DEFAULT_LOOP } from '../specs';
+import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'agent-loop-example';
@@ -104,35 +104,9 @@ function buildLoopSystemPrompt(loop: LoopSpec): string {
   lines.push(
     `Keep loop state (dataframes, charts, intermediate results) in the notebook/runtime, not in the prompt. ` +
       `For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. ` +
-      `Use executeCode only for temporary inspection code that should not modify notebook cells.`,
+      `Use executeCodeInNotebook only for temporary inspection code that should not modify notebook cells.`,
   );
   return lines.join('\n\n');
-}
-
-function getJupyterSandboxUrl(
-  serviceManager?: ServiceManager.IManager,
-): string | undefined {
-  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
-  if (!baseUrl) {
-    return undefined;
-  }
-
-  if (baseUrl.includes('token=')) {
-    return baseUrl;
-  }
-
-  const token = serviceManager?.serverSettings?.token;
-  if (!token) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
 /**
@@ -159,15 +133,28 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
     );
   }
 
+  /*
+   * Scoped to the notebook, not to the example.
+   *
+   * `JupyterReactTheme` nests a Primer theme of its own, and Primer tokens
+   * resolve against the nearest one — so anything rendered inside it reads
+   * `canvas.default` from that theme rather than from the Datalayer theme the
+   * picker drives. Wrapping the whole example is why its chrome came out
+   * white while every other example followed the theme; the working examples
+   * all wrap the notebook alone.
+   */
   return (
-    <Notebook
-      nbformat={NOTEBOOK_CONTENT}
-      id={NOTEBOOK_ID}
-      serviceManager={serviceManager}
-      height="100%"
-      cellSidebarMargin={120}
-      startDefaultKernel={true}
-    />
+    <ThemedJupyterProvider>
+      <Notebook
+        nbformat={NOTEBOOK_CONTENT}
+        id={NOTEBOOK_ID}
+        Toolbar={ExampleNotebookToolbar}
+        serviceManager={serviceManager}
+        height="100%"
+        cellSidebarMargin={120}
+        startDefaultKernel={true}
+      />
+    </ThemedJupyterProvider>
   );
 }
 
@@ -198,8 +185,8 @@ function LoopSummary({ loop }: { loop: LoopSpec }) {
               px: 2,
               py: '2px',
               borderRadius: 6,
-              bg: 'accent.subtle',
-              color: 'accent.fg',
+              bg: 'neutral.muted',
+              color: 'fg.default',
               fontWeight: 'bold',
             }}
           >
@@ -229,10 +216,6 @@ interface AgentLoopExampleInnerProps {
 export function AgentLoopExampleInner({
   serviceManager,
 }: AgentLoopExampleInnerProps) {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
-  const [createRequested, setCreateRequested] = useState(false);
-
   // All available loops come from the generated loop catalogue.
   const loops = useMemo(() => listLoops(), []);
   const [selectedLoopId, setSelectedLoopId] = useState<string>(DEFAULT_LOOP);
@@ -241,77 +224,41 @@ export function AgentLoopExampleInner({
     [selectedLoopId, loops],
   );
 
-  const jupyterSandboxUrl = useMemo(
-    () => getJupyterSandboxUrl(serviceManager),
-    [serviceManager],
-  );
-
   const systemPrompt = useMemo(
     () => buildLoopSystemPrompt(selectedLoop),
     [selectedLoop],
   );
 
-  const { agentId, isReady, status, error, createAgent } =
-    useExampleAgentRuntime({
-      exampleId: 'AgentLoopExample',
-      agentName: DEFAULT_AGENT_ID,
-      autoCreateAgent: false,
-      agentConfig: {
-        name: DEFAULT_AGENT_ID,
-        description: `Loop agent (${selectedLoop.name}) for AgentLoopExample`,
-        protocol: 'vercel-ai',
-        model: DEFAULT_MODEL,
-        systemPrompt,
-        enableCodemode: false,
-        sandboxVariant: 'jupyter',
-        jupyterSandbox: jupyterSandboxUrl,
-      },
-    });
-
-  // Launch the loop agent once the sandbox is ready, using the loop that was
-  // selected at launch time.
-  useEffect(() => {
-    if (!jupyterSandboxUrl || createRequested || agentId) {
-      return;
-    }
-    setCreateRequested(true);
-    void createAgent({
-      name: DEFAULT_AGENT_ID,
-      description: `Loop agent (${selectedLoop.name}) for AgentLoopExample`,
-      protocol: 'vercel-ai',
-      model: DEFAULT_MODEL,
-      systemPrompt,
-      enableCodemode: false,
-      sandboxVariant: 'jupyter',
-      jupyterSandbox: jupyterSandboxUrl,
-    }).catch(() => {
-      setCreateRequested(false);
-    });
-  }, [
-    jupyterSandboxUrl,
-    createRequested,
-    agentId,
-    createAgent,
-    selectedLoop.name,
-    systemPrompt,
-  ]);
-
-  const effectiveReady = isReady || status === 'ready';
-  const isLoopSelectorDisabled = createRequested;
-
-  // Get notebook tools for ChatSidebar
+  // The tools. Which of the chat and the harness runs them depends on
+  // where the loop turns, and the hook decides that.
   const tools = useNotebookTools(NOTEBOOK_ID);
 
+  const {
+    agentReady,
+    protocol: protocolConfig,
+    chatFrontendTools,
+    error,
+    unavailableReason,
+    createAttempted,
+  } = useExampleJupyterAgent({
+    exampleId: 'AgentLoopExample',
+    agentName: DEFAULT_AGENT_ID,
+    description: `Loop agent (${selectedLoop.name}) for AgentLoopExample`,
+    systemPrompt,
+    serviceManager,
+    frontendTools: tools,
+  });
+  // One failed attempt is reported, not retried — see `useExampleJupyterAgent`.
+  const chatError = error || unavailableReason;
+
+  // The example's own agent, not merely the runtime: on the cloud target the
+  // runtime is ready before this agent has been registered on it.
+  const effectiveReady = agentReady;
+  const isLoopSelectorDisabled = createAttempted;
+
+  // Get notebook tools for ChatSidebar
+
   // Build Vercel AI protocol config
-  const protocolConfig = useMemo((): ProtocolConfig => {
-    return {
-      type: 'vercel-ai',
-      endpoint: vercelAiEndpoint,
-      agentId: DEFAULT_AGENT_ID,
-      enableConfigQuery: true,
-      configEndpoint: `${baseUrl}/api/v1/configure`,
-    };
-  }, [baseUrl, vercelAiEndpoint]);
 
   // Chat suggestions derived from the selected loop.
   const suggestions = useMemo(
@@ -345,10 +292,16 @@ export function AgentLoopExampleInner({
     <>
       <Box
         sx={{
-          height: 'calc(100vh - 70px)',
-          width: '100vw',
+          // The wrapper is the viewport, not the window: it sits below the
+          // header and beside the sidebar, so viewport units size this box to
+          // an area it is not in — and the wrapper paints no background of its
+          // own, so wherever this box failed to reach showed through white.
+          height: '100%',
+          width: '100%',
           display: 'flex',
           overflow: 'hidden',
+          bg: 'canvas.default',
+          color: 'fg.default',
         }}
       >
         {/* Main content area */}
@@ -366,7 +319,7 @@ export function AgentLoopExampleInner({
               p: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              bg: 'canvas.subtle',
+              bg: 'canvas.default',
             }}
           >
             <Box
@@ -469,7 +422,7 @@ export function AgentLoopExampleInner({
             defaultOpen={true}
             panelProps={{
               protocol: protocolConfig,
-              frontendTools: tools,
+              frontendTools: chatFrontendTools,
               useStore: false,
               showModelSelector: true,
               showToolsMenu: true,
@@ -479,7 +432,7 @@ export function AgentLoopExampleInner({
           />
         )}
 
-        {error && (
+        {chatError && (
           <Box
             sx={{
               position: 'fixed',
@@ -493,7 +446,7 @@ export function AgentLoopExampleInner({
               zIndex: 999,
             }}
           >
-            <strong>Error:</strong> {error}
+            <strong>Error:</strong> {chatError}
           </Box>
         )}
       </Box>
@@ -504,17 +457,16 @@ export function AgentLoopExampleInner({
 /**
  * Main example component with Jupyter provider wrapper.
  */
-export function AgentLoopExample() {
+export function AgentLoopExample({
+  serviceManager,
+}: {
+  serviceManager?: ServiceManager.IManager;
+}) {
   return (
-    <ThemedJupyterProvider>
-      <SimpleWrapper />
-    </ThemedJupyterProvider>
+    <ThemedProvider>
+      <AgentLoopExampleInner serviceManager={serviceManager} />
+    </ThemedProvider>
   );
-}
-
-function SimpleWrapper() {
-  const { serviceManager } = useJupyter();
-  return <AgentLoopExampleInner serviceManager={serviceManager} />;
 }
 
 export default AgentLoopExample;

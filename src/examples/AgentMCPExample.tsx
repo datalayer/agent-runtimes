@@ -32,7 +32,10 @@ import {
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { Chat } from '../chat';
+import { waitForAgent } from './utils/waitForAgent';
+import { LoopEmbed } from '../loop';
+import { AgentMcpPlugin } from '../loop/plugins/agent-mcp';
+import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
 import { useAIAgentsWebSocket } from '../hooks';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import type { AgentStreamSnapshotPayload } from '../types/stream';
@@ -48,7 +51,6 @@ import { MCP_SERVER_LIBRARY } from '../specs/mcpServers';
 const queryClient = new QueryClient();
 const AGENT_NAME = 'mcp-example-agent';
 // Must match agentspecs/agentspecs/agents/example-mcp.yaml `id`.
-const AGENTSPEC_ID = 'example-mcp';
 
 /** A tool discovered from a running MCP server. */
 interface McpToolInfo {
@@ -305,6 +307,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const agentBaseUrl = useExampleAgentRuntimesUrl();
   const chatAuthToken: string | undefined = token === null ? undefined : token;
+  void chatAuthToken;
 
   const authFetch = useCallback(
     (url: string, opts: RequestInit = {}) =>
@@ -322,6 +325,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   // ── Create agent ──────────────────────────────────────
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const createAgent = async () => {
       setRuntimeStatus('launching');
@@ -330,57 +334,22 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       setIsReconnectedAgent(false);
 
       try {
-        const response = await authFetch(`${agentBaseUrl}/api/v1/agents`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: agentName,
-            description:
-              'MCP example agent – web crawling and research via Tavily',
-            agent_library: 'pydantic-ai',
-            transport: 'vercel-ai',
-            agent_spec_id: AGENTSPEC_ID,
-            enable_codemode: false,
-            enable_skills: true,
-            tools: [],
-          }),
+        // The Loop creates the agent from the capacity plugin's blueprint as
+        // it mounts; the page only waits until the server has it, so its own
+        // sockets and reads address an agent that exists.
+        const found = await waitForAgent(agentBaseUrl, agentName, {
+          signal: controller.signal,
         });
-
-        let resolvedAgentId = agentName;
-        let isAlreadyRunning = false;
-
-        if (response.ok) {
-          const data = await response.json();
-          resolvedAgentId = data?.id || agentName;
-        } else {
-          const contentType = response.headers.get('content-type') || '';
-          let detail = '';
-
-          if (contentType.includes('application/json')) {
-            const data = await response.json().catch(() => null);
-            detail =
-              (typeof data?.detail === 'string' && data.detail) ||
-              (typeof data?.message === 'string' && data.message) ||
-              '';
-          } else {
-            detail = await response.text();
-          }
-
-          if (response.status === 409 || /already exists/i.test(detail || '')) {
-            isAlreadyRunning = true;
-          } else {
-            throw new Error(
-              detail || `Failed to create agent: ${response.status}`,
-            );
-          }
+        if (isCancelled) return;
+        if (!found) {
+          throw new Error(
+            `The agent '${agentName}' did not appear on ${agentBaseUrl}.`,
+          );
         }
-
-        if (!isCancelled) {
-          setAgentId(resolvedAgentId);
-          setIsReconnectedAgent(isAlreadyRunning);
-
-          setIsReady(true);
-          setRuntimeStatus('ready');
-        }
+        setAgentId(agentName);
+        setIsReconnectedAgent(false);
+        setIsReady(true);
+        setRuntimeStatus('ready');
       } catch (error) {
         if (!isCancelled) {
           setHookError(
@@ -395,6 +364,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [agentBaseUrl, agentName, authFetch]);
 
@@ -566,7 +536,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const readyServers = servers
       .filter(s => s.status === 'started')
       .map(s => s.id);
-    // Build enabled_tools_by_server so the InputFooter ToolsMenu can render
+    // Build enabled_tools_by_server so the ToolsMenu can render
     // tools as enabled immediately on first open.
     const enabledToolsByServer = derivedEnabledToolsByServer;
     const approvedToolsByServer = derivedApprovedToolsByServer;
@@ -589,23 +559,20 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const totalTools = mcpServers.reduce((sum, s) => sum + s.toolsCount, 0);
   const aggregate = deriveAggregate(mcpStatusData?.servers ?? []);
 
-  if (!isReady && runtimeStatus !== 'error') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
-      >
-        <Spinner size="large" />
-        <Text sx={{ color: 'fg.muted' }}>Launching MCP example agent...</Text>
-      </Box>
-    );
-  }
+  // The chat column is the shared loop; the live MCP status the footer shows
+  // reaches it through the chat-extras channel. The server panel on the right
+  // is the example's own.
+  const { plugin: extrasPlugin, setExtras } = useMemo(
+    () => createChatExtrasPlugin(),
+    [],
+  );
+  const chatPlugins = useMemo(
+    () => [AgentMcpPlugin, extrasPlugin],
+    [extrasPlugin],
+  );
+  useEffect(() => {
+    setExtras({ mcpStatusData: mcpStatusData ?? null });
+  }, [mcpStatusData, setExtras]);
 
   if (runtimeStatus === 'error' || hookError) {
     return <ErrorView error={hookError} onLogout={onLogout} />;
@@ -636,57 +603,14 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Chat
-            protocol="vercel-ai"
-            baseUrl={agentBaseUrl}
+          <LoopEmbed
+            serverUrl={agentBaseUrl}
+            target="local"
+            showAgentVariants
             agentId={agentId}
-            authToken={chatAuthToken}
-            title="MCP Demo Agent"
-            brandIcon={<GlobeIcon size={16} />}
-            placeholder="Ask the agent to search the web or explore GitHub..."
-            showHeader={true}
-            showNewChatButton={true}
-            showClearButton={true}
-            showToolsMenu={true}
-            showSkillsMenu={true}
-            showTokenUsage={true}
-            autoFocus
-            height="100%"
-            runtimeId={agentId}
-            historyEndpoint={`${agentBaseUrl}/api/v1/history`}
-            mcpStatusData={mcpStatusData}
-            showToolApprovalBanner={true}
-            headerActions={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
-                  MCP Tools: {totalTools}
-                </Text>
-              </Box>
-            }
-            suggestions={[
-              {
-                title: '🔍 Search the web',
-                message: 'Search the web for recent news about AI agents.',
-              },
-              {
-                title: '🐙 GitHub repos',
-                message: 'Find trending open-source Python projects on GitHub.',
-              },
-              {
-                title: '📚 Research topic',
-                message:
-                  'Research best practices for building RAG applications.',
-              },
-              {
-                title: '⚡ Compare frameworks',
-                message: 'Compare popular JavaScript frameworks in 2024.',
-              },
-              {
-                title: '😄 Tell me a joke',
-                message: 'Use your jokes skill to tell me a random joke.',
-              },
-            ]}
-            submitOnSuggestionClick
+            editors={false}
+            showHeader
+            plugins={chatPlugins}
           />
         </Box>
 
@@ -700,7 +624,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
-            bg: 'canvas.subtle',
+            bg: 'canvas.default',
           }}
         >
           {/* Header */}
@@ -786,7 +710,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     mt: 3,
                     p: 2,
                     borderRadius: 2,
-                    bg: 'canvas.inset',
+                    bg: 'canvas.default',
                     border: '1px solid',
                     borderColor: 'border.muted',
                   }}

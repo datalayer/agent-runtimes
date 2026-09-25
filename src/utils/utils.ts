@@ -18,7 +18,9 @@ import {
   A2AAdapter,
   VercelAIAdapter,
   ACPAdapter,
+  BrowserAgentAdapter,
   type BaseProtocolAdapter,
+  type BrowserAgentAdapterConfig,
 } from '../protocols';
 
 import type {
@@ -254,6 +256,14 @@ export function createProtocolAdapter(
       return new VercelAIAdapter(adapterConfig);
     case 'acp':
       return new ACPAdapter(adapterConfig);
+    case 'browser-vercel-ai':
+      // The live objects a browser agent needs — its tools, its instructions,
+      // where to reach a model — travel in `options`, which is spread onto
+      // `adapterConfig` above. Unlike the other adapters, a URL is not enough:
+      // this one runs the loop rather than calling one.
+      return new BrowserAgentAdapter(
+        adapterConfig as BrowserAgentAdapterConfig,
+      );
     default:
       console.warn(`[ChatBase] Unknown protocol type: ${config.type}`);
       return null;

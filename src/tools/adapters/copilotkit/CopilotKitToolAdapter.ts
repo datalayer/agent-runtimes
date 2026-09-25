@@ -196,8 +196,7 @@ function jsonSchemaToParameters(
     };
 
     // Map JSON Schema type to CopilotKit type
-    let copilotType: 'string' | 'number' | 'boolean' | 'object' | 'object[]' =
-      'string';
+    let copilotType: 'string' | 'number' | 'boolean' | 'object' | 'object[]';
 
     if (propSchema.type === 'array') {
       // Handle array types based on items type

@@ -9,15 +9,22 @@ import { Checkbox, FormControl, Heading } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { INotebookContent } from '@jupyterlab/nbformat';
 import { ServiceManager } from '@jupyterlab/services';
-import { loadJupyterConfig, Notebook } from '@datalayer/jupyter-react';
+import {
+  loadJupyterConfig,
+  Notebook,
+  JupyterCollaborationProvider,
+} from '@datalayer/jupyter-react';
 import { DatalayerCollaborationProvider } from '../collaboration';
 import { useCoreStore } from '../state';
 import { ThemedJupyterProvider } from './utils/themedProvider';
+import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 
 import nbformatExample from './utils/notebooks/NotebookExample1.ipynb.json';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // This corresponds to the notebook ID in the URL when you open an existing notbook in your library
 const NOTEBOOK_ID = '01JZQRQ35GG871QQCZW9TB1A8J';
+const ROOM_PATH = 'notebook-collaboration-example.ipynb';
 
 /**
  * Example demonstrating how to use Datalayer services with Notebook
@@ -45,9 +52,71 @@ const NotebookCollaborationExample = (
   const [serviceManager, setServiceManager] = useState<
     ServiceManager.IManager | undefined
   >(props.serviceManager);
+  const [collaborationReady, setCollaborationReady] = useState(false);
+  const [collaborationError, setCollaborationError] = useState<string | null>(
+    null,
+  );
 
   const { configuration } = useCoreStore();
+  const runtimeTarget = useRuntimeTargetStore(state => state.target);
 
+  useEffect(() => {
+    let cancelled = false;
+    const prepare = async () => {
+      if (!enableCollaboration || !serviceManager) {
+        setCollaborationReady(false);
+        setCollaborationError(null);
+        return;
+      }
+      setCollaborationReady(false);
+      setCollaborationError(null);
+      if (runtimeTarget === 'datalayer') {
+        setCollaborationReady(true);
+        return;
+      }
+      try {
+        await serviceManager.ready;
+        try {
+          await serviceManager.contents.get(ROOM_PATH, { content: false });
+        } catch (error) {
+          if (
+            (error as { response?: { status?: number } }).response?.status !==
+            404
+          )
+            throw error;
+          try {
+            await serviceManager.contents.save(ROOM_PATH, {
+              type: 'notebook',
+              format: 'json',
+              content: nbformat,
+            });
+          } catch (saveError) {
+            // Some Jupyter backends create the file but return a response that
+            // the contents client cannot decode. Verify before reporting it.
+            try {
+              await serviceManager.contents.get(ROOM_PATH, { content: false });
+            } catch {
+              throw saveError;
+            }
+          }
+        }
+        // Do not open the collaboration websocket until the room file is
+        // observable through the same service manager.
+        await serviceManager.contents.get(ROOM_PATH, { content: false });
+        if (!cancelled) setCollaborationReady(true);
+      } catch (error) {
+        console.error('Failed to prepare collaboration room:', error);
+        if (!cancelled) {
+          setCollaborationReady(false);
+          setCollaborationError(String(error));
+        }
+      }
+    };
+    void prepare();
+    return () => {
+      cancelled = true;
+    };
+  }, [enableCollaboration, nbformat, runtimeTarget, serviceManager]);
   useEffect(() => {
     // Create DatalayerServiceManager if not provided
     const createManager = async () => {
@@ -59,7 +128,7 @@ const NotebookCollaborationExample = (
       }
 
       // Create DatalayerServiceManager if we have credentials
-      if (configuration?.token && configuration?.datalayerUrl) {
+      if (configuration?.token && configuration?.spacerUrl) {
         try {
           // Now we can pass undefined to use config/defaults
           const manager = await createDatalayerServiceManager(
@@ -73,7 +142,7 @@ const NotebookCollaborationExample = (
         }
       } else {
         console.warn(
-          'Datalayer credentials not configured. Please set datalayerUrl and token.',
+          'Datalayer credentials not configured. Please set spacerUrl and token.',
         );
       }
     };
@@ -81,29 +150,50 @@ const NotebookCollaborationExample = (
     createManager();
   }, [props.serviceManager, configuration]);
 
-  // Create the collaboration provider when enabled
-  const collaborationProvider = useMemo(() => {
-    if (!enableCollaboration) {
-      return undefined;
+  // Each Notebook owns its own shared model, so each pane needs a separate
+  // provider. Both providers point at the same real library document.
+  const collaborationProviders = useMemo(() => {
+    if (!enableCollaboration || !collaborationReady) {
+      return [undefined, undefined] as const;
     }
 
-    const datalayerUrl = configuration?.datalayerUrl;
+    if (runtimeTarget === 'local') {
+      const config = {
+        path: ROOM_PATH,
+        serverSettings: serviceManager?.serverSettings,
+      };
+      return [
+        new JupyterCollaborationProvider(config),
+        new JupyterCollaborationProvider(config),
+      ] as const;
+    }
+
+    const spacerUrl = configuration?.spacerUrl;
     const token = configuration?.token;
+    if (!spacerUrl || !token) return [undefined, undefined] as const;
+    return [
+      new DatalayerCollaborationProvider({ spacerUrl, token }),
+      new DatalayerCollaborationProvider({ spacerUrl, token }),
+    ] as const;
+  }, [
+    enableCollaboration,
+    collaborationReady,
+    runtimeTarget,
+    configuration?.spacerUrl,
+    configuration?.token,
+  ]);
 
-    if (!datalayerUrl || !token) {
-      console.warn(
-        'Datalayer collaboration enabled but datalayerUrl or token not configured. ' +
-          'Please configure them in the Datalayer store or environment.',
-      );
-      return undefined;
-    }
+  const [collaborationProvider1, collaborationProvider2] =
+    collaborationProviders;
 
-    // Create and return the Datalayer collaboration provider
-    return new DatalayerCollaborationProvider({
-      datalayerUrl,
-      token,
-    });
-  }, [enableCollaboration, configuration]);
+  // Close websocket connections when collaboration is disabled or the example
+  // is unmounted. This also prevents stale providers from keeping a notebook
+  // in its loading state after toggling the checkbox.
+  useEffect(() => {
+    return () => {
+      collaborationProviders.forEach(provider => provider?.dispose());
+    };
+  }, [collaborationProviders]);
 
   return (
     <ThemedJupyterProvider>
@@ -122,13 +212,19 @@ const NotebookCollaborationExample = (
               Enable Datalayer Collaboration
             </FormControl.Label>
           </FormControl>
+          {enableCollaboration && runtimeTarget !== 'datalayer' && (
+            <Box sx={{ mt: 1, color: 'fg.muted', fontSize: 0 }}>
+              Real-time Datalayer collaboration requires the cloud runtime
+              target. Local mode does not expose a collaboration room.
+            </Box>
+          )}
         </Box>
 
-        {(!configuration?.datalayerUrl || !configuration?.token) && (
+        {(!configuration?.spacerUrl || !configuration?.token) && (
           <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
             Warning: Datalayer configuration is missing. Please configure
-            datalayerUrl and token to use DatalayerServiceManager and
-            collaboration features.
+            spacerUrl and token to use DatalayerServiceManager and collaboration
+            features.
           </Box>
         )}
 
@@ -139,7 +235,13 @@ const NotebookCollaborationExample = (
           </Box>
         )}
 
-        {enableCollaboration ? (
+        {collaborationError && (
+          <Box sx={{ mb: 2, p: 2, bg: 'danger.subtle' }}>
+            Collaboration could not start: {collaborationError}
+          </Box>
+        )}
+
+        {enableCollaboration && collaborationReady ? (
           <Box
             sx={{
               display: 'flex',
@@ -158,7 +260,7 @@ const NotebookCollaborationExample = (
               <Box
                 sx={{
                   p: 2,
-                  bg: 'canvas.subtle',
+                  bg: 'canvas.default',
                   borderBottom: '1px solid',
                   borderColor: 'border.default',
                   fontWeight: 'bold',
@@ -168,13 +270,15 @@ const NotebookCollaborationExample = (
               </Box>
               {serviceManager ? (
                 <Notebook
-                  id={`${NOTEBOOK_ID}-collab-1`}
+                  id={NOTEBOOK_ID}
+                  Toolbar={ExampleNotebookToolbar}
+                  path={ROOM_PATH}
                   height="calc(100vh - 280px)"
                   nbformat={nbformat}
                   readonly={readonly}
                   serviceManager={serviceManager}
                   startDefaultKernel={true}
-                  collaborationProvider={collaborationProvider}
+                  collaborationProvider={collaborationProvider1}
                 />
               ) : (
                 <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -193,7 +297,7 @@ const NotebookCollaborationExample = (
               <Box
                 sx={{
                   p: 2,
-                  bg: 'canvas.subtle',
+                  bg: 'canvas.default',
                   borderBottom: '1px solid',
                   borderColor: 'border.default',
                   fontWeight: 'bold',
@@ -203,13 +307,15 @@ const NotebookCollaborationExample = (
               </Box>
               {serviceManager ? (
                 <Notebook
-                  id={`${NOTEBOOK_ID}-collab-2`}
+                  id={NOTEBOOK_ID}
+                  Toolbar={ExampleNotebookToolbar}
+                  path={ROOM_PATH}
                   height="calc(100vh - 280px)"
                   nbformat={nbformat}
                   readonly={readonly}
                   serviceManager={serviceManager}
                   startDefaultKernel={false}
-                  collaborationProvider={collaborationProvider}
+                  collaborationProvider={collaborationProvider2}
                 />
               ) : (
                 <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -229,12 +335,13 @@ const NotebookCollaborationExample = (
             {serviceManager ? (
               <Notebook
                 id={NOTEBOOK_ID}
+                Toolbar={ExampleNotebookToolbar}
                 height="calc(100vh - 200px)"
                 nbformat={nbformat}
                 readonly={readonly}
                 serviceManager={serviceManager}
                 startDefaultKernel={true}
-                collaborationProvider={collaborationProvider}
+                collaborationProvider={collaborationProvider1}
               />
             ) : (
               <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -245,11 +352,11 @@ const NotebookCollaborationExample = (
         )}
 
         <Box sx={{ mt: 2, fontSize: 1, color: 'fg.subtle' }}>
-          <p>
+          <Box as="p" sx={{ m: 0, mb: 2 }}>
             This example demonstrates how to use Datalayer services with
             Notebook:
-          </p>
-          <ul>
+          </Box>
+          <Box as="ul" sx={{ m: 0, pl: 3, '& li': { mb: 1 } }}>
             <li>
               <strong>DatalayerServiceManager:</strong> Connects to Datalayer
               infrastructure for kernel management
@@ -258,7 +365,7 @@ const NotebookCollaborationExample = (
               <strong>DatalayerCollaborationProvider:</strong> Enables real-time
               collaboration
             </li>
-            <li>Both require Datalayer credentials (datalayerUrl and token)</li>
+            <li>Both require Datalayer credentials (spacerUrl and token)</li>
             <li>Pass them directly to the base Notebook component</li>
             <li>
               No wrapper components needed - just create the services and pass
@@ -268,7 +375,7 @@ const NotebookCollaborationExample = (
               This shows the explicit, composable pattern for Datalayer
               integration
             </li>
-          </ul>
+          </Box>
         </Box>
       </Box>
     </ThemedJupyterProvider>

@@ -25,7 +25,9 @@ class CheckpointConfig:
     max_checkpoints : int
         Rolling window — oldest pruned when exceeded.
     store : str
-        Storage backend: "in_memory", "file", or "s3".
+        Storage backend: "in_memory", "file", "s3", or "protocol_state" — an
+        execution's checkpoints in the runtime's protocol state store, which
+        outlive the process and need the execution as their scope (O2-05).
     file_dir : str
         Directory for file-based storage.
     """
@@ -33,7 +35,7 @@ class CheckpointConfig:
     enabled: bool = False
     frequency: str = "every_turn"  # "every_tool" | "every_turn" | "manual_only"
     max_checkpoints: int = 20
-    store: str = "in_memory"  # "in_memory" | "file" | "s3"
+    store: str = "in_memory"  # "in_memory" | "file" | "s3" | "protocol_state"
     file_dir: str = _DEFAULT_CHECKPOINTS_DIR
     metadata: dict = field(default_factory=dict)
 

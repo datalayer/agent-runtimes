@@ -22,8 +22,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 try:
+    from fastmcp.client.transports import StdioTransport
     from pydantic_ai import Agent
-    from pydantic_ai.mcp import MCPServerStdio
+    from pydantic_ai.mcp import MCPToolset
 
     HAS_PYDANTIC_AI = True
 except ImportError:
@@ -521,11 +522,13 @@ def create_agent(model: str, codemode: bool) -> tuple[Agent, object | None]:
                         resolved_args.append(str((config_dir / arg).resolve()))
                     else:
                         resolved_args.append(arg)
-                mcp_server = MCPServerStdio(
-                    command,
-                    args=resolved_args,
-                    timeout=float(timeout),
-                    env=env,
+                mcp_server = MCPToolset(
+                    StdioTransport(
+                        command=command,
+                        args=resolved_args,
+                        env=env,
+                    ),
+                    init_timeout=float(timeout),
                 )
                 toolsets.append(mcp_server)
                 logger.debug(
@@ -534,10 +537,12 @@ def create_agent(model: str, codemode: bool) -> tuple[Agent, object | None]:
                 )
         else:
             # Fallback to default example_mcp server
-            mcp_server = MCPServerStdio(
-                sys.executable,
-                args=[mcp_server_path],
-                timeout=300.0,
+            mcp_server = MCPToolset(
+                StdioTransport(
+                    command=sys.executable,
+                    args=[mcp_server_path],
+                ),
+                init_timeout=300.0,
             )
             toolsets = [mcp_server]
         toolset = None
@@ -549,7 +554,7 @@ def create_agent(model: str, codemode: bool) -> tuple[Agent, object | None]:
     agent_kwargs = dict(
         model=model,
         toolsets=toolsets,
-        system_prompt=_build_system_prompt(codemode, tool_hints),
+        instructions=_build_system_prompt(codemode, tool_hints),
     )
     try:
         signature = inspect.signature(Agent)

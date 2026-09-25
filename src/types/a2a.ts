@@ -6,6 +6,21 @@
 import { ChatMessage } from './messages';
 
 /**
+ * A protocol extension an agent card advertises supporting
+ * (https://a2a-protocol.org/latest/topics/extensions/): a URI, not the
+ * bare string this codebase's `capabilities.extensions` used to be typed
+ * as. A real card's entries are objects — `{ uri, description?, required?
+ * }` — and a `string[]` type made `.includes(uri)` silently false against
+ * one, even though nothing read the field yet to notice.
+ */
+export interface AgentExtension {
+  uri: string;
+  description?: string;
+  required?: boolean;
+  params?: Record<string, unknown>;
+}
+
+/**
  * Agent card for A2A protocol
  */
 export interface AgentCard {
@@ -15,7 +30,7 @@ export interface AgentCard {
   version?: string;
   capabilities?: {
     streaming?: boolean;
-    extensions?: string[];
+    extensions?: AgentExtension[];
   };
   skills?: Array<{
     id: string;

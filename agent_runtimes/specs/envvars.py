@@ -79,8 +79,8 @@ HF_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
-KAGGLE_TOKEN_SPEC_0_0_1 = EnvvarSpec(
-    id="KAGGLE_TOKEN",
+KAGGLE_API_TOKEN_SPEC_0_0_1 = EnvvarSpec(
+    id="KAGGLE_API_TOKEN",
     version="0.0.1",
     name="Kaggle API Token",
     description="API token for accessing Kaggle datasets, competitions, notebooks, and models. Required for Kaggle MCP server authentication.",
@@ -144,7 +144,7 @@ ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "GOOGLE_OAUTH_CLIENT_ID": GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,
     "HF_TOKEN": HF_TOKEN_SPEC_0_0_1,
-    "KAGGLE_TOKEN": KAGGLE_TOKEN_SPEC_0_0_1,
+    "KAGGLE_API_TOKEN": KAGGLE_API_TOKEN_SPEC_0_0_1,
     "SLACK_BOT_TOKEN": SLACK_BOT_TOKEN_SPEC_0_0_1,
     "SLACK_CHANNEL_IDS": SLACK_CHANNEL_IDS_SPEC_0_0_1,
     "SLACK_TEAM_ID": SLACK_TEAM_ID_SPEC_0_0_1,

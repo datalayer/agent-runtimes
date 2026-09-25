@@ -23,6 +23,7 @@ CSV_OUTPUT_SPEC_0_0_1 = OutputSpec(
     name="CSV",
     description="Deliver results as a CSV file for easy import into spreadsheets, data pipelines, or other analysis tools.",
     icon="table",
+    enabled=False,
     supports_template=False,
     supports_storage=True,
     mime_types=["text/csv"],
@@ -34,9 +35,22 @@ DASHBOARD_OUTPUT_SPEC_0_0_1 = OutputSpec(
     name="Dashboard",
     description="Deliver results as an interactive dashboard with charts, tables, and filter controls rendered in the browser.",
     icon="graph",
+    enabled=False,
     supports_template=True,
     supports_storage=True,
     mime_types=["text/html", "application/json"],
+)
+
+DATABASE_OUTPUT_SPEC_0_0_1 = OutputSpec(
+    id="database",
+    version="0.0.1",
+    name="Database",
+    description="Write results back to a SQL or NoSQL store, where the rest of the business already reads from rather than into a file somebody must find.",
+    icon="database",
+    enabled=False,
+    supports_template=False,
+    supports_storage=True,
+    mime_types=["application/sql", "application/json"],
 )
 
 DOCUMENT_OUTPUT_SPEC_0_0_1 = OutputSpec(
@@ -45,6 +59,7 @@ DOCUMENT_OUTPUT_SPEC_0_0_1 = OutputSpec(
     name="Document",
     description="Deliver results as a structured document (PDF, DOCX, or Markdown) suitable for sharing, archiving, or regulatory compliance.",
     icon="file",
+    enabled=False,
     supports_template=True,
     supports_storage=True,
     mime_types=[
@@ -60,6 +75,7 @@ EMAIL_OUTPUT_SPEC_0_0_1 = OutputSpec(
     name="Email",
     description="Send results as an email attachment or inline HTML body. Supports rich formatting with embedded tables and charts.",
     icon="mail",
+    enabled=False,
     supports_template=True,
     supports_storage=False,
     mime_types=["text/html", "application/pdf"],
@@ -71,6 +87,7 @@ JSON_OUTPUT_SPEC_0_0_1 = OutputSpec(
     name="JSON",
     description="Deliver results as structured JSON data, suitable for programmatic consumption by APIs, pipelines, or dashboards.",
     icon="code",
+    enabled=False,
     supports_template=False,
     supports_storage=True,
     mime_types=["application/json"],
@@ -82,6 +99,7 @@ NOTEBOOK_OUTPUT_SPEC_0_0_1 = OutputSpec(
     name="Notebook",
     description="Deliver results as a Jupyter notebook with executable cells, inline visualizations, and rich markdown narrative.",
     icon="file-code",
+    enabled=False,
     supports_template=True,
     supports_storage=True,
     mime_types=["application/x-ipynb+json"],
@@ -93,9 +111,22 @@ SPREADSHEET_OUTPUT_SPEC_0_0_1 = OutputSpec(
     name="Spreadsheet",
     description="Deliver results as an Excel spreadsheet with formatted tables, charts, and multiple sheets for structured analysis.",
     icon="table",
+    enabled=False,
     supports_template=True,
     supports_storage=True,
     mime_types=["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+)
+
+WEBHOOK_OUTPUT_SPEC_0_0_1 = OutputSpec(
+    id="webhook",
+    version="0.0.1",
+    name="Webhook",
+    description="Push results to any HTTP endpoint as they are produced, so a run can hand its answer straight to whatever is waiting for it.",
+    icon="globe",
+    enabled=False,
+    supports_template=True,
+    supports_storage=False,
+    mime_types=["application/json", "text/plain"],
 )
 
 # ============================================================================
@@ -105,11 +136,13 @@ SPREADSHEET_OUTPUT_SPEC_0_0_1 = OutputSpec(
 OUTPUT_CATALOG: Dict[str, OutputSpec] = {
     "csv": CSV_OUTPUT_SPEC_0_0_1,
     "dashboard": DASHBOARD_OUTPUT_SPEC_0_0_1,
+    "database": DATABASE_OUTPUT_SPEC_0_0_1,
     "document": DOCUMENT_OUTPUT_SPEC_0_0_1,
     "email": EMAIL_OUTPUT_SPEC_0_0_1,
     "json": JSON_OUTPUT_SPEC_0_0_1,
     "notebook": NOTEBOOK_OUTPUT_SPEC_0_0_1,
     "spreadsheet": SPREADSHEET_OUTPUT_SPEC_0_0_1,
+    "webhook": WEBHOOK_OUTPUT_SPEC_0_0_1,
 }
 
 

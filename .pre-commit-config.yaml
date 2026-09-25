@@ -1,4 +1,4 @@
-exclude: '^conda.recipe|dev|docs|style|src|jupyter-config|.github|.storybook$'
+exclude: '^conda.recipe|dev|docs|style|src|jupyter-config|.github|.storybook$|\.sse$|^patches/'
 repos:
   # Basic file checks and formatting
   - repo: https://github.com/pre-commit/pre-commit-hooks

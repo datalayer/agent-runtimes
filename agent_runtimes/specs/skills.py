@@ -33,7 +33,7 @@ ACCOUNTING_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["accounting", "finance", "reconciliation", "close"],
     icon="book",
     emoji="🧮",
-    enabled=True,
+    enabled=False,
 )
 
 CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -51,7 +51,7 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["web", "crawl", "scraping"],
     icon="globe",
     emoji="🌐",
-    enabled=True,
+    enabled=False,
 )
 
 EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -69,7 +69,7 @@ EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["events", "orchestration", "automation"],
     icon="bell",
     emoji="📅",
-    enabled=True,
+    enabled=False,
 )
 
 GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -87,7 +87,7 @@ GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["github", "git", "code"],
     icon="mark-github",
     emoji="🐙",
-    enabled=True,
+    enabled=False,
 )
 
 JOKES_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -105,7 +105,7 @@ JOKES_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["fun", "humor", "demo"],
     icon="smiley",
     emoji="😄",
-    enabled=True,
+    enabled=False,
 )
 
 PDF_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -123,7 +123,7 @@ PDF_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["pdf", "documents", "extraction"],
     icon="file",
     emoji="📄",
-    enabled=True,
+    enabled=False,
 )
 
 TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
@@ -141,7 +141,7 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["nlp", "summarization", "text-processing"],
     icon="note",
     emoji="📝",
-    enabled=True,
+    enabled=False,
 )
 
 # ============================================================================

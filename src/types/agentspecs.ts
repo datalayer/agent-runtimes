@@ -24,6 +24,69 @@ import type { AgentCodemodeConfig, AgentAdvancedConfig } from './config';
  * Defines the configuration for a reusable agent template that can be
  * instantiated as an Agent Runtime.
  */
+/**
+ * An opener offered to somebody arriving at an empty chat.
+ *
+ * Text and, optionally, a mark to show beside it. It was a bare string, which
+ * is enough for a chip in an empty state and not enough for anywhere else a
+ * suggestion is offered — a menu, a launcher, a list of what an agent is for —
+ * where an unmarked row of sentences is hard to scan. Both marks are optional
+ * and independent: an octicon suits chrome already drawn in line art, an emoji
+ * suits a place that has colour.
+ */
+export interface AgentSuggestion {
+  /** What is sent when the suggestion is taken. */
+  text: string;
+  /**
+   * A few words shown as the label where the text is too long to be one — a
+   * chip, a menu row. The text itself is then the tooltip.
+   */
+  summary?: string;
+  /** Octicon name to show beside it. */
+  icon?: string;
+  /** Unicode emoji to show beside it. */
+  emoji?: string;
+}
+
+/**
+ * Conversation checkpoint configuration.
+ *
+ * Snapshots of the message history the agent (or the person) can rewind to.
+ * Complementary to runtime checkpoints (CRIU), which freeze the whole process.
+ */
+export interface AgentCheckpointsConfig {
+  /** Whether checkpointing is on for this agent. */
+  enabled?: boolean;
+  /** When a checkpoint is taken on its own. */
+  frequency?: 'every_turn' | 'every_tool' | 'manual_only';
+  /** Rolling window: the oldest checkpoint goes when this is exceeded. */
+  max_checkpoints?: number;
+  /** Where checkpoints are kept. */
+  store?: 'in_memory' | 'file';
+}
+
+/**
+ * One kind of work an agent can be delegated, and what it takes and returns.
+ *
+ * The unit `agents.discover` matches on. It maps onto an A2A agent card's
+ * `skills` entry, so a Datalayer agentspec and a third-party A2A worker are
+ * discoverable through one query rather than two.
+ */
+export interface AgentCapability {
+  /** One of the closed vocabulary in `agent_runtimes.types`. */
+  id: string;
+  /** Display label; the vocabulary's own description when absent. */
+  name?: string;
+  /** What this agent in particular does under that capability. */
+  description?: string;
+  /** Context reference kinds it accepts — notebook, dataset, file, sandbox. */
+  inputs?: string[];
+  /** Artifact types it produces — notebook, report, dataset, file. */
+  outputs?: string[];
+  /** Free text, for humans reading a catalogue; never matched on. */
+  tags?: string[];
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -39,6 +102,8 @@ export interface Agentspec {
   systemPromptCodemodeAddons?: string;
   /** Tags for categorization */
   tags: string[];
+  /** Domain used to group agents in the gallery */
+  domain?: string;
   /** Whether the agent is enabled */
   enabled: boolean;
   /** AI model identifier to use for this agent */
@@ -66,17 +131,40 @@ export interface Agentspec {
   /** Theme color for the agent (hex code) */
   color?: string;
   /** Chat suggestions to show users what this agent can do */
-  suggestions?: string[];
+  suggestions?: AgentSuggestion[];
   /** Welcome message shown when agent starts */
   welcomeMessage?: string;
   /** Path to Jupyter notebook to show on agent creation */
   welcomeNotebook?: string;
   /** Path to Lexical document to show on agent creation */
   welcomeDocument?: string;
-  /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter', 'kaggle'). */
+  /**
+   * Which agent framework runs this agent's loop.
+   *
+   * `pydantic-ai` (the default) runs it server-side in the agent runtime;
+   * `vercel-ai` runs it in the browser with the Vercel AI SDK, for an agent
+   * that has to work with no server behind it. Distinct from `protocol`,
+   * which says how a client and an agent talk rather than what runs the loop.
+   */
+  harness?: string;
+  /** Sandbox variant to use for this agent (e.g. 'eval', 'jupyter-server', 'kaggle'). */
   sandboxVariant?: string;
   /** User-facing objective for the agent */
   goal?: string;
+  /**
+   * What work this agent can be delegated (ORCHESTRATOR.md, O2-07).
+   *
+   * `protocol` below says how a client and an agent talk; this says what it
+   * is worth handing the agent. Ids come from a closed vocabulary, because
+   * `agents.discover --capability notebook.validate` has to match something
+   * and free text does not: two specs saying "analysis" and "analyse"
+   * describe the same work and find each other never.
+   *
+   * Deliberately not called `capabilities`: that name is already taken on
+   * this type for pydantic-ai capability configurations, which are runtime
+   * behaviours attached to an agent rather than work handed to it.
+   */
+  delegable?: AgentCapability[];
   /** Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai') */
   protocol?: string;
   /** UI extension type (e.g., 'a2ui', 'mcp-apps') */
@@ -97,6 +185,8 @@ export interface Agentspec {
   output?: AgentOutputConfig;
   /** Advanced settings (cost_limit, time_limit, max_iterations, validation) */
   advanced?: AgentAdvancedConfig;
+  /** Conversation checkpoints: auto-snapshots of the history, with tools to save, list and rewind. */
+  checkpoints?: AgentCheckpointsConfig;
   /** Authorization policy */
   authorizationPolicy?: string;
   /** Notification configuration (email, slack) */
@@ -121,6 +211,23 @@ export interface Agentspec {
 }
 
 /**
+ * Where a subagent reached over A2A lives, or how to launch it.
+ *
+ * Either `url` names an agent already running, or the subagent's `ref` names
+ * the agentspec to launch one from — on the local agent-runtimes server when
+ * the parent runs locally and on a Datalayer runtime when it runs in the
+ * cloud (`launch: 'auto'`, the default), or on one of those explicitly.
+ */
+export interface A2ASubagentConfig {
+  /** JSON-RPC endpoint of an A2A agent already running. */
+  url?: string;
+  /** Where to launch the agent named by `ref`. */
+  launch?: 'local' | 'cloud' | 'auto';
+  /** Runtime environment for a cloud launch. */
+  environment?: string;
+}
+
+/**
  * Configuration for a subagent within an agent specification.
  */
 export interface SubAgentspecConfig {
@@ -128,8 +235,23 @@ export interface SubAgentspecConfig {
   name: string;
   /** Brief description shown to the parent agent */
   description: string;
-  /** System prompt for the subagent */
-  instructions: string;
+  /**
+   * System prompt for the subagent. Optional when `ref` names an agentspec to
+   * take it from.
+   */
+  instructions?: string;
+  /**
+   * An agentspec this subagent *is*, as `<id>:<version>`.
+   *
+   * A specialist defined once and referenced by many parents, rather than its
+   * instructions copy-pasted into each — which is how they drift apart.
+   */
+  ref?: string;
+  /**
+   * Reach this subagent over A2A, as a separate agent, instead of running it
+   * inside the parent's process.
+   */
+  a2a?: A2ASubagentConfig;
   /** LLM model to use (defaults to parent agent's model) */
   model?: string;
   /** Whether the subagent can ask the parent for clarification */

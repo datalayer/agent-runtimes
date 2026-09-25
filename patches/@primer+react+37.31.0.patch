@@ -1,0 +1,390 @@
+diff --git a/node_modules/@primer/react/lib-esm/AnchoredOverlay/AnchoredOverlay.d.ts b/node_modules/@primer/react/lib-esm/AnchoredOverlay/AnchoredOverlay.d.ts
+index fd9bcf5..20408cb 100644
+--- a/node_modules/@primer/react/lib-esm/AnchoredOverlay/AnchoredOverlay.d.ts
++++ b/node_modules/@primer/react/lib-esm/AnchoredOverlay/AnchoredOverlay.d.ts
+@@ -10,7 +10,7 @@ interface AnchoredOverlayPropsWithAnchor {
+      * A custom function component used to render the anchor element.
+      * Will receive the selected text as `children` prop when an item is activated.
+      */
+-    renderAnchor: <T extends React.HTMLAttributes<HTMLElement>>(props: T) => JSX.Element;
++    renderAnchor: <T extends React.HTMLAttributes<HTMLElement>>(props: T) => React.JSX.Element;
+     /**
+      * An override to the internal ref that will be spread on to the renderAnchor
+      */
+diff --git a/node_modules/@primer/react/lib-esm/BaseStyles.d.ts b/node_modules/@primer/react/lib-esm/BaseStyles.d.ts
+index d5ce099..cfb4a98 100644
+--- a/node_modules/@primer/react/lib-esm/BaseStyles.d.ts
++++ b/node_modules/@primer/react/lib-esm/BaseStyles.d.ts
+@@ -4,7 +4,7 @@ import type { SystemCommonProps, SystemTypographyProps } from './constants';
+ import type { SxProp } from './sx';
+ import 'focus-visible';
+ export type BaseStylesProps = PropsWithChildren & {
+-    as?: React.ComponentType<any> | keyof JSX.IntrinsicElements;
++    as?: React.ComponentType<any> | keyof React.JSX.IntrinsicElements;
+     className?: string;
+     style?: CSSProperties;
+     color?: string;
+diff --git a/node_modules/@primer/react/lib-esm/DataTable/Table.d.ts b/node_modules/@primer/react/lib-esm/DataTable/Table.d.ts
+index 6a0c96b..11bea9a 100644
+--- a/node_modules/@primer/react/lib-esm/DataTable/Table.d.ts
++++ b/node_modules/@primer/react/lib-esm/DataTable/Table.d.ts
+@@ -88,7 +88,7 @@ export type TableTitleProps = React.PropsWithChildren<{
+      * `TableSubtitle`. This is useful when specifying markup that is more
+      * semantic for your use-case, such as a heading tag.
+      */
+-    as?: keyof JSX.IntrinsicElements | React.ComponentType;
++    as?: keyof React.JSX.IntrinsicElements | React.ComponentType;
+     /**
+      * Provide a unique id for the table subtitle. This should be used along with
+      * `aria-labelledby` on `DataTable`
+@@ -102,7 +102,7 @@ export type TableSubtitleProps = React.PropsWithChildren<{
+      * `TableSubtitle`. This is useful when specifying markup that is more
+      * semantic for your use-case
+      */
+-    as?: keyof JSX.IntrinsicElements | React.ComponentType;
++    as?: keyof React.JSX.IntrinsicElements | React.ComponentType;
+     /**
+      * Provide a unique id for the table subtitle. This should be used along with
+      * `aria-describedby` on `DataTable`
+diff --git a/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionList.d.ts b/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionList.d.ts
+index 8cde497..13d91d1 100644
+--- a/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionList.d.ts
++++ b/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionList.d.ts
+@@ -23,7 +23,7 @@ export interface FilteredActionListProps extends Partial<Omit<GroupedListProps,
+     fullScreenOnNarrow?: boolean;
+     onSelectAllChange?: (checked: boolean) => void;
+ }
+-export declare function FilteredActionList({ loading, placeholderText, filterValue: externalFilterValue, loadingType, onFilterChange, onListContainerRefChanged, onInputRefChanged, items, textInputProps, inputRef: providedInputRef, sx, groupMetadata, showItemDividers, message, messageText, className, selectionVariant, announcementsEnabled, fullScreenOnNarrow, onSelectAllChange, ...listProps }: FilteredActionListProps): JSX.Element;
++export declare function FilteredActionList({ loading, placeholderText, filterValue: externalFilterValue, loadingType, onFilterChange, onListContainerRefChanged, onInputRefChanged, items, textInputProps, inputRef: providedInputRef, sx, groupMetadata, showItemDividers, message, messageText, className, selectionVariant, announcementsEnabled, fullScreenOnNarrow, onSelectAllChange, ...listProps }: FilteredActionListProps): React.JSX.Element;
+ export declare namespace FilteredActionList {
+     var displayName: string;
+ }
+diff --git a/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionListLoaders.d.ts b/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionListLoaders.d.ts
+index 2da18be..ef3829c 100644
+--- a/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionListLoaders.d.ts
++++ b/node_modules/@primer/react/lib-esm/FilteredActionList/FilteredActionListLoaders.d.ts
+@@ -1,3 +1,4 @@
++import type React from 'react';
+ export declare class FilteredActionListLoadingType {
+     name: string;
+     appearsInBody: boolean;
+@@ -11,5 +12,5 @@ export declare const FilteredActionListLoadingTypes: {
+ export declare function FilteredActionListBodyLoader({ loadingType, height, }: {
+     loadingType: FilteredActionListLoadingType;
+     height: number;
+-}): JSX.Element;
++}): React.JSX.Element;
+ //# sourceMappingURL=FilteredActionListLoaders.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@primer/react/lib-esm/SelectPanel/SelectPanel.d.ts b/node_modules/@primer/react/lib-esm/SelectPanel/SelectPanel.d.ts
+index 0c79996..1dfd2cd 100644
+--- a/node_modules/@primer/react/lib-esm/SelectPanel/SelectPanel.d.ts
++++ b/node_modules/@primer/react/lib-esm/SelectPanel/SelectPanel.d.ts
+@@ -59,7 +59,7 @@ type SelectPanelVariantProps = {
+     onCancel: () => void;
+ };
+ export type SelectPanelProps = SelectPanelBaseProps & Omit<FilteredActionListProps, 'selectionVariant' | 'variant' | 'message'> & Pick<AnchoredOverlayProps, 'open' | 'height' | 'width' | 'align'> & AnchoredOverlayWrapperAnchorProps & (SelectPanelSingleSelection | SelectPanelMultiSelection) & SelectPanelVariantProps;
+-declare function Panel({ open, onOpenChange, renderAnchor, anchorRef: externalAnchorRef, placeholder, placeholderText, inputLabel, selected, title, subtitle, onSelectedChange, filterValue: externalFilterValue, onFilterChange: externalOnFilterChange, items, footer, textInputProps, overlayProps, sx, loading, initialLoadingType, className, height, width, id, message, notice, onCancel, variant, secondaryAction, showSelectedOptionsFirst, disableFullscreenOnNarrow, align, showSelectAll, ...listProps }: SelectPanelProps): JSX.Element;
++declare function Panel({ open, onOpenChange, renderAnchor, anchorRef: externalAnchorRef, placeholder, placeholderText, inputLabel, selected, title, subtitle, onSelectedChange, filterValue: externalFilterValue, onFilterChange: externalOnFilterChange, items, footer, textInputProps, overlayProps, sx, loading, initialLoadingType, className, height, width, id, message, notice, onCancel, variant, secondaryAction, showSelectedOptionsFirst, disableFullscreenOnNarrow, align, showSelectAll, ...listProps }: SelectPanelProps): React.JSX.Element;
+ declare const SecondaryButton: React.FC<ButtonProps>;
+ declare const SecondaryLink: React.FC<LinkButtonProps & ButtonProps>;
+ export declare const SelectPanel: typeof Panel & {
+diff --git a/node_modules/@primer/react/lib-esm/Text/Text.d.ts b/node_modules/@primer/react/lib-esm/Text/Text.d.ts
+index e7692aa..5449c58 100644
+--- a/node_modules/@primer/react/lib-esm/Text/Text.d.ts
++++ b/node_modules/@primer/react/lib-esm/Text/Text.d.ts
+@@ -3,7 +3,7 @@ import React from 'react';
+ import type { SystemCommonProps, SystemTypographyProps } from '../constants';
+ import type { SxProp } from '../sx';
+ type StyledTextProps = {
+-    as?: React.ComponentType<any> | keyof JSX.IntrinsicElements;
++    as?: React.ComponentType<any> | keyof React.JSX.IntrinsicElements;
+     size?: 'large' | 'medium' | 'small';
+     weight?: 'light' | 'normal' | 'medium' | 'semibold';
+ } & SystemTypographyProps & SystemCommonProps & SxProp & React.HTMLAttributes<HTMLSpanElement>;
+diff --git a/node_modules/@primer/react/lib-esm/deprecated/ActionList/Divider.d.ts b/node_modules/@primer/react/lib-esm/deprecated/ActionList/Divider.d.ts
+index 91a770f..25ab073 100644
+--- a/node_modules/@primer/react/lib-esm/deprecated/ActionList/Divider.d.ts
++++ b/node_modules/@primer/react/lib-esm/deprecated/ActionList/Divider.d.ts
+@@ -1,8 +1,9 @@
++import type React from 'react';
+ export declare const StyledDivider: import("styled-components").StyledComponent<"div", any, {}, never>;
+ /**
+  * Visually separates `Item`s or `Group`s in an `ActionList`.
+  */
+-export declare function Divider(): JSX.Element;
++export declare function Divider(): React.JSX.Element;
+ export declare namespace Divider {
+     var renderItem: typeof Divider;
+ }
+diff --git a/node_modules/@primer/react/lib-esm/deprecated/ActionList/Group.d.ts b/node_modules/@primer/react/lib-esm/deprecated/ActionList/Group.d.ts
+index 98c8809..1fdceeb 100644
+--- a/node_modules/@primer/react/lib-esm/deprecated/ActionList/Group.d.ts
++++ b/node_modules/@primer/react/lib-esm/deprecated/ActionList/Group.d.ts
+@@ -16,7 +16,7 @@ export interface GroupProps extends React.ComponentPropsWithoutRef<'div'>, SxPro
+     /**
+      * `Items` to render in the `Group`.
+      */
+-    items?: JSX.Element[];
++    items?: React.JSX.Element[];
+     /**
+      * Whether to display a divider above each `Item` in this `Group` when it does not follow a `Header` or `Divider`.
+      */
+@@ -25,5 +25,5 @@ export interface GroupProps extends React.ComponentPropsWithoutRef<'div'>, SxPro
+ /**
+  * Collects related `Items` in an `ActionList`.
+  */
+-export declare function Group({ header, items, ...props }: GroupProps): JSX.Element;
++export declare function Group({ header, items, ...props }: GroupProps): React.JSX.Element;
+ //# sourceMappingURL=Group.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@primer/react/lib-esm/deprecated/ActionList/Header.d.ts b/node_modules/@primer/react/lib-esm/deprecated/ActionList/Header.d.ts
+index c31b8cc..c5a0401 100644
+--- a/node_modules/@primer/react/lib-esm/deprecated/ActionList/Header.d.ts
++++ b/node_modules/@primer/react/lib-esm/deprecated/ActionList/Header.d.ts
+@@ -26,5 +26,5 @@ export declare const StyledHeader: import("styled-components").StyledComponent<"
+ /**
+  * Displays the name and description of a `Group`.
+  */
+-export declare function Header({ variant, title, auxiliaryText, children: _children, ...props }: HeaderProps): JSX.Element;
++export declare function Header({ variant, title, auxiliaryText, children: _children, ...props }: HeaderProps): React.JSX.Element;
+ //# sourceMappingURL=Header.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@primer/react/lib-esm/deprecated/ActionMenu.d.ts b/node_modules/@primer/react/lib-esm/deprecated/ActionMenu.d.ts
+index 6ddbd32..d61abe9 100644
+--- a/node_modules/@primer/react/lib-esm/deprecated/ActionMenu.d.ts
++++ b/node_modules/@primer/react/lib-esm/deprecated/ActionMenu.d.ts
+@@ -31,7 +31,7 @@ export type ActionMenuProps = ActionMenuBaseProps & AnchoredOverlayWrapperAnchor
+  * @deprecated Use ActionMenu with composable API instead. See https://primer.style/react/ActionMenu for more details.
+  */
+ export declare const ActionMenu: {
+-    ({ anchorContent, renderAnchor, anchorRef: externalAnchorRef, onAction, open, setOpen, overlayProps, items, ...listProps }: ActionMenuProps): JSX.Element;
++    ({ anchorContent, renderAnchor, anchorRef: externalAnchorRef, onAction, open, setOpen, overlayProps, items, ...listProps }: ActionMenuProps): React.JSX.Element;
+     displayName: string;
+ } & {
+     Divider: typeof Divider;
+diff --git a/node_modules/@primer/react/lib-esm/utils/polymorphic.d.ts b/node_modules/@primer/react/lib-esm/utils/polymorphic.d.ts
+index bbe2f50..f2abd05 100644
+--- a/node_modules/@primer/react/lib-esm/utils/polymorphic.d.ts
++++ b/node_modules/@primer/react/lib-esm/utils/polymorphic.d.ts
+@@ -11,7 +11,7 @@ type Merge<P1 = {}, P2 = {}> = Omit<P1, keyof P2> & P2;
+  */
+ type OwnProps<E> = E extends ForwardRefComponent<any, infer P> ? P : {};
+ /**
+- * Infers the JSX.IntrinsicElement if E is a ForwardRefExoticComponentWithAs
++ * Infers the React.JSX.IntrinsicElement if E is a ForwardRefExoticComponentWithAs
+  */
+ type IntrinsicElement<E> = E extends ForwardRefComponent<infer I, any> ? I : never;
+ type ForwardRefExoticComponent<E, OwnProps> = React.ForwardRefExoticComponent<Merge<E extends React.ElementType ? React.ComponentPropsWithRef<E> : never, OwnProps & {
+@@ -24,13 +24,13 @@ interface ForwardRefComponent<IntrinsicElementString, OwnProps = {}> extends For
+      * from `as` element with the own props taking precedence.
+      *
+      * We explicitly avoid `React.ElementType` and manually narrow the prop types
+-     * so that events are typed when using JSX.IntrinsicElements.
++     * so that events are typed when using React.JSX.IntrinsicElements.
+      */
+     <As = IntrinsicElementString>(props: As extends '' ? {
+-        as: keyof JSX.IntrinsicElements;
++        as: keyof React.JSX.IntrinsicElements;
+     } : As extends React.ComponentType<infer P> ? Merge<P, OwnProps & {
+         as: As;
+-    }> : As extends keyof JSX.IntrinsicElements ? Merge<JSX.IntrinsicElements[As], OwnProps & {
++    }> : As extends keyof React.JSX.IntrinsicElements ? Merge<React.JSX.IntrinsicElements[As], OwnProps & {
+         as: As;
+     }> : never): React.ReactElement | null;
+ }
+diff --git a/node_modules/@primer/react/lib/AnchoredOverlay/AnchoredOverlay.d.ts b/node_modules/@primer/react/lib/AnchoredOverlay/AnchoredOverlay.d.ts
+index fd9bcf5..20408cb 100644
+--- a/node_modules/@primer/react/lib/AnchoredOverlay/AnchoredOverlay.d.ts
++++ b/node_modules/@primer/react/lib/AnchoredOverlay/AnchoredOverlay.d.ts
+@@ -10,7 +10,7 @@ interface AnchoredOverlayPropsWithAnchor {
+      * A custom function component used to render the anchor element.
+      * Will receive the selected text as `children` prop when an item is activated.
+      */
+-    renderAnchor: <T extends React.HTMLAttributes<HTMLElement>>(props: T) => JSX.Element;
++    renderAnchor: <T extends React.HTMLAttributes<HTMLElement>>(props: T) => React.JSX.Element;
+     /**
+      * An override to the internal ref that will be spread on to the renderAnchor
+      */
+diff --git a/node_modules/@primer/react/lib/BaseStyles.d.ts b/node_modules/@primer/react/lib/BaseStyles.d.ts
+index d5ce099..cfb4a98 100644
+--- a/node_modules/@primer/react/lib/BaseStyles.d.ts
++++ b/node_modules/@primer/react/lib/BaseStyles.d.ts
+@@ -4,7 +4,7 @@ import type { SystemCommonProps, SystemTypographyProps } from './constants';
+ import type { SxProp } from './sx';
+ import 'focus-visible';
+ export type BaseStylesProps = PropsWithChildren & {
+-    as?: React.ComponentType<any> | keyof JSX.IntrinsicElements;
++    as?: React.ComponentType<any> | keyof React.JSX.IntrinsicElements;
+     className?: string;
+     style?: CSSProperties;
+     color?: string;
+diff --git a/node_modules/@primer/react/lib/DataTable/Table.d.ts b/node_modules/@primer/react/lib/DataTable/Table.d.ts
+index 6a0c96b..11bea9a 100644
+--- a/node_modules/@primer/react/lib/DataTable/Table.d.ts
++++ b/node_modules/@primer/react/lib/DataTable/Table.d.ts
+@@ -88,7 +88,7 @@ export type TableTitleProps = React.PropsWithChildren<{
+      * `TableSubtitle`. This is useful when specifying markup that is more
+      * semantic for your use-case, such as a heading tag.
+      */
+-    as?: keyof JSX.IntrinsicElements | React.ComponentType;
++    as?: keyof React.JSX.IntrinsicElements | React.ComponentType;
+     /**
+      * Provide a unique id for the table subtitle. This should be used along with
+      * `aria-labelledby` on `DataTable`
+@@ -102,7 +102,7 @@ export type TableSubtitleProps = React.PropsWithChildren<{
+      * `TableSubtitle`. This is useful when specifying markup that is more
+      * semantic for your use-case
+      */
+-    as?: keyof JSX.IntrinsicElements | React.ComponentType;
++    as?: keyof React.JSX.IntrinsicElements | React.ComponentType;
+     /**
+      * Provide a unique id for the table subtitle. This should be used along with
+      * `aria-describedby` on `DataTable`
+diff --git a/node_modules/@primer/react/lib/FilteredActionList/FilteredActionList.d.ts b/node_modules/@primer/react/lib/FilteredActionList/FilteredActionList.d.ts
+index 8cde497..13d91d1 100644
+--- a/node_modules/@primer/react/lib/FilteredActionList/FilteredActionList.d.ts
++++ b/node_modules/@primer/react/lib/FilteredActionList/FilteredActionList.d.ts
+@@ -23,7 +23,7 @@ export interface FilteredActionListProps extends Partial<Omit<GroupedListProps,
+     fullScreenOnNarrow?: boolean;
+     onSelectAllChange?: (checked: boolean) => void;
+ }
+-export declare function FilteredActionList({ loading, placeholderText, filterValue: externalFilterValue, loadingType, onFilterChange, onListContainerRefChanged, onInputRefChanged, items, textInputProps, inputRef: providedInputRef, sx, groupMetadata, showItemDividers, message, messageText, className, selectionVariant, announcementsEnabled, fullScreenOnNarrow, onSelectAllChange, ...listProps }: FilteredActionListProps): JSX.Element;
++export declare function FilteredActionList({ loading, placeholderText, filterValue: externalFilterValue, loadingType, onFilterChange, onListContainerRefChanged, onInputRefChanged, items, textInputProps, inputRef: providedInputRef, sx, groupMetadata, showItemDividers, message, messageText, className, selectionVariant, announcementsEnabled, fullScreenOnNarrow, onSelectAllChange, ...listProps }: FilteredActionListProps): React.JSX.Element;
+ export declare namespace FilteredActionList {
+     var displayName: string;
+ }
+diff --git a/node_modules/@primer/react/lib/FilteredActionList/FilteredActionListLoaders.d.ts b/node_modules/@primer/react/lib/FilteredActionList/FilteredActionListLoaders.d.ts
+index 2da18be..ef3829c 100644
+--- a/node_modules/@primer/react/lib/FilteredActionList/FilteredActionListLoaders.d.ts
++++ b/node_modules/@primer/react/lib/FilteredActionList/FilteredActionListLoaders.d.ts
+@@ -1,3 +1,4 @@
++import type React from 'react';
+ export declare class FilteredActionListLoadingType {
+     name: string;
+     appearsInBody: boolean;
+@@ -11,5 +12,5 @@ export declare const FilteredActionListLoadingTypes: {
+ export declare function FilteredActionListBodyLoader({ loadingType, height, }: {
+     loadingType: FilteredActionListLoadingType;
+     height: number;
+-}): JSX.Element;
++}): React.JSX.Element;
+ //# sourceMappingURL=FilteredActionListLoaders.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@primer/react/lib/SelectPanel/SelectPanel.d.ts b/node_modules/@primer/react/lib/SelectPanel/SelectPanel.d.ts
+index 0c79996..1dfd2cd 100644
+--- a/node_modules/@primer/react/lib/SelectPanel/SelectPanel.d.ts
++++ b/node_modules/@primer/react/lib/SelectPanel/SelectPanel.d.ts
+@@ -59,7 +59,7 @@ type SelectPanelVariantProps = {
+     onCancel: () => void;
+ };
+ export type SelectPanelProps = SelectPanelBaseProps & Omit<FilteredActionListProps, 'selectionVariant' | 'variant' | 'message'> & Pick<AnchoredOverlayProps, 'open' | 'height' | 'width' | 'align'> & AnchoredOverlayWrapperAnchorProps & (SelectPanelSingleSelection | SelectPanelMultiSelection) & SelectPanelVariantProps;
+-declare function Panel({ open, onOpenChange, renderAnchor, anchorRef: externalAnchorRef, placeholder, placeholderText, inputLabel, selected, title, subtitle, onSelectedChange, filterValue: externalFilterValue, onFilterChange: externalOnFilterChange, items, footer, textInputProps, overlayProps, sx, loading, initialLoadingType, className, height, width, id, message, notice, onCancel, variant, secondaryAction, showSelectedOptionsFirst, disableFullscreenOnNarrow, align, showSelectAll, ...listProps }: SelectPanelProps): JSX.Element;
++declare function Panel({ open, onOpenChange, renderAnchor, anchorRef: externalAnchorRef, placeholder, placeholderText, inputLabel, selected, title, subtitle, onSelectedChange, filterValue: externalFilterValue, onFilterChange: externalOnFilterChange, items, footer, textInputProps, overlayProps, sx, loading, initialLoadingType, className, height, width, id, message, notice, onCancel, variant, secondaryAction, showSelectedOptionsFirst, disableFullscreenOnNarrow, align, showSelectAll, ...listProps }: SelectPanelProps): React.JSX.Element;
+ declare const SecondaryButton: React.FC<ButtonProps>;
+ declare const SecondaryLink: React.FC<LinkButtonProps & ButtonProps>;
+ export declare const SelectPanel: typeof Panel & {
+diff --git a/node_modules/@primer/react/lib/Text/Text.d.ts b/node_modules/@primer/react/lib/Text/Text.d.ts
+index e7692aa..5449c58 100644
+--- a/node_modules/@primer/react/lib/Text/Text.d.ts
++++ b/node_modules/@primer/react/lib/Text/Text.d.ts
+@@ -3,7 +3,7 @@ import React from 'react';
+ import type { SystemCommonProps, SystemTypographyProps } from '../constants';
+ import type { SxProp } from '../sx';
+ type StyledTextProps = {
+-    as?: React.ComponentType<any> | keyof JSX.IntrinsicElements;
++    as?: React.ComponentType<any> | keyof React.JSX.IntrinsicElements;
+     size?: 'large' | 'medium' | 'small';
+     weight?: 'light' | 'normal' | 'medium' | 'semibold';
+ } & SystemTypographyProps & SystemCommonProps & SxProp & React.HTMLAttributes<HTMLSpanElement>;
+diff --git a/node_modules/@primer/react/lib/deprecated/ActionList/Divider.d.ts b/node_modules/@primer/react/lib/deprecated/ActionList/Divider.d.ts
+index 91a770f..25ab073 100644
+--- a/node_modules/@primer/react/lib/deprecated/ActionList/Divider.d.ts
++++ b/node_modules/@primer/react/lib/deprecated/ActionList/Divider.d.ts
+@@ -1,8 +1,9 @@
++import type React from 'react';
+ export declare const StyledDivider: import("styled-components").StyledComponent<"div", any, {}, never>;
+ /**
+  * Visually separates `Item`s or `Group`s in an `ActionList`.
+  */
+-export declare function Divider(): JSX.Element;
++export declare function Divider(): React.JSX.Element;
+ export declare namespace Divider {
+     var renderItem: typeof Divider;
+ }
+diff --git a/node_modules/@primer/react/lib/deprecated/ActionList/Group.d.ts b/node_modules/@primer/react/lib/deprecated/ActionList/Group.d.ts
+index 98c8809..1fdceeb 100644
+--- a/node_modules/@primer/react/lib/deprecated/ActionList/Group.d.ts
++++ b/node_modules/@primer/react/lib/deprecated/ActionList/Group.d.ts
+@@ -16,7 +16,7 @@ export interface GroupProps extends React.ComponentPropsWithoutRef<'div'>, SxPro
+     /**
+      * `Items` to render in the `Group`.
+      */
+-    items?: JSX.Element[];
++    items?: React.JSX.Element[];
+     /**
+      * Whether to display a divider above each `Item` in this `Group` when it does not follow a `Header` or `Divider`.
+      */
+@@ -25,5 +25,5 @@ export interface GroupProps extends React.ComponentPropsWithoutRef<'div'>, SxPro
+ /**
+  * Collects related `Items` in an `ActionList`.
+  */
+-export declare function Group({ header, items, ...props }: GroupProps): JSX.Element;
++export declare function Group({ header, items, ...props }: GroupProps): React.JSX.Element;
+ //# sourceMappingURL=Group.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@primer/react/lib/deprecated/ActionList/Header.d.ts b/node_modules/@primer/react/lib/deprecated/ActionList/Header.d.ts
+index c31b8cc..c5a0401 100644
+--- a/node_modules/@primer/react/lib/deprecated/ActionList/Header.d.ts
++++ b/node_modules/@primer/react/lib/deprecated/ActionList/Header.d.ts
+@@ -26,5 +26,5 @@ export declare const StyledHeader: import("styled-components").StyledComponent<"
+ /**
+  * Displays the name and description of a `Group`.
+  */
+-export declare function Header({ variant, title, auxiliaryText, children: _children, ...props }: HeaderProps): JSX.Element;
++export declare function Header({ variant, title, auxiliaryText, children: _children, ...props }: HeaderProps): React.JSX.Element;
+ //# sourceMappingURL=Header.d.ts.map
+\ No newline at end of file
+diff --git a/node_modules/@primer/react/lib/deprecated/ActionMenu.d.ts b/node_modules/@primer/react/lib/deprecated/ActionMenu.d.ts
+index 6ddbd32..d61abe9 100644
+--- a/node_modules/@primer/react/lib/deprecated/ActionMenu.d.ts
++++ b/node_modules/@primer/react/lib/deprecated/ActionMenu.d.ts
+@@ -31,7 +31,7 @@ export type ActionMenuProps = ActionMenuBaseProps & AnchoredOverlayWrapperAnchor
+  * @deprecated Use ActionMenu with composable API instead. See https://primer.style/react/ActionMenu for more details.
+  */
+ export declare const ActionMenu: {
+-    ({ anchorContent, renderAnchor, anchorRef: externalAnchorRef, onAction, open, setOpen, overlayProps, items, ...listProps }: ActionMenuProps): JSX.Element;
++    ({ anchorContent, renderAnchor, anchorRef: externalAnchorRef, onAction, open, setOpen, overlayProps, items, ...listProps }: ActionMenuProps): React.JSX.Element;
+     displayName: string;
+ } & {
+     Divider: typeof Divider;
+diff --git a/node_modules/@primer/react/lib/utils/polymorphic.d.ts b/node_modules/@primer/react/lib/utils/polymorphic.d.ts
+index bbe2f50..f2abd05 100644
+--- a/node_modules/@primer/react/lib/utils/polymorphic.d.ts
++++ b/node_modules/@primer/react/lib/utils/polymorphic.d.ts
+@@ -11,7 +11,7 @@ type Merge<P1 = {}, P2 = {}> = Omit<P1, keyof P2> & P2;
+  */
+ type OwnProps<E> = E extends ForwardRefComponent<any, infer P> ? P : {};
+ /**
+- * Infers the JSX.IntrinsicElement if E is a ForwardRefExoticComponentWithAs
++ * Infers the React.JSX.IntrinsicElement if E is a ForwardRefExoticComponentWithAs
+  */
+ type IntrinsicElement<E> = E extends ForwardRefComponent<infer I, any> ? I : never;
+ type ForwardRefExoticComponent<E, OwnProps> = React.ForwardRefExoticComponent<Merge<E extends React.ElementType ? React.ComponentPropsWithRef<E> : never, OwnProps & {
+@@ -24,13 +24,13 @@ interface ForwardRefComponent<IntrinsicElementString, OwnProps = {}> extends For
+      * from `as` element with the own props taking precedence.
+      *
+      * We explicitly avoid `React.ElementType` and manually narrow the prop types
+-     * so that events are typed when using JSX.IntrinsicElements.
++     * so that events are typed when using React.JSX.IntrinsicElements.
+      */
+     <As = IntrinsicElementString>(props: As extends '' ? {
+-        as: keyof JSX.IntrinsicElements;
++        as: keyof React.JSX.IntrinsicElements;
+     } : As extends React.ComponentType<infer P> ? Merge<P, OwnProps & {
+         as: As;
+-    }> : As extends keyof JSX.IntrinsicElements ? Merge<JSX.IntrinsicElements[As], OwnProps & {
++    }> : As extends keyof React.JSX.IntrinsicElements ? Merge<React.JSX.IntrinsicElements[As], OwnProps & {
+         as: As;
+     }> : never): React.ReactElement | null;
+ }

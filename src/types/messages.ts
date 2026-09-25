@@ -66,6 +66,31 @@ export type ContentPart =
   | ActivityContentPart;
 
 /**
+ * Who said a message, when a chat holds more than one non-user voice — a
+ * team's supervisor and its members, not just "the assistant".
+ *
+ * Attaching one to a message is what tells `ChatMessageList` to draw a named,
+ * coloured header instead of the single generic assistant look; a message
+ * with no `speaker` renders exactly as it always has.
+ */
+export interface MessageSpeaker {
+  /** Stable id, e.g. an agent id — not shown, but keeps two same-named speakers apart. */
+  id: string;
+  name: string;
+  /** A short label under the name, e.g. "supervisor" or a capability. */
+  role?: string;
+  /**
+   * The Primer colour family this speaker is drawn in — `'accent'`,
+   * `'success'`, `'attention'`, `'severe'`, `'sponsors'`, `'neutral'`, or any
+   * other family `sx` resolves as `<tone>.emphasis` / `.subtle` / `.muted` /
+   * `.fg`. Omitted or `'neutral'` falls back to the chat's neutral tones.
+   */
+  tone?: string;
+  /** Up to two letters shown in the avatar in place of the default icon. */
+  initials?: string;
+}
+
+/**
  * Core message interface
  */
 export interface ChatMessage {
@@ -83,6 +108,48 @@ export interface ChatMessage {
 
   /** Optional agent name for multi-agent scenarios */
   agentName?: string;
+
+  /**
+   * Who said this message, when the chat has more than one voice. See
+   * {@link MessageSpeaker}.
+   */
+  speaker?: MessageSpeaker;
+
+  /**
+   * Who this message is addressed to — one agent hanging another its brief,
+   * or a person steering an agent already at work. Shown in the header as
+   * "<speaker> asks/steers <directedTo>"; ignored without `speaker`.
+   */
+  directedTo?: MessageSpeaker;
+
+  /**
+   * `true` for a person's instruction to an agent already working, `false`
+   * (or omitted) for a delegation. Only meaningful with `directedTo`, where
+   * it chooses "steers" over "asks".
+   */
+  steer?: boolean;
+
+  /**
+   * Short labels for tools this message's turn called, shown as small chips
+   * above the text — lighter than a full tool-call card, for a turn already
+   * known to have finished rather than one awaiting approval.
+   */
+  toolChips?: string[];
+
+  /**
+   * Still being written: the speaker is working and this message is not its
+   * settled content yet. With no text yet, `ChatMessageList` shows a typing
+   * indicator in its place.
+   */
+  live?: boolean;
+
+  /**
+   * Renders this message as a distinct aside — centred, pill-shaped, no
+   * avatar or side — rather than as a speech bubble. For a wait, a failure or
+   * a stop: something that happened to a part of the conversation, not
+   * something a speaker said.
+   */
+  note?: 'waiting' | 'failed' | 'stopped';
 
   /** Optional metadata */
   metadata?: Record<string, unknown>;

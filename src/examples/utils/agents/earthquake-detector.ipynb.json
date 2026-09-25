@@ -41,7 +41,7 @@
     {
       "id": "3a857810-de1c-4afa-9eaa-06f77214b900",
       "cell_type": "code",
-      "source": "dls = ImageDataLoaders.from_name_func(\n    path=\"/home/jovyan/home/training7\",\n    fnames=files,\n    label_func=label_func,\n    item_tfms=Resize(224),\n    batch_tfms=[*aug_transforms(xtra_tfms=None)],\n    splitter=my_splitter\n)",
+      "source": "dls = ImageDataLoaders.from_name_func(\n    path=\"/home/datalayer/home/training7\",\n    fnames=files,\n    label_func=label_func,\n    item_tfms=Resize(224),\n    batch_tfms=[*aug_transforms(xtra_tfms=None)],\n    splitter=my_splitter\n)",
       "metadata": {
         "execution": {
           "iopub.execute_input": "2025-08-22T11:34:35.979092Z",

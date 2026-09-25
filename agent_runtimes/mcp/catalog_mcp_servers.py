@@ -33,7 +33,7 @@ ALPHAVANTAGE_MCP_SERVER_0_0_1 = MCPServer(
         "${ALPHAVANTAGE_API_KEY}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "MAX_RESPONSE_TOKENS": "100000",
@@ -54,9 +54,30 @@ CHART_MCP_SERVER_0_0_1 = MCPServer(
         "@antv/mcp-server-chart",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=[],
+)
+
+DATALAYER_MCP_SERVER_0_0_1 = MCPServer(
+    id="datalayer",
+    version="0.0.1",
+    name="Datalayer",
+    description="Read, edit and run Jupyter notebooks on Datalayer, with sandboxes and data",
+    icon="notebook",
+    emoji="🚀",
+    command="npx",
+    args=[
+        "-y",
+        "mcp-remote",
+        "https://mcp.datalayer.run/mcp",
+        "--header",
+        "Authorization: Bearer ${DATALAYER_API_KEY}",
+    ],
+    transport="stdio",
+    enabled=False,
+    tools=[],
+    required_env_vars=["DATALAYER_API_KEY:0.0.1"],
 )
 
 EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
@@ -72,7 +93,7 @@ EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
         "earthdata-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "EARTHDATA_USERNAME": "${EARTHDATA_USERNAME}",
@@ -91,7 +112,7 @@ EURUS_MCP_SERVER_0_0_1 = MCPServer(
     command="eurus-mcp",
     args=[],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=[],
 )
@@ -107,10 +128,10 @@ FILESYSTEM_MCP_SERVER_0_0_1 = MCPServer(
     args=[
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        tempfile.gettempdir(),
+        "${TMPDIR}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=[],
 )
@@ -121,7 +142,7 @@ GITHUB_MCP_SERVER_0_0_1 = MCPServer(
     name="GitHub",
     description="GitHub repository operations (issues, PRs, code search)",
     icon="mark-github",
-    emoji="🐙 - git - collaboration",
+    emoji="🐙",
     command="docker",
     args=[
         "run",
@@ -132,7 +153,7 @@ GITHUB_MCP_SERVER_0_0_1 = MCPServer(
         "ghcr.io/github/github-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}",
@@ -152,7 +173,7 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
         "workspace-mcp",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "GOOGLE_OAUTH_CLIENT_ID": "${GOOGLE_OAUTH_CLIENT_ID}",
@@ -181,7 +202,7 @@ HUGGINGFACE_MCP_SERVER_0_0_1 = MCPServer(
         "Authorization: Bearer ${HF_TOKEN}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     required_env_vars=["HF_TOKEN:0.0.1"],
 )
@@ -199,12 +220,12 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
         "mcp-remote",
         "https://www.kaggle.com/mcp",
         "--header",
-        "Authorization: Bearer ${KAGGLE_TOKEN}",
+        "Authorization: Bearer ${KAGGLE_API_TOKEN}",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
-    required_env_vars=["KAGGLE_TOKEN:0.0.1"],
+    required_env_vars=["KAGGLE_API_TOKEN:0.0.1"],
 )
 
 ODOO_MCP_SERVER_0_0_1 = MCPServer(
@@ -219,7 +240,7 @@ ODOO_MCP_SERVER_0_0_1 = MCPServer(
         "mcp-server-odoo",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "ODOO_URL": "${ODOO_URL}",
@@ -243,7 +264,7 @@ SALESFORCE_MCP_SERVER_0_0_1 = MCPServer(
         "@anthropic/salesforce-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "SALESFORCE_ACCESS_TOKEN": "${SALESFORCE_ACCESS_TOKEN}",
@@ -268,7 +289,7 @@ SLACK_MCP_SERVER_0_0_1 = MCPServer(
         "@datalayer/slack-mcp-server",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
@@ -295,7 +316,7 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
         "tavily-mcp",
     ],
     transport="stdio",
-    enabled=True,
+    enabled=False,
     tools=[],
     env={
         "TAVILY_API_KEY": "${TAVILY_API_KEY}",
@@ -310,6 +331,7 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
 MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "alphavantage": ALPHAVANTAGE_MCP_SERVER_0_0_1,
     "chart": CHART_MCP_SERVER_0_0_1,
+    "datalayer": DATALAYER_MCP_SERVER_0_0_1,
     "earthdata": EARTHDATA_MCP_SERVER_0_0_1,
     "eurus": EURUS_MCP_SERVER_0_0_1,
     "filesystem": FILESYSTEM_MCP_SERVER_0_0_1,

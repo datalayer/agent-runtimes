@@ -15,7 +15,7 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from versioning import ensure_spec_version, version_suffix
@@ -39,6 +39,31 @@ def _make_const_name(model_id: str) -> str:
     E.g. 'anthropic:claude-sonnet-4-5-20250514' -> 'ANTHROPIC_CLAUDE_SONNET_4_5_20250514'
     """
     return model_id.upper().replace(":", "_").replace("-", "_").replace(".", "_")
+
+
+def _pick_default(specs: list[dict]) -> Optional[dict]:
+    """The spec the generated DEFAULT_MODEL points at.
+
+    Among the specs that claim `default`, an **available** one wins. The two
+    flags answer different questions — which model to open on, and whether
+    this deployment may call it at all — and nothing stopped a spec set from
+    claiming the first and denying the second. When that happened the chat
+    opened on a model it could not use, and fell back to whatever was listed
+    first, which is how a Bedrock deployment ended up calling Alibaba.
+    """
+    claimed = [spec for spec in specs if spec.get("default", False)]
+    if not claimed:
+        return None
+    usable = [spec for spec in claimed if spec.get("available", False)]
+    if len(claimed) > 1:
+        print(
+            "  ! more than one model claims the default: "
+            + ", ".join(spec["id"] for spec in claimed)
+        )
+    if not usable:
+        print("  ! the default model is not available: " + claimed[0]["id"])
+        return claimed[0]
+    return usable[0]
 
 
 def _make_enum_name(model_id: str) -> str:
@@ -104,20 +129,40 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         else:
             env_vars_formatted = "[]"
 
-        lines.extend(
-            [
-                f"{const_name} = AIModel(",
-                f'    id="{spec["id"]}",',
-                f'    version="{spec["version"]}",',
-                f'    name="{spec["name"]}",',
-                f'    description="{spec.get("description", "")}",',
-                f'    provider="{spec["provider"]}",',
-                f"    default={spec.get('default', False)},",
-                f"    required_env_vars={env_vars_formatted},",
-                ")",
-                "",
-            ]
+        tokens_limit = spec.get("tokens_limit")
+        tokens_limit_formatted = (
+            str(tokens_limit) if tokens_limit is not None else "None"
         )
+
+        model_lines = [
+            f"{const_name} = AIModel(",
+            f'    id="{spec["id"]}",',
+            f'    version="{spec["version"]}",',
+            f'    name="{spec["name"]}",',
+            f'    description="{spec.get("description", "")}",',
+            f'    provider="{spec["provider"]}",',
+            f"    default={spec.get('default', False)},",
+            # What is worth offering today, as distinct from what the platform
+            # knows how to talk to.
+            f"    available={spec.get('available', False)},",
+            f"    required_env_vars={env_vars_formatted},",
+            f"    tokens_limit={tokens_limit_formatted},",
+        ]
+
+        # Local-model fields, emitted only when set so hosted models stay terse.
+        if spec.get("local"):
+            model_lines.append("    local=True,")
+        if spec.get("base_url"):
+            model_lines.append(f'    base_url="{spec["base_url"]}",')
+        if spec.get("api_key_env"):
+            model_lines.append(f'    api_key_env="{spec["api_key_env"]}",')
+        capabilities = spec.get("capabilities") or []
+        if capabilities:
+            formatted = "[" + ", ".join(f'"{c}"' for c in capabilities) + "]"
+            model_lines.append(f"    capabilities={formatted},")
+
+        model_lines.extend([")", ""])
+        lines.extend(model_lines)
 
     # Generate catalog dictionary
     lines.extend(
@@ -143,9 +188,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     )
 
     # Find default model
-    default_specs = [s for s in specs if s.get("default", False)]
-    if default_specs:
-        default_id = default_specs[0]["id"]
+    default_spec = _pick_default(specs)
+    if default_spec:
+        default_id = default_spec["id"]
         default_enum = _make_enum_name(default_id)
         lines.extend(
             [
@@ -288,20 +333,38 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         # Escape description for TypeScript
         description = spec.get("description", "").replace("'", "\\'")
 
-        lines.extend(
+        tokens_limit = spec.get("tokens_limit")
+
+        model_lines = [
+            f"export const {const_name}: AIModel = {{",
+            f"  id: '{spec['id']}',",
+            f"  version: '{spec['version']}',",
+            f"  name: '{spec['name']}',",
+            f"  description: '{description}',",
+            f"  provider: '{spec['provider']}',",
+            f"  default: {str(spec.get('default', False)).lower()},",
+            f"  available: {str(spec.get('available', False)).lower()},",
+            f"  requiredEnvVars: {env_vars_formatted},",
+        ]
+        if tokens_limit is not None:
+            model_lines.append(f"  tokensLimit: {tokens_limit},")
+        if spec.get("local"):
+            model_lines.append("  local: true,")
+        if spec.get("base_url"):
+            model_lines.append(f"  baseUrl: '{spec['base_url']}',")
+        if spec.get("api_key_env"):
+            model_lines.append(f"  apiKeyEnv: '{spec['api_key_env']}',")
+        capabilities = spec.get("capabilities") or []
+        if capabilities:
+            formatted = "[" + ", ".join(f"'{c}'" for c in capabilities) + "]"
+            model_lines.append(f"  capabilities: {formatted},")
+        model_lines.extend(
             [
-                f"export const {const_name}: AIModel = {{",
-                f"  id: '{spec['id']}',",
-                f"  version: '{spec['version']}',",
-                f"  name: '{spec['name']}',",
-                f"  description: '{description}',",
-                f"  provider: '{spec['provider']}',",
-                f"  default: {str(spec.get('default', False)).lower()},",
-                f"  requiredEnvVars: {env_vars_formatted},",
                 "};",
                 "",
             ]
         )
+        lines.extend(model_lines)
 
     # Generate catalog object
     lines.extend(
@@ -327,11 +390,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     )
 
     # Default model
-    default_specs = [s for s in specs if s.get("default", False)]
-    if default_specs:
-        default_id = default_specs[0]["id"]
+    default_spec = _pick_default(specs)
+    if default_spec:
+        default_id = default_spec["id"]
         default_const = _make_const_name(default_id) + version_suffix(
-            default_specs[0]["version"]
+            default_spec["version"]
         )
         lines.extend(
             [

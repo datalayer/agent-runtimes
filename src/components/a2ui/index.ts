@@ -3,5 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+export * from './A2uiMarkdownProvider';
 export * from './A2uiSurfaceComposed';
 export * from './styles';

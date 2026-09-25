@@ -32,21 +32,20 @@ import React, {
 } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { Button, Spinner, Text } from '@primer/react';
-import { basicCatalog } from '@a2ui/react/v0_9';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import { A2UI_RENDER_SCOPE_SX, A2uiSurfaceComposed } from '../components/a2ui';
 import { ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useA2uiProcessor } from './utils/a2ui';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
+import {
+  createA2uiSurfacePlugin,
+  validateA2uiSubmission,
+  type A2uiFieldRule,
+} from '../loop/plugins/a2ui-surface';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { uniqueAgentId } from './utils/agentId';
-import {
-  useSpecRenderToolResult,
-  specRendererClassName,
-  type SpecRenderer,
-} from './hooks/useSpecRenderToolResult';
-import { Chat } from '../chat';
+import { LoopEmbed } from '../loop';
+import { AgentA2uiPlugin } from '../loop/plugins/agent-a2ui';
 
 setupPrimerPortals();
 
@@ -76,239 +75,13 @@ const SUGGESTIONS = [
   },
 ];
 
-type A2uiRequiredField = {
-  id: string;
-  label: string;
-};
-
-/**
- * Per-field validation descriptor emitted by the backend `render_a2ui_surface`
- * tool. The action handler uses these rules to gate form submission.
- */
-type A2uiFieldRule = {
-  id: string;
-  label: string;
-  type?: string;
-  required?: boolean;
-  format?: 'email';
-  pattern?: string;
-  minLength?: number;
-  min?: number;
-  max?: number;
-};
-
-type A2uiToolResult = {
-  surfaceId?: string;
-  title?: string;
-  messages?: A2uiMessage[];
-  requiredFields?: A2uiRequiredField[];
-  fieldRules?: A2uiFieldRule[];
-};
-
-/**
- * Whether a submitted form value should count as "not provided" for the
- * purpose of required-field validation. Handles the value shapes the A2UI
- * basic catalog emits: strings (text/email), arrays (choice), booleans
- * (checkbox).
- */
-function isEmptyValue(value: unknown): boolean {
-  if (value === null || value === undefined) {
-    return true;
-  }
-  if (typeof value === 'string') {
-    return value.trim() === '';
-  }
-  if (Array.isArray(value)) {
-    return value.length === 0;
-  }
-  if (typeof value === 'boolean') {
-    return value === false;
-  }
-  return false;
-}
-
-/**
- * Basic email format check (matches the intent of the backend `email` field
- * type). Intentionally permissive: requires `local@domain.tld` with no spaces.
- */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * Validate a single submitted value against its backend-provided rule. Returns
- * a human-readable error message, or `null` when the value is acceptable.
- */
-function validateFieldValue(
-  rule: A2uiFieldRule,
-  value: unknown,
-): string | null {
-  const empty = isEmptyValue(value);
-  if (empty) {
-    // Optional fields left blank are fine; only required ones fail here.
-    return rule.required ? `${rule.label} is required.` : null;
-  }
-  if (
-    rule.format === 'email' &&
-    typeof value === 'string' &&
-    !EMAIL_PATTERN.test(value.trim())
-  ) {
-    return `${rule.label} must be a valid email address.`;
-  }
-  if (rule.pattern && typeof value === 'string') {
-    let matches = true;
-    try {
-      matches = new RegExp(rule.pattern).test(value.trim());
-    } catch {
-      matches = true; // Ignore malformed patterns rather than blocking.
-    }
-    if (!matches) {
-      return `${rule.label} is not in the expected format.`;
-    }
-  }
-  if (
-    rule.minLength !== undefined &&
-    typeof value === 'string' &&
-    value.trim().length < rule.minLength
-  ) {
-    return `${rule.label} must be at least ${rule.minLength} characters.`;
-  }
-  if (rule.type === 'slider' && typeof value === 'number') {
-    if (rule.min !== undefined && value < rule.min) {
-      return `${rule.label} must be at least ${rule.min}.`;
-    }
-    if (rule.max !== undefined && value > rule.max) {
-      return `${rule.label} must be at most ${rule.max}.`;
-    }
-  }
-  return null;
-}
-
-/**
- * Normalize a backend tool result (object or JSON string) into A2UI messages,
- * rewriting the catalog id to the frontend catalog so the renderer accepts it.
- */
-function extractToolResult(result: unknown): A2uiToolResult | null {
-  if (!result) {
-    return null;
-  }
-  let obj: unknown = result;
-  if (typeof result === 'string') {
-    try {
-      obj = JSON.parse(result);
-    } catch {
-      return null;
-    }
-  }
-  if (
-    typeof obj !== 'object' ||
-    obj === null ||
-    !Array.isArray((obj as A2uiToolResult).messages)
-  ) {
-    return null;
-  }
-  const parsed = obj as A2uiToolResult;
-  const messages = (parsed.messages ?? []).map(message => {
-    const payload = message as A2uiMessage & {
-      createSurface?: { catalogId?: string };
-    };
-    if (
-      payload.createSurface &&
-      payload.createSurface.catalogId !== basicCatalog.id
-    ) {
-      return {
-        ...payload,
-        createSurface: {
-          ...payload.createSurface,
-          catalogId: basicCatalog.id,
-        },
-      } as A2uiMessage;
-    }
-    return message;
-  });
-  return { ...parsed, messages };
-}
-
 /** A single submitted-form record shown in the "Submitted values" panel. */
 interface SubmissionRecord {
   id: number;
   values: Record<string, unknown>;
 }
 
-/**
- * Renders a fully interactive A2UI surface *inline* in the chat transcript.
- *
- * Uses its own `useA2uiProcessor` instance (independent from the canvas
- * processor) so the same generated surface can be filled in and submitted from
- * both places. Messages are processed once on mount.
- */
-const InlineA2uiSurface: React.FC<{
-  messages: A2uiMessage[];
-  onAction: (action: A2uiClientAction) => void;
-  validationError?: string | null;
-}> = ({ messages, onAction, validationError }) => {
-  const { surfaces, processMessages, resetSurfaces, themeStyle } =
-    useA2uiProcessor(onAction);
-  const processedRef = useRef(false);
-
-  useEffect(() => {
-    if (processedRef.current) {
-      return;
-    }
-    processedRef.current = true;
-    resetSurfaces();
-    processMessages(messages);
-  }, [messages, processMessages, resetSurfaces]);
-
-  if (surfaces.length === 0) {
-    return null;
-  }
-
-  return (
-    <Box
-      style={themeStyle}
-      sx={{
-        ...A2UI_RENDER_SCOPE_SX,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-      }}
-    >
-      {validationError && (
-        <Box
-          role="alert"
-          sx={{
-            px: 3,
-            py: 2,
-            borderRadius: 2,
-            bg: 'danger.subtle',
-            border: '1px solid',
-            borderColor: 'danger.muted',
-            color: 'danger.fg',
-            fontSize: 1,
-          }}
-        >
-          {validationError}
-        </Box>
-      )}
-      {surfaces.map(surface => (
-        <Box
-          key={surface.id}
-          sx={{
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            p: 3,
-            bg: 'canvas.default',
-          }}
-        >
-          <A2uiSurfaceComposed surface={surface} />
-        </Box>
-      ))}
-    </Box>
-  );
-};
-
 const A2UiAgentExample: React.FC = () => {
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
 
   const {
@@ -316,6 +89,7 @@ const A2UiAgentExample: React.FC = () => {
     error: chatError,
     status,
     isReady,
+    baseUrl,
   } = useExampleAgentRuntime({
     exampleId: 'A2UiAgentExample',
     agentName,
@@ -330,9 +104,6 @@ const A2UiAgentExample: React.FC = () => {
 
   const [surfaceTitle, setSurfaceTitle] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionRecord[]>([]);
-  const [pendingPrompt, setPendingPrompt] = useState<string | undefined>(
-    undefined,
-  );
   const [validationError, setValidationError] = useState<{
     surfaceId: string;
     message: string;
@@ -358,9 +129,7 @@ const A2UiAgentExample: React.FC = () => {
       // Block submission when any field fails validation (required, email
       // format, pattern, length, slider range).
       const rules = fieldRulesBySurfaceRef.current[action.surfaceId] ?? [];
-      const errors = rules
-        .map(rule => validateFieldValue(rule, values[rule.id]))
-        .filter((message): message is string => message !== null);
+      const errors = validateA2uiSubmission(rules, values);
       if (errors.length > 0) {
         setValidationError({
           surfaceId: action.surfaceId,
@@ -370,28 +139,22 @@ const A2UiAgentExample: React.FC = () => {
       }
       setValidationError(null);
 
+      // The canvas copy: recorded here, since the transcript's own copy is
+      // the one that goes back to the agent.
       submissionSeq.current += 1;
-      const seq = submissionSeq.current;
-      setSubmissions(prev => [
-        {
-          id: seq,
-          values,
-        },
-        ...prev,
-      ]);
-      // Feed the submission back to the agent so it replies with a confirmation.
-      const title = surfaceTitleRef.current ?? 'the form';
-      const json = JSON.stringify(values, null, 2);
-      setPendingPrompt(
-        `I just submitted "${title}" (submission #${seq}). Here are the values:\n\n\`\`\`json\n${json}\n\`\`\`\n\nPlease confirm you received them and briefly summarize what happens next.`,
-      );
+      setSubmissions(prev => [{ id: submissionSeq.current, values }, ...prev]);
     }
   }, []);
 
   const { surfaces, processMessages, resetSurfaces, themeStyle } =
     useA2uiProcessor(handleAction);
 
-  // Stable ref so the memoized renderer can push surfaces without re-creating.
+  /*
+   * The transcript's surfaces are the loop's own — the preset's surface
+   * plugin draws, checks and submits them. This example asks for an instance
+   * of its own so the canvas beside the chat can mirror what was drawn, and
+   * the "Submitted values" panel can record what went back to the agent.
+   */
   const showSurfaceRef = useRef<(messages: A2uiMessage[]) => void>(() => {});
   useEffect(() => {
     showSurfaceRef.current = (messages: A2uiMessage[]) => {
@@ -399,96 +162,30 @@ const A2UiAgentExample: React.FC = () => {
       processMessages(messages);
     };
   }, [resetSurfaces, processMessages]);
-
-  const processedToolCallIds = useRef<Set<string>>(new Set());
-
-  const renderers = useMemo<Record<string, SpecRenderer>>(
-    () => ({
-      'a2ui-surface': (context, binding) => {
-        const parsed =
-          context.status === 'complete'
-            ? extractToolResult(context.result)
-            : null;
-
-        if (
-          context.status === 'complete' &&
-          parsed?.messages &&
-          parsed.messages.length > 0 &&
-          context.toolCallId &&
-          !processedToolCallIds.current.has(context.toolCallId)
-        ) {
-          processedToolCallIds.current.add(context.toolCallId);
-          showSurfaceRef.current(parsed.messages);
-          setSurfaceTitle(parsed.title ?? 'A2UI surface');
-          if (parsed.surfaceId) {
-            fieldRulesBySurfaceRef.current[parsed.surfaceId] =
-              parsed.fieldRules ?? [];
+  const chatPlugins = useMemo(
+    () => [
+      AgentA2uiPlugin,
+      createA2uiSurfacePlugin({
+        onRendered: rendered => {
+          showSurfaceRef.current(rendered.messages);
+          setSurfaceTitle(rendered.title);
+          if (rendered.surfaceId) {
+            fieldRulesBySurfaceRef.current[rendered.surfaceId] =
+              rendered.result.fieldRules ?? [];
           }
           setValidationError(null);
-        }
-
-        return (
-          <div className={specRendererClassName(binding)}>
-            {context.status === 'complete' &&
-            parsed?.messages &&
-            parsed.messages.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    color: 'fg.muted',
-                  }}
-                >
-                  <Text sx={{ fontSize: 2 }}>🎛️</Text>
-                  <Text sx={{ fontWeight: 'bold', color: 'fg.default' }}>
-                    {parsed.title ?? 'A2UI surface'}
-                  </Text>
-                  <Text sx={{ fontSize: 0 }}>
-                    · also in the canvas → fill it in and submit
-                  </Text>
-                </Box>
-                <InlineA2uiSurface
-                  messages={parsed.messages}
-                  onAction={handleAction}
-                  validationError={
-                    validationError &&
-                    parsed.surfaceId &&
-                    validationError.surfaceId === parsed.surfaceId
-                      ? validationError.message
-                      : null
-                  }
-                />
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  px: 3,
-                  py: 2,
-                  bg: 'canvas.subtle',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
-              >
-                <Spinner size="small" />
-                <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-                  Rendering A2UI surface...
-                </Text>
-              </Box>
-            )}
-          </div>
-        );
-      },
-    }),
-    [handleAction, validationError],
+        },
+        onSubmitted: submitted => {
+          submissionSeq.current += 1;
+          setSubmissions(prev => [
+            { id: submissionSeq.current, values: submitted.values },
+            ...prev,
+          ]);
+        },
+      }),
+    ],
+    [],
   );
-
-  const renderToolResult = useSpecRenderToolResult(AGENTSPEC_ID, renderers);
 
   const clearCanvas = useCallback(() => {
     resetSurfaces();
@@ -540,7 +237,7 @@ const A2UiAgentExample: React.FC = () => {
                   py: 2,
                   borderBottom: '1px solid',
                   borderColor: 'border.default',
-                  bg: 'canvas.subtle',
+                  bg: 'canvas.default',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -687,7 +384,7 @@ const A2UiAgentExample: React.FC = () => {
                         m: 0,
                         p: 2,
                         borderRadius: 2,
-                        bg: 'canvas.subtle',
+                        bg: 'canvas.default',
                         border: '1px solid',
                         borderColor: 'border.default',
                         fontSize: 0,
@@ -742,27 +439,18 @@ const A2UiAgentExample: React.FC = () => {
                 </Text>
               </Box>
             ) : (
-              <Chat
-                protocol="ag-ui"
-                baseUrl={baseUrl}
+              <LoopEmbed
+                serverUrl={baseUrl}
+                target="local"
+                // What lets the target take: without the choice the agents
+                // plugin pins the sandbox to the page, whatever `target` says,
+                // and the chat then turns in-page, where the server's tools
+                // do not exist.
+                showAgentVariants
                 agentId={agentId}
-                title="A2UI Agent"
-                description="Generate interactive A2UI surfaces"
-                placeholder="Describe the UI you want..."
-                showHeader={true}
-                showModelSelector={true}
-                showToolsMenu={true}
-                showSkillsMenu={true}
-                showTokenUsage={true}
-                showInformation={true}
-                autoFocus
-                height="100%"
-                runtimeId={agentId}
-                historyEndpoint={`${baseUrl}/api/v1/history`}
-                suggestions={SUGGESTIONS}
-                submitOnSuggestionClick
-                pendingPrompt={pendingPrompt}
-                renderToolResult={renderToolResult}
+                defaultEditor="none"
+                showHeader
+                plugins={chatPlugins}
               />
             )}
           </Box>

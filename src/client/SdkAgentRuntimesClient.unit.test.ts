@@ -11,7 +11,7 @@ import type { AgentsSdkLike } from './SdkAgentRuntimesClient';
 function createSdkStub(): AgentsSdkLike {
   return {
     getRunningAgents: vi.fn().mockResolvedValue([]),
-    getAgentStatus: vi.fn().mockResolvedValue({ pod_name: 'p' } as any),
+    getAgentStatus: vi.fn().mockResolvedValue({ runtime_name: 'p' } as any),
     pauseAgent: vi.fn().mockResolvedValue(undefined),
     resumeAgent: vi.fn().mockResolvedValue(undefined),
     getAgentCheckpoints: vi.fn().mockResolvedValue([]),
@@ -174,11 +174,11 @@ describe('SdkAgentRuntimesClient', () => {
     it('returns the underlying SDK promise resolution', async () => {
       const sdk = createSdkStub();
       (sdk.getRunningAgents as any).mockResolvedValue([
-        { pod_name: 'p1' } as any,
+        { runtime_name: 'p1' } as any,
       ]);
       const client = new SdkAgentRuntimesClient(sdk);
       await expect(client.listRunningAgents()).resolves.toEqual([
-        { pod_name: 'p1' },
+        { runtime_name: 'p1' },
       ]);
     });
 

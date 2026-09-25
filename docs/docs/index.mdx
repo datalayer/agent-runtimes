@@ -43,6 +43,7 @@ Agent Runtimes is the **top-level orchestration layer** in the Datalayer AI stac
 - ✅ Multiple protocols (AG-UI, Vercel AI, ACP, A2A, A2UI, MCP-UI)
 - ✅ MCP server management and tool routing
 - ✅ React UI components (ChatBase, ChatSidebar, ChatFloating)
+- ✅ Loop — the plugin-based browser workspace (chat + editors + sandbox)
 - ✅ Agent identity controls (guardrails, monitoring, tool approvals)
 - ✅ Extensions (A2UI, MCP-UI, MCP Apps)
 - ✅ Integration layer for agent-codemode and agent-skills
@@ -72,12 +73,14 @@ The docs below explicitly cover the main building blocks used in the example gal
 
 | Concern | Where to Read |
 |---------|---------------|
+| The browser workspace (plugins, editors, commands) | [Loop Web](/loop) |
+| The interactive terminal | [Loop REPL](/loop-repl) |
 | UX patterns (GenUI) with A2UI and AG-UI | [Protocols](/protocols), [Chat](/chat) |
 | Interactive or triggered workflows | [Agentspecs](/agentspecs), [Endpoints](/endpoints) |
 | Agent Identity and Controls (guardrails, monitoring, tool approvals) | [Identity](/identity), [Endpoints](/endpoints#tool-approvals--monitoring-stream-websocket) |
 | Programmatic tooling with Sandbox and Codemode for MCP and Skills | [Programmatic Tools](/programmatic-tools), [Hooks](/hooks), [Endpoints](/endpoints#sandbox-status-websocket) |
 | Outputs and Notifications | [Integrations](/integrations), [Agentspecs](/agentspecs) |
 | Real-time collaboration with users, subagents, and multi-agent teams | [Protocols](/protocols), [Endpoints](/endpoints#acp-protocol-websocket), [Agentspecs](/agentspecs) |
-| Custom agents built from Agentspecs | [Agentspecs](/agentspecs), [CLI](/cli) |
+| Custom agents built from Agentspecs | [Agentspecs](/agentspecs), [Loop CLI](/cli) |
 
 <DocCardList items={useDocsSidebar().items.filter(i => (i.label !== 'Agent Runtimes'))} />

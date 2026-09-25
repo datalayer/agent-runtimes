@@ -58,7 +58,7 @@ between the remote Jupyter sandbox and the local stdio MCP servers.
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
@@ -95,9 +95,12 @@ class ToolCallRequest(BaseModel):
 
     Attributes:
         arguments: The arguments to pass to the tool.
+        destination_uri: Where a Contents MCP acquisition lands, as a Contents
+            URI. Only the Contents session route reads it.
     """
 
     arguments: dict[str, Any]
+    destination_uri: str | None = None
 
 
 class ToolCallResponse(BaseModel):
@@ -192,6 +195,100 @@ async def _try_codemode_tool_call(
             return ToolCallResponse(success=False, error=str(exc))
         return _mcp_result_to_response(raw)
     return None
+
+
+def _bearer(authorization: str | None) -> str | None:
+    """The token of an ``Authorization: Bearer …`` header, if there is one."""
+    if not authorization:
+        return None
+    scheme, _, credentials = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not credentials.strip():
+        return None
+    return credentials.strip()
+
+
+@router.post(
+    "/contents/{session_uid}/tools/{tool_name}", response_model=ToolCallResponse
+)
+async def proxy_contents_tool_call(
+    session_uid: str,
+    tool_name: str,
+    request: ToolCallRequest,
+    authorization: str | None = Header(default=None),
+) -> ToolCallResponse:
+    """
+    Proxy a tool call from a sandbox to a Contents MCP session.
+
+    The server behind the session is never reached from here: Contents holds
+    its credential and makes the connection. What this route decides is who
+    may call what, and it decides it per caller: the session is read with the
+    caller's own token — Contents answers only the session's actor, so a
+    token that is not the session's gets 403 — and a tool the session does
+    not allow is refused before anything is forwarded. An allowed call goes
+    through the session's toolset, approval flow included, and answers with
+    the call's content and artifact handles, never bytes.
+    """
+    from agent_runtimes.mcp.contents_toolset import (
+        ContentsMcpError,
+        ContentsMcpToolset,
+        _request_token,
+        get_contents_mcp_client,
+        get_contents_toolset,
+    )
+
+    token = _bearer(authorization) or _request_token()
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="A Contents MCP session call needs the caller's bearer token",
+        )
+    api = get_contents_mcp_client()
+    try:
+        session = await api.get_session(session_uid, token=token)
+    except ContentsMcpError as error:
+        logger.warning(
+            f"[MCP Proxy] Contents refused session '{session_uid}' to the caller: {error}"
+        )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Contents MCP session '{session_uid}' is not available to the caller",
+        )
+    if session.get("status", "active") != "active":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Contents MCP session '{session_uid}' is {session.get('status')}",
+        )
+    allowed = {str(name) for name in session.get("allowed_tools") or []}
+    if tool_name not in allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Tool '{tool_name}' is not allowed by Contents MCP session "
+                f"'{session_uid}'; allowed: {sorted(allowed)}"
+            ),
+        )
+
+    toolset = get_contents_toolset(session_uid) or ContentsMcpToolset(
+        session_uid=session_uid,
+        source_uid=session.get("source_uid"),
+        client=api,
+    )
+    logger.info(
+        f"[MCP Proxy] Calling '{tool_name}' through Contents MCP session '{session_uid}'"
+    )
+    try:
+        result = await toolset.direct_call_tool(
+            tool_name,
+            request.arguments,
+            token=token,
+            destination_uri=request.destination_uri,
+        )
+    except ContentsMcpError as error:
+        return ToolCallResponse(success=False, error=str(error), is_error=True)
+    except Exception as error:
+        logger.error(f"[MCP Proxy] Contents MCP call failed: {error}", exc_info=True)
+        return ToolCallResponse(success=False, error=str(error), is_error=True)
+    return ToolCallResponse(success=True, result=result)
 
 
 @router.post("/{server_name}/tools/{tool_name}", response_model=ToolCallResponse)

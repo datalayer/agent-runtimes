@@ -1,9 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2023-2026 Datalayer, Inc.
-# Distributed under the terms of the Modified BSD License.
-
 """Tests for Ray URL resolution and Ray mixin requests."""
 
 from __future__ import annotations
@@ -51,7 +48,7 @@ def test_ray_mixin_job_logs_and_events_paths() -> None:
     logs_payload = client.ray_get_job_logs(
         "job-1",
         namespace="team-a",
-        pod_name="pod-1",
+        runtime_name="pod-1",
         container="submitter",
         tail_lines=50,
     )
@@ -65,7 +62,7 @@ def test_ray_mixin_job_logs_and_events_paths() -> None:
     assert logs_kwargs["params"] == {
         "namespace": "team-a",
         "tail_lines": 50,
-        "pod_name": "pod-1",
+        "runtime_name": "pod-1",
         "container": "submitter",
     }
 

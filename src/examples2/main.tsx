@@ -28,10 +28,14 @@ import { BOOTSTRAP_USER_ONBOARDING } from '@datalayer/core/lib/models/UserOnboar
 import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
 
 const DEFAULT_RUNTIMES_URL = 'https://r1.datalayer.run';
+const DEFAULT_LOCAL_JUPYTER_SERVER_URL =
+  'http://0.0.0.0:8888/api/jupyter-server';
+const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
+  '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
 const resolveRuntimesUrl = (configured?: string): string => {
   const envRuntimeUrl = import.meta.env.VITE_DATALAYER_RUNTIMES_URL;
-  const envBaseUrl = import.meta.env.VITE_DATALAYER_URL;
+  const envBaseUrl = import.meta.env.VITE_DATALAYER_IAM_URL;
   const candidate = configured || envRuntimeUrl || envBaseUrl;
   if (!candidate) {
     return DEFAULT_RUNTIMES_URL;
@@ -40,6 +44,62 @@ const resolveRuntimesUrl = (configured?: string): string => {
     return DEFAULT_RUNTIMES_URL;
   }
   return candidate.replace(/\/$/, '');
+};
+
+/**
+ * Whether a URL names a Jupyter server on this machine.
+ *
+ * Asked this way round on purpose. The previous test was "is this prod1?",
+ * which took every host it did not recognise for a local one — so once the
+ * configured server moved to `r1`, Local mode accepted the cloud URL as its
+ * own and the browser dialled it from `localhost`, where CORS refused it.
+ *
+ * The set of remote hosts is open — `prod1`, `r1`, whatever a deployment adds
+ * next — while the set of local ones is not, so the closed set is the one
+ * worth enumerating.
+ */
+const isLocalJupyterServerUrl = (value?: string | null): boolean => {
+  if (!value) {
+    return false;
+  }
+  let host: string;
+  try {
+    host = new URL(value).hostname.toLowerCase();
+  } catch {
+    return /(^|\/\/)(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)([:/]|$)/.test(
+      value,
+    );
+  }
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host === '::1' ||
+    host === '[::1]' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local')
+  );
+};
+
+const resolveLocalJupyterServerUrl = (): string => {
+  const envLocalUrl = (
+    import.meta.env.VITE_JUPYTER_SERVER_URL as string | undefined
+  )?.trim();
+  if (envLocalUrl) {
+    return envLocalUrl.replace(/\/$/, '');
+  }
+  const configured = getJupyterServerUrl();
+  if (configured && isLocalJupyterServerUrl(configured)) {
+    return configured;
+  }
+  return DEFAULT_LOCAL_JUPYTER_SERVER_URL;
+};
+
+const ensureLocalJupyterToken = (): void => {
+  const token = (getJupyterServerToken() || '').trim();
+  if (!token) {
+    setJupyterServerToken(DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN);
+  }
 };
 
 // Load configurations from DOM
@@ -63,7 +123,7 @@ const loadConfigurations = () => {
         }
       }
 
-      if (datalayerConfig.datalayerUrl) {
+      if (datalayerConfig.iamUrl) {
         datalayerConfig.runtimesUrl = resolveRuntimesUrl(
           datalayerConfig.runtimesUrl,
         );
@@ -160,13 +220,13 @@ const NotebookOnlyApp: React.FC = () => {
       try {
         const { configuration } = coreStore.getState();
 
-        // Always try to create collaboration provider if we have token and datalayerUrl
-        if (configuration?.token && configuration?.datalayerUrl) {
+        // Always try to create collaboration provider if we have token and spacerUrl
+        if (configuration?.token && configuration?.spacerUrl) {
           try {
             const { DatalayerCollaborationProvider } =
               await import('../collaboration/DatalayerCollaborationProvider');
             const provider = new DatalayerCollaborationProvider({
-              datalayerUrl: configuration.datalayerUrl,
+              spacerUrl: configuration.spacerUrl,
               token: configuration.token,
             });
             console.warn(
@@ -193,6 +253,8 @@ const NotebookOnlyApp: React.FC = () => {
             setServiceManager(manager);
           } catch (error) {
             console.error('Failed to create DatalayerServiceManager:', error);
+            setJupyterServerUrl(resolveLocalJupyterServerUrl());
+            ensureLocalJupyterToken();
             const serverSettings = createServerSettings(
               getJupyterServerUrl(),
               getJupyterServerToken(),
@@ -202,6 +264,8 @@ const NotebookOnlyApp: React.FC = () => {
             setServiceManager(manager);
           }
         } else {
+          setJupyterServerUrl(resolveLocalJupyterServerUrl());
+          ensureLocalJupyterToken();
           const serverSettings = createServerSettings(
             getJupyterServerUrl(),
             getJupyterServerToken(),
@@ -337,6 +401,8 @@ export const ExampleApp: React.FC = () => {
           } catch (error) {
             console.error('Failed to create DatalayerServiceManager:', error);
             // Fall back to regular ServiceManager
+            setJupyterServerUrl(resolveLocalJupyterServerUrl());
+            ensureLocalJupyterToken();
             const serverSettings = createServerSettings(
               getJupyterServerUrl(),
               getJupyterServerToken(),
@@ -350,6 +416,8 @@ export const ExampleApp: React.FC = () => {
           }
         } else {
           // Use regular ServiceManager (no Datalayer token)
+          setJupyterServerUrl(resolveLocalJupyterServerUrl());
+          ensureLocalJupyterToken();
           const serverSettings = createServerSettings(
             getJupyterServerUrl(),
             getJupyterServerToken(),

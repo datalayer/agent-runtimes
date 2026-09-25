@@ -4,7 +4,7 @@
  */
 
 import { useJupyter, JupyterReactTheme } from '@datalayer/jupyter-react';
-import { JupyterCellExample } from './examples/CellSimpleExample';
+import { CellExample } from './examples/CellExample';
 import { JupyterNotebookExample } from './examples/NotebookExample';
 
 import './App.css';
@@ -18,7 +18,7 @@ export function App() {
   });
   return (
     <JupyterReactTheme>
-      {serviceManager && <JupyterCellExample serviceManager={serviceManager} />}
+      {serviceManager && <CellExample serviceManager={serviceManager} />}
       {serviceManager && (
         <JupyterNotebookExample serviceManager={serviceManager} />
       )}

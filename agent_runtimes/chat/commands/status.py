@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Slash command: /status - Show agent-runtimes CLI status."""
 
 from __future__ import annotations
@@ -16,6 +12,8 @@ from urllib.parse import urlparse
 
 import httpx
 from rich.text import Text
+
+from ..banner import TOKENS_DOWN, TOKENS_UP
 
 if TYPE_CHECKING:
     from ..tux import CliTux
@@ -146,7 +144,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
             summary_parts.append(
                 f"{skill_count} skill{'s' if skill_count != 1 else ''}"
             )
-        if sandbox_variant == "jupyter":
+        if sandbox_variant == "jupyter-server":
             summary_parts.append("Jupyter sandbox")
         if codemode_on:
             summary_parts.append("Code Mode")
@@ -169,8 +167,8 @@ async def execute(tux: "CliTux") -> Optional[str]:
     tux.console.print(
         "  Session tokens: "
         f"{tux._format_tokens(tux.stats.total_tokens)} "
-        f"({tux._format_tokens(tux.stats.total_input_tokens)} in / "
-        f"{tux._format_tokens(tux.stats.total_output_tokens)} out)",
+        f"({TOKENS_UP} {tux._format_tokens(tux.stats.total_input_tokens)} / "
+        f"{TOKENS_DOWN} {tux._format_tokens(tux.stats.total_output_tokens)})",
         style=STYLE_MUTED,
     )
     tux.console.print(f"  Messages: {tux.stats.messages}", style=STYLE_MUTED)

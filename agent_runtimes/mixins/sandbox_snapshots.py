@@ -8,14 +8,14 @@ class SandboxSnapshotsCreateMixin:
     """Mixin class for creating snapshots."""
 
     def _create_snapshot(
-        self, pod_name: str, name: str, description: str, stop: bool = True
+        self, runtime_name: str, name: str, description: str, stop: bool = True
     ) -> dict[str, Any]:
         """
         Create a snapshot from a runtime.
 
         Parameters
         ----------
-        pod_name : str
+        runtime_name : str
             The pod name of the runtime to snapshot.
         name : str
             Name for the snapshot.
@@ -30,7 +30,7 @@ class SandboxSnapshotsCreateMixin:
             Response containing snapshot creation details.
         """
         body = {
-            "pod_name": pod_name,
+            "runtime_name": runtime_name,
             "name": name,
             "description": description,
             "stop": stop,

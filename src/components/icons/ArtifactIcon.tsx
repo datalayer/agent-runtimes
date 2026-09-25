@@ -3,6 +3,7 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+import type { JSX } from 'react';
 import { createElement } from 'react';
 import {
   Icon,
@@ -34,6 +35,7 @@ import {
   QuestionIcon,
   PersonIcon,
   MailIcon,
+  FileMediaIcon,
   ZapIcon,
 } from '@primer/octicons-react';
 import {
@@ -54,6 +56,7 @@ const ARTIFACT_ICONS = new Map<IItemType, Icon>([
   ['credits', NumberIcon],
   ['dataset', StackIcon],
   ['datasource', DatabaseIcon],
+  ['deck', FileMediaIcon],
   ['document', FileIcon],
   ['documentation', BookOpenIcon],
   ['environment', ContainerIcon],

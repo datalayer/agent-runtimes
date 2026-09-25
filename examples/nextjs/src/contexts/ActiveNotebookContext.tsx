@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2023-2025 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';
@@ -17,7 +12,7 @@ interface ActiveNotebook {
   name: string;
   environment: string;
   runtimeId?: string;
-  podName?: string;
+  runtimeName?: string;
   viewerUrl: string;
 }
 

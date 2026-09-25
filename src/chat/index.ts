@@ -56,10 +56,27 @@
 
 // Components - Chat elements
 export { ChatMessages, type ChatMessagesProps } from './messages/ChatMessages';
+// The transcript renderer `ChatBase` itself draws with — a `DisplayItem[]`
+// straight in, no protocol underneath — for a host with its own transcript
+// to show rather than a live runtime to talk to (a team's run, watched as
+// its agents' own conversation).
+export {
+  ChatMessageList,
+  type ChatMessageListProps,
+} from './messages/ChatMessageList';
+export {
+  NotebookToolSurfaces,
+  notebookToolSurfacesRenderer,
+} from './messages/NotebookToolSurfaces';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';
-export { InputPrompt, type InputPromptProps } from './prompt';
+export {
+  InputPrompt,
+  type InputPromptProps,
+  InputPromptBase,
+  type InputPromptBaseProps,
+} from './prompt';
 export {
   McpStatusIndicator,
   type McpStatusIndicatorProps,
@@ -76,6 +93,11 @@ export {
   type FloatingBrandButtonProps,
 } from './display/FloatingBrandButton';
 export { ChatHeader, type ChatHeaderProps } from './header/ChatHeader';
+export {
+  ChatViewModeToggle,
+  VIEW_MODE_ICONS,
+  type ChatViewModeToggleProps,
+} from './header/ChatViewModeToggle';
 
 // Components - Message part renderers
 export {
@@ -118,3 +140,4 @@ export {
   AgentRuntimeChat,
   type AgentRuntimeChatProps,
 } from '../agents/AgentRuntimeChat';
+export * from './EphemeralSurfaceControl';

@@ -17,7 +17,7 @@ export type ConnectionState =
  */
 export interface AgentConnection {
   /** Runtime pod name (unique identifier). */
-  podName: string;
+  runtimeName: string;
   /** Environment name. */
   environmentName: string;
   /** Base URL for the Jupyter server. */

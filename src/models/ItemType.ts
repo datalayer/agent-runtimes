@@ -11,6 +11,7 @@ export type IItemType =
   | 'credits'
   | 'dataset'
   | 'datasource'
+  | 'deck'
   | 'document'
   | 'documentation'
   | 'environment'

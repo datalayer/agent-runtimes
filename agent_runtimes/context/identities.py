@@ -124,7 +124,7 @@ def get_identity_env() -> dict[str, str]:
         "microsoft": "AZURE_ACCESS_TOKEN",
         "bitbucket": "BITBUCKET_TOKEN",
         "linkedin": "LINKEDIN_ACCESS_TOKEN",
-        "kaggle": "KAGGLE_TOKEN",
+        "kaggle": "KAGGLE_API_TOKEN",
         "huggingface": "HUGGINGFACE_TOKEN",
         "slack": "SLACK_TOKEN",
         "notion": "NOTION_TOKEN",

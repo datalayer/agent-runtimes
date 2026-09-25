@@ -27,7 +27,7 @@ export interface ProjectJSON {
   variant: string;
   isPublic: boolean;
   createdAt: string;
-  attachedAgentPodName: string | null;
+  attachedAgentRuntimeName: string | null;
   attachedAgentSpecId: string | null;
   attachedAgentGivenName: string | null;
   hasAgent: boolean;
@@ -114,9 +114,9 @@ export class ProjectDTO {
   }
 
   /** Attached agent runtime pod name, if any. */
-  get attachedAgentPodName(): string | undefined {
+  get attachedAgentRuntimeName(): string | undefined {
     this._checkDeleted();
-    return this._data.attached_agent_pod_name_s || undefined;
+    return this._data.attached_agent_runtime_name_s || undefined;
   }
 
   /** Attached agentspec ID (e.g., 'data-acquisition'), if any. */
@@ -134,7 +134,7 @@ export class ProjectDTO {
   /** Whether an agent is currently attached to this project. */
   get hasAgent(): boolean {
     this._checkDeleted();
-    return !!this._data.attached_agent_pod_name_s;
+    return !!this._data.attached_agent_runtime_name_s;
   }
 
   /** Mark this project as deleted. */
@@ -162,7 +162,7 @@ export class ProjectDTO {
       variant: this.variant,
       isPublic: this.isPublic,
       createdAt: this.createdAt.toISOString(),
-      attachedAgentPodName: this.attachedAgentPodName ?? null,
+      attachedAgentRuntimeName: this.attachedAgentRuntimeName ?? null,
       attachedAgentSpecId: this.attachedAgentSpecId ?? null,
       attachedAgentGivenName: this.attachedAgentGivenName ?? null,
       hasAgent: this.hasAgent,

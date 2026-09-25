@@ -81,12 +81,12 @@ async function cleanupRuntimes(
 
     for (const runtime of runtimesResponse.runtimes) {
       try {
-        await runtimes.deleteRuntime(token, runtime.pod_name, baseUrl);
-        console.log(`  ✓ Removed runtime: ${runtime.pod_name}`);
+        await runtimes.deleteRuntime(token, runtime.runtime_name, baseUrl);
+        console.log(`  ✓ Removed runtime: ${runtime.runtime_name}`);
         removedCount++;
       } catch (error: any) {
         console.log(
-          `  ✗ Failed to remove runtime ${runtime.pod_name}: ${error.message}`,
+          `  ✗ Failed to remove runtime ${runtime.runtime_name}: ${error.message}`,
         );
         failedCount++;
       }

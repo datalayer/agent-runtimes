@@ -61,7 +61,7 @@ class ToolApprovalCreateRequest(BaseModel):
     """Payload to create a pending tool approval request."""
 
     agent_id: str = Field(default="default")
-    pod_name: str = Field(default="")
+    runtime_name: str = Field(default="")
     tool_name: str
     tool_args: dict[str, Any] = Field(default_factory=dict)
     tool_call_id: str | None = None
@@ -78,7 +78,7 @@ class ToolApprovalRecord(BaseModel):
 
     id: str
     agent_id: str
-    pod_name: str = ""
+    runtime_name: str = ""
     tool_name: str
     tool_args: dict[str, Any] = Field(default_factory=dict)
     tool_call_id: str | None = None
@@ -476,7 +476,7 @@ async def mirror_approval_to_local(data: dict) -> ToolApprovalRecord:
     record = ToolApprovalRecord(
         id=data.get("id", str(uuid4())),
         agent_id=data.get("agent_id", ""),
-        pod_name=data.get("pod_name", ""),
+        runtime_name=data.get("runtime_name", ""),
         tool_name=data.get("tool_name", ""),
         tool_args=data.get("tool_args", {}),
         tool_call_id=data.get("tool_call_id"),
@@ -584,7 +584,7 @@ async def forward_approval_to_ai_agents(
                 f"{ai_agents_url}/api/ai-agents/v1/tool-approvals",
                 json={
                     "agent_id": record.agent_id,
-                    "pod_name": record.pod_name or "",
+                    "runtime_name": record.runtime_name or "",
                     "tool_name": record.tool_name,
                     "tool_args": record.tool_args or {},
                     "tool_call_id": record.tool_call_id,
@@ -642,7 +642,7 @@ async def _create_approval(body: ToolApprovalCreateRequest) -> ToolApprovalRecor
     record = ToolApprovalRecord(
         id=str(uuid4()),
         agent_id=body.agent_id,
-        pod_name=body.pod_name,
+        runtime_name=body.runtime_name,
         tool_name=body.tool_name,
         tool_args=body.tool_args or {},
         tool_call_id=body.tool_call_id,
@@ -802,7 +802,7 @@ async def _mark_approval_executing(
     now = _now_iso()
     async with _APPROVALS_LOCK:
         record = _APPROVALS.get(approval_id)
-        if record is None or record.status != "approved":
+        if record is None:
             return None
         if not _approval_envelope_matches(
             record,
@@ -810,6 +810,18 @@ async def _mark_approval_executing(
             tool_name=tool_name,
             tool_args=tool_args,
         ):
+            return None
+        if record.status == "executing":
+            # Idempotent reservation: the same in-flight call (e.g. a second
+            # guardrail capability or a re-entrant continuation pass) already
+            # reserved this envelope — do not fail or double-reserve.
+            if (
+                execution_tool_call_id is not None
+                and record.execution_tool_call_id == execution_tool_call_id
+            ):
+                return record
+            return None
+        if record.status != "approved":
             return None
 
         updated = record.model_copy(

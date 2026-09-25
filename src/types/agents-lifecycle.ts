@@ -41,12 +41,17 @@ export type CreateAgentRuntimeRequest = {
   billingSourceOrganizationUid?: string;
   /** Source organization handle for team-billed runtimes. */
   billingSourceOrganizationHandle?: string;
-  /** Mount account home folder into runtime. */
-  mountHomeFolder?: boolean;
-  /** Optional volume UID to mount into runtime. */
-  volumeUid?: string;
-  /** Optional volume UIDs to mount into runtime. */
-  volumeUids?: string[];
+  /**
+   * The runtime's uid (a ULID) the Contents attachments were made for; the
+   * runtime is created under it so the attachments name the right sandbox.
+   */
+  runtimeName?: string;
+  /**
+   * Contents attachments to mount, created for `runtimeName` before the runtime:
+   * a Home Folder attachment mounts the caller's home folders, a Volume
+   * attachment mounts its Volume. There is no other way to ask for a mount.
+   */
+  contentAttachmentUids?: string[];
 };
 
 export type CreateRuntimeApiResponse = {

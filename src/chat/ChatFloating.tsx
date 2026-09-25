@@ -27,9 +27,17 @@ import React, {
 } from 'react';
 import { IconButton, Text, Tooltip } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { XIcon, CommentDiscussionIcon } from '@primer/octicons-react';
+import {
+  XIcon,
+  CommentDiscussionIcon,
+  GrabberIcon,
+} from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
+import { createPortal } from 'react-dom';
 import { ChatBase } from './base/ChatBase';
+import { ButtonGlow } from './display/ButtonGlow';
+import { useViewportDrag } from './useViewportDrag';
+import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import {
   useChatOpen,
   useChatMessages,
@@ -90,6 +98,14 @@ export interface ChatFloatingProps extends ChatCommonProps {
   /** Brand color override. Defaults to the theme's `accent.emphasis` token. */
   brandColor?: string;
 
+  /**
+   * A soft light breathing around the button while the chat is closed, as
+   * if it were alive (see `ButtonGlow`). Still, and dimmer, for a reader who
+   * asks the system for reduced motion.
+   * @default true
+   */
+  buttonGlow?: boolean;
+
   /** Offset from edge (in pixels) */
   offset?: number;
 
@@ -103,10 +119,12 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * Default view mode.
    * - 'floating': Full-height floating panel (pinned to right edge with offset)
    * - 'floating-small': Standard floating popup
+   * - 'floating-draggable': The popup with a handle, movable about the viewport
    * - 'panel': Full-height side panel (right edge, no floating offset)
    * @default 'floating'
    */
-  defaultViewMode?: 'floating' | 'floating-small' | 'panel';
+  defaultViewMode?:
+    'floating' | 'floating-small' | 'floating-draggable' | 'panel';
 
   /**
    * Callback when the user switches view mode via the header toggle.
@@ -115,6 +133,17 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * a ChatSidebar instead.
    */
   onViewModeChange?: (mode: ChatViewMode) => void;
+
+  /**
+   * Where "Sidebar panel" docks the chat: an element, or a selector for one.
+   *
+   * The proof there is a sidebar to dock into — without it, the option is
+   * shown greyed out in the header. A host that swaps to `<ChatSidebar>`
+   * itself on `onViewModeChange('sidebar')` passes the container it renders
+   * that sidebar in; a host with no such component passes the element, and
+   * the panel is rendered into it from here.
+   */
+  sidebarMountPoint?: HTMLElement | string | null;
 
   /**
    * Show backdrop overlay in panel mode.
@@ -165,6 +194,8 @@ export function ChatFloating({
   enableKeyboardShortcuts = true,
   toggleShortcut = '/',
   showPoweredBy = true,
+  promptVariant,
+  mentionableAgents,
   poweredByProps,
   clickOutsideToClose = false,
   escapeToClose = true,
@@ -179,6 +210,7 @@ export function ChatFloating({
   buttonIcon,
   buttonTooltip = 'Chat with AI',
   brandColor,
+  buttonGlow = true,
   offset = 20,
   animationDuration = 200,
   renderToolResult,
@@ -189,12 +221,16 @@ export function ChatFloating({
   hideMessagesAfterToolUI = false,
   defaultViewMode = 'floating',
   onViewModeChange,
+  sidebarMountPoint = null,
   showPanelBackdrop = false,
   availableModels,
   showModelSelector = false,
   showToolsMenu = false,
   showSkillsMenu = false,
   showTokenUsage = true,
+  showContextRing = false,
+  themeVariant,
+  colorMode,
   runtimeId,
   historyEndpoint,
   authToken,
@@ -231,7 +267,7 @@ export function ChatFloating({
   const [isAnimating, setIsAnimating] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [viewMode, setViewMode] = useState<
-    'floating' | 'floating-small' | 'panel'
+    'floating' | 'floating-small' | 'floating-draggable' | 'panel'
   >(defaultViewMode);
   const [focusTrigger, setFocusTrigger] = useState(0);
   const [panelInFlow, setPanelInFlow] = useState(false);
@@ -245,9 +281,42 @@ export function ChatFloating({
   const chatViewMode: ChatViewMode =
     viewMode === 'panel' ? 'sidebar' : viewMode;
 
+  /*
+   * The host's mount point for a sidebar, resolved each time the chat opens
+   * or changes mode: a container may mount after the chat does.
+   */
+  const [sidebarMount, setSidebarMount] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setSidebarMount(resolveMountPoint(sidebarMountPoint));
+  }, [sidebarMountPoint, isOpen, viewMode]);
+  const disabledViewModes = disabledChatViewModes({
+    sidebarMountPoint: sidebarMount,
+    viewMode: chatViewMode,
+  });
+  const sidebarDisabled = disabledViewModes.includes('sidebar');
+  /* Docked into the host's element, rather than measured against it. */
+  const dockedInMount = viewMode === 'panel' && !isMobile && !!sidebarMount;
+
+  /*
+   * "Floating draggable": the window moves by its handle. Its place is
+   * forgotten on leaving the mode, so it comes back where the small popup
+   * starts rather than wherever it was last dropped.
+   */
+  const drag = useViewportDrag(popupRef);
+  const resetDrag = drag.reset;
+  useEffect(() => {
+    if (viewMode !== 'floating-draggable') {
+      resetDrag();
+    }
+  }, [viewMode, resetDrag]);
+
   // Handle view mode changes from the header segmented toggle
   const handleChatViewModeChange = useCallback(
     (mode: ChatViewMode) => {
+      if (mode === 'sidebar' && sidebarDisabled) {
+        // Greyed out in the header: nothing to dock into.
+        return;
+      }
       if (mode === 'sidebar') {
         // When a parent callback is provided, let it switch the host layout
         // (e.g. swap to ChatSidebar). Otherwise, fall back to the built-in
@@ -260,13 +329,13 @@ export function ChatFloating({
         setViewMode('panel');
         setFocusTrigger(prev => prev + 1);
       } else {
-        // 'floating' or 'floating-small' stays within ChatFloating
+        // The floating modes stay within ChatFloating
         setViewMode(mode);
         setFocusTrigger(prev => prev + 1);
         onViewModeChange?.(mode);
       }
     },
-    [onViewModeChange],
+    [onViewModeChange, sidebarDisabled],
   );
 
   // Detect whether the chat is mounted inside a parent that is intentionally
@@ -276,6 +345,11 @@ export function ChatFloating({
   useLayoutEffect(() => {
     if (viewMode !== 'panel' || isMobile) {
       setPanelInFlow(false);
+      return;
+    }
+    if (sidebarMount) {
+      // Rendered into the host's element: in its flow by definition.
+      setPanelInFlow(true);
       return;
     }
     const parent = popupRef.current?.parentElement;
@@ -289,7 +363,7 @@ export function ChatFloating({
       (style.flexDirection === 'row' || style.flexDirection === 'row-reverse');
     const isGrid = style.display.includes('grid');
     setPanelInFlow(isFlexRow || isGrid);
-  }, [viewMode, isMobile, isOpen]);
+  }, [viewMode, isMobile, isOpen, sidebarMount]);
 
   // For fixed (non-flow) panel mode, measure the host region so the docked
   // panel aligns to the visible content area (below any app header) at full
@@ -610,6 +684,226 @@ export function ChatFloating({
     </Tooltip>
   );
 
+  /* The window itself; where it goes is decided below. */
+  const chatWindow = (
+    <Box
+      ref={popupRef}
+      className={className}
+      sx={{
+        position:
+          viewMode === 'panel' && !isMobile && (panelInFlow || dockedInMount)
+            ? 'relative'
+            : ('fixed' as const),
+        // floating (normal) — full-height column pinned to the right edge
+        ...(viewMode === 'floating' && !isMobile
+          ? {
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 'auto',
+            }
+          : {}),
+        // floating-small — standard popup positioned via getPositionStyles()
+        ...(viewMode === 'floating-small' && !isMobile
+          ? getPositionStyles()
+          : {}),
+        // floating-draggable — where it was last put down, or where the
+        // small popup starts until somebody moves it
+        ...(viewMode === 'floating-draggable' && !isMobile
+          ? drag.position
+            ? {
+                left: drag.position.left,
+                top: drag.position.top,
+                right: 'auto',
+                bottom: 'auto',
+              }
+            : getPositionStyles()
+          : {}),
+        ...(viewMode === 'panel' && !isMobile
+          ? {
+              ...(panelInFlow || dockedInMount
+                ? {
+                    top: 'auto',
+                    right: 'auto',
+                    bottom: 'auto',
+                    left: 'auto',
+                    marginLeft: 'auto',
+                    alignSelf: 'stretch',
+                  }
+                : {
+                    // Fixed panel aligned to the measured host region so it
+                    // docks below any app header at full content height,
+                    // instead of overlaying from the very top of the viewport.
+                    top: panelHostRect ? `${panelHostRect.top}px` : 0,
+                    right: panelHostRect ? `${panelHostRect.right}px` : 0,
+                    bottom: panelHostRect ? 'auto' : 0,
+                    left: 'auto',
+                  }),
+            }
+          : {}),
+        width:
+          viewMode === 'panel' && !isMobile
+            ? isOpen || isAnimating
+              ? `${panelWidthPx}px`
+              : '0px'
+            : viewMode === 'floating' && !isMobile
+              ? typeof popupWidth === 'number'
+                ? `${popupWidth}px`
+                : popupWidth
+              : (viewMode === 'floating-small' ||
+                    viewMode === 'floating-draggable') &&
+                  !isMobile
+                ? typeof popupWidth === 'number'
+                  ? `${popupWidth}px`
+                  : popupWidth
+                : isMobile
+                  ? '100%'
+                  : typeof popupWidth === 'number'
+                    ? `${popupWidth}px`
+                    : popupWidth,
+        height:
+          viewMode === 'panel' && !isMobile
+            ? panelInFlow || dockedInMount
+              ? '100%'
+              : panelHostRect
+                ? `${panelHostRect.height}px`
+                : '100%'
+            : viewMode === 'floating' && !isMobile
+              ? '100%'
+              : (viewMode === 'floating-small' ||
+                    viewMode === 'floating-draggable') &&
+                  !isMobile
+                ? typeof popupHeight === 'number'
+                  ? `${popupHeight}px`
+                  : popupHeight
+                : isMobile
+                  ? '100%'
+                  : typeof popupHeight === 'number'
+                    ? `${popupHeight}px`
+                    : popupHeight,
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'canvas.default',
+        border: '1px solid',
+        borderColor: 'border.default',
+        borderRadius: viewMode === 'panel' || isMobile ? 0 : '12px',
+        boxShadow: viewMode === 'panel' ? 'shadow.none' : 'shadow.extra-large',
+        overflow: 'hidden',
+        transform:
+          viewMode === 'panel'
+            ? isOpen
+              ? 'translateX(0)'
+              : 'translateX(100%)'
+            : getAnimationTransform(isOpen),
+        opacity: viewMode === 'panel' ? 1 : isOpen ? 1 : 0,
+        transition: `transform ${animationDuration}ms ease, opacity ${animationDuration}ms ease, width ${animationDuration}ms ease`,
+        zIndex:
+          viewMode === 'panel' && !isMobile
+            ? panelInFlow || dockedInMount
+              ? 'auto'
+              : 1001
+            : 1001,
+        // Hide from accessibility and pointer events when closed
+        visibility: isOpen || isAnimating ? 'visible' : 'hidden',
+        pointerEvents: isOpen ? 'auto' : 'none',
+        ...mobileStyles,
+      }}
+    >
+      {/* The handle "Floating draggable" is moved by. */}
+      {viewMode === 'floating-draggable' && !isMobile && (
+        <Box
+          onPointerDown={drag.onHandlePointerDown}
+          aria-label="Move the chat"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            height: 18,
+            cursor: 'grab',
+            color: 'fg.subtle',
+            bg: 'canvas.subtle',
+            borderBottom: '1px solid',
+            borderColor: 'border.muted',
+            touchAction: 'none',
+            '&:active': { cursor: 'grabbing' },
+          }}
+        >
+          <GrabberIcon size={16} />
+        </Box>
+      )}
+      <ChatBase
+        title={title}
+        showHeader={showHeader}
+        useStore={useStoreMode}
+        protocol={protocol}
+        themeVariant={themeVariant}
+        colorMode={colorMode}
+        autoFocus={isOpen}
+        focusTrigger={focusTrigger}
+        launching={launching}
+        launchingMessage={launchingMessage}
+        brandIcon={brandIcon || <AiAgentIcon colored size={20} />}
+        headerButtons={{
+          showNewChat: showNewChatButton,
+          showClear: showClearButton && messages.length > 0,
+          showSettings: showSettingsButton && !!onSettingsClick,
+          onNewChat: handleNewChat,
+          onClear: handleClear,
+          onSettings: onSettingsClick,
+        }}
+        headerActions={<>{closeButton}</>}
+        chatViewMode={chatViewMode}
+        onChatViewModeChange={handleChatViewModeChange}
+        disabledViewModes={disabledViewModes}
+        showPoweredBy={showPoweredBy}
+        // Forwarded, so a host can ask for the Lexical editor — and with it
+        // the `@` menu — without giving up the floating chat to get one.
+        promptVariant={promptVariant}
+        mentionableAgents={mentionableAgents}
+        poweredByProps={{
+          brandName: 'Datalayer',
+          brandUrl: 'https://datalayer.ai',
+          ...poweredByProps,
+        }}
+        renderToolResult={renderToolResult}
+        description={description}
+        onStateUpdate={onStateUpdate}
+        onNewChat={onNewChat}
+        suggestions={suggestions}
+        submitOnSuggestionClick={submitOnSuggestionClick}
+        hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+        avatarConfig={{
+          showAvatars: true,
+        }}
+        placeholder="Type a message..."
+        backgroundColor="canvas.subtle"
+        frontendTools={frontendTools}
+        showModelSelector={showModelSelector}
+        availableModels={availableModels}
+        showToolsMenu={showToolsMenu}
+        showSkillsMenu={showSkillsMenu}
+        showTokenUsage={showTokenUsage}
+        showContextRing={showContextRing}
+        runtimeId={runtimeId}
+        historyEndpoint={historyEndpoint}
+        historyAuthToken={historyAuthToken}
+        pendingPrompt={pendingPrompt}
+        showInformation={showInformation}
+        onInformationClick={onInformationClick}
+        onToolCallStart={onToolCallStart}
+        onToolCallComplete={onToolCallComplete}
+        showToolApprovalBanner={showToolApprovalBanner}
+        pendingApprovals={pendingApprovals}
+        onApproveApproval={onApproveApproval}
+        onRejectApproval={onRejectApproval}
+        {...panelProps}
+      >
+        {children}
+      </ChatBase>
+    </Box>
+  );
+
   return (
     <>
       {/* Floating button when closed */}
@@ -623,10 +917,13 @@ export function ChatFloating({
             sx={{
               position: 'relative',
               display: 'inline-flex',
+              // The glow's halos go behind the button, not behind the page.
+              isolation: 'isolate',
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
+            {buttonGlow && <ButtonGlow color={brandColor} />}
             <Tooltip
               text={`${buttonTooltip}${shortcutHint ? ` (${shortcutHint})` : ''}`}
               direction={position.includes('right') ? 'w' : 'e'}
@@ -749,177 +1046,10 @@ export function ChatFloating({
         />
       )}
 
-      {/* window - always rendered to preserve state, hidden when closed */}
-      <Box
-        ref={popupRef}
-        className={className}
-        sx={{
-          position:
-            viewMode === 'panel' && !isMobile && panelInFlow
-              ? 'relative'
-              : ('fixed' as const),
-          // floating (normal) — full-height column pinned to the right edge
-          ...(viewMode === 'floating' && !isMobile
-            ? {
-                top: 0,
-                right: 0,
-                bottom: 0,
-                left: 'auto',
-              }
-            : {}),
-          // floating-small — standard popup positioned via getPositionStyles()
-          ...(viewMode === 'floating-small' && !isMobile
-            ? getPositionStyles()
-            : {}),
-          ...(viewMode === 'panel' && !isMobile
-            ? {
-                ...(panelInFlow
-                  ? {
-                      top: 'auto',
-                      right: 'auto',
-                      bottom: 'auto',
-                      left: 'auto',
-                      marginLeft: 'auto',
-                      alignSelf: 'stretch',
-                    }
-                  : {
-                      // Fixed panel aligned to the measured host region so it
-                      // docks below any app header at full content height,
-                      // instead of overlaying from the very top of the viewport.
-                      top: panelHostRect ? `${panelHostRect.top}px` : 0,
-                      right: panelHostRect ? `${panelHostRect.right}px` : 0,
-                      bottom: panelHostRect ? 'auto' : 0,
-                      left: 'auto',
-                    }),
-              }
-            : {}),
-          width:
-            viewMode === 'panel' && !isMobile
-              ? isOpen || isAnimating
-                ? `${panelWidthPx}px`
-                : '0px'
-              : viewMode === 'floating' && !isMobile
-                ? typeof popupWidth === 'number'
-                  ? `${popupWidth}px`
-                  : popupWidth
-                : viewMode === 'floating-small' && !isMobile
-                  ? typeof popupWidth === 'number'
-                    ? `${popupWidth}px`
-                    : popupWidth
-                  : isMobile
-                    ? '100%'
-                    : typeof popupWidth === 'number'
-                      ? `${popupWidth}px`
-                      : popupWidth,
-          height:
-            viewMode === 'panel' && !isMobile
-              ? panelInFlow
-                ? '100%'
-                : panelHostRect
-                  ? `${panelHostRect.height}px`
-                  : '100%'
-              : viewMode === 'floating' && !isMobile
-                ? '100%'
-                : viewMode === 'floating-small' && !isMobile
-                  ? typeof popupHeight === 'number'
-                    ? `${popupHeight}px`
-                    : popupHeight
-                  : isMobile
-                    ? '100%'
-                    : typeof popupHeight === 'number'
-                      ? `${popupHeight}px`
-                      : popupHeight,
-          display: 'flex',
-          flexDirection: 'column',
-          bg: 'canvas.default',
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: viewMode === 'panel' || isMobile ? 0 : '12px',
-          boxShadow:
-            viewMode === 'panel' ? 'shadow.none' : 'shadow.extra-large',
-          overflow: 'hidden',
-          transform:
-            viewMode === 'panel'
-              ? isOpen
-                ? 'translateX(0)'
-                : 'translateX(100%)'
-              : getAnimationTransform(isOpen),
-          opacity: viewMode === 'panel' ? 1 : isOpen ? 1 : 0,
-          transition: `transform ${animationDuration}ms ease, opacity ${animationDuration}ms ease, width ${animationDuration}ms ease`,
-          zIndex:
-            viewMode === 'panel' && !isMobile
-              ? panelInFlow
-                ? 'auto'
-                : 1001
-              : 1001,
-          // Hide from accessibility and pointer events when closed
-          visibility: isOpen || isAnimating ? 'visible' : 'hidden',
-          pointerEvents: isOpen ? 'auto' : 'none',
-          ...mobileStyles,
-        }}
-      >
-        <ChatBase
-          title={title}
-          showHeader={showHeader}
-          useStore={useStoreMode}
-          protocol={protocol}
-          autoFocus={isOpen}
-          focusTrigger={focusTrigger}
-          launching={launching}
-          launchingMessage={launchingMessage}
-          brandIcon={brandIcon || <AiAgentIcon colored size={20} />}
-          headerButtons={{
-            showNewChat: showNewChatButton,
-            showClear: showClearButton && messages.length > 0,
-            showSettings: showSettingsButton && !!onSettingsClick,
-            onNewChat: handleNewChat,
-            onClear: handleClear,
-            onSettings: onSettingsClick,
-          }}
-          headerActions={<>{closeButton}</>}
-          chatViewMode={chatViewMode}
-          onChatViewModeChange={handleChatViewModeChange}
-          showPoweredBy={showPoweredBy}
-          poweredByProps={{
-            brandName: 'Datalayer',
-            brandUrl: 'https://datalayer.ai',
-            ...poweredByProps,
-          }}
-          renderToolResult={renderToolResult}
-          description={description}
-          onStateUpdate={onStateUpdate}
-          onNewChat={onNewChat}
-          suggestions={suggestions}
-          submitOnSuggestionClick={submitOnSuggestionClick}
-          hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-          avatarConfig={{
-            showAvatars: true,
-          }}
-          placeholder="Type a message..."
-          backgroundColor="canvas.subtle"
-          frontendTools={frontendTools}
-          showModelSelector={showModelSelector}
-          availableModels={availableModels}
-          showToolsMenu={showToolsMenu}
-          showSkillsMenu={showSkillsMenu}
-          showTokenUsage={showTokenUsage}
-          runtimeId={runtimeId}
-          historyEndpoint={historyEndpoint}
-          historyAuthToken={historyAuthToken}
-          pendingPrompt={pendingPrompt}
-          showInformation={showInformation}
-          onInformationClick={onInformationClick}
-          onToolCallStart={onToolCallStart}
-          onToolCallComplete={onToolCallComplete}
-          showToolApprovalBanner={showToolApprovalBanner}
-          pendingApprovals={pendingApprovals}
-          onApproveApproval={onApproveApproval}
-          onRejectApproval={onRejectApproval}
-          {...panelProps}
-        >
-          {children}
-        </ChatBase>
-      </Box>
+      {/* The window: in place, or into the host's mount point when docked there. */}
+      {dockedInMount && sidebarMount
+        ? createPortal(chatWindow, sidebarMount)
+        : chatWindow}
     </>
   );
 }

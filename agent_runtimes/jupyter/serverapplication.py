@@ -6,6 +6,7 @@
 import asyncio
 import os
 
+from datalayer_core.utils.urls import DatalayerURLs
 from jupyter_server.extension.application import ExtensionApp, ExtensionAppJinjaMixin
 from jupyter_server.utils import url_path_join
 from traitlets import Bool, CInt, Instance, Unicode, default
@@ -48,14 +49,82 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
 
     template_paths = [DEFAULT_TEMPLATE_FILES_PATH]
 
-    # datalayer_url can be set set and None or ' ' (empty string).
-    # In that case, the consumer of those settings are free to consider datalayer_url as null.
-    datalayer_url = Unicode(
-        "https://prod1.datalayer.run",
+    # One URL per service: there is no single base any more. Each of them can
+    # be set and None or ' ' (empty string); the consumer of those settings is
+    # then free to consider it as null. What is not configured is resolved from
+    # the environment — `DATALAYER_IAM_URL` and friends — and falls back to the
+    # default of the service, see `DatalayerURLs`.
+    iam_url = Unicode(
         config=True,
         allow_none=True,
-        help="""URL to connect to the Datalayer RUN APIs.""",
+        help="""URL to connect to the Datalayer IAM API.""",
     )
+
+    runtimes_url = Unicode(
+        config=True,
+        allow_none=True,
+        help="""URL to connect to the Datalayer Runtimes API.""",
+    )
+
+    spacer_url = Unicode(
+        config=True,
+        allow_none=True,
+        help="""URL to connect to the Datalayer Spacer API.""",
+    )
+
+    library_url = Unicode(
+        config=True,
+        allow_none=True,
+        help="""URL to connect to the Datalayer Library API.""",
+    )
+
+    ai_agents_url = Unicode(
+        config=True,
+        allow_none=True,
+        help="""URL to connect to the Datalayer AI Agents API.""",
+    )
+
+    ai_inference_url = Unicode(
+        config=True,
+        allow_none=True,
+        help="""URL to connect to the Datalayer AI Inference API.""",
+    )
+
+    @default("iam_url")
+    def _default_iam_url(self) -> str:
+        return DatalayerURLs.from_environment().iam_url
+
+    @default("runtimes_url")
+    def _default_runtimes_url(self) -> str:
+        return DatalayerURLs.from_environment().runtimes_url
+
+    @default("spacer_url")
+    def _default_spacer_url(self) -> str:
+        return DatalayerURLs.from_environment().spacer_url
+
+    @default("library_url")
+    def _default_library_url(self) -> str:
+        return DatalayerURLs.from_environment().library_url
+
+    @default("ai_agents_url")
+    def _default_ai_agents_url(self) -> str:
+        return DatalayerURLs.from_environment().ai_agents_url
+
+    @default("ai_inference_url")
+    def _default_ai_inference_url(self) -> str:
+        return DatalayerURLs.from_environment().ai_inference_url
+
+    @property
+    def service_urls(self) -> dict:
+        """The URL of every service, as the browser and the templates read them."""
+        return {
+            "iam_url": self.iam_url,
+            "runtimes_url": self.runtimes_url,
+            "spacer_url": self.spacer_url,
+            "library_url": self.library_url,
+            "ai_agents_url": self.ai_agents_url,
+            "ai_inference_url": self.ai_inference_url,
+        }
 
     white_label = Bool(False, config=True, help="""Display white label content.""")
 
@@ -302,7 +371,7 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
             self.serverapp.port = port
 
         settings = dict(
-            datalayer_url=self.datalayer_url,
+            **self.service_urls,
             launcher={
                 "category": self.launcher.category,
                 "name": self.launcher.name,
@@ -328,7 +397,7 @@ class AgentRuntimesExtensionApp(ExtensionAppJinjaMixin, ExtensionApp):
         self.serverapp.jinja_template_vars.update(
             {
                 "datalayer_version": __version__,
-                "datalayer_url": self.datalayer_url,
+                **self.service_urls,
             }
         )
 

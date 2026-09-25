@@ -20,9 +20,19 @@ class EphemeralMemory(BaseMemoryBackend):
 
     Suitable for development and testing. Data is lost when the
     process restarts. For persistent memory, use ``Mem0Backend``.
+
+    Entries are tagged with the owning ``user_id``/``agent_id`` so the
+    non-persistent store mirrors the isolation scope of the durable
+    backends.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        user_id: str | None = None,
+        agent_id: str | None = None,
+    ) -> None:
+        self.user_id = user_id
+        self.agent_id = agent_id
         self._entries: list[dict[str, Any]] = []
 
     async def add(
@@ -35,6 +45,8 @@ class EphemeralMemory(BaseMemoryBackend):
             entry = {
                 "content": msg.get("content", ""),
                 "role": msg.get("role", "user"),
+                "user_id": self.user_id,
+                "agent_id": self.agent_id,
                 "metadata": metadata or {},
             }
             self._entries.append(entry)
@@ -54,6 +66,15 @@ class EphemeralMemory(BaseMemoryBackend):
                 scored.append({"content": content, "score": 1.0, **entry})
         # Return most recent matches first, capped at limit
         return scored[-limit:]
+
+    async def list_all(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Return the most recent stored entries."""
+        entries = [
+            {"content": entry.get("content", ""), "score": 1.0, **entry}
+            for entry in self._entries
+            if entry.get("content")
+        ]
+        return entries[-limit:][::-1]
 
     async def close(self) -> None:
         """Clear memory."""

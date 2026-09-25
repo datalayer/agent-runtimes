@@ -6,10 +6,23 @@
 /**
  * Lexical Editor Theme - Integrated with JupyterReactTheme
  *
- * This theme uses CSS variables from:
- * - SimpleLab theme (--jp-* variables)
- * - Primer design system (--bgColor-*, --fgColor-*, --borderColor-*, etc.)
- * - Automatically adapts to light/dark mode via JupyterReactTheme
+ * Two families of CSS variables meet here, and which one a rule reaches for
+ * first is the whole of whether the editor follows the theme picker.
+ *
+ * - Primer's (`--bgColor-*`, `--fgColor-*`, `--borderColor-*`) are set per
+ *   theme by `DatalayerThemeProvider`, from the selected variant's
+ *   `themeStyles`. Surfaces, text and borders take these, so the editor is
+ *   the colour the picker says.
+ * - JupyterLab's (`--jp-*`) carry JupyterLab's own palette and metrics. They
+ *   follow the colormode but know nothing of the variant, so preferring them
+ *   for a surface — which this file used to do, `var(--jp-layout-color1, …)`
+ *   ahead of the Primer fallback that never got a chance to apply — pinned
+ *   the editor to JupyterLab white on every theme. They are kept where they
+ *   are the right source: fonts, sizes, line heights, and the CodeMirror
+ *   syntax token colours.
+ *
+ * The colormode those `--jp-*` variables resolve against is supplied by
+ * `LexicalPrimerThemeProvider`, which the example wraps the editor in.
  *
  * Based on Lexical's theming guide: https://lexical.dev/docs/getting-started/theming
  */
@@ -35,7 +48,7 @@
 }
 
 .lexical-theme-code {
-  background-color: var(--jp-layout-color2, var(--bgColor-neutral-muted));
+  background-color: var(--bgColor-neutral-muted);
   border-radius: 3px;
   padding: 2px 4px;
   font-family: var(
@@ -68,7 +81,7 @@
   margin: 0;
   padding: 8px 0;
   line-height: var(--jp-content-line-height, 1.6);
-  color: var(--jp-ui-font-color1, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-heading-h1 {
@@ -76,7 +89,7 @@
   font-weight: 600;
   margin: 0.67em 0;
   line-height: var(--jp-content-heading-line-height, 1.3);
-  color: var(--jp-ui-font-color0, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-heading-h2 {
@@ -84,7 +97,7 @@
   font-weight: 600;
   margin: 0.75em 0;
   line-height: var(--jp-content-heading-line-height, 1.3);
-  color: var(--jp-ui-font-color0, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-heading-h3 {
@@ -92,7 +105,7 @@
   font-weight: 600;
   margin: 0.83em 0;
   line-height: var(--jp-content-heading-line-height, 1.3);
-  color: var(--jp-ui-font-color0, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-heading-h4 {
@@ -100,7 +113,7 @@
   font-weight: 600;
   margin: 1em 0;
   line-height: var(--jp-content-heading-line-height, 1.3);
-  color: var(--jp-ui-font-color0, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-heading-h5 {
@@ -108,7 +121,7 @@
   font-weight: 600;
   margin: 1.33em 0;
   line-height: var(--jp-content-heading-line-height, 1.3);
-  color: var(--jp-ui-font-color0, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-heading-h6 {
@@ -116,17 +129,16 @@
   font-weight: 600;
   margin: 1.67em 0;
   line-height: var(--jp-content-heading-line-height, 1.3);
-  color: var(--jp-ui-font-color1, var(--fgColor-muted));
+  color: var(--fgColor-muted);
 }
 
 .lexical-theme-quote {
   margin: 16px 0;
   padding: 8px 16px;
-  border-left: 4px solid
-    var(--jp-border-color2, var(--borderColor-accent-emphasis));
-  background-color: var(--jp-layout-color2, var(--bgColor-neutral-muted));
+  border-left: 4px solid var(--borderColor-accent-emphasis);
+  background-color: var(--bgColor-neutral-muted);
   font-style: italic;
-  color: var(--jp-ui-font-color2, var(--fgColor-muted));
+  color: var(--fgColor-muted);
 }
 
 /* ============================================
@@ -137,14 +149,14 @@
   margin: 8px 0;
   padding-left: 24px;
   list-style-type: disc;
-  color: var(--jp-ui-font-color1, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-list-ol {
   margin: 8px 0;
   padding-left: 24px;
   list-style-type: decimal;
-  color: var(--jp-ui-font-color1, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-list-listitem {
@@ -178,11 +190,11 @@
 code.lexical-theme-code-block,
 code.lexical-theme-code-block[spellcheck],
 code.lexical-theme-code-block[data-highlight-language] {
-  background-color: #f7f7f7 !important;
-  background: #f7f7f7 !important;
-  border: 1px solid #d3d3d3 !important;
+  background-color: var(--bgColor-muted) !important;
+  background: var(--bgColor-muted) !important;
+  border: 1px solid var(--borderColor-default) !important;
   border-radius: 6px !important;
-  border-left: 3px solid #0366d6 !important;
+  border-left: 3px solid var(--borderColor-accent-emphasis) !important;
   padding: 8px 16px 8px 70px !important;
   margin: 16px 0 0 0 !important;
   overflow-x: auto !important;
@@ -195,8 +207,11 @@ code.lexical-theme-code-block[data-highlight-language] {
   ) !important;
   font-size: 13px !important;
   line-height: 1.6 !important;
-  color: #24292e !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  color: var(--fgColor-default) !important;
+  box-shadow: var(
+    --shadow-resting-small,
+    0 1px 3px rgba(0, 0, 0, 0.1)
+  ) !important;
   display: block !important;
   min-height: 50px !important;
   position: relative !important;
@@ -211,14 +226,14 @@ code.lexical-theme-code-block::before {
   bottom: 0 !important;
   width: 50px !important;
   padding: 8px 8px 8px 0 !important;
-  color: #999 !important;
+  color: var(--fgColor-muted) !important;
   text-align: right !important;
   white-space: pre !important;
   font-family: monospace !important;
   font-size: 13px !important;
   line-height: 1.6 !important;
-  background-color: #f7f7f7 !important;
-  border-right: 1px solid #e1e4e8 !important;
+  background-color: var(--bgColor-muted) !important;
+  border-right: 1px solid var(--borderColor-muted) !important;
 }
 
 /* Force transparent background on all child elements */
@@ -232,8 +247,11 @@ code.lexical-theme-code-block br {
 }
 
 code.lexical-theme-code-block:hover {
-  border-color: #66afe9 !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  border-color: var(--borderColor-accent-emphasis) !important;
+  box-shadow: var(
+    --shadow-resting-medium,
+    0 2px 6px rgba(0, 0, 0, 0.15)
+  ) !important;
 }
 
 /* Code syntax highlighting tokens using SimpleLab CodeMirror colors */
@@ -294,18 +312,18 @@ code.lexical-theme-code-block:hover {
    ============================================ */
 
 .lexical-theme-link {
-  color: var(--jp-content-link-color, var(--fgColor-accent));
+  color: var(--fgColor-accent);
   text-decoration: none;
   cursor: pointer;
 }
 
 .lexical-theme-link:hover {
   text-decoration: underline;
-  color: var(--jp-content-link-color, var(--fgColor-accent));
+  color: var(--fgColor-accent);
 }
 
 .lexical-theme-autolink {
-  color: var(--jp-content-link-color, var(--fgColor-accent));
+  color: var(--fgColor-accent);
   text-decoration: none;
 }
 
@@ -319,26 +337,26 @@ code.lexical-theme-code-block:hover {
 
 .lexical-theme-table {
   border-collapse: collapse;
-  border: 1px solid var(--jp-border-color2, var(--borderColor-default));
+  border: 1px solid var(--borderColor-default);
   margin: 16px 0;
   width: 100%;
 }
 
 .lexical-theme-tableCell {
-  border: 1px solid var(--jp-border-color2, var(--borderColor-default));
+  border: 1px solid var(--borderColor-default);
   padding: 8px 12px;
   min-width: 75px;
   vertical-align: top;
-  color: var(--jp-ui-font-color1, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 .lexical-theme-tableCellHeader {
-  background-color: var(--jp-layout-color2, var(--bgColor-neutral-muted));
-  border: 1px solid var(--jp-border-color2, var(--borderColor-default));
+  background-color: var(--bgColor-neutral-muted);
+  border: 1px solid var(--borderColor-default);
   padding: 8px 12px;
   font-weight: 600;
   text-align: left;
-  color: var(--jp-ui-font-color0, var(--fgColor-default));
+  color: var(--fgColor-default);
 }
 
 /* ============================================
@@ -346,8 +364,8 @@ code.lexical-theme-code-block:hover {
    ============================================ */
 
 .lexical-theme-hashtag {
-  color: var(--jp-brand-color1, var(--fgColor-accent));
-  background-color: var(--jp-layout-color2, var(--bgColor-accent-muted));
+  color: var(--fgColor-accent);
+  background-color: var(--bgColor-accent-muted);
   border-radius: 3px;
   padding: 2px 4px;
   cursor: pointer;
@@ -357,17 +375,17 @@ code.lexical-theme-code-block:hover {
   max-width: 100%;
   height: auto;
   margin: 16px 0;
-  border-radius: var(--jp-border-radius, 6px);
+  border-radius: var(--borderRadius-medium, 6px);
 }
 
 .lexical-theme-hr {
   border: none;
-  border-top: 2px solid var(--jp-border-color2, var(--borderColor-default));
+  border-top: 2px solid var(--borderColor-default);
   margin: 24px 0;
 }
 
 .lexical-theme-mark {
-  background-color: var(--jp-warn-color3, rgba(255, 212, 0, 0.4));
+  background-color: var(--bgColor-attention-muted, rgba(255, 212, 0, 0.4));
   padding: 2px 0;
 }
 
@@ -399,8 +417,8 @@ code.lexical-theme-code-block:hover {
   );
   font-size: var(--jp-ui-font-size1, 16px);
   line-height: var(--jp-content-line-height, 1.6);
-  color: var(--jp-ui-font-color1, var(--fgColor-default));
-  background-color: var(--jp-layout-color1, var(--bgColor-default));
+  color: var(--fgColor-default);
+  background-color: var(--bgColor-default);
 }
 
 .lexical-editor-content:focus {
@@ -409,7 +427,7 @@ code.lexical-theme-code-block:hover {
 
 .lexical-editor-inner {
   position: relative;
-  background-color: var(--jp-layout-color1, var(--bgColor-default));
+  background-color: var(--bgColor-default);
 }
 
 /* ============================================
@@ -417,7 +435,7 @@ code.lexical-theme-code-block:hover {
    ============================================ */
 
 .lexical-theme-placeholder {
-  color: var(--jp-ui-font-color3, var(--fgColor-muted));
+  color: var(--fgColor-muted);
   overflow: hidden;
   position: absolute;
   text-overflow: ellipsis;

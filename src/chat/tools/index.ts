@@ -16,6 +16,20 @@ export {
 } from './ToolCallDisplay';
 
 export {
+  SubagentActivity,
+  type SubagentActivityProps,
+} from './SubagentActivity';
+export {
+  A2AAgentDialog,
+  a2aAgentDetails,
+  agentCardUrl,
+  useAgentCard,
+  type A2AAgentDetails,
+  type A2AAgentDialogProps,
+  type AgentCardFetch,
+} from './A2AAgentDialog';
+
+export {
   ToolApprovalBanner,
   type ToolApprovalBannerProps,
   type PendingApproval,

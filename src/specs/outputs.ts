@@ -25,6 +25,7 @@ export const CSV_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as a CSV file for easy import into spreadsheets, data pipelines, or other analysis tools.',
   icon: 'table',
+  enabled: false,
   supports_template: false,
   supports_storage: true,
   mime_types: ['text/csv'],
@@ -37,9 +38,23 @@ export const DASHBOARD_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as an interactive dashboard with charts, tables, and filter controls rendered in the browser.',
   icon: 'graph',
+  enabled: false,
   supports_template: true,
   supports_storage: true,
   mime_types: ['text/html', 'application/json'],
+};
+
+export const DATABASE_OUTPUT_SPEC_0_0_1: OutputSpec = {
+  id: 'database',
+  version: '0.0.1',
+  name: 'Database',
+  description:
+    'Write results back to a SQL or NoSQL store, where the rest of the business already reads from rather than into a file somebody must find.',
+  icon: 'database',
+  enabled: false,
+  supports_template: false,
+  supports_storage: true,
+  mime_types: ['application/sql', 'application/json'],
 };
 
 export const DOCUMENT_OUTPUT_SPEC_0_0_1: OutputSpec = {
@@ -49,6 +64,7 @@ export const DOCUMENT_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as a structured document (PDF, DOCX, or Markdown) suitable for sharing, archiving, or regulatory compliance.',
   icon: 'file',
+  enabled: false,
   supports_template: true,
   supports_storage: true,
   mime_types: [
@@ -65,6 +81,7 @@ export const EMAIL_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Send results as an email attachment or inline HTML body. Supports rich formatting with embedded tables and charts.',
   icon: 'mail',
+  enabled: false,
   supports_template: true,
   supports_storage: false,
   mime_types: ['text/html', 'application/pdf'],
@@ -77,6 +94,7 @@ export const JSON_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as structured JSON data, suitable for programmatic consumption by APIs, pipelines, or dashboards.',
   icon: 'code',
+  enabled: false,
   supports_template: false,
   supports_storage: true,
   mime_types: ['application/json'],
@@ -89,6 +107,7 @@ export const NOTEBOOK_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as a Jupyter notebook with executable cells, inline visualizations, and rich markdown narrative.',
   icon: 'file-code',
+  enabled: false,
   supports_template: true,
   supports_storage: true,
   mime_types: ['application/x-ipynb+json'],
@@ -101,11 +120,25 @@ export const SPREADSHEET_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as an Excel spreadsheet with formatted tables, charts, and multiple sheets for structured analysis.',
   icon: 'table',
+  enabled: false,
   supports_template: true,
   supports_storage: true,
   mime_types: [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   ],
+};
+
+export const WEBHOOK_OUTPUT_SPEC_0_0_1: OutputSpec = {
+  id: 'webhook',
+  version: '0.0.1',
+  name: 'Webhook',
+  description:
+    'Push results to any HTTP endpoint as they are produced, so a run can hand its answer straight to whatever is waiting for it.',
+  icon: 'globe',
+  enabled: false,
+  supports_template: true,
+  supports_storage: false,
+  mime_types: ['application/json', 'text/plain'],
 };
 
 // ============================================================================
@@ -115,11 +148,13 @@ export const SPREADSHEET_OUTPUT_SPEC_0_0_1: OutputSpec = {
 export const OUTPUT_CATALOG: Record<string, OutputSpec> = {
   csv: CSV_OUTPUT_SPEC_0_0_1,
   dashboard: DASHBOARD_OUTPUT_SPEC_0_0_1,
+  database: DATABASE_OUTPUT_SPEC_0_0_1,
   document: DOCUMENT_OUTPUT_SPEC_0_0_1,
   email: EMAIL_OUTPUT_SPEC_0_0_1,
   json: JSON_OUTPUT_SPEC_0_0_1,
   notebook: NOTEBOOK_OUTPUT_SPEC_0_0_1,
   spreadsheet: SPREADSHEET_OUTPUT_SPEC_0_0_1,
+  webhook: WEBHOOK_OUTPUT_SPEC_0_0_1,
 };
 
 export function getOutputSpecs(): OutputSpec[] {

@@ -81,7 +81,7 @@ export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => notifications.markAllRead(token, baseUrl),
+    mutationFn: () => notifications.markAllRead(token, undefined, baseUrl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-notifications'] });
     },

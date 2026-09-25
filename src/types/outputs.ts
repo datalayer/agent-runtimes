@@ -17,6 +17,8 @@ export interface OutputSpec {
   description: string;
   /** Icon identifier */
   icon: string;
+  /** Whether the platform offers this output today; off unless the spec says so */
+  enabled: boolean;
   /** Whether this format supports templates */
   supports_template: boolean;
   /** Whether this format supports storage paths */

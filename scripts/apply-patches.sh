@@ -39,7 +39,12 @@ for patch_file in patches/*.patch; do
     # Extract package name from patch filename (e.g., @datalayer+jupyter-lexical+1.0.8.patch)
     filename=$(basename "$patch_file")
     # Handle scoped packages: @datalayer+jupyter-lexical+1.0.8.patch -> @datalayer/jupyter-lexical
-    pkg_name=$(echo "$filename" | sed 's/+/\//; s/+.*//')
+    # Unscoped packages: eslint-plugin-react+7.37.5.patch -> eslint-plugin-react
+    if [[ "$filename" == @* ]]; then
+      pkg_name=$(echo "$filename" | sed 's/+/\//; s/+.*//')
+    else
+      pkg_name="${filename%%+*}"
+    fi
 
     if [ ! -d "node_modules/$pkg_name" ]; then
       echo -e "${YELLOW}⚠️  Package $pkg_name not found in local node_modules (may be hoisted in monorepo)${NC}"
@@ -51,6 +56,15 @@ done
 if [ "$MISSING_PACKAGES" = true ]; then
   echo -e "${YELLOW}⏭️  Skipping patches - packages not in local node_modules (monorepo setup)${NC}"
   exit 0
+fi
+
+# `npm install --workspaces --include-workspace-root` runs this postinstall
+# twice, for the root and for its "." workspace, and possibly at the same
+# time: two patch-package runs editing the same files fail each other. One
+# at a time, the second finds the patches applied and leaves them.
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"node_modules/.apply-patches.lock"
+  flock 9
 fi
 
 npx patch-package

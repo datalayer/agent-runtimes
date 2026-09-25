@@ -27,6 +27,8 @@ export interface EvalSpec {
   evaluator_type: 'case' | 'report';
   /** Pydantic evaluator class name */
   pydantic_class: string;
+  /** Whether the platform can run this evaluator today; shown, never offered, when false. */
+  executable: boolean;
   /** Primary output shape */
   output_kind:
     | 'boolean'

@@ -290,6 +290,49 @@ export const streamdownMarkdownStyles: SxStyles = {
     marginTop: '1em',
     marginBottom: '1em',
   },
+  /*
+   * The controls Streamdown draws over a table, an image and a diagram: copy
+   * and download, and the download's own menu.
+   *
+   * They are plain `<button>`s with Tailwind classes, and Tailwind's preflight
+   * — which we do not load — is what strips a button of its default chrome.
+   * Without it the browser drew them as it draws any button: a grey face and
+   * a bevelled border, in a message whose ground is the theme's. The reset
+   * here is the one the code block's header already has, and the colours are
+   * Primer's, so the row reads as part of the message in either colour mode.
+   */
+  '& [data-streamdown="table-wrapper"] button, & [data-streamdown="image-wrapper"] button, & [data-streamdown="mermaid-block"] button':
+    {
+      background: 'transparent',
+      border: 'none',
+      font: 'inherit',
+      cursor: 'pointer',
+      color: 'fg.muted',
+      borderRadius: '4px',
+      '&:hover': {
+        backgroundColor: 'neutral.muted',
+        color: 'fg.default',
+      },
+      '&:disabled': { cursor: 'not-allowed', opacity: 0.5 },
+    },
+  '& [data-streamdown="table-wrapper"] > .flex': {
+    marginBottom: '4px',
+  },
+  // The download menu, and its rows: the popover's own ground and rule, not
+  // the button reset above.
+  '& [data-streamdown="table-wrapper"] .bg-background, & [data-streamdown="mermaid-block"] .bg-background':
+    {
+      backgroundColor: 'canvas.overlay',
+      borderColor: 'border.default',
+      color: 'fg.default',
+      boxShadow: 'shadow.medium',
+    },
+  '& [data-streamdown="table-wrapper"] .bg-background button, & [data-streamdown="mermaid-block"] .bg-background button':
+    {
+      color: 'fg.default',
+      borderRadius: 0,
+      '&:hover': { backgroundColor: 'neutral.muted' },
+    },
   // Include Tailwind utilities for Streamdown output
   ...tailwindUtilities,
 };

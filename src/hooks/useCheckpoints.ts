@@ -19,7 +19,7 @@ import { useCoreStore, useDatalayer } from '@datalayer/core';
 import {
   agentQueryKeys,
   AGENT_QUERY_OPTIONS,
-  clearRuntimePodDeleted,
+  clearRuntimeDeleted,
 } from './useAgentRuntimes';
 import { disposeSandboxServiceManagers } from '../services/sandboxServiceManagers';
 import type {
@@ -28,6 +28,7 @@ import type {
   AgentConnection,
   CheckpointRecord,
 } from '../types';
+import { runtimeCheckpointsUrl, runtimeResumeUrl } from '../runtimes/lifecycle';
 
 /**
  * Checkpoint data returned by the runtime-checkpoints API.
@@ -54,7 +55,7 @@ export type CheckpointData = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type PauseAgentParams = {
-  podName: string;
+  runtimeName: string;
   mode?: CheckpointMode;
   agentSpecId?: string;
   agentSpec?: Record<string, any>;
@@ -62,14 +63,14 @@ export type PauseAgentParams = {
 };
 
 export type ResumeAgentParams = {
-  podName: string;
+  runtimeName: string;
   agentSpecId?: string;
   mode?: CheckpointMode;
   checkpointId?: string;
 };
 
 export type CheckpointAgentParams = {
-  podName: string;
+  runtimeName: string;
   name?: string;
   mode?: CheckpointMode;
   agentSpecId?: string;
@@ -78,7 +79,7 @@ export type CheckpointAgentParams = {
 };
 
 export type TerminateAgentParams = {
-  podName: string;
+  runtimeName: string;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -100,7 +101,7 @@ export function useCheckpointsQuery() {
     queryKey: agentQueryKeys.checkpoints.lists(),
     queryFn: async () => {
       const resp = await requestDatalayer({
-        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtime-checkpoints`,
+        url: runtimeCheckpointsUrl(configuration.runtimesUrl),
         method: 'GET',
       });
       if (resp.success && resp.checkpoints) {
@@ -127,43 +128,6 @@ export function useRefreshCheckpoints() {
 }
 
 /**
- * Hook to delete a paused agent runtime.
- *
- * Paused agents have no K8s pod — their state lives entirely in Solr
- * checkpoint records. This calls the dedicated
- * ``DELETE /runtimes/{podName}/paused`` endpoint which removes those
- * Solr records.
- */
-export function useDeletePausedAgentRuntime() {
-  const { configuration } = useCoreStore();
-  const { requestDatalayer } = useDatalayer({ notifyOnError: false });
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (podName: string) => {
-      return requestDatalayer({
-        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}/paused`,
-        method: 'DELETE',
-      });
-    },
-    onSuccess: (_data, podName) => {
-      queryClient.cancelQueries({
-        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
-      });
-      queryClient.removeQueries({
-        queryKey: agentQueryKeys.agentRuntimes.detail(podName),
-      });
-      queryClient.invalidateQueries({
-        queryKey: agentQueryKeys.agentRuntimes.lists(),
-      });
-      queryClient.invalidateQueries({
-        queryKey: agentQueryKeys.checkpoints.all(),
-      });
-    },
-  });
-}
-
-/**
  * Hook to resume a paused agent runtime via checkpoint restore.
  */
 export function useResumePausedAgentRuntime() {
@@ -172,16 +136,16 @@ export function useResumePausedAgentRuntime() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (podName: string) => {
+    mutationFn: async (runtimeName: string) => {
       return requestDatalayer({
-        url: `${configuration.runtimesUrl}/api/runtimes/v1/runtimes/${podName}/resume`,
+        url: runtimeResumeUrl(configuration.runtimesUrl, runtimeName),
         method: 'POST',
       });
     },
-    onSuccess: (_data, podName) => {
+    onSuccess: (_data, runtimeName) => {
       // The pod can come back under the same name — drop any delete tombstone
       // so the runtimes queries do not filter the resumed runtime out.
-      clearRuntimePodDeleted(podName);
+      clearRuntimeDeleted(runtimeName);
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.all(),
       });
@@ -214,7 +178,7 @@ export function usePauseAgent() {
       const { pauseRuntime } = await import('../api/runtimes/runtimes');
 
       const mode = params.mode || 'light';
-      const resp = await pauseRuntime(token, params.podName, runtimesUrl, {
+      const resp = await pauseRuntime(token, params.runtimeName, runtimesUrl, {
         agent_spec_id: params.agentSpecId,
         checkpoint_mode: mode,
         ...(params.messages && mode === 'light'
@@ -228,7 +192,7 @@ export function usePauseAgent() {
           await import('../api/runtimes/checkpoints');
         const ckpt = await waitForCheckpointStatus(
           token,
-          params.podName,
+          params.runtimeName,
           resp.checkpoint_id,
           ['paused', 'failed'],
           runtimesUrl,
@@ -245,7 +209,7 @@ export function usePauseAgent() {
     onSuccess: (_data, params) => {
       // Pausing tears the pod down: dispose every ServiceManager any surface
       // opened against the sandbox so their pollers stop immediately.
-      disposeSandboxServiceManagers(params.podName);
+      disposeSandboxServiceManagers(params.runtimeName);
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.all(),
       });
@@ -272,7 +236,7 @@ export function useResumeAgent() {
       const runtimesUrl = coreStore.getState().configuration?.runtimesUrl || '';
       const { resumeRuntime } = await import('../api/runtimes/runtimes');
 
-      return resumeRuntime(token, params.podName, runtimesUrl, {
+      return resumeRuntime(token, params.runtimeName, runtimesUrl, {
         agent_spec_id: params.agentSpecId,
         ...(params.mode ? { checkpoint_mode: params.mode } : {}),
         ...(params.checkpointId ? { checkpoint_id: params.checkpointId } : {}),
@@ -281,7 +245,7 @@ export function useResumeAgent() {
     onSuccess: (_data, params) => {
       // The pod can come back under the same name — drop any delete tombstone
       // so the runtimes queries do not filter the resumed runtime out.
-      clearRuntimePodDeleted(params.podName);
+      clearRuntimeDeleted(params.runtimeName);
       queryClient.invalidateQueries({
         queryKey: agentQueryKeys.agentRuntimes.all(),
       });
@@ -311,16 +275,21 @@ export function useCheckpointAgent() {
         await import('../api/runtimes/checkpoints');
 
       const mode = params.mode || 'criu';
-      const pauseResp = await pauseRuntime(token, params.podName, runtimesUrl, {
-        name: params.name || `checkpoint-${Date.now()}`,
-        description: `${mode.toUpperCase()} checkpoint for ${params.agentSpecId}`,
-        checkpoint_mode: mode,
-        ...(params.messages && mode === 'light'
-          ? { messages: params.messages }
-          : {}),
-        agent_spec_id: params.agentSpecId,
-        agentspec: params.agentSpec || {},
-      });
+      const pauseResp = await pauseRuntime(
+        token,
+        params.runtimeName,
+        runtimesUrl,
+        {
+          name: params.name || `checkpoint-${Date.now()}`,
+          description: `${mode.toUpperCase()} checkpoint for ${params.agentSpecId}`,
+          checkpoint_mode: mode,
+          ...(params.messages && mode === 'light'
+            ? { messages: params.messages }
+            : {}),
+          agent_spec_id: params.agentSpecId,
+          agentspec: params.agentSpec || {},
+        },
+      );
 
       const checkpointId = pauseResp.checkpoint_id;
       if (!checkpointId) {
@@ -329,7 +298,7 @@ export function useCheckpointAgent() {
 
       const ckpt = await waitForCheckpointStatus(
         token,
-        params.podName,
+        params.runtimeName,
         checkpointId,
         ['paused', 'failed'],
         runtimesUrl,
@@ -369,7 +338,7 @@ export function useTerminateAgent() {
       const token = iamStore.getState().token || '';
       const runtimesUrl = coreStore.getState().configuration?.runtimesUrl || '';
       const { deleteRuntime } = await import('../api/runtimes/runtimes');
-      return deleteRuntime(token, params.podName, runtimesUrl);
+      return deleteRuntime(token, params.runtimeName, runtimesUrl);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -398,7 +367,7 @@ export interface AgentLifecycleOptions {
   runtime: AgentConnection | null;
   /** Callback to connect to a new runtime pod */
   connectToRuntime: (opts: {
-    podName: string;
+    runtimeName: string;
     environmentName: string;
     jupyterBaseUrl?: string;
   }) => void;
@@ -423,7 +392,7 @@ export interface AgentLifecycleReturn {
   resume: (
     mode?: CheckpointMode,
     checkpointId?: string,
-    podName?: string,
+    runtimeName?: string,
   ) => Promise<void>;
   /** Terminate the agent (delete runtime) */
   terminate: () => Promise<void>;
@@ -493,7 +462,7 @@ export function useAgentLifecycle(
       }
       try {
         await pauseAgentMutation.mutateAsync({
-          podName: runtime.podName,
+          runtimeName: runtime.runtimeName,
           mode,
           agentSpecId,
           agentSpec,
@@ -514,24 +483,24 @@ export function useAgentLifecycle(
     async (
       mode: CheckpointMode = 'criu',
       checkpointId?: string,
-      podName?: string,
+      runtimeName?: string,
     ) => {
       setLifecycleStatus('resuming');
       setLifecycleError(null);
       try {
         const checkpoints = checkpointsQuery.data || [];
-        const targetPodName =
-          podName ||
-          runtime?.podName ||
+        const targetRuntimeName =
+          runtimeName ||
+          runtime?.runtimeName ||
           (checkpointId
             ? checkpoints.find(
                 (c: { id: string; runtime_uid: string }) =>
                   c.id === checkpointId,
               )?.runtime_uid
             : undefined);
-        if (targetPodName) {
+        if (targetRuntimeName) {
           await resumeAgentMutation.mutateAsync({
-            podName: targetPodName,
+            runtimeName: targetRuntimeName,
             agentSpecId,
             mode,
             checkpointId,
@@ -549,7 +518,7 @@ export function useAgentLifecycle(
             const runtimesResponse = await listRuntimes(token, runtimesUrl);
             const runtimes = runtimesResponse.runtimes || [];
             const aiAgentRuntimes = runtimes.filter(rt => {
-              if (rt.environment_name !== 'ai-agents-env') {
+              if (rt.environment.name !== 'ai-agents-env') {
                 return false;
               }
               if (!agentSpecId) {
@@ -564,10 +533,10 @@ export function useAgentLifecycle(
               const bTs = Number(b.started_at || 0);
               return bTs - aTs;
             })[0];
-            if (latestRuntime?.pod_name && latestRuntime?.ingress) {
+            if (latestRuntime?.runtime_name && latestRuntime?.ingress) {
               connectToRuntime({
-                podName: latestRuntime.pod_name,
-                environmentName: latestRuntime.environment_name,
+                runtimeName: latestRuntime.runtime_name,
+                environmentName: latestRuntime.environment.name,
                 jupyterBaseUrl: latestRuntime.ingress,
               });
             }
@@ -614,7 +583,7 @@ export function useAgentLifecycle(
       }
       try {
         await checkpointAgentMutation.mutateAsync({
-          podName: runtime.podName,
+          runtimeName: runtime.runtimeName,
           name,
           mode,
           agentSpecId,
@@ -640,7 +609,7 @@ export function useAgentLifecycle(
     }
     try {
       await terminateAgentMutation.mutateAsync({
-        podName: runtime.podName,
+        runtimeName: runtime.runtimeName,
       });
       disconnect();
       setLifecycleStatus('idle');

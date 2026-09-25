@@ -14,9 +14,9 @@ import {
   setJupyterServerUrl,
   getJupyterServerUrl,
   getJupyterServerToken,
+  setJupyterServerToken,
   ServiceManagerLess,
   loadJupyterConfig,
-  DEFAULT_JUPYTER_SERVER_URL,
   Lite,
   OnSessionConnection,
   useNotebookStore,
@@ -30,6 +30,9 @@ import { createDatalayerServiceManager } from '../services/DatalayerServiceManag
 import nbformatExample from './notebooks/NotebookExample1.ipynb.json';
 
 const NOTEBOOK_ID = 'notebook-mutations-id';
+const LOCAL_JUPYTER_SERVER_URL = 'http://0.0.0.0:8888/api/jupyter-server';
+const LOCAL_JUPYTER_SERVER_TOKEN =
+  '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 
 loadJupyterConfig();
 
@@ -67,6 +70,9 @@ const NotebookMutationsServiceManager = () => {
   };
   const changeIndex = (index: number) => {
     setIndex(index);
+    setJupyterServerToken(
+      getJupyterServerToken() || LOCAL_JUPYTER_SERVER_TOKEN,
+    );
     switch (index) {
       case 0: {
         setNbformat(getCurrentNotebookContent());
@@ -76,7 +82,7 @@ const NotebookMutationsServiceManager = () => {
         break;
       }
       case 1: {
-        setJupyterServerUrl(location.protocol + '//' + location.host);
+        setJupyterServerUrl(LOCAL_JUPYTER_SERVER_URL);
         createLiteServiceManager().then(liteServiceManager => {
           setServiceManager(liteServiceManager);
           setNbformat(getCurrentNotebookContent());
@@ -86,7 +92,7 @@ const NotebookMutationsServiceManager = () => {
         break;
       }
       case 2: {
-        setJupyterServerUrl(DEFAULT_JUPYTER_SERVER_URL);
+        setJupyterServerUrl(LOCAL_JUPYTER_SERVER_URL);
         setNbformat(getCurrentNotebookContent());
         setReadonly(false);
         setLite(false);

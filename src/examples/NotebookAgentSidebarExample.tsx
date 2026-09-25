@@ -4,7 +4,7 @@
  */
 
 /**
- * Agent Runtime Notebook Example - Next generation chat with Jupyter Notebook.
+ * Notebook Agent Sidebar Example - Chat with Jupyter Notebook.
  *
  * This example demonstrates using the chat component with:
  * - Jupyter Notebook integration
@@ -14,24 +14,22 @@
  *
  * To run this example:
  * 1. Start the agent-runtimes server: `npm run start:ag-ui`
- * 2. Create a .env file with VITE_BASE_URL if not using defaults
+ * 2. Optionally set `VITE_DATALAYER_AGENT_RUNTIMES_URL` (and
+ *    `VITE_DATALAYER_RUNTIMES_URL` for cloud target) when overriding defaults.
  *
  * @module examples/NotebookAgentSidebarExample
  */
 
-import { useEffect, useMemo, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ServiceManager } from '@jupyterlab/services';
-import { Notebook, useJupyter } from '@datalayer/jupyter-react';
+import { Notebook } from '@datalayer/jupyter-react';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
-import { ThemedJupyterProvider } from './utils/themedProvider';
+import { ThemedJupyterProvider, ThemedProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
-import type { ProtocolConfig } from '../types';
-import { DEFAULT_MODEL } from '../specs';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
+import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
 const NOTEBOOK_ID = 'chat-notebook-example';
@@ -42,32 +40,6 @@ const NOTEBOOK_CONTENT = MatplotlibNotebook;
 // Default configuration
 const DEFAULT_AGENT_ID =
   import.meta.env.VITE_AGENT_ID || 'notebook-sidebar-agent-runtime-example';
-
-function getJupyterSandboxUrl(
-  serviceManager?: ServiceManager.IManager,
-): string | undefined {
-  const envUrl = import.meta.env.VITE_JUPYTER_SANDBOX_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-
-  const baseUrl = serviceManager?.serverSettings?.baseUrl?.replace(/\/$/, '');
-  if (!baseUrl) {
-    return undefined;
-  }
-
-  if (baseUrl.includes('token=')) {
-    return baseUrl;
-  }
-
-  const token = serviceManager?.serverSettings?.token;
-  if (!token) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
 
 /**
  * Notebook UI component
@@ -94,19 +66,27 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
   }
 
   return (
-    <Notebook
-      nbformat={NOTEBOOK_CONTENT}
-      id={NOTEBOOK_ID}
-      serviceManager={serviceManager}
-      height="100%"
-      cellSidebarMargin={120}
-      startDefaultKernel={true}
-    />
+    // Only the notebook is wrapped. `JupyterReactTheme` nests a Primer theme
+    // of its own, so wrapping the example in it made every surface around the
+    // notebook — header, sidebar, error panel — read `canvas.default` from
+    // Primer's stock light palette rather than from the chosen theme, which is
+    // what showed as a white background.
+    <ThemedJupyterProvider fullHeight>
+      <Notebook
+        nbformat={NOTEBOOK_CONTENT}
+        id={NOTEBOOK_ID}
+        Toolbar={ExampleNotebookToolbar}
+        serviceManager={serviceManager}
+        height="100%"
+        cellSidebarMargin={120}
+        startDefaultKernel={true}
+      />
+    </ThemedJupyterProvider>
   );
 }
 
 /**
- * Agent Runtime Notebook Sidebar Example with Simple integration
+ * Notebook Chat Sidebar Example
  */
 interface ChatJupyterNotebookExampleProps {
   serviceManager?: ServiceManager.IManager;
@@ -115,67 +95,36 @@ interface ChatJupyterNotebookExampleProps {
 export function AgentRuntimeNotebookExampleInner({
   serviceManager,
 }: ChatJupyterNotebookExampleProps) {
-  const baseUrl = useExampleAgentRuntimesUrl();
-  const vercelAiEndpoint = `${baseUrl}/api/v1/vercel-ai/${DEFAULT_AGENT_ID}`;
-  const [createRequested, setCreateRequested] = useState(false);
-  const jupyterSandboxUrl = useMemo(
-    () => getJupyterSandboxUrl(serviceManager),
-    [serviceManager],
-  );
-
-  const { agentId, isReady, status, error, createAgent } =
-    useExampleAgentRuntime({
-      exampleId: 'NotebookAgentSidebarExample',
-      agentName: DEFAULT_AGENT_ID,
-      autoCreateAgent: false,
-      agentConfig: {
-        name: DEFAULT_AGENT_ID,
-        description: 'Demo agent for notebook sidebar example',
-        protocol: 'vercel-ai',
-        model: DEFAULT_MODEL,
-        systemPrompt:
-          'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
-        enableCodemode: false,
-        sandboxVariant: 'jupyter',
-        jupyterSandbox: jupyterSandboxUrl,
-      },
-    });
-
-  useEffect(() => {
-    if (!jupyterSandboxUrl || createRequested || agentId) {
-      return;
-    }
-    setCreateRequested(true);
-    void createAgent({
-      name: DEFAULT_AGENT_ID,
-      description: 'Demo agent for notebook sidebar example',
-      protocol: 'vercel-ai',
-      model: DEFAULT_MODEL,
-      systemPrompt:
-        'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCode only for temporary inspection code that should not modify notebook cells.',
-      enableCodemode: false,
-      sandboxVariant: 'jupyter',
-      jupyterSandbox: jupyterSandboxUrl,
-    }).catch(() => {
-      setCreateRequested(false);
-    });
-  }, [jupyterSandboxUrl, createRequested, agentId, createAgent]);
-
-  const effectiveReady = isReady || status === 'ready';
-
-  // Get notebook tools for ChatSidebar
+  // The tools. Which of the chat and the harness runs them depends on
+  // where the loop turns, and the hook decides that.
   const tools = useNotebookTools(NOTEBOOK_ID);
 
+  const {
+    agentReady,
+    protocol: protocolConfig,
+    chatFrontendTools,
+    error,
+    unavailableReason,
+  } = useExampleJupyterAgent({
+    exampleId: 'NotebookAgentSidebarExample',
+    agentName: DEFAULT_AGENT_ID,
+    description: 'Demo agent for notebook sidebar example',
+    systemPrompt:
+      'You are a helpful AI assistant that helps users work with Jupyter notebooks. For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. Use executeCodeInNotebook only for temporary inspection code that should not modify notebook cells.',
+    serviceManager,
+    frontendTools: tools,
+  });
+  // One failed attempt is reported, not retried — see
+  // `useExampleJupyterAgent`.
+  const chatError = error || unavailableReason;
+
+  // The example's own agent, not merely the runtime: on the cloud target the
+  // runtime is ready before this agent has been registered on it.
+  const effectiveReady = agentReady;
+
+  // Get notebook tools for ChatSidebar
+
   // Build Vercel AI protocol config
-  const protocolConfig = useMemo((): ProtocolConfig => {
-    return {
-      type: 'vercel-ai',
-      endpoint: vercelAiEndpoint,
-      agentId: DEFAULT_AGENT_ID,
-      enableConfigQuery: true,
-      configEndpoint: `${baseUrl}/api/v1/configure`,
-    };
-  }, [baseUrl, vercelAiEndpoint]);
 
   return (
     <>
@@ -202,14 +151,14 @@ export function AgentRuntimeNotebookExampleInner({
               p: 3,
               borderBottom: '1px solid',
               borderColor: 'border.default',
-              bg: 'canvas.subtle',
+              bg: 'canvas.default',
             }}
           >
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-              Agent Runtime Notebook Sidebar Example
+              Notebook Chat Sidebar Example
             </h1>
             <p style={{ margin: '8px 0 0', color: 'var(--fgColor-muted)' }}>
-              Next generation chat with Jupyter Notebook integration
+              Chat with Jupyter Notebook integration
             </p>
           </Box>
 
@@ -250,7 +199,7 @@ export function AgentRuntimeNotebookExampleInner({
             defaultOpen={true}
             panelProps={{
               protocol: protocolConfig,
-              frontendTools: tools,
+              frontendTools: chatFrontendTools,
               useStore: false,
               showModelSelector: true,
               showToolsMenu: true,
@@ -277,7 +226,7 @@ export function AgentRuntimeNotebookExampleInner({
           />
         )}
 
-        {error && (
+        {chatError && (
           <Box
             sx={{
               position: 'fixed',
@@ -291,7 +240,7 @@ export function AgentRuntimeNotebookExampleInner({
               zIndex: 999,
             }}
           >
-            <strong>Error:</strong> {error}
+            <strong>Error:</strong> {chatError}
           </Box>
         )}
       </Box>
@@ -300,19 +249,22 @@ export function AgentRuntimeNotebookExampleInner({
 }
 
 /**
- * Main example component with Simple wrapper
+ * The example, in the app's theme.
+ *
+ * The service manager comes from the shell, as it does in every other example:
+ * the shell owns which of the four runtime targets is selected, and reading it
+ * from an ambient Jupyter provider instead — which is what this example used
+ * to do — meant it could be showing a notebook on a different runtime than the
+ * one the picker says.
  */
-export function AgentRuntimeNotebookAgentSidebarExample() {
+export function AgentRuntimeNotebookAgentSidebarExample({
+  serviceManager,
+}: ChatJupyterNotebookExampleProps) {
   return (
-    <ThemedJupyterProvider>
-      <SimpleWrapper />
-    </ThemedJupyterProvider>
+    <ThemedProvider>
+      <AgentRuntimeNotebookExampleInner serviceManager={serviceManager} />
+    </ThemedProvider>
   );
-}
-
-function SimpleWrapper() {
-  const { serviceManager } = useJupyter();
-  return <AgentRuntimeNotebookExampleInner serviceManager={serviceManager} />;
 }
 
 export default AgentRuntimeNotebookAgentSidebarExample;

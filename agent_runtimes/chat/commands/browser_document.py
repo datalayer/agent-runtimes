@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Slash command: /document - Open the Agent Lexical UI in the browser."""
 
 from __future__ import annotations
@@ -19,7 +15,9 @@ if TYPE_CHECKING:
 NAME = "document"
 ALIASES: list[str] = ["browser-document", "browser-lexical"]
 DESCRIPTION = "Open the Agent Lexical UI in your browser"
-SHORTCUT = "escape l"
+# Its own key: three commands claimed `escape l`, so only the first of
+# them was ever bound (a document is a file; /browser has w and /notebook has n).
+SHORTCUT = "escape f"
 
 
 async def execute(tux: "CliTux") -> Optional[str]:

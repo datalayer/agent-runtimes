@@ -29,8 +29,10 @@ from typing import Any, AsyncGenerator, Callable
 from acp import (
     AGENT_METHODS,
     CLIENT_METHODS,
+    PROTOCOL_VERSION,
     InitializeRequest,
     InitializeResponse,
+    LoadSessionRequest,
     NewSessionRequest,
     NewSessionResponse,
     PromptRequest,
@@ -41,9 +43,24 @@ from acp import (
 )
 from acp.schema import (
     AgentCapabilities,
+    AllowedOutcome,
     ClientCapabilities,
+    DeniedOutcome,
     Implementation,
 )
+
+
+def _wire(model: Any) -> dict[str, Any]:
+    """One ACP message, as the protocol spells it.
+
+    The schema's fields are snake_case with camelCase aliases, and the wire
+    is the aliases: `sessionId`, `protocolVersion`, `clientCapabilities`.
+    Dumped without them every request went out in a spelling no conformant
+    agent reads. `None`s are dropped so an optional field that was never set
+    is absent rather than null.
+    """
+    return model.model_dump(by_alias=True, exclude_none=True)
+
 
 try:
     import websockets  # noqa: F401
@@ -154,11 +171,16 @@ class ACPClient:
 
     async def _initialize(self) -> None:
         """Initialize the ACP connection using SDK types."""
-        # Create initialize request
-        init_request = InitializeRequest(client_capabilities=ClientCapabilities())
+        # The protocol version is required by `InitializeRequest` and is what
+        # tells the agent which ACP this client speaks; without it the SDK
+        # refuses to build the request at all.
+        init_request = InitializeRequest(
+            protocol_version=PROTOCOL_VERSION,
+            client_capabilities=ClientCapabilities(),
+        )
 
         response = await self._send_request(
-            AGENT_METHODS.initialize, init_request.model_dump()
+            AGENT_METHODS["initialize"], _wire(init_request)
         )
 
         if response:
@@ -189,7 +211,7 @@ class ACPClient:
         session_request = NewSessionRequest(cwd=cwd, mcp_servers=mcp_servers or [])
 
         response = await self._send_request(
-            AGENT_METHODS.session_new, session_request.model_dump()
+            AGENT_METHODS["session_new"], _wire(session_request)
         )
 
         if response:
@@ -199,6 +221,22 @@ class ACPClient:
             return session_response.session_id
 
         raise ACPClientError("Failed to create session")
+
+    async def load_session(self, session_id: str, cwd: str = ".") -> None:
+        """
+        Load a session the agent kept, to go on with it (``session/load``).
+
+        What the session said so far is replayed as updates before the load
+        is answered, and an agent that keeps its sessions still has them
+        after a restart (O1-11).
+
+        Args:
+            session_id: The session to load.
+            cwd: Current working directory for the session.
+        """
+        request = LoadSessionRequest(session_id=session_id, cwd=cwd, mcp_servers=[])
+        await self._send_request(AGENT_METHODS["session_load"], _wire(request))
+        self._session_id = session_id
 
     async def run(
         self,
@@ -228,43 +266,65 @@ class ACPClient:
 
         # Register notification handler for session updates
         def notification_handler(msg: dict[str, Any]) -> None:
-            if msg.get("method") == CLIENT_METHODS.session_notification:
+            if msg.get("method") == CLIENT_METHODS["session_update"]:
                 params = msg.get("params", {})
-                if params.get("session_id") == self._session_id:
+                # The wire is camelCase; a notification for another session
+                # is not this prompt's.
+                if (
+                    params.get("sessionId", params.get("session_id"))
+                    == self._session_id
+                ):
                     asyncio.create_task(event_queue.put(params))
 
         self._notification_handlers.append(notification_handler)
 
         try:
-            # Send prompt request
-            response = await self._send_request(
-                AGENT_METHODS.session_prompt, prompt_request.model_dump()
+            # The prompt request only answers when the turn is over, so it
+            # cannot be awaited before reading the updates it produces: the
+            # updates arrive *during* it. Started as a task, the queue is
+            # drained while it runs and the response is taken at the end.
+            #
+            # Awaiting it first — as this did — meant every update sat in the
+            # queue until the turn finished and then only the first was
+            # yielded, because the loop broke as soon as it saw a response.
+            pending = asyncio.ensure_future(
+                self._send_request(
+                    AGENT_METHODS["session_prompt"], _wire(prompt_request)
+                )
             )
 
             if stream:
-                # Yield session notifications from the queue
                 while True:
-                    try:
-                        notification_data = await asyncio.wait_for(
-                            event_queue.get(),
-                            timeout=self.timeout,
-                        )
-                        notification = SessionNotification(**notification_data)
-                        yield notification
-
-                        # Check if we should stop (response received)
-                        if response:
-                            break
-                    except asyncio.TimeoutError:
+                    getter = asyncio.ensure_future(event_queue.get())
+                    done, _ = await asyncio.wait(
+                        {getter, pending},
+                        timeout=self.timeout,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    if getter in done:
+                        yield SessionNotification(**getter.result())
+                        continue
+                    getter.cancel()
+                    if pending in done:
+                        # The turn is over. Anything already queued is part
+                        # of it and is yielded before the response.
+                        while not event_queue.empty():
+                            yield SessionNotification(**event_queue.get_nowait())
                         break
+                    # Neither: the agent has gone quiet for longer than the
+                    # timeout, which is the caller's answer as much as a
+                    # response would be.
+                    pending.cancel()
+                    break
 
-                # Yield final response
-                if response:
-                    yield PromptResponse(**response)
-            else:
-                # Non-streaming: yield the final result
-                if response:
-                    yield PromptResponse(**response)
+            response = None
+            if not pending.cancelled():
+                try:
+                    response = await pending
+                except asyncio.CancelledError:
+                    response = None
+            if response:
+                yield PromptResponse(**response)
 
         finally:
             self._notification_handlers.remove(notification_handler)
@@ -297,12 +357,24 @@ class ACPClient:
 
         Args:
             request_id: The JSON-RPC request ID to respond to.
-            option_id: Optional permission option ID (if None, denies).
+            option_id: The option chosen; `None` refuses the request.
+
+        The answer is an *outcome*, which `RequestPermissionResponse`
+        requires: the option selected, or cancelled. Built without one the
+        SDK refuses to construct the response, so a permission request was
+        never answered at all.
         """
-        response = RequestPermissionResponse(option_id=option_id)
+        # `RequestPermissionResponse.outcome` is one of these two: the
+        # option that was selected, or cancelled.
+        outcome = (
+            AllowedOutcome(outcome="selected", option_id=option_id)
+            if option_id
+            else DeniedOutcome(outcome="cancelled")
+        )
+        response = RequestPermissionResponse(outcome=outcome)
 
         # Send as JSON-RPC response
-        await self._send_response(request_id, response.model_dump())
+        await self._send_response(request_id, _wire(response))
 
     async def shutdown(self) -> None:
         """Gracefully shutdown the connection."""

@@ -1,0 +1,99 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * `@datalayer/loop-plugin-input-prompt` — the composer, as a plugin.
+ *
+ * The chat view assembles everything the composer needs — the draft, the
+ * send handler, the tools/skills/model menus' data, the placement — and
+ * offers it through the {@link LoopChatComposer} point. This plugin is the
+ * standard taker: it renders the assembled props with the chat's own
+ * `InputPrompt`, which is the full composer — the lexical editor (`/` opens
+ * the command menu, `@` mentions agents) and the session-controls footer.
+ *
+ * The split is what makes the composer honest workspace furniture: untick
+ * this plugin and the box goes, the way unticking the notebook takes the
+ * editor; contribute a different component to the same point and the
+ * workspace types through *your* composer with none of the wiring
+ * re-derived.
+ *
+ * The component is loaded lazily: `InputPrompt` drags the lexical editor
+ * and every menu behind it, and none of that belongs in the module graph a
+ * host pays for by merely mounting the preset. The plugin file is a
+ * manifest; the composer arrives when it first renders.
+ *
+ * Not to be confused with `@datalayer/loop-plugin-prompt`, which owns the
+ * `/prompt` and `/new` commands and the **+** footer action — commands about
+ * the composer, wherever it came from.
+ *
+ * @module loop/plugins/input-prompt
+ */
+
+import type { JSX } from 'react';
+import { Suspense, lazy } from 'react';
+import { contribution, definePlugin } from '@datalayer/reactor';
+import {
+  LoopChatComposer,
+  LoopPromptPanel,
+  type LoopChatComposerProps,
+} from '../../core';
+
+export const INPUT_PROMPT_PLUGIN_NAME = '@datalayer/loop-plugin-input-prompt';
+
+/**
+ * What a host may set on the composer.
+ */
+export type InputPromptPluginConfig = {
+  /**
+   * Called once — the first time a person actually sends a message through
+   * this composer — and never again after, for the life of the mounted
+   * workspace.
+   *
+   * Typing does not count, and neither does a suggestion merely landing in
+   * the box: only a real send. This is the one place that sees every send
+   * regardless of which surface is open beside the chat, which is what
+   * makes it the right point for a host to notice "the conversation has
+   * started" rather than each editor plugin guessing at it independently.
+   *
+   * The usual reason to want it: a page that shows something *around* the
+   * workspace before the first message — an empty-state layout, a column
+   * beside it — and wants to react (give the editor the room that layout
+   * was holding, say) exactly once, when the workspace stops being empty.
+   */
+  firstPromptHook?: () => void;
+};
+
+const LazyComposerView = lazy(() => import('./ComposerView'));
+
+/** The lazy boundary, so the point's consumers need no Suspense of theirs. */
+function ComposerView(props: LoopChatComposerProps): JSX.Element {
+  return (
+    <Suspense fallback={null}>
+      <LazyComposerView {...props} />
+    </Suspense>
+  );
+}
+
+export const InputPromptPlugin = definePlugin<InputPromptPluginConfig>({
+  name: INPUT_PROMPT_PLUGIN_NAME,
+  config: {},
+  displayName: 'Input Prompt',
+  description: 'The composer under (or over) the conversation.',
+  octicon: 'pencil',
+  emoji: '\u{270F}\u{FE0F}',
+  // The composer's own opening: panels hung above or below it, inside its
+  // card. Declared here so the graph shows the point before anything fills
+  // it; the page layout's current-turn panel is what normally does.
+  contributionPoints: [LoopPromptPanel],
+  contributes: [
+    contribution(
+      LoopChatComposer,
+      { id: 'input-prompt', Component: ComposerView },
+      { id: 'input-prompt' },
+    ),
+  ],
+});
+
+export default InputPromptPlugin;

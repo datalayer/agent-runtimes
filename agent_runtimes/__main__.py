@@ -54,6 +54,7 @@ from agent_runtimes.commands.evals import app as evals_app
 from agent_runtimes.commands.events import app as events_app
 from agent_runtimes.commands.events import events_list, events_ls
 from agent_runtimes.commands.exec import main as exec_main
+from agent_runtimes.commands.executions import app as executions_app
 from agent_runtimes.commands.list_agents import (
     ListAgentsError,
     OutputFormat,
@@ -77,9 +78,11 @@ from agent_runtimes.commands.mcp_servers_config import (
 from agent_runtimes.commands.mcp_servers_config import (
     list_mcp_servers_config,
 )
+from agent_runtimes.commands.memory import app as memory_app
 from agent_runtimes.commands.pools import app as pools_app
 from agent_runtimes.commands.ray import app as ray_app
 from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
+from agent_runtimes.commands.sandboxes import app as sandboxes_app
 from agent_runtimes.commands.schedules import app as schedules_app
 from agent_runtimes.commands.serve import (
     LogLevel,
@@ -169,11 +172,6 @@ def main_callback(
         is_eager=True,
         help="Show version and exit",
     ),
-    datalayer_url: str | None = typer.Option(
-        None,
-        "--datalayer-url",
-        help="Override DATALAYER_URL for this CLI invocation.",
-    ),
     iam_url: str | None = typer.Option(
         None,
         "--iam-url",
@@ -235,9 +233,9 @@ def main_callback(
         "--support-url",
         help="Override DATALAYER_SUPPORT_URL for this CLI invocation.",
     ),
-    mcp_server_url: str | None = typer.Option(
+    datalayer_mcp_server_url: str | None = typer.Option(
         None,
-        "--mcp-server-url",
+        "--datalayer-mcp-server-url",
         help="Override DATALAYER_MCP_SERVER_URL for this CLI invocation.",
     ),
     scheduler_url: str | None = typer.Option(
@@ -319,7 +317,6 @@ def main_callback(
 ) -> None:
     """Main callback to handle global options."""
     overrides = {
-        "DATALAYER_URL": datalayer_url,
         "DATALAYER_IAM_URL": iam_url,
         "DATALAYER_RUNTIMES_URL": runtimes_url,
         "DATALAYER_SPACER_URL": spacer_url,
@@ -332,7 +329,7 @@ def main_callback(
         "DATALAYER_SUCCESS_URL": success_url,
         "DATALAYER_STATUS_URL": status_url,
         "DATALAYER_SUPPORT_URL": support_url,
-        "DATALAYER_MCP_SERVER_URL": mcp_server_url,
+        "DATALAYER_MCP_SERVER_URL": datalayer_mcp_server_url,
         "DATALAYER_SCHEDULER_URL": scheduler_url,
     }
     for env_name, value in overrides.items():
@@ -389,6 +386,16 @@ def main_callback(
     # When no subcommand is given, default to the interactive `chat` command
     # so that running `loop` behaves like running `loop chat`.
     if ctx.invoked_subcommand is None:
+        # Four console scripts share this callback. `loop` and `l` open the
+        # interactive workspace; `agent-runtimes` and `datalayer-agents` print
+        # help, so scripts and documentation calling them keep behaving as they
+        # read. Anything with a subcommand routes normally either way.
+        from agent_runtimes.loop.entrypoint import opens_workspace
+
+        if not opens_workspace():
+            typer.echo(ctx.get_help())
+            raise typer.Exit()
+
         from agent_runtimes.chat.cli import app as chat_app
 
         chat_args: list[str] = []
@@ -430,11 +437,14 @@ except Exception as exc:  # noqa: BLE001
 
 # Register events command group and root aliases.
 app.add_typer(events_app)
+app.add_typer(executions_app)
 app.add_typer(agents_app)
 app.add_typer(agent_nodes_app)
 app.add_typer(benchmarks_app)
 app.add_typer(checkpoints_app)
+app.add_typer(sandboxes_app)
 app.add_typer(console_app)
+app.add_typer(memory_app)
 app.add_typer(envs_app)
 app.add_typer(evals_app)
 app.add_typer(pools_app)
@@ -608,7 +618,11 @@ def serve(
             "--sandbox-variant",
             envvar="AGENT_RUNTIMES_SANDBOX_VARIANT",
             help="Sandbox variant: 'eval' (default in-process exec), "
-            "or 'jupyter' (connects to existing Jupyter server, requires --jupyter-sandbox).",
+            "'jupyter-server' (connects to existing Jupyter server, "
+            "requires --jupyter-sandbox), or a provider reached with the "
+            "credentials this machine holds for it — 'docker', 'datalayer', "
+            "'google-colab', 'kaggle', 'monty', 'modal', 'daytona', "
+            "'cloudflare', 'coreweave', 'e2b'.",
         ),
     ] = None,
     protocol: Annotated[
@@ -620,6 +634,15 @@ def serve(
             help="Transport protocol to use (ag-ui, vercel-ai, vercel-ai-jupyter, a2a)",
         ),
     ] = Protocol.ag_ui,
+    orchestrator_root: Annotated[
+        Optional[str],
+        typer.Option(
+            "--orchestrator-root",
+            envvar="AGENT_RUNTIMES_ORCHESTRATOR_ROOT",
+            help="Register the orchestrator as an ACP agent, delegating each turn to this agent: "
+            "an agentspec ID, or an A2A (http) or ACP (ws) endpoint",
+        ),
+    ] = None,
     find_free_port: Annotated[
         bool,
         typer.Option(
@@ -729,6 +752,7 @@ def serve(
             find_free_port_flag=find_free_port,
             node=node,
             disable_tool_approvals=disable_tool_approvals,
+            orchestrator_root=orchestrator_root,
         )
     except ServeError as e:
         logger.error(str(e))

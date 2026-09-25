@@ -34,7 +34,6 @@ app = typer.Typer(
 
 console = Console()
 
-KERNEL_READY_TIMEOUT_SECONDS = 20.0
 KERNEL_PROBE_TIMEOUT_SECONDS = 20.0
 DEFAULT_EXEC_TIMEOUT_SECONDS = 10.0
 
@@ -52,7 +51,7 @@ class CodeSandboxExecService:
     def __init__(self, token: Optional[str] = None) -> None:
         """Initialize the exec service."""
         self.kernel_manager: Optional[RuntimeManager] = None
-        self.kernel_client = None
+        self.sandbox_client = None
         self._executing = False
         self._client = AgentClient(api_key=token)
 
@@ -99,7 +98,7 @@ class CodeSandboxExecService:
 
                 # Create a RuntimeManager with proper credentials
                 self.kernel_manager = RuntimeManager(
-                    datalayer_url=self._client.urls.datalayer_url,
+                    runtimes_url=self._client.urls.runtimes_url,
                     token=token or "",
                     username="",  # Username is not required for token-based auth
                 )
@@ -112,19 +111,13 @@ class CodeSandboxExecService:
                 ):
                     self._inspect_created_code_sandbox_kernels()
 
-                self.kernel_client = self.kernel_manager.client
+                self.sandbox_client = self.kernel_manager.client
 
-                if not self.kernel_client:
-                    raise RuntimeError("Failed to create kernel client")
-
-                self.kernel_client.start_channels()
-                # Fresh runtimes can report healthy before the kernel channels are
-                # fully ready for requests. Wait explicitly to avoid hanging on
-                # the first execute call.
-                self.kernel_client.wait_for_ready(timeout=KERNEL_READY_TIMEOUT_SECONDS)
+                if not self.sandbox_client:
+                    raise RuntimeError("Failed to create code sandbox client")
                 self._probe_kernel_execution()
-                manager_runtime_name = str(
-                    getattr(self.kernel_manager, "runtime_name", "")
+                manager_given_name = str(
+                    getattr(self.kernel_manager, "given_name", "")
                     or sandbox_name
                     or "auto-selected"
                 )
@@ -139,7 +132,7 @@ class CodeSandboxExecService:
                         "#"
                     )
                     console.print(
-                        f"[green]Connected to code sandbox: {manager_runtime_name} ({runtime_ref})[/green]"
+                        f"[green]Connected to code sandbox: {manager_given_name} ({runtime_ref})[/green]"
                     )
                 else:
                     console.print(
@@ -150,7 +143,7 @@ class CodeSandboxExecService:
                 last_error = e
                 self.cleanup()
                 self.kernel_manager = None
-                self.kernel_client = None
+                self.sandbox_client = None
                 if attempt < max_attempts:
                     console.print(
                         "[yellow]Kernel not ready yet, retrying connection...[/yellow]"
@@ -193,9 +186,9 @@ class CodeSandboxExecService:
             "/"
         )
         sandbox_token = str(getattr(self.kernel_manager, "token", "") or "")
-        sandbox_name = str(getattr(self.kernel_manager, "runtime_name", "") or "")
+        sandbox_name = str(getattr(self.kernel_manager, "given_name", "") or "")
         sandbox_uid = str(getattr(self.kernel_manager, "runtime_uid", "") or "")
-        sandbox_pod = str(getattr(self.kernel_manager, "runtime_pod_name", "") or "")
+        sandbox_pod = str(getattr(self.kernel_manager, "runtime_name", "") or "")
 
         response = fetch(f"{server_url}/api/kernels", token=sandbox_token, timeout=15)
         kernels = response.json() if response.content else []
@@ -236,14 +229,14 @@ class CodeSandboxExecService:
 
     def _probe_kernel_execution(self) -> None:
         """Validate the kernel can execute a trivial statement before running user code."""
-        if not self.kernel_client:
-            raise RuntimeError("Kernel client not initialized")
+        if not self.sandbox_client:
+            raise RuntimeError("Code sandbox client not initialized")
 
         def _noop_output_hook(msg: dict[str, Any]) -> None:
             # A stream-based probe validates the same IOPub path used by cells.
             _ = msg
 
-        self.kernel_client.execute_interactive(
+        self.sandbox_client.execute_interactive(
             "print('__datalayer_probe__')",
             silent=False,
             timeout=KERNEL_PROBE_TIMEOUT_SECONDS,
@@ -271,8 +264,8 @@ class CodeSandboxExecService:
         raise_exceptions : bool
             Whether to stop on exceptions.
         """
-        if not self.kernel_client:
-            raise RuntimeError("Kernel client not initialized")
+        if not self.sandbox_client:
+            raise RuntimeError("Code sandbox client not initialized")
 
         report: dict[str, Any] = {
             "input_file": str(filepath),
@@ -355,46 +348,43 @@ class CodeSandboxExecService:
                 }
 
                 try:
-                    try:
-                        reply = self.kernel_client.execute_interactive(
-                            cell_source,
-                            silent=silent,
-                            timeout=effective_timeout,
-                            output_hook=output_hook,
-                        )
-                    except TypeError:
-                        # Backward compatibility when output_hook is not available.
-                        reply = self.kernel_client.execute_interactive(
-                            cell_source,
-                            silent=silent,
-                            timeout=effective_timeout,
-                        )
-
-                    cell_report["reply"] = (
-                        reply.get("content") if isinstance(reply, dict) else {}
+                    reply = self.sandbox_client.execute_interactive(
+                        cell_source,
+                        silent=silent,
+                        timeout=effective_timeout,
+                        output_hook=output_hook,
                     )
 
-                    if raise_exceptions and reply["content"]["status"] != "ok":
-                        content = reply["content"]
-                        if content["status"] == "error":
+                    cell_report["reply"] = reply if isinstance(reply, dict) else {}
+
+                    if raise_exceptions and reply["status"] != "ok":
+                        if reply["status"] == "error":
                             if cell_id:
                                 console.print(
                                     f"[red]Exception when running cell {cell_id}[/red]"
                                 )
+                            error_output = next(
+                                (
+                                    output
+                                    for output in reply.get("outputs", [])
+                                    if output.get("output_type") == "error"
+                                ),
+                                {},
+                            )
                             console.print(
-                                "[red]" + "\n".join(content["traceback"]) + "[/red]"
+                                "[red]"
+                                + "\n".join(error_output.get("traceback", []))
+                                + "[/red]"
                             )
                             raise typer.Exit(1)
                         else:
-                            raise RuntimeError(
-                                f"Unknown failure: {json.dumps(content)}"
-                            )
+                            raise RuntimeError(f"Unknown failure: {json.dumps(reply)}")
 
                     self._print_cell_outputs(i, captured_outputs)
 
                     # Show success for each cell if not silent
                     if not silent:
-                        status = reply["content"]["status"]
+                        status = reply["status"]
                         if status == "ok":
                             console.print(
                                 f"[green]✓ Cell {i} executed successfully[/green]"
@@ -404,10 +394,8 @@ class CodeSandboxExecService:
                                 f"[yellow]⚠ Cell {i} completed with status: {status}[/yellow]"
                             )
 
-                    if reply["content"].get("status") != "ok":
-                        cell_report["status"] = str(
-                            reply["content"].get("status") or "error"
-                        )
+                    if reply.get("status") != "ok":
+                        cell_report["status"] = str(reply.get("status") or "error")
                         failed_cells += 1
 
                 except Exception as e:
@@ -577,9 +565,9 @@ class CodeSandboxExecService:
 
     def cleanup(self) -> None:
         """Clean up resources."""
-        if self.kernel_client:
+        if self.sandbox_client:
             try:
-                self.kernel_client.stop_channels()
+                self.sandbox_client.stop(shutdown_kernel=False)
             except Exception as e:
                 console.print(f"[yellow]Warning during cleanup: {e}[/yellow]")
 
@@ -926,7 +914,7 @@ def _select_code_sandbox(token: Optional[str] = None) -> str:
 
             sandbox_name = str(created_runtime.name or "")
             sandbox_uid = str(created_runtime.uid or "")
-            sandbox_pod = str(created_runtime.pod_name or "")
+            sandbox_pod = str(created_runtime.runtime_name or "")
             sandbox_ingress = str(created_runtime.ingress or "").rstrip("/")
             sandbox_token = str(
                 created_runtime.jupyter_token or client._get_api_key() or ""

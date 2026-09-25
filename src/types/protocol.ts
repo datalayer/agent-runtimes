@@ -19,10 +19,20 @@ import type {
 } from './tools';
 
 /**
- * Supported protocol (communication protocols with agent backends)
+ * Supported protocol (communication protocols with agent backends).
+ *
+ * `browser-vercel-ai` is the odd one: there is no backend and no wire. It runs
+ * the loop in the page with the Vercel AI SDK and reports it through the same
+ * interface, so a chat component does not have to know the difference. See
+ * {@link ../protocols/BrowserAgentAdapter}.
  */
 export type Protocol =
-  'ag-ui' | 'a2a' | 'acp' | 'vercel-ai' | 'vercel-ai-jupyter';
+  | 'ag-ui'
+  | 'a2a'
+  | 'acp'
+  | 'vercel-ai'
+  | 'vercel-ai-jupyter'
+  | 'browser-vercel-ai';
 
 /**
  * Protocol connection state

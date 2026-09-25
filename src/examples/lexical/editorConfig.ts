@@ -3,75 +3,41 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import { HeadingNode, QuoteNode } from '@lexical/rich-text';
-import { ListNode, ListItemNode } from '@lexical/list';
-import { CodeNode, CodeHighlightNode } from '@lexical/code';
-import { LinkNode, AutoLinkNode } from '@lexical/link';
-import { TableNode, TableCellNode, TableRowNode } from '@lexical/table';
-import { HashtagNode } from '@lexical/hashtag';
-import { MarkNode } from '@lexical/mark';
-import { OverflowNode } from '@lexical/overflow';
-import { HorizontalRuleNode } from '@lexical/react/LexicalHorizontalRuleNode';
-import {
-  EquationNode,
-  ImageNode,
-  YouTubeNode,
-  ExcalidrawNode,
-  CollapsibleContainerNode,
-  CollapsibleTitleNode,
-  CollapsibleContentNode,
-  JupyterCellNode,
-  JupyterInputNode,
-  JupyterInputHighlightNode,
-  JupyterOutputNode,
-  InlineCompletionNode,
-} from '@datalayer/jupyter-lexical';
+/**
+ * The Lexical editor the examples share, as a root extension.
+ *
+ * `JupyterLexicalExtension` is the document — every node and behaviour of
+ * `@datalayer/jupyter-lexical` — and this adds what is the examples' own:
+ * their namespace, their theme, the demo content, focus on mount and the
+ * overflow node. Defined once at module scope so a composer never rebuilds
+ * the editor on a re-render.
+ *
+ * @module examples/lexical/editorConfig
+ */
+
+import { AutoFocusExtension } from '@lexical/extension';
+import { OverflowExtension } from '@lexical/overflow';
+import { JupyterLexicalExtension } from '@datalayer/jupyter-lexical';
+import { defineExtension } from 'lexical';
 
 import { lexicalTheme } from './theme';
 import initialContent from './initial-content.json';
 
 /**
- * Lexical editor configuration
+ * Lexical editor extension
  */
-export const editorConfig = {
+export const editorExtension = defineExtension({
+  name: '@datalayer/agent-runtimes/examples/Lexical',
   namespace: 'AgUiLexicalEditor',
   editable: true,
   theme: lexicalTheme,
-  editorState: JSON.stringify(initialContent),
-  nodes: [
-    // Basic rich text nodes
-    HeadingNode,
-    QuoteNode,
-    ListNode,
-    ListItemNode,
-    CodeNode,
-    CodeHighlightNode,
-    LinkNode,
-    AutoLinkNode,
-    // Table nodes
-    TableNode,
-    TableCellNode,
-    TableRowNode,
-    // Additional nodes from @lexical packages
-    HashtagNode,
-    MarkNode,
-    OverflowNode,
-    HorizontalRuleNode,
-    // Simple lexical nodes
-    EquationNode,
-    ImageNode,
-    YouTubeNode,
-    ExcalidrawNode,
-    CollapsibleContainerNode,
-    CollapsibleTitleNode,
-    CollapsibleContentNode,
-    JupyterCellNode,
-    JupyterInputNode,
-    JupyterInputHighlightNode,
-    JupyterOutputNode,
-    InlineCompletionNode,
+  dependencies: [
+    JupyterLexicalExtension,
+    AutoFocusExtension,
+    OverflowExtension,
   ],
-  onError(_error: Error) {
-    // Lexical error handler
+  $initialEditorState: JSON.stringify(initialContent),
+  onError(error: Error) {
+    console.error('[LexicalExample]', error);
   },
-};
+});

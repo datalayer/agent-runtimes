@@ -56,7 +56,11 @@ export function useConfig(
       // Otherwise use Jupyter requestAPI.
       return requestAPI<RemoteConfig>('configure');
     },
-    queryKey: ['models', configEndpoint || 'jupyter', agentId || 'global'],
+    queryKey: [
+      'models',
+      configEndpoint || 'jupyter-server',
+      agentId || 'global',
+    ],
     enabled,
     retry: 1,
   });

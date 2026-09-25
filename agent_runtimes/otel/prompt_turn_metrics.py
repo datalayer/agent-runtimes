@@ -179,22 +179,15 @@ def _token_cache_key(user_jwt_token: str | None) -> str:
 
 def _resolve_otlp_endpoint() -> str:
     # Rely solely on the Datalayer OTEL base URL for cluster/environment routing.
-    datalayer_url = (
-        os.environ.get("DATALAYER_OTEL_URL")
-        or os.environ.get("DATALAYER_URL")
-        or "https://prod1.datalayer.run"
-    )
-    return f"{datalayer_url.rstrip('/')}/api/otel/v1/otlp"
+    otel_url = os.environ.get("DATALAYER_OTEL_URL") or "https://prod1.datalayer.run"
+    return f"{otel_url.rstrip('/')}/api/otel/v1/otlp"
 
 
-def _resolve_datalayer_url_source() -> tuple[str, str]:
-    """Return (source, value) for the run URL used to build OTLP endpoint."""
-    datalayer_url = os.environ.get("DATALAYER_OTEL_URL")
-    if datalayer_url:
-        return "DATALAYER_OTEL_URL", datalayer_url
-    datalayer_url = os.environ.get("DATALAYER_URL")
-    if datalayer_url:
-        return "DATALAYER_URL", datalayer_url
+def _resolve_otel_url_source() -> tuple[str, str]:
+    """Return (source, value) for the OTEL URL used to build OTLP endpoint."""
+    otel_url = os.environ.get("DATALAYER_OTEL_URL")
+    if otel_url:
+        return "DATALAYER_OTEL_URL", otel_url
     return "default", "https://prod1.datalayer.run"
 
 
@@ -649,12 +642,12 @@ def _get_emitter(user_jwt_token: str | None = None) -> PromptTurnMetricsEmitter 
             service_name = os.environ.get(
                 "DATALAYER_OTEL_SERVICE_NAME", "agent-runtimes"
             )
-            datalayer_url_source, datalayer_url_value = _resolve_datalayer_url_source()
+            otel_url_source, otel_url_value = _resolve_otel_url_source()
             logger.info(
-                "Prompt-turn OTEL emitter init: service=%s datalayer_url_source=%s datalayer_url=%s",
+                "Prompt-turn OTEL emitter init: service=%s otel_url_source=%s otel_url=%s",
                 service_name,
-                datalayer_url_source,
-                datalayer_url_value,
+                otel_url_source,
+                otel_url_value,
             )
             emitter = PromptTurnMetricsEmitter(
                 service_name=service_name,

@@ -4,9 +4,9 @@
 
 echo -e "\x1b[34m\x1b[43mStarting Jupyter Server\x1b[0m"
 echo
-echo ✨ open http://localhost:8888/api/jupyter-server/lab?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6
-echo ✨ open http://localhost:8888/api/jupyter-server/api/kernelspecs?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6
-echo ✨ open http://localhost:8888/api/jupyter-server/datalayer/config?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6
+echo ✨ open http://0.0.0.0:8888/api/jupyter-server/lab?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6
+echo ✨ open http://0.0.0.0:8888/api/jupyter-server/api/kernelspecs?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6
+echo ✨ open http://0.0.0.0:8888/api/jupyter-server/datalayer/config?token=60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6
 echo
 
 export CURR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

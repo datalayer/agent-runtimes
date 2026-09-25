@@ -71,7 +71,7 @@ export type ProjectData = {
   /** Whether the project is public */
   isPublic: boolean;
   /** Attached agent (runtime) pod name, if any */
-  attachedAgentPodName?: string;
+  attachedAgentRuntimeName?: string;
   /** Attached agentspec ID (e.g. 'data-acquisition'), if any */
   attachedAgentSpecId?: string;
 };
@@ -110,7 +110,8 @@ export function useProjects() {
         description: space.description ?? space.description_t ?? '',
         createdAt: space.created_at ? new Date(space.created_at) : new Date(),
         isPublic: space.public ?? space.public_b ?? false,
-        attachedAgentPodName: space.attached_agent_pod_name_s || undefined,
+        attachedAgentRuntimeName:
+          space.attached_agent_runtime_name_s || undefined,
         attachedAgentSpecId: space.attached_agent_spec_id_s || undefined,
       }));
   }, [allSpaces]);
@@ -138,7 +139,7 @@ export function useProject(uid: string | undefined) {
       description: s.description ?? s.description_t ?? '',
       createdAt: s.created_at ? new Date(s.created_at) : new Date(),
       isPublic: s.public ?? s.public_b ?? false,
-      attachedAgentPodName: s.attached_agent_pod_name_s || undefined,
+      attachedAgentRuntimeName: s.attached_agent_runtime_name_s || undefined,
       attachedAgentSpecId: s.attached_agent_spec_id_s || undefined,
     };
   }, [space]);
@@ -192,14 +193,14 @@ export function useUpdateProject() {
   const assignAgent = useCallback(
     async (
       project: ProjectData,
-      agentPodName: string,
+      agentRuntimeName: string,
       agentSpecId?: string,
     ) => {
       return updateSpaceMutation.mutateAsync({
         id: project.id,
         name: project.name,
         description: project.description,
-        attached_agent_pod_name_s: agentPodName,
+        attached_agent_runtime_name_s: agentRuntimeName,
         attached_agent_spec_id_s: agentSpecId || '',
       } as any);
     },
@@ -225,7 +226,7 @@ export function useUpdateProject() {
         id: project.id,
         name: project.name,
         description: project.description,
-        attached_agent_pod_name_s: '',
+        attached_agent_runtime_name_s: '',
         attached_agent_spec_id_s: '',
       } as any);
     },

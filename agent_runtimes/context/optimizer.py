@@ -91,7 +91,9 @@ def print_response_details(result: Any, turn_number: int) -> None:
     print(f"{'=' * 80}")
 
     print(f"\n✅ Output: {result.output}")
-    print(f"📊 Usage: {result.usage()}")
+    usage_candidate = getattr(result, "usage", None)
+    usage = usage_candidate() if callable(usage_candidate) else usage_candidate
+    print(f"📊 Usage: {usage}")
 
     # Get model name from the last response message
     all_messages = result.all_messages()

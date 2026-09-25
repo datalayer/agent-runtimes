@@ -37,7 +37,17 @@ from agent_runtimes.evals.remote.evaluators import (
     run_and_evaluate_evalset,
     run_case_evaluators,
 )
-from agent_runtimes.evals.remote.runner import execute_evalset_spec
+from agent_runtimes.evals.remote.runner import (
+    benchmark_url,
+    ensure_experiments,
+    execute_evalset_spec,
+    launch_config,
+    launch_outcome_lines,
+    launch_url,
+    resolve_evalset,
+    submit_launch,
+    watch_launch,
+)
 from agent_runtimes.evals.report import (
     average_latest_pass_rate,
     collect_report_failures,
@@ -46,11 +56,16 @@ from agent_runtimes.evals.report import (
 
 __all__ = [
     "average_latest_pass_rate",
+    "benchmark_url",
     "build_eval_report",
     "collect_report_failures",
+    "ensure_experiments",
     "evaluate_evalset",
     "evaluate_run",
     "execute_evalset_spec",
+    "launch_config",
+    "launch_outcome_lines",
+    "launch_url",
     "iter_report_runs",
     "load_evalset_spec",
     "make_client",
@@ -59,9 +74,12 @@ __all__ = [
     "parse_json_file",
     "parse_json_value",
     "render_eval_report_markdown",
+    "resolve_evalset",
     "run_and_evaluate_evalset",
     "run_case_evaluators",
+    "submit_launch",
     "timestamp_slug",
+    "watch_launch",
     "watch_runs",
     "write_eval_report_csv",
     "write_eval_reports",

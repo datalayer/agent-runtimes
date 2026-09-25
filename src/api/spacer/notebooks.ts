@@ -40,7 +40,7 @@ export const createNotebook = async (
   const formData = new FormData();
   formData.append('spaceId', data.spaceId);
   formData.append('name', data.name);
-  formData.append('notebookType', data.notebookType || 'jupyter'); // Required field
+  formData.append('notebookType', data.notebookType || 'jupyter-server'); // Required field
   formData.append('description', data.description || ''); // Required field - can be empty
 
   // Add file if provided

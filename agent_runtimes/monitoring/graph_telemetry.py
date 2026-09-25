@@ -713,28 +713,9 @@ def _classify_beta_event(event: Any) -> str:
 def _try_push_snapshot(agent_id: str) -> None:
     """Best-effort push of monitoring snapshot after graph execution."""
     try:
-        import asyncio
+        from ..streams.loop import push_snapshot
 
-        from ..streams.loop import (
-            build_monitoring_snapshot_payload,
-            enqueue_stream_message,
-        )
-        from ..streams.messages import AgentStreamMessage
-
-        async def _push() -> None:
-            snapshot = await build_monitoring_snapshot_payload(agent_id)
-            msg = AgentStreamMessage.create(
-                type="agent.snapshot",
-                payload=snapshot.model_dump(by_alias=True),
-                agent_id=agent_id,
-            )
-            enqueue_stream_message(agent_id, msg)
-
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(_push())
-        except RuntimeError:
-            pass
+        push_snapshot(agent_id)
     except Exception:
         logger.debug(
             "[GraphTelemetry] Failed to push snapshot for agent_id=%s",

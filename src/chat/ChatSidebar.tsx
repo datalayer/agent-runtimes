@@ -54,7 +54,19 @@ export interface ChatSidebarProps extends ChatCommonProps {
   /** Keyboard shortcut to toggle (default: 'k') */
   toggleShortcut?: string;
 
-  /** Enable click outside to close */
+  /**
+   * Close the sidebar when a click lands outside it. Off by default.
+   *
+   * On a desktop the sidebar is *docked*: it takes layout width beside the
+   * content, and everything the user is working on — a notebook cell, a
+   * paragraph of the document — is by definition outside it. Closing on that
+   * click made the panel vanish the moment anyone touched what they were
+   * chatting about. Modal semantics for a panel that is not modal.
+   *
+   * The mobile overlay is genuinely modal, and it already closes on its own
+   * backdrop, so nothing needs this to be on there either. Left as a prop for
+   * a consumer that really does want dismiss-on-outside-click.
+   */
   clickOutsideToClose?: boolean;
 
   /** Enable escape key to close */
@@ -97,7 +109,7 @@ export function ChatSidebar({
   toggleShortcut = 'k',
   showPoweredBy = true,
   poweredByProps,
-  clickOutsideToClose = true,
+  clickOutsideToClose = false,
   className,
   onSettingsClick,
   onNewChat,

@@ -22,7 +22,6 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
 import { InlineWeatherCard, type WeatherResult } from './components/weather';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
@@ -72,9 +71,8 @@ const AGENTSPEC_ID = 'example-backend-tool-rendering';
 
 const AgUiBackendToolRenderingExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId } = useExampleAgentRuntime({
+  const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiBackendToolRenderingExample',
     agentName,
     specId: AGENTSPEC_ID,
@@ -122,7 +120,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Backend Tool Rendering (Inline)
+            AG-UI Backend Tool Rendering (Inline)
           </Text>
           <Text
             as="p"
@@ -140,7 +138,7 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -204,12 +202,14 @@ const AgUiBackendToolRenderingExample: React.FC = () => {
         {/* Floating chat with inline tool rendering */}
         {backendToolRenderingEndpoint && (
           <ChatFloating
+            kernelIndicatorPlacement="right"
             protocol="ag-ui"
             endpoint={backendToolRenderingEndpoint}
             title="Weather Assistant"
             description="Ask me about the weather anywhere in the world!"
             position="bottom-right"
             brandColor={brandColor}
+            defaultOpen={true}
             onStateUpdate={handleStateUpdate}
             renderToolResult={renderToolResult}
             suggestions={[

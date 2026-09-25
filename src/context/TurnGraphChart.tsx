@@ -64,8 +64,8 @@ interface TraceRun {
 //   - start/end  → graph entry / exit markers
 
 const NODE_COLORS: Record<string, string> = {
-  root: '#58a6ff',
-  start: '#58a6ff',
+  root: '#16A085',
+  start: '#16A085',
   step: '#3fb950',
   end: '#f85149',
   end_or_continue: '#d29922',
@@ -457,7 +457,7 @@ export interface TurnGraphChartProps {
   /** Filter spans to this agent ID (matches ``agent.id`` span attribute). */
   agentId?: string;
   /** Base URL for the Datalayer OTEL service. */
-  datalayerUrl?: string;
+  otelUrl?: string;
   /** JWT / API key for OTEL auth. */
   apiKey?: string;
   /**
@@ -472,7 +472,7 @@ export interface TurnGraphChartProps {
 export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
   serviceName,
   agentId,
-  datalayerUrl,
+  otelUrl,
   apiKey,
   autoRefreshMs = 10_000,
   height = 320,
@@ -544,11 +544,11 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!datalayerUrl || !apiKey) return;
+    if (!otelUrl || !apiKey) return;
     setLoading(true);
     setError(null);
     try {
-      const client = createOtelClient({ baseUrl: datalayerUrl, token: apiKey });
+      const client = createOtelClient({ baseUrl: otelUrl, token: apiKey });
       const result = await client.fetchTraces({ serviceName, limit: 200 });
       if (mountedRef.current) upsertRunsFromSpans(result.data, 'replace');
     } catch (err: unknown) {
@@ -558,10 +558,10 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [datalayerUrl, apiKey, serviceName, upsertRunsFromSpans]);
+  }, [otelUrl, apiKey, serviceName, upsertRunsFromSpans]);
 
   const { connected: wsConnected, error: wsError } = useOtelWebSocket({
-    baseUrl: datalayerUrl,
+    baseUrl: otelUrl,
     token: apiKey,
     callbacks: {
       onTraces: spans => {
@@ -586,7 +586,7 @@ export const TurnGraphChart: React.FC<TurnGraphChartProps> = ({
   );
 
   // Not configured — caller didn't pass auth.
-  if (!datalayerUrl || !apiKey) return null;
+  if (!otelUrl || !apiKey) return null;
 
   if (loading && runs.length === 0) {
     return (

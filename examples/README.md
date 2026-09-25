@@ -38,6 +38,10 @@ These examples demonstrate the Datalayer Client and runtime workflows.
 - ⚛️ [Next.js + Datalayer Notebook](./nextjs/README.md): Next.js app integrating Jupyter notebooks with cloud runtimes.
 - ⚡ [PyTorch GPU Workloads](./pytorch/README.md): CPU vs GPU benchmarks on Datalayer runtimes.
 
+## Orchestration
+
+- 🔀 [One Objective, Two Protocols](./orchestration/README.md): a parent delegates the same notebook analysis to an A2A worker and an ACP worker over one code path, with the descriptor as the only difference. Both workers are real protocol servers and need no model, so `python orchestration/orchestrate.py` runs anywhere.
+
 ## Additional Examples
 
 ### Python Examples

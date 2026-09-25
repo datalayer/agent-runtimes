@@ -1,0 +1,65 @@
+diff --git a/node_modules/eslint-plugin-react/lib/rules/jsx-filename-extension.js b/node_modules/eslint-plugin-react/lib/rules/jsx-filename-extension.js
+index 4a2cfee..7ebf845 100644
+--- a/node_modules/eslint-plugin-react/lib/rules/jsx-filename-extension.js
++++ b/node_modules/eslint-plugin-react/lib/rules/jsx-filename-extension.js
+@@ -6,6 +6,7 @@
+ 'use strict';
+ 
+ const path = require('path');
++const getFilename = require('../util/eslint').getFilename;
+ const docsUrl = require('../util/docsUrl');
+ const report = require('../util/report');
+ 
+@@ -61,7 +62,7 @@ module.exports = {
+   },
+ 
+   create(context) {
+-    const filename = context.getFilename();
++    const filename = getFilename(context);
+ 
+     let jsxNode;
+ 
+diff --git a/node_modules/eslint-plugin-react/lib/util/eslint.js b/node_modules/eslint-plugin-react/lib/util/eslint.js
+index 79a0537..740e94a 100644
+--- a/node_modules/eslint-plugin-react/lib/util/eslint.js
++++ b/node_modules/eslint-plugin-react/lib/util/eslint.js
+@@ -4,6 +4,10 @@ function getSourceCode(context) {
+   return context.getSourceCode ? context.getSourceCode() : context.sourceCode;
+ }
+ 
++function getFilename(context) {
++  return context.filename !== undefined ? context.filename : context.getFilename();
++}
++
+ function getAncestors(context, node) {
+   const sourceCode = getSourceCode(context);
+   return sourceCode.getAncestors ? sourceCode.getAncestors(node) : context.getAncestors();
+@@ -38,6 +42,7 @@ function getText(context) {
+ 
+ module.exports = {
+   getAncestors,
++  getFilename,
+   getFirstTokens,
+   getScope,
+   getSourceCode,
+diff --git a/node_modules/eslint-plugin-react/lib/util/version.js b/node_modules/eslint-plugin-react/lib/util/version.js
+index c9dc683..1172f98 100644
+--- a/node_modules/eslint-plugin-react/lib/util/version.js
++++ b/node_modules/eslint-plugin-react/lib/util/version.js
+@@ -8,6 +8,7 @@
+ const fs = require('fs');
+ const path = require('path');
+ 
++const getFilename = require('./eslint').getFilename;
+ const resolve = require('resolve');
+ const semver = require('semver');
+ const error = require('./error');
+@@ -28,7 +29,7 @@ function resetDetectedVersion() {
+ 
+ function resolveBasedir(contextOrFilename) {
+   if (contextOrFilename) {
+-    const filename = typeof contextOrFilename === 'string' ? contextOrFilename : contextOrFilename.getFilename();
++    const filename = typeof contextOrFilename === 'string' ? contextOrFilename : getFilename(contextOrFilename);
+     const dirname = path.dirname(filename);
+     try {
+       if (fs.statSync(filename).isFile()) {

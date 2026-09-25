@@ -48,6 +48,18 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
 
   private vercelConfig: VercelAIAdapterConfig;
   private abortController: AbortController | null = null;
+
+  /**
+   * Every in-flight request's abort controller, not just the newest.
+   *
+   * `abortController` is a single field that each request overwrites, and each
+   * request's `finally` used to clear it unconditionally — so a request that
+   * finished just after a newer one started would null the newer one's handle,
+   * and a subsequent stop had nothing left to abort. The stream carried on and
+   * the transcript went on typing itself after the reader had asked it not to.
+   */
+  private inFlight = new Set<AbortController>();
+
   private currentRequestId: string | null = null;
 
   // Frontend tool continuation state (modelled after AGUIAdapter)
@@ -206,11 +218,15 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
       }>;
     },
   ): Promise<void> {
-    if (this.abortController) {
-      this.abortController.abort();
-    }
+    // A new send supersedes what came before it — all of it. Aborting only
+    // the field left any stream it had already lost track of still running.
+    this.stopGeneration();
 
-    this.abortController = new AbortController();
+    // Held in a local too: by the time the `finally` runs, a later request may
+    // own the field, and this one must only retire its own controller.
+    const controller = new AbortController();
+    this.abortController = controller;
+    this.inFlight.add(controller);
 
     // Generate request ID for tracking
     const requestId = options?.threadId || generateMessageId();
@@ -366,7 +382,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
-        signal: this.abortController.signal,
+        signal: controller.signal,
         mode: this.vercelConfig.fetchOptions?.mode,
         credentials: this.vercelConfig.fetchOptions?.credentials,
       });
@@ -387,7 +403,10 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         throw error;
       }
     } finally {
-      this.abortController = null;
+      this.inFlight.delete(controller);
+      if (this.abortController === controller) {
+        this.abortController = null;
+      }
     }
   }
 
@@ -659,6 +678,9 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                       toolCallId,
                       toolName,
                       args,
+                      // `tool-input-available` carries the final input:
+                      // empty args are an answer, not a promise of more.
+                      argsComplete: true,
                     },
                     timestamp: new Date(),
                   });
@@ -1024,7 +1046,10 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
    * Stop generation
    */
   stopGeneration(): void {
-    this.abortController?.abort();
+    for (const controller of this.inFlight) {
+      controller.abort();
+    }
+    this.inFlight.clear();
     this.abortController = null;
   }
 }

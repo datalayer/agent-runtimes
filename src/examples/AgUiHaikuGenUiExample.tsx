@@ -32,7 +32,6 @@ import {
   HaikuDisplay,
   type HaikuResult,
 } from './components/haiku';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
@@ -107,9 +106,8 @@ const AGENTSPEC_ID = 'example-haiku-generative-ui';
 
 const AgUiHaikuGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId } = useExampleAgentRuntime({
+  const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiHaikuGenUiExample',
     agentName,
     specId: AGENTSPEC_ID,
@@ -208,7 +206,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Haiku Generative UI
+            AG-UI Haiku Generative UI
           </Text>
           <Text
             as="p"
@@ -226,7 +224,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
           <Box
             sx={{
               padding: 5,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -243,7 +241,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -306,6 +304,7 @@ const AgUiHaikuGenUiExample: React.FC = () => {
             launching state so the chat appears instantly while the managed
             agent runtime is still starting. */}
         <ChatFloating
+          kernelIndicatorPlacement="right"
           protocol="ag-ui"
           endpoint={haikuGenUiEndpoint}
           launching={!haikuGenUiEndpoint}

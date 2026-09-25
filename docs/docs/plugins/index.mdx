@@ -1,72 +1,58 @@
 ---
+sidebar_position: 9
 title: Plugins
 ---
 
 # Plugins
 
-Agent Runtimes supports plugin-based policy and authorization workflows
-through tool hooks. This page documents the Agent_Sudo integration for
-authorization and audit logging.
+Agent Runtimes is extended — and extends other hosts — through the
+[Datalayer reactor](https://github.com/datalayer/reactor) plugin platform, on
+both tiers. A plugin declares what it contributes; the host discovers it and
+never names it.
 
-## Agent_Sudo Plugin (Authorization and Audit Logging)
+## In the browser
 
-`agent-runtimes` provides support for the `Agent_Sudo` plugin, allowing
-policy evaluation and validation using Agent_Sudo-compatible audit logs.
+The [Loop Web](/loop) workspace is built entirely from reactor plugins: the
+chat, the editors, the command palette, even the theme arrive as
+contributions into declared extension points (`LoopViewType`,
+`LoopEditorView`, `LoopFrontendTool`, `LoopCommand`, the slots). A host
+plugin that adds an editor, its agent tools, and a command is ordinary
+reactor code — the Loop page carries a complete example, and the generic
+machinery (`@datalayer/reactor-shell`, `@datalayer/reactor-commands`,
+`@datalayer/primer-theme`) is documented in the reactor's own docs.
 
-### Ownership Boundaries
+## In Python
 
-- **`agent-runtimes`** owns:
-  - Tool approval UX
-  - Hook lifecycle
-  - Audit log persistence
-- **`Agent_Sudo`** owns:
-  - Policy evaluation
-  - Interoperability specifications
-  - Verification tooling
+Three hooks, three surfaces:
 
-### 1. Remote Tool Authorization (HTTP Plugin)
+| Hook | Surface | Discovered under |
+|---|---|---|
+| `provide_cli(cli)` | The command line — a Typer application the plugin adds command groups to | `datalayer.cli`, `datalayer.reactor.cli` |
+| `provide_slash_commands(registry)` | The interactive session — the [Loop REPL](/loop-repl)'s slash menu | `loop.plugins` |
+| Tool hooks (`before_tool_execute`, …) | The agent's tool lifecycle — see [Hooks](/hooks) | agentspec configuration |
 
-To delegate policy decisions to a remote Agent_Sudo server, register the
-plugin function hook under `before_tool_execute`:
+Agent Runtimes plays both roles. As a **host**, the REPL discovers slash
+commands from any distribution advertising under `loop.plugins`. As an
+**extension**, `agent_runtimes.reactor_extension` packages this package's
+command groups so the `datalayer` and `reactor` CLIs carry them — nothing
+spawns another executable; the groups register in-process at startup.
 
-```yaml
-tool_hooks:
-    before_tool_execute:
-        - function: agent_runtimes.plugins:authorize_tool_call
-            kwargs:
-                fallback_decision: approval_required
-                endpoint: "http://localhost:8080/authorize"
+```toml
+# A distribution shipping a /deploy command for the REPL:
+[project.entry-points."loop.plugins"]
+my-package = "my_package.loop_plugin:plugin"
 ```
 
-### 2. Local Tool Authorization (In-Process Plugin)
-
-For local policy verification using the `agent-sudo` package, configure the
-built-in `agent_sudo_local` plugin hook handler:
-
-```yaml
-tool_hooks:
-    agent_sudo_policy_path: "/path/to/policy.yaml"
-    agent_sudo_audit_log_path: "/tmp/agent_runtimes_tool_approvals_audit.jsonl"
-    before_tool_execute:
-        - handler: agent_sudo_local
+```python
+class MyLoopPlugin:
+    def provide_slash_commands(self, registry) -> None:
+        registry.try_register(SlashCommandSpec(
+            name="deploy",
+            description="Ship it",
+            handler=deploy,
+            source="my-package",
+        ))
 ```
 
-> [!NOTE]
-> Local authorization requires the `agent-sudo` extra dependency installed:
-> `pip install agent-runtimes[agent-sudo]`.
-
-### 3. Agent_Sudo-Compatible Audit Logs
-
-When using the `agent_sudo_local` plugin handler or custom user hooks
-configured to emit Agent_Sudo-compatible audit logs, logs follow the
-Canonical Hash Chain Specification and Policy/Audit Schema (standardized in
-`v0.4.0-rc14`).
-
-These logs can be cryptographically verified using the `agent-sudo` CLI:
-
-```bash
-agent-sudo verify-audit /tmp/agent_runtimes_tool_approvals_audit.jsonl
-```
-
-For full specifications, refer to the
-[Interoperability Checklist](https://github.com/isyntra/agent_sudo/blob/main/docs/interop).
+A plugin that cannot load — a missing optional dependency, a broken hook —
+costs a warning and is skipped: one bad plugin must never take the host down.

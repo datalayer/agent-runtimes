@@ -1,10 +1,6 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-# Copyright (c) 2025-2026 Datalayer, Inc.
-#
-# BSD 3-Clause License
-
 """Agent Runtimes interactive CLI assistant using AG-UI and ACP."""
 
 import asyncio
@@ -32,11 +28,11 @@ DEFAULT_RUNTIME_AGENT_NAME = "chat"
 # the picker focused while preserving the existing valid/env/sort logic.
 DEFAULT_AGENTSPEC_CONTEXT_IDS: tuple[str, ...] = (
     "example-simple",
-    "gallery-accountant",
-    "gallery-analyze-excel-spreadsheet",
-    "gallery-agent-critic-loop-for-analysis",
-    "gallery-ai-explains-notebook-output",
-    "gallery-replace-excel-pivot-work",
+    "worker-accountant",
+    "example-analyze-excel-spreadsheet",
+    "example-agent-critic-loop-for-analysis",
+    "example-ai-explains-notebook-output",
+    "example-replace-excel-pivot-work",
 )
 
 
@@ -243,11 +239,32 @@ app = typer.Typer(
 )
 
 
+def _quiet_the_logs(debug: bool) -> None:
+    """Keep library logging out of the terminal unless it is asked for.
+
+    `agent_runtimes.__main__` configures logging at INFO for the command-line
+    tools, and in this terminal that means every HTTP request the session
+    makes prints over the conversation. This is a reader's window, not a
+    developer's console: errors still surface, everything under them goes,
+    and `--debug` puts the lot back.
+    """
+    import logging
+
+    if debug or os.environ.get("AG_CHAT_DEBUG") == "1":
+        logging.getLogger().setLevel(logging.DEBUG)
+        return
+    logging.getLogger().setLevel(logging.ERROR)
+    # Named as well as inherited: a library that sets its own level is not
+    # quieted by the root's.
+    for noisy in ("httpx", "httpcore", "urllib3", "asyncio", "reactor"):
+        logging.getLogger(noisy).setLevel(logging.ERROR)
+
+
 def _show_version() -> None:
     """Display version information."""
-    from . import __version__
+    from .banner import LOOP_VERSION
 
-    typer.echo(f"{GREEN_LIGHT}Agent Runtimes Chat{RESET} v{__version__.__version__}")
+    typer.echo(f"{GREEN_LIGHT}Agent Runtimes Chat{RESET} v{LOOP_VERSION}")
     typer.echo(
         f"{GRAY}Powered by Datalayer • \033]8;;https://datalayer.ai\033\\https://datalayer.ai\033]8;;\033\\{RESET}"
     )
@@ -332,7 +349,7 @@ def _run_agent_runtime_server(
     # Load agent spec to get MCP servers and sandbox variant
     # Keep empty by default so specs with no MCP servers do not start any.
     mcp_servers_str = ""
-    sandbox_variant = "jupyter"  # Default interactive CLI sandbox variant
+    sandbox_variant = "jupyter-server"  # Default interactive CLI sandbox variant
     agent_spec = get_agent_spec(agent_id)
     if agent_spec:
         if agent_spec.mcp_servers:
@@ -507,7 +524,7 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
             add_row("Code Sandbox", sandbox_line)
 
             kernel_id = sandbox_info.get("kernel_id")
-            if str(variant).lower() == "jupyter" and kernel_id:
+            if str(variant).lower() == "jupyter-server" and kernel_id:
                 add_row("Kernel ID", str(kernel_id))
 
         skills = agent_info.get("skills", [])
@@ -522,10 +539,16 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
 
 
 def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
-    """Return model IDs available from current env vars.
+    """Return model IDs offered here, and which of them the env vars reach.
+
+    A model whose spec says ``available: false`` is switched off in the
+    catalogue: it is not listed, not counted, and not a reason to let an
+    agent through. So the total is the number of models this build offers
+    at all, and the ids are those of them whose credentials are present —
+    the two figures the terminal prints as a ratio.
 
     Returns:
-        (available_ids, available_display_lines, total_model_specs)
+        (available_ids, available_display_lines, offered_model_specs)
     """
     try:
         from agent_runtimes.specs.models import check_env_vars_available, list_models
@@ -534,7 +557,7 @@ def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
 
     available_ids: set[str] = set()
     available_lines: list[str] = []
-    models = list_models()
+    models = [model for model in list_models() if model.available]
     for model in sorted(models, key=lambda m: m.id):
         if check_env_vars_available(list(model.required_env_vars or [])):
             available_ids.add(model.id)
@@ -858,6 +881,8 @@ def main_callback(
     if ctx.invoked_subcommand is not None:
         return
 
+    _quiet_the_logs(debug)
+
     if show_version:
         _show_version()
         raise typer.Exit(0)
@@ -1081,7 +1106,7 @@ def main_callback(
                     _summary_parts.append(
                         f"{_skill_count} skill{'s' if _skill_count != 1 else ''}"
                     )
-                if str(_sandbox_variant or "").lower() == "jupyter":
+                if str(_sandbox_variant or "").lower() == "jupyter-server":
                     _summary_parts.append("Jupyter sandbox")
                 if _codemode_on and not codemode_disabled:
                     _summary_parts.append("Code Mode")

@@ -18,7 +18,6 @@ import { Text, ProgressBar, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider, useThemeBrandColor } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
-import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
@@ -79,7 +78,7 @@ const PlanStepItem: React.FC<{
             : step.status === 'completed'
               ? 'success.subtle'
               : isEnabled
-                ? 'canvas.subtle'
+                ? 'canvas.default'
                 : 'canvas.default',
         border: '1px solid',
         borderColor:
@@ -98,7 +97,9 @@ const PlanStepItem: React.FC<{
         '&:hover': isInteractive
           ? {
               backgroundColor:
-                step.status === 'completed' ? 'success.subtle' : 'canvas.inset',
+                step.status === 'completed'
+                  ? 'success.subtle'
+                  : 'canvas.default',
               borderColor: 'accent.muted',
             }
           : {},
@@ -344,9 +345,8 @@ const AGENTSPEC_ID = 'example-agentic-generative-ui';
 
 const AgUiToolsBasedGenUiExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
-  const baseUrl = useExampleAgentRuntimesUrl();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
-  const { agentId } = useExampleAgentRuntime({
+  const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiToolsBasedGenUiExample',
     agentName,
     specId: AGENTSPEC_ID,
@@ -430,7 +430,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
               marginBottom: 2,
             }}
           >
-            AG-UI: Tool-Based Generative UI Example
+            AG-UI Tool-Based Generative UI Example
           </Text>
           <Text
             as="p"
@@ -448,7 +448,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -476,7 +476,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
           <Box
             sx={{
               padding: 4,
-              backgroundColor: 'canvas.subtle',
+              backgroundColor: 'canvas.default',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'border.default',
@@ -521,6 +521,7 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
         {/* Floating chat */}
         {agenticGenerativeUiEndpoint && (
           <ChatFloating
+            kernelIndicatorPlacement="right"
             protocol="ag-ui"
             endpoint={agenticGenerativeUiEndpoint}
             title="Plan Generator"

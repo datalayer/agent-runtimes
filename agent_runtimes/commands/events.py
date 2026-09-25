@@ -21,7 +21,7 @@ from agent_runtimes.events import (
     mark_event_unread,
 )
 
-DEFAULT_BASE_URL = "https://prod1.datalayer.run"
+DEFAULT_BASE_URL = "https://r1.datalayer.run"
 
 app = typer.Typer(
     name="events",

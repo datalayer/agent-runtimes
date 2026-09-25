@@ -47,10 +47,13 @@ export const ping = async (
       const status = error.response.status;
       throw new Error(
         `Health check failed: Service unhealthy (status ${status}) - ${error.message}`,
+        { cause: error },
       );
     }
 
     // Re-throw other errors (network errors, etc.)
-    throw new Error(`Health check failed: ${error.message}`);
+    throw new Error(`Health check failed: ${error.message}`, {
+      cause: error,
+    });
   }
 };

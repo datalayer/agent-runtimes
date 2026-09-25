@@ -71,7 +71,7 @@ export const MOCK_RUNTIME_RESPONSE = {
   success: true,
   message: 'Runtime retrieved successfully',
   runtime: {
-    pod_name: 'test-runtime-pod',
+    runtime_name: 'test-runtime-pod',
     status: 'running',
     environment: 'python-base',
     created_at: '2024-01-01T00:00:00Z',
