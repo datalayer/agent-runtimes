@@ -799,8 +799,8 @@ The route speaks the ACP schema:
   which an orchestration delegation sends. The turn is held to it as
   pydantic-ai's per-run usage limits; a limit reached ends the turn with
   `max_tokens` (or `max_turn_requests` for requests), and `_meta` in the answer
-  names it: `{"datalayer": {"error": {"code": "budget_exhausted", "details":
-  {"budget": "model", "limit": "output_tokens"}}}}`.
+  names it:
+  `{"datalayer": {"error": {"code": "budget_exhausted", "details": {"budget": "model", "limit": "output_tokens"}}}}`.
 - A prompt an orchestration delegation sends also carries the execution's own
   token in `_meta`, as `{"datalayer": {"credential": "…"}}`. The route takes it
   out of `_meta` before anything keeps the prompt, and the turn runs as that

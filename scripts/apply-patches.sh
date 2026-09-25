@@ -39,7 +39,12 @@ for patch_file in patches/*.patch; do
     # Extract package name from patch filename (e.g., @datalayer+jupyter-lexical+1.0.8.patch)
     filename=$(basename "$patch_file")
     # Handle scoped packages: @datalayer+jupyter-lexical+1.0.8.patch -> @datalayer/jupyter-lexical
-    pkg_name=$(echo "$filename" | sed 's/+/\//; s/+.*//')
+    # Unscoped packages: eslint-plugin-react+7.37.5.patch -> eslint-plugin-react
+    if [[ "$filename" == @* ]]; then
+      pkg_name=$(echo "$filename" | sed 's/+/\//; s/+.*//')
+    else
+      pkg_name="${filename%%+*}"
+    fi
 
     if [ ! -d "node_modules/$pkg_name" ]; then
       echo -e "${YELLOW}⚠️  Package $pkg_name not found in local node_modules (may be hoisted in monorepo)${NC}"

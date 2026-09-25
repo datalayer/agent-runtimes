@@ -147,7 +147,7 @@ export default function NotebookViewer({
           );
 
           // Get runtime info from the store - find the runtime for our environment
-          const currentPods = runtimesStore.runtimePods;
+          const currentPods = runtimesStore.runtimes;
           const matchingRuntime = currentPods.find(
             pod => pod.environment?.name === (runtime || 'ai-agents-env'),
           );

@@ -83,6 +83,22 @@ function resolveLoroBase64Entry(): string {
   }
 }
 
+/**
+ * How Vitest treats dependencies; each project repeats it, since a project
+ * does not inherit the root `test` options.
+ */
+const testServer = {
+  deps: {
+    external: ['@jupyter/web-components'],
+    // The published @datalayer packages are ESM with extensionless
+    // specifiers and CSS imports, which Node cannot load but Vite can.
+    // In the monorepo they are workspace links, outside node_modules,
+    // and Vite transforms them anyway; installed from npm, as in CI, they
+    // have to be inlined to be transformed the same way.
+    inline: [/@datalayer\//],
+  },
+};
+
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const target = env.VITE_APP_TARGET || process.env.VITE_APP_TARGET || 'app';
@@ -322,7 +338,8 @@ export default defineConfig(({ mode, command }) => {
               )
               .replaceAll(
                 '%VITE_DATALAYER_INBOUNDS_URL%',
-                env.VITE_DATALAYER_INBOUNDS_URL || 'https://prod1.datalayer.run',
+                env.VITE_DATALAYER_INBOUNDS_URL ||
+                  'https://prod1.datalayer.run',
               )
               .replaceAll(
                 '%VITE_DATALAYER_SUPPORT_URL%',
@@ -677,11 +694,7 @@ export default defineConfig(({ mode, command }) => {
         reporter: ['text', 'html', 'lcov'],
         reportsDirectory: './coverage',
       },
-      server: {
-        deps: {
-          external: ['@datalayer/jupyter-react', '@jupyter/web-components'],
-        },
-      },
+      server: testServer,
       projects: [
         {
           test: {
@@ -692,6 +705,7 @@ export default defineConfig(({ mode, command }) => {
             testTimeout: 10000,
             pool: 'threads',
             poolOptions: { threads: { singleThread: false } },
+            server: testServer,
           },
         },
         {
@@ -702,6 +716,7 @@ export default defineConfig(({ mode, command }) => {
             testTimeout: 30000,
             pool: 'threads',
             poolOptions: { threads: { singleThread: true } },
+            server: testServer,
           },
         },
         {
@@ -719,6 +734,7 @@ export default defineConfig(({ mode, command }) => {
             setupFiles: ['src/test-setup.ts'],
             testTimeout: 10000,
             pool: 'threads',
+            server: testServer,
           },
         },
       ],

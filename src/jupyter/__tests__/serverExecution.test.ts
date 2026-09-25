@@ -20,6 +20,11 @@ import {
   resumeServerExecutions,
 } from '../serverExecution';
 
+// `@jupyterlab/cells` builds its models on `createMutex` and the shared
+// models of `@jupyter/ydoc`, which `test-setup.ts` stubs down to `YNotebook`
+// for everybody else; this suite imports the cells, so it takes the real one.
+vi.mock('@jupyter/ydoc', async importOriginal => await importOriginal());
+
 const settings = ServerConnection.makeSettings({ baseUrl: 'http://x/' });
 
 /**

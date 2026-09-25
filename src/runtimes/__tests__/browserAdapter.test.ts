@@ -51,10 +51,14 @@ function modelStreaming(...steps: unknown[][]) {
   });
 }
 
-/** The provider-level usage shape, which is nested rather than flat. */
+/**
+ * The provider-level finish: its usage nested rather than flat, and its
+ * reason unified and raw. A plain string reason reads as no reason at all,
+ * which the SDK treats as unsafe and so executes no tool after it.
+ */
 const FINISH = {
   type: 'finish',
-  finishReason: 'stop',
+  finishReason: { unified: 'stop', raw: 'stop' },
   usage: {
     inputTokens: { total: 7, noCache: 7, cacheRead: 0, cacheWrite: 0 },
     outputTokens: { total: 3 },
@@ -154,7 +158,10 @@ describe('the browser adapter as a protocol adapter', () => {
             toolName: 'readAllCells',
             input: '{}',
           },
-          { ...FINISH, finishReason: 'tool-calls' },
+          {
+            ...FINISH,
+            finishReason: { unified: 'tool-calls', raw: 'tool_calls' },
+          },
         ],
         // The step after the tool ran: the model says what it found and stops.
         [
@@ -206,7 +213,10 @@ describe('the browser adapter as a protocol adapter', () => {
             toolName: 'readAllCells',
             input: '{}',
           },
-          { ...FINISH, finishReason: 'tool-calls' },
+          {
+            ...FINISH,
+            finishReason: { unified: 'tool-calls', raw: 'tool_calls' },
+          },
         ],
         [
           { type: 'text-start', id: 'b' },

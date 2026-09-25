@@ -333,10 +333,12 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
         ) {
           throw new Error(
             `Failed to delete space item '${itemId}': Item not found`,
+            { cause: error },
           );
         }
         throw new Error(
           `Failed to delete space item '${itemId}': ${error.message}`,
+          { cause: error },
         );
       }
 
@@ -395,7 +397,7 @@ export function SpacerMixin<TBase extends Constructor>(Base: TBase) {
     async checkSpacerHealth(): Promise<HealthCheck> {
       const startTime = Date.now();
       const errors: string[] = [];
-      let status = 'unknown';
+      let status: string;
       let healthy = false;
 
       try {

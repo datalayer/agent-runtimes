@@ -11,7 +11,7 @@ export const ENVIRONMENT_SCHEMA_ID =
 
 /** The sha256 of the schema text these types are generated from. */
 export const ENVIRONMENT_SCHEMA_SHA256 =
-  'df0f8dc57cd82b8b0a77727071cb9a084a64c099703a8b9747ebe0f0958fe8f0';
+  '3aa1a84206afd2d5d04d3a2eab28abca1d60e1a6a6ab8c14a94ace62b39e6015';
 
 /** The `apiVersion` an Environment document carries. */
 export const ENVIRONMENT_API_VERSION = 'environments.datalayer.io/v1alpha1';
@@ -42,6 +42,7 @@ export interface BuildSecret {
 
 export interface BuildSpec {
   dependencyFile?: DependencyFileSpec | null;
+  dockerfile?: DockerfileSpec | null;
   image?: ImageSourceSpec | null;
   /** Default: `"packages"`. */
   source?: 'packages' | 'dependencyFile' | 'dockerfile' | 'image';
@@ -74,6 +75,12 @@ export interface DependencyFileSpec {
   lockContent?: string;
   /** Default: `"requirements"`. */
   sourceFormat?: 'requirements' | 'pyproject' | 'conda';
+}
+
+/** The Dockerfile a `dockerfile`-sourced version builds from (E3-03). */
+export interface DockerfileSpec {
+  /** Default: `""`. */
+  content?: string;
 }
 
 export interface EnvironmentSpec {

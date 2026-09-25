@@ -362,7 +362,13 @@
         "pyodide": "0.29.4",
         "react": "19.2.8",
         "react-dom": "19.2.8",
-        "typescript": "5.9.3"
+        "typescript": "5.9.3",
+        "@datalayer/core": {
+            "react-router-dom": "$react-router-dom"
+        },
+        "eslint-plugin-react": {
+            "eslint": "$eslint"
+        }
     },
     "lint-staged": {
         "src/**/*.{js,jsx,ts,tsx}": [
