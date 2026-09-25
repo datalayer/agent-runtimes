@@ -11,7 +11,7 @@
  * rather than quietly diverging until a caller builds the wrong URL.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -28,12 +28,18 @@ import {
 
 const BASE = 'https://runtimes.example';
 
+/**
+ * The Python module, in the `code-sandboxes` checkout beside this one. A
+ * standalone checkout, as in CI, has none, and the comparison is skipped.
+ */
+const PYTHON_LIFECYCLE = join(
+  __dirname,
+  '../../../../code-sandboxes/code_sandboxes/lifecycle.py',
+);
+
 /** The verbs Python names, read out of `code_sandboxes/lifecycle.py`. */
 function pythonOperations(): Record<string, string> {
-  const source = readFileSync(
-    join(__dirname, '../../../../code-sandboxes/code_sandboxes/lifecycle.py'),
-    'utf8',
-  );
+  const source = readFileSync(PYTHON_LIFECYCLE, 'utf8');
   const block = source.match(
     /LIFECYCLE_OPERATIONS: dict\[str, str\] = \{([\s\S]*?)\n\}/,
   );
@@ -51,7 +57,7 @@ function pythonOperations(): Record<string, string> {
   return operations;
 }
 
-describe('the vocabulary', () => {
+describe.skipIf(!existsSync(PYTHON_LIFECYCLE))('the vocabulary', () => {
   it('names the same verbs as the Python module', () => {
     expect(Object.keys(LIFECYCLE_OPERATIONS).sort()).toEqual(
       Object.keys(pythonOperations()).sort(),

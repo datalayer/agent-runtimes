@@ -58,6 +58,15 @@ if [ "$MISSING_PACKAGES" = true ]; then
   exit 0
 fi
 
+# `npm install --workspaces --include-workspace-root` runs this postinstall
+# twice, for the root and for its "." workspace, and possibly at the same
+# time: two patch-package runs editing the same files fail each other. One
+# at a time, the second finds the patches applied and leaves them.
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"node_modules/.apply-patches.lock"
+  flock 9
+fi
+
 npx patch-package
 
 echo -e "${GREEN}✅ Patches applied successfully${NC}"
