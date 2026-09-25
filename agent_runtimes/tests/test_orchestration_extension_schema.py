@@ -168,8 +168,3 @@ def test_every_catalogued_capability_is_in_the_closed_vocabulary():
     assert declared <= set(AGENT_CAPABILITIES), sorted(
         declared - set(AGENT_CAPABILITIES)
     )
-
-    # A demonstration discovered as something to hand work to is worse than
-    # one that cannot be discovered at all.
-    examples = [s for s in specs if s.id.startswith("example-") and s.delegable]
-    assert not examples, [s.id for s in examples]

@@ -1731,7 +1731,7 @@ invent a tool name.
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,
-  delegable: [],
+  delegable: [{ id: 'document.author' }],
   protocol: 'vercel-ai',
   uiExtension: undefined,
   trigger: undefined,

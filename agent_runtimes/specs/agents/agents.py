@@ -1510,7 +1510,9 @@ invent a tool name.
 """,
     system_prompt_codemode_addons=None,
     goal=None,
-    delegable=[],
+    delegable=[
+        AgentCapability(id="document.author"),
+    ],
     protocol="vercel-ai",
     ui_extension=None,
     trigger=None,
