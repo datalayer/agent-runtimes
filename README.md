@@ -10,7 +10,7 @@
 
 # 🤖 🚀 Agent Runtimes
 
-[![Github Actions Status](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yml/badge.svg)](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yml)
+[![Github Actions Status](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yaml/badge.svg)](https://github.com/datalayer/agent-runtimes/actions/workflows/build.yaml)
 [![PyPI - Version](https://img.shields.io/pypi/v/agent-runtimes)](https://pypi.org/project/agent-runtimes)
 
 **Agent Runtimes** is a unified library for deploying, managing, and interacting with AI agents across multiple protocols and frameworks. It provides both a Python server for hosting agents and React components for seamless integration into web and desktop applications.

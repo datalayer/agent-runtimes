@@ -10,8 +10,8 @@ on:
       - '*.js'
       - '*.ts'
       - '*.tsx'
-      - '.github/workflows/ts-tests.yml'
-      - '.github/workflows/reusable-typescript.yml'
+      - '.github/workflows/ts-tests.yaml'
+      - '.github/workflows/reusable-typescript.yaml'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -21,12 +21,12 @@ on:
       - '*.js'
       - '*.ts'
       - '*.tsx'
-      - '.github/workflows/ts-tests.yml'
-      - '.github/workflows/reusable-typescript.yml'
+      - '.github/workflows/ts-tests.yaml'
+      - '.github/workflows/reusable-typescript.yaml'
 
 jobs:
   test-22x:
-    uses: ./.github/workflows/reusable-typescript.yml
+    uses: ./.github/workflows/reusable-typescript.yaml
     with:
       node-version: '22.x'
       install-command: 'npm install --workspaces --include-workspace-root --no-audit --no-fund'
@@ -41,7 +41,7 @@ jobs:
 
   test-24x:
     needs: test-22x  # Run sequentially
-    uses: ./.github/workflows/reusable-typescript.yml
+    uses: ./.github/workflows/reusable-typescript.yaml
     with:
       node-version: '24.x'
       install-command: 'npm install --workspaces --include-workspace-root --no-audit --no-fund'

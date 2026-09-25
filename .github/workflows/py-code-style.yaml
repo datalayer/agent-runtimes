@@ -1,4 +1,4 @@
-name: Py Type Checking
+name: Py Code Style
 
 on:
   push:
@@ -10,9 +10,10 @@ on:
       - 'tests/**/*.py'
       - 'pyproject.toml'
       - 'setup.py'
-      - 'mypy.ini'
-      - '.mypy.ini'
-      - '.github/workflows/py-typing.yml'
+      - '.pre-commit-config.yaml'
+      - 'ruff.toml'
+      - '.ruff.toml'
+      - '.github/workflows/py-code-style.yaml'
   pull_request:
     branches:
       - main
@@ -22,15 +23,16 @@ on:
       - 'tests/**/*.py'
       - 'pyproject.toml'
       - 'setup.py'
-      - 'mypy.ini'
-      - '.mypy.ini'
-      - '.github/workflows/py-typing.yml'
+      - '.pre-commit-config.yaml'
+      - 'ruff.toml'
+      - '.ruff.toml'
+      - '.github/workflows/py-code-style.yaml'
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
+    
 jobs:
   check-code-style:
     runs-on: ubuntu-latest
@@ -44,13 +46,14 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
-          python-version: 3.12
+          python-version: 3.11
           activate-environment: true
 
       - name: Install dependencies
         run: |
-          uv pip install mypy
-          uv pip install types-requests
-      - name: Run mypy
+          uv pip install .
+          uv pip install pre-commit
+
+      - name: Run pre-commit
         run: |
-          mypy agent_runtimes
+          pre-commit run --all-files    

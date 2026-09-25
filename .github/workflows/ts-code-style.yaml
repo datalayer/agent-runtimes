@@ -15,8 +15,8 @@ on:
       - '.eslintrc*'
       - '.prettierrc*'
       - 'package.json'
-      - '.github/workflows/ts-code-style.yml'
-      - '.github/workflows/reusable-typescript.yml'
+      - '.github/workflows/ts-code-style.yaml'
+      - '.github/workflows/reusable-typescript.yaml'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -31,12 +31,12 @@ on:
       - '.eslintrc*'
       - '.prettierrc*'
       - 'package.json'
-      - '.github/workflows/ts-code-style.yml'
-      - '.github/workflows/reusable-typescript.yml'
+      - '.github/workflows/ts-code-style.yaml'
+      - '.github/workflows/reusable-typescript.yaml'
 
 jobs:
   code-style:
-    uses: ./.github/workflows/reusable-typescript.yml
+    uses: ./.github/workflows/reusable-typescript.yaml
     with:
       node-version: '22.x'
       install-command: 'npm install'
