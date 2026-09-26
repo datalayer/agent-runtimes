@@ -252,7 +252,7 @@ test = [
     "python-dotenv>=1.1.1",
     "types-requests>=2.32.4",
     "typing-extensions>=4.15.0",
-    "datalayer_reactor",
+    "datalayer_reactor>=1.0.4",
 ]
 
 [project.scripts]
