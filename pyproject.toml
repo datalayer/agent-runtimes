@@ -33,11 +33,11 @@ dependencies = [
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
     # each re-declaring its own copy of the same strings (ORCHESTRATOR.md,
     # O3-02). Unconditional, not under the `a2a` extra below: delegation
-    # metadata is read on the ACP path too. 0.0.3 is where the field-name
-    # constants became public; pinned to the width of that one release,
-    # since a 0.0.x package makes no compatibility promise across even a
-    # patch bump.
-    "agent-teams>=0.0.3,<0.0.4",
+    # metadata is read on the ACP path too. 1.0.0 is the first release under
+    # semver proper (the 0.0.x releases made no compatibility promise across
+    # even a patch bump, hence the one-release-wide pin until then); the
+    # field-name constants it exports are the ones 0.0.3 made public.
+    "agent-teams>=1.0.0,<2",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
     # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0.
