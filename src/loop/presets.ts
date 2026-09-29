@@ -84,6 +84,12 @@ export type LoopPresetOptions = {
    */
   autoFocusPrompt?: boolean;
   /**
+   * Whether the openers show as labels by the composer. True by default; the
+   * composer's suggestions menu offers them either way. See
+   * `ChatPluginConfig.suggestionLabels`.
+   */
+  suggestionLabels?: boolean;
+  /**
    * Pixels to reserve at the top of the workspace when it goes full screen,
    * for a host's own fixed header. Passed through to the chat plugin — see
    * `ChatPluginConfig.fullScreenTopOffset` for what it changes and why
@@ -222,6 +228,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     chatHeaderButtons = false,
     promptPlacement,
     autoFocusPrompt = true,
+    suggestionLabels = true,
     fullScreenTopOffset = 0,
     showAgentVariants = false,
     agentSummary = true,
@@ -258,6 +265,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       headerButtons: { newChat: chatHeaderButtons, clear: chatHeaderButtons },
       promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
       autoFocusPrompt,
+      suggestionLabels,
       fullScreenTopOffset,
     }),
     // The composer and the title bar are plugins of their own: the chat

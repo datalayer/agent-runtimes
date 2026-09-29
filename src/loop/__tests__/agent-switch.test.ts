@@ -266,9 +266,24 @@ describe('a host that asked for no header', () => {
      * control on screen with only the switcher missing.
      */
     const shell = read('shell', 'LoopWorkspace.tsx');
-    expect(shell).toContain('{showHeader ? (');
-    const header = shell.slice(shell.indexOf('{showHeader ? ('));
-    expect(header.indexOf('LoopSlots.header')).toBeGreaterThan(0);
+    // The slot is part of the header's controls…
+    const controls = shell.slice(
+      shell.indexOf('const headerControls = ('),
+      shell.indexOf('</>', shell.indexOf('const headerControls = (')),
+    );
+    expect(controls).toContain('LoopSlots.header');
+    // …which are rendered only behind `showHeader`: in the row, or in the
+    // host's own bar (`headerContainer`), and nowhere else.
+    const renders = [...shell.matchAll(/\{headerControls\}/g)].map(
+      m => m.index ?? 0,
+    );
+    expect(renders).toHaveLength(2);
+    for (const at of renders) {
+      // The nearest guard above it, with no block closed in between.
+      const guard = shell.lastIndexOf('{showHeader && headerContainer', at);
+      expect(guard).toBeGreaterThan(0);
+      expect(shell.slice(guard, at)).not.toContain(') : null}');
+    }
   });
 });
 

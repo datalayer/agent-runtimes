@@ -102,14 +102,34 @@ export type WorkspaceFullScreenOptions = {
 };
 
 /**
+ * What full screen promotes, found from the control that asked.
+ *
+ * The workspace (`[data-loop-workspace]`) — unless a host marked something
+ * around it with `data-loop-fullscreen-root`. A host that draws its own bar
+ * above the workspace and has the header's controls rendered in it
+ * (`LoopWorkspace`'s `headerContainer`) marks the element holding both: the
+ * controls are then outside the workspace, and promoting the workspace alone
+ * would leave them — the one that leaves full screen included — under the
+ * overlay. The anchor itself when there is neither.
+ */
+export function fullScreenNode(anchor: HTMLElement | null): HTMLElement | null {
+  return (
+    (anchor?.closest('[data-loop-fullscreen-root]') as HTMLElement | null) ??
+    (anchor?.closest('[data-loop-workspace]') as HTMLElement | null) ??
+    anchor
+  );
+}
+
+/**
  * Full-screen state and the toggle, anchored by any element inside the
  * workspace.
  *
  * The element promoted is the whole workspace — the nearest
- * `[data-loop-workspace]` above the anchor — so the header's controls come
- * along instead of being left on the page underneath. With no workspace
- * around it, the anchor's own element is promoted, which is what a view
- * mounted without a shell would want.
+ * `[data-loop-workspace]` above the anchor, or the host's
+ * `[data-loop-fullscreen-root]` around it (see `fullScreenNode`) — so the
+ * header's controls come along instead of being left on the page underneath.
+ * With neither around it, the anchor's own element is promoted, which is what
+ * a view mounted without a shell would want.
  */
 export function useWorkspaceFullScreen(
   anchorRef: RefObject<HTMLElement | null>,
@@ -152,10 +172,7 @@ export function useWorkspaceFullScreen(
      * runs — so at full screen a reader would lose the two controls most
      * worth having room for.
      */
-    const node =
-      (anchorRef.current?.closest(
-        '[data-loop-workspace]',
-      ) as HTMLElement | null) ?? anchorRef.current;
+    const node = fullScreenNode(anchorRef.current);
     if (fullScreen) {
       if (usingApi.current && document.fullscreenElement) {
         void document.exitFullscreen();
@@ -209,10 +226,7 @@ export function useWorkspaceFullScreen(
     if (!paintOverlay || !fullScreen || usingApi.current) {
       return undefined;
     }
-    const node =
-      (anchorRef.current?.closest(
-        '[data-loop-workspace]',
-      ) as HTMLElement | null) ?? anchorRef.current;
+    const node = fullScreenNode(anchorRef.current);
     if (!node) {
       return undefined;
     }

@@ -27,6 +27,7 @@
 
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { Box } from '@primer/react';
 import {
@@ -138,6 +139,20 @@ export type LoopWorkspaceProps = {
    * through `LoopSlots.header`.
    */
   headerActions?: ReactNode;
+  /**
+   * Where the header's controls go, when not in a row of their own.
+   *
+   * A host that already draws a bar above the workspace — a window's title
+   * bar, a frame with its own tabs — hands over an element in it, and the
+   * controls the header would have carried (the host's `headerActions`, every
+   * plugin's `LoopSlots.header` contribution, the view switcher) are rendered
+   * there instead, and the workspace draws no header row. They stay inside
+   * the workspace's React tree, so they keep their context and their state.
+   *
+   * `null` while the host's element is not mounted yet: nothing is rendered,
+   * and no row is drawn in its place.
+   */
+  headerContainer?: HTMLElement | null;
 };
 
 /** Build the platform for a set of plugins. */
@@ -162,6 +177,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     showHeader = true,
     chatHeaderActions,
     headerActions,
+    headerContainer,
   } = props;
 
   // Building the platform is a one-time act: rebuilding it on every render
@@ -187,6 +203,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       showHeader={showHeader}
       chatHeaderActions={chatHeaderActions}
       headerActions={headerActions}
+      headerContainer={headerContainer}
     />
   );
 }
@@ -216,6 +233,7 @@ function WorkspaceBody({
   showHeader = true,
   chatHeaderActions,
   headerActions,
+  headerContainer,
 }: BodyProps): JSX.Element {
   /*
    * Which agent the session is talking to.
@@ -359,6 +377,21 @@ function WorkspaceBody({
   // untouched, so this costs nothing until somebody uses it.
   useReactorEvent(effectiveViewType ? onView(effectiveViewType) : undefined);
 
+  /*
+   * The header's controls: the host's first, then the plugins', then the
+   * view switcher on the trailing edge. Drawn in the header row, or in the
+   * host's own bar when it handed one over (`headerContainer`).
+   */
+  const headerControls = (
+    <>
+      {headerActions}
+      <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
+      {showViewSelector ? (
+        <ViewSwitcher views={views} workspace={workspace} compact={compact} />
+      ) : null}
+    </>
+  );
+
   return (
     <Box
       /*
@@ -395,7 +428,23 @@ function WorkspaceBody({
         is what takes the plugins' controls with it, while the plugins
         themselves stay running.
       */}
-      {showHeader ? (
+      {showHeader && headerContainer
+        ? createPortal(
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 2,
+              }}
+            >
+              {headerControls}
+            </Box>,
+            headerContainer,
+          )
+        : null}
+      {/* A host still mounting its bar (`null`) gets no row in its place. */}
+      {showHeader && headerContainer === undefined ? (
         <Box
           as="header"
           sx={{
@@ -432,15 +481,7 @@ function WorkspaceBody({
           {/* The host's controls first — see `headerActions`. A plugin that
               must lead anyway (the landing page's links) sets `order` on its
               own component. */}
-          {headerActions}
-          <ReactorSlot slot={LoopSlots.header} props={{ workspace }} />
-          {showViewSelector ? (
-            <ViewSwitcher
-              views={views}
-              workspace={workspace}
-              compact={compact}
-            />
-          ) : null}
+          {headerControls}
         </Box>
       ) : null}
 

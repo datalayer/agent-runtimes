@@ -43,6 +43,11 @@ export type LoopEmbedProps = LoopPresetOptions & {
   /** The host's own controls for the workspace header row. */
   headerActions?: ReactNode;
   /**
+   * An element in the host's own bar to render the header's controls in,
+   * instead of a header row. See `LoopWorkspaceProps.headerContainer`.
+   */
+  headerContainer?: HTMLElement | null;
+  /**
    * Draw the workspace inside a window frame with this title bar.
    *
    * The composition every embedding page was writing for itself: the frame
@@ -72,6 +77,7 @@ export function LoopEmbed({
   showHeader = false,
   chatHeaderActions,
   headerActions,
+  headerContainer,
   frameTitle,
   frameHeight,
   plugins = [],
@@ -118,6 +124,7 @@ export function LoopEmbed({
       preset.chatHeaderButtons,
       preset.promptPlacement,
       preset.autoFocusPrompt,
+      preset.suggestionLabels,
       preset.fullScreenTopOffset,
       preset.showAgentVariants,
       preset.agentSummary,
@@ -181,6 +188,7 @@ export function LoopEmbed({
       showHeader={showHeader}
       chatHeaderActions={chatHeaderActions}
       headerActions={headerActions}
+      headerContainer={headerContainer}
     />
   );
 

@@ -1832,7 +1832,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // With the prompt on top the openers are already chips under
             // it; the empty state repeating them was the same three buttons
             // twice on one screen.
-            suggestions={topPrompt || layout ? [] : chatSuggestions}
+            suggestions={
+              topPrompt || layout || config?.suggestionLabels === false
+                ? []
+                : chatSuggestions
+            }
             /*
                 The title bar arrives as a plugin: the chat-header plugin
                 contributes the component, this view hands it the assembled
@@ -2008,8 +2012,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       </Box>
     </>
   );
+  // Off when the host asked for the menu alone: the composer's suggestions
+  // control carries the same openers (`suggestions` above).
   const chipsEl =
-    chatSuggestions.length > 0 ? (
+    config?.suggestionLabels !== false && chatSuggestions.length > 0 ? (
       <Box
         aria-label="Suggested prompts"
         sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, px: 2, pb: '6px' }}

@@ -17,6 +17,7 @@ export {
 export { ViewSwitcher, type ViewSwitcherProps } from './ViewSwitcher';
 export { PluginToggles, type PluginTogglesProps } from './PluginToggles';
 export {
+  fullScreenNode,
   useWorkspaceFullScreen,
   type WorkspaceFullScreen,
 } from './useWorkspaceFullScreen';

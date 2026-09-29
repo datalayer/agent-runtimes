@@ -174,6 +174,17 @@ export type ChatPluginConfig = {
   autoFocusPrompt: boolean;
 
   /**
+   * Whether the openers are drawn as a row of labels by the composer.
+   *
+   * On by default: a person who has just opened the workspace sees what it is
+   * worth asking without opening anything. The same openers are always behind
+   * the composer's own suggestions menu, so a host with little room — a frame
+   * on a landing page, where the labels would be a row of the first screen —
+   * turns the labels off and loses nothing.
+   */
+  suggestionLabels: boolean;
+
+  /**
    * Pixels to reserve at the top of the workspace when it goes full screen —
    * room for a host's own fixed header, drawn outside the workspace
    * entirely.
@@ -209,6 +220,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     hidePrompt: false,
     promptPlacement: 'bottom',
     autoFocusPrompt: true,
+    suggestionLabels: true,
     fullScreenTopOffset: 0,
   },
   displayName: 'Chat',
