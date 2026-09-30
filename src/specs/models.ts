@@ -46,9 +46,13 @@ export const AIModels = {
     'bedrock:us.anthropic.claude-sonnet-4-6',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
+  CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT: 'cloudflare:google/gemma-4-26b-a4b-it',
+  CLOUDFLARE_ZAI_ORG_GLM_5_2: 'cloudflare:zai-org/glm-5.2',
   CLOUDFLARE_OPENAI_GPT_OSS_120B: 'cloudflare:openai/gpt-oss-120b',
+  CLOUDFLARE_MOONSHOTAI_KIMI_K2_6: 'cloudflare:moonshotai/kimi-k2.6',
   CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST:
     'cloudflare:meta/llama-3.3-70b-instruct-fp8-fast',
+  CLOUDFLARE_QWEN_QWEN3_8_27B: 'cloudflare:qwen/qwen3.8-27b',
   OLLAMA_GEMMA3_4B: 'ollama:gemma3:4b',
   OLLAMA_LLAMA3_1_8B: 'ollama:llama3.1:8b',
   OLLAMA_QWEN2_5_CODER_7B: 'ollama:qwen2.5-coder:7b',
@@ -375,12 +379,54 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
     tokensLimit: 64000,
   };
 
+export const CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
+  id: 'cloudflare:google/gemma-4-26b-a4b-it',
+  version: '0.0.1',
+  name: 'Cloudflare Gemma 4 26B',
+  description:
+    'Google Gemma 4 26B (a4b, instruction-tuned) on Cloudflare Workers AI - 256k context, tool calling, standard billing',
+  provider: 'cloudflare',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  tokensLimit: 16384,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
+
+export const CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
+  id: 'cloudflare:zai-org/glm-5.2',
+  version: '0.0.1',
+  name: 'Cloudflare GLM-5.2',
+  description:
+    'Z.ai GLM-5.2 on Cloudflare Workers AI - 262k context, tool calling; a frontier model billed from AI Gateway credits',
+  provider: 'cloudflare',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  tokensLimit: 32768,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
+
 export const CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   id: 'cloudflare:openai/gpt-oss-120b',
   version: '0.0.1',
   name: 'Cloudflare gpt-oss-120b',
   description:
     'OpenAI gpt-oss-120b on Cloudflare Workers AI - 128k context, tool calling, standard billing',
+  provider: 'cloudflare',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  tokensLimit: 32768,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
+
+export const CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
+  id: 'cloudflare:moonshotai/kimi-k2.6',
+  version: '0.0.1',
+  name: 'Cloudflare Kimi K2.6',
+  description:
+    'Moonshot Kimi K2.6 on Cloudflare Workers AI - 262k context, tool calling; a frontier model billed from AI Gateway credits',
   provider: 'cloudflare',
   default: false,
   available: true,
@@ -400,6 +446,20 @@ export const CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel = {
   available: true,
   requiredEnvVars: [],
   tokensLimit: 8192,
+  capabilities: ['chat', 'tools', 'codemode'],
+};
+
+export const CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
+  id: 'cloudflare:qwen/qwen3.8-27b',
+  version: '0.0.1',
+  name: 'Cloudflare Qwen3.8 27B',
+  description:
+    'Qwen3.8 27B on Cloudflare Workers AI - 262k context, tool calling, standard billing',
+  provider: 'cloudflare',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  tokensLimit: 16384,
   capabilities: ['chat', 'tools', 'codemode'],
 };
 
@@ -558,9 +618,14 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
+  'cloudflare:google/gemma-4-26b-a4b-it':
+    CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
+  'cloudflare:zai-org/glm-5.2': CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1,
   'cloudflare:openai/gpt-oss-120b': CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1,
+  'cloudflare:moonshotai/kimi-k2.6': CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1,
   'cloudflare:meta/llama-3.3-70b-instruct-fp8-fast':
     CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,
+  'cloudflare:qwen/qwen3.8-27b': CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1,
   'ollama:gemma3:4b': OLLAMA_GEMMA3_4B_0_0_1,
   'ollama:llama3.1:8b': OLLAMA_LLAMA3_1_8B_0_0_1,
   'ollama:qwen2.5-coder:7b': OLLAMA_QWEN2_5_CODER_7B_0_0_1,

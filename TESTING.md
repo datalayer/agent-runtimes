@@ -59,3 +59,17 @@ describe('Component/Function Name', () => {
   });
 });
 ```
+
+## The Cloudflare model specs against Cloudflare's listing
+
+`agentspecs/agentspecs/models/cloudflare-*.yaml` name models Cloudflare Workers AI
+serves, and the catalogue moves (a model the specs could have named in September
+2026 had been deprecated in May). Before a release of the specs:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=… CLOUDFLARE_API_TOKEN=… python scripts/check-cloudflare-models.py
+```
+
+It says which spec names a model no longer served (and exits 1), which served model
+with tool calling has no spec, and each model's context window. The
+`DATALAYER_CLOUDFLARE_*` names of the services' rc files are read too.
