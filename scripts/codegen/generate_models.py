@@ -38,7 +38,8 @@ def _make_const_name(model_id: str) -> str:
 
     E.g. 'anthropic:claude-sonnet-4-5-20250514' -> 'ANTHROPIC_CLAUDE_SONNET_4_5_20250514'
     """
-    return model_id.upper().replace(":", "_").replace("-", "_").replace(".", "_")
+    # A Cloudflare id carries a vendor segment: "cloudflare:openai/gpt-oss-120b".
+    return model_id.upper().replace(":", "_").replace("-", "_").replace(".", "_").replace("/", "_")
 
 
 def _pick_default(specs: list[dict]) -> Optional[dict]:

@@ -24,6 +24,7 @@ from agent_runtimes.models import models as service
 from agent_runtimes.specs.models import AI_MODEL_CATALOGUE, DEFAULT_MODEL
 
 ALIBABA = AI_MODEL_CATALOGUE["alibaba:qwen-max"]
+CLOUDFLARE = AI_MODEL_CATALOGUE["cloudflare:openai/gpt-oss-120b"]
 BEDROCK = AI_MODEL_CATALOGUE[DEFAULT_MODEL.value]
 
 AWS = {
@@ -39,6 +40,10 @@ def clean_env(monkeypatch):
     for name in (
         "ALIBABA_API_KEY",
         "DASHSCOPE_API_KEY",
+        "CLOUDFLARE_API_TOKEN",
+        "CLOUDFLARE_API_KEY",
+        "CLOUDFLARE_ACCOUNT_ID",
+        "CLOUDFLARE_GATEWAY",
         "AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE",
         *AWS,
     ):
@@ -62,6 +67,39 @@ class TestCredentialsReady:
         self, clean_env
     ) -> None:
         assert service.credentials_ready(ALIBABA, "datalayer") is True
+
+    def test_a_cloudflare_call_needs_the_token_and_the_account(self, clean_env) -> None:
+        """Hosted through ai-inference the spec lists nothing; a direct call
+        goes to the account's own endpoint, so the token alone is not enough."""
+        assert CLOUDFLARE.required_env_vars == []
+        assert service.credentials_ready(CLOUDFLARE, "datalayer") is True
+        assert service.credentials_ready(CLOUDFLARE, "local") is False
+        clean_env.setenv("CLOUDFLARE_API_TOKEN", "token")
+        assert service.credentials_ready(CLOUDFLARE, "local") is False
+        clean_env.setenv("CLOUDFLARE_ACCOUNT_ID", "acct")
+        assert service.credentials_ready(CLOUDFLARE, "local") is True
+
+    def test_a_direct_cloudflare_call_goes_through_the_gateway_unless_told_not_to(
+        self, clean_env
+    ) -> None:
+        clean_env.setenv("CLOUDFLARE_API_TOKEN", "token")
+        clean_env.setenv("CLOUDFLARE_ACCOUNT_ID", "acct")
+        assert service.cloudflare_direct_route("openai/gpt-oss-120b") == (
+            "https://gateway.ai.cloudflare.com/v1/acct/default/compat",
+            "token",
+            "workers-ai/@cf/openai/gpt-oss-120b",
+        )
+        clean_env.setenv("CLOUDFLARE_GATEWAY", "")
+        assert service.cloudflare_direct_route("@cf/openai/gpt-oss-120b") == (
+            "https://api.cloudflare.com/client/v4/accounts/acct/ai/v1",
+            "token",
+            "@cf/openai/gpt-oss-120b",
+        )
+        model = service.create_model_with_provider("cloudflare", "openai/gpt-oss-120b")
+        assert model.model_name == "@cf/openai/gpt-oss-120b"
+        assert str(model.client.base_url).startswith(
+            "https://api.cloudflare.com/client/v4/accounts/acct/ai/v1"
+        )
 
     def test_the_spec_s_own_variables_are_still_required(self, clean_env) -> None:
         assert service.credentials_ready(BEDROCK, "local") is False

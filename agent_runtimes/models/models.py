@@ -39,7 +39,34 @@ logger = logging.getLogger(__name__)
 #: Any one of the names is enough — they are alternatives, not a set.
 DIRECT_PROVIDER_CREDENTIALS: dict[str, tuple[str, ...]] = {
     "alibaba": ("ALIBABA_API_KEY", "DASHSCOPE_API_KEY"),
+    # Cloudflare Workers AI: the token, and the account it belongs to (below).
+    "cloudflare": ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY"),
 }
+
+#: What a direct call needs beside its key: a Cloudflare call is made to the
+#: account's own endpoint, so the account id is not optional.
+DIRECT_PROVIDER_ACCOUNTS: dict[str, tuple[str, ...]] = {
+    "cloudflare": ("CLOUDFLARE_ACCOUNT_ID",),
+}
+
+#: Where a direct Cloudflare call goes: the account's AI Gateway when one is
+#: named (`CLOUDFLARE_GATEWAY`, `default` unless empty), else Workers AI's
+#: own OpenAI-compatible endpoint. The same two routes ai-inference takes.
+CLOUDFLARE_GATEWAY_BASE = "https://gateway.ai.cloudflare.com/v1"
+CLOUDFLARE_DIRECT_BASE = "https://api.cloudflare.com/client/v4/accounts"
+
+
+def cloudflare_direct_route(model_name: str) -> tuple[str, str, str]:
+    """The base URL, the token and the model name for a direct Cloudflare call."""
+    account = (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip()
+    token = (
+        os.environ.get("CLOUDFLARE_API_TOKEN") or os.environ.get("CLOUDFLARE_API_KEY") or ""
+    ).strip()
+    gateway = os.environ.get("CLOUDFLARE_GATEWAY", "default").strip().strip("/")
+    name = model_name if model_name.startswith("@cf/") else f"@cf/{model_name}"
+    if gateway:
+        return f"{CLOUDFLARE_GATEWAY_BASE}/{account}/{gateway}/compat", token, f"workers-ai/{name}"
+    return f"{CLOUDFLARE_DIRECT_BASE}/{account}/ai/v1", token, name
 
 
 def effective_inference_provider() -> str:
@@ -76,12 +103,14 @@ def credentials_ready(spec_model: Any, inference_provider: str | None = None) ->
         return True
     if is_local_model(getattr(spec_model, "id", "")):
         return True
-    alternatives = DIRECT_PROVIDER_CREDENTIALS.get(
-        str(getattr(spec_model, "provider", "")), ()
-    )
+    provider_name = str(getattr(spec_model, "provider", ""))
+    alternatives = DIRECT_PROVIDER_CREDENTIALS.get(provider_name, ())
     if not alternatives:
         return True
-    return any(os.environ.get(name) for name in alternatives)
+    accounts = DIRECT_PROVIDER_ACCOUNTS.get(provider_name, ())
+    return any(os.environ.get(name) for name in alternatives) and all(
+        os.environ.get(name) for name in accounts
+    )
 
 
 def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
@@ -280,6 +309,23 @@ def create_model_with_provider(
         return OpenAIChatModel(
             model_name,
             provider=openai_provider,
+            settings=ModelSettings(parallel_tool_calls=False, temperature=0),
+        )
+    elif model_provider.lower() == "cloudflare":
+        # Workers AI speaks the OpenAI wire format: an OpenAI model over the
+        # account's gateway (or Workers AI's own endpoint), with its token.
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+
+        base_url, token, name = cloudflare_direct_route(model_name)
+        provider = OpenAIProvider(
+            base_url=base_url,
+            api_key=token or "cloudflare",
+            http_client=_create_inference_http_client(http_timeout, source="cloudflare"),
+        )
+        return OpenAIChatModel(
+            name,
+            provider=provider,
             settings=ModelSettings(parallel_tool_calls=False, temperature=0),
         )
     elif model_provider.lower() in LOCAL_PROVIDERS:
