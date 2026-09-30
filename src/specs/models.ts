@@ -391,6 +391,7 @@ export const CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 16384,
   capabilities: ['chat', 'tools', 'codemode'],
+  billing: 'standard',
 };
 
 export const CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
@@ -405,6 +406,7 @@ export const CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
+  billing: 'credits',
 };
 
 export const CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
@@ -419,6 +421,7 @@ export const CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
+  billing: 'standard',
 };
 
 export const CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
@@ -433,6 +436,7 @@ export const CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
+  billing: 'credits',
 };
 
 export const CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel = {
@@ -447,6 +451,7 @@ export const CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 8192,
   capabilities: ['chat', 'tools', 'codemode'],
+  billing: 'standard',
 };
 
 export const CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
@@ -461,6 +466,7 @@ export const CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
   requiredEnvVars: [],
   tokensLimit: 16384,
   capabilities: ['chat', 'tools', 'codemode'],
+  billing: 'standard',
 };
 
 export const OLLAMA_GEMMA3_4B_0_0_1: AIModel = {

@@ -1305,6 +1305,73 @@ Answer in the conversation, briefly, and only with the tools you actually have; 
   subagents: undefined,
 };
 
+export const EXAMPLE_CLOUDFLARE_AGENTSPEC_0_0_1: Agentspec = {
+  id: 'example-cloudflare',
+  version: '0.0.1',
+  name: 'Example Cloudflare Workers AI Agent',
+  description: `A data analyst on Cloudflare Workers AI (gpt-oss-120b), reached through datalayer-ai-inference and the account's AI Gateway: a chat with a code sandbox and tool calls, on a model billed by Cloudflare rather than by an API key of your own.`,
+  tags: ['workflow', 'analysis', 'inference'],
+  domain: undefined,
+  enabled: true,
+  model: 'cloudflare:openai/gpt-oss-120b',
+  inferenceProvider: 'datalayer',
+  mcpServers: [],
+  skills: [
+    SKILL_MAP['events:0.0.1']
+      ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
+      : undefined,
+  ].filter(Boolean) as SkillSpec[],
+  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  frontendTools: [],
+  environmentName: 'ai-agents-env',
+  icon: 'cloud',
+  emoji: '☁️',
+  color: '#F38020',
+  suggestions: [
+    {
+      text: 'Multiply 12 by 34 with a tool call, then explain which model answered and where it ran.',
+      summary: 'A tool call on Workers AI',
+    },
+    {
+      text: 'Write and run a short Python cell that sums the squares of 1 to 10.',
+      summary: 'Run a code cell',
+    },
+    {
+      text: 'Which Cloudflare model are you, what is its context window, and how is it billed?',
+      summary: 'Which model',
+    },
+  ],
+  welcomeMessage:
+    "Cloudflare Workers AI demo ready. I run on gpt-oss-120b through Datalayer's inference service and the account's AI Gateway; ask me for a tool call or a code cell.",
+  welcomeNotebook: undefined,
+  welcomeDocument: undefined,
+  sandboxVariant: 'jupyter-server',
+  harness: 'pydantic-ai',
+  systemPrompt: `You are a data analyst running on Cloudflare Workers AI. Be concise. Use a tool when a tool does the job, and say which model answered when asked.`,
+  systemPromptCodemodeAddons: undefined,
+  goal: undefined,
+  delegable: [],
+  protocol: undefined,
+  uiExtension: undefined,
+  trigger: undefined,
+  modelConfig: undefined,
+  mcpServerTools: undefined,
+  guardrails: undefined,
+  evals: undefined,
+  codemode: undefined,
+  output: undefined,
+  advanced: undefined,
+  checkpoints: undefined,
+  authorizationPolicy: undefined,
+  notifications: undefined,
+  memory: 'ephemeral',
+  preHooks: undefined,
+  postHooks: undefined,
+  toolHooks: undefined,
+  parameters: undefined,
+  subagents: undefined,
+};
+
 export const EXAMPLE_CODE_SANDBOX_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-code-sandbox',
   version: '0.0.1',
@@ -1894,7 +1961,7 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-evals-nocodemode',
   version: '0.0.1',
   name: 'Example Evals Agent (No Codemode)',
-  description: `Evals runner variant with codemode disabled for A/B comparisons against example-evals in SDK eval examples.`,
+  description: `The agent the SDK eval examples evaluate (no codemode): it normalizes text (trims it and uppercases it) and returns nothing else, so every eval case has one unambiguous expected output. Runs with codemode disabled, for A/B comparisons against example-evals.`,
   tags: ['workflow', 'automation', 'analysis'],
   domain: undefined,
   enabled: true,
@@ -1916,21 +1983,15 @@ export const EXAMPLE_EVALS_NOCODEMODE_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧪',
   color: '#0284C7',
   suggestions: [
+    { text: 'hello world', summary: 'Uppercase a phrase' },
+    { text: '  Paris  ', summary: 'Trim and uppercase' },
     {
-      text: 'Run the selected evaluation experiment on the configured dataset',
-      summary: 'Run the experiment',
-    },
-    {
-      text: 'Validate experiment configuration and report missing fields',
-      summary: 'Validate the config',
-    },
-    {
-      text: 'Summarize run results with pass rate and latency highlights',
-      summary: 'Summarize the results',
+      text: 'déjà vu, 3 times!',
+      summary: 'Keep accents, digits and punctuation',
     },
   ],
   welcomeMessage:
-    'Ready to run eval experiments without codemode enabled. Configure your benchmark and evaluator setup, then launch a run.',
+    'Send any text and get it back normalized: trimmed and in uppercase, with punctuation, numbers and inner spacing kept. The eval examples score these answers against their expected outputs.',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
@@ -1964,7 +2025,7 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-evals',
   version: '0.0.1',
   name: 'Example Evals Agent',
-  description: `Default eval runner for local and cloud execution in SDK eval examples. Includes baseline tooling for reproducible eval runs.`,
+  description: `The agent the SDK eval examples evaluate: it normalizes text (trims it and uppercases it) and returns nothing else, so every eval case has one unambiguous expected output. Runs with codemode.`,
   tags: ['workflow', 'automation', 'analysis'],
   domain: undefined,
   enabled: true,
@@ -1983,21 +2044,15 @@ export const EXAMPLE_EVALS_AGENTSPEC_0_0_1: Agentspec = {
   emoji: '🧪',
   color: '#0EA5E9',
   suggestions: [
+    { text: 'hello world', summary: 'Uppercase a phrase' },
+    { text: '  Paris  ', summary: 'Trim and uppercase' },
     {
-      text: 'Run the selected evaluation experiment on the configured dataset using at most 3 sandbox calls total',
-      summary: 'Run the experiment',
-    },
-    {
-      text: 'Validate experiment configuration and report missing fields, batching checks to stay within 3 sandbox calls',
-      summary: 'Validate the config',
-    },
-    {
-      text: 'Summarize run results with pass rate and latency highlights without exceeding 3 sandbox calls overall',
-      summary: 'Summarize the results',
+      text: 'déjà vu, 3 times!',
+      summary: 'Keep accents, digits and punctuation',
     },
   ],
   welcomeMessage:
-    'Ready to run eval experiments. Configure your benchmark and evaluator setup, then launch a run.',
+    'Send any text and get it back normalized: trimmed and in uppercase, with punctuation, numbers and inner spacing kept. The eval examples score these answers against their expected outputs.',
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
@@ -13629,6 +13684,7 @@ export const AGENTSPECS: Record<string, Agentspec> = {
   'example-build-notebook-with-one-prompt':
     EXAMPLE_BUILD_NOTEBOOK_WITH_ONE_PROMPT_AGENTSPEC_0_0_1,
   'example-checkpoints': EXAMPLE_CHECKPOINTS_AGENTSPEC_0_0_1,
+  'example-cloudflare': EXAMPLE_CLOUDFLARE_AGENTSPEC_0_0_1,
   'example-code-sandbox': EXAMPLE_CODE_SANDBOX_AGENTSPEC_0_0_1,
   'example-codemode': EXAMPLE_CODEMODE_AGENTSPEC_0_0_1,
   'example-compaction': EXAMPLE_COMPACTION_AGENTSPEC_0_0_1,

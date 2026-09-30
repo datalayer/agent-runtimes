@@ -161,6 +161,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         if capabilities:
             formatted = "[" + ", ".join(f'"{c}"' for c in capabilities) + "]"
             model_lines.append(f"    capabilities={formatted},")
+        if spec.get("billing"):
+            model_lines.append(f'    billing="{spec["billing"]}",')
 
         model_lines.extend([")", ""])
         lines.extend(model_lines)
@@ -359,6 +361,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         if capabilities:
             formatted = "[" + ", ".join(f"'{c}'" for c in capabilities) + "]"
             model_lines.append(f"  capabilities: {formatted},")
+        if spec.get("billing"):
+            model_lines.append(f"  billing: '{spec['billing']}',")
         model_lines.extend(
             [
                 "};",

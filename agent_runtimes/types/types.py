@@ -292,6 +292,16 @@ class AIModel(BaseModel):
             "selection instead of failing mysteriously mid-run."
         ),
     )
+    billing: Optional[str] = Field(
+        default=None,
+        description=(
+            "How the provider bills the model, when it is worth telling a "
+            "person choosing one: 'standard' (the provider's own billing) or "
+            "'credits' (prepaid credits, which is what makes Cloudflare's "
+            "frontier models available on a free plan). None means the "
+            "provider's usual."
+        ),
+    )
 
 
 class AIModels(str, Enum):

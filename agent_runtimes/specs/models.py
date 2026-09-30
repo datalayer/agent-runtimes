@@ -15,7 +15,6 @@ from typing import Dict, List, Optional
 
 from agent_runtimes.types import AIModel
 
-
 # ============================================================================
 # AIModels Enum
 # ============================================================================
@@ -41,16 +40,24 @@ class AIModels(str, Enum):
     BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5 = "bedrock:us.anthropic.claude-fable-5"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = "bedrock:us.anthropic.claude-opus-4-6-v1"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8 = "bedrock:us.anthropic.claude-opus-4-8"
-    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = (
+        "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
+    )
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5 = "bedrock:us.anthropic.claude-opus-5"
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = (
+        "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    )
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6 = "bedrock:us.anthropic.claude-sonnet-4-6"
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = (
+        "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
+    )
     CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT = "cloudflare:google/gemma-4-26b-a4b-it"
     CLOUDFLARE_ZAI_ORG_GLM_5_2 = "cloudflare:zai-org/glm-5.2"
     CLOUDFLARE_OPENAI_GPT_OSS_120B = "cloudflare:openai/gpt-oss-120b"
     CLOUDFLARE_MOONSHOTAI_KIMI_K2_6 = "cloudflare:moonshotai/kimi-k2.6"
-    CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST = "cloudflare:meta/llama-3.3-70b-instruct-fp8-fast"
+    CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST = (
+        "cloudflare:meta/llama-3.3-70b-instruct-fp8-fast"
+    )
     CLOUDFLARE_QWEN_QWEN3_8_27B = "cloudflare:qwen/qwen3.8-27b"
     OLLAMA_GEMMA3_4B = "ollama:gemma3:4b"
     OLLAMA_LLAMA3_1_8B = "ollama:llama3.1:8b"
@@ -248,7 +255,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=64000,
 )
 
@@ -260,7 +271,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=32000,
 )
 
@@ -272,7 +287,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=32000,
 )
 
@@ -284,7 +303,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=32000,
 )
 
@@ -296,7 +319,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=32000,
 )
 
@@ -308,7 +335,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=64000,
 )
 
@@ -320,7 +351,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
     provider="bedrock",
     default=True,
     available=True,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=64000,
 )
 
@@ -332,7 +367,11 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
+    required_env_vars=[
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_DEFAULT_REGION",
+    ],
     tokens_limit=64000,
 )
 
@@ -347,6 +386,7 @@ CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=16384,
     capabilities=["chat", "tools", "codemode"],
+    billing="standard",
 )
 
 CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1 = AIModel(
@@ -360,6 +400,7 @@ CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=32768,
     capabilities=["chat", "tools", "codemode"],
+    billing="credits",
 )
 
 CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
@@ -373,6 +414,7 @@ CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=32768,
     capabilities=["chat", "tools", "codemode"],
+    billing="standard",
 )
 
 CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1 = AIModel(
@@ -386,6 +428,7 @@ CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=32768,
     capabilities=["chat", "tools", "codemode"],
+    billing="credits",
 )
 
 CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1 = AIModel(
@@ -399,6 +442,7 @@ CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=8192,
     capabilities=["chat", "tools", "codemode"],
+    billing="standard",
 )
 
 CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1 = AIModel(
@@ -412,6 +456,7 @@ CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1 = AIModel(
     required_env_vars=[],
     tokens_limit=16384,
     capabilities=["chat", "tools", "codemode"],
+    billing="standard",
 )
 
 OLLAMA_GEMMA3_4B_0_0_1 = AIModel(
@@ -604,8 +649,8 @@ def get_model(model_id: str) -> Optional[AIModel]:
     model = AI_MODEL_CATALOGUE.get(model_id)
     if model is not None:
         return model
-    base, _, ver = model_id.rpartition(':')
-    if base and '.' in ver:
+    base, _, ver = model_id.rpartition(":")
+    if base and "." in ver:
         return AI_MODEL_CATALOGUE.get(base)
     return None
 

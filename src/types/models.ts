@@ -52,6 +52,8 @@ export interface AIModel {
    * 'thinking'. Empty means unstated rather than incapable.
    */
   capabilities?: string[];
+  /** How the provider bills it, when worth telling: 'standard' or 'credits'. */
+  billing?: 'standard' | 'credits';
 }
 
 /**
