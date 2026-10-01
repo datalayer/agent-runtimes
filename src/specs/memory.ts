@@ -40,6 +40,7 @@ export const EPHEMERAL_MEMORY_0_0_1: MemorySpec = {
   persistence: 'none',
   scope: 'agent',
   backend: 'in-memory',
+  enabled: false,
   icon: 'zap',
   emoji: '⚡',
 };
@@ -53,6 +54,7 @@ export const MEM0_MEMORY_0_0_1: MemorySpec = {
   persistence: 'permanent',
   scope: 'user',
   backend: 'mem0',
+  enabled: true,
   icon: 'brain',
   emoji: '🧠',
 };
@@ -66,6 +68,7 @@ export const MEMU_MEMORY_0_0_1: MemorySpec = {
   persistence: 'permanent',
   scope: 'user',
   backend: 'memu',
+  enabled: false,
   icon: 'eye',
   emoji: '👁️',
 };
@@ -79,6 +82,7 @@ export const SIMPLEMEM_MEMORY_0_0_1: MemorySpec = {
   persistence: 'cross-session',
   scope: 'agent',
   backend: 'lancedb',
+  enabled: false,
   icon: 'archive',
   emoji: '🗜️',
 };

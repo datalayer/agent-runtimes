@@ -40,6 +40,7 @@ EPHEMERAL_MEMORY_0_0_1 = MemorySpec(
     persistence="none",
     scope="agent",
     backend="in-memory",
+    enabled=False,
     icon="zap",
     emoji="⚡",
 )
@@ -52,6 +53,7 @@ MEM0_MEMORY_0_0_1 = MemorySpec(
     persistence="permanent",
     scope="user",
     backend="mem0",
+    enabled=True,
     icon="brain",
     emoji="🧠",
 )
@@ -64,6 +66,7 @@ MEMU_MEMORY_0_0_1 = MemorySpec(
     persistence="permanent",
     scope="user",
     backend="memu",
+    enabled=False,
     icon="eye",
     emoji="👁️",
 )
@@ -76,6 +79,7 @@ SIMPLEMEM_MEMORY_0_0_1 = MemorySpec(
     persistence="cross-session",
     scope="agent",
     backend="lancedb",
+    enabled=False,
     icon="archive",
     emoji="🗜️",
 )

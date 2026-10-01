@@ -674,6 +674,9 @@ class MemorySpec(BaseModel):
         description="Memory scope: agent, team, repository, user, global",
     )
     backend: str = Field(default="in-memory", description="Storage backend identifier")
+    enabled: bool = Field(
+        default=False, description="Whether an agent spec is offered this memory"
+    )
     icon: str = Field(default="database", description="Icon identifier")
     emoji: str = Field(default="\U0001f9e0", description="Emoji representation")
 

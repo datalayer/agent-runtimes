@@ -21,6 +21,8 @@ export interface MemorySpec {
   scope: string;
   /** Storage backend identifier */
   backend: string;
+  /** Whether an agent spec is offered this memory */
+  enabled: boolean;
   /** Icon identifier */
   icon: string;
   /** Emoji representation */
