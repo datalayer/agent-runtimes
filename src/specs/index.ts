@@ -24,3 +24,4 @@ export * from './outputs';
 export * from './skills';
 export * from './tools';
 export * from './triggers';
+export * from './uiPlugins';

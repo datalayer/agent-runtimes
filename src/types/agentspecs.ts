@@ -87,6 +87,23 @@ export interface AgentCapability {
   tags?: string[];
 }
 
+/**
+ * How an agent's answer becomes an interface: a protocol the host renders
+ * (`agentspecs/ui-plugins`). An agent spec's `uiPlugin` names one.
+ */
+export interface UIPluginSpec {
+  /** What an agent spec's `uiPlugin` names (e.g. 'a2ui'). */
+  id: string;
+  version: string;
+  name: string;
+  /** What the plugin renders, and how the user's action comes back. */
+  description: string;
+  /** The protocol's own documentation. */
+  docsUrl: string;
+  /** Whether an agent spec may name it today. */
+  enabled: boolean;
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
@@ -167,8 +184,8 @@ export interface Agentspec {
   delegable?: AgentCapability[];
   /** Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai') */
   protocol?: string;
-  /** UI extension type (e.g., 'a2ui', 'mcp-apps') */
-  uiExtension?: string;
+  /** UI plugin (e.g., 'a2ui', 'mcp-apps'), one of the `UI_PLUGIN_CATALOGUE`. */
+  uiPlugin?: string;
   /** Trigger configuration (type, cron, event source, prompt) */
   trigger?: AgentTriggerConfig;
   /** Model configuration (temperature, max_tokens) */

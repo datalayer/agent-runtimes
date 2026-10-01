@@ -73,7 +73,7 @@ tags:
   - code-execution
   - {key}
 
-enabled: true
+enabled: false
 model: "bedrock:us.anthropic.claude-sonnet-4-6"
 harness: pydantic-ai
 

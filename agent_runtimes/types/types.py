@@ -232,8 +232,31 @@ class ModelPricing(BaseModel):
     Both are required: a block naming one and not the other would make
     metered usage look free."""
 
-    input_usd_per_million: float = Field(..., ge=0, allow_inf_nan=False, description="Dollars per million input tokens")
-    output_usd_per_million: float = Field(..., ge=0, allow_inf_nan=False, description="Dollars per million output tokens")
+    input_usd_per_million: float = Field(
+        ..., ge=0, allow_inf_nan=False, description="Dollars per million input tokens"
+    )
+    output_usd_per_million: float = Field(
+        ..., ge=0, allow_inf_nan=False, description="Dollars per million output tokens"
+    )
+
+
+class UIPluginSpec(BaseModel):
+    """How an agent's answer becomes an interface: a protocol the host
+    renders (`agentspecs/ui-plugins`). An agent spec's `ui_plugin` names one."""
+
+    id: str = Field(
+        ..., description="What an agent spec's `ui_plugin` names (e.g. 'a2ui')"
+    )
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(
+        default="",
+        description="What the plugin renders, and how the user's action comes back",
+    )
+    docs_url: str = Field(default="", description="The protocol's own documentation")
+    enabled: bool = Field(
+        default=True, description="Whether an agent spec may name it today"
+    )
 
 
 class ModelProvider(BaseModel):
@@ -241,16 +264,29 @@ class ModelProvider(BaseModel):
     the user's machine — with what a person choosing it has to be able to
     read (`agentspecs/model-providers`)."""
 
-    id: str = Field(..., description="What a model spec's `provider` names (e.g. 'anthropic')")
+    id: str = Field(
+        ..., description="What a model spec's `provider` names (e.g. 'anthropic')"
+    )
     version: str = Field(default="0.0.1", description="Specification version")
     name: str = Field(..., description="Display name")
-    description: str = Field(default="", description="What the provider is, and what is worth knowing before choosing it")
+    description: str = Field(
+        default="",
+        description="What the provider is, and what is worth knowing before choosing it",
+    )
     website: str = Field(default="", description="The provider's product page")
     docs_url: str = Field(default="", description="The provider's documentation")
-    terms_url: str = Field(default="", description="The terms of service a call is made under")
+    terms_url: str = Field(
+        default="", description="The terms of service a call is made under"
+    )
     privacy_url: str = Field(default="", description="The provider's privacy policy")
-    data_usage_url: Optional[str] = Field(default=None, description="What the provider says about the data a request carries, when it has a page for it")
-    hosting: str = Field(default="cloud", description="Where the model runs: 'cloud' (the provider's) or 'local' (the user's machine)")
+    data_usage_url: Optional[str] = Field(
+        default=None,
+        description="What the provider says about the data a request carries, when it has a page for it",
+    )
+    hosting: str = Field(
+        default="cloud",
+        description="Where the model runs: 'cloud' (the provider's) or 'local' (the user's machine)",
+    )
 
 
 class AIModel(BaseModel):
@@ -354,8 +390,7 @@ class AIModel(BaseModel):
     pricing: Optional["ModelPricing"] = Field(
         default=None,
         description=(
-            "The provider's list price per million tokens, when a service "
-            "meters by it."
+            "The provider's list price per million tokens, when a service meters by it."
         ),
     )
     request_logging: Optional[str] = Field(
@@ -1569,10 +1604,14 @@ class Agentspec(BaseModel):
         default=None,
         description="Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai')",
     )
-    ui_extension: Optional[str] = Field(
+    ui_plugin: Optional[str] = Field(
         default=None,
-        description="UI extension type (e.g., 'a2ui', 'mcp-apps')",
-        alias="uiExtension",
+        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`. "
+        "Called a UI extension before agentspecs 0.0.11: `uiExtension` and `ui_extension` are still read.",
+        validation_alias=AliasChoices(
+            "uiPlugin", "ui_plugin", "uiExtension", "ui_extension"
+        ),
+        serialization_alias="uiPlugin",
     )
     trigger: Optional[Dict[str, Any]] = Field(
         default=None,

@@ -441,9 +441,9 @@ color: "{color}"
 goal: >-
   {goal}
 
-# Protocols & UI Extensions
+# Protocols & UI Plugins
 protocol: vercel-ai
-ui_extension: a2ui
+ui_plugin: a2ui
 
 # Model configuration
 model_config:

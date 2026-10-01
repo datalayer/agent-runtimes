@@ -175,6 +175,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/tools.py \
 	agent_runtimes/specs/frontend_tools.py \
 	agent_runtimes/specs/envvars.py \
+	agent_runtimes/specs/ui_plugins.py \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/memory.py \
 	agent_runtimes/specs/loops.py \
@@ -486,6 +487,15 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/model-providers \
 	  --python-output agent_runtimes/specs/model_providers.py \
 	  --typescript-output src/specs/modelProviders.ts
+	$(call step,Generating UI plugin specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/ui-plugins" ]; then \
+	  python scripts/codegen/generate_ui_plugins.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/ui-plugins \
+	    --python-output agent_runtimes/specs/ui_plugins.py \
+	    --typescript-output src/specs/uiPlugins.ts; \
+	else \
+	  echo "Skipping UI plugin specifications: $(AGENTSPECS_DIR)/agentspecs/ui-plugins not found (agentspecs < 0.0.11)"; \
+	fi
 	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \
