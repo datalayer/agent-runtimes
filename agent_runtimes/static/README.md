@@ -1,1 +1,1 @@
-[![Datalayer](https://assets.datalayer.tech/datalayer-25.svg)](https://datalayer.io)
+[![Datalayer](https://images.datalayer.io/legacy/datalayer-25.svg)](https://datalayer.ai)
