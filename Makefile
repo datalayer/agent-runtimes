@@ -481,6 +481,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/models \
 	  --python-output agent_runtimes/specs/models.py \
 	  --typescript-output src/specs/models.ts
+	$(call step,Generating model provider specifications)
+	python scripts/codegen/generate_model_providers.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/model-providers \
+	  --python-output agent_runtimes/specs/model_providers.py \
+	  --typescript-output src/specs/modelProviders.ts
 	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/memory \

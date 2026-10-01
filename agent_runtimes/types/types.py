@@ -228,10 +228,29 @@ class FrontendRenderToolSpec(BaseModel):
 
 
 class ModelPricing(BaseModel):
-    """What the provider lists a model at, per million tokens, in dollars."""
+    """What the provider lists a model at, per million tokens, in dollars.
+    Both are required: a block naming one and not the other would make
+    metered usage look free."""
 
-    input_usd_per_million: float = Field(default=0.0, description="Dollars per million input tokens")
-    output_usd_per_million: float = Field(default=0.0, description="Dollars per million output tokens")
+    input_usd_per_million: float = Field(..., ge=0, allow_inf_nan=False, description="Dollars per million input tokens")
+    output_usd_per_million: float = Field(..., ge=0, allow_inf_nan=False, description="Dollars per million output tokens")
+
+
+class ModelProvider(BaseModel):
+    """Who serves a model: the vendor's own API, a cloud that hosts it, or
+    the user's machine — with what a person choosing it has to be able to
+    read (`agentspecs/model-providers`)."""
+
+    id: str = Field(..., description="What a model spec's `provider` names (e.g. 'anthropic')")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What the provider is, and what is worth knowing before choosing it")
+    website: str = Field(default="", description="The provider's product page")
+    docs_url: str = Field(default="", description="The provider's documentation")
+    terms_url: str = Field(default="", description="The terms of service a call is made under")
+    privacy_url: str = Field(default="", description="The provider's privacy policy")
+    data_usage_url: Optional[str] = Field(default=None, description="What the provider says about the data a request carries, when it has a page for it")
+    hosting: str = Field(default="cloud", description="Where the model runs: 'cloud' (the provider's) or 'local' (the user's machine)")
 
 
 class AIModel(BaseModel):
@@ -244,6 +263,10 @@ class AIModel(BaseModel):
     name: str = Field(..., description="Display name")
     description: str = Field(default="", description="Model description")
     provider: str = Field(..., description="Provider name")
+    provider_url: Optional[str] = Field(
+        default=None,
+        description="The page on the provider's website that describes this model.",
+    )
     default: bool = Field(
         default=False, description="Whether this is the default model"
     )
@@ -333,6 +356,21 @@ class AIModel(BaseModel):
         description=(
             "The provider's list price per million tokens, when a service "
             "meters by it."
+        ),
+    )
+    request_logging: Optional[str] = Field(
+        default=None,
+        description=(
+            "Where the route keeps a log of the requests it carries, apart "
+            "from what the provider retains: 'none', or 'gateway' (AI "
+            "Gateway's request logs). Read beside zero_data_retention."
+        ),
+    )
+    aliases: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Older ids this spec answers to, kept when an id had to move so "
+            "what a consumer named still resolves."
         ),
     )
 

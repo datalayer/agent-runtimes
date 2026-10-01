@@ -18,6 +18,7 @@ export * from './loops';
 export * from './mcpServers';
 export * from './memory';
 export * from './models';
+export * from './modelProviders';
 export * from './notifications';
 export * from './outputs';
 export * from './skills';

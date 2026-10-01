@@ -80,6 +80,7 @@ export const ALIBABA_QWEN_MAX_0_0_1: AIModel = {
   description:
     'Qwen-Max via Alibaba Cloud Model Studio - highest capability Qwen model',
   provider: 'alibaba',
+  providerUrl: 'https://www.alibabacloud.com/help/en/model-studio/models',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -94,6 +95,7 @@ export const ALIBABA_QWEN3_32B_0_0_1: AIModel = {
   description:
     'Qwen3-32B via Alibaba Cloud Model Studio - open-weight 32B model with tool calling',
   provider: 'alibaba',
+  providerUrl: 'https://www.alibabacloud.com/help/en/model-studio/models',
   default: false,
   available: false,
   requiredEnvVars: [],
@@ -108,6 +110,7 @@ export const ALIBABA_QWEN3_6_FLASH_0_0_1: AIModel = {
   description:
     'Qwen3.6-Flash via Alibaba Cloud Model Studio - fast and low cost',
   provider: 'alibaba',
+  providerUrl: 'https://www.alibabacloud.com/help/en/model-studio/models',
   default: false,
   available: false,
   requiredEnvVars: [],
@@ -122,6 +125,7 @@ export const ALIBABA_QWEN3_6_PLUS_0_0_1: AIModel = {
   description:
     'Qwen3.6-Plus via Alibaba Cloud Model Studio - balanced performance and cost',
   provider: 'alibaba',
+  providerUrl: 'https://www.alibabacloud.com/help/en/model-studio/models',
   default: false,
   available: false,
   requiredEnvVars: [],
@@ -136,6 +140,7 @@ export const ALIBABA_QWEN3_7_PLUS_0_0_1: AIModel = {
   description:
     'Qwen3.7-Plus via Alibaba Cloud Model Studio - balanced flagship Qwen3 model',
   provider: 'alibaba',
+  providerUrl: 'https://www.alibabacloud.com/help/en/model-studio/models',
   default: false,
   available: false,
   requiredEnvVars: [],
@@ -149,6 +154,7 @@ export const ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1: AIModel = {
   name: 'Anthropic Claude Haiku 3.5',
   description: 'Claude Haiku 3.5 by Anthropic - fast and efficient',
   provider: 'anthropic',
+  providerUrl: 'https://www.anthropic.com/claude/haiku',
   default: false,
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
@@ -161,6 +167,7 @@ export const ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1: AIModel = {
   name: 'Anthropic Claude Opus 4',
   description: 'Claude Opus 4 by Anthropic - highest capability model',
   provider: 'anthropic',
+  providerUrl: 'https://www.anthropic.com/claude/opus',
   default: false,
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
@@ -174,6 +181,7 @@ export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
   description:
     'Claude Sonnet 4.5 by Anthropic - balanced performance and speed',
   provider: 'anthropic',
+  providerUrl: 'https://www.anthropic.com/claude/sonnet',
   default: false,
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
@@ -186,6 +194,7 @@ export const ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1: AIModel = {
   name: 'Anthropic Claude Sonnet 4',
   description: 'Claude Sonnet 4 by Anthropic - strong reasoning and coding',
   provider: 'anthropic',
+  providerUrl: 'https://www.anthropic.com/claude/sonnet',
   default: false,
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
@@ -198,6 +207,8 @@ export const AZURE_OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   name: 'Azure OpenAI GPT-4.1 Mini',
   description: 'GPT-4.1 Mini via Azure OpenAI - compact version',
   provider: 'azure-openai',
+  providerUrl:
+    'https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure',
   default: false,
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
@@ -210,6 +221,8 @@ export const AZURE_OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   name: 'Azure OpenAI GPT-4.1 Nano',
   description: 'GPT-4.1 Nano via Azure OpenAI - smallest and fastest',
   provider: 'azure-openai',
+  providerUrl:
+    'https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure',
   default: false,
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
@@ -222,6 +235,8 @@ export const AZURE_OPENAI_GPT_4_1_0_0_1: AIModel = {
   name: 'Azure OpenAI GPT-4.1',
   description: 'GPT-4.1 via Azure OpenAI - strong general purpose',
   provider: 'azure-openai',
+  providerUrl:
+    'https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure',
   default: false,
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
@@ -234,6 +249,8 @@ export const AZURE_OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   name: 'Azure OpenAI GPT-4o Mini',
   description: 'GPT-4o Mini via Azure OpenAI - compact enterprise deployment',
   provider: 'azure-openai',
+  providerUrl:
+    'https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure',
   default: false,
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
@@ -246,6 +263,8 @@ export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
   name: 'Azure OpenAI GPT-4o',
   description: 'GPT-4o via Azure OpenAI - enterprise deployment',
   provider: 'azure-openai',
+  providerUrl:
+    'https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure',
   default: false,
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
@@ -258,6 +277,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {
   name: 'Bedrock Claude Fable 5',
   description: 'Claude Fable 5 via AWS Bedrock',
   provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
   default: false,
   available: false,
   requiredEnvVars: [
@@ -274,6 +294,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
   name: 'Bedrock Claude Opus 4.6',
   description: 'Claude Opus 4.6 via AWS Bedrock',
   provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
   default: false,
   available: false,
   requiredEnvVars: [
@@ -290,6 +311,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
   name: 'Bedrock Claude Opus 4.8',
   description: 'Claude Opus 4.8 via AWS Bedrock',
   provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
   default: false,
   available: false,
   requiredEnvVars: [
@@ -306,6 +328,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
   name: 'Bedrock Claude Opus 4',
   description: 'Claude Opus 4 via AWS Bedrock - highest capability',
   provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
   default: false,
   available: false,
   requiredEnvVars: [
@@ -322,6 +345,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1: AIModel = {
   name: 'Bedrock Claude Opus 5',
   description: 'Claude Opus 5 via AWS Bedrock - the current frontier model',
   provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
   default: false,
   available: false,
   requiredEnvVars: [
@@ -339,6 +363,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel
     name: 'Bedrock Claude Sonnet 4.5',
     description: 'Claude Sonnet 4.5 via AWS Bedrock - balanced performance',
     provider: 'bedrock',
+    providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
     default: false,
     available: false,
     requiredEnvVars: [
@@ -355,6 +380,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
   name: 'Bedrock Claude Sonnet 4.6',
   description: 'Claude Sonnet 4.6 via AWS Bedrock - balanced performance',
   provider: 'bedrock',
+  providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
   default: true,
   available: true,
   requiredEnvVars: [
@@ -374,6 +400,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
     name: 'Bedrock Claude Sonnet 4',
     description: 'Claude Sonnet 4 via AWS Bedrock - strong reasoning',
     provider: 'bedrock',
+    providerUrl: 'https://aws.amazon.com/bedrock/anthropic/',
     default: false,
     available: false,
     requiredEnvVars: [
@@ -391,6 +418,7 @@ export const CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1: AIModel = {
   description:
     "Typesafe's typed-judgment model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
   provider: 'cloudflare',
+  providerUrl: 'https://docs.typesafe.ai/models',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -399,6 +427,7 @@ export const CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1: AIModel = {
   route: 'ai-gateway',
   contextWindow: 32000,
   zeroDataRetention: true,
+  requestLogging: 'gateway',
   pricing: { inputUsdPerMillion: 0.042, outputUsdPerMillion: 0.0 },
 };
 
@@ -409,6 +438,8 @@ export const CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
   description:
     'Google Gemma 4 26B (a4b, instruction-tuned) on Cloudflare Workers AI - 256k context, tool calling, standard billing',
   provider: 'cloudflare',
+  providerUrl:
+    'https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -417,6 +448,7 @@ export const CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
   billing: 'standard',
   route: 'workers-ai',
   contextWindow: 256000,
+  aliases: ['cloudflare:google/gemma-4-26b-a4b-it'],
 };
 
 export const CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
@@ -426,6 +458,7 @@ export const CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
   description:
     'Z.ai GLM-5.2 on Cloudflare Workers AI - 262k context, tool calling; a frontier model billed from AI Gateway credits',
   provider: 'cloudflare',
+  providerUrl: 'https://developers.cloudflare.com/workers-ai/models/glm-5.2/',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -434,6 +467,7 @@ export const CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
   billing: 'credits',
   route: 'workers-ai',
   contextWindow: 262144,
+  aliases: ['cloudflare:zai-org/glm-5.2'],
 };
 
 export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
@@ -443,6 +477,8 @@ export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   description:
     'OpenAI gpt-oss-120b on Cloudflare Workers AI - 128k context, tool calling, standard billing',
   provider: 'cloudflare',
+  providerUrl:
+    'https://developers.cloudflare.com/workers-ai/models/gpt-oss-120b/',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -451,6 +487,7 @@ export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   billing: 'standard',
   route: 'workers-ai',
   contextWindow: 128000,
+  aliases: ['cloudflare:openai/gpt-oss-120b'],
 };
 
 export const CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
@@ -460,6 +497,7 @@ export const CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
   description:
     'Moonshot Kimi K2.6 on Cloudflare Workers AI - 262k context, tool calling; a frontier model billed from AI Gateway credits',
   provider: 'cloudflare',
+  providerUrl: 'https://developers.cloudflare.com/workers-ai/models/kimi-k2.6/',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -468,6 +506,7 @@ export const CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
   billing: 'credits',
   route: 'workers-ai',
   contextWindow: 262144,
+  aliases: ['cloudflare:moonshotai/kimi-k2.6'],
 };
 
 export const CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel =
@@ -478,6 +517,8 @@ export const CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel 
     description:
       'Meta Llama 3.3 70B Instruct (fp8, fast) on Cloudflare Workers AI - 24k context, tool calling, standard billing',
     provider: 'cloudflare',
+    providerUrl:
+      'https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/',
     default: false,
     available: true,
     requiredEnvVars: [],
@@ -486,6 +527,7 @@ export const CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel 
     billing: 'standard',
     route: 'workers-ai',
     contextWindow: 24000,
+    aliases: ['cloudflare:meta/llama-3.3-70b-instruct-fp8-fast'],
   };
 
 export const CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
@@ -495,6 +537,8 @@ export const CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
   description:
     'Qwen3.8 27B on Cloudflare Workers AI - 262k context, tool calling, standard billing',
   provider: 'cloudflare',
+  providerUrl:
+    'https://developers.cloudflare.com/workers-ai/models/qwen3.8-27b/',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -503,6 +547,7 @@ export const CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
   billing: 'standard',
   route: 'workers-ai',
   contextWindow: 262144,
+  aliases: ['cloudflare:qwen/qwen3.8-27b'],
 };
 
 export const CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1: AIModel = {
@@ -512,6 +557,7 @@ export const CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1: AIModel = {
   description:
     "Typesafe's typed-judgment model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
   provider: 'cloudflare',
+  providerUrl: 'https://docs.typesafe.ai/models',
   default: false,
   available: true,
   requiredEnvVars: [],
@@ -520,6 +566,7 @@ export const CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1: AIModel = {
   route: 'workers-ai',
   contextWindow: 32000,
   zeroDataRetention: true,
+  requestLogging: 'none',
   pricing: { inputUsdPerMillion: 0.042, outputUsdPerMillion: 0.0 },
 };
 
@@ -530,6 +577,7 @@ export const OLLAMA_GEMMA3_4B_0_0_1: AIModel = {
   description:
     'Gemma 3 4B running locally through Ollama - small and fast, no tool calling',
   provider: 'ollama',
+  providerUrl: 'https://ollama.com/library/gemma3:4b',
   default: false,
   available: false,
   requiredEnvVars: [],
@@ -545,6 +593,7 @@ export const OLLAMA_LLAMA3_1_8B_0_0_1: AIModel = {
   description:
     'Meta Llama 3.1 8B running locally through Ollama - tool calling, no data leaves the machine',
   provider: 'ollama',
+  providerUrl: 'https://ollama.com/library/llama3.1:8b',
   default: false,
   available: false,
   requiredEnvVars: [],
@@ -560,6 +609,7 @@ export const OLLAMA_QWEN2_5_CODER_7B_0_0_1: AIModel = {
   description:
     'Qwen2.5 Coder 7B running locally through Ollama - code-focused with tool calling',
   provider: 'ollama',
+  providerUrl: 'https://ollama.com/library/qwen2.5-coder:7b',
   default: false,
   available: false,
   requiredEnvVars: [],
@@ -574,6 +624,7 @@ export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   name: 'OpenAI GPT-4.1 Mini',
   description: 'GPT-4.1 Mini by OpenAI - compact version of GPT-4.1',
   provider: 'openai',
+  providerUrl: 'https://platform.openai.com/docs/models/gpt-4.1-mini',
   default: false,
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
@@ -586,6 +637,7 @@ export const OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   name: 'OpenAI GPT-4.1 Nano',
   description: 'GPT-4.1 Nano by OpenAI - smallest and fastest',
   provider: 'openai',
+  providerUrl: 'https://platform.openai.com/docs/models/gpt-4.1-nano',
   default: false,
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
@@ -598,6 +650,7 @@ export const OPENAI_GPT_4_1_0_0_1: AIModel = {
   name: 'OpenAI GPT-4.1',
   description: 'GPT-4.1 by OpenAI - strong general purpose model',
   provider: 'openai',
+  providerUrl: 'https://platform.openai.com/docs/models/gpt-4.1',
   default: false,
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
@@ -610,6 +663,7 @@ export const OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   name: 'OpenAI GPT-4o Mini',
   description: 'GPT-4o Mini by OpenAI - compact and cost-effective',
   provider: 'openai',
+  providerUrl: 'https://platform.openai.com/docs/models/gpt-4o-mini',
   default: false,
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
@@ -622,6 +676,7 @@ export const OPENAI_GPT_4O_0_0_1: AIModel = {
   name: 'OpenAI GPT-4o',
   description: 'GPT-4o by OpenAI - fast multimodal model',
   provider: 'openai',
+  providerUrl: 'https://platform.openai.com/docs/models/gpt-4o',
   default: false,
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
@@ -634,6 +689,7 @@ export const OPENAI_O3_MINI_0_0_1: AIModel = {
   name: 'OpenAI o3 Mini',
   description: 'o3 Mini by OpenAI - reasoning-focused compact model',
   provider: 'openai',
+  providerUrl: 'https://platform.openai.com/docs/models/o3-mini',
   default: false,
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
@@ -681,14 +737,22 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
   'cloudflare:gtw/typesafe/jev': CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1,
   'cloudflare:wrk/google/gemma-4-26b-a4b-it':
     CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
+  'cloudflare:google/gemma-4-26b-a4b-it':
+    CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1, // before the id moved
   'cloudflare:wrk/zai-org/glm-5.2': CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1,
+  'cloudflare:zai-org/glm-5.2': CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1, // before the id moved
   'cloudflare:wrk/openai/gpt-oss-120b':
     CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1,
+  'cloudflare:openai/gpt-oss-120b': CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1, // before the id moved
   'cloudflare:wrk/moonshotai/kimi-k2.6':
     CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1,
+  'cloudflare:moonshotai/kimi-k2.6': CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1, // before the id moved
   'cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast':
     CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,
+  'cloudflare:meta/llama-3.3-70b-instruct-fp8-fast':
+    CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1, // before the id moved
   'cloudflare:wrk/qwen/qwen3.8-27b': CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1,
+  'cloudflare:qwen/qwen3.8-27b': CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1, // before the id moved
   'cloudflare:wrk/typesafe/jev': CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1,
   'ollama:gemma3:4b': OLLAMA_GEMMA3_4B_0_0_1,
   'ollama:llama3.1:8b': OLLAMA_LLAMA3_1_8B_0_0_1,

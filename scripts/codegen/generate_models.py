@@ -103,10 +103,18 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
     ]
 
-    # Generate enum members
+    # Generate enum members; an older id keeps its member, with its older value.
+    seen = set()
     for spec in specs:
         enum_name = _make_enum_name(spec["id"])
         lines.append(f'    {enum_name} = "{spec["id"]}"')
+        seen.add(enum_name)
+    for spec in specs:
+        for alias in spec.get("aliases") or []:
+            alias_name = _make_enum_name(alias)
+            if alias_name not in seen:
+                lines.append(f'    {alias_name} = "{alias}"  # before the id moved')
+                seen.add(alias_name)
 
     lines.extend(
         [
@@ -142,6 +150,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f'    name="{spec["name"]}",',
             f'    description="{spec.get("description", "")}",',
             f'    provider="{spec["provider"]}",',
+            *([f'    provider_url="{spec["provider_url"]}",'] if spec.get("provider_url") else []),
             f"    default={spec.get('default', False)},",
             # What is worth offering today, as distinct from what the platform
             # knows how to talk to.
@@ -169,12 +178,17 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             model_lines.append(f"    context_window={int(spec['context_window'])},")
         if spec.get("zero_data_retention") is not None:
             model_lines.append(f"    zero_data_retention={bool(spec['zero_data_retention'])},")
+        if spec.get("request_logging"):
+            model_lines.append(f'    request_logging="{spec["request_logging"]}",')
+        aliases = spec.get("aliases") or []
+        if aliases:
+            model_lines.append("    aliases=[" + ", ".join(f'"{a}"' for a in aliases) + "],")
         pricing = spec.get("pricing") or {}
         if pricing:
             model_lines.append(
                 "    pricing=ModelPricing("
-                f"input_usd_per_million={float(pricing.get('input_usd_per_million', 0) or 0)}, "
-                f"output_usd_per_million={float(pricing.get('output_usd_per_million', 0) or 0)}),"
+                f"input_usd_per_million={float(pricing['input_usd_per_million'])}, "
+                f"output_usd_per_million={float(pricing['output_usd_per_million'])}),"
             )
 
         model_lines.extend([")", ""])
@@ -195,6 +209,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         model_id = spec["id"]
         const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f'    "{model_id}": {const_name},')
+        for alias in spec.get("aliases") or []:
+            lines.append(f'    "{alias}": {const_name},  # before the id moved')
 
     lines.extend(
         [
@@ -358,6 +374,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"  name: '{spec['name']}',",
             f"  description: '{description}',",
             f"  provider: '{spec['provider']}',",
+            *([f"  providerUrl: '{spec['provider_url']}',"] if spec.get("provider_url") else []),
             f"  default: {str(spec.get('default', False)).lower()},",
             f"  available: {str(spec.get('available', False)).lower()},",
             f"  requiredEnvVars: {env_vars_formatted},",
@@ -382,12 +399,17 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             model_lines.append(f"  contextWindow: {int(spec['context_window'])},")
         if spec.get("zero_data_retention") is not None:
             model_lines.append(f"  zeroDataRetention: {'true' if spec['zero_data_retention'] else 'false'},")
+        if spec.get("request_logging"):
+            model_lines.append(f"  requestLogging: '{spec['request_logging']}',")
+        aliases = spec.get("aliases") or []
+        if aliases:
+            model_lines.append("  aliases: [" + ", ".join(f"'{a}'" for a in aliases) + "],")
         pricing = spec.get("pricing") or {}
         if pricing:
             model_lines.append(
                 "  pricing: { "
-                f"inputUsdPerMillion: {float(pricing.get('input_usd_per_million', 0) or 0)}, "
-                f"outputUsdPerMillion: {float(pricing.get('output_usd_per_million', 0) or 0)} }},"
+                f"inputUsdPerMillion: {float(pricing['input_usd_per_million'])}, "
+                f"outputUsdPerMillion: {float(pricing['output_usd_per_million'])} }},"
             )
         model_lines.extend(
             [
@@ -412,6 +434,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         model_id = spec["id"]
         const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f"  '{model_id}': {const_name},")
+        for alias in spec.get("aliases") or []:
+            lines.append(f"  '{alias}': {const_name}, // before the id moved")
 
     lines.extend(
         [

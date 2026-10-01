@@ -19,6 +19,8 @@ export interface AIModel {
   description: string;
   /** Provider name (anthropic, openai, bedrock, azure-openai) */
   provider: string;
+  /** The page on the provider's website that describes this model. */
+  providerUrl?: string;
   /** Whether this is the default model */
   default: boolean;
   /**
@@ -66,6 +68,40 @@ export interface AIModel {
   zeroDataRetention?: boolean;
   /** The provider's list price per million tokens, when a service meters by it. */
   pricing?: { inputUsdPerMillion: number; outputUsdPerMillion: number };
+  /**
+   * Where the route keeps a log of the requests it carries, apart from what
+   * the provider retains: 'none', or 'gateway' (AI Gateway's request logs).
+   * Read beside zeroDataRetention.
+   */
+  requestLogging?: 'none' | 'gateway';
+  /** Older ids this spec answers to, kept when an id had to move. */
+  aliases?: string[];
+}
+
+/**
+ * Who serves a model: the vendor's own API, a cloud that hosts it, or the
+ * user's machine — with what a person choosing it has to be able to read
+ * (`agentspecs/model-providers`).
+ */
+export interface ModelProvider {
+  /** What a model spec's `provider` names (e.g. 'anthropic'). */
+  id: string;
+  version: string;
+  name: string;
+  /** What the provider is, and what is worth knowing before choosing it. */
+  description: string;
+  /** The provider's product page. */
+  website?: string;
+  /** The provider's documentation. */
+  docsUrl?: string;
+  /** The terms of service a call is made under. */
+  termsUrl?: string;
+  /** The provider's privacy policy. */
+  privacyUrl?: string;
+  /** What the provider says about the data a request carries, when it has a page for it. */
+  dataUsageUrl?: string;
+  /** Where the model runs: the provider's cloud, or the user's machine. */
+  hosting: 'cloud' | 'local';
 }
 
 /**
