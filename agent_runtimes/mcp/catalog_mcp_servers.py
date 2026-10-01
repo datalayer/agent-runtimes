@@ -93,7 +93,7 @@ EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
         "earthdata-mcp-server",
     ],
     transport="stdio",
-    enabled=False,
+    enabled=True,
     tools=[],
     env={
         "EARTHDATA_USERNAME": "${EARTHDATA_USERNAME}",
@@ -316,7 +316,7 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
         "tavily-mcp",
     ],
     transport="stdio",
-    enabled=False,
+    enabled=True,
     tools=[],
     env={
         "TAVILY_API_KEY": "${TAVILY_API_KEY}",
