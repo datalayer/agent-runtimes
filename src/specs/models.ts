@@ -777,6 +777,20 @@ export function getModel(modelId: string): AIModel | undefined {
   return AI_MODEL_CATALOGUE[AI_MODEL_ALIASES[modelId] ?? modelId];
 }
 
+/**
+ * A model a chat can run on: not a typed-judgment model (Jev), which
+ * answers typed questions about a state and nothing else. A spec that
+ * states no capability is read as a chat model.
+ */
+export function isChatModel(model: AIModel): boolean {
+  return !(model.capabilities ?? []).includes('judgments');
+}
+
+/** The models a person choosing a chat model is offered from. */
+export function listChatModels(): AIModel[] {
+  return Object.values(AI_MODEL_CATALOGUE).filter(isChatModel);
+}
+
 export const DEFAULT_MODEL: AIModelId =
   AIModels.BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6;
 export const DEFAULT_MODEL_SPEC: AIModel =

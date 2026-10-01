@@ -392,14 +392,15 @@ async def list_catalog_models() -> dict[str, Any]:
         split_model_id,
     )
     from agent_runtimes.models.models import credentials_ready
-    from agent_runtimes.specs.models import AI_MODEL_CATALOGUE
+    from agent_runtimes.specs.models import list_chat_models
 
     installed = discover_installed_models()
 
     models: list[dict[str, Any]] = []
     catalogued_local: set[tuple[str, str]] = set()
 
-    for model in AI_MODEL_CATALOGUE.values():
+    # A chat picker's models: a typed-judgment model (Jev) is not one.
+    for model in list_chat_models():
         missing = [
             name
             for name in model.required_env_vars

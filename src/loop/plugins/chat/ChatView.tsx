@@ -99,7 +99,7 @@ import type {
   ContextSnapshotData,
   ModelConfig,
 } from '../../../types';
-import { AI_MODEL_CATALOGUE } from '../../../specs/models';
+import { AI_MODEL_CATALOGUE, isChatModel } from '../../../specs/models';
 import {
   LoopAgentBlueprint,
   LoopAgentGate,
@@ -1398,7 +1398,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       catalogModels.length > 0
         ? catalogModels
         : Object.values(AI_MODEL_CATALOGUE)
-            .filter(model => model.available)
+            // A typed-judgment model answers typed questions, not a chat.
+            .filter(model => model.available && isChatModel(model))
             .map(model => ({
               id: model.id,
               name: model.name,

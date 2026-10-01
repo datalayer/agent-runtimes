@@ -551,13 +551,13 @@ def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
         (available_ids, available_display_lines, offered_model_specs)
     """
     try:
-        from agent_runtimes.specs.models import check_env_vars_available, list_models
+        from agent_runtimes.specs.models import check_env_vars_available, list_chat_models
     except Exception:
         return set(), [], 0
 
     available_ids: set[str] = set()
     available_lines: list[str] = []
-    models = [model for model in list_models() if model.available]
+    models = [model for model in list_chat_models() if model.available]
     for model in sorted(models, key=lambda m: m.id):
         if check_env_vars_available(list(model.required_env_vars or [])):
             available_ids.add(model.id)

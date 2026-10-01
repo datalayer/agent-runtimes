@@ -64,7 +64,11 @@ import type {
 } from '../../types/chat';
 import { AgentDetails } from '../../agents/AgentDetails';
 import type { BuiltinTool } from '../../types/models';
-import { AI_MODEL_CATALOGUE, DEFAULT_MODEL } from '../../specs/models';
+import {
+  AI_MODEL_CATALOGUE,
+  DEFAULT_MODEL,
+  isChatModel,
+} from '../../specs/models';
 import type { ContextSnapshotData } from '../../types/context';
 import type { FrontendToolDefinition } from '../../types/tools';
 import {
@@ -2004,7 +2008,8 @@ function ChatBaseInner({
      * four are current.
      */
     const catalogued = Object.values(AI_MODEL_CATALOGUE)
-      .filter(model => model.available)
+      // A typed-judgment model answers typed questions, not a chat.
+      .filter(model => model.available && isChatModel(model))
       .map(model => ({
         id: model.id,
         name: model.name,

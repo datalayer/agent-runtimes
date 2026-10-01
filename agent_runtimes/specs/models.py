@@ -756,3 +756,15 @@ def list_models() -> list[AIModel]:
         List of all AIModel specifications.
     """
     return list(AI_MODEL_CATALOGUE.values())
+
+
+def is_chat_model(model: AIModel) -> bool:
+    """A model a chat can run on: not a typed-judgment model (Jev), which
+    answers typed questions about a state and nothing else. A spec that
+    states no capability is read as a chat model."""
+    return "judgments" not in model.capabilities
+
+
+def list_chat_models() -> list[AIModel]:
+    """The models a person choosing a chat model is offered from."""
+    return [model for model in AI_MODEL_CATALOGUE.values() if is_chat_model(model)]
