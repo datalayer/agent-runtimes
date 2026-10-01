@@ -90,7 +90,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "from enum import Enum",
         "from typing import Dict, List, Optional",
         "",
-        "from agent_runtimes.types import AIModel",
+        "from agent_runtimes.types import AIModel, ModelPricing",
         "",
         "",
         "# " + "=" * 76,
@@ -163,6 +163,19 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             model_lines.append(f"    capabilities={formatted},")
         if spec.get("billing"):
             model_lines.append(f'    billing="{spec["billing"]}",')
+        if spec.get("route"):
+            model_lines.append(f'    route="{spec["route"]}",')
+        if spec.get("context_window") is not None:
+            model_lines.append(f"    context_window={int(spec['context_window'])},")
+        if spec.get("zero_data_retention") is not None:
+            model_lines.append(f"    zero_data_retention={bool(spec['zero_data_retention'])},")
+        pricing = spec.get("pricing") or {}
+        if pricing:
+            model_lines.append(
+                "    pricing=ModelPricing("
+                f"input_usd_per_million={float(pricing.get('input_usd_per_million', 0) or 0)}, "
+                f"output_usd_per_million={float(pricing.get('output_usd_per_million', 0) or 0)}),"
+            )
 
         model_lines.extend([")", ""])
         lines.extend(model_lines)
@@ -363,6 +376,19 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             model_lines.append(f"  capabilities: {formatted},")
         if spec.get("billing"):
             model_lines.append(f"  billing: '{spec['billing']}',")
+        if spec.get("route"):
+            model_lines.append(f"  route: '{spec['route']}',")
+        if spec.get("context_window") is not None:
+            model_lines.append(f"  contextWindow: {int(spec['context_window'])},")
+        if spec.get("zero_data_retention") is not None:
+            model_lines.append(f"  zeroDataRetention: {'true' if spec['zero_data_retention'] else 'false'},")
+        pricing = spec.get("pricing") or {}
+        if pricing:
+            model_lines.append(
+                "  pricing: { "
+                f"inputUsdPerMillion: {float(pricing.get('input_usd_per_million', 0) or 0)}, "
+                f"outputUsdPerMillion: {float(pricing.get('output_usd_per_million', 0) or 0)} }},"
+            )
         model_lines.extend(
             [
                 "};",

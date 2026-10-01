@@ -13,7 +13,8 @@ import os
 from enum import Enum
 from typing import Dict, List, Optional
 
-from agent_runtimes.types import AIModel
+from agent_runtimes.types import AIModel, ModelPricing
+
 
 # ============================================================================
 # AIModels Enum
@@ -40,25 +41,19 @@ class AIModels(str, Enum):
     BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5 = "bedrock:us.anthropic.claude-fable-5"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1 = "bedrock:us.anthropic.claude-opus-4-6-v1"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8 = "bedrock:us.anthropic.claude-opus-4-8"
-    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = (
-        "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
-    )
+    BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0 = "bedrock:us.anthropic.claude-opus-4-20250514-v1:0"
     BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5 = "bedrock:us.anthropic.claude-opus-5"
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = (
-        "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    )
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0 = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6 = "bedrock:us.anthropic.claude-sonnet-4-6"
-    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = (
-        "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
-    )
-    CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT = "cloudflare:google/gemma-4-26b-a4b-it"
-    CLOUDFLARE_ZAI_ORG_GLM_5_2 = "cloudflare:zai-org/glm-5.2"
-    CLOUDFLARE_OPENAI_GPT_OSS_120B = "cloudflare:openai/gpt-oss-120b"
-    CLOUDFLARE_MOONSHOTAI_KIMI_K2_6 = "cloudflare:moonshotai/kimi-k2.6"
-    CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST = (
-        "cloudflare:meta/llama-3.3-70b-instruct-fp8-fast"
-    )
-    CLOUDFLARE_QWEN_QWEN3_8_27B = "cloudflare:qwen/qwen3.8-27b"
+    BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0 = "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0"
+    CLOUDFLARE_GTW_TYPESAFE_JEV = "cloudflare:gtw/typesafe/jev"
+    CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT = "cloudflare:wrk/google/gemma-4-26b-a4b-it"
+    CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2 = "cloudflare:wrk/zai-org/glm-5.2"
+    CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B = "cloudflare:wrk/openai/gpt-oss-120b"
+    CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6 = "cloudflare:wrk/moonshotai/kimi-k2.6"
+    CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST = "cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast"
+    CLOUDFLARE_WRK_QWEN_QWEN3_8_27B = "cloudflare:wrk/qwen/qwen3.8-27b"
+    CLOUDFLARE_WRK_TYPESAFE_JEV = "cloudflare:wrk/typesafe/jev"
     OLLAMA_GEMMA3_4B = "ollama:gemma3:4b"
     OLLAMA_LLAMA3_1_8B = "ollama:llama3.1:8b"
     OLLAMA_QWEN2_5_CODER_7B = "ollama:qwen2.5-coder:7b"
@@ -255,11 +250,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=64000,
 )
 
@@ -271,11 +262,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=32000,
 )
 
@@ -287,11 +274,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=32000,
 )
 
@@ -303,11 +286,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=32000,
 )
 
@@ -319,11 +298,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=32000,
 )
 
@@ -335,11 +310,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=64000,
 )
 
@@ -351,12 +322,10 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
     provider="bedrock",
     default=True,
     available=True,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=64000,
+    capabilities=["chat", "tools", "judge"],
+    context_window=200000,
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
@@ -367,16 +336,30 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
     provider="bedrock",
     default=False,
     available=False,
-    required_env_vars=[
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_DEFAULT_REGION",
-    ],
+    required_env_vars=["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_DEFAULT_REGION"],
     tokens_limit=64000,
 )
 
-CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1 = AIModel(
-    id="cloudflare:google/gemma-4-26b-a4b-it",
+CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1 = AIModel(
+    id="cloudflare:gtw/typesafe/jev",
+    version="0.0.1",
+    name="Jev (Cloudflare AI Gateway)",
+    description="Typesafe's typed-judgment model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
+    provider="cloudflare",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=None,
+    capabilities=["judgments"],
+    billing="credits",
+    route="ai-gateway",
+    context_window=32000,
+    zero_data_retention=True,
+    pricing=ModelPricing(input_usd_per_million=0.042, output_usd_per_million=0.0),
+)
+
+CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1 = AIModel(
+    id="cloudflare:wrk/google/gemma-4-26b-a4b-it",
     version="0.0.1",
     name="Cloudflare Gemma 4 26B",
     description="Google Gemma 4 26B (a4b, instruction-tuned) on Cloudflare Workers AI - 256k context, tool calling, standard billing",
@@ -387,10 +370,12 @@ CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1 = AIModel(
     tokens_limit=16384,
     capabilities=["chat", "tools", "codemode"],
     billing="standard",
+    route="workers-ai",
+    context_window=256000,
 )
 
-CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1 = AIModel(
-    id="cloudflare:zai-org/glm-5.2",
+CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1 = AIModel(
+    id="cloudflare:wrk/zai-org/glm-5.2",
     version="0.0.1",
     name="Cloudflare GLM-5.2",
     description="Z.ai GLM-5.2 on Cloudflare Workers AI - 262k context, tool calling; a frontier model billed from AI Gateway credits",
@@ -401,10 +386,12 @@ CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1 = AIModel(
     tokens_limit=32768,
     capabilities=["chat", "tools", "codemode"],
     billing="credits",
+    route="workers-ai",
+    context_window=262144,
 )
 
-CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
-    id="cloudflare:openai/gpt-oss-120b",
+CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
+    id="cloudflare:wrk/openai/gpt-oss-120b",
     version="0.0.1",
     name="Cloudflare gpt-oss-120b",
     description="OpenAI gpt-oss-120b on Cloudflare Workers AI - 128k context, tool calling, standard billing",
@@ -413,12 +400,14 @@ CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
     available=True,
     required_env_vars=[],
     tokens_limit=32768,
-    capabilities=["chat", "tools", "codemode"],
+    capabilities=["chat", "tools", "codemode", "judge"],
     billing="standard",
+    route="workers-ai",
+    context_window=128000,
 )
 
-CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1 = AIModel(
-    id="cloudflare:moonshotai/kimi-k2.6",
+CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1 = AIModel(
+    id="cloudflare:wrk/moonshotai/kimi-k2.6",
     version="0.0.1",
     name="Cloudflare Kimi K2.6",
     description="Moonshot Kimi K2.6 on Cloudflare Workers AI - 262k context, tool calling; a frontier model billed from AI Gateway credits",
@@ -429,10 +418,12 @@ CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1 = AIModel(
     tokens_limit=32768,
     capabilities=["chat", "tools", "codemode"],
     billing="credits",
+    route="workers-ai",
+    context_window=262144,
 )
 
-CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1 = AIModel(
-    id="cloudflare:meta/llama-3.3-70b-instruct-fp8-fast",
+CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1 = AIModel(
+    id="cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast",
     version="0.0.1",
     name="Cloudflare Llama 3.3 70B",
     description="Meta Llama 3.3 70B Instruct (fp8, fast) on Cloudflare Workers AI - 24k context, tool calling, standard billing",
@@ -443,10 +434,12 @@ CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1 = AIModel(
     tokens_limit=8192,
     capabilities=["chat", "tools", "codemode"],
     billing="standard",
+    route="workers-ai",
+    context_window=24000,
 )
 
-CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1 = AIModel(
-    id="cloudflare:qwen/qwen3.8-27b",
+CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1 = AIModel(
+    id="cloudflare:wrk/qwen/qwen3.8-27b",
     version="0.0.1",
     name="Cloudflare Qwen3.8 27B",
     description="Qwen3.8 27B on Cloudflare Workers AI - 262k context, tool calling, standard billing",
@@ -457,6 +450,26 @@ CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1 = AIModel(
     tokens_limit=16384,
     capabilities=["chat", "tools", "codemode"],
     billing="standard",
+    route="workers-ai",
+    context_window=262144,
+)
+
+CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1 = AIModel(
+    id="cloudflare:wrk/typesafe/jev",
+    version="0.0.1",
+    name="Jev (Cloudflare Workers AI)",
+    description="Typesafe's typed-judgment model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
+    provider="cloudflare",
+    default=False,
+    available=True,
+    required_env_vars=[],
+    tokens_limit=None,
+    capabilities=["judgments"],
+    billing="credits",
+    route="workers-ai",
+    context_window=32000,
+    zero_data_retention=True,
+    pricing=ModelPricing(input_usd_per_million=0.042, output_usd_per_million=0.0),
 )
 
 OLLAMA_GEMMA3_4B_0_0_1 = AIModel(
@@ -600,12 +613,14 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-6": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
     "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
-    "cloudflare:google/gemma-4-26b-a4b-it": CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
-    "cloudflare:zai-org/glm-5.2": CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1,
-    "cloudflare:openai/gpt-oss-120b": CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1,
-    "cloudflare:moonshotai/kimi-k2.6": CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1,
-    "cloudflare:meta/llama-3.3-70b-instruct-fp8-fast": CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,
-    "cloudflare:qwen/qwen3.8-27b": CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1,
+    "cloudflare:gtw/typesafe/jev": CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1,
+    "cloudflare:wrk/google/gemma-4-26b-a4b-it": CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
+    "cloudflare:wrk/zai-org/glm-5.2": CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1,
+    "cloudflare:wrk/openai/gpt-oss-120b": CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1,
+    "cloudflare:wrk/moonshotai/kimi-k2.6": CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1,
+    "cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast": CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,
+    "cloudflare:wrk/qwen/qwen3.8-27b": CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1,
+    "cloudflare:wrk/typesafe/jev": CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1,
     "ollama:gemma3:4b": OLLAMA_GEMMA3_4B_0_0_1,
     "ollama:llama3.1:8b": OLLAMA_LLAMA3_1_8B_0_0_1,
     "ollama:qwen2.5-coder:7b": OLLAMA_QWEN2_5_CODER_7B_0_0_1,
@@ -649,8 +664,8 @@ def get_model(model_id: str) -> Optional[AIModel]:
     model = AI_MODEL_CATALOGUE.get(model_id)
     if model is not None:
         return model
-    base, _, ver = model_id.rpartition(":")
-    if base and "." in ver:
+    base, _, ver = model_id.rpartition(':')
+    if base and '.' in ver:
         return AI_MODEL_CATALOGUE.get(base)
     return None
 

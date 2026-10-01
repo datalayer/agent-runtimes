@@ -56,14 +56,36 @@ CLOUDFLARE_GATEWAY_BASE = "https://gateway.ai.cloudflare.com/v1"
 CLOUDFLARE_DIRECT_BASE = "https://api.cloudflare.com/client/v4/accounts"
 
 
+#: The flavour a Cloudflare id carries after the provider: ``wrk`` is a model
+#: Cloudflare hosts (Workers AI), ``gtw`` one its AI Gateway fronts. The older
+#: spelling without a flavour is read as ``wrk``.
+CLOUDFLARE_FLAVOURS = ("wrk", "gtw")
+
+
+def cloudflare_flavour(model_name: str) -> tuple[str, str]:
+    """``wrk/openai/gpt-oss-120b`` → ``("wrk", "openai/gpt-oss-120b")``; no flavour reads as ``wrk``."""
+    head, sep, rest = model_name.partition("/")
+    if sep and head in CLOUDFLARE_FLAVOURS:
+        return head, rest
+    return "wrk", model_name
+
+
 def cloudflare_direct_route(model_name: str) -> tuple[str, str, str]:
-    """The base URL, the token and the model name for a direct Cloudflare call."""
+    """The base URL, the token and the model name for a direct Cloudflare call.
+
+    A Workers AI model (``wrk``) goes through the account's gateway when one
+    is named, else to Workers AI's own endpoint; a gateway model (``gtw``)
+    has no endpoint but the gateway, ``default`` unless told.
+    """
     account = (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip()
     token = (
         os.environ.get("CLOUDFLARE_API_TOKEN") or os.environ.get("CLOUDFLARE_API_KEY") or ""
     ).strip()
     gateway = os.environ.get("CLOUDFLARE_GATEWAY", "default").strip().strip("/")
-    name = model_name if model_name.startswith("@cf/") else f"@cf/{model_name}"
+    flavour, bare = cloudflare_flavour(model_name)
+    if flavour == "gtw":
+        gateway = gateway or "default"
+    name = bare if bare.startswith("@cf/") else f"@cf/{bare}"
     if gateway:
         return f"{CLOUDFLARE_GATEWAY_BASE}/{account}/{gateway}/compat", token, f"workers-ai/{name}"
     return f"{CLOUDFLARE_DIRECT_BASE}/{account}/ai/v1", token, name

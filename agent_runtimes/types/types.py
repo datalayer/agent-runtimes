@@ -227,6 +227,13 @@ class FrontendRenderToolSpec(BaseModel):
     )
 
 
+class ModelPricing(BaseModel):
+    """What the provider lists a model at, per million tokens, in dollars."""
+
+    input_usd_per_million: float = Field(default=0.0, description="Dollars per million input tokens")
+    output_usd_per_million: float = Field(default=0.0, description="Dollars per million output tokens")
+
+
 class AIModel(BaseModel):
     """Specification for an AI model."""
 
@@ -286,8 +293,10 @@ class AIModel(BaseModel):
     capabilities: List[str] = Field(
         default_factory=list,
         description=(
-            "What the model can be trusted with: 'tools', 'codemode', "
-            "'vision', 'thinking'. Empty means unstated rather than incapable. "
+            "What the model can be trusted with: 'chat', 'tools', 'codemode', "
+            "'vision', 'thinking', 'judgments' (a typed-judgment model), "
+            "'judge' (a chat model that may be asked those questions). "
+            "Empty means unstated rather than incapable. "
             "A small local model that lists no 'tools' is warned about at "
             "selection instead of failing mysteriously mid-run."
         ),
@@ -300,6 +309,30 @@ class AIModel(BaseModel):
             "'credits' (prepaid credits, which is what makes Cloudflare's "
             "frontier models available on a free plan). None means the "
             "provider's usual."
+        ),
+    )
+    route: Optional[str] = Field(
+        default=None,
+        description=(
+            "How a Cloudflare model is reached: 'workers-ai' (a model "
+            "Cloudflare hosts, ids 'cloudflare:wrk/…') or 'ai-gateway' (a "
+            "third-party model its gateway fronts, ids 'cloudflare:gtw/…'). "
+            "Other providers leave it unset."
+        ),
+    )
+    context_window: Optional[int] = Field(
+        default=None,
+        description="The tokens a request may carry, input and output together.",
+    )
+    zero_data_retention: Optional[bool] = Field(
+        default=None,
+        description="Whether the provider keeps nothing of a request once it is answered.",
+    )
+    pricing: Optional["ModelPricing"] = Field(
+        default=None,
+        description=(
+            "The provider's list price per million tokens, when a service "
+            "meters by it."
         ),
     )
 

@@ -54,6 +54,18 @@ export interface AIModel {
   capabilities?: string[];
   /** How the provider bills it, when worth telling: 'standard' or 'credits'. */
   billing?: 'standard' | 'credits';
+  /**
+   * How a Cloudflare model is reached: 'workers-ai' (a model Cloudflare
+   * hosts, ids 'cloudflare:wrk/…') or 'ai-gateway' (a third-party model its
+   * gateway fronts, ids 'cloudflare:gtw/…').
+   */
+  route?: 'workers-ai' | 'ai-gateway';
+  /** The tokens a request may carry, input and output together. */
+  contextWindow?: number;
+  /** Whether the provider keeps nothing of a request once it is answered. */
+  zeroDataRetention?: boolean;
+  /** The provider's list price per million tokens, when a service meters by it. */
+  pricing?: { inputUsdPerMillion: number; outputUsdPerMillion: number };
 }
 
 /**

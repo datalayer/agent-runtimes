@@ -24,7 +24,7 @@ from agent_runtimes.models import models as service
 from agent_runtimes.specs.models import AI_MODEL_CATALOGUE, DEFAULT_MODEL
 
 ALIBABA = AI_MODEL_CATALOGUE["alibaba:qwen-max"]
-CLOUDFLARE = AI_MODEL_CATALOGUE["cloudflare:openai/gpt-oss-120b"]
+CLOUDFLARE = AI_MODEL_CATALOGUE["cloudflare:wrk/openai/gpt-oss-120b"]
 BEDROCK = AI_MODEL_CATALOGUE[DEFAULT_MODEL.value]
 
 AWS = {
@@ -94,6 +94,14 @@ class TestCredentialsReady:
             "https://api.cloudflare.com/client/v4/accounts/acct/ai/v1",
             "token",
             "@cf/openai/gpt-oss-120b",
+        )
+        # The flavour in the id picks the route: `wrk` is Workers AI (through the
+        # gateway when one is named), `gtw` is the gateway whatever the deployment says.
+        assert service.cloudflare_direct_route("wrk/openai/gpt-oss-120b")[2] == "@cf/openai/gpt-oss-120b"
+        assert service.cloudflare_direct_route("gtw/openai/gpt-oss-120b") == (
+            "https://gateway.ai.cloudflare.com/v1/acct/default/compat",
+            "token",
+            "workers-ai/@cf/openai/gpt-oss-120b",
         )
         model = service.create_model_with_provider("cloudflare", "openai/gpt-oss-120b")
         assert model.model_name == "@cf/openai/gpt-oss-120b"

@@ -1313,7 +1313,7 @@ export const EXAMPLE_CLOUDFLARE_AGENTSPEC_0_0_1: Agentspec = {
   tags: ['workflow', 'analysis', 'inference'],
   domain: undefined,
   enabled: true,
-  model: 'cloudflare:openai/gpt-oss-120b',
+  model: 'cloudflare:wrk/openai/gpt-oss-120b',
   inferenceProvider: 'datalayer',
   mcpServers: [],
   skills: [

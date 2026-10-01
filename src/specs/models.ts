@@ -46,13 +46,16 @@ export const AIModels = {
     'bedrock:us.anthropic.claude-sonnet-4-6',
   BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0:
     'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0',
-  CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT: 'cloudflare:google/gemma-4-26b-a4b-it',
-  CLOUDFLARE_ZAI_ORG_GLM_5_2: 'cloudflare:zai-org/glm-5.2',
-  CLOUDFLARE_OPENAI_GPT_OSS_120B: 'cloudflare:openai/gpt-oss-120b',
-  CLOUDFLARE_MOONSHOTAI_KIMI_K2_6: 'cloudflare:moonshotai/kimi-k2.6',
-  CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST:
-    'cloudflare:meta/llama-3.3-70b-instruct-fp8-fast',
-  CLOUDFLARE_QWEN_QWEN3_8_27B: 'cloudflare:qwen/qwen3.8-27b',
+  CLOUDFLARE_GTW_TYPESAFE_JEV: 'cloudflare:gtw/typesafe/jev',
+  CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT:
+    'cloudflare:wrk/google/gemma-4-26b-a4b-it',
+  CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2: 'cloudflare:wrk/zai-org/glm-5.2',
+  CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B: 'cloudflare:wrk/openai/gpt-oss-120b',
+  CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6: 'cloudflare:wrk/moonshotai/kimi-k2.6',
+  CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST:
+    'cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast',
+  CLOUDFLARE_WRK_QWEN_QWEN3_8_27B: 'cloudflare:wrk/qwen/qwen3.8-27b',
+  CLOUDFLARE_WRK_TYPESAFE_JEV: 'cloudflare:wrk/typesafe/jev',
   OLLAMA_GEMMA3_4B: 'ollama:gemma3:4b',
   OLLAMA_LLAMA3_1_8B: 'ollama:llama3.1:8b',
   OLLAMA_QWEN2_5_CODER_7B: 'ollama:qwen2.5-coder:7b',
@@ -360,6 +363,8 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
     'AWS_DEFAULT_REGION',
   ],
   tokensLimit: 64000,
+  capabilities: ['chat', 'tools', 'judge'],
+  contextWindow: 200000,
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
@@ -379,8 +384,26 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
     tokensLimit: 64000,
   };
 
-export const CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
-  id: 'cloudflare:google/gemma-4-26b-a4b-it',
+export const CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1: AIModel = {
+  id: 'cloudflare:gtw/typesafe/jev',
+  version: '0.0.1',
+  name: 'Jev (Cloudflare AI Gateway)',
+  description:
+    "Typesafe's typed-judgment model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
+  provider: 'cloudflare',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  capabilities: ['judgments'],
+  billing: 'credits',
+  route: 'ai-gateway',
+  contextWindow: 32000,
+  zeroDataRetention: true,
+  pricing: { inputUsdPerMillion: 0.042, outputUsdPerMillion: 0.0 },
+};
+
+export const CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
+  id: 'cloudflare:wrk/google/gemma-4-26b-a4b-it',
   version: '0.0.1',
   name: 'Cloudflare Gemma 4 26B',
   description:
@@ -392,10 +415,12 @@ export const CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
   tokensLimit: 16384,
   capabilities: ['chat', 'tools', 'codemode'],
   billing: 'standard',
+  route: 'workers-ai',
+  contextWindow: 256000,
 };
 
-export const CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
-  id: 'cloudflare:zai-org/glm-5.2',
+export const CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
+  id: 'cloudflare:wrk/zai-org/glm-5.2',
   version: '0.0.1',
   name: 'Cloudflare GLM-5.2',
   description:
@@ -407,10 +432,12 @@ export const CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
   billing: 'credits',
+  route: 'workers-ai',
+  contextWindow: 262144,
 };
 
-export const CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
-  id: 'cloudflare:openai/gpt-oss-120b',
+export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
+  id: 'cloudflare:wrk/openai/gpt-oss-120b',
   version: '0.0.1',
   name: 'Cloudflare gpt-oss-120b',
   description:
@@ -420,12 +447,14 @@ export const CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   available: true,
   requiredEnvVars: [],
   tokensLimit: 32768,
-  capabilities: ['chat', 'tools', 'codemode'],
+  capabilities: ['chat', 'tools', 'codemode', 'judge'],
   billing: 'standard',
+  route: 'workers-ai',
+  contextWindow: 128000,
 };
 
-export const CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
-  id: 'cloudflare:moonshotai/kimi-k2.6',
+export const CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
+  id: 'cloudflare:wrk/moonshotai/kimi-k2.6',
   version: '0.0.1',
   name: 'Cloudflare Kimi K2.6',
   description:
@@ -437,25 +466,30 @@ export const CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
   billing: 'credits',
+  route: 'workers-ai',
+  contextWindow: 262144,
 };
 
-export const CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel = {
-  id: 'cloudflare:meta/llama-3.3-70b-instruct-fp8-fast',
-  version: '0.0.1',
-  name: 'Cloudflare Llama 3.3 70B',
-  description:
-    'Meta Llama 3.3 70B Instruct (fp8, fast) on Cloudflare Workers AI - 24k context, tool calling, standard billing',
-  provider: 'cloudflare',
-  default: false,
-  available: true,
-  requiredEnvVars: [],
-  tokensLimit: 8192,
-  capabilities: ['chat', 'tools', 'codemode'],
-  billing: 'standard',
-};
+export const CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel =
+  {
+    id: 'cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast',
+    version: '0.0.1',
+    name: 'Cloudflare Llama 3.3 70B',
+    description:
+      'Meta Llama 3.3 70B Instruct (fp8, fast) on Cloudflare Workers AI - 24k context, tool calling, standard billing',
+    provider: 'cloudflare',
+    default: false,
+    available: true,
+    requiredEnvVars: [],
+    tokensLimit: 8192,
+    capabilities: ['chat', 'tools', 'codemode'],
+    billing: 'standard',
+    route: 'workers-ai',
+    contextWindow: 24000,
+  };
 
-export const CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
-  id: 'cloudflare:qwen/qwen3.8-27b',
+export const CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
+  id: 'cloudflare:wrk/qwen/qwen3.8-27b',
   version: '0.0.1',
   name: 'Cloudflare Qwen3.8 27B',
   description:
@@ -467,6 +501,26 @@ export const CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
   tokensLimit: 16384,
   capabilities: ['chat', 'tools', 'codemode'],
   billing: 'standard',
+  route: 'workers-ai',
+  contextWindow: 262144,
+};
+
+export const CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1: AIModel = {
+  id: 'cloudflare:wrk/typesafe/jev',
+  version: '0.0.1',
+  name: 'Jev (Cloudflare Workers AI)',
+  description:
+    "Typesafe's typed-judgment model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
+  provider: 'cloudflare',
+  default: false,
+  available: true,
+  requiredEnvVars: [],
+  capabilities: ['judgments'],
+  billing: 'credits',
+  route: 'workers-ai',
+  contextWindow: 32000,
+  zeroDataRetention: true,
+  pricing: { inputUsdPerMillion: 0.042, outputUsdPerMillion: 0.0 },
 };
 
 export const OLLAMA_GEMMA3_4B_0_0_1: AIModel = {
@@ -624,14 +678,18 @@ export const AI_MODEL_CATALOGUE: Record<string, AIModel> = {
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1,
   'bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0':
     BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
-  'cloudflare:google/gemma-4-26b-a4b-it':
-    CLOUDFLARE_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
-  'cloudflare:zai-org/glm-5.2': CLOUDFLARE_ZAI_ORG_GLM_5_2_0_0_1,
-  'cloudflare:openai/gpt-oss-120b': CLOUDFLARE_OPENAI_GPT_OSS_120B_0_0_1,
-  'cloudflare:moonshotai/kimi-k2.6': CLOUDFLARE_MOONSHOTAI_KIMI_K2_6_0_0_1,
-  'cloudflare:meta/llama-3.3-70b-instruct-fp8-fast':
-    CLOUDFLARE_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,
-  'cloudflare:qwen/qwen3.8-27b': CLOUDFLARE_QWEN_QWEN3_8_27B_0_0_1,
+  'cloudflare:gtw/typesafe/jev': CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1,
+  'cloudflare:wrk/google/gemma-4-26b-a4b-it':
+    CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
+  'cloudflare:wrk/zai-org/glm-5.2': CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1,
+  'cloudflare:wrk/openai/gpt-oss-120b':
+    CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1,
+  'cloudflare:wrk/moonshotai/kimi-k2.6':
+    CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1,
+  'cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast':
+    CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,
+  'cloudflare:wrk/qwen/qwen3.8-27b': CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1,
+  'cloudflare:wrk/typesafe/jev': CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1,
   'ollama:gemma3:4b': OLLAMA_GEMMA3_4B_0_0_1,
   'ollama:llama3.1:8b': OLLAMA_LLAMA3_1_8B_0_0_1,
   'ollama:qwen2.5-coder:7b': OLLAMA_QWEN2_5_CODER_7B_0_0_1,

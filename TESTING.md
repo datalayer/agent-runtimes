@@ -62,7 +62,7 @@ describe('Component/Function Name', () => {
 
 ## The Cloudflare model specs against Cloudflare's listing
 
-`agentspecs/agentspecs/models/cloudflare-*.yaml` name models Cloudflare Workers AI
+`agentspecs/agentspecs/models/cloudflare-wrk-*.yaml` name models Cloudflare Workers AI
 serves, and the catalogue moves (a model the specs could have named in September
 2026 had been deprecated in May). Before a release of the specs:
 
