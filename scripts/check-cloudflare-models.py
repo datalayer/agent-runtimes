@@ -46,7 +46,8 @@ def served(account: str, token: str) -> dict[str, dict]:
             f"{API}/{account}/ai/models/search?task=Text%20Generation&per_page=100&page={page}",
             headers={"Authorization": f"Bearer {token}"},
         )
-        with urllib.request.urlopen(request, timeout=60) as response:
+        # The address is the constant https `API` above, never caller input.
+        with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310
             answer = json.load(response)
         if not answer.get("success"):
             raise SystemExit(f"Cloudflare refused the listing: {answer.get('errors')}")
