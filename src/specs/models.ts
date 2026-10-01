@@ -441,7 +441,7 @@ export const CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
   providerUrl:
     'https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/',
   default: false,
-  available: true,
+  available: false,
   requiredEnvVars: [],
   tokensLimit: 16384,
   capabilities: ['chat', 'tools', 'codemode'],
@@ -460,7 +460,7 @@ export const CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
   provider: 'cloudflare',
   providerUrl: 'https://developers.cloudflare.com/workers-ai/models/glm-5.2/',
   default: false,
-  available: true,
+  available: false,
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
@@ -480,7 +480,7 @@ export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   providerUrl:
     'https://developers.cloudflare.com/workers-ai/models/gpt-oss-120b/',
   default: false,
-  available: true,
+  available: false,
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode', 'judge'],
@@ -499,7 +499,7 @@ export const CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
   provider: 'cloudflare',
   providerUrl: 'https://developers.cloudflare.com/workers-ai/models/kimi-k2.6/',
   default: false,
-  available: true,
+  available: false,
   requiredEnvVars: [],
   tokensLimit: 32768,
   capabilities: ['chat', 'tools', 'codemode'],
@@ -520,7 +520,7 @@ export const CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel 
     providerUrl:
       'https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/',
     default: false,
-    available: true,
+    available: false,
     requiredEnvVars: [],
     tokensLimit: 8192,
     capabilities: ['chat', 'tools', 'codemode'],
@@ -540,7 +540,7 @@ export const CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
   providerUrl:
     'https://developers.cloudflare.com/workers-ai/models/qwen3.8-27b/',
   default: false,
-  available: true,
+  available: false,
   requiredEnvVars: [],
   tokensLimit: 16384,
   capabilities: ['chat', 'tools', 'codemode'],
