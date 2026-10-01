@@ -39,7 +39,13 @@ def _make_const_name(model_id: str) -> str:
     E.g. 'anthropic:claude-sonnet-4-5-20250514' -> 'ANTHROPIC_CLAUDE_SONNET_4_5_20250514'
     """
     # A Cloudflare id carries a vendor segment: "cloudflare:openai/gpt-oss-120b".
-    return model_id.upper().replace(":", "_").replace("-", "_").replace(".", "_").replace("/", "_")
+    return (
+        model_id.upper()
+        .replace(":", "_")
+        .replace("-", "_")
+        .replace(".", "_")
+        .replace("/", "_")
+    )
 
 
 def _pick_default(specs: list[dict]) -> Optional[dict]:
@@ -150,7 +156,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             f'    name="{spec["name"]}",',
             f'    description="{spec.get("description", "")}",',
             f'    provider="{spec["provider"]}",',
-            *([f'    provider_url="{spec["provider_url"]}",'] if spec.get("provider_url") else []),
+            *(
+                [f'    provider_url="{spec["provider_url"]}",']
+                if spec.get("provider_url")
+                else []
+            ),
             f"    default={spec.get('default', False)},",
             # What is worth offering today, as distinct from what the platform
             # knows how to talk to.
@@ -177,12 +187,16 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         if spec.get("context_window") is not None:
             model_lines.append(f"    context_window={int(spec['context_window'])},")
         if spec.get("zero_data_retention") is not None:
-            model_lines.append(f"    zero_data_retention={bool(spec['zero_data_retention'])},")
+            model_lines.append(
+                f"    zero_data_retention={bool(spec['zero_data_retention'])},"
+            )
         if spec.get("request_logging"):
             model_lines.append(f'    request_logging="{spec["request_logging"]}",')
         aliases = spec.get("aliases") or []
         if aliases:
-            model_lines.append("    aliases=[" + ", ".join(f'"{a}"' for a in aliases) + "],")
+            model_lines.append(
+                "    aliases=[" + ", ".join(f'"{a}"' for a in aliases) + "],"
+            )
         pricing = spec.get("pricing") or {}
         if pricing:
             model_lines.append(
@@ -315,7 +329,8 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "def is_chat_model(model: AIModel) -> bool:",
             '    """A model a chat can run on: not a typed-judgment model (Jev), which',
             "    answers typed questions about a state and nothing else. A spec that",
-            '    states no capability is read as a chat model."""',
+            "    states no capability is read as a chat model.",
+            '    """',
             '    return "judgments" not in model.capabilities',
             "",
             "",
@@ -396,7 +411,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             f"  name: '{spec['name']}',",
             f"  description: '{description}',",
             f"  provider: '{spec['provider']}',",
-            *([f"  providerUrl: '{spec['provider_url']}',"] if spec.get("provider_url") else []),
+            *(
+                [f"  providerUrl: '{spec['provider_url']}',"]
+                if spec.get("provider_url")
+                else []
+            ),
             f"  default: {str(spec.get('default', False)).lower()},",
             f"  available: {str(spec.get('available', False)).lower()},",
             f"  requiredEnvVars: {env_vars_formatted},",
@@ -420,12 +439,16 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         if spec.get("context_window") is not None:
             model_lines.append(f"  contextWindow: {int(spec['context_window'])},")
         if spec.get("zero_data_retention") is not None:
-            model_lines.append(f"  zeroDataRetention: {'true' if spec['zero_data_retention'] else 'false'},")
+            model_lines.append(
+                f"  zeroDataRetention: {'true' if spec['zero_data_retention'] else 'false'},"
+            )
         if spec.get("request_logging"):
             model_lines.append(f"  requestLogging: '{spec['request_logging']}',")
         aliases = spec.get("aliases") or []
         if aliases:
-            model_lines.append("  aliases: [" + ", ".join(f"'{a}'" for a in aliases) + "],")
+            model_lines.append(
+                "  aliases: [" + ", ".join(f"'{a}'" for a in aliases) + "],"
+            )
         pricing = spec.get("pricing") or {}
         if pricing:
             model_lines.append(

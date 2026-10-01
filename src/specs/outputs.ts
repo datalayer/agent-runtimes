@@ -25,7 +25,7 @@ export const CSV_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as a CSV file for easy import into spreadsheets, data pipelines, or other analysis tools.',
   icon: 'table',
-  enabled: false,
+  enabled: true,
   supports_template: false,
   supports_storage: true,
   mime_types: ['text/csv'],
@@ -94,7 +94,7 @@ export const JSON_OUTPUT_SPEC_0_0_1: OutputSpec = {
   description:
     'Deliver results as structured JSON data, suitable for programmatic consumption by APIs, pipelines, or dashboards.',
   icon: 'code',
-  enabled: false,
+  enabled: true,
   supports_template: false,
   supports_storage: true,
   mime_types: ['application/json'],

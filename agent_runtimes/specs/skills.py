@@ -51,7 +51,7 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     tags=["web", "crawl", "scraping"],
     icon="globe",
     emoji="🌐",
-    enabled=False,
+    enabled=True,
 )
 
 EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(

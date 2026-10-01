@@ -24,7 +24,7 @@ from agent_runtimes.chat.banner import (
 )
 from agent_runtimes.chat.cli import _available_model_ids_by_env, _quiet_the_logs
 from agent_runtimes.chat.tux import CliTux
-from agent_runtimes.specs.models import list_models
+from agent_runtimes.specs.models import is_chat_model, list_models
 
 CHAT_DIR = Path(__file__).resolve().parent.parent / "chat"
 
@@ -32,14 +32,21 @@ CHAT_DIR = Path(__file__).resolve().parent.parent / "chat"
 class TestModelsOffered:
     def test_a_model_switched_off_in_the_catalogue_is_not_offered(self) -> None:
         offered_ids, lines, total = _available_model_ids_by_env()
-        enabled = {model.id for model in list_models() if model.available}
+        # The terminal is a chat: it offers the chat models the catalogue has
+        # available, and leaves the typed-judgment models (Jev) out.
+        enabled = {
+            model.id
+            for model in list_models()
+            if model.available and is_chat_model(model)
+        }
         disabled = {model.id for model in list_models() if not model.available}
+        judgment = {model.id for model in list_models() if not is_chat_model(model)}
 
         assert total == len(enabled)
         assert offered_ids <= enabled
         # The line the terminal prints names none of the switched-off ones.
         printed = " ".join(lines)
-        for model_id in disabled:
+        for model_id in disabled | judgment:
             assert model_id not in offered_ids
             assert model_id not in printed
 

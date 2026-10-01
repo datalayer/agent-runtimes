@@ -46,12 +46,16 @@ def served(account: str, token: str) -> dict[str, dict]:
             f"{API}/{account}/ai/models/search?task=Text%20Generation&per_page=100&page={page}",
             headers={"Authorization": f"Bearer {token}"},
         )
-        with urllib.request.urlopen(request, timeout=60) as response:
+        # The address is the constant https `API` above, never caller input.
+        with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310
             answer = json.load(response)
         if not answer.get("success"):
             raise SystemExit(f"Cloudflare refused the listing: {answer.get('errors')}")
         for model in answer.get("result") or []:
-            properties = {p.get("property_id"): p.get("value") for p in model.get("properties") or []}
+            properties = {
+                p.get("property_id"): p.get("value")
+                for p in model.get("properties") or []
+            }
             models[model["name"]] = {
                 # The listing says it as a string: "true".
                 "tools": str(properties.get("function_calling")).lower() == "true",
@@ -66,7 +70,8 @@ def specs() -> list[dict]:
     """The Workers AI specs (``cloudflare-wrk-*.yaml``) that name a model Cloudflare
     hosts under ``@cf/``. The gateway flavour (``cloudflare-gtw-*``) and the typed
     judgment models (``typesafe/jev``, with no ``@cf/`` namespace) are not in the
-    account's model listing and are left out."""
+    account's model listing and are left out.
+    """
     found = []
     for path in sorted(SPECS.glob("cloudflare-wrk-*.yaml")):
         with open(path) as handle:
@@ -79,9 +84,15 @@ def specs() -> list[dict]:
 
 def main() -> int:
     account = env("CLOUDFLARE_ACCOUNT_ID", "DATALAYER_CLOUDFLARE_ACCOUNT_ID")
-    token = env("CLOUDFLARE_API_TOKEN", "DATALAYER_CLOUDFLARE_API_TOKEN", "DATALAYER_CLOUDFLARE_ACCOUNT_API_TOKEN")
+    token = env(
+        "CLOUDFLARE_API_TOKEN",
+        "DATALAYER_CLOUDFLARE_API_TOKEN",
+        "DATALAYER_CLOUDFLARE_ACCOUNT_API_TOKEN",
+    )
     if not account or not token:
-        print("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are needed", file=sys.stderr)
+        print(
+            "CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are needed", file=sys.stderr
+        )
         return 2
     listing = served(account, token)
     named = {}
@@ -95,11 +106,15 @@ def main() -> int:
             print(f"NOT SERVED  {spec['file']}: Cloudflare no longer lists {name}")
             continue
         if "tools" in (spec.get("capabilities") or []) and not entry["tools"]:
-            print(f"NO TOOLS    {spec['file']}: the listing says {name} has no function calling")
+            print(
+                f"NO TOOLS    {spec['file']}: the listing says {name} has no function calling"
+            )
         print(f"ok          {spec['file']}: {name} (context {entry['context']})")
     for name, entry in sorted(listing.items()):
         if entry["tools"] and name not in named:
-            print(f"unlisted    {name} has tool calling and no spec (context {entry['context']})")
+            print(
+                f"unlisted    {name} has tool calling and no spec (context {entry['context']})"
+            )
     return 1 if failures else 0
 
 

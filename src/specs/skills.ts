@@ -52,7 +52,7 @@ export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   tags: ['web', 'crawl', 'scraping'],
   icon: 'globe',
   emoji: '🌐',
-  enabled: false,
+  enabled: true,
 };
 
 export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
