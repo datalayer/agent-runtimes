@@ -668,17 +668,11 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "bedrock:us.anthropic.claude-sonnet-4-20250514-v1:0": BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1,
     "cloudflare:gtw/typesafe/jev": CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1,
     "cloudflare:wrk/google/gemma-4-26b-a4b-it": CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,
-    "cloudflare:google/gemma-4-26b-a4b-it": CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1,  # before the id moved
     "cloudflare:wrk/zai-org/glm-5.2": CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1,
-    "cloudflare:zai-org/glm-5.2": CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1,  # before the id moved
     "cloudflare:wrk/openai/gpt-oss-120b": CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1,
-    "cloudflare:openai/gpt-oss-120b": CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1,  # before the id moved
     "cloudflare:wrk/moonshotai/kimi-k2.6": CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1,
-    "cloudflare:moonshotai/kimi-k2.6": CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1,  # before the id moved
     "cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast": CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,
-    "cloudflare:meta/llama-3.3-70b-instruct-fp8-fast": CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1,  # before the id moved
     "cloudflare:wrk/qwen/qwen3.8-27b": CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1,
-    "cloudflare:qwen/qwen3.8-27b": CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1,  # before the id moved
     "cloudflare:wrk/typesafe/jev": CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1,
     "ollama:gemma3:4b": OLLAMA_GEMMA3_4B_0_0_1,
     "ollama:llama3.1:8b": OLLAMA_LLAMA3_1_8B_0_0_1,
@@ -689,6 +683,17 @@ AI_MODEL_CATALOGUE: Dict[str, AIModel] = {
     "openai:gpt-4o-mini": OPENAI_GPT_4O_MINI_0_0_1,
     "openai:gpt-4o": OPENAI_GPT_4O_0_0_1,
     "openai:o3-mini": OPENAI_O3_MINI_0_0_1,
+}
+
+# The ids a model answered to before its id moved, to the id it has now.
+# Kept apart from the catalogue, which lists each model once.
+AI_MODEL_ALIASES: Dict[str, str] = {
+    "cloudflare:google/gemma-4-26b-a4b-it": "cloudflare:wrk/google/gemma-4-26b-a4b-it",
+    "cloudflare:zai-org/glm-5.2": "cloudflare:wrk/zai-org/glm-5.2",
+    "cloudflare:openai/gpt-oss-120b": "cloudflare:wrk/openai/gpt-oss-120b",
+    "cloudflare:moonshotai/kimi-k2.6": "cloudflare:wrk/moonshotai/kimi-k2.6",
+    "cloudflare:meta/llama-3.3-70b-instruct-fp8-fast": "cloudflare:wrk/meta/llama-3.3-70b-instruct-fp8-fast",
+    "cloudflare:qwen/qwen3.8-27b": "cloudflare:wrk/qwen/qwen3.8-27b",
 }
 
 
@@ -720,7 +725,7 @@ def get_model(model_id: str) -> Optional[AIModel]:
     Returns:
         The AIModel specification, or None if not found.
     """
-    model = AI_MODEL_CATALOGUE.get(model_id)
+    model = AI_MODEL_CATALOGUE.get(AI_MODEL_ALIASES.get(model_id, model_id))
     if model is not None:
         return model
     base, _, ver = model_id.rpartition(':')

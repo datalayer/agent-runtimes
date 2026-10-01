@@ -209,9 +209,19 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         model_id = spec["id"]
         const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f'    "{model_id}": {const_name},')
-        for alias in spec.get("aliases") or []:
-            lines.append(f'    "{alias}": {const_name},  # before the id moved')
 
+    lines.extend(
+        [
+            "}",
+            "",
+            "# The ids a model answered to before its id moved, to the id it has now.",
+            "# Kept apart from the catalogue, which lists each model once.",
+            "AI_MODEL_ALIASES: Dict[str, str] = {",
+        ]
+    )
+    for spec in specs:
+        for alias in spec.get("aliases") or []:
+            lines.append(f'    "{alias}": "{spec["id"]}",')
     lines.extend(
         [
             "}",
@@ -269,7 +279,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    Returns:",
             "        The AIModel specification, or None if not found.",
             '    """',
-            "    model = AI_MODEL_CATALOGUE.get(model_id)",
+            "    model = AI_MODEL_CATALOGUE.get(AI_MODEL_ALIASES.get(model_id, model_id))",
             "    if model is not None:",
             "        return model",
             "    base, _, ver = model_id.rpartition(':')",
@@ -434,12 +444,29 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         model_id = spec["id"]
         const_name = _make_const_name(model_id) + version_suffix(spec["version"])
         lines.append(f"  '{model_id}': {const_name},")
-        for alias in spec.get("aliases") or []:
-            lines.append(f"  '{alias}': {const_name}, // before the id moved")
 
     lines.extend(
         [
             "};",
+            "",
+            "/**",
+            " * The ids a model answered to before its id moved, to the id it has now.",
+            " * Kept apart from the catalogue, which lists each model once.",
+            " */",
+            "export const AI_MODEL_ALIASES: Record<string, string> = {",
+        ]
+    )
+    for spec in specs:
+        for alias in spec.get("aliases") or []:
+            lines.append(f"  '{alias}': '{spec['id']}',")
+    lines.extend(
+        [
+            "};",
+            "",
+            "/** A model by its id, or by an id it had before; undefined when the catalogue has neither. */",
+            "export function getModel(modelId: string): AIModel | undefined {",
+            "  return AI_MODEL_CATALOGUE[AI_MODEL_ALIASES[modelId] ?? modelId];",
+            "}",
             "",
         ]
     )
