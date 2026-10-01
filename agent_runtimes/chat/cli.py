@@ -551,7 +551,10 @@ def _available_model_ids_by_env() -> tuple[set[str], list[str], int]:
         (available_ids, available_display_lines, offered_model_specs)
     """
     try:
-        from agent_runtimes.specs.models import check_env_vars_available, list_chat_models
+        from agent_runtimes.specs.models import (
+            check_env_vars_available,
+            list_chat_models,
+        )
     except Exception:
         return set(), [], 0
 

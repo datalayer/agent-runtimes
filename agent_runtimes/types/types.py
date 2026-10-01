@@ -230,7 +230,8 @@ class FrontendRenderToolSpec(BaseModel):
 class ModelPricing(BaseModel):
     """What the provider lists a model at, per million tokens, in dollars.
     Both are required: a block naming one and not the other would make
-    metered usage look free."""
+    metered usage look free.
+    """
 
     input_usd_per_million: float = Field(
         ..., ge=0, allow_inf_nan=False, description="Dollars per million input tokens"
@@ -242,7 +243,8 @@ class ModelPricing(BaseModel):
 
 class UIPluginSpec(BaseModel):
     """How an agent's answer becomes an interface: a protocol the host
-    renders (`agentspecs/ui-plugins`). An agent spec's `ui_plugin` names one."""
+    renders (`agentspecs/ui-plugins`). An agent spec's `ui_plugin` names one.
+    """
 
     id: str = Field(
         ..., description="What an agent spec's `ui_plugin` names (e.g. 'a2ui')"
@@ -262,7 +264,8 @@ class UIPluginSpec(BaseModel):
 class ModelProvider(BaseModel):
     """Who serves a model: the vendor's own API, a cloud that hosts it, or
     the user's machine — with what a person choosing it has to be able to
-    read (`agentspecs/model-providers`)."""
+    read (`agentspecs/model-providers`).
+    """
 
     id: str = Field(
         ..., description="What a model spec's `provider` names (e.g. 'anthropic')"

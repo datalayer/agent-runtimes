@@ -97,7 +97,10 @@ class TestCredentialsReady:
         )
         # The flavour in the id picks the route: `wrk` is Workers AI (through the
         # gateway when one is named), `gtw` is the gateway whatever the deployment says.
-        assert service.cloudflare_direct_route("wrk/openai/gpt-oss-120b")[2] == "@cf/openai/gpt-oss-120b"
+        assert (
+            service.cloudflare_direct_route("wrk/openai/gpt-oss-120b")[2]
+            == "@cf/openai/gpt-oss-120b"
+        )
         assert service.cloudflare_direct_route("gtw/openai/gpt-oss-120b") == (
             "https://gateway.ai.cloudflare.com/v1/acct/default/compat",
             "token",

@@ -79,7 +79,9 @@ def cloudflare_direct_route(model_name: str) -> tuple[str, str, str]:
     """
     account = (os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip()
     token = (
-        os.environ.get("CLOUDFLARE_API_TOKEN") or os.environ.get("CLOUDFLARE_API_KEY") or ""
+        os.environ.get("CLOUDFLARE_API_TOKEN")
+        or os.environ.get("CLOUDFLARE_API_KEY")
+        or ""
     ).strip()
     gateway = os.environ.get("CLOUDFLARE_GATEWAY", "default").strip().strip("/")
     flavour, bare = cloudflare_flavour(model_name)
@@ -87,7 +89,11 @@ def cloudflare_direct_route(model_name: str) -> tuple[str, str, str]:
         gateway = gateway or "default"
     name = bare if bare.startswith("@cf/") else f"@cf/{bare}"
     if gateway:
-        return f"{CLOUDFLARE_GATEWAY_BASE}/{account}/{gateway}/compat", token, f"workers-ai/{name}"
+        return (
+            f"{CLOUDFLARE_GATEWAY_BASE}/{account}/{gateway}/compat",
+            token,
+            f"workers-ai/{name}",
+        )
     return f"{CLOUDFLARE_DIRECT_BASE}/{account}/ai/v1", token, name
 
 
@@ -343,7 +349,9 @@ def create_model_with_provider(
         provider = OpenAIProvider(
             base_url=base_url,
             api_key=token or "cloudflare",
-            http_client=_create_inference_http_client(http_timeout, source="cloudflare"),
+            http_client=_create_inference_http_client(
+                http_timeout, source="cloudflare"
+            ),
         )
         return OpenAIChatModel(
             name,

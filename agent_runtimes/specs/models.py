@@ -810,7 +810,8 @@ def list_models() -> list[AIModel]:
 def is_chat_model(model: AIModel) -> bool:
     """A model a chat can run on: not a typed-judgment model (Jev), which
     answers typed questions about a state and nothing else. A spec that
-    states no capability is read as a chat model."""
+    states no capability is read as a chat model.
+    """
     return "judgments" not in model.capabilities
 
 

@@ -12,9 +12,6 @@ from .types import (
     AgentStatus,
     AgentSuggestion,
     AIModel,
-    ModelPricing,
-    ModelProvider,
-    UIPluginSpec,
     AIModelRuntime,
     AIModels,
     ApprovalPolicySpec,
@@ -42,6 +39,8 @@ from .types import (
     MCPServerTool,
     Memories,
     MemorySpec,
+    ModelPricing,
+    ModelProvider,
     NotificationChannelSpec,
     NotificationField,
     OutputSpec,
@@ -67,6 +66,7 @@ from .types import (
     ToolSpec,
     TriggerField,
     TriggerSpec,
+    UIPluginSpec,
 )
 
 __all__ = [
