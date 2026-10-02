@@ -251,6 +251,20 @@ class TestAParentIsAppliedOverAChildsFragments:
         resolved = resolve_spec(specs["child"], specs, self.FRAGMENTS)
         assert resolved["tools"] == ["fragment-tool:0.0.1", "p:0.0.1"]
 
+    def test_a_marker_a_parent_brings_through_its_own_fragment_reaches_them_too(
+        self,
+    ) -> None:
+        fragments = {
+            **self.FRAGMENTS,
+            "strict": {"id": "strict", "tools": ["!remove shared"]},
+        }
+        specs = {
+            "parent": {"id": "parent", "includes": ["strict:0.0.1"]},
+            "child": {"id": "child", "extends": "parent", "includes": ["f"]},
+        }
+        resolved = resolve_spec(specs["child"], specs, fragments)
+        assert resolved["tools"] == ["fragment-tool:0.0.1"]
+
     def test_without_a_marker_both_contribute(self) -> None:
         specs = {
             "parent": {"id": "parent", "tools": ["p:0.0.1"]},
