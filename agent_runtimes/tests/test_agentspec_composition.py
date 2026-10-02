@@ -224,3 +224,51 @@ class TestSubagentRefs:
 
         # A specialist that is not installed costs that subagent, not the agent.
         assert [d.name for d in capability.subagents] == ["Real"]
+
+
+class TestAParentIsAppliedOverAChildsFragments:
+    """Fragments first, the parent second: its markers reach what they brought."""
+
+    FRAGMENTS = {"f": {"id": "f", "tools": ["fragment-tool:0.0.1", "shared:0.0.1"]}}
+
+    def test_a_parent_that_replaces_a_list_replaces_what_a_fragment_brought(
+        self,
+    ) -> None:
+        specs = {
+            "parent": {"id": "parent", "tools": ["!replace", "parent-tool:0.0.1"]},
+            "child": {"id": "child", "extends": "parent", "includes": ["f"]},
+        }
+        resolved = resolve_spec(specs["child"], specs, self.FRAGMENTS)
+        assert resolved["tools"] == ["parent-tool:0.0.1"]
+
+    def test_a_parent_that_removes_an_entry_removes_it_from_a_fragment_too(
+        self,
+    ) -> None:
+        specs = {
+            "parent": {"id": "parent", "tools": ["!remove shared", "p:0.0.1"]},
+            "child": {"id": "child", "extends": "parent", "includes": ["f"]},
+        }
+        resolved = resolve_spec(specs["child"], specs, self.FRAGMENTS)
+        assert resolved["tools"] == ["fragment-tool:0.0.1", "p:0.0.1"]
+
+    def test_a_marker_a_parent_brings_through_its_own_fragment_reaches_them_too(
+        self,
+    ) -> None:
+        fragments = {
+            **self.FRAGMENTS,
+            "strict": {"id": "strict", "tools": ["!remove shared"]},
+        }
+        specs = {
+            "parent": {"id": "parent", "includes": ["strict:0.0.1"]},
+            "child": {"id": "child", "extends": "parent", "includes": ["f"]},
+        }
+        resolved = resolve_spec(specs["child"], specs, fragments)
+        assert resolved["tools"] == ["fragment-tool:0.0.1"]
+
+    def test_without_a_marker_both_contribute(self) -> None:
+        specs = {
+            "parent": {"id": "parent", "tools": ["p:0.0.1"]},
+            "child": {"id": "child", "extends": "parent", "includes": ["f"]},
+        }
+        resolved = resolve_spec(specs["child"], specs, self.FRAGMENTS)
+        assert resolved["tools"] == ["fragment-tool:0.0.1", "shared:0.0.1", "p:0.0.1"]

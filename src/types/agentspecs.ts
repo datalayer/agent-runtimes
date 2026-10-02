@@ -104,6 +104,88 @@ export interface UIPluginSpec {
   enabled: boolean;
 }
 
+/** A check a Frame requires of the output of work done under it. */
+export interface FrameGuardSpec {
+  id: string;
+  /**
+   * What kind of check it is: algorithmic, source-grounding, consensus,
+   * expert, policy-safety, regression-drift or outcome.
+   */
+  category: string;
+  description: string;
+  /** Whether the output counts only once this Guard has passed. */
+  required: boolean;
+}
+
+/** A reusable prompt fragment a Cog loads into its context. */
+export interface FramePromptSpec {
+  id: string;
+  text: string;
+}
+
+/**
+ * The context work happens in, written down (`agentspecs/frames`): owned,
+ * scoped, versioned and inherited. A Frame in the generated catalogue is
+ * resolved — what it inherits through `extends` is already in it.
+ */
+export interface FrameSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** organization, department, team, project, role or relationship. */
+  scope: string;
+  /** Who manages the Frame and answers for it. */
+  owner: string;
+  /** The parent Frame, as the spec names it. */
+  extends?: string;
+  /** The Frames it inherits from, nearest parent first. */
+  lineage: string[];
+  tags: string[];
+  /** Whether a Cog may name it today. */
+  enabled: boolean;
+  icon?: string;
+  emoji?: string;
+  rules: string[];
+  terminology: Record<string, string>;
+  goals: string[];
+  style: string[];
+  norms: string[];
+  process: string[];
+  architecture: string;
+  prompts: FramePromptSpec[];
+  skills: string[];
+  tools: string[];
+  mcpServers: string[];
+  guards: FrameGuardSpec[];
+}
+
+/**
+ * An AI worker you can hold to account (`agentspecs/cogs`): a Cog extends an
+ * agent spec and is equipped with Frames. In the generated catalogue it is
+ * resolved — `spec` is the agent with the Cog's changes and its Frames.
+ */
+export interface CogSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** The id of the agent spec it extends. */
+  agent: string;
+  /** The Frames it works under, in order. */
+  frames: string[];
+  /** Every Frame that contributed: the named ones and those they inherit from. */
+  lineage: string[];
+  /** What the Cog packages: context, model or combined. */
+  kind: string;
+  /** Whether it is offered today. */
+  enabled: boolean;
+  /** The Guards its Frames declare: what its output answers to. */
+  guards: FrameGuardSpec[];
+  /** The Cog as an agent spec, resolved and ready to launch. */
+  spec: Agentspec;
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
