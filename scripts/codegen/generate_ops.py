@@ -97,8 +97,24 @@ def _flat(text: Any) -> str:
     return " ".join(str(text or "").split())
 
 
+#: What a Guard that does not say gets: agentspecs validates these defaults
+#: and leaves them out of what `resolve_guard` returns, and the generated
+#: types require them.
+GUARD_DEFAULTS: dict[str, Any] = {
+    "description": "",
+    "tags": [],
+    "signals": [],
+    "icon": "shield-check",
+    "emoji": "\U0001f6e1\ufe0f",
+}
+
+
 def _tidy_guard(guard: dict[str, Any]) -> dict[str, Any]:
+    """A resolved Guard with every field the generated types require."""
     guard = dict(guard)
+    for key, default in GUARD_DEFAULTS.items():
+        if guard.get(key) is None:
+            guard[key] = list(default) if isinstance(default, list) else default
     for key in ("description", "check"):
         guard[key] = _flat(guard.get(key))
     return guard

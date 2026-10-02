@@ -112,6 +112,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['frames', 'configuration'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'datalayer',
@@ -185,6 +187,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['permissions', 'identity'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'datalayer',
@@ -267,6 +271,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['data', 'authorization'],
         guardrail: 'data-engineering-power-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
     ],
     inFlight: [
@@ -343,6 +349,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['tools', 'limits'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'azure-ad',
@@ -422,6 +430,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['privacy', 'pii', 'secrets'],
         guardrail: 'restricted-viewer',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'datalayer',
@@ -496,6 +506,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['confidence'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
     ],
     postRun: [
@@ -571,6 +583,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['schema', 'structure'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'datalayer',
@@ -645,6 +659,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['sources', 'evidence'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'datalayer',
@@ -719,6 +735,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['consensus', 'verification'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'azure-ad',
@@ -798,6 +816,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['privacy', 'pii', 'secrets'],
         guardrail: 'restricted-viewer',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'datalayer',
@@ -877,6 +897,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['expert', 'review'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
     ],
     continuous: [
@@ -961,6 +983,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['regression', 'drift'],
         guardrail: 'data-engineering-power-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
       {
         identity_provider: 'datalayer',
@@ -1034,6 +1058,8 @@ export const OP_SALES_PIPELINE_BOARD_REPORT_0_0_1: OpSpec = {
         enabled: true,
         tags: ['outcome', 'value'],
         guardrail: 'default-platform-user',
+        icon: 'shield-check',
+        emoji: '🛡️',
       },
     ],
   },

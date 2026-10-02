@@ -111,6 +111,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["frames", "configuration"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "datalayer",
@@ -182,6 +184,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["permissions", "identity"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "datalayer",
@@ -261,6 +265,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["data", "authorization"],
                     "guardrail": "data-engineering-power-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
             ],
             "in_flight": [
@@ -334,6 +340,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["tools", "limits"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "azure-ad",
@@ -411,6 +419,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["privacy", "pii", "secrets"],
                     "guardrail": "restricted-viewer",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "datalayer",
@@ -482,6 +492,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["confidence"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
             ],
             "post_run": [
@@ -555,6 +567,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["schema", "structure"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "datalayer",
@@ -626,6 +640,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["sources", "evidence"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "datalayer",
@@ -697,6 +713,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["consensus", "verification"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "azure-ad",
@@ -774,6 +792,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["privacy", "pii", "secrets"],
                     "guardrail": "restricted-viewer",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "datalayer",
@@ -850,6 +870,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["expert", "review"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
             ],
             "continuous": [
@@ -931,6 +953,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["regression", "drift"],
                     "guardrail": "data-engineering-power-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
                 {
                     "identity_provider": "datalayer",
@@ -1002,6 +1026,8 @@ OP_SALES_PIPELINE_BOARD_REPORT_0_0_1 = OpSpec.model_validate(
                     "enabled": True,
                     "tags": ["outcome", "value"],
                     "guardrail": "default-platform-user",
+                    "icon": "shield-check",
+                    "emoji": "🛡️",
                 },
             ],
         },

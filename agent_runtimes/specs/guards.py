@@ -85,6 +85,8 @@ CONFIDENCE_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["confidence"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -155,6 +157,8 @@ CONSENSUS_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["consensus", "verification"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -233,6 +237,8 @@ DATA_SOURCE_AUTHORIZATION_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["data", "authorization"],
         "guardrail": "data-engineering-power-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -308,6 +314,8 @@ EXPERT_SAMPLING_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["expert", "review"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -378,6 +386,8 @@ OUTCOME_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["outcome", "value"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -448,6 +458,8 @@ PERMISSION_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["permissions", "identity"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -526,6 +538,8 @@ REGRESSION_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["regression", "drift"],
         "guardrail": "data-engineering-power-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -596,6 +610,8 @@ REQUIRED_FRAME_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["frames", "configuration"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -666,6 +682,8 @@ SCHEMA_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["schema", "structure"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -736,6 +754,8 @@ SENSITIVE_DATA_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["privacy", "pii", "secrets"],
         "guardrail": "restricted-viewer",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -806,6 +826,8 @@ SOURCE_GROUNDING_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["sources", "evidence"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 
@@ -876,6 +898,8 @@ TOOL_USE_POLICY_GUARD_0_0_1 = GuardSpec.model_validate(
         "enabled": True,
         "tags": ["tools", "limits"],
         "guardrail": "default-platform-user",
+        "icon": "shield-check",
+        "emoji": "🛡️",
     }
 )
 

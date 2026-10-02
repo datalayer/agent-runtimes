@@ -87,6 +87,8 @@ export const CONFIDENCE_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['confidence'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const CONSENSUS_GUARD_0_0_1: GuardSpec = {
@@ -162,6 +164,8 @@ export const CONSENSUS_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['consensus', 'verification'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const DATA_SOURCE_AUTHORIZATION_GUARD_0_0_1: GuardSpec = {
@@ -244,6 +248,8 @@ export const DATA_SOURCE_AUTHORIZATION_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['data', 'authorization'],
   guardrail: 'data-engineering-power-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const EXPERT_SAMPLING_GUARD_0_0_1: GuardSpec = {
@@ -324,6 +330,8 @@ export const EXPERT_SAMPLING_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['expert', 'review'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const OUTCOME_GUARD_0_0_1: GuardSpec = {
@@ -398,6 +406,8 @@ export const OUTCOME_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['outcome', 'value'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const PERMISSION_GUARD_0_0_1: GuardSpec = {
@@ -472,6 +482,8 @@ export const PERMISSION_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['permissions', 'identity'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const REGRESSION_GUARD_0_0_1: GuardSpec = {
@@ -555,6 +567,8 @@ export const REGRESSION_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['regression', 'drift'],
   guardrail: 'data-engineering-power-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const REQUIRED_FRAME_GUARD_0_0_1: GuardSpec = {
@@ -629,6 +643,8 @@ export const REQUIRED_FRAME_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['frames', 'configuration'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const SCHEMA_GUARD_0_0_1: GuardSpec = {
@@ -703,6 +719,8 @@ export const SCHEMA_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['schema', 'structure'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const SENSITIVE_DATA_GUARD_0_0_1: GuardSpec = {
@@ -777,6 +795,8 @@ export const SENSITIVE_DATA_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['privacy', 'pii', 'secrets'],
   guardrail: 'restricted-viewer',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const SOURCE_GROUNDING_GUARD_0_0_1: GuardSpec = {
@@ -852,6 +872,8 @@ export const SOURCE_GROUNDING_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['sources', 'evidence'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const TOOL_USE_POLICY_GUARD_0_0_1: GuardSpec = {
@@ -927,6 +949,8 @@ export const TOOL_USE_POLICY_GUARD_0_0_1: GuardSpec = {
   enabled: true,
   tags: ['tools', 'limits'],
   guardrail: 'default-platform-user',
+  icon: 'shield-check',
+  emoji: '🛡️',
 };
 
 export const GUARD_CATALOGUE: Record<string, GuardSpec> = {

@@ -193,6 +193,37 @@ class TestTheGenerator:
         # A guardrail's own keys stay as GuardrailSpec declares them.
         assert '"token_limits"' in typescript and '"per_run"' in typescript
 
+    def test_a_guard_that_says_no_tags_is_generated_with_none(
+        self, tmp_path: Path
+    ) -> None:
+        import generate_ops
+        import yaml
+
+        # In a directory of the clone's package, as the generator reads one.
+        written = yaml.safe_load((CLONE / "guards" / "schema-guard.yaml").read_text())
+        for optional in ("tags", "signals", "description"):
+            written.pop(optional, None)
+        package = tmp_path / "agentspecs"
+        (package / "guards").mkdir(parents=True)
+        (package / "guards" / "schema-guard.yaml").write_text(yaml.safe_dump(written))
+        for needed in ("__init__.py", "__version__.py", "compose.py"):
+            (package / needed).write_text((CLONE / needed).read_text())
+        (package / "guards" / "__init__.py").write_text(
+            (CLONE / "guards" / "__init__.py").read_text()
+        )
+        (package / "guardrails").mkdir()
+        for guardrail in (CLONE / "guardrails").glob("*.yaml"):
+            (package / "guardrails" / guardrail.name).write_text(guardrail.read_text())
+
+        (spec,) = generate_ops.load_specs("guards", package / "guards")
+        assert spec["tags"] == [] and spec["signals"] == []
+        assert spec["description"] == "" and spec["icon"] and spec["emoji"]
+        from agent_runtimes.types import GuardSpec as Model
+
+        assert Model.model_validate(generate_ops._python_value(spec)).tags == []
+        typescript = generate_ops.generate_typescript_code("guards", [spec])
+        assert '"tags": []' in typescript and '"signals": []' in typescript
+
     def test_constants_are_named_for_the_kind_once(self) -> None:
         import generate_ops
 
