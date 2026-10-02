@@ -30,7 +30,6 @@
 
 import type {
   AppAccent,
-  AppBehaviour,
   AppConnectionSpec,
   AppCriterionSpec,
   AppDecisionSpec,
@@ -44,6 +43,7 @@ import type {
   AppSurfaceSpec,
   AppTriggerSpec,
 } from '../../types/agentspecs';
+import { BEHAVIOURS } from './rules';
 
 /** The version of the spec itself. */
 export const APP_SCHEMA = 'loop.app/v1';
@@ -60,13 +60,6 @@ export const APP_ACCENTS: AppAccent[] = [
   'lime',
   'sun',
   'violet',
-];
-
-export const APP_BEHAVIOURS: AppBehaviour[] = [
-  'do_it',
-  'if_asked',
-  'ask_first',
-  'leave_to_me',
 ];
 
 const ACTION_CLASS_NAMES = [
@@ -237,7 +230,7 @@ function parseRule(data: Data): AppRuleSpec {
       typeof data.applies_to === 'string'
         ? [data.applies_to]
         : texts(data.applies_to),
-    behaviour: oneOf(data.behaviour, APP_BEHAVIOURS, 'ask_first'),
+    behaviour: oneOf(data.behaviour, BEHAVIOURS, 'ask_first'),
   };
 }
 
