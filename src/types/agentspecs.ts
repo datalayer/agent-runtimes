@@ -339,10 +339,10 @@ export type ActionClass =
 export interface ActionConditionSpec {
   /** The argument of the call. */
   argument: string;
-  /** Holds when the argument is any of these. */
-  equals?: unknown[];
+  /** Holds when the argument is any of these: a word, a number, true or false. */
+  equals?: Array<string | number | boolean>;
   /** Holds when the argument's values include any of these. */
-  includes?: unknown[];
+  includes?: Array<string | number | boolean>;
   /** What the tool is then, besides its own. */
   classes: ActionClass[];
 }

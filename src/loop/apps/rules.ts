@@ -88,14 +88,23 @@ export function splitRef(ref: string): [string | undefined, string] {
   return matched ? [matched[1], matched[2]] : [undefined, idOf(ref)];
 }
 
-const isPattern = (name: string): boolean => /[*?[]/.test(name);
+/** Whether a tool name is a pattern: it stands for several. */
+export const isPattern = (name: string): boolean => /[*?]/.test(name);
 
-/** Whether a name matches a pattern where `*` is any run and `?` any one character. */
+/**
+ * Whether a name matches a pattern: `*` is any run of characters, `?` any one.
+ *
+ * Nothing else is special — no bracket expressions — and case counts: the
+ * same pattern means the same thing here and in Python.
+ */
 export function matchesPattern(name: string, pattern: string): boolean {
-  const expression = pattern
-    .replace(/[.+^${}()|\\]/g, '\\$&')
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.');
+  const expression = Array.from(pattern, character =>
+    character === '*'
+      ? '[\\s\\S]*'
+      : character === '?'
+        ? '[\\s\\S]'
+        : character.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+  ).join('');
   return new RegExp(`^${expression}$`).test(name);
 }
 

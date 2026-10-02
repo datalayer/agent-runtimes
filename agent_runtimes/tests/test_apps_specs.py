@@ -9,6 +9,7 @@ the decision is written in agentspecs, here, and in TypeScript, and
 `APP_BEHAVIOURS` — what agentspecs decided — is what each has to reproduce.
 """
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -20,7 +21,10 @@ from agent_runtimes.loop.apps import (
     DEFAULT_BEHAVIOURS,
     behaviour_for,
     classes_of,
+    condition_holds,
+    is_pattern,
     is_read_only,
+    matches,
     split_ref,
     strictest,
     tool_behaviours,
@@ -34,9 +38,34 @@ from agent_runtimes.specs.actions import (
     TOOL_ACTIONS,
 )
 from agent_runtimes.specs.apps import APP_CATALOGUE, get_app, list_apps
-from agent_runtimes.types import AppSpec
+from agent_runtimes.types import ActionConditionSpec, AppSpec
 
 REPO = Path(__file__).resolve().parents[2]
+
+#: A name, a pattern, and whether the one matches the other: `*` is any run
+#: of characters, `?` any one, nothing else is special, and case counts. The
+#: TypeScript rules are tested on the same table.
+PATTERNS = [
+    ("search_gmail_messages", "*gmail*", True),
+    ("search_drive_files", "*gmail*", False),
+    ("get_a", "get_?", True),
+    ("get_ab", "get_?", False),
+    ("a.b", "a.b", True),
+    ("axb", "a.b", False),
+    ("a[1]", "a[1]", True),
+    ("a1", "a[1]", False),
+    ("a[!b]c", "a[!b]c", True),
+    ("axc", "a[!b]c", False),
+    ("[", "[", True),
+    ("a{b}", "a{b}", True),
+    ("a|b", "a|b", True),
+    ("a", "a|b", False),
+    ("a+", "a+", True),
+    ("aa", "a+", False),
+    ("Search", "search", False),
+    ("", "*", True),
+    ("line\nbreak", "line*", True),
+]
 CODEGEN = REPO / "scripts" / "codegen"
 CLONE = REPO / "agentspecs" / "agentspecs"
 
@@ -113,6 +142,26 @@ class TestActionClasses:
         assert classes_of("runtime-send-mail:0.0.1") == ["send"]
         assert classes_of("chart.generate_pie_chart") == ["read"]
         assert split_ref("runtime-send-mail") == (None, "runtime-send-mail")
+
+    def test_a_pattern_means_what_it_means_in_agentspecs(self) -> None:
+        for name, pattern, expected in PATTERNS:
+            assert matches(name, pattern) is expected, (name, pattern)
+        assert is_pattern("generate_*") and is_pattern("get_?")
+        assert not is_pattern("a[1]") and not is_pattern("plain_name")
+
+    def test_an_argument_is_compared_as_what_it_is(self) -> None:
+        condition = ActionConditionSpec(argument="mode", equals=["Delete", 3, True])
+        assert condition_holds(condition, {"mode": "delete"})
+        assert condition_holds(condition, {"mode": 3})
+        assert condition_holds(condition, {"mode": True})
+        # True is not 1, and a list is not a word.
+        assert not condition_holds(condition, {"mode": 1})
+        assert not condition_holds(condition, {"mode": ["delete"]})
+        assert not condition_holds(condition, {"other": "delete"})
+        among = ActionConditionSpec(argument="ids", includes=["TRASH"])
+        assert condition_holds(among, {"ids": ["INBOX", "trash"]})
+        assert condition_holds(among, {"ids": "TRASH"})
+        assert not condition_holds(among, {"ids": ["INBOX"]})
 
     def test_an_unknown_tool_has_no_class_and_is_never_a_reader(self) -> None:
         assert classes_of("github.create_issue") == []
@@ -261,15 +310,27 @@ class TestWhatARuleDecides:
         assert app().emoji == "\U0001f440"
 
 
+def _said(text: str) -> str:
+    """What a generated file says, whatever a formatter did to it.
+
+    `make specs` runs ruff and prettier over what the generator writes:
+    quotes, commas, line breaks and escapes move, and nothing else does.
+    """
+    return re.sub(r"[\s'\",\\]", "", text)
+
+
+COMMITTED = {
+    "--python-output": REPO / "agent_runtimes" / "specs" / "apps.py",
+    "--typescript-output": REPO / "src" / "specs" / "apps.ts",
+    "--actions-python-output": REPO / "agent_runtimes" / "specs" / "actions.py",
+    "--actions-typescript-output": REPO / "src" / "specs" / "actions.ts",
+}
+
+
 @pytest.mark.skipif(not (CLONE / "apps").is_dir(), reason="needs the agentspecs clone")
 class TestTheGenerator:
     def test_what_is_committed_is_what_it_writes(self, tmp_path: Path) -> None:
-        outputs = {
-            "--python-output": tmp_path / "apps.py",
-            "--typescript-output": tmp_path / "apps.ts",
-            "--actions-python-output": tmp_path / "actions.py",
-            "--actions-typescript-output": tmp_path / "actions.ts",
-        }
+        outputs = {flag: tmp_path / path.name for flag, path in COMMITTED.items()}
         arguments = [str(part) for pair in outputs.items() for part in pair]
         subprocess.run(  # noqa: S603 - our own generator, on our own files
             [
@@ -282,8 +343,16 @@ class TestTheGenerator:
             check=True,
             capture_output=True,
         )
-        written = (tmp_path / "apps.py").read_text()
-        for identity in APP_CATALOGUE:
-            assert f"'{identity}'" in written or f'"{identity}"' in written
-        assert "APP_BEHAVIOURS" in (tmp_path / "actions.py").read_text()
-        assert "APP_BEHAVIOURS" in (tmp_path / "actions.ts").read_text()
+        for flag, written in outputs.items():
+            committed = COMMITTED[flag]
+            assert _said(written.read_text()) == _said(committed.read_text()), (
+                f"{committed.relative_to(REPO)} is not what `make specs` writes today: "
+                "run it again"
+            )
+
+    def test_a_change_of_one_word_is_seen(self) -> None:
+        text = COMMITTED["--actions-python-output"].read_text()
+        assert "ask_first" in text
+        assert _said(text) != _said(text.replace("ask_first", "do_it", 1))
+        # And a formatter's change is not one.
+        assert _said(text) == _said(text.replace('"', "'").replace(",\n", "\n"))

@@ -670,6 +670,7 @@ export function getApp(ref: string): AppSpec | undefined {
  */
 export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'inbox-triage': {
+    schema: 'loop.app/v1',
     id: 'inbox-triage',
     name: 'Inbox Triage',
     kind: 'worker',
@@ -790,9 +791,9 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'worker', 'mail'],
     icon: 'mail',
     emoji: '📬',
-    schema: 'loop.app/v1',
   },
   'quote-calculator': {
+    schema: 'loop.app/v1',
     id: 'quote-calculator',
     name: 'Quote Calculator',
     kind: 'widget',
@@ -938,9 +939,9 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'widget'],
     icon: 'number',
     emoji: '🧮',
-    schema: 'loop.app/v1',
   },
   'ship-or-fix': {
+    schema: 'loop.app/v1',
     id: 'ship-or-fix',
     name: 'Ship or Fix',
     kind: 'decision',
@@ -1038,9 +1039,9 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'decision', 'benchmarks'],
     icon: 'checklist',
     emoji: '🚢',
-    schema: 'loop.app/v1',
   },
   'web-research': {
+    schema: 'loop.app/v1',
     id: 'web-research',
     name: 'Web Research',
     kind: 'chat',
@@ -1114,7 +1115,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'research'],
     icon: 'search',
     emoji: '🔎',
-    schema: 'loop.app/v1',
   },
 };
 

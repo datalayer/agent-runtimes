@@ -2009,10 +2009,10 @@ class ActionConditionSpec(BaseModel):
     """An argument that makes a tool do something more than its own class."""
 
     argument: str = Field(..., description="The argument of the call")
-    equals: List[Any] = Field(
+    equals: List[Union[bool, int, float, str]] = Field(
         default_factory=list, description="Holds when the argument is any of these"
     )
-    includes: List[Any] = Field(
+    includes: List[Union[bool, int, float, str]] = Field(
         default_factory=list,
         description="Holds when the argument's values include any of these",
     )

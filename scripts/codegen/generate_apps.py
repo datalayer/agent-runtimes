@@ -77,16 +77,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             for tool, behaviour in sorted(apps_module.tool_behaviours(app).items())
         }
         escalations[identity] = dict(sorted(apps_module.tool_escalations(app).items()))
-        source = apps_module.dump_app(app)
-        # The layout of its kind is not written: an editor cannot tell one
-        # that was said from one that was not, and writes neither.
-        if (source.get("interface") or {}).get("layout") == apps_module.DEFAULT_LAYOUTS[
-            app.kind
-        ].value:
-            del source["interface"]["layout"]
-            if not source["interface"]:
-                del source["interface"]
-        sources[identity] = source
+        sources[identity] = apps_module.dump_app(app)
         for rule in spec["rules"]:
             rule["applies_to"] = (
                 [rule["applies_to"]]

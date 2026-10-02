@@ -30,6 +30,8 @@ import {
   DEFAULT_BEHAVIOURS,
   behaviourFor,
   classesOf,
+  conditionHolds,
+  isPattern,
   isReadOnly,
   matchesPattern,
   splitRef,
@@ -97,11 +99,55 @@ describe('action classes', () => {
     expect(isReadOnly(['read', 'write'])).toBe(false);
   });
 
-  it('matches a pattern literally but for its stars', () => {
-    expect(matchesPattern('search_gmail_messages', '*gmail*')).toBe(true);
-    expect(matchesPattern('search_drive_files', '*gmail*')).toBe(false);
-    expect(matchesPattern('a.b', 'a.b')).toBe(true);
-    expect(matchesPattern('axb', 'a.b')).toBe(false);
+  it('reads a pattern as Python does: stars, question marks, and nothing else', () => {
+    // The table of `agent_runtimes/tests/test_apps_specs.py`, word for word.
+    const patterns: Array<[string, string, boolean]> = [
+      ['search_gmail_messages', '*gmail*', true],
+      ['search_drive_files', '*gmail*', false],
+      ['get_a', 'get_?', true],
+      ['get_ab', 'get_?', false],
+      ['a.b', 'a.b', true],
+      ['axb', 'a.b', false],
+      ['a[1]', 'a[1]', true],
+      ['a1', 'a[1]', false],
+      ['a[!b]c', 'a[!b]c', true],
+      ['axc', 'a[!b]c', false],
+      ['[', '[', true],
+      ['a{b}', 'a{b}', true],
+      ['a|b', 'a|b', true],
+      ['a', 'a|b', false],
+      ['a+', 'a+', true],
+      ['aa', 'a+', false],
+      ['Search', 'search', false],
+      ['', '*', true],
+      ['line\nbreak', 'line*', true],
+    ];
+    for (const [name, pattern, expected] of patterns) {
+      expect(matchesPattern(name, pattern), `${name} ~ ${pattern}`).toBe(
+        expected,
+      );
+    }
+    expect(isPattern('generate_*') && isPattern('get_?')).toBe(true);
+    expect(isPattern('a[1]') || isPattern('plain_name')).toBe(false);
+  });
+
+  it('compares an argument with a word, a number, true or false', () => {
+    const condition = {
+      argument: 'mode',
+      equals: ['Delete', 3, true],
+      classes: [],
+    };
+    expect(conditionHolds(condition, { mode: 'delete' })).toBe(true);
+    expect(conditionHolds(condition, { mode: 3 })).toBe(true);
+    expect(conditionHolds(condition, { mode: true })).toBe(true);
+    // True is not 1, and a list is not a word.
+    expect(conditionHolds(condition, { mode: 1 })).toBe(false);
+    expect(conditionHolds(condition, { mode: ['delete'] })).toBe(false);
+    expect(conditionHolds(condition, { other: 'delete' })).toBe(false);
+    const among = { argument: 'ids', includes: ['TRASH'], classes: [] };
+    expect(conditionHolds(among, { ids: ['INBOX', 'trash'] })).toBe(true);
+    expect(conditionHolds(among, { ids: 'TRASH' })).toBe(true);
+    expect(conditionHolds(among, { ids: ['INBOX'] })).toBe(false);
   });
 });
 

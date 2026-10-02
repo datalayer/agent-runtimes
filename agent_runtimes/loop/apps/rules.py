@@ -30,7 +30,6 @@ agentspecs, is what all three have to agree on.
 
 from __future__ import annotations
 
-import fnmatch
 import re
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -78,9 +77,22 @@ def split_ref(ref: str) -> Tuple[Optional[str], str]:
     return None, _id_of(str(ref))
 
 
-def _is_pattern(name: str) -> bool:
+def is_pattern(name: str) -> bool:
     """Whether a tool name is a pattern: it stands for several."""
-    return any(mark in name for mark in "*?[")
+    return "*" in name or "?" in name
+
+
+def matches(name: str, pattern: str) -> bool:
+    """Whether a name matches a pattern: `*` is any run of characters, `?` any one.
+
+    Nothing else is special — no bracket expressions — and case counts: the
+    same pattern means the same thing here, in agentspecs and in TypeScript.
+    """
+    expression = "".join(
+        ".*" if character == "*" else "." if character == "?" else re.escape(character)
+        for character in pattern
+    )
+    return re.fullmatch(expression, name, flags=re.DOTALL) is not None
 
 
 def _same(value: Any, wanted: Any) -> bool:
@@ -117,7 +129,7 @@ def _entry(server: str, name: str) -> Tuple[List[str], List[ActionConditionSpec]
     if name in actions.tools:
         return list(actions.tools[name]), list(actions.conditions.get(name, []))
     for pattern, classes in actions.tools.items():
-        if _is_pattern(pattern) and fnmatch.fnmatchcase(name, pattern):
+        if is_pattern(pattern) and matches(name, pattern):
             return list(classes), list(actions.conditions.get(pattern, []))
     return list(actions.default), []
 
@@ -159,7 +171,7 @@ def _connection(app: AppSpec, server: str) -> Optional[AppConnectionSpec]:
 def _reaches(connection: AppConnectionSpec, tool_name: str) -> bool:
     """Whether a connection lets the application use a tool of its server."""
     return not connection.only or any(
-        fnmatch.fnmatchcase(tool_name, pattern) for pattern in connection.only
+        matches(tool_name, pattern) for pattern in connection.only
     )
 
 
@@ -240,7 +252,7 @@ def tool_behaviours(app: AppSpec) -> Dict[str, str]:
             continue
         for name, found in actions.tools.items():
             ref = f"{server}.{name}"
-            if not _is_pattern(name):
+            if not is_pattern(name):
                 behaviours[ref] = behaviour_for(app, ref, arguments={})
             elif connection.access == READ and any(item != READ for item in found):
                 behaviours[ref] = LEAVE_TO_ME
@@ -260,7 +272,7 @@ def tool_escalations(app: AppSpec) -> Dict[str, List[Dict[str, Any]]]:
         if actions is None:
             continue
         for name, conditions in actions.conditions.items():
-            if _is_pattern(name):
+            if is_pattern(name):
                 continue
             ref = f"{server}.{name}"
             plain = behaviour_for(app, ref, arguments={})
