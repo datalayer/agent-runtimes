@@ -41,13 +41,14 @@ class TestTheFrameCatalogue:
             assert frame.owner and frame.scope and frame.rules
 
     def test_a_frame_is_found_by_id_and_by_versioned_reference(self) -> None:
-        assert get_frame("web-research").id == "web-research"
-        assert get_frame("web-research:0.0.1").id == "web-research"
+        frame = FRAME_CATALOGUE["web-research"]
+        assert get_frame("web-research") is frame
+        assert get_frame("web-research:0.0.1") is frame
         assert get_frame("nope") is None
 
     def test_a_frame_arrives_with_what_it_inherits(self) -> None:
-        company = get_frame("datalayer")
-        child = get_frame("web-research")
+        company = FRAME_CATALOGUE["datalayer"]
+        child = FRAME_CATALOGUE["web-research"]
         assert child.extends == "datalayer:0.0.1"
         assert child.lineage == ["datalayer"] and company.lineage == []
         assert child.rules[: len(company.rules)] == company.rules
@@ -83,7 +84,8 @@ class TestTheCogCatalogue:
 
     def test_a_cog_is_the_agent_it_extends_with_its_frames(self) -> None:
         agent = get_agent_spec("worker-crawler")
-        cog = get_cog("cog-crawler")
+        assert agent is not None
+        cog = COG_CATALOGUE["cog-crawler"]
         assert isinstance(cog.spec, Agentspec)
         assert (cog.spec.id, cog.spec.name) == ("cog-crawler", "Crawler Cog")
         for inherited in ("model", "harness", "sandbox_variant", "icon", "color"):
@@ -93,22 +95,23 @@ class TestTheCogCatalogue:
         assert _ids(cog.spec.mcp_servers) == _ids(agent.mcp_servers)
         assert cog.spec.tags == [*agent.tags, "cog"]
         # Its context, rendered onto the agent's prompt.
-        assert cog.spec.system_prompt.startswith(agent.system_prompt.strip())
-        assert "## Frames" in cog.spec.system_prompt
-        assert "Web Research Frame — owned by" in cog.spec.system_prompt
-        assert "Never present a search-result snippet" in cog.spec.system_prompt
+        prompt = cog.spec.system_prompt or ""
+        assert prompt.startswith((agent.system_prompt or "").strip())
+        assert "## Frames" in prompt
+        assert "Web Research Frame — owned by" in prompt
+        assert "Never present a search-result snippet" in prompt
 
     def test_a_cog_says_which_frames_oriented_it_and_which_guards_it_answers_to(
         self,
     ) -> None:
-        cog = get_cog("cog-sales-pipeline-board-report")
+        cog = COG_CATALOGUE["cog-sales-pipeline-board-report"]
         assert cog.frames == ["sales-pipeline", "board-reporting"]
         assert cog.lineage == ["datalayer", "sales-pipeline", "board-reporting"]
         guards = [guard.id for guard in cog.guards]
         assert guards.count("no-secrets") == 1
         assert {"totals-reconcile", "summary-first", "finance-review"} <= set(guards)
         # The company's rule reaches the prompt once, through two Frames.
-        assert cog.spec.system_prompt.count("Never put a secret") == 1
+        assert (cog.spec.system_prompt or "").count("Never put a secret") == 1
 
     def test_the_cogs_under_a_frame_are_found_through_inheritance_too(self) -> None:
         assert {cog.id for cog in cogs_using("datalayer")} == set(COG_CATALOGUE)

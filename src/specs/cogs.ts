@@ -779,7 +779,11 @@ function cogId(ref: string): string {
 
 /** A Cog, by `id` or `id:version`, or undefined. */
 export function getCog(ref: string): CogSpec | undefined {
-  return COG_CATALOGUE[cogId(ref)];
+  // Own entries only: `constructor` and `toString` are not Cogs.
+  const id = cogId(ref);
+  return Object.prototype.hasOwnProperty.call(COG_CATALOGUE, id)
+    ? COG_CATALOGUE[id]
+    : undefined;
 }
 
 export function listCogs(): CogSpec[] {

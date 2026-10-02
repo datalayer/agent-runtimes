@@ -107,6 +107,18 @@ describe('the Cog catalogue', () => {
     ]);
   });
 
+  it('answers a lookup with a catalogue entry or with nothing', () => {
+    // A name every object inherits is not a Frame, and not a Cog.
+    for (const inherited of ['constructor', 'toString', '__proto__']) {
+      expect(getFrame(inherited)).toBeUndefined();
+      expect(getFrame(`${inherited}:0.0.1`)).toBeUndefined();
+      expect(getCog(inherited)).toBeUndefined();
+      expect(getCog(`${inherited}:0.0.1`)).toBeUndefined();
+    }
+    // A reference is `id:version`, as in Python: not anything before a colon.
+    expect(getFrame('web-research:latest')).toBeUndefined();
+  });
+
   it('is exported with the other catalogues', () => {
     expect(specs.COG_CATALOGUE).toBe(COG_CATALOGUE);
     expect(specs.FRAME_CATALOGUE).toBe(FRAME_CATALOGUE);

@@ -187,9 +187,60 @@ def resolve_spec(
         parent_resolved = resolve_spec(
             parent, specs, fragments, _seen=(*seen, identity)
         )
+        # The parent is applied over this spec's fragments, so what the parent
+        # chain says with `!replace` and `!remove` reaches them too. Resolving
+        # the parent consumed those markers; they are read again from the
+        # chain as it is written.
+        replaced, removed = _list_directives(parent, specs)
+        for field in LIST_FIELDS:
+            if field not in resolved:
+                continue
+            if field in replaced:
+                del resolved[field]
+            elif removed.get(field):
+                resolved[field] = [
+                    entry
+                    for entry in resolved[field]
+                    if _key_of(entry) not in removed[field]
+                ]
         resolved = merge_spec(resolved, parent_resolved)
 
     return merge_spec(resolved, spec)
+
+
+def _list_directives(
+    spec: dict[str, Any],
+    specs: dict[str, dict[str, Any]],
+) -> tuple[set[str], dict[str, set[str]]]:
+    """The `!replace` and `!remove` markers of a spec and of what it extends.
+
+    Returns the list fields the chain replaces, and for each list field the
+    keys it removes — what a spec lower in the order has to give up.
+    """
+    replaced: set[str] = set()
+    removed: dict[str, set[str]] = {}
+    current: Optional[dict[str, Any]] = spec
+    for _ in range(MAX_EXTENDS_DEPTH + 1):
+        if current is None:
+            break
+        for field in LIST_FIELDS:
+            entries = current.get(field)
+            if not isinstance(entries, list):
+                continue
+            if REPLACE_MARKER in entries:
+                replaced.add(field)
+            for entry in entries:
+                if isinstance(entry, str) and entry.startswith(REMOVE_PREFIX):
+                    removed.setdefault(field, set()).add(
+                        _key_of(entry[len(REMOVE_PREFIX) :])
+                    )
+        parent_ref = current.get("extends")
+        current = (
+            specs.get(_key_of(str(parent_ref))) or specs.get(str(parent_ref))
+            if parent_ref
+            else None
+        )
+    return replaced, removed
 
 
 def resolve_all(
