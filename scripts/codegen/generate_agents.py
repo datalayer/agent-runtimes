@@ -1582,6 +1582,10 @@ export * from './triggers';
 export * from './uiPlugins';
 export * from './frames';
 export * from './cogs';
+export * from './guards';
+export * from './gates';
+export * from './tracks';
+export * from './ops';
 """
     )
 

@@ -186,6 +186,151 @@ export interface CogSpec {
   spec: Agentspec;
 }
 
+/** Something a Guard reports, which a Gate's condition reads. */
+export interface GuardSignalSpec {
+  name: string;
+  /** boolean, number or string. */
+  type: string;
+  description: string;
+}
+
+/**
+ * A reusable check (`agentspecs/guards`): a Guard extends a guardrail. The
+ * guardrail is the policy; the Guard verifies that the work stayed within
+ * it. Resolved: it carries the guardrail's policy under its own identity.
+ */
+export interface GuardSpec extends GuardrailSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** The id of the guardrail it extends. */
+  guardrail: string;
+  /**
+   * algorithmic, source-grounding, consensus, expert, policy-safety,
+   * regression-drift or outcome.
+   */
+  category: string;
+  /** preflight, in_flight, post_run, continuous: where it may run. */
+  stages: string[];
+  /** algorithmic, cog or human. */
+  method: string;
+  /** What is verified. */
+  check: string;
+  /** What it reports for a Gate to decide on. */
+  signals: GuardSignalSpec[];
+  /** Whether the work counts only once it has passed. */
+  required: boolean;
+  enabled: boolean;
+  tags: string[];
+  icon?: string;
+  emoji?: string;
+}
+
+/** A decision point of an Op (`agentspecs/gates`): Guards check, Gates decide. */
+export interface GateSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** The stage it decides at. */
+  stage: string;
+  /** The Guards whose results it reads. */
+  guards: string[];
+  /** The condition on its Guards' signals, or `always`. */
+  when: string;
+  /** What happens when the condition holds. */
+  then: string;
+  /** What happens when it does not. */
+  otherwise: string;
+  /** The signals the condition reads. */
+  signals: string[];
+  /** The roles a decision is handed to. */
+  reviewers: string[];
+  maxRetries: number;
+  enabled: boolean;
+  tags: string[];
+  icon?: string;
+  emoji?: string;
+}
+
+/** What evidence a run keeps, and for how long (`agentspecs/tracks`). */
+export interface TrackSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** The retention, e.g. `7_years`. */
+  retainFor: string;
+  retentionDays: number;
+  /** What a record has to include. */
+  include: string[];
+  /** The roles that may read a record. */
+  readers: string[];
+  /** Field patterns kept out of the record. */
+  redact: string[];
+  /** Whether corrections and overrides feed Organizational Memory. */
+  feedsMemory: boolean;
+  /** Whether a record may leave the Hub that produced it: it may not. */
+  exchangeable: boolean;
+  enabled: boolean;
+  tags: string[];
+  icon?: string;
+  emoji?: string;
+}
+
+/** A Cog as an Op names it. */
+export interface OpCogSpec {
+  id: string;
+  /** The agent spec the Cog extends. */
+  agent: string;
+  frames: string[];
+  kind: string;
+}
+
+/** The Guards of an Op, by the stage they run at, each resolved. */
+export interface OpGuardsSpec {
+  preflight: GuardSpec[];
+  inFlight: GuardSpec[];
+  postRun: GuardSpec[];
+  continuous: GuardSpec[];
+}
+
+/**
+ * An orchestrated, supervised workflow (`agentspecs/ops`): Cogs do the work,
+ * and a validation strategy says how it is verified — Guards by stage, the
+ * Gates that decide, the Track kept as evidence. Resolved: everything it
+ * names is in it.
+ */
+export interface OpSpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** Who is accountable for the outcome. */
+  owner: string;
+  goal: string;
+  cogs: OpCogSpec[];
+  /** Frames applied at the workflow level. */
+  frames: string[];
+  /** Every Frame that orients the Op, its Cogs' included. */
+  lineage: string[];
+  supervisor: { model: string; instructions: string };
+  guards: OpGuardsSpec;
+  /** The checks its Frames declare. */
+  frameGuards: FrameGuardSpec[];
+  /** The Gates, in the order they are met. */
+  gates: GateSpec[];
+  track: TrackSpec;
+  /** launcher, command, button, schedule. */
+  triggers: string[];
+  enabled: boolean;
+  tags: string[];
+  icon?: string;
+  emoji?: string;
+  color?: string;
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;
