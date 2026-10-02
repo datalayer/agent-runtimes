@@ -2005,6 +2005,292 @@ class OpSpec(BaseModel):
     color: Optional[str] = Field(default=None, description="Accent colour")
 
 
+class ActionConditionSpec(BaseModel):
+    """An argument that makes a tool do something more than its own class."""
+
+    argument: str = Field(..., description="The argument of the call")
+    equals: List[Any] = Field(
+        default_factory=list, description="Holds when the argument is any of these"
+    )
+    includes: List[Any] = Field(
+        default_factory=list,
+        description="Holds when the argument's values include any of these",
+    )
+    classes: List[str] = Field(
+        default_factory=list, description="What the tool is then, besides its own"
+    )
+
+
+class ServerActionsSpec(BaseModel):
+    """What the tools of an MCP server do to the world (`agentspecs.actions`)."""
+
+    checked: Optional[str] = Field(
+        default=None,
+        description="The day the tool names were read off the running server; None when nobody looked",
+    )
+    default: List[str] = Field(
+        default_factory=list,
+        description="The classes of a tool nothing else names; empty means unknown",
+    )
+    tools: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="What each tool does of its own, by name or pattern",
+    )
+    conditions: Dict[str, List[ActionConditionSpec]] = Field(
+        default_factory=dict,
+        description="What an argument makes a tool do besides, by tool",
+    )
+
+
+class AppConnectionSpec(BaseModel):
+    """Something an application reaches."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    server: str = Field(..., description="An MCP server, `id` or `id:version`")
+    access: str = Field(default="read", description="`read` or `write`")
+    acts_as: str = Field(
+        default="owner",
+        alias="as",
+        description="In whose name: `owner` or `user`",
+    )
+    only: List[str] = Field(
+        default_factory=list,
+        description="The tools it may use, by name or pattern; all when empty",
+    )
+
+
+class AppRuleSpec(BaseModel):
+    """When an application acts alone, and when it asks."""
+
+    action: str = Field(..., description="The action, in the words a person reads")
+    applies_to: List[str] = Field(
+        default_factory=list,
+        description="Classes of action, or tools (`server.tool`), the rule applies to",
+    )
+    behaviour: str = Field(
+        ..., description="`do_it`, `if_asked`, `ask_first` or `leave_to_me`"
+    )
+
+
+class AppSpaceGrantSpec(BaseModel):
+    """A Space an application may reach."""
+
+    space: str
+    access: str = Field(default="read", description="`read` or `write`")
+
+
+class AppComputerSpec(BaseModel):
+    """What an application may do on its own computer; each off until turned on."""
+
+    browse: bool = False
+    files: bool = False
+    shell: bool = False
+
+
+class AppPermissionsSpec(BaseModel):
+    """What an application may reach beside its connections. Nothing, unless said."""
+
+    spaces: List[AppSpaceGrantSpec] = Field(default_factory=list)
+    computer: AppComputerSpec = Field(default_factory=AppComputerSpec)
+
+
+class AppStarterSpec(BaseModel):
+    """A first message offered to the user."""
+
+    label: str
+    message: str
+
+
+class AppSettingSpec(BaseModel):
+    """Something the user may set for their session."""
+
+    id: str
+    type: str = Field(..., description="`select`, `text`, `toggle`, `slider`, `number`")
+    label: str
+    options: List[str] = Field(default_factory=list)
+    default: Optional[Union[str, bool, float]] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+
+
+class AppSurfaceSpec(BaseModel):
+    """The component tree a user meets, over the approved catalog (A2UI)."""
+
+    protocol: str = Field(default="a2ui/v0.9")
+    components: List[Dict[str, Any]] = Field(default_factory=list)
+    composed_by: str = Field(default="")
+    composed_at: str = Field(default="")
+
+
+class AppInterfaceSpec(BaseModel):
+    """What the user of an application sees."""
+
+    layout: str = Field(default="chat", description="`chat`, `page` or `split`")
+    accent: str = Field(default="green", description="The application's one colour")
+    welcome: str = Field(default="")
+    starters: List[AppStarterSpec] = Field(default_factory=list)
+    settings: List[AppSettingSpec] = Field(default_factory=list)
+    components: List[str] = Field(
+        default_factory=list,
+        description="The components of the catalog the surface may use",
+    )
+    surface: Optional[AppSurfaceSpec] = None
+
+
+class AppTestCaseSpec(BaseModel):
+    """An example of what an application should do, in plain words."""
+
+    ask: str
+    expect: str
+
+
+class AppTestsSpec(BaseModel):
+    """How an application is verified."""
+
+    ready_at: float = Field(
+        default=0.8, description="The share of tests that has to pass"
+    )
+    evalset: str = Field(default="")
+    cases: List[AppTestCaseSpec] = Field(default_factory=list)
+
+
+class AppRecordSpec(BaseModel):
+    """What is kept of what an application did, and for how long."""
+
+    keep_for: str = Field(default="1_years")
+    retention_days: int = Field(default=365, description="The retention, as days")
+    include: List[str] = Field(default_factory=list)
+
+
+class AppChecksSpec(BaseModel):
+    """Optional checks from the catalogue."""
+
+    guards: List[str] = Field(default_factory=list)
+    gates: List[str] = Field(default_factory=list)
+    track: str = Field(default="")
+
+
+class AppHostedSpec(BaseModel):
+    """An application at an address of its own."""
+
+    visibility: str = Field(default="private")
+    slug: str = Field(default="")
+
+
+class AppEmbeddedSpec(BaseModel):
+    """An application inside another product's page."""
+
+    mode: str = Field(default="inline", description="`inline`, `bubble` or `panel`")
+    origins: List[str] = Field(default_factory=list)
+
+
+class AppDeploymentSpec(BaseModel):
+    """Where an application goes."""
+
+    hosted: Optional[AppHostedSpec] = None
+    embedded: Optional[AppEmbeddedSpec] = None
+
+
+class AppTriggerSpec(BaseModel):
+    """What starts a worker's work."""
+
+    type: str = Field(..., description="`schedule`, `event` or `once`")
+    cron: str = Field(default="")
+    event: str = Field(default="")
+    at: str = Field(default="")
+    description: str = Field(default="")
+    prompt: str = Field(default="")
+
+
+class AppCriterionSpec(BaseModel):
+    """What an alternative is judged on."""
+
+    name: str
+    kind: str = Field(default="metric")
+    weight: float = Field(default=1)
+    instructions: str = Field(default="")
+    options: List[str] = Field(default_factory=list)
+    direction: str = Field(default="higher")
+    measure: str = Field(default="")
+
+
+class AppScenarioSpec(BaseModel):
+    """A named set of weights."""
+
+    name: str
+    weights: Dict[str, float] = Field(default_factory=dict)
+
+
+class AppDecisionSpec(BaseModel):
+    """What a decision application decides."""
+
+    question: str
+    alternatives: List[str] = Field(default_factory=list)
+    criteria: List[AppCriterionSpec] = Field(default_factory=list)
+    min_confidence: float = Field(default=0)
+    scenarios: List[AppScenarioSpec] = Field(default_factory=list)
+    judgment_model: str = Field(default="")
+
+
+class AppSpec(BaseModel):
+    """An application (`agentspecs/apps`): the Appspec.
+
+    An agent with an interface, rules, tests and a place to run: a chat, a
+    widget, a decision or a worker. It stands alone — Guards, Gates and a
+    Track are optional, under `checks`. In the generated catalogue it carries
+    its layout, and what it names that is not enabled (`setup`).
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_: str = Field(
+        default="loop.app/v1", alias="schema", description="The version of the spec"
+    )
+    id: str = Field(..., description="Unique application identifier")
+    version: str = Field(default="0.0.1", description="Application version")
+    name: str = Field(..., description="Display name")
+    kind: str = Field(..., description="`chat`, `widget`, `decision` or `worker`")
+    description: str = Field(default="", description="What it does")
+    owner: str = Field(default="", description="Who answers for it")
+    agent: str = Field(default="", description="The agent or Cog that does the work")
+    team: str = Field(default="", description="Or a team of them")
+    instructions: str = Field(default="")
+    model: str = Field(default="")
+    skills: List[str] = Field(default_factory=list)
+    tools: List[str] = Field(default_factory=list)
+    context: List[str] = Field(
+        default_factory=list, description="The Frames it works under"
+    )
+    contents: List[str] = Field(
+        default_factory=list, description="The documents it answers from"
+    )
+    connections: List[AppConnectionSpec] = Field(default_factory=list)
+    rules: List[AppRuleSpec] = Field(default_factory=list)
+    permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)
+    interface: AppInterfaceSpec = Field(default_factory=AppInterfaceSpec)
+    tests: AppTestsSpec = Field(default_factory=AppTestsSpec)
+    record: AppRecordSpec = Field(default_factory=AppRecordSpec)
+    checks: AppChecksSpec = Field(default_factory=AppChecksSpec)
+    deployment: AppDeploymentSpec = Field(default_factory=AppDeploymentSpec)
+    goal: str = Field(default="", description="For a worker: what it works toward")
+    triggers: List[AppTriggerSpec] = Field(default_factory=list)
+    memory: str = Field(default="")
+    notifications: List[str] = Field(default_factory=list)
+    decision: Optional[AppDecisionSpec] = None
+    setup: List[str] = Field(
+        default_factory=list,
+        description="What it names that is not enabled today, in sentences",
+    )
+    enabled: bool = Field(default=True, description="Whether it is offered today")
+    tags: List[str] = Field(default_factory=list)
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: str = Field(
+        default="\U0001f440",
+        description="Its face: one emoji, shown wherever the application appears",
+    )
+
+
 class TeamSubagentspec(BaseModel):
     """A specialist a team member may hand work to.
 

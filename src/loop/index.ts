@@ -312,3 +312,17 @@ export { loopPlugins, type LoopPresetOptions } from './presets';
 // The extensions that group them, for hosts that would rather install a
 // capability than assemble one.
 export { DocumentExtension, NotebookExtension } from './extensions';
+
+// Applications: what one does when its agent calls a tool — the rules a
+// person wrote, decided on what the tool does.
+export {
+  BEHAVIOURS as APP_BEHAVIOUR_ORDER,
+  DEFAULT_BEHAVIOURS as APP_DEFAULT_BEHAVIOURS,
+  behaviourFor,
+  classesOf,
+  isReadOnly,
+  toolBehaviours,
+  toolEscalations,
+  type BehaviourOptions,
+  type ToolArguments,
+} from './apps';

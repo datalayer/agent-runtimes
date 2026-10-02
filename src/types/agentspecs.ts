@@ -331,6 +331,238 @@ export interface OpSpec {
   color?: string;
 }
 
+/** What a tool does to the world (`agentspecs.actions`). */
+export type ActionClass =
+  'read' | 'write' | 'send' | 'buy' | 'delete' | 'publish';
+
+/** An argument that makes a tool do something more than its own class. */
+export interface ActionConditionSpec {
+  /** The argument of the call. */
+  argument: string;
+  /** Holds when the argument is any of these. */
+  equals?: unknown[];
+  /** Holds when the argument's values include any of these. */
+  includes?: unknown[];
+  /** What the tool is then, besides its own. */
+  classes: ActionClass[];
+}
+
+/** A condition, and what an application does when it holds. */
+export interface AppEscalation extends ActionConditionSpec {
+  behaviour: AppBehaviour;
+}
+
+/** What the tools of an MCP server do. */
+export interface ServerActionsSpec {
+  /** The day the tool names were read off the running server; absent when nobody looked. */
+  checked?: string;
+  /** The classes of a tool nothing else names; empty means unknown. */
+  default: ActionClass[];
+  /** What each tool does of its own, by name or pattern. */
+  tools: Record<string, ActionClass[]>;
+  /** What an argument makes a tool do besides, by tool. */
+  conditions: Record<string, ActionConditionSpec[]>;
+}
+
+/** What kind of application it is: what its user meets. */
+export type AppKind = 'chat' | 'widget' | 'decision' | 'worker';
+
+/** What an application does when it meets an action. */
+export type AppBehaviour = 'do_it' | 'if_asked' | 'ask_first' | 'leave_to_me';
+
+export type AppLayout = 'chat' | 'page' | 'split';
+
+/** The one colour of an application; everything else is neutral. */
+export type AppAccent = 'green' | 'rose' | 'sky' | 'lime' | 'sun' | 'violet';
+
+/** Something an application reaches. */
+export interface AppConnectionSpec {
+  /** An MCP server, `id` or `id:version`. */
+  server: string;
+  access: 'read' | 'write';
+  /** In whose name: the builder's account, or each user's own. */
+  as: 'owner' | 'user';
+  /** The tools it may use, by name or pattern; all when empty. */
+  only: string[];
+}
+
+/** When an application acts alone, and when it asks. */
+export interface AppRuleSpec {
+  /** The action, in the words a person reads. */
+  action: string;
+  /** Classes of action, or tools (`server.tool`), the rule applies to. */
+  appliesTo: string[];
+  behaviour: AppBehaviour;
+}
+
+/** What an application may reach beside its connections. Nothing, unless said. */
+export interface AppPermissionsSpec {
+  /** The Spaces it reads or writes. */
+  spaces: Array<{ space: string; access: 'read' | 'write' }>;
+  /** Its computer; each off until it is turned on. */
+  computer: { browse: boolean; files: boolean; shell: boolean };
+}
+
+export interface AppStarterSpec {
+  label: string;
+  message: string;
+}
+
+export interface AppSettingSpec {
+  id: string;
+  type: 'select' | 'text' | 'toggle' | 'slider' | 'number';
+  label: string;
+  options: string[];
+  default?: string | boolean | number;
+  min?: number;
+  max?: number;
+}
+
+/** The component tree a user meets, over the approved catalog (A2UI). */
+export interface AppSurfaceSpec {
+  protocol: string;
+  components: Array<{
+    id: string;
+    component: string;
+    [property: string]: unknown;
+  }>;
+  composedBy: string;
+  composedAt: string;
+}
+
+/** What the user of an application sees. */
+export interface AppInterfaceSpec {
+  layout: AppLayout;
+  accent: AppAccent;
+  welcome: string;
+  starters: AppStarterSpec[];
+  settings: AppSettingSpec[];
+  /** The components of the catalog the surface may use. */
+  components: string[];
+  surface?: AppSurfaceSpec;
+}
+
+export interface AppTestCaseSpec {
+  ask: string;
+  expect: string;
+}
+
+/** How an application is verified. */
+export interface AppTestsSpec {
+  /** The share of tests that has to pass for it to be ready. */
+  readyAt: number;
+  evalset: string;
+  cases: AppTestCaseSpec[];
+}
+
+/** What is kept of what an application did, and for how long. */
+export interface AppRecordSpec {
+  /** The retention, e.g. `1_years`. */
+  keepFor: string;
+  retentionDays: number;
+  include: string[];
+}
+
+/** Optional checks from the catalogue. */
+export interface AppChecksSpec {
+  guards: string[];
+  gates: string[];
+  track: string;
+}
+
+export interface AppDeploymentSpec {
+  hosted?: {
+    visibility: 'private' | 'invited' | 'organization' | 'link' | 'public';
+    slug: string;
+  };
+  embedded?: { mode: 'inline' | 'bubble' | 'panel'; origins: string[] };
+}
+
+/** What starts a worker's work. */
+export interface AppTriggerSpec {
+  type: 'schedule' | 'event' | 'once';
+  cron: string;
+  event: string;
+  at: string;
+  description: string;
+  prompt: string;
+}
+
+export interface AppCriterionSpec {
+  name: string;
+  kind: 'metric' | 'noul' | 'choice' | 'score';
+  weight: number;
+  instructions: string;
+  options: string[];
+  direction: 'higher' | 'lower';
+  measure: '' | 'pass_rate' | 'cost_per_task' | 'seconds_per_task';
+}
+
+export interface AppScenarioSpec {
+  name: string;
+  weights: Record<string, number>;
+}
+
+/** What a decision application decides. */
+export interface AppDecisionSpec {
+  question: string;
+  alternatives: string[];
+  criteria: AppCriterionSpec[];
+  minConfidence: number;
+  scenarios: AppScenarioSpec[];
+  judgmentModel: string;
+}
+
+/**
+ * An application (`agentspecs/apps`): the Appspec. An agent with an interface,
+ * rules, tests and a place to run — a chat, a widget, a decision or a worker.
+ * It stands alone: Guards, Gates and a Track are optional, under `checks`.
+ * In the generated catalogue it carries its layout, and what it names that
+ * is not enabled (`setup`).
+ */
+export interface AppSpec {
+  /** The version of the spec itself: `loop.app/v1`. */
+  schema: string;
+  id: string;
+  version: string;
+  name: string;
+  kind: AppKind;
+  description: string;
+  owner: string;
+  /** The agent or the Cog that does the work; empty when a team does. */
+  agent: string;
+  team: string;
+  instructions: string;
+  model: string;
+  skills: string[];
+  tools: string[];
+  /** The Frames it works under. */
+  context: string[];
+  /** The documents and datasets it answers from. */
+  contents: string[];
+  connections: AppConnectionSpec[];
+  rules: AppRuleSpec[];
+  permissions: AppPermissionsSpec;
+  interface: AppInterfaceSpec;
+  tests: AppTestsSpec;
+  record: AppRecordSpec;
+  checks: AppChecksSpec;
+  deployment: AppDeploymentSpec;
+  /** For a worker: what it works toward. */
+  goal: string;
+  triggers: AppTriggerSpec[];
+  memory: string;
+  notifications: string[];
+  decision?: AppDecisionSpec;
+  /** What it names that is not enabled today, in sentences. */
+  setup: string[];
+  enabled: boolean;
+  tags: string[];
+  icon?: string;
+  /** Its face: one emoji, shown wherever the application appears. */
+  emoji: string;
+}
+
 export interface Agentspec {
   /** Unique agent identifier */
   id: string;

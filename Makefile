@@ -182,6 +182,8 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/gates.py \
 	agent_runtimes/specs/tracks.py \
 	agent_runtimes/specs/ops.py \
+	agent_runtimes/specs/apps.py \
+	agent_runtimes/specs/actions.py \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/model_providers.py \
 	agent_runtimes/specs/memory.py \
@@ -430,7 +432,7 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, frames, cogs, ops, guards, gates, tracks, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, frames, cogs, ops, guards, gates, tracks, applications, MCP servers, skills, envvars)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)
@@ -556,6 +558,17 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	    --typescript-output src/specs/ops.ts; \
 	else \
 	  echo "Skipping Op specifications: $(AGENTSPECS_DIR)/agentspecs/ops not found (agentspecs < 0.0.14)"; \
+	fi
+	$(call step,Generating application specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/apps" ]; then \
+	  python scripts/codegen/generate_apps.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/apps \
+	    --python-output agent_runtimes/specs/apps.py \
+	    --typescript-output src/specs/apps.ts \
+	    --actions-python-output agent_runtimes/specs/actions.py \
+	    --actions-typescript-output src/specs/actions.ts; \
+	else \
+	  echo "Skipping application specifications: $(AGENTSPECS_DIR)/agentspecs/apps not found (agentspecs < 0.0.15)"; \
 	fi
 	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \
