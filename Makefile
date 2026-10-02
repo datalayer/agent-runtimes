@@ -16,7 +16,7 @@ SHELL=/bin/bash
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
-AGENTSPECS_BRANCH ?= "feat/new"
+AGENTSPECS_BRANCH ?= "main"
 
 AGENT_SERVE_ID ?= data-acquisition
 AGENT_SERVE_NAME ?= dla-1
@@ -176,7 +176,10 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/frontend_tools.py \
 	agent_runtimes/specs/envvars.py \
 	agent_runtimes/specs/ui_plugins.py \
+	agent_runtimes/specs/frames.py \
+	agent_runtimes/specs/cogs.py \
 	agent_runtimes/specs/models.py \
+	agent_runtimes/specs/model_providers.py \
 	agent_runtimes/specs/memory.py \
 	agent_runtimes/specs/loops.py \
 	agent_runtimes/specs/guardrails.py \
@@ -423,7 +426,7 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, frames, cogs, MCP servers, skills, envvars)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)
@@ -495,6 +498,24 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	    --typescript-output src/specs/uiPlugins.ts; \
 	else \
 	  echo "Skipping UI plugin specifications: $(AGENTSPECS_DIR)/agentspecs/ui-plugins not found (agentspecs < 0.0.11)"; \
+	fi
+	$(call step,Generating Frame specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/frames" ]; then \
+	  python scripts/codegen/generate_frames.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/frames \
+	    --python-output agent_runtimes/specs/frames.py \
+	    --typescript-output src/specs/frames.ts; \
+	else \
+	  echo "Skipping Frame specifications: $(AGENTSPECS_DIR)/agentspecs/frames not found (agentspecs < 0.0.12)"; \
+	fi
+	$(call step,Generating Cog specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/cogs" ]; then \
+	  python scripts/codegen/generate_cogs.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/cogs \
+	    --python-output agent_runtimes/specs/cogs.py \
+	    --typescript-output src/specs/cogs.ts; \
+	else \
+	  echo "Skipping Cog specifications: $(AGENTSPECS_DIR)/agentspecs/cogs not found (agentspecs < 0.0.12)"; \
 	fi
 	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \

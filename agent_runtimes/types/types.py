@@ -261,6 +261,76 @@ class UIPluginSpec(BaseModel):
     )
 
 
+class FrameGuardSpec(BaseModel):
+    """A check a Frame requires of the output of work done under it."""
+
+    id: str = Field(..., description="Identity within the Frame")
+    category: str = Field(
+        ...,
+        description=(
+            "What kind of check it is: algorithmic, source-grounding, consensus, "
+            "expert, policy-safety, regression-drift or outcome"
+        ),
+    )
+    description: str = Field(default="", description="What is checked")
+    required: bool = Field(
+        default=True,
+        description="Whether the output counts only once this Guard has passed",
+    )
+
+
+class FramePromptSpec(BaseModel):
+    """A reusable prompt fragment a Cog loads into its context."""
+
+    id: str = Field(..., description="Identity within the Frame")
+    text: str = Field(default="", description="The fragment")
+
+
+class FrameSpec(BaseModel):
+    """The context work happens in, written down (`agentspecs/frames`).
+
+    Owned, scoped, versioned and inherited. A Frame in the generated catalogue
+    is resolved: what it inherits through `extends` is already in it, and
+    `lineage` says from which Frames, nearest parent first.
+    """
+
+    id: str = Field(..., description="Unique Frame identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What context it carries")
+    scope: str = Field(
+        ...,
+        description=(
+            "What it applies to: organization, department, team, project, role "
+            "or relationship"
+        ),
+    )
+    owner: str = Field(..., description="Who manages the Frame and answers for it")
+    extends: Optional[str] = Field(
+        default=None, description="The parent Frame, as the spec names it"
+    )
+    lineage: List[str] = Field(
+        default_factory=list,
+        description="The Frames it inherits from, nearest parent first",
+    )
+    tags: List[str] = Field(default_factory=list)
+    enabled: bool = Field(default=True, description="Whether a Cog may name it today")
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+    rules: List[str] = Field(default_factory=list)
+    terminology: Dict[str, str] = Field(default_factory=dict)
+    goals: List[str] = Field(default_factory=list)
+    style: List[str] = Field(default_factory=list)
+    norms: List[str] = Field(default_factory=list)
+    process: List[str] = Field(default_factory=list)
+    architecture: str = Field(default="")
+    prompts: List[FramePromptSpec] = Field(default_factory=list)
+    skills: List[str] = Field(default_factory=list)
+    tools: List[str] = Field(default_factory=list)
+    mcp_servers: List[str] = Field(default_factory=list)
+    guards: List[FrameGuardSpec] = Field(default_factory=list)
+
+
 class ModelProvider(BaseModel):
     """Who serves a model: the vendor's own API, a cloud that hosts it, or
     the user's machine — with what a person choosing it has to be able to
@@ -1720,6 +1790,43 @@ class Agentspec(BaseModel):
             "delegate tasks to specialised child agents via the in-repo "
             "SubagentsCapability."
         ),
+    )
+
+
+class CogSpec(BaseModel):
+    """An AI worker you can hold to account (`agentspecs/cogs`).
+
+    A Cog extends an agent spec and is equipped with Frames. In the generated
+    catalogue it is resolved: `spec` is the agent it extends with the Cog's
+    changes, the Frames' skills, tools and MCP servers added, and their
+    context rendered onto the system prompt.
+    """
+
+    id: str = Field(..., description="Unique Cog identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What the Cog does")
+    agent: str = Field(..., description="The id of the agent spec it extends")
+    frames: List[str] = Field(
+        default_factory=list, description="The Frames it works under, in order"
+    )
+    lineage: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Every Frame that contributed: the named ones and those they inherit from"
+        ),
+    )
+    kind: str = Field(
+        default="context",
+        description="What the Cog packages: context, model or combined",
+    )
+    enabled: bool = Field(default=False, description="Whether it is offered today")
+    guards: List[FrameGuardSpec] = Field(
+        default_factory=list,
+        description="The Guards its Frames declare: what its output answers to",
+    )
+    spec: Agentspec = Field(
+        ..., description="The Cog as an agent spec, resolved and ready to launch"
     )
 
 
