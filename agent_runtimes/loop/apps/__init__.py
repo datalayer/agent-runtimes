@@ -11,9 +11,11 @@ decided.
 from agent_runtimes.loop.apps.rules import (
     BEHAVIOURS,
     DEFAULT_BEHAVIOURS,
+    Decision,
     behaviour_for,
     classes_of,
     condition_holds,
+    decision_for,
     is_comparable,
     is_pattern,
     is_read_only,
@@ -27,9 +29,11 @@ from agent_runtimes.loop.apps.rules import (
 __all__ = [
     "BEHAVIOURS",
     "DEFAULT_BEHAVIOURS",
+    "Decision",
     "behaviour_for",
     "classes_of",
     "condition_holds",
+    "decision_for",
     "is_comparable",
     "is_pattern",
     "is_read_only",

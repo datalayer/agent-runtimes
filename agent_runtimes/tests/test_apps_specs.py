@@ -22,6 +22,7 @@ from agent_runtimes.loop.apps import (
     behaviour_for,
     classes_of,
     condition_holds,
+    decision_for,
     is_comparable,
     is_pattern,
     is_read_only,
@@ -310,6 +311,49 @@ class TestWhatARuleDecides:
         ):
             ref = f"google-workspace.{tool}"
             assert behaviour_for(triage, ref, arguments=arguments) == "leave_to_me"
+
+    def test_a_decision_says_why(self) -> None:
+        triage = APP_CATALOGUE["inbox-triage"]
+        prefix = "google-workspace."
+        cases = [
+            ("send_gmail_message", {}, "ask_first", "rule_on_class", "Send a message"),
+            ("search_gmail_messages", {}, "do_it", "default", ""),
+            (
+                "modify_gmail_message_labels",
+                {"remove_label_ids": ["INBOX"]},
+                "do_it",
+                "rule_on_tool",
+                "Label and archive a message",
+            ),
+            (
+                "modify_gmail_message_labels",
+                {"add_label_ids": ["TRASH"]},
+                "leave_to_me",
+                "rule_on_class",
+                "Delete anything",
+            ),
+            ("search_drive_files", {}, "leave_to_me", "left_out", ""),
+            ("a_tool_added_tomorrow_gmail", {}, "leave_to_me", "unclassed", ""),
+        ]
+        for tool, arguments, behaviour, because, said in cases:
+            decision = decision_for(triage, prefix + tool, arguments=arguments)
+            assert (decision.behaviour, decision.because, decision.rule) == (
+                behaviour,
+                because,
+                said,
+            ), tool
+            assert decision.sentence.endswith(".")
+        apart = decision_for(triage, "tavily.tavily_search")
+        assert apart.because == "not_connected"
+        reader = app(connections=[{"server": "google-workspace", "access": "read"}])
+        blocked = decision_for(reader, prefix + "send_gmail_message")
+        assert (blocked.behaviour, blocked.because) == ("leave_to_me", "read_only")
+        assert "only reads" in blocked.sentence
+        # It is the same decision `behaviour_for` gives, for every tool.
+        for tool in tool_behaviours(triage):
+            assert decision_for(triage, tool, arguments={}).behaviour == behaviour_for(
+                triage, tool, arguments={}
+            )
 
     def test_an_application_has_a_face_and_its_permissions(self) -> None:
         faces = [found.emoji for found in list_apps()]
