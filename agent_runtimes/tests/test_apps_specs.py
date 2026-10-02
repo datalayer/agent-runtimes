@@ -22,6 +22,7 @@ from agent_runtimes.loop.apps import (
     behaviour_for,
     classes_of,
     condition_holds,
+    is_comparable,
     is_pattern,
     is_read_only,
     matches,
@@ -158,6 +159,15 @@ class TestActionClasses:
         assert not condition_holds(condition, {"mode": 1})
         assert not condition_holds(condition, {"mode": ["delete"]})
         assert not condition_holds(condition, {"other": "delete"})
+        # A number no reader holds exactly equals nothing: not even itself.
+        safe = 2**53 - 1
+        exact = ActionConditionSpec(argument="amount", equals=[safe])
+        assert condition_holds(exact, {"amount": safe})
+        assert not condition_holds(exact, {"amount": safe + 1})
+        assert not is_comparable(safe + 2) and not is_comparable(1e20)
+        assert not is_comparable(float("inf")) and not is_comparable(float("nan"))
+        assert is_comparable(2.5) and is_comparable(-3) and is_comparable("word")
+        assert not is_comparable(None) and not is_comparable(["x"])
         among = ActionConditionSpec(argument="ids", includes=["TRASH"])
         assert condition_holds(among, {"ids": ["INBOX", "trash"]})
         assert condition_holds(among, {"ids": "TRASH"})

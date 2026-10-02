@@ -138,8 +138,61 @@ describe('writing an Appspec', () => {
       expect(JSON.stringify(dumpAppspec(parseAppspec(shuffled).app))).toBe(
         JSON.stringify(dumpAppspec(parseAppspec(source).app)),
       );
+      // And it is the document agentspecs writes, key for key and in its order.
+      expect(JSON.stringify(dumpAppspec(parseAppspec(source).app))).toBe(
+        JSON.stringify(source),
+      );
       expect(written[0]).toBe('schema');
     }
+  });
+
+  it('writes the keys the spec does not declare in one order too', () => {
+    const tree = [
+      { id: 'root', component: 'Column', children: ['go'] },
+      {
+        id: 'go',
+        component: 'Button',
+        variant: 'primary',
+        action: { event: { name: 'run', context: { b: 1, a: 2 } } },
+      },
+    ];
+    const reversedTree = [
+      { children: ['go'], component: 'Column', id: 'root' },
+      {
+        action: { event: { context: { a: 2, b: 1 }, name: 'run' } },
+        variant: 'primary',
+        component: 'Button',
+        id: 'go',
+      },
+    ];
+    const document = (components: unknown, weights: unknown) => ({
+      kind: 'decision',
+      id: 'd',
+      name: 'D',
+      decision: { question: 'Which?', scenarios: [{ name: 'S', weights }] },
+      interface: { surface: { components } },
+    });
+    const one = dumpAppspec(
+      parseAppspec(document(tree, { Cost: 1, Accuracy: 2 })).app,
+    );
+    const other = dumpAppspec(
+      parseAppspec(document(reversedTree, { Accuracy: 2, Cost: 1 })).app,
+    );
+    expect(JSON.stringify(one)).toBe(JSON.stringify(other));
+    const written = one as {
+      decision: { scenarios: Array<{ weights: object }> };
+      interface: { surface: { components: Array<Record<string, unknown>> } };
+    };
+    expect(Object.keys(written.decision.scenarios[0].weights)).toEqual([
+      'Accuracy',
+      'Cost',
+    ]);
+    expect(Object.keys(written.interface.surface.components[1])).toEqual([
+      'id',
+      'component',
+      'action',
+      'variant',
+    ]);
   });
 
   it('writes nothing that is at its default', () => {

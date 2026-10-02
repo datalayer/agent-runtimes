@@ -31,6 +31,7 @@ import {
   behaviourFor,
   classesOf,
   conditionHolds,
+  isComparable,
   isPattern,
   isReadOnly,
   matchesPattern,
@@ -144,6 +145,26 @@ describe('action classes', () => {
     expect(conditionHolds(condition, { mode: 1 })).toBe(false);
     expect(conditionHolds(condition, { mode: ['delete'] })).toBe(false);
     expect(conditionHolds(condition, { other: 'delete' })).toBe(false);
+    // A number no reader holds exactly equals nothing: not itself, not its neighbour.
+    const exact = {
+      argument: 'amount',
+      equals: [Number.MAX_SAFE_INTEGER],
+      classes: [],
+    };
+    expect(conditionHolds(exact, { amount: Number.MAX_SAFE_INTEGER })).toBe(
+      true,
+    );
+    expect(conditionHolds(exact, { amount: Number.MAX_SAFE_INTEGER + 1 })).toBe(
+      false,
+    );
+    expect(isComparable(Number.MAX_SAFE_INTEGER + 2)).toBe(false);
+    expect(
+      isComparable(1e20) || isComparable(Infinity) || isComparable(NaN),
+    ).toBe(false);
+    expect(isComparable(2.5) && isComparable(-3) && isComparable('word')).toBe(
+      true,
+    );
+    expect(isComparable(null) || isComparable(['x'])).toBe(false);
     const among = { argument: 'ids', includes: ['TRASH'], classes: [] };
     expect(conditionHolds(among, { ids: ['INBOX', 'trash'] })).toBe(true);
     expect(conditionHolds(among, { ids: 'TRASH' })).toBe(true);

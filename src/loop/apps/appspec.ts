@@ -13,8 +13,10 @@
  *
  * {@link parseAppspec} reads the first into the second, and
  * {@link dumpAppspec} writes it back: the same application always writes the
- * same document, keys in one fixed order, so that a difference between two
- * versions shows what changed and nothing else. Reading what was written
+ * same document, keys in one fixed order — the spec's own where it declares
+ * them, alphabetical where it does not (a scenario's weights, a component of
+ * a surface) — so that a difference between two versions shows what changed
+ * and nothing else. Reading what was written
  * gives the application back, and writing what was read gives the document
  * back — which is what lets three editors work on one file.
  *
@@ -541,10 +543,31 @@ class Writer {
   }
 }
 
+/** A value with the keys of every mapping in it in alphabetical order. */
+function sorted(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sorted);
+  }
+  if (isData(value)) {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(key => [key, sorted(value[key])]),
+    );
+  }
+  return value;
+}
+
+/** A component as it is written: its `id`, what it is, then the rest in alphabetical order. */
+function dumpComponent(component: Data): Data {
+  const { id, component: what, ...rest } = component;
+  return { id, component: what, ...(sorted(rest) as Data) };
+}
+
 function dumpSurface(surface: AppSurfaceSpec): Data {
   return new Writer()
     .text('protocol', surface.protocol, DEFAULT_PROTOCOL)
-    .list('components', surface.components)
+    .list('components', surface.components.map(dumpComponent))
     .text('composed_by', surface.composedBy)
     .text('composed_at', surface.composedAt).data;
 }
@@ -610,7 +633,8 @@ function dumpDecision(decision: AppDecisionSpec): Data {
         scenario =>
           new Writer()
             .text('name', scenario.name, '\u0000')
-            .part('weights', { ...scenario.weights }).data,
+            // By criterion name, in alphabetical order: the spec declares no order.
+            .part('weights', sorted(scenario.weights) as Data).data,
       ),
     )
     .text('judgment_model', decision.judgmentModel).data;

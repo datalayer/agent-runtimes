@@ -108,11 +108,24 @@ export function matchesPattern(name: string, pattern: string): boolean {
   return new RegExp(`^${expression}$`).test(name);
 }
 
+/**
+ * Whether a value is one every reader compares the same way: a word, true or
+ * false, or a number that is finite and — when it is whole — held exactly.
+ * Beyond `Number.MAX_SAFE_INTEGER` two different integers are one number
+ * here and two in Python.
+ */
+export const isComparable = (value: unknown): boolean =>
+  typeof value === 'string' ||
+  typeof value === 'boolean' ||
+  (typeof value === 'number' &&
+    Number.isFinite(value) &&
+    (!Number.isInteger(value) || Number.isSafeInteger(value)));
+
 /** Whether an argument's value is the one a condition names; words whatever their case. */
 const same = (value: unknown, wanted: unknown): boolean =>
   typeof value === 'string' && typeof wanted === 'string'
     ? value.trim().toLowerCase() === wanted.trim().toLowerCase()
-    : value === wanted;
+    : isComparable(value) && isComparable(wanted) && value === wanted;
 
 /** Whether the arguments of a call make a condition true. */
 export function conditionHolds(

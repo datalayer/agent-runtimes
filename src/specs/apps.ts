@@ -844,40 +844,40 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             id: 'seats',
             component: 'Slider',
             label: 'Seats',
+            max: 1000,
+            min: 1,
             value: {
               path: '/inputs/seats',
             },
-            min: 1,
-            max: 1000,
           },
           {
             id: 'plan',
             component: 'ChoicePicker',
             label: 'Plan',
+            options: ['Team', 'Business', 'Enterprise'],
             value: {
               path: '/inputs/plan',
             },
-            options: ['Team', 'Business', 'Enterprise'],
           },
           {
             id: 'term',
             component: 'ChoicePicker',
             label: 'Term',
+            options: ['Monthly', 'Annual'],
             value: {
               path: '/inputs/term',
             },
-            options: ['Monthly', 'Annual'],
           },
           {
             id: 'run',
             component: 'Button',
-            child: 'run-label',
-            variant: 'primary',
             action: {
               event: {
                 name: 'run',
               },
             },
+            child: 'run-label',
+            variant: 'primary',
           },
           {
             id: 'run-label',
@@ -1016,21 +1016,21 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           name: 'Quality first',
           weights: {
-            'Pass rate': 4.0,
             'Cost per task': 0.0,
-            Latency: 0.0,
             'Failure severity': 3.0,
             'Formatting failures block shipping': 1.0,
+            Latency: 0.0,
+            'Pass rate': 4.0,
           },
         },
         {
           name: 'Cost first',
           weights: {
-            'Pass rate': 2.0,
             'Cost per task': 4.0,
-            Latency: 2.0,
             'Failure severity': 1.0,
             'Formatting failures block shipping': 0.0,
+            Latency: 2.0,
+            'Pass rate': 2.0,
           },
         },
       ],

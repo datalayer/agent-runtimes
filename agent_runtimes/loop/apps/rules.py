@@ -95,13 +95,35 @@ def matches(name: str, pattern: str) -> bool:
     return re.fullmatch(expression, name, flags=re.DOTALL) is not None
 
 
+#: The largest whole number every reader holds exactly: JavaScript's, 2**53 - 1.
+MAX_SAFE_INTEGER = 9007199254740991
+
+
+def is_comparable(value: Any) -> bool:
+    """Whether a value is one every reader compares the same way.
+
+    A word, true or false, or a number that is finite and — when it is whole —
+    held exactly by a JavaScript number.
+    """
+    if isinstance(value, (str, bool)):
+        return True
+    if isinstance(value, int):
+        return abs(value) <= MAX_SAFE_INTEGER
+    if isinstance(value, float):
+        if value != value or value in (float("inf"), float("-inf")):
+            return False
+        return not value.is_integer() or abs(value) <= MAX_SAFE_INTEGER
+    return False
+
+
 def _same(value: Any, wanted: Any) -> bool:
     """Whether an argument's value is the one a condition names; words whatever their case."""
     if isinstance(value, str) and isinstance(wanted, str):
         return value.strip().lower() == wanted.strip().lower()
     if isinstance(value, bool) or isinstance(wanted, bool):
         return isinstance(value, bool) and isinstance(wanted, bool) and value is wanted
-    return bool(value == wanted)
+    # A number no reader holds exactly is equal to nothing.
+    return is_comparable(value) and is_comparable(wanted) and bool(value == wanted)
 
 
 def condition_holds(
