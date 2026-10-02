@@ -178,6 +178,10 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/ui_plugins.py \
 	agent_runtimes/specs/frames.py \
 	agent_runtimes/specs/cogs.py \
+	agent_runtimes/specs/guards.py \
+	agent_runtimes/specs/gates.py \
+	agent_runtimes/specs/tracks.py \
+	agent_runtimes/specs/ops.py \
 	agent_runtimes/specs/models.py \
 	agent_runtimes/specs/model_providers.py \
 	agent_runtimes/specs/memory.py \
@@ -426,7 +430,7 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, frames, cogs, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, frames, cogs, ops, guards, gates, tracks, MCP servers, skills, envvars)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)
@@ -516,6 +520,42 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	    --typescript-output src/specs/cogs.ts; \
 	else \
 	  echo "Skipping Cog specifications: $(AGENTSPECS_DIR)/agentspecs/cogs not found (agentspecs < 0.0.12)"; \
+	fi
+	$(call step,Generating Guard specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/guards" ]; then \
+	  python scripts/codegen/generate_ops.py --kind guards \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/guards \
+	    --python-output agent_runtimes/specs/guards.py \
+	    --typescript-output src/specs/guards.ts; \
+	else \
+	  echo "Skipping Guard specifications: $(AGENTSPECS_DIR)/agentspecs/guards not found (agentspecs < 0.0.14)"; \
+	fi
+	$(call step,Generating Gate specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/gates" ]; then \
+	  python scripts/codegen/generate_ops.py --kind gates \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/gates \
+	    --python-output agent_runtimes/specs/gates.py \
+	    --typescript-output src/specs/gates.ts; \
+	else \
+	  echo "Skipping Gate specifications: $(AGENTSPECS_DIR)/agentspecs/gates not found (agentspecs < 0.0.14)"; \
+	fi
+	$(call step,Generating Track specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/tracks" ]; then \
+	  python scripts/codegen/generate_ops.py --kind tracks \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/tracks \
+	    --python-output agent_runtimes/specs/tracks.py \
+	    --typescript-output src/specs/tracks.ts; \
+	else \
+	  echo "Skipping Track specifications: $(AGENTSPECS_DIR)/agentspecs/tracks not found (agentspecs < 0.0.14)"; \
+	fi
+	$(call step,Generating Op specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/ops" ]; then \
+	  python scripts/codegen/generate_ops.py --kind ops \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/ops \
+	    --python-output agent_runtimes/specs/ops.py \
+	    --typescript-output src/specs/ops.ts; \
+	else \
+	  echo "Skipping Op specifications: $(AGENTSPECS_DIR)/agentspecs/ops not found (agentspecs < 0.0.14)"; \
 	fi
 	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \

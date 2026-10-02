@@ -1830,6 +1830,181 @@ class CogSpec(BaseModel):
     )
 
 
+class GuardSignalSpec(BaseModel):
+    """Something a Guard reports, which a Gate's condition reads."""
+
+    name: str = Field(..., description="The name a Gate's `when` uses")
+    type: str = Field(default="boolean", description="boolean, number or string")
+    description: str = Field(default="", description="What it measures")
+
+
+class GuardSpec(GuardrailSpec):
+    """A reusable check (`agentspecs/guards`): a Guard extends a guardrail.
+
+    The guardrail is the policy; the Guard verifies that the work stayed
+    within it. In the generated catalogue a Guard is resolved: it carries the
+    guardrail's permissions, data scope and handling, and limits, under its
+    own identity, and `guardrail` names the guardrail it extends.
+    """
+
+    guardrail: str = Field(..., description="The id of the guardrail it extends")
+    category: str = Field(
+        ...,
+        description=(
+            "algorithmic, source-grounding, consensus, expert, policy-safety, "
+            "regression-drift or outcome"
+        ),
+    )
+    stages: List[str] = Field(
+        default_factory=list,
+        description="preflight, in_flight, post_run, continuous: where it may run",
+    )
+    method: str = Field(default="algorithmic", description="algorithmic, cog or human")
+    check: str = Field(default="", description="What is verified")
+    signals: List[GuardSignalSpec] = Field(
+        default_factory=list, description="What it reports for a Gate to decide on"
+    )
+    required: bool = Field(
+        default=True, description="Whether the work counts only once it has passed"
+    )
+    enabled: bool = Field(default=True, description="Whether an Op may name it")
+    tags: List[str] = Field(default_factory=list)
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+
+
+class GateSpec(BaseModel):
+    """A decision point of an Op (`agentspecs/gates`): Guards check, Gates decide."""
+
+    id: str = Field(..., description="Unique Gate identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What decision it makes")
+    stage: str = Field(default="post_run", description="The stage it decides at")
+    guards: List[str] = Field(
+        default_factory=list, description="The Guards whose results it reads"
+    )
+    when: str = Field(
+        ..., description="The condition on its Guards' signals, or `always`"
+    )
+    then: str = Field(..., description="What happens when the condition holds")
+    otherwise: str = Field(
+        default="proceed", description="What happens when it does not"
+    )
+    signals: List[str] = Field(
+        default_factory=list, description="The signals the condition reads"
+    )
+    reviewers: List[str] = Field(
+        default_factory=list, description="The roles a decision is handed to"
+    )
+    max_retries: int = Field(default=0, description="How often `retry` may be decided")
+    enabled: bool = Field(default=True, description="Whether an Op may name it")
+    tags: List[str] = Field(default_factory=list)
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+
+
+class TrackSpec(BaseModel):
+    """What evidence a run keeps, and for how long (`agentspecs/tracks`)."""
+
+    id: str = Field(..., description="Unique Track identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What the record is for")
+    retain_for: str = Field(..., description="The retention, e.g. `7_years`")
+    retention_days: int = Field(default=0, description="The retention, as days")
+    include: List[str] = Field(
+        default_factory=list, description="What a record has to include"
+    )
+    readers: List[str] = Field(
+        default_factory=list, description="The roles that may read a record"
+    )
+    redact: List[str] = Field(
+        default_factory=list, description="Field patterns kept out of the record"
+    )
+    feeds_memory: bool = Field(
+        default=False,
+        description="Whether corrections and overrides feed Organizational Memory",
+    )
+    exchangeable: bool = Field(
+        default=False, description="Whether a record may leave the Hub: it may not"
+    )
+    enabled: bool = Field(default=True, description="Whether an Op may name it")
+    tags: List[str] = Field(default_factory=list)
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+
+
+class OpCogSpec(BaseModel):
+    """A Cog as an Op names it."""
+
+    id: str = Field(..., description="The Cog, in the Cog catalogue")
+    agent: str = Field(..., description="The agent spec the Cog extends")
+    frames: List[str] = Field(default_factory=list, description="The Cog's Frames")
+    kind: str = Field(default="context", description="What the Cog packages")
+
+
+class OpSupervisorSpec(BaseModel):
+    """What coordinates the Cogs of an Op."""
+
+    model: str = Field(..., description="The model that supervises")
+    instructions: str = Field(default="", description="How the Cogs are sequenced")
+
+
+class OpGuardsSpec(BaseModel):
+    """The Guards of an Op, by the stage they run at, each resolved."""
+
+    preflight: List[GuardSpec] = Field(default_factory=list)
+    in_flight: List[GuardSpec] = Field(default_factory=list)
+    post_run: List[GuardSpec] = Field(default_factory=list)
+    continuous: List[GuardSpec] = Field(default_factory=list)
+
+
+class OpSpec(BaseModel):
+    """An orchestrated, supervised workflow (`agentspecs/ops`).
+
+    Cogs do the work; a validation strategy says how it is verified: Guards
+    by stage, the Gates that decide, and the Track kept as evidence. In the
+    generated catalogue an Op is resolved: everything it names is in it.
+    """
+
+    id: str = Field(..., description="Unique Op identifier")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="The outcome it produces")
+    owner: str = Field(..., description="Who is accountable for the outcome")
+    goal: str = Field(default="", description="What a run is asked to achieve")
+    cogs: List[OpCogSpec] = Field(
+        default_factory=list, description="The Cogs that do the work"
+    )
+    frames: List[str] = Field(
+        default_factory=list, description="Frames applied at the workflow level"
+    )
+    lineage: List[str] = Field(
+        default_factory=list,
+        description="Every Frame that orients the Op, its Cogs' included",
+    )
+    supervisor: OpSupervisorSpec = Field(..., description="What coordinates the Cogs")
+    guards: OpGuardsSpec = Field(
+        default_factory=OpGuardsSpec, description="The Guards, by stage"
+    )
+    frame_guards: List[FrameGuardSpec] = Field(
+        default_factory=list, description="The checks its Frames declare"
+    )
+    gates: List[GateSpec] = Field(
+        default_factory=list, description="The Gates, in the order they are met"
+    )
+    track: TrackSpec = Field(..., description="The Track kept as evidence")
+    triggers: List[str] = Field(
+        default_factory=list, description="launcher, command, button, schedule"
+    )
+    enabled: bool = Field(default=False, description="Whether it is offered today")
+    tags: List[str] = Field(default_factory=list)
+    icon: Optional[str] = Field(default=None, description="Icon identifier")
+    emoji: Optional[str] = Field(default=None, description="Emoji representation")
+    color: Optional[str] = Field(default=None, description="Accent colour")
+
+
 class TeamSubagentspec(BaseModel):
     """A specialist a team member may hand work to.
 
