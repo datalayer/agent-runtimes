@@ -9,4 +9,5 @@
  * @module loop/apps
  */
 
+export * from './appspec';
 export * from './rules';

@@ -65,6 +65,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     specs: list[dict[str, Any]] = []
     behaviours: dict[str, dict[str, str]] = {}
     escalations: dict[str, dict[str, Any]] = {}
+    sources: dict[str, Any] = {}
     for identity in sorted(apps):
         app = apps[identity]
         spec = app.model_dump(mode="json", by_alias=True)
@@ -76,6 +77,16 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             for tool, behaviour in sorted(apps_module.tool_behaviours(app).items())
         }
         escalations[identity] = dict(sorted(apps_module.tool_escalations(app).items()))
+        source = apps_module.dump_app(app)
+        # The layout of its kind is not written: an editor cannot tell one
+        # that was said from one that was not, and writes neither.
+        if (source.get("interface") or {}).get("layout") == apps_module.DEFAULT_LAYOUTS[
+            app.kind
+        ].value:
+            del source["interface"]["layout"]
+            if not source["interface"]:
+                del source["interface"]
+        sources[identity] = source
         for rule in spec["rules"]:
             rule["applies_to"] = (
                 [rule["applies_to"]]
@@ -126,6 +137,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         "servers": servers,
         "behaviours": behaviours,
         "escalations": escalations,
+        "sources": sources,
     }
     return specs, actions
 
@@ -231,7 +243,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
+def generate_typescript_code(
+    specs: list[dict[str, Any]], sources: dict[str, Any]
+) -> str:
     """Generate the TypeScript application catalogue."""
     lines = [
         "/*",
@@ -273,6 +287,15 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "      : undefined)",
             "  );",
             "}",
+            "",
+            "/**",
+            " * Each application as the document its file holds: the spec's own words,",
+            " * nothing written that is at its default. What reading and writing an",
+            " * Appspec have to give back.",
+            " */",
+            "export const APP_SOURCES: Record<string, Record<string, unknown>> = "
+            + json.dumps(sources, indent=2, ensure_ascii=False)
+            + ";",
             "",
             "/** Every application of the catalogue, or those of a kind. */",
             "export function listApps(kind?: AppKind): AppSpec[] {",
@@ -419,7 +442,10 @@ def main() -> None:
     specs, actions = load_specs(args.specs_dir)
     outputs = [
         (args.python_output, generate_python_code(specs)),
-        (args.typescript_output, generate_typescript_code(specs)),
+        (
+            args.typescript_output,
+            generate_typescript_code(specs, actions["sources"]),
+        ),
         (args.actions_python_output, generate_actions_python_code(actions)),
         (args.actions_typescript_output, generate_actions_typescript_code(actions)),
     ]

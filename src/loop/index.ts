@@ -325,4 +325,11 @@ export {
   toolEscalations,
   type BehaviourOptions,
   type ToolArguments,
+  APP_SCHEMA,
+  APPSPEC_KEY_ORDER,
+  DEFAULT_LAYOUTS as APP_DEFAULT_LAYOUTS,
+  dumpAppspec,
+  emptyAppspec,
+  parseAppspec,
+  type ParsedAppspec,
 } from './apps';
