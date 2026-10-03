@@ -1,0 +1,91 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""Applications as Reactor plugins on the runtime (LOOP §5.4, F-12, F-13)."""
+
+from __future__ import annotations
+
+from typing import Any, Optional
+
+from reactor import ContributionRegistry
+
+from agent_runtimes.loop.apps.enforcement import AppRulesCapability
+from agent_runtimes.loop.apps.loading import load_app
+from agent_runtimes.loop.apps.plugins import (
+    APP_POINT,
+    CATALOGUE_PLUGIN,
+    app_plugin_name,
+    find_app,
+    list_apps,
+    manifest_of,
+    register_app,
+    rules_for,
+    unregister_app,
+)
+from agent_runtimes.specs.apps import APP_CATALOGUE
+
+EDITED = {
+    "schema": "loop.app/v1",
+    "id": "web-research",
+    "name": "Web research, edited",
+    "kind": "chat",
+    "agent": "cog-crawler:0.0.1",
+    "emoji": "\U0001f9ed",
+    "connections": [{"server": "tavily:0.0.1"}],
+}
+
+
+def test_the_catalogue_is_contributed_by_agent_runtimes() -> None:
+    registry = ContributionRegistry()
+    apps = list_apps(registry)
+    assert {app.id for app in apps} == set(APP_CATALOGUE)
+    assert {c.plugin for c in registry.get(APP_POINT)} == {CATALOGUE_PLUGIN}
+    assert find_app("web-research", registry) is APP_CATALOGUE["web-research"]
+    assert find_app("no-such-app", registry) is None
+
+
+def test_an_application_of_its_own_wins_over_the_catalogue_and_goes_away() -> None:
+    registry = ContributionRegistry()
+    edited = load_app(EDITED)
+    manifest = register_app(edited, registry)
+    assert manifest.name == app_plugin_name("web-research") == "loop-app-web-research"
+    assert (manifest.display_name, manifest.emoji) == (
+        "Web research, edited",
+        "\U0001f9ed",
+    )
+    assert find_app("web-research", registry) is edited
+    assert [app for app in list_apps(registry) if app.id == "web-research"] == [edited]
+    assert len(list_apps(registry)) == len(APP_CATALOGUE)
+    # Configured again: replaced, not added.
+    register_app(edited, registry)
+    assert len(registry.get(APP_POINT, plugins=[manifest.name])) == 1
+    assert unregister_app("web-research", registry)
+    assert find_app("web-research", registry) is APP_CATALOGUE["web-research"]
+
+
+def test_the_rules_are_an_extension_a_plugin_can_replace() -> None:
+    registry = ContributionRegistry()
+    app = find_app("web-research", registry)
+    assert app is not None
+    rules = rules_for(app, agent_id="default", registry=registry)
+    assert isinstance(rules, AppRulesCapability)
+    assert rules.agent_id == "default"
+
+    class Stricter(AppRulesCapability):
+        pass
+
+    def stricter(app: Any, agent_id: Optional[str]) -> AppRulesCapability:
+        return Stricter(app=app, agent_id=agent_id)
+
+    from reactor import PluginContributions
+
+    PluginContributions(registry, "a-stricter-policy").extend(
+        APP_POINT, app.id, stricter
+    )
+    assert isinstance(rules_for(app, registry=registry), Stricter)
+
+
+def test_the_manifest_is_the_applications_identity() -> None:
+    manifest = manifest_of(APP_CATALOGUE["inbox-triage"])
+    assert manifest.version == APP_CATALOGUE["inbox-triage"].version
+    assert "worker" in manifest.tags
