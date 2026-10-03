@@ -134,6 +134,9 @@ async def test_an_ag_ui_client_that_stops_at_run_finished_leaves_a_record():
     import asyncio
 
     import httpx
+
+    # AG-UI is the `ui` extra: without it there is no AG-UI client to drill.
+    pytest.importorskip("ag_ui")
     from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
     from starlette.applications import Starlette
     from starlette.routing import Route
@@ -141,7 +144,7 @@ async def test_an_ag_ui_client_that_stops_at_run_finished_leaves_a_record():
     spec = app(["outputs"])
     agent, sent = recorded(spec, ["Python is ", "a language."])
 
-    async def endpoint(request):  # type: ignore[no-untyped-def]
+    async def endpoint(request: Any) -> Any:
         return await AGUIAdapter.dispatch_request(request, agent=agent)
 
     server = Starlette(routes=[Route("/", endpoint, methods=["POST"])])
