@@ -8,7 +8,7 @@ Generate Python and TypeScript code from YAML UI-plugin specifications.
 A UI plugin is how an agent's answer becomes an interface rather than text —
 a protocol the host knows how to render (A2UI, MCP Apps, MCP UI). One YAML per
 plugin under ``agentspecs/ui-plugins``; an agent spec's ``ui_plugin`` names
-one. They were called UI extensions before agentspecs 0.0.11.
+one. A plugin hosts the visual components it renders (LOOP C-13).
 
 Usage:
     python generate_ui_plugins.py \\

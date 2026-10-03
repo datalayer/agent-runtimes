@@ -4,14 +4,14 @@
  */
 
 /**
- * MCP-UI extension for chat component.
+ * MCP-UI plugin for chat component.
  * Renders MCP UI protocol messages and resources.
  *
- * @module components/extensions/MCPUIExtension
+ * @module components/uiPlugins/MCPUIPlugin
  */
 
 import React from 'react';
-import type { ActivityRendererExtension } from '../types/extensions';
+import type { ActivityRendererUIPlugin } from '../types/uiPlugins';
 
 /**
  * MCP-UI resource types
@@ -71,7 +71,7 @@ export function createMCPUIRenderer(
     string,
     React.ComponentType<{ resource: MCPUIResource }>
   >,
-): ActivityRendererExtension {
+): ActivityRendererUIPlugin {
   // Track resources per session
   const contexts = new Map<string, MCPUIContext>();
 
@@ -345,10 +345,10 @@ const UIElement: React.FC<{ element: MCPUIMessage['uiElement'] }> = ({
 };
 
 /**
- * MCP-UI Extension implementation class
+ * MCP-UI UI plugin implementation class
  */
-export class MCPUIExtensionImpl {
-  private renderer: ActivityRendererExtension;
+export class MCPUIPluginImpl {
+  private renderer: ActivityRendererUIPlugin;
   private customRenderers: Record<
     string,
     React.ComponentType<{ resource: MCPUIResource }>
@@ -365,9 +365,9 @@ export class MCPUIExtensionImpl {
   }
 
   /**
-   * Get the activity renderer extension
+   * Get the activity renderer plugin
    */
-  getRenderer(): ActivityRendererExtension {
+  getRenderer(): ActivityRendererUIPlugin {
     return this.renderer;
   }
 
@@ -384,7 +384,7 @@ export class MCPUIExtensionImpl {
   }
 
   /**
-   * Cleanup extension state
+   * Cleanup plugin state
    */
   cleanup(): void {
     // Context cleanup handled by renderer garbage collection

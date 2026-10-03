@@ -16,10 +16,10 @@ import { Box, useThemeStore, getColorPalette } from '@datalayer/primer-addons';
 import { PersonIcon, ToolsIcon } from '@primer/octicons-react';
 import { AiAgentIcon } from '@datalayer/icons-react';
 import type { ChatMessage, ContentPart } from '../../types/messages';
-import type { ExtensionRegistry } from '../../extensions/ExtensionRegistry';
+import type { UIPluginRegistry } from '../../ui-plugins/UIPluginRegistry';
 import {
   useChatMessages,
-  useChatExtensionRegistry,
+  useChatUIPluginRegistry,
 } from '../../stores/chatStore';
 
 /**
@@ -47,8 +47,8 @@ export interface ChatMessagesProps {
   /** Custom class name */
   className?: string;
 
-  /** Optional extension registry (defaults to store value) */
-  extensionRegistry?: ExtensionRegistry;
+  /** Optional plugin registry (defaults to store value) */
+  uiPluginRegistry?: UIPluginRegistry;
 }
 
 /**
@@ -61,11 +61,11 @@ export function ChatMessages({
   showAvatars = true,
   autoScroll = true,
   className,
-  extensionRegistry: extensionRegistryProp,
+  uiPluginRegistry: uiPluginRegistryProp,
 }: ChatMessagesProps) {
   const messages = useChatMessages();
-  const storeExtensionRegistry = useChatExtensionRegistry();
-  const extensionRegistry = extensionRegistryProp ?? storeExtensionRegistry;
+  const storeUIPluginRegistry = useChatUIPluginRegistry();
+  const uiPluginRegistry = uiPluginRegistryProp ?? storeUIPluginRegistry;
   const containerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
 
@@ -88,14 +88,12 @@ export function ChatMessages({
       return messageRenderer(message);
     }
 
-    // Check extension registry for custom renderer
-    if (extensionRegistry) {
-      const messageRenderers = extensionRegistry.getMessageRenderers();
-      const extensionRenderer = messageRenderers.find(r =>
-        r.canRender(message),
-      );
-      if (extensionRenderer) {
-        return extensionRenderer.render({
+    // Check plugin registry for custom renderer
+    if (uiPluginRegistry) {
+      const messageRenderers = uiPluginRegistry.getMessageRenderers();
+      const pluginRenderer = messageRenderers.find(r => r.canRender(message));
+      if (pluginRenderer) {
+        return pluginRenderer.render({
           message,
           isStreaming: false,
         });
@@ -184,7 +182,7 @@ export function ChatMessages({
             {renderMessageContent(
               message,
               activityRenderer,
-              extensionRegistry ?? undefined,
+              uiPluginRegistry ?? undefined,
             )}
           </Box>
         </Box>
@@ -240,7 +238,7 @@ function renderMessageContent(
     type: string;
     data: unknown;
   }) => React.ReactNode,
-  extensionRegistry?: ExtensionRegistry,
+  uiPluginRegistry?: UIPluginRegistry,
 ): React.ReactNode {
   const { content } = message;
 
@@ -254,7 +252,7 @@ function renderMessageContent(
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {content.map((part, index) =>
-          renderContentPart(part, index, activityRenderer, extensionRegistry),
+          renderContentPart(part, index, activityRenderer, uiPluginRegistry),
         )}
       </Box>
     );
@@ -273,7 +271,7 @@ function renderContentPart(
     type: string;
     data: unknown;
   }) => React.ReactNode,
-  extensionRegistry?: ExtensionRegistry,
+  uiPluginRegistry?: UIPluginRegistry,
 ): React.ReactNode {
   switch (part.type) {
     case 'text':
@@ -376,9 +374,9 @@ function renderContentPart(
         );
       }
 
-      // Check extension registry
-      if (extensionRegistry) {
-        const renderer = extensionRegistry.getActivityRenderer(
+      // Check plugin registry
+      if (uiPluginRegistry) {
+        const renderer = uiPluginRegistry.getActivityRenderer(
           part.activityType || 'unknown',
         );
         if (renderer) {

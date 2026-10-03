@@ -22,7 +22,7 @@ export * from './eventspecs';
 export * from './evals';
 export * from './examples';
 export * from './execution';
-export * from './extensions';
+export * from './uiPlugins';
 export * from './guardrails';
 export * from './inference';
 export * from './loops';

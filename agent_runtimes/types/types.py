@@ -1723,11 +1723,8 @@ class Agentspec(BaseModel):
     )
     ui_plugin: Optional[str] = Field(
         default=None,
-        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`. "
-        "Called a UI extension before agentspecs 0.0.11: `uiExtension` and `ui_extension` are still read.",
-        validation_alias=AliasChoices(
-            "uiPlugin", "ui_plugin", "uiExtension", "ui_extension"
-        ),
+        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`.",
+        validation_alias=AliasChoices("uiPlugin", "ui_plugin"),
         serialization_alias="uiPlugin",
     )
     trigger: Optional[Dict[str, Any]] = Field(

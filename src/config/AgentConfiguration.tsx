@@ -509,7 +509,7 @@ const EXTENSIONS: { value: Extension; label: string; description: string }[] = [
   {
     value: 'a2ui',
     label: 'A2UI',
-    description: 'Agent-to-UI extension',
+    description: 'Agent-to-UI plugin',
   },
   {
     value: 'mcp-ui',

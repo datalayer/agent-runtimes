@@ -4,10 +4,10 @@
  */
 
 /**
- * Extension types for chat component.
- * Extensions add pluggable UI and protocol capabilities.
+ * UI plugin types for the chat.
+ * UI plugins add pluggable UI and protocol capabilities.
  *
- * @module types/extension
+ * @module types/plugin
  */
 
 import type { ReactNode } from 'react';
@@ -16,24 +16,24 @@ import type { ToolRenderProps } from './tools';
 import type { ProtocolEvent } from './protocol';
 
 /**
- * Extension type identifiers
+ * UI plugin type identifiers
  */
-export type ExtensionType =
+export type UIPluginType =
   | 'a2ui' // A2UI message rendering
   | 'mcp-ui' // MCP UI resources
   | 'tool-approval' // Human-in-the-loop UI
   | 'dev-console' // Debug panel
   | 'activity' // Custom activity renderers
-  | 'custom'; // User-defined extensions
+  | 'custom'; // User-defined uiPlugins
 
 /**
- * Extension lifecycle hooks
+ * UI plugin lifecycle hooks
  */
-export interface ExtensionLifecycle {
-  /** Called when extension is registered */
+export interface UIPluginLifecycle {
+  /** Called when plugin is registered */
   onRegister?: () => void;
 
-  /** Called when extension is unregistered */
+  /** Called when plugin is unregistered */
   onUnregister?: () => void;
 
   /** Called when chat context changes */
@@ -41,16 +41,16 @@ export interface ExtensionLifecycle {
 }
 
 /**
- * Message renderer extension
+ * Message renderer plugin
  * Used to render custom message types (A2UI, activity messages, etc.)
  */
-export interface MessageRendererExtension {
+export interface MessageRendererUIPlugin {
   type: 'message-renderer';
 
-  /** Unique extension name */
+  /** Unique plugin name */
   name: string;
 
-  /** Check if this extension can render the message */
+  /** Check if this plugin can render the message */
   canRender: (message: ChatMessage) => boolean;
 
   /** Render the message */
@@ -61,16 +61,16 @@ export interface MessageRendererExtension {
 }
 
 /**
- * Activity renderer extension
+ * Activity renderer plugin
  * Used to render protocol-specific activity messages
  */
-export interface ActivityRendererExtension {
+export interface ActivityRendererUIPlugin {
   type: 'activity-renderer';
 
-  /** Unique extension name */
+  /** Unique plugin name */
   name: string;
 
-  /** Activity types this extension handles */
+  /** Activity types this plugin handles */
   activityTypes: string[];
 
   /** Render the activity */
@@ -85,16 +85,16 @@ export interface ActivityRendererExtension {
 }
 
 /**
- * Tool UI extension
+ * Tool UI plugin
  * Used to provide custom UI for tool calls (beyond tool's own render)
  */
-export interface ToolUIExtension {
+export interface ToolUIPlugin {
   type: 'tool-ui';
 
-  /** Unique extension name */
+  /** Unique plugin name */
   name: string;
 
-  /** Tool names this extension handles (or '*' for all) */
+  /** Tool names this plugin handles (or '*' for all) */
   toolNames: string[] | '*';
 
   /** Render custom UI for tool */
@@ -110,16 +110,16 @@ export interface ToolUIExtension {
 }
 
 /**
- * Protocol event extension
+ * Protocol event plugin
  * Used to handle custom protocol events
  */
-export interface ProtocolEventExtension {
+export interface ProtocolEventUIPlugin {
   type: 'protocol-event';
 
-  /** Unique extension name */
+  /** Unique plugin name */
   name: string;
 
-  /** Event types this extension handles */
+  /** Event types this plugin handles */
   eventTypes: string[];
 
   /** Handle the protocol event */
@@ -130,13 +130,13 @@ export interface ProtocolEventExtension {
 }
 
 /**
- * Panel extension
+ * Panel plugin
  * Used to add custom panels (dev console, settings, etc.)
  */
-export interface PanelExtension {
+export interface PanelUIPlugin {
   type: 'panel';
 
-  /** Unique extension name */
+  /** Unique plugin name */
   name: string;
 
   /** Panel title */
@@ -156,39 +156,39 @@ export interface PanelExtension {
 }
 
 /**
- * Union type for all extensions
+ * Union type for all uiPlugins
  */
-export type ChatExtension =
-  | MessageRendererExtension
-  | ActivityRendererExtension
-  | ToolUIExtension
-  | ProtocolEventExtension
-  | PanelExtension;
+export type ChatUIPlugin =
+  | MessageRendererUIPlugin
+  | ActivityRendererUIPlugin
+  | ToolUIPlugin
+  | ProtocolEventUIPlugin
+  | PanelUIPlugin;
 
 /**
- * Extension registration options
+ * UI plugin registration options
  */
-export interface ExtensionRegistrationOptions {
-  /** Replace existing extension with same name */
+export interface UIPluginRegistrationOptions {
+  /** Replace existing plugin with same name */
   replace?: boolean;
 
-  /** Enable/disable extension */
+  /** Enable/disable plugin */
   enabled?: boolean;
 }
 
 /**
- * Extension registry entry
+ * UI plugin registry entry
  */
-export interface ExtensionRegistryEntry {
-  extension: ChatExtension;
+export interface UIPluginRegistryEntry {
+  plugin: ChatUIPlugin;
   enabled: boolean;
   registeredAt: Date;
 }
 
 /**
- * A2UI specific extension types
+ * A2UI specific plugin types
  */
-export namespace A2UIExtension {
+export namespace A2UIPlugin {
   /** A2UI surface state */
   export interface Surface {
     id: string;
@@ -221,43 +221,43 @@ export namespace A2UIExtension {
 }
 
 /**
- * Type guard to check extension type
+ * Type guard to check plugin type
  */
-export function isMessageRendererExtension(
-  ext: ChatExtension,
-): ext is MessageRendererExtension {
+export function isMessageRendererUIPlugin(
+  ext: ChatUIPlugin,
+): ext is MessageRendererUIPlugin {
   return ext.type === 'message-renderer';
 }
 
-export function isActivityRendererExtension(
-  ext: ChatExtension,
-): ext is ActivityRendererExtension {
+export function isActivityRendererUIPlugin(
+  ext: ChatUIPlugin,
+): ext is ActivityRendererUIPlugin {
   return ext.type === 'activity-renderer';
 }
 
-export function isToolUIExtension(ext: ChatExtension): ext is ToolUIExtension {
+export function isToolUIPlugin(ext: ChatUIPlugin): ext is ToolUIPlugin {
   return ext.type === 'tool-ui';
 }
 
-export function isProtocolEventExtension(
-  ext: ChatExtension,
-): ext is ProtocolEventExtension {
+export function isProtocolEventUIPlugin(
+  ext: ChatUIPlugin,
+): ext is ProtocolEventUIPlugin {
   return ext.type === 'protocol-event';
 }
 
-export function isPanelExtension(ext: ChatExtension): ext is PanelExtension {
+export function isPanelUIPlugin(ext: ChatUIPlugin): ext is PanelUIPlugin {
   return ext.type === 'panel';
 }
 
 /**
- * Helper to create a message renderer extension
+ * Helper to create a message renderer plugin
  */
 export function createMessageRenderer(
   name: string,
-  canRender: MessageRendererExtension['canRender'],
-  render: MessageRendererExtension['render'],
+  canRender: MessageRendererUIPlugin['canRender'],
+  render: MessageRendererUIPlugin['render'],
   priority = 0,
-): MessageRendererExtension {
+): MessageRendererUIPlugin {
   return {
     type: 'message-renderer',
     name,
@@ -268,14 +268,14 @@ export function createMessageRenderer(
 }
 
 /**
- * Helper to create an activity renderer extension
+ * Helper to create an activity renderer plugin
  */
 export function createActivityRenderer(
   name: string,
   activityTypes: string[],
-  render: ActivityRendererExtension['render'],
+  render: ActivityRendererUIPlugin['render'],
   priority = 0,
-): ActivityRendererExtension {
+): ActivityRendererUIPlugin {
   return {
     type: 'activity-renderer',
     name,

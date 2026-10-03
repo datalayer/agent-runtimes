@@ -4,23 +4,23 @@
  */
 
 /**
- * Extension registry for chat component.
- * Manages custom renderers and extension points.
+ * UI plugin registry for the chat.
+ * Manages custom renderers and plugin points.
  *
- * @module components/extensions/ExtensionRegistry
+ * @module components/uiPlugins/UIPluginRegistry
  */
 
 import type {
-  ChatExtension,
-  MessageRendererExtension,
-  ActivityRendererExtension,
-  ToolUIExtension,
-  ProtocolEventExtension,
-  PanelExtension,
-} from '../types/extensions';
+  ChatUIPlugin,
+  MessageRendererUIPlugin,
+  ActivityRendererUIPlugin,
+  ToolUIPlugin,
+  ProtocolEventUIPlugin,
+  PanelUIPlugin,
+} from '../types/uiPlugins';
 
-/** Internal extension type for registry organization */
-export type InternalExtensionType =
+/** Internal plugin type for registry organization */
+export type InternalUIPluginType =
   | 'message-renderer'
   | 'activity-renderer'
   | 'tool-ui'
@@ -28,29 +28,29 @@ export type InternalExtensionType =
   | 'panel';
 
 /**
- * Get the internal type string from an extension
+ * Get the internal type string from an plugin
  */
-function getExtensionType(ext: ChatExtension): InternalExtensionType {
-  return ext.type as InternalExtensionType;
+function getUIPluginType(ext: ChatUIPlugin): InternalUIPluginType {
+  return ext.type as InternalUIPluginType;
 }
 
 /**
- * Get the name from an extension
+ * Get the name from an plugin
  */
-function getExtensionName(ext: ChatExtension): string {
+function getUIPluginName(ext: ChatUIPlugin): string {
   return ext.name;
 }
 
 /**
- * Extension registry class
+ * UI plugin registry class
  */
-export class ExtensionRegistry {
-  private extensions: Map<string, ChatExtension> = new Map();
-  private byType: Map<InternalExtensionType, Set<string>> = new Map();
+export class UIPluginRegistry {
+  private uiPlugins: Map<string, ChatUIPlugin> = new Map();
+  private byType: Map<InternalUIPluginType, Set<string>> = new Map();
 
   constructor() {
     // Initialize type maps
-    const types: InternalExtensionType[] = [
+    const types: InternalUIPluginType[] = [
       'message-renderer',
       'activity-renderer',
       'tool-ui',
@@ -63,67 +63,67 @@ export class ExtensionRegistry {
   }
 
   /**
-   * Register an extension
+   * Register an plugin
    */
-  register(extension: ChatExtension): void {
-    const name = getExtensionName(extension);
-    if (this.extensions.has(name)) {
+  register(plugin: ChatUIPlugin): void {
+    const name = getUIPluginName(plugin);
+    if (this.uiPlugins.has(name)) {
       console.warn(
-        `[ExtensionRegistry] Extension ${name} already registered, replacing`,
+        `[UIPluginRegistry] UI plugin ${name} already registered, replacing`,
       );
     }
 
-    this.extensions.set(name, extension);
-    this.byType.get(getExtensionType(extension))?.add(name);
+    this.uiPlugins.set(name, plugin);
+    this.byType.get(getUIPluginType(plugin))?.add(name);
   }
 
   /**
-   * Unregister an extension
+   * Unregister an plugin
    */
-  unregister(extensionName: string): void {
-    const extension = this.extensions.get(extensionName);
-    if (extension) {
-      this.byType.get(getExtensionType(extension))?.delete(extensionName);
-      this.extensions.delete(extensionName);
+  unregister(pluginName: string): void {
+    const plugin = this.uiPlugins.get(pluginName);
+    if (plugin) {
+      this.byType.get(getUIPluginType(plugin))?.delete(pluginName);
+      this.uiPlugins.delete(pluginName);
     }
   }
 
   /**
-   * Get an extension by name
+   * Get an plugin by name
    */
-  get<T extends ChatExtension>(extensionName: string): T | undefined {
-    return this.extensions.get(extensionName) as T | undefined;
+  get<T extends ChatUIPlugin>(pluginName: string): T | undefined {
+    return this.uiPlugins.get(pluginName) as T | undefined;
   }
 
   /**
-   * Get all extensions of a specific type
+   * Get all uiPlugins of a specific type
    */
-  getByType<T extends ChatExtension>(type: InternalExtensionType): T[] {
+  getByType<T extends ChatUIPlugin>(type: InternalUIPluginType): T[] {
     const names = this.byType.get(type) || new Set();
     return Array.from(names)
-      .map(name => this.extensions.get(name) as T)
+      .map(name => this.uiPlugins.get(name) as T)
       .filter(ext => ext !== undefined);
   }
 
   /**
-   * Get all registered extensions
+   * Get all registered uiPlugins
    */
-  getAll(): ChatExtension[] {
-    return Array.from(this.extensions.values());
+  getAll(): ChatUIPlugin[] {
+    return Array.from(this.uiPlugins.values());
   }
 
   /**
-   * Check if an extension is registered
+   * Check if an plugin is registered
    */
-  has(extensionName: string): boolean {
-    return this.extensions.has(extensionName);
+  has(pluginName: string): boolean {
+    return this.uiPlugins.has(pluginName);
   }
 
   /**
    * Get message renderers
    */
-  getMessageRenderers(): MessageRendererExtension[] {
-    return this.getByType<MessageRendererExtension>('message-renderer');
+  getMessageRenderers(): MessageRendererUIPlugin[] {
+    return this.getByType<MessageRendererUIPlugin>('message-renderer');
   }
 
   /**
@@ -131,9 +131,9 @@ export class ExtensionRegistry {
    */
   getActivityRenderer(
     activityType: string,
-  ): ActivityRendererExtension | undefined {
+  ): ActivityRendererUIPlugin | undefined {
     const renderers =
-      this.getByType<ActivityRendererExtension>('activity-renderer');
+      this.getByType<ActivityRendererUIPlugin>('activity-renderer');
 
     return renderers.find(r => r.activityTypes.includes(activityType));
   }
@@ -141,8 +141,8 @@ export class ExtensionRegistry {
   /**
    * Get tool UI for a specific tool
    */
-  getToolUI(toolName: string): ToolUIExtension | undefined {
-    const toolUIs = this.getByType<ToolUIExtension>('tool-ui');
+  getToolUI(toolName: string): ToolUIPlugin | undefined {
+    const toolUIs = this.getByType<ToolUIPlugin>('tool-ui');
 
     return toolUIs.find(
       ui => ui.toolNames === '*' || ui.toolNames.includes(toolName),
@@ -152,15 +152,15 @@ export class ExtensionRegistry {
   /**
    * Get all panels
    */
-  getPanels(): PanelExtension[] {
-    return this.getByType<PanelExtension>('panel');
+  getPanels(): PanelUIPlugin[] {
+    return this.getByType<PanelUIPlugin>('panel');
   }
 
   /**
    * Get protocol event handlers for an event type
    */
-  getProtocolEventHandlers(eventType: string): ProtocolEventExtension[] {
-    const handlers = this.getByType<ProtocolEventExtension>('protocol-event');
+  getProtocolEventHandlers(eventType: string): ProtocolEventUIPlugin[] {
+    const handlers = this.getByType<ProtocolEventUIPlugin>('protocol-event');
 
     return handlers.filter(
       h => h.eventTypes.includes(eventType) || h.eventTypes.includes('*'),
@@ -168,10 +168,10 @@ export class ExtensionRegistry {
   }
 
   /**
-   * Clear all extensions
+   * Clear all uiPlugins
    */
   clear(): void {
-    this.extensions.clear();
+    this.uiPlugins.clear();
     for (const set of this.byType.values()) {
       set.clear();
     }

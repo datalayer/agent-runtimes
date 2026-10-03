@@ -113,7 +113,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'A2UiAgentExample',
     () => import('./A2UiAgentExample'),
-    'A2UI Agent with built-in chat component and Python A2UI extension surface.',
+    'A2UI Agent with built-in chat component and Python A2UI UI plugin surface.',
   ),
   makeEntry(
     'AgUiAgenticExample',

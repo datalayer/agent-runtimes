@@ -455,8 +455,8 @@ from agent_runtimes.types import (
             protocol_val = spec.get("protocol")
             protocol_str = f'"{protocol_val}"' if protocol_val else "None"
             delegable_str = _fmt_py_delegable(spec.get("delegable", []))
-            ui_ext = spec.get("ui_plugin") or spec.get("ui_extension")
-            ui_ext_str = f'"{ui_ext}"' if ui_ext else "None"
+            ui_plugin = spec.get("ui_plugin")
+            ui_plugin_str = f'"{ui_plugin}"' if ui_plugin else "None"
             trigger_val = spec.get("trigger")
             model_cfg = spec.get("model_config")
             mcp_srv_tools = spec.get("mcp_server_tools")
@@ -567,7 +567,7 @@ from agent_runtimes.types import (
     goal={goal_str},
     delegable={delegable_str},
     protocol={protocol_str},
-    ui_plugin={ui_ext_str},
+    ui_plugin={ui_plugin_str},
     trigger={_fmt_py_literal(trigger_val)},
     model_configuration={_fmt_py_literal(model_cfg)},
     mcp_server_tools={_fmt_py_literal(mcp_srv_tools)},
@@ -1075,8 +1075,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             protocol_val = spec.get("protocol")
             protocol_ts = f"'{protocol_val}'" if protocol_val else "undefined"
             delegable_ts = _fmt_ts_delegable(spec.get("delegable", []))
-            ui_ext = spec.get("ui_plugin") or spec.get("ui_extension")
-            ui_ext_ts = f"'{ui_ext}'" if ui_ext else "undefined"
+            ui_plugin = spec.get("ui_plugin")
+            ui_plugin_ts = f"'{ui_plugin}'" if ui_plugin else "undefined"
             trigger_val = spec.get("trigger")
             model_cfg = spec.get("model_config")
             mcp_srv_tools = spec.get("mcp_server_tools")
@@ -1135,7 +1135,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     goal: {goal_ts},
     delegable: {delegable_ts},
     protocol: {protocol_ts},
-    uiPlugin: {ui_ext_ts},
+    uiPlugin: {ui_plugin_ts},
     trigger: {_fmt_ts_literal(trigger_val)},
     modelConfig: {_fmt_ts_literal(model_cfg)},
     mcpServerTools: {_fmt_ts_literal(mcp_srv_tools)},

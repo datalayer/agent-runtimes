@@ -4,23 +4,23 @@
  */
 
 /**
- * Extension exports for chat component.
+ * UI plugin exports for the chat: how an agent's answer becomes an interface (A2UI, MCP UI).
  *
- * @module components/extensions
+ * @module components/uiPlugins
  */
 
-export { ExtensionRegistry } from './ExtensionRegistry';
-export type { InternalExtensionType } from './ExtensionRegistry';
+export { UIPluginRegistry } from './UIPluginRegistry';
+export type { InternalUIPluginType } from './UIPluginRegistry';
 
 export {
   createA2UIRenderer,
-  A2UIExtensionImpl,
+  A2UIPluginImpl,
   type A2UIMessage,
-} from './A2UIExtension';
+} from './A2UIPlugin';
 
 export {
   createMCPUIRenderer,
-  MCPUIExtensionImpl,
+  MCPUIPluginImpl,
   type MCPUIMessage,
   type MCPUIResource,
-} from './MCPUIExtension';
+} from './MCPUIPlugin';
