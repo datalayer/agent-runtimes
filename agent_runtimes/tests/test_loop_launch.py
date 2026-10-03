@@ -354,7 +354,7 @@ def test_a_running_agent_runtime_is_offered_before_a_new_one(
     assert launch.choose_running(runtimes, can_ask=False) is None
 
     client = FakeClient()
-    client.list_runtimes = lambda: runtimes  # type: ignore[attr-defined]
+    client.list_runtimes = lambda: runtimes
     monkeypatch.setattr(launch, "make_client", lambda: (client, "the-token"))
     monkeypatch.setattr(
         launch, "_select", lambda question, choices, default: "runtime-9"
