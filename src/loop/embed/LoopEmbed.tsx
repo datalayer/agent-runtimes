@@ -204,7 +204,19 @@ export function LoopEmbed({
           {shell}
         </WindowFrame>
       ) : (
-        <Box sx={{ height: '100%', minHeight: 0 }}>{shell}</Box>
+        // Filling its host, whatever the host is: in a flex row it used to
+        // shrink to the chat's own width and leave the rest of the frame bare.
+        <Box
+          sx={{
+            height: '100%',
+            minHeight: 0,
+            width: '100%',
+            flex: '1 1 auto',
+            minWidth: 0,
+          }}
+        >
+          {shell}
+        </Box>
       )}
     </QueryClientProvider>
   );
