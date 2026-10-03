@@ -142,4 +142,49 @@ describe('the instant checks', () => {
     });
     expect(ruled.verdict).toBe(PASSES);
   });
+
+  it('count a rule on a versioned tool as a rule on that tool', () => {
+    const slack = checkAppspec({
+      ...BASE,
+      connections: [{ server: 'slack:0.0.1', access: 'write', as: 'user' }],
+    });
+    const tools = (slack.attention[0].match(/slack\.[a-z_]+/g) ?? []).map(
+      tool => tool.replace('slack.', 'slack:0.0.1.'),
+    );
+    expect(tools.length).toBeGreaterThan(0);
+    const ruled = checkAppspec({
+      ...BASE,
+      connections: [{ server: 'slack:0.0.1', access: 'write', as: 'user' }],
+      rules: [{ action: 'Post', applies_to: tools, behaviour: 'ask_first' }],
+    });
+    expect(ruled.attention.join(' ')).not.toMatch(/^It can send/);
+  });
+
+  it('refuse what the reader would otherwise replace with a default', () => {
+    const check = checkAppspec({
+      ...BASE,
+      connections: [{ server: 'tavily:0.0.1', access: 'admin', as: 'me' }],
+      rules: [{ action: 'Post', applies_to: 'send', behaviour: 'always' }],
+      interface: { layout: 'grid', accent: 'blue' },
+      tests: { ready_at: 2 },
+      record: { include: ['everything'] },
+      triggers: 'daily',
+      deployment: { embedded: { origins: ['https://example.com/path'] } },
+      permissions: { computer: { shell: 'yes' } },
+    });
+    expect(check.verdict).toBe(NOT_READY);
+    expect(check.problems).toEqual(
+      expect.arrayContaining([
+        'connections.0.access: is one of read, write.',
+        'connections.0.as: is one of owner, user.',
+        'rules.0.behaviour: is one of do_it, if_asked, ask_first, leave_to_me.',
+        'interface.layout: is one of chat, page, split.',
+        'tests.ready_at: is a share, from 0 to 1.',
+        'record.include.0: is one of conversations, actions, decisions, approvals, checks, sources, outputs, feedback.',
+        'triggers: is a list.',
+        'deployment.embedded.origins.0: is an origin: https://example.com, without a path.',
+        'permissions.computer.shell: is true or false.',
+      ]),
+    );
+  });
 });

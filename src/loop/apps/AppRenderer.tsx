@@ -22,7 +22,8 @@
  * @module loop/apps/AppRenderer
  */
 
-import type { ReactorPlugin } from '@datalayer/reactor';
+import { useMemo } from 'react';
+import type { PluginRef, ReactorPlugin } from '@datalayer/reactor';
 import type { AppSpec } from '../../types/agentspecs';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
@@ -45,10 +46,18 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
  * it, and one that does not creates the agent alone — the application is
  * then shown and not enforced, which is why a hosted application only runs
  * on a runtime that does.
+ *
+ * An application run by a team is not supported in the workspace yet: a team
+ * is not an agent spec, and is refused here rather than launched as one.
  */
 export function defineAppPlugin(
   app: AppSpec,
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
+  if (!app.agent) {
+    throw new Error(
+      `“${app.name}” is run by a team, which the workspace does not run as an application yet.`,
+    );
+  }
   return defineAgentCapacityPlugin({
     key: `app-${app.id}`,
     displayName: app.name,
@@ -78,15 +87,44 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
  * Every other prop is `LoopEmbed`'s, and wins over what the application
  * implies — a host that wants the editors beside a chat still says so.
  */
+/** No host plugins: one array, so that it never reads as a change. */
+const NO_PLUGINS: PluginRef[] = [];
+
 export function AppRenderer({
   app,
-  plugins = [],
+  plugins = NO_PLUGINS,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   const chatOnly = app.interface.layout === 'chat';
+  /*
+   * The application plugin, made once per application. `LoopEmbed` rebuilds
+   * its whole reactor when its plugins change, so a new plugin on every
+   * render of the host would restart the running workspace. The key is the
+   * application as its file holds it: a change to it is a new application.
+   */
+  const source = JSON.stringify(dumpAppspec(app));
+  const appPlugin = useMemo(
+    () => (app.agent ? defineAppPlugin(app) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [source],
+  );
+  const allPlugins = useMemo(
+    () => (appPlugin ? [appPlugin, ...plugins] : plugins),
+    [appPlugin, plugins],
+  );
+  if (!appPlugin) {
+    return (
+      <div role="status" style={{ padding: 16 }}>
+        “{app.name}” is run by a team, which the workspace does not run as an
+        application yet.
+      </div>
+    );
+  }
   return (
     <LoopEmbed
-      agentId={agentIdOf(app)}
+      // The application's own agent: created under its id, so that its
+      // spec is applied to an agent of its own, never to the one it extends.
+      agentId={app.id}
       editors={!chatOnly}
       showViewSelector={!chatOnly}
       teamPicker={false}
@@ -94,7 +132,7 @@ export function AppRenderer({
       graph={false}
       pluginsPanel={false}
       {...embed}
-      plugins={[defineAppPlugin(app), ...plugins]}
+      plugins={allPlugins}
     />
   );
 }
