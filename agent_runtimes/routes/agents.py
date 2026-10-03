@@ -2291,6 +2291,11 @@ async def create_agent(
                     ),
                 )
                 capabilities.insert(2, AppRecordCapability(recorder=recorder))
+                logger.info(
+                    "Application %s on agent %s: its rules, checks and record attached.",
+                    running_app.id,
+                    agent_id,
+                )
 
             # And always count what the runs cost.
             #

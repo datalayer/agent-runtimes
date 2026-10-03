@@ -103,7 +103,14 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> None:
             json=body,
             headers={"Authorization": f"Bearer {token}"},
         )
-        if response.status_code >= 300:
+        if response.status_code < 300:
+            logger.info(
+                "The record of %s sent: %d entries, session %s.",
+                body.get("app_uid"),
+                len(body.get("entries") or []),
+                body.get("session_uid"),
+            )
+        else:
             logger.warning(
                 "The record of %s was refused (%s): %s",
                 body.get("app_uid"),
@@ -217,6 +224,7 @@ class AppRecordCapability(AbstractCapability[Any]):
 
     async def before_run(self, ctx: RunContext[Any]) -> None:
         session = str(ctx.conversation_id or ctx.run_id or "run")
+        logger.info("Recording %s, session %s.", self.recorder.app.id, session)
         self._sessions[self._key(ctx)] = session
         self.recorder.start(session)
 
