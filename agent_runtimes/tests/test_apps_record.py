@@ -172,3 +172,52 @@ async def test_an_ag_ui_client_that_stops_at_run_finished_leaves_a_record():
     assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]
     assert sent[0]["session_uid"] == "t-1"
     assert sent[0]["entries"][1]["summary"] == "Python is a language."
+
+
+async def test_a_stream_whose_closing_raises_still_sends_the_record():
+    """Closing an MCP server's stream from another task raises (anyio)."""
+    import asyncio
+    from types import SimpleNamespace
+
+    from pydantic_ai.messages import FinalResultEvent, PartStartEvent, TextPart
+
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    capability = AppRecordCapability(
+        recorder=AppRecorder(app=app(["outputs"]), send=send)
+    )
+    ctx: Any = SimpleNamespace(run_id="r-1", conversation_id="t-1")
+    await capability.before_run(ctx)
+
+    class Stream:
+        def __init__(self) -> None:
+            self.events = iter(
+                [
+                    FinalResultEvent(tool_name=None, tool_call_id=None),
+                    PartStartEvent(index=0, part=TextPart(content="An answer.")),
+                ]
+            )
+
+        def __aiter__(self) -> "Stream":
+            return self
+
+        async def __anext__(self) -> Any:
+            try:
+                return next(self.events)
+            except StopIteration:
+                raise StopAsyncIteration from None
+
+        async def aclose(self) -> None:
+            raise RuntimeError("Attempted to exit cancel scope in a different task")
+
+    with pytest.raises(RuntimeError):
+        async for _ in capability.wrap_run_event_stream(ctx, stream=Stream()):
+            pass
+    for _ in range(20):
+        if sent:
+            break
+        await asyncio.sleep(0.05)
+    assert [entry["summary"] for entry in sent[0]["entries"]][-1] == "An answer."

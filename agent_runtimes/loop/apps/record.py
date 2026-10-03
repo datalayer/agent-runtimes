@@ -210,6 +210,7 @@ class AppRecordCapability(AbstractCapability[Any]):
 
     _sessions: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     _answers: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    _sending: Set[Any] = field(default_factory=set, init=False, repr=False)
 
     def _key(self, ctx: RunContext[Any]) -> str:
         return str(ctx.run_id or ctx.conversation_id or "run")
@@ -278,18 +279,24 @@ class AppRecordCapability(AbstractCapability[Any]):
             cancelled = True
             raise
         finally:
-            close = getattr(stream, "aclose", None)
-            if close is not None:
-                await close()
+            # First, before closing what it wraps: closing an MCP server's
+            # stream from another task raises (anyio's cancel scope), and
+            # nothing after a raise in a `finally` runs.
             if (cancelled or final) and key in self._sessions:
                 # The answer is given, or the client went: sent now, in a task
                 # of its own, which neither a cancellation nor a client that
                 # stops reading at `RUN_FINISHED` (and stops the runtime with
                 # it, as the terminal does) takes away.
                 answer = self._answers.get(key, "")
-                asyncio.get_running_loop().create_task(
+                task = asyncio.get_running_loop().create_task(
                     self._close(ctx, _short(answer, 300), {"length": len(answer)})
                 )
+                # Held until done: a task nothing refers to may be collected.
+                self._sending.add(task)
+                task.add_done_callback(self._sending.discard)
+            close = getattr(stream, "aclose", None)
+            if close is not None:
+                await close()
 
     async def after_run(self, ctx: RunContext[Any], *, result: Any) -> Any:
         output = getattr(result, "output", "")
