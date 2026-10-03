@@ -425,7 +425,14 @@ def apps_deploy(
         raise typer.Exit(1)
     try:
         deployment, done = deploy(
-            Deployments(client.urls.spacer_url, token), app_uid, version, slug
+            Deployments(
+                client.urls.spacer_url,
+                token,
+                ai_agents_url=client.urls.ai_agents_url,
+            ),
+            app_uid,
+            version,
+            slug,
         )
     except (DeployRefused, httpx.HTTPError) as refused:
         console.print(f"[red]✗[/red] {refused}")

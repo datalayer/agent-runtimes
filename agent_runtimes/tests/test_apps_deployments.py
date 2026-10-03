@@ -10,11 +10,10 @@ import httpx
 import pytest
 
 from agent_runtimes.loop.apps.deployments import (
-    DEPLOYMENT_FORMAT,
     Deployments,
     DeployRefused,
     deploy,
-    parse_deployment,
+    deployment_of,
     slug_of,
     slug_problem,
     version_of_model,
@@ -22,7 +21,7 @@ from agent_runtimes.loop.apps.deployments import (
 
 
 class FakeSpacer:
-    """The Spacer's items, as much of them as a deployment touches."""
+    """The Spacer's items and ai-agents' deployments, as much as a deployment touches."""
 
     def __init__(self) -> None:
         self.items: dict[str, dict[str, Any]] = {
@@ -36,17 +35,16 @@ class FakeSpacer:
                 ),
             }
         }
+        self.deployments: dict[str, dict[str, Any]] = {}
         self.created = 0
 
     def handle(self, request: httpx.Request) -> httpx.Response:
-        path = request.url.path.removeprefix("/api/spacer/v1")
-        if request.method == "GET" and path == "/spaces/items/types/appdeployment":
-            items = [
-                {"uid": uid}
-                for uid, item in self.items.items()
-                if item["type_s"] == "appdeployment"
-            ]
-            return httpx.Response(200, json={"success": True, "items": items})
+        path = request.url.path
+        if path.startswith("/api/ai-agents/v1/apps/deployments"):
+            return self.agents(
+                request, path.removeprefix("/api/ai-agents/v1/apps/deployments")
+            )
+        path = path.removeprefix("/api/spacer/v1")
         if request.method == "GET" and path.startswith("/lexicals/"):
             uid = path.split("/")[2]
             if uid not in self.items:
@@ -54,22 +52,40 @@ class FakeSpacer:
             return httpx.Response(
                 200, json={"success": True, "document": self.items[uid]}
             )
-        if request.method == "POST" and path == "/lexicals":
-            body = request.content.decode()
-            assert 'name="spaceId"' in body and "space-1" in body
-            self.created += 1
-            uid = f"dep-{self.created}"
-            content = body.split('filename="deployment.json"')[1]
-            content = content[content.index("{") : content.rindex("}") + 1]
-            self.items[uid] = {
-                "uid": uid,
-                "type_s": "appdeployment",
-                "model_s": content,
-            }
-            return httpx.Response(200, json={"success": True, "document": {"uid": uid}})
         if request.method == "PUT" and path.endswith("/model"):
             uid = path.split("/")[2]
             self.items[uid]["model_s"] = json.loads(request.content)["model"]
+            return httpx.Response(200, json={"success": True})
+        return httpx.Response(405)
+
+    def agents(self, request: httpx.Request, rest: str) -> httpx.Response:
+        if request.method == "GET" and not rest:
+            return httpx.Response(
+                200,
+                json={"success": True, "deployments": list(self.deployments.values())},
+            )
+        if request.method == "POST" and not rest:
+            body = json.loads(request.content)
+            if any(d["slug"] == body["slug"] for d in self.deployments.values()):
+                return httpx.Response(
+                    422, json={"detail": "already the address of an application"}
+                )
+            self.created += 1
+            uid = f"dep-{self.created}"
+            self.deployments[uid] = {**body, "uid": uid, "state": "live"}
+            return httpx.Response(
+                200, json={"success": True, "deployment": self.deployments[uid]}
+            )
+        uid = rest.strip("/")
+        if uid not in self.deployments:
+            return httpx.Response(404, json={"detail": "Deployment not found"})
+        if request.method == "PATCH":
+            self.deployments[uid].update(json.loads(request.content))
+            return httpx.Response(
+                200, json={"success": True, "deployment": self.deployments[uid]}
+            )
+        if request.method == "DELETE":
+            del self.deployments[uid]
             return httpx.Response(200, json={"success": True})
         return httpx.Response(405)
 
@@ -93,8 +109,12 @@ def test_a_first_deploy_creates_it_at_an_address_from_its_name(deployments, spac
         "web-research",
         "live",
     )
-    stored = json.loads(spacer.items[deployment.uid]["model_s"])
-    assert stored["format"] == DEPLOYMENT_FORMAT and stored["app"] == "app-1"
+    stored = spacer.deployments[deployment.uid]
+    assert (stored["app_uid"], stored["space_uid"], stored["app_name"]) == (
+        "app-1",
+        "space-1",
+        "Web Research",
+    )
 
 
 def test_another_version_moves_it_and_the_same_one_changes_nothing(deployments):
@@ -112,8 +132,7 @@ def test_another_version_moves_it_and_the_same_one_changes_nothing(deployments):
 
 def test_a_paused_deployment_is_resumed(deployments, spacer):
     first, _ = deploy(deployments, "app-1")
-    model = json.loads(spacer.items[first.uid]["model_s"])
-    spacer.items[first.uid]["model_s"] = json.dumps({**model, "state": "paused"})
+    spacer.deployments[first.uid]["state"] = "paused"
     resumed, done = deploy(deployments, "app-1")
     assert (done, resumed.state) == ("resumed", "live")
 
@@ -130,19 +149,27 @@ def test_what_stands_in_the_way_is_said(deployments):
         deploy(deployments, "missing")
 
 
-def test_the_format_is_the_studios():
+def test_an_address_another_account_holds_is_refused_by_ai_agents(deployments, spacer):
+    spacer.deployments["theirs"] = {
+        "uid": "theirs",
+        "app_uid": "x",
+        "slug": "desk",
+        "version": 1,
+    }
+    # Theirs is not listed to us in production; the server says no all the same.
+    spacer.deployments["theirs"]["app_uid"] = "someone-elses"
+    with pytest.raises(DeployRefused):
+        deploy(deployments, "app-1", slug="desk")
+
+
+def test_a_deployment_is_read_as_ai_agents_answers():
     assert slug_of("Web Research!") == "web-research"
     assert slug_problem("", []) and not slug_problem("ok-1", [])
-    assert parse_deployment("x", '{"format": "other", "app": "a"}') is None
-    parsed = parse_deployment(
-        "x",
-        {"format": DEPLOYMENT_FORMAT, "app": "a", "version": "2", "state": "paused"},
+    parsed = deployment_of(
+        {"uid": "x", "app_uid": "a", "version": "2", "state": "paused"}
     )
-    assert parsed and (parsed.version, parsed.state, parsed.target) == (
-        2,
-        "paused",
-        "hosted",
-    )
+    assert (parsed.version, parsed.state, parsed.target) == (2, "paused", "hosted")
+    assert deployment_of(None).version == 1
     # A definition written before the new format keeps its version at the top.
     assert version_of_model('{"version": 4}') == 4
     assert version_of_model("not json") == 1
