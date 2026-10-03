@@ -76,9 +76,21 @@ export function defineAppPlugin(
   });
 }
 
+/** Which instance of an application runs, as the platform knows it (LOOP R-07). */
+export type AppInstance = {
+  /** Its `app` item. */
+  appUid?: string;
+  /** The deployment it runs as, when it is one. */
+  deploymentUid?: string;
+  /** The version that runs. */
+  version?: number;
+};
+
 export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   /** The application to render. */
   app: AppSpec;
+  /** What its record is kept under, on Datalayer: the application, its deployment. */
+  instance?: AppInstance;
 };
 
 /**
@@ -96,6 +108,7 @@ const NO_PLUGINS: PluginRef[] = [];
 export function AppRenderer({
   app,
   plugins = NO_PLUGINS,
+  instance,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   const chatOnly = app.interface.layout === 'chat';
@@ -135,10 +148,19 @@ export function AppRenderer({
             // application without a shell is refused: its tools are called
             // one by one instead, each decided by its rules.
             enable_codemode: Boolean(app.permissions?.computer?.shell),
+            ...(instance
+              ? {
+                  app_instance: {
+                    app_uid: instance.appUid ?? '',
+                    deployment_uid: instance.deploymentUid ?? '',
+                    version: instance.version ?? 0,
+                  },
+                }
+              : {}),
           }
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source],
+    [source, instance?.appUid, instance?.deploymentUid, instance?.version],
   );
   if (!appPlugin) {
     return (

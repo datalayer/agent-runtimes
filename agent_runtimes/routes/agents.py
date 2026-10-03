@@ -1174,6 +1174,14 @@ class CreateAgentRequest(BaseModel):
             "before every tool call in place of the default approvals (LOOP R-03, R-05)."
         ),
     )
+    app_instance: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Which instance of the application this agent runs, as the platform "
+            "knows it: `app_uid` (its Spacer item), `deployment_uid`, `version`. "
+            "What its record is kept under (LOOP R-07)."
+        ),
+    )
     subagents: SubAgentsConfig | None = Field(
         default=None,
         description=(
@@ -2253,9 +2261,22 @@ async def create_agent(
                     AppChecksCapability,
                 )
                 from agent_runtimes.loop.apps.plugins import rules_for
+                from agent_runtimes.loop.apps.record import (
+                    AppRecordCapability,
+                    AppRecorder,
+                )
 
                 capabilities = _without_approval_capabilities(capabilities)
+                instance = request.app_instance or {}
+                # What it did, session by session, kept by ai-agents (R-07).
+                recorder = AppRecorder(
+                    app=running_app,
+                    app_uid=str(instance.get("app_uid") or ""),
+                    deployment_uid=str(instance.get("deployment_uid") or ""),
+                    version=int(instance.get("version") or 0),
+                )
                 rules = rules_for(running_app, agent_id=agent_id)
+                rules.record = recorder.decided
                 capabilities.insert(0, rules)
                 # And its checks, after its rules: a call the rules refuse
                 # is not checked, and a Guard reads what the rules decided
@@ -2266,8 +2287,10 @@ async def create_agent(
                         checks=AppChecks.of(running_app),
                         agent_id=agent_id,
                         decide=rules.decide,
+                        record=recorder.checked,
                     ),
                 )
+                capabilities.insert(2, AppRecordCapability(recorder=recorder))
 
             # And always count what the runs cost.
             #
@@ -4651,6 +4674,7 @@ class ConfigureFromSpecRequest(BaseModel):
     evals_mode: str | None = None
     emit_live_events: bool | None = None
     app_spec: dict[str, Any] | None = None
+    app_instance: dict[str, Any] | None = None
     """An application's Appspec, when the agent is the one it runs."""
     model: str | None = None
     """The model, when it is not the agent spec's own."""
@@ -4777,6 +4801,7 @@ async def configure_from_spec_endpoint(
         # and tools would execute without waiting for human sign-off.
         tools=list(spec.tools or []),
         app_spec=body.app_spec,
+        app_instance=body.app_instance,
         **({"model": body.model} if body.model else {}),
     )
     # Serialise to a dict for comparison (env_vars are excluded since

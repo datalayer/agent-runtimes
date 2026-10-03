@@ -375,6 +375,9 @@ class AppChecksCapability(AbstractCapability[Any]):
     decide: Optional[Callable[[str, Dict[str, Any]], Any]] = None
     """The rules' decision on a call, which some Guards read."""
 
+    record: Optional[Callable[[str, Verdict], None]] = None
+    """Told of every verdict that does not let a step pass, by stage."""
+
     async def before_run(self, ctx: RunContext[Any]) -> None:
         for sentence in self.checks.unexecuted:
             logger.warning("%s: %s", self.checks.app.id, sentence)
@@ -394,6 +397,8 @@ class AppChecksCapability(AbstractCapability[Any]):
             except Exception:  # noqa: BLE001 - a Guard that cannot read the rules reads nothing
                 pass
         verdict = self.checks.verdict_at(IN_FLIGHT, seen)
+        if verdict.action != "proceed" and self.record is not None:
+            self.record(IN_FLIGHT, verdict)
         if verdict.action == "retry":
             raise ModelRetry(verdict.sentence)
         if verdict.action == "ask":
@@ -499,6 +504,8 @@ class AppChecksCapability(AbstractCapability[Any]):
         self, ctx: RunContext[Any], *, output_context: Any, output: Any
     ) -> Any:
         verdict = self.checks.verdict_at(POST_RUN, {"output": output})
+        if verdict.action != "proceed" and self.record is not None:
+            self.record(POST_RUN, verdict)
         if verdict.action == "retry":
             raise ModelRetry(f"{verdict.sentence} Answer again without it.")
         if verdict.action in ("stop", "ask"):
