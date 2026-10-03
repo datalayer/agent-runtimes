@@ -561,6 +561,13 @@ export interface AppSpec {
   icon?: string;
   /** Its face: one emoji, shown wherever the application appears. */
   emoji: string;
+  /**
+   * Its avatar, by name: a drawing of the set people choose theirs from on
+   * their profile. Empty, its emoji stands for it.
+   */
+  avatar: string;
+  /** Its banner, by name, from the same profile's set. Empty, its id seeds one. */
+  banner: string;
 }
 
 export interface Agentspec {

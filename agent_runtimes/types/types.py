@@ -2289,6 +2289,14 @@ class AppSpec(BaseModel):
         default="\U0001f440",
         description="Its face: one emoji, shown wherever the application appears",
     )
+    avatar: str = Field(
+        default="",
+        description="Its avatar, by name, from the drawings people choose theirs from; its emoji when unsaid",
+    )
+    banner: str = Field(
+        default="",
+        description="Its banner, by name, from the set people choose theirs from; the one its id seeds when unsaid",
+    )
 
 
 class TeamSubagentspec(BaseModel):

@@ -176,6 +176,8 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     tags: [],
     icon: DEFAULT_ICON,
     emoji: DEFAULT_EMOJI,
+    avatar: '',
+    banner: '',
   };
 }
 
@@ -214,6 +216,8 @@ const KNOWN_KEYS = [
   'tags',
   'icon',
   'emoji',
+  'avatar',
+  'banner',
 ] as const;
 
 function parseConnection(data: Data): AppConnectionSpec {
@@ -489,6 +493,8 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     tags: texts(data.tags),
     icon: text(data.icon, DEFAULT_ICON),
     emoji: text(data.emoji, DEFAULT_EMOJI) || DEFAULT_EMOJI,
+    avatar: text(data.avatar).trim(),
+    banner: text(data.banner).trim(),
   };
   if (isData(data.decision)) {
     app.decision = parseDecision(data.decision);
@@ -780,7 +786,9 @@ export function dumpAppspec(app: AppSpec): Data {
     .value('enabled', app.enabled, true)
     .list('tags', app.tags)
     .text('icon', app.icon ?? DEFAULT_ICON, DEFAULT_ICON)
-    .text('emoji', app.emoji, DEFAULT_EMOJI);
+    .text('emoji', app.emoji, DEFAULT_EMOJI)
+    .text('avatar', app.avatar ?? '', '')
+    .text('banner', app.banner ?? '', '');
   return writer.data;
 }
 

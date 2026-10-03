@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { APP_SOURCES } from '../../specs/apps';
+import { dumpAppspec, parseAppspec } from '../apps/appspec';
 import {
   NEEDS_ATTENTION,
   NOT_READY,
@@ -186,5 +187,24 @@ describe('the instant checks', () => {
         'permissions.computer.shell: is true or false.',
       ]),
     );
+  });
+
+  it('read an avatar and a banner chosen as a person chooses theirs, and refuse one misnamed', () => {
+    const chosen = parseAppspec({
+      ...BASE,
+      avatar: 'AstronautIcon',
+      banner: 'SvgTutorialsHero',
+    }).app;
+    expect([chosen.avatar, chosen.banner]).toEqual([
+      'AstronautIcon',
+      'SvgTutorialsHero',
+    ]);
+    const written = Object.keys(dumpAppspec(chosen));
+    expect(written.slice(-2)).toEqual(['avatar', 'banner']);
+    // Unchosen: nothing written, the emoji stands for it.
+    expect(dumpAppspec(parseAppspec(BASE).app)).not.toHaveProperty('avatar');
+    expect(
+      checkAppspec({ ...BASE, avatar: 'an astronaut' }).problems,
+    ).toContain('avatar: is named as its drawing is, `AstronautIcon`.');
   });
 });

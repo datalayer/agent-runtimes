@@ -465,8 +465,17 @@ export function documentShapeProblems(document: unknown): string[] {
     'memory',
     'emoji',
     'icon',
+    'avatar',
+    'banner',
   ]) {
     text(d[key], key);
+  }
+  // A drawing is named as it is in the profile's sets, `AstronautIcon`.
+  for (const key of ['avatar', 'banner']) {
+    const name = typeof d[key] === 'string' ? (d[key] as string).trim() : '';
+    if (name && !/^[A-Z][A-Za-z0-9]{0,63}$/.test(name)) {
+      at(key, 'is named as its drawing is, `AstronautIcon`');
+    }
   }
   for (const key of [
     'skills',
