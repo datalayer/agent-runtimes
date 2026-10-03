@@ -118,6 +118,9 @@ export function LoopEmbed({
     [
       preset.serverUrl,
       preset.target,
+      preset.datalayerAgentSpecId,
+      // By its content: an application's spec written inline is a new object each render.
+      JSON.stringify(preset.datalayerCreatePayload ?? null),
       preset.defaultEditor,
       preset.showViewSelector,
       preset.hideChatHeader,

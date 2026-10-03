@@ -120,6 +120,12 @@ export type AgentsConfig = {
    * The other targets take their agent from wherever they already run one.
    */
   datalayerAgentSpecId?: string;
+  /**
+   * What the agent created on that runtime is created with besides its spec:
+   * an application's `app_spec`, so that the runtime runs the application and
+   * decides its tool calls by its rules (LOOP R-05, R-03).
+   */
+  datalayerCreatePayload?: Record<string, unknown>;
 };
 
 export type AgentsOutput = {

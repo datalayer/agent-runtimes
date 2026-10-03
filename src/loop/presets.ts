@@ -149,6 +149,10 @@ export type LoopPresetOptions = {
   teamId?: string;
   /** What a local agent is created from, when one is. */
   localAgent?: AgentsConfig['localAgent'];
+  /** The agentspec a Datalayer runtime is allocated with (the `datalayer` target). */
+  datalayerAgentSpecId?: string;
+  /** What the agent on that runtime is created with besides its spec — an `app_spec`. */
+  datalayerCreatePayload?: Record<string, unknown>;
   /**
    * The agentspec the local agent is created from, by id.
    *
@@ -242,6 +246,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     pageLayoutTurnPanelFooter = 'full',
     localAgent,
     localAgentSpec,
+    datalayerAgentSpecId,
+    datalayerCreatePayload,
     floatingPrompt = false,
     editorSelector = false,
     editors = true,
@@ -287,6 +293,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     configurePlugin(AgentsPlugin, {
       serverUrl,
       target,
+      datalayerAgentSpecId,
+      datalayerCreatePayload,
       showAgentVariants,
       showAgentSummary: agentSummary,
       teamId,

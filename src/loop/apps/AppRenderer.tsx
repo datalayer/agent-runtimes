@@ -88,6 +88,9 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
  * implies — a host that wants the editors beside a chat still says so.
  */
 /** No host plugins: one array, so that it never reads as a change. */
+/** The agentspec a runtime is allocated with before an application's agent is created on it. */
+export const DATALAYER_BOOTSTRAP_AGENTSPEC = 'example-simple';
+
 const NO_PLUGINS: PluginRef[] = [];
 
 export function AppRenderer({
@@ -112,6 +115,20 @@ export function AppRenderer({
     () => (appPlugin ? [appPlugin, ...plugins] : plugins),
     [appPlugin, plugins],
   );
+  /*
+   * On Datalayer, the application runs on a runtime: allocated with a plain
+   * agentspec, its agent created there with the application's spec — so that
+   * the runtime registers it and decides every tool call by its rules (LOOP
+   * R-03, R-05), as `loop apps run --cloud` does.
+   */
+  const datalayerCreatePayload = useMemo(
+    () =>
+      app.agent
+        ? { agent_spec_id: agentIdOf(app), app_spec: dumpAppspec(app) }
+        : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [source],
+  );
   if (!appPlugin) {
     return (
       <div role="status" style={{ padding: 16 }}>
@@ -131,6 +148,8 @@ export function AppRenderer({
       showAgentVariants={false}
       graph={false}
       pluginsPanel={false}
+      datalayerAgentSpecId={DATALAYER_BOOTSTRAP_AGENTSPEC}
+      datalayerCreatePayload={datalayerCreatePayload}
       {...embed}
       plugins={allPlugins}
     />
