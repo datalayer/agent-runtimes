@@ -15,7 +15,10 @@ import {
   assistantCharacter,
 } from '../assistant/characters';
 import {
+  ASSISTANT_AWAY_KEY,
   SAYING_LIMIT,
+  keepAway,
+  keptAway,
   assistantStateOf,
   latestSaying,
   newestIsAnswer,
@@ -145,5 +148,20 @@ describe('what the assistant says in its balloon (T-23)', () => {
     expect(saying?.more).toBe(true);
     expect(saying!.text.length).toBeLessThanOrEqual(SAYING_LIMIT + 1);
     expect(saying!.text.endsWith('word…')).toBe(true);
+  });
+});
+
+describe('how long the assistant is sent away for (T-27)', () => {
+  it('keeps the session and for good apart, and forgets on a call back', () => {
+    keepAway('session');
+    expect(keptAway()).toBe('session');
+    expect(window.localStorage.getItem(ASSISTANT_AWAY_KEY)).toBeNull();
+    keepAway('always');
+    expect(keptAway()).toBe('always');
+    expect(window.sessionStorage.getItem(ASSISTANT_AWAY_KEY)).toBeNull();
+    keepAway('page');
+    expect(keptAway()).toBe('none');
+    keepAway('none');
+    expect(keptAway()).toBe('none');
   });
 });

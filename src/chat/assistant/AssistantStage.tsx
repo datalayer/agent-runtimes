@@ -19,14 +19,14 @@
 
 import type { JSX, RefObject } from 'react';
 import { useRef, useState } from 'react';
-import { IconButton } from '@primer/react';
+import { ActionList, ActionMenu, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
 import { assistantCharacter } from './characters';
 import { SpeechBalloon } from './SpeechBalloon';
 import { SpriteCharacter } from './SpriteCharacter';
 import type { AssistantCharacterData } from './formats/types';
-import type { AssistantState } from './state';
+import type { AssistantAway, AssistantState } from './state';
 
 /** The motions, by the state the stage is in. */
 const MOTIONS = {
@@ -70,6 +70,13 @@ const MOTIONS = {
 
 const BODY = '& .assistant-body';
 
+/** How long it may be sent away for, in the menu's words (T-27). */
+const AWAY_CHOICES: { away: AssistantAway; label: string }[] = [
+  { away: 'page', label: 'Hide for now' },
+  { away: 'session', label: 'Hide for this session' },
+  { away: 'always', label: 'Don\u2019t show again' },
+];
+
 export interface AssistantStageProps {
   /** The character: one Datalayer ships, by id (T-25), or one loaded from a file (T-26). */
   character: string | AssistantCharacterData;
@@ -95,8 +102,8 @@ export interface AssistantStageProps {
   balloon?: { text: string; more?: boolean };
   /** Show the balloon without being hovered: something new to say. */
   insist?: boolean;
-  /** Send it away (T-27). */
-  onDismiss: () => void;
+  /** Send it away (T-27): for the page, for the session, or for good. */
+  onDismiss: (away: AssistantAway) => void;
 }
 
 export function AssistantStage({
@@ -118,6 +125,7 @@ export function AssistantStage({
     ? shipped.name
     : (character as AssistantCharacterData).name;
   const [hovered, setHovered] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
   const showBalloon = !open && !!balloon && (hovered || insist);
@@ -249,23 +257,38 @@ export function AssistantStage({
           />
         )}
       </Box>
-      {hovered && state !== 'goodbye' && (
-        <IconButton
-          icon={XIcon}
-          aria-label={`Send ${name} away`}
-          size="small"
-          variant="invisible"
-          onClick={onDismiss}
-          data-assistant-dismiss=""
-          sx={{
-            position: 'absolute',
-            top: -6,
-            right: -6,
-            bg: 'canvas.default',
-            borderRadius: '50%',
-            boxShadow: 'shadow.small',
-          }}
-        />
+      {(hovered || menuOpen) && state !== 'goodbye' && (
+        <Box sx={{ position: 'absolute', top: -6, right: -6 }}>
+          <ActionMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <ActionMenu.Anchor>
+              <IconButton
+                icon={XIcon}
+                aria-label={`Send ${name} away`}
+                size="small"
+                variant="invisible"
+                data-assistant-dismiss=""
+                sx={{
+                  bg: 'canvas.default',
+                  borderRadius: '50%',
+                  boxShadow: 'shadow.small',
+                }}
+              />
+            </ActionMenu.Anchor>
+            <ActionMenu.Overlay width="auto">
+              <ActionList>
+                {AWAY_CHOICES.map(choice => (
+                  <ActionList.Item
+                    key={choice.away}
+                    data-assistant-away={choice.away}
+                    onSelect={() => onDismiss(choice.away)}
+                  >
+                    {choice.label}
+                  </ActionList.Item>
+                ))}
+              </ActionList>
+            </ActionMenu.Overlay>
+          </ActionMenu>
+        </Box>
       )}
     </Box>
   );

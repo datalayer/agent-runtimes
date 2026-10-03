@@ -13,6 +13,7 @@
 import React, { act, createRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ThemeProvider } from '@primer/react';
 import {
   AssistantStage,
   type AssistantStageProps,
@@ -33,17 +34,19 @@ async function render(props: Partial<AssistantStageProps> = {}) {
   const onDismiss = vi.fn();
   await act(async () => {
     root.render(
-      <AssistantStage
-        character="paperclip"
-        state="idle"
-        place={{ left: 10, top: 10 }}
-        stageRef={createRef<HTMLDivElement>()}
-        onDragStart={() => {}}
-        open={false}
-        onToggle={onToggle}
-        onDismiss={onDismiss}
-        {...props}
-      />,
+      <ThemeProvider>
+        <AssistantStage
+          character="paperclip"
+          state="idle"
+          place={{ left: 10, top: 10 }}
+          stageRef={createRef<HTMLDivElement>()}
+          onDragStart={() => {}}
+          open={false}
+          onToggle={onToggle}
+          onDismiss={onDismiss}
+          {...props}
+        />
+      </ThemeProvider>,
     );
   });
   mounted.push(() => act(() => root.unmount()));
@@ -112,7 +115,7 @@ describe('the floating assistant', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('can be sent away from its hover control', async () => {
+  it('can be sent away from its hover control, for as long as the person says', async () => {
     const { container, onDismiss } = await render();
     const stage = container.querySelector(
       '[data-assistant-state]',
@@ -127,6 +130,17 @@ describe('the floating assistant', () => {
     await act(async () => {
       away.click();
     });
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    const choices = [...document.querySelectorAll('[data-assistant-away]')];
+    expect(choices.map(choice => choice.textContent)).toEqual([
+      'Hide for now',
+      'Hide for this session',
+      'Don’t show again',
+    ]);
+    await act(async () => {
+      (
+        document.querySelector('[data-assistant-away="session"]') as HTMLElement
+      ).click();
+    });
+    expect(onDismiss).toHaveBeenCalledWith('session');
   });
 });

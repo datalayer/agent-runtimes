@@ -144,3 +144,43 @@ export function latestSaying(
   }
   return undefined;
 }
+
+/**
+ * How long the assistant is away, once sent (T-27): for the page — the
+ * popup's button calls it back — for the session, or for good; the header's
+ * *Floating assistant* always calls it back.
+ */
+export type AssistantAway = 'none' | 'page' | 'session' | 'always';
+
+/** Where the choice is kept: the session's storage, or for good. */
+export const ASSISTANT_AWAY_KEY = 'datalayer-assistant-away';
+
+/** The away a page starts with, from what was kept. Storage may be refused. */
+export function keptAway(): AssistantAway {
+  try {
+    if (window.localStorage.getItem(ASSISTANT_AWAY_KEY) === 'always') {
+      return 'always';
+    }
+    if (window.sessionStorage.getItem(ASSISTANT_AWAY_KEY) === 'session') {
+      return 'session';
+    }
+  } catch {
+    // A page without storage keeps the assistant for the page only.
+  }
+  return 'none';
+}
+
+/** Keep the choice where it lasts as long as it says; `none` forgets it. */
+export function keepAway(away: AssistantAway): void {
+  try {
+    window.localStorage.removeItem(ASSISTANT_AWAY_KEY);
+    window.sessionStorage.removeItem(ASSISTANT_AWAY_KEY);
+    if (away === 'always') {
+      window.localStorage.setItem(ASSISTANT_AWAY_KEY, 'always');
+    } else if (away === 'session') {
+      window.sessionStorage.setItem(ASSISTANT_AWAY_KEY, 'session');
+    }
+  } catch {
+    // Without storage the choice holds for the page.
+  }
+}

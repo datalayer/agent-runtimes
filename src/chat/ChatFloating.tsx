@@ -46,6 +46,9 @@ import {
   assistantStateOf,
   latestSaying,
   newestIsAnswer,
+  keepAway,
+  keptAway,
+  type AssistantAway,
   type AssistantSaying,
 } from './assistant/state';
 import {
@@ -355,7 +358,12 @@ export function ChatFloating({
   const [answering, setAnswering] = useState(false);
   const [arriving, setArriving] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [assistantAway, setAssistantAway] = useState(false);
+  const [assistantAway, setAssistantAway] = useState<AssistantAway>(keptAway);
+  const assistantShown = assistantMode && assistantAway === 'none';
+  const callAssistantBack = useCallback(() => {
+    keepAway('none');
+    setAssistantAway('none');
+  }, []);
   /* The agent's newest words, said in the balloon until heard (T-23). */
   const [saying, setSaying] = useState<AssistantSaying | undefined>();
   const [heardId, setHeardId] = useState<string | undefined>();
@@ -376,14 +384,13 @@ export function ChatFloating({
   const stageRef = useRef<HTMLDivElement>(null);
   const stageDrag = useViewportDrag(stageRef);
   useEffect(() => {
-    if (!assistantMode) {
+    if (!assistantShown) {
       return;
     }
-    setAssistantAway(false);
     setArriving(true);
     const timer = setTimeout(() => setArriving(false), 1800);
     return () => clearTimeout(timer);
-  }, [assistantMode]);
+  }, [assistantShown]);
   const assistantState = assistantStateOf(presenceState(chatBusy, chatTool), {
     arriving,
     leaving,
@@ -449,13 +456,17 @@ export function ChatFloating({
         setViewMode('panel');
         setFocusTrigger(prev => prev + 1);
       } else {
-        // The floating modes stay within ChatFloating
+        // The floating modes stay within ChatFloating; picking the assistant
+        // calls it back, however long it was sent away for (T-27).
+        if (mode === 'assistant') {
+          callAssistantBack();
+        }
         setViewMode(mode);
         setFocusTrigger(prev => prev + 1);
         onViewModeChange?.(mode);
       }
     },
-    [onViewModeChange, sidebarDisabled],
+    [onViewModeChange, sidebarDisabled, callAssistantBack],
   );
 
   // Detect whether the chat is mounted inside a parent that is intentionally
@@ -638,17 +649,25 @@ export function ChatFloating({
     setTimeout(() => setIsAnimating(false), animationDuration);
   }, [isOpen, setIsOpen, onOpen, onClose, animationDuration]);
 
-  /* The assistant sent away: goodbye first, then a small way back (T-27). */
-  const dismissAssistant = useCallback(() => {
-    if (isOpen) {
-      handleToggle();
-    }
-    setLeaving(true);
-    setTimeout(() => {
-      setLeaving(false);
-      setAssistantAway(true);
-    }, 600);
-  }, [isOpen, handleToggle]);
+  /*
+   * The assistant sent away (T-27): goodbye first, then the popup's round
+   * button in its place — which calls it back when it went for the page, and
+   * opens the chat when it went for the session or for good.
+   */
+  const dismissAssistant = useCallback(
+    (away: AssistantAway) => {
+      if (isOpen) {
+        handleToggle();
+      }
+      keepAway(away);
+      setLeaving(true);
+      setTimeout(() => {
+        setLeaving(false);
+        setAssistantAway(away);
+      }, 600);
+    },
+    [isOpen, handleToggle],
+  );
 
   /*
    * The conversation as the assistant's balloon: above the character, its
@@ -872,7 +891,11 @@ export function ChatFloating({
               }
             : getPositionStyles()
           : {}),
-        ...(assistantMode ? balloonPlace() : {}),
+        ...(assistantShown
+          ? balloonPlace()
+          : assistantMode && !isMobile
+            ? getPositionStyles()
+            : {}),
         ...(viewMode === 'panel' && !isMobile
           ? {
               ...(panelInFlow || dockedInMount
@@ -1078,7 +1101,11 @@ export function ChatFloating({
         buttonIcon ? (buttonIcon as React.ElementType) : CommentDiscussionIcon
       }
       aria-label={buttonTooltip}
-      onClick={handleToggle}
+      onClick={
+        assistantMode && assistantAway === 'page'
+          ? callAssistantBack
+          : handleToggle
+      }
       size="large"
       sx={{
         width: 56,
@@ -1119,7 +1146,7 @@ export function ChatFloating({
   return (
     <>
       {/* The floating assistant: the character, open or closed (T-21). */}
-      {assistantMode && !assistantAway && (
+      {assistantShown && (
         <AssistantStage
           character={assistantCharacter}
           state={assistantState}
@@ -1138,20 +1165,9 @@ export function ChatFloating({
           onDismiss={dismissAssistant}
         />
       )}
-      {/* Sent away: a small way back, where it stood (T-27). */}
-      {assistantMode && assistantAway && (
-        <Box sx={{ ...getPositionStyles() }}>
-          <IconButton
-            icon={CommentDiscussionIcon}
-            aria-label="Call the assistant back"
-            onClick={() => setAssistantAway(false)}
-            sx={{ borderRadius: '50%', boxShadow: 'shadow.medium' }}
-          />
-        </Box>
-      )}
 
       {/* Floating button when closed */}
-      {showButton && !isOpen && !assistantMode && (
+      {showButton && !isOpen && !assistantShown && (
         <Box
           sx={{
             ...getPositionStyles(),
