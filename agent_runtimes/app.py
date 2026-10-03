@@ -55,6 +55,7 @@ from .routes import (
     agent_node_router,
     agents_router,
     agui_router,
+    apps_router,
     checkpoints_router,
     configure_router,
     evals_router,
@@ -1474,6 +1475,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # the router existed and nothing mounted it.
     app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(loop_router, prefix=config.api_prefix)
+    app.include_router(apps_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)

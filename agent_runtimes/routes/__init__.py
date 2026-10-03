@@ -51,6 +51,7 @@ from .agui import (
 from .agui import (
     unregister_thread as unregister_agui_thread,
 )
+from .apps import router as apps_router
 from .checkpoints import router as checkpoints_router
 from .configure import router as configure_router
 from .health import router as health_router
@@ -99,6 +100,7 @@ __all__ = [
     "health_router",
     "history_router",
     "identity_router",
+    "apps_router",
     "loop_router",
     "mcp_proxy_router",
     "mcp_auth_router",

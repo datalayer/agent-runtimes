@@ -53,7 +53,7 @@ from ..services import (
     wire_skills_into_codemode,
 )
 from ..specs.agents import AGENTSPECS
-from ..specs.agents import get_agent_spec as get_library_agent_spec
+from ..specs.agents import get_agent_spec as _get_agent_spec
 from ..specs.agents import list_agentspecs as list_library_agents
 
 try:
@@ -125,6 +125,21 @@ _APPROVAL_CAPABILITY_NAMES = frozenset(
         "SkillsGuardrailCapability",
     }
 )
+
+
+def get_library_agent_spec(agent_id: str) -> Any:
+    """An agent of the library by id — or a Cog's, which is an agent equipped with Frames.
+
+    A Cog carries its whole agent spec, its Frames' context in its system
+    prompt; an application may name a Cog where it names an agent.
+    """
+    spec = _get_agent_spec(agent_id)
+    if spec is not None:
+        return spec
+    from ..specs.cogs import get_cog
+
+    cog = get_cog(agent_id)
+    return cog.spec if cog is not None else None
 
 
 def _without_approval_capabilities(capabilities: list[Any]) -> list[Any]:
@@ -1150,6 +1165,15 @@ class CreateAgentRequest(BaseModel):
         default=None,
         description="Optional complete agent spec payload forwarded by the UI. Used to prefill fields when creating from a library spec.",
     )
+    app_spec: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "An application's Appspec (`loop.app/v1`), when the agent is the one "
+            "an application runs: it reaches only the MCP servers the application "
+            "connects to, its instructions are added, and its rules are enforced "
+            "before every tool call in place of the default approvals (LOOP R-03, R-05)."
+        ),
+    )
     subagents: SubAgentsConfig | None = Field(
         default=None,
         description=(
@@ -1608,6 +1632,28 @@ async def create_agent(
         # Determine which MCP servers to use and ensure they are running
         # These will be dynamically fetched at run time, not stored at creation time
         selected_mcp_servers = request.selected_mcp_servers or []
+        # An application reaches nothing it does not name: its connections,
+        # in place of the servers its agent would bring.
+        running_app = None
+        if request.app_spec is not None:
+            from agent_runtimes.loop.apps.loading import (
+                AppNotRunnable,
+                connected_server_ids,
+                load_app,
+            )
+
+            try:
+                running_app = load_app(request.app_spec)
+            except AppNotRunnable as refused:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"problems": refused.problems},
+                ) from None
+            selected_mcp_servers = [
+                McpServerSelection(id=server, origin="catalog")
+                for server in connected_server_ids(running_app)
+            ]
+            request.selected_mcp_servers = selected_mcp_servers
 
         # When codemode is NOT enabled, we start the servers explicitly here
         # When codemode IS enabled, the servers are started via _build_codemode_toolset
@@ -2108,6 +2154,11 @@ async def create_agent(
         # installed skills, their scripts, parameters, and usage.
         if skills_prompt_section:
             final_system_prompt = final_system_prompt + "\n\n" + skills_prompt_section
+        # What the application tells its agent, on top of the agent's own.
+        if running_app is not None and running_app.instructions.strip():
+            final_system_prompt = (
+                final_system_prompt + "\n\n" + running_app.instructions.strip()
+            )
 
         # Create the agent based on the library
         if request.agent_library == "pydantic-ai":
@@ -2186,6 +2237,15 @@ async def create_agent(
             # approvals used to get them back from here.
             if tool_approvals_disabled:
                 capabilities = _without_approval_capabilities(capabilities)
+            # An application's rules decide every tool call, in place of the
+            # default approvals: asking twice for one call is not a rule.
+            if running_app is not None:
+                from agent_runtimes.loop.apps.enforcement import AppRulesCapability
+
+                capabilities = _without_approval_capabilities(capabilities)
+                capabilities.insert(
+                    0, AppRulesCapability(app=running_app, agent_id=agent_id)
+                )
 
             # And always count what the runs cost.
             #
@@ -2220,7 +2280,7 @@ async def create_agent(
             if usage_limits is not None:
                 agent_kwargs["usage_limits"] = usage_limits
             approval_tool_ids = []
-            if not tool_approvals_disabled:
+            if not tool_approvals_disabled and running_app is None:
                 approval_tool_ids = tools_requiring_approval_ids(tool_ids)
             if approval_tool_ids:
                 approval_patterns = [
@@ -4568,6 +4628,10 @@ class ConfigureFromSpecRequest(BaseModel):
     mcp_proxy_url: str | None = None
     evals_mode: str | None = None
     emit_live_events: bool | None = None
+    app_spec: dict[str, Any] | None = None
+    """An application's Appspec, when the agent is the one it runs."""
+    model: str | None = None
+    """The model, when it is not the agent spec's own."""
 
 
 @router.post("/configure-from-spec")
@@ -4690,6 +4754,8 @@ async def configure_from_spec_endpoint(
         # tool_ids would be empty, no approval capability would be registered,
         # and tools would execute without waiting for human sign-off.
         tools=list(spec.tools or []),
+        app_spec=body.app_spec,
+        **({"model": body.model} if body.model else {}),
     )
     # Serialise to a dict for comparison (env_vars are excluded since
     # they don't affect agent identity — only secrets/keys).
@@ -4734,6 +4800,8 @@ async def configure_from_spec_endpoint(
                 target_agent_name,
                 body.agent_spec_id,
             )
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(
                 "Failed to create agent from spec '%s': %s",
