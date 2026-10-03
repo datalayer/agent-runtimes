@@ -19,13 +19,13 @@ from urllib.parse import quote
 import yaml
 
 from agent_runtimes.loop.apps.deployments import (
+    APP_ITEM_FORMAT,
     APP_ITEM_TYPE,
     Deployments,
     DeployRefused,
     version_of_model,
 )
 
-APP_ITEM_FORMAT = "loop.app.item/v1"
 APP_VERSION_ITEM_TYPE = "appversion"
 
 

@@ -170,6 +170,11 @@ def test_a_deployment_is_read_as_ai_agents_answers():
     )
     assert (parsed.version, parsed.state, parsed.target) == (2, "paused", "hosted")
     assert deployment_of(None).version == 1
-    # A definition written before the new format keeps its version at the top.
-    assert version_of_model('{"version": 4}') == 4
-    assert version_of_model("not json") == 1
+    assert (
+        version_of_model('{"format": "loop.app.item/v1", "state": {"revision": 4}}')
+        == 4
+    )
+    # Another form is refused, not guessed at.
+    for older in ('{"version": 4}', "not json", None):
+        with pytest.raises(DeployRefused, match="older form"):
+            version_of_model(older)

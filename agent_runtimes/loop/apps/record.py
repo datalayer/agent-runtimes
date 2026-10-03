@@ -65,12 +65,9 @@ def keep_days_of(app: AppSpec) -> int:
     Read from agentspecs, not from the generated `retention_days`, which is a
     plain field there and says a year whatever `keep_for` says.
     """
-    try:
-        from agentspecs.apps import retention_days
+    from agentspecs.apps import retention_days
 
-        return int(retention_days(app.record.keep_for))
-    except Exception:  # noqa: BLE001 - an unreadable retention keeps the default
-        return 365
+    return int(retention_days(app.record.keep_for))
 
 
 def _short(value: Any, limit: int = 500) -> str:

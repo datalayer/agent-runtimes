@@ -90,23 +90,30 @@ def deployment_of(raw: Any) -> Deployment:
     )
 
 
+APP_ITEM_FORMAT = "loop.app.item/v1"
+
+
 def version_of_model(model: Any) -> int:
-    """The saved version an app item's content holds, in either format."""
-    if isinstance(model, str):
-        try:
-            model = json.loads(model)
-        except ValueError:
-            return 1
-    if not isinstance(model, dict):
-        return 1
-    state = model.get("state")
-    value: Any = (state if isinstance(state, dict) else {}).get(
-        "revision", model.get("version", 1)
-    )
+    """The saved version an app item's content holds (`state.revision`).
+
+    Refused for an item in another form: it is said, not guessed at.
+    """
     try:
-        return max(1, int(value))
-    except (TypeError, ValueError):
-        return 1
+        data = json.loads(model) if isinstance(model, str) else model
+    except ValueError:
+        data = None
+    state = data.get("state") if isinstance(data, dict) else None
+    revision = state.get("revision") if isinstance(state, dict) else None
+    if (
+        not isinstance(data, dict)
+        or data.get("format") != APP_ITEM_FORMAT
+        or not isinstance(revision, int)
+        or revision < 1
+    ):
+        raise DeployRefused(
+            "This application is kept in an older form: open it in the Studio and save it once."
+        )
+    return revision
 
 
 class Deployments:
