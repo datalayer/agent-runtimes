@@ -39,6 +39,9 @@ APP_EMBED_AUDIENCE = "datalayer:app:embed"
 #: The longest a verified token is trusted without asking again.
 CACHE_SECONDS = 300.0
 
+#: The most verified tokens remembered at once; the oldest goes first.
+CACHE_SIZE = 1024
+
 #: How long the platform is waited for.
 TIMEOUT_SECONDS = 5.0
 
@@ -185,8 +188,19 @@ class CallerVerifier:
         lifetime = CACHE_SECONDS
         if isinstance(expires, (int, float)):
             lifetime = min(lifetime, max(0.0, expires - self._now()))
-        self._verified[key] = (caller, self._clock() + lifetime)
+        self._remember(key, caller, self._clock() + lifetime)
         return caller
+
+    def _remember(self, key: Tuple[str, str], caller: Caller, until: float) -> None:
+        """Keep an answer; what has expired goes, and the oldest when it is full."""
+        now = self._clock()
+        for stale in [
+            known for known, (_, end) in self._verified.items() if end <= now
+        ]:
+            del self._verified[stale]
+        while len(self._verified) >= CACHE_SIZE:
+            del self._verified[next(iter(self._verified))]
+        self._verified[key] = (caller, until)
 
     async def _ask(self, url: str, token: str) -> int:
         try:
@@ -202,8 +216,40 @@ class CallerVerifier:
 VERIFIER = CallerVerifier()
 
 
+def is_loopback_origin(origin: str) -> bool:
+    """Whether a browser's origin is a page served by this machine."""
+    try:
+        host = httpx.URL(origin).host
+    except Exception:  # noqa: BLE001 - an origin that does not parse is nobody's
+        return False
+    return is_loopback(host)
+
+
+def platform_origins() -> Tuple[str, ...]:
+    """The origins of the platform's own pages: what the operator says, and its URLs."""
+    named = (os.environ.get("AGENT_RUNTIMES_APP_ORIGINS") or "").split(",")
+    urls = [
+        os.environ.get("DATALAYER_UI_URL") or "",
+        os.environ.get("DATALAYER_RUN_URL") or "",
+    ]
+    origins = []
+    for entry in [*named, *urls]:
+        entry = entry.strip().rstrip("/")
+        if entry:
+            url = httpx.URL(entry)
+            origins.append(f"{url.scheme}://{url.netloc.decode()}")
+    return tuple(dict.fromkeys(origins))
+
+
 def origin_allowed(origin: Optional[str], allowed: Tuple[str, ...]) -> bool:
-    """Whether a browser's origin may call: any, when the deployment names none."""
-    if not origin or not allowed:
+    """Whether a browser's origin may call.
+
+    No origin is not a browser's cross-site call, and is let through to the
+    token check. A page served by this machine is a developer's. Any other
+    origin has to be named: by the platform, or by the deployment.
+    """
+    if not origin:
+        return True
+    if is_loopback_origin(origin):
         return True
     return origin.rstrip("/") in {entry.rstrip("/") for entry in allowed}

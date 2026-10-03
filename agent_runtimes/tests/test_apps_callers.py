@@ -100,6 +100,31 @@ def test_a_runtime_that_does_not_know_iam_refuses(
     assert refused.value.status == 503
 
 
+def test_the_platform_names_its_origins(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "AGENT_RUNTIMES_APP_ORIGINS", "https://datalayer.ai, https://datalayer.app/"
+    )
+    monkeypatch.setenv("DATALAYER_RUN_URL", "https://r1.datalayer.run/api")
+    assert callers.platform_origins() == (
+        "https://datalayer.ai",
+        "https://datalayer.app",
+        "https://r1.datalayer.run",
+    )
+
+
+def test_what_is_remembered_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(callers, "CACHE_SIZE", 3)
+    clock = [0.0]
+    verifier = CallerVerifier(fetch=Platform(), clock=lambda: clock[0])
+    for index in range(5):
+        asyncio.run(verifier.verify(token(sub=f"u{index}")))
+    assert len(verifier._verified) == 3
+    # What has expired goes first.
+    clock[0] = callers.CACHE_SECONDS + 1
+    asyncio.run(verifier.verify(token(sub="late")))
+    assert len(verifier._verified) == 1
+
+
 def test_a_verified_token_is_trusted_for_minutes_not_for_its_life() -> None:
     platform = Platform()
     clock = [0.0]
@@ -124,9 +149,13 @@ def test_the_small_rules() -> None:
         and bearer_of(None) == ""
     )
     assert origin_allowed(None, ("https://a.example",))
-    assert origin_allowed("https://b.example", ())
+    # A supplied origin is named, or refused: an empty list names nobody.
+    assert not origin_allowed("https://b.example", ())
     assert origin_allowed("https://a.example/", ("https://a.example",))
     assert not origin_allowed("https://b.example", ("https://a.example",))
+    # A page this machine serves is a developer's.
+    assert origin_allowed("http://localhost:3063", ())
+    assert origin_allowed("http://127.0.0.1:8765", ())
 
 
 WEB_RESEARCH = {
@@ -199,6 +228,52 @@ def test_a_person_reads_and_an_embed_cannot_configure(remote: Any) -> None:
             "/api/v1/apps/configure", headers=embed, json={"app": WEB_RESEARCH}
         ).status_code
         == 403
+    )
+
+
+def test_a_page_elsewhere_cannot_reach_a_local_runtime_through_the_browser(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_runtimes.app import create_app
+
+    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
+    routes._RUNNING.clear()
+    with TestClient(create_app(), client=("127.0.0.1", 50000)) as local:
+        hostile = {"Origin": "https://evil.example"}
+        response = local.post(
+            "/api/v1/apps/configure", headers=hostile, json={"app": WEB_RESEARCH}
+        )
+        assert response.status_code == 403
+        assert (
+            local.get(
+                "/api/v1/apps", headers={"Origin": "http://localhost:3063"}
+            ).status_code
+            == 200
+        )
+    routes._RUNNING.clear()
+
+
+def test_an_application_configured_while_a_token_is_checked_is_not_answered_for(
+    remote: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_runtimes.loop.apps.loading import load_app
+
+    run(WEB_RESEARCH)
+    other = load_app({**WEB_RESEARCH, "id": "other-app", "name": "Another"})
+    verify = callers.VERIFIER.verify
+
+    async def slow(token: str, app_uid: str = "") -> Any:
+        # Another application is configured while the platform is asked.
+        plugins.register_app(other)
+        routes._RUNNING["default"] = other.id
+        return await verify(token, app_uid)
+
+    monkeypatch.setattr(callers.VERIFIER, "verify", slow)
+    embed = {
+        "Authorization": f"Bearer {token(sub='u1', aud=APP_EMBED_AUDIENCE, app_uid='web-research')}"
+    }
+    assert (
+        remote.get("/api/v1/apps/current", headers=embed).json()["id"] == "web-research"
     )
 
 

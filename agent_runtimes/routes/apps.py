@@ -33,6 +33,7 @@ calls not ready.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -47,6 +48,7 @@ from agent_runtimes.loop.apps.callers import (
     bearer_of,
     is_loopback,
     origin_allowed,
+    platform_origins,
 )
 from agent_runtimes.loop.apps.enforcement import sentence_of
 from agent_runtimes.loop.apps.loading import AppNotRunnable, agent_id_of, load_app
@@ -88,37 +90,38 @@ def running_app(agent: str = "default") -> Optional[AppSpec]:
     return find_app(app_id) if app_id else None
 
 
-def _platform_origins() -> tuple[str, ...]:
-    import os
+@dataclass(frozen=True)
+class Authorized:
+    """Who called, and the application they were authorized for.
 
-    return tuple(
-        url.strip().rstrip("/")
-        for url in (
-            os.environ.get("DATALAYER_UI_URL"),
-            os.environ.get("DATALAYER_RUN_URL"),
-        )
-        if url and url.strip()
-    )
+    The handler answers about this application and no other: one read, under
+    one check, so that an application configured while a token is being
+    verified is never answered for under the first one's authorization.
+    """
+
+    caller: Caller
+    app: Optional[AppSpec]
 
 
-async def _caller(
-    request: Request, app: Optional[AppSpec], person_only: bool
-) -> Caller:
+async def _authorize(request: Request, person_only: bool) -> Authorized:
     """Who is calling, or an HTTP refusal that says why."""
-    if is_loopback(request.client.host if request.client else None):
-        return LOCAL
+    app = running_app()
     origin = request.headers.get("origin")
     embedded = app.deployment.embedded if app and app.deployment else None
-    allowed = _platform_origins() + tuple(embedded.origins if embedded else ())
+    allowed = platform_origins() + tuple(embedded.origins if embedded else ())
+    # A browser's origin first, whoever the client: a page elsewhere reaches a
+    # developer's localhost through their browser.
     if not origin_allowed(origin, allowed):
         raise HTTPException(
             status_code=403, detail=f"This application does not answer {origin}."
         )
+    if is_loopback(request.client.host if request.client else None):
+        return Authorized(LOCAL, app)
     token = bearer_of(request.headers.get("authorization"))
     if not token:
         hosted = app.deployment.hosted if app and app.deployment else None
         if not person_only and hosted is not None and hosted.visibility == "public":
-            return ANONYMOUS
+            return Authorized(ANONYMOUS, app)
         raise HTTPException(
             status_code=401,
             detail="Who is calling is not said: send a token.",
@@ -133,24 +136,24 @@ async def _caller(
             status_code=403,
             detail="Only a person configures the application a runtime runs.",
         )
-    return caller
+    return Authorized(caller, app)
 
 
-async def a_person(request: Request) -> Caller:
+async def a_person(request: Request) -> Authorized:
     """A person, or the machine itself: who may configure the runtime."""
-    return await _caller(request, running_app(), person_only=True)
+    return await _authorize(request, person_only=True)
 
 
-async def a_caller(request: Request) -> Caller:
+async def a_caller(request: Request) -> Authorized:
     """Whoever the running application answers."""
-    return await _caller(request, running_app(), person_only=False)
+    return await _authorize(request, person_only=False)
 
 
 @router.post("/configure")
 async def configure_app(
     http_request: Request,
     body: ConfigureAppRequest,
-    caller: Caller = Depends(a_person),
+    authorized: Authorized = Depends(a_person),
 ) -> Dict[str, Any]:
     """Make the runtime's agent the one the application runs."""
     try:
@@ -201,7 +204,7 @@ async def configure_app(
 
 
 @router.get("")
-async def apps(caller: Caller = Depends(a_person)) -> Dict[str, Any]:
+async def apps(authorized: Authorized = Depends(a_person)) -> Dict[str, Any]:
     """The applications this runtime knows: the catalogue's, and its own."""
     return {
         "apps": [
@@ -218,9 +221,9 @@ async def apps(caller: Caller = Depends(a_person)) -> Dict[str, Any]:
 
 
 @router.get("/current")
-async def current_app(caller: Caller = Depends(a_caller)) -> Dict[str, Any]:
+async def current_app(authorized: Authorized = Depends(a_caller)) -> Dict[str, Any]:
     """Which application the runtime runs."""
-    app = running_app()
+    app = authorized.app
     if app is None:
         raise HTTPException(status_code=404, detail="This runtime runs no application.")
     return {
@@ -235,10 +238,10 @@ async def current_app(caller: Caller = Depends(a_caller)) -> Dict[str, Any]:
 
 @router.post("/decide")
 async def decide(
-    body: DecideRequest, caller: Caller = Depends(a_caller)
+    body: DecideRequest, authorized: Authorized = Depends(a_caller)
 ) -> Dict[str, Any]:
     """What the application would do about a tool call, and why — without making it."""
-    app = running_app()
+    app = authorized.app
     if app is None:
         raise HTTPException(status_code=404, detail="This runtime runs no application.")
     enforced = rules_for(app).decide(body.tool, body.arguments)
