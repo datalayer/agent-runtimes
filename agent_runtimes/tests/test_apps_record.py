@@ -127,3 +127,45 @@ async def test_a_client_that_goes_once_it_has_its_answer_leaves_a_record():
             break
         await asyncio.sleep(0.05)
     assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]
+
+
+async def test_an_ag_ui_client_that_stops_at_run_finished_leaves_a_record():
+    """The terminal stops reading at RUN_FINISHED, and stops its runtime."""
+    import asyncio
+
+    import httpx
+    from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
+    from starlette.applications import Starlette
+    from starlette.routing import Route
+
+    spec = app(["outputs"])
+    agent, sent = recorded(spec, ["Python is ", "a language."])
+
+    async def endpoint(request):  # type: ignore[no-untyped-def]
+        return await AGUIAdapter.dispatch_request(request, agent=agent)
+
+    server = Starlette(routes=[Route("/", endpoint, methods=["POST"])])
+    body = {
+        "threadId": "t-1",
+        "runId": "r-1",
+        "state": {},
+        "messages": [{"id": "m1", "role": "user", "content": "What is Python?"}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {},
+    }
+    transport = httpx.ASGITransport(app=server)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://runtime"
+    ) as client:
+        async with client.stream("POST", "/", json=body) as response:
+            async for line in response.aiter_lines():
+                if "RUN_FINISHED" in line:
+                    break
+    for _ in range(20):
+        if sent:
+            break
+        await asyncio.sleep(0.05)
+    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]
+    assert sent[0]["session_uid"] == "t-1"
+    assert sent[0]["entries"][1]["summary"] == "Python is a language."

@@ -27,6 +27,7 @@ from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import (
     AgentStreamEvent,
+    FinalResultEvent,
     PartDeltaEvent,
     PartStartEvent,
     TextPart,
@@ -201,8 +202,8 @@ class AppRecordCapability(AbstractCapability[Any]):
 
     Sent when the run ends — and, since a client that has its answer may go
     before the run has ended (the terminal stops its runtime at once, a
-    browser closes its tab), also when the stream it was shown is cancelled,
-    in a task of its own. Once per run.
+    browser closes its tab), as soon as the stream that carried the final
+    answer ends, or is cancelled, in a task of its own. Once per run.
     """
 
     recorder: AppRecorder
@@ -255,8 +256,11 @@ class AppRecordCapability(AbstractCapability[Any]):
     ) -> AsyncIterable[AgentStreamEvent]:
         key = self._key(ctx)
         cancelled = False
+        final = False
         try:
             async for event in stream:
+                if isinstance(event, FinalResultEvent):
+                    final = True
                 if isinstance(event, PartStartEvent) and isinstance(
                     event.part, TextPart
                 ):
@@ -277,9 +281,11 @@ class AppRecordCapability(AbstractCapability[Any]):
             close = getattr(stream, "aclose", None)
             if close is not None:
                 await close()
-            if cancelled and key in self._sessions:
-                # Cancelled: the client went, and the run will not end. Sent
-                # in a task of its own, which the cancellation does not take.
+            if (cancelled or final) and key in self._sessions:
+                # The answer is given, or the client went: sent now, in a task
+                # of its own, which neither a cancellation nor a client that
+                # stops reading at `RUN_FINISHED` (and stops the runtime with
+                # it, as the terminal does) takes away.
                 answer = self._answers.get(key, "")
                 asyncio.get_running_loop().create_task(
                     self._close(ctx, _short(answer, 300), {"length": len(answer)})
