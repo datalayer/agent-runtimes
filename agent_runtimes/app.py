@@ -890,8 +890,13 @@ async def _create_and_register_cli_agent(
             # Dynamically mount AG-UI route
             agui_app = get_agui_app(agent_id)
             if agui_app and app:
+                from .routes.agui import AGUIDispatch, is_agui_mounted
+
                 mount_path = f"{api_prefix}/ag-ui/{agent_id}"
-                app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
+                if not is_agui_mounted(app.routes, mount_path):
+                    app.mount(
+                        mount_path, AGUIDispatch(agent_id), name=f"agui-{agent_id}"
+                    )
                 logger.info(f"Dynamically mounted AG-UI route: {mount_path}")
         except Exception as e:
             logger.warning(f"Could not register with AG-UI: {e}")
@@ -1323,9 +1328,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # To manually register the demo agent, run: python -m agent_runtimes.examples.demo.demo_agent
 
         # Add AG-UI mounts after agents are registered
+        from .routes.agui import is_agui_mounted
+
         for mount in get_agui_mounts():
             # Mount under /api/v1/ag-ui/{agent_id}
-            full_mount = Mount(f"{config.api_prefix}/ag-ui{mount.path}", app=mount.app)
+            full_path = f"{config.api_prefix}/ag-ui{mount.path}"
+            if is_agui_mounted(app.routes, full_path):
+                continue
+            full_mount = Mount(full_path, app=mount.app)
             app.routes.append(full_mount)
             logger.info(f"Mounted AG-UI route: {config.api_prefix}/ag-ui{mount.path}")
 

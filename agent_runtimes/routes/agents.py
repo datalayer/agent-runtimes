@@ -2613,13 +2613,16 @@ async def create_agent(
                 # Dynamically add the AG-UI mount to the FastAPI app
                 agui_app = get_agui_app(agent_id)
                 if agui_app and http_request.app:
+                    from .agui import AGUIDispatch, is_agui_mounted
+
                     # Mount path should NOT have trailing slash - Starlette Mount handles that
                     mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
-                    # Use app.mount() for proper dynamic route registration
-                    # This is more reliable than manually manipulating app.routes
-                    http_request.app.mount(
-                        mount_path, agui_app, name=f"agui-{agent_id}"
-                    )
+                    # Once per id: the dispatch answers with the agent
+                    # registered now, so a recreated agent is reached.
+                    if not is_agui_mounted(http_request.app.routes, mount_path):
+                        http_request.app.mount(
+                            mount_path, AGUIDispatch(agent_id), name=f"agui-{agent_id}"
+                        )
                     logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
             except Exception as e:
                 logger.warning(f"Could not register with AG-UI: {e}")
@@ -4787,8 +4790,15 @@ async def configure_from_spec_endpoint(
     # ── 4. Build the CreateAgentRequest that represents this spec ────
     server_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
 
+    # Recreated on the transport it is served on: an agent served over AG-UI
+    # and recreated on the default transport was never registered for AG-UI
+    # again, and its clients went on talking to the agent it replaced.
+    from .agui import get_agui_adapter
+
+    served_on = "ag-ui" if get_agui_adapter(target_agent_name) is not None else None
     create_request = CreateAgentRequest(
         name=target_agent_name,
+        **({"transport": served_on} if served_on else {}),
         agent_spec_id=body.agent_spec_id,
         agent_spec=body.agent_spec,
         enable_codemode=server_codemode,
