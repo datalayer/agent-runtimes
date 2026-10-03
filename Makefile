@@ -6,8 +6,8 @@ SHELL=/bin/bash
 .DEFAULT_GOAL := default
 
 .PHONY: \
-	help default clean build test test-js test-py kill warning \
-	publish-npm publish-pypi publish-conda pydoc typedoc docs \
+	help default clean build test test-js test-py kill \
+	publish-npm publish-pypi pydoc typedoc docs \
 	examples examples\:prod examples-local agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
 	agents list-specs specs specs-clone specs-generate specs-format \
@@ -238,8 +238,6 @@ test-py: ## run python tests
 kill:
 	npm run kill
 
-warning:
-	echo "\x1b[34m\x1b[43mEnsure you have run \x1b[1;37m\x1b[41m conda deactivate \x1b[22m\x1b[34m\x1b[43m before invoking this.\x1b[0m"
 
 publish-npm: clean build-lib ## publish-npm
 	npm publish
@@ -253,12 +251,6 @@ publish-pypi: clean build # publish the pypi package
 	@exec echo
 	@exec echo https://pypi.org/project/agent-runtimes/#history
 
-publish-conda: # publish the conda package
-	@exec echo
-	cd ./conda-recipe; ./publish-conda.sh
-	@exec echo
-	@exec echo https://anaconda.org/datalayer/agent-runtimes
-	@exec echo conda install datalayer::agent-runtimes
 
 pydoc: # pydoc
 	rm -fr docs/docs/python_api

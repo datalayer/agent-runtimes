@@ -13,6 +13,15 @@ module.exports = {
   favicon: 'img/favicon.ico',
   organizationName: 'datalayer',
   projectName: 'datalayer',
+  // Rspack, SWC and Lightning CSS (@docusaurus/faster), as Reactor's docs do:
+  // the build is several times faster, and webpack stays the fallback —
+  // reverting is deleting these lines.
+  future: {
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+    },
+    faster: true,
+  },
   markdown: {
     format: 'detect',
     mermaid: true,
