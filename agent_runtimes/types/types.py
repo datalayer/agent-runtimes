@@ -249,29 +249,31 @@ class ComponentBindingsSpec(BaseModel):
 
 
 class ComponentSpec(BaseModel):
-    """A visual component of the catalog (`agentspecs/components`, LOOP C-13):
-    one catalog for the spec, the Canvas and Python. Its `properties` are a
-    JSON Schema, from which its properties form is drawn (C-14).
+    """A visual component a UI plugin renders (LOOP C-13), named as a surface
+    names it. A standard one's properties are its protocol's own; Datalayer's
+    own carry theirs as a JSON Schema, from which its properties form is drawn
+    (C-14).
     """
 
-    id: str = Field(..., description="What a layout names (e.g. 'table')")
-    version: str = Field(default="0.0.1", description="Specification version")
+    id: str = Field(..., description="The name a surface gives it (e.g. 'Table')")
     name: str = Field(..., description="Display name")
     description: str = Field(..., description="What it is for, in a sentence")
     category: str = Field(
         ..., description="text, input, action, data, conversation, media, layout"
     )
     emoji: str = Field(..., description="Its face on the palette")
-    a2ui: Optional[str] = Field(
+    standard: bool = Field(..., description="Its properties are its protocol's own")
+    properties: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="The A2UI standard component it renders as; none for a contributed one",
+        description="Its properties as a JSON Schema, when it is Datalayer's own",
     )
-    properties: Dict[str, Any] = Field(
-        ..., description="Its properties, as a JSON Schema"
+    bindings: Optional[ComponentBindingsSpec] = Field(
+        default=None, description="What it can be bound to"
     )
-    bindings: ComponentBindingsSpec = Field(..., description="What it can be bound to")
     events: List[str] = Field(default_factory=list, description="What it reports")
-    example: Dict[str, Any] = Field(..., description="A valid configuration of it")
+    example: Optional[Dict[str, Any]] = Field(
+        default=None, description="A valid configuration of it"
+    )
 
 
 class UIPluginSpec(BaseModel):
@@ -291,6 +293,12 @@ class UIPluginSpec(BaseModel):
     docs_url: str = Field(default="", description="The protocol's own documentation")
     enabled: bool = Field(
         default=True, description="Whether an agent spec may name it today"
+    )
+    catalog: str = Field(
+        default="", description="The catalog its components are written in"
+    )
+    components: List[ComponentSpec] = Field(
+        default_factory=list, description="The visual components it renders (LOOP C-13)"
     )
 
 

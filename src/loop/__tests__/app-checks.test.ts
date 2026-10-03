@@ -145,9 +145,9 @@ describe('the instant checks', () => {
     expect(ruled.verdict).toBe(PASSES);
   });
 
-  it('refuse a component the catalog does not have, by id or A2UI type (C-13)', () => {
-    expect(componentNamed('ChoicePicker')?.id).toBe('select');
-    expect(componentNamed('table')?.id).toBe('table');
+  it('refuse a component no UI plugin renders (C-13)', () => {
+    expect(componentNamed('ChoicePicker')?.standard).toBe(true);
+    expect(componentNamed('Table')?.properties).toBeDefined();
     const check = checkAppspec({
       ...BASE,
       interface: {

@@ -88,14 +88,13 @@ export interface AgentCapability {
 }
 
 /**
- * A visual component of the catalog (`agentspecs/components`, LOOP C-13): one
- * catalog for the spec, the Canvas and Python. Its `properties` are a JSON
- * Schema, from which its properties form is drawn (C-14).
+ * A visual component a UI plugin renders (LOOP C-13), named as a surface names
+ * it. A standard one's properties are its protocol's own; Datalayer's own
+ * carry theirs as a JSON Schema, from which its properties form is drawn (C-14).
  */
 export interface ComponentSpec {
-  /** What a layout names (e.g. 'table'). */
+  /** The name a surface gives it (e.g. 'Table'). */
   id: string;
-  version: string;
   name: string;
   /** What it is for, in a sentence. */
   description: string;
@@ -103,16 +102,16 @@ export interface ComponentSpec {
   category: string;
   /** Its face on the palette. */
   emoji: string;
-  /** The A2UI standard component it renders as; undefined for a contributed one. */
-  a2ui?: string;
-  /** Its properties, as a JSON Schema. */
-  properties: Record<string, unknown>;
+  /** Its properties are its protocol's own. */
+  standard: boolean;
+  /** Its properties as a JSON Schema, when it is Datalayer's own. */
+  properties?: Record<string, unknown>;
   /** What it can be bound to: what it shows, what it sends. */
-  bindings: { shows: string[]; sends: string[] };
+  bindings?: { shows: string[]; sends: string[] };
   /** What it reports. */
   events: string[];
   /** A valid configuration of it. */
-  example: Record<string, unknown>;
+  example?: Record<string, unknown>;
 }
 
 /**
@@ -130,6 +129,10 @@ export interface UIPluginSpec {
   docsUrl: string;
   /** Whether an agent spec may name it today. */
   enabled: boolean;
+  /** The catalog its components are written in. */
+  catalog: string;
+  /** The visual components it renders (LOOP C-13). */
+  components: ComponentSpec[];
 }
 
 /** A check a Frame requires of the output of work done under it. */

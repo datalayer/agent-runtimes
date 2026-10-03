@@ -31,7 +31,7 @@ import { getCog } from '../../specs/cogs';
 import { getFrame } from '../../specs/frames';
 import { getGate } from '../../specs/gates';
 import { GUARD_CATALOGUE } from '../../specs/guards';
-import { COMPONENT_CATALOGUE, getComponent } from '../../specs/components';
+import { getComponent } from '../../specs/uiPlugins';
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { getMemory } from '../../specs/memory';
 import { getModel } from '../../specs/models';
@@ -69,12 +69,11 @@ const idOf = (ref: string): string => {
 };
 
 /**
- * The catalog's component a layout names (LOOP C-13): by its id, or by the
- * A2UI type it renders as.
+ * The component a layout names (LOOP C-13), from the catalogs of the enabled
+ * UI plugins, by the name a surface gives it.
  */
 export const componentNamed = (name: string): ComponentSpec | undefined =>
-  getComponent(name) ??
-  Object.values(COMPONENT_CATALOGUE).find(component => component.a2ui === name);
+  getComponent(name);
 
 const own = <T>(record: Record<string, T>, key: string): T | undefined =>
   Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
