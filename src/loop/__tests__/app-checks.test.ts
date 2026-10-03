@@ -16,6 +16,7 @@ import {
   NOT_READY,
   PASSES,
   checkAppspec,
+  componentNamed,
 } from '../apps/checks';
 
 const BASE = {
@@ -142,6 +143,28 @@ describe('the instant checks', () => {
       rules: [{ action: 'Post', applies_to: 'send', behaviour: 'ask_first' }],
     });
     expect(ruled.verdict).toBe(PASSES);
+  });
+
+  it('refuse a component the catalog does not have, by id or A2UI type (C-13)', () => {
+    expect(componentNamed('ChoicePicker')?.id).toBe('select');
+    expect(componentNamed('table')?.id).toBe('table');
+    const check = checkAppspec({
+      ...BASE,
+      interface: {
+        components: ['Text', 'Marquee'],
+        surface: {
+          components: [
+            { id: 'root', component: 'Column', children: ['ticker'] },
+            { id: 'ticker', component: 'Marquee' },
+          ],
+        },
+      },
+    });
+    expect(check.verdict).toBe(NOT_READY);
+    expect(check.problems).toEqual([
+      'There is no component named “Marquee” in the catalog.',
+      "The surface's “ticker” is a “Marquee”, which the catalog does not have.",
+    ]);
   });
 
   it('need attention for a Guard the runtime does not run (R-06)', () => {

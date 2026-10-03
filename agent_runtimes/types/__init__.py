@@ -101,6 +101,8 @@ from .types import (
     TrackSpec,
     TriggerField,
     TriggerSpec,
+    ComponentBindingsSpec,
+    ComponentSpec,
     UIPluginSpec,
 )
 
@@ -111,6 +113,8 @@ __all__ = [
     "AIModel",
     "ModelPricing",
     "ModelProvider",
+    "ComponentBindingsSpec",
+    "ComponentSpec",
     "UIPluginSpec",
     "CogSpec",
     "FrameGuardSpec",

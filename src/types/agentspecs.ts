@@ -88,6 +88,34 @@ export interface AgentCapability {
 }
 
 /**
+ * A visual component of the catalog (`agentspecs/components`, LOOP C-13): one
+ * catalog for the spec, the Canvas and Python. Its `properties` are a JSON
+ * Schema, from which its properties form is drawn (C-14).
+ */
+export interface ComponentSpec {
+  /** What a layout names (e.g. 'table'). */
+  id: string;
+  version: string;
+  name: string;
+  /** What it is for, in a sentence. */
+  description: string;
+  /** text, input, action, data, conversation, media, layout. */
+  category: string;
+  /** Its face on the palette. */
+  emoji: string;
+  /** The A2UI standard component it renders as; undefined for a contributed one. */
+  a2ui?: string;
+  /** Its properties, as a JSON Schema. */
+  properties: Record<string, unknown>;
+  /** What it can be bound to: what it shows, what it sends. */
+  bindings: { shows: string[]; sends: string[] };
+  /** What it reports. */
+  events: string[];
+  /** A valid configuration of it. */
+  example: Record<string, unknown>;
+}
+
+/**
  * How an agent's answer becomes an interface: a protocol the host renders
  * (`agentspecs/ui-plugins`). An agent spec's `uiPlugin` names one.
  */

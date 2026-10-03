@@ -176,6 +176,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/frontend_tools.py \
 	agent_runtimes/specs/envvars.py \
 	agent_runtimes/specs/ui_plugins.py \
+	agent_runtimes/specs/components.py \
 	agent_runtimes/specs/frames.py \
 	agent_runtimes/specs/cogs.py \
 	agent_runtimes/specs/guards.py \
@@ -497,6 +498,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	else \
 	  echo "Skipping UI plugin specifications: $(AGENTSPECS_DIR)/agentspecs/ui-plugins not found (agentspecs < 0.0.11)"; \
 	fi
+	$(call step,Generating component specifications)
+	python scripts/codegen/generate_components.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/components \
+	  --python-output agent_runtimes/specs/components.py \
+	  --typescript-output src/specs/components.ts
 	$(call step,Generating Frame specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/frames" ]; then \
 	  python scripts/codegen/generate_frames.py \

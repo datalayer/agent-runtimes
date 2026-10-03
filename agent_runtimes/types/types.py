@@ -241,6 +241,39 @@ class ModelPricing(BaseModel):
     )
 
 
+class ComponentBindingsSpec(BaseModel):
+    """What a component can be bound to: what it shows, what it sends."""
+
+    shows: List[str] = Field(default_factory=list, description="The data it shows")
+    sends: List[str] = Field(default_factory=list, description="What it sends back")
+
+
+class ComponentSpec(BaseModel):
+    """A visual component of the catalog (`agentspecs/components`, LOOP C-13):
+    one catalog for the spec, the Canvas and Python. Its `properties` are a
+    JSON Schema, from which its properties form is drawn (C-14).
+    """
+
+    id: str = Field(..., description="What a layout names (e.g. 'table')")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(..., description="What it is for, in a sentence")
+    category: str = Field(
+        ..., description="text, input, action, data, conversation, media, layout"
+    )
+    emoji: str = Field(..., description="Its face on the palette")
+    a2ui: Optional[str] = Field(
+        default=None,
+        description="The A2UI standard component it renders as; none for a contributed one",
+    )
+    properties: Dict[str, Any] = Field(
+        ..., description="Its properties, as a JSON Schema"
+    )
+    bindings: ComponentBindingsSpec = Field(..., description="What it can be bound to")
+    events: List[str] = Field(default_factory=list, description="What it reports")
+    example: Dict[str, Any] = Field(..., description="A valid configuration of it")
+
+
 class UIPluginSpec(BaseModel):
     """How an agent's answer becomes an interface: a protocol the host
     renders (`agentspecs/ui-plugins`). An agent spec's `ui_plugin` names one.
