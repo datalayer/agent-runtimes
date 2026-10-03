@@ -134,8 +134,12 @@ import {
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import type { ToolCallMessage } from '../../../types/chat';
-import { PresenceFace, PresenceLine } from './Presence';
-import { presenceState, type PresenceTool } from './presenceStatus';
+import { PresenceFace, PresenceLine } from '../../../chat/presence/Presence';
+import {
+  presenceState,
+  presenceToolOf,
+  type PresenceTool,
+} from '../../../chat/presence/presenceStatus';
 
 type ChatControls = {
   send: (message: string) => void;
@@ -333,20 +337,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const handleDisplayItemsChange = useCallback(
     (items: Array<ChatMessage | ToolCallMessage>) => {
       // The newest tool call, for an application's line of status (T-08).
-      let newest: ToolCallMessage | undefined;
-      for (let index = items.length - 1; index >= 0; index -= 1) {
-        const item = items[index] as ToolCallMessage;
-        if (typeof item.toolName === 'string' && item.toolCallId) {
-          newest = item;
-          break;
-        }
-      }
-      const open =
-        !!newest && newest.status !== 'complete' && newest.status !== 'error';
-      const pendingApproval =
-        open &&
-        (newest?.result as { pending_approval?: unknown } | undefined)
-          ?.pending_approval === true;
+      const { open, pendingApproval } = presenceToolOf(items);
       setPresenceTool(previous =>
         previous.open === open && previous.pendingApproval === pendingApproval
           ? previous

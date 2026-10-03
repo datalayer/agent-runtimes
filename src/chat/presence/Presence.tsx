@@ -10,7 +10,7 @@
  * still under `prefers-reduced-motion`, and the line changes at the theme's
  * status pace (T-10).
  *
- * @module loop/plugins/chat/Presence
+ * @module chat/presence/Presence
  */
 
 import { Box, Text } from '@primer/react';

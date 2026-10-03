@@ -32,7 +32,7 @@ import {
   type EditorToolbarContext,
 } from '../../core';
 import { createTurnFeed, feedWriters } from './turnState';
-import type { PresenceState } from './presenceStatus';
+import type { PresenceState } from '../../../chat/presence/presenceStatus';
 
 /**
  * An editor toolbar button that asks an agent to do something.

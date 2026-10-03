@@ -28,7 +28,7 @@ import type { AppSpec } from '../../types/agentspecs';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import { dumpAppspec } from './appspec';
-import type { PresenceState } from '../plugins/chat/presenceStatus';
+import type { PresenceState } from '../../chat/presence/presenceStatus';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {

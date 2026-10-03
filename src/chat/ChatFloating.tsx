@@ -38,6 +38,20 @@ import { ChatBase } from './base/ChatBase';
 import { ButtonGlow } from './display/ButtonGlow';
 import { useViewportDrag } from './useViewportDrag';
 import { disabledChatViewModes, resolveMountPoint } from './viewModes';
+import { AssistantStage } from './assistant/AssistantStage';
+import { SpeechBalloon } from './assistant/SpeechBalloon';
+import { DEFAULT_ASSISTANT_CHARACTER } from './assistant/characters';
+import {
+  assistantStateOf,
+  latestSaying,
+  newestIsAnswer,
+  type AssistantSaying,
+} from './assistant/state';
+import {
+  presenceState,
+  presenceToolOf,
+  type PresenceTool,
+} from './presence/presenceStatus';
 import {
   useChatOpen,
   useChatMessages,
@@ -120,11 +134,23 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * - 'floating': Full-height floating panel (pinned to right edge with offset)
    * - 'floating-small': Standard floating popup
    * - 'floating-draggable': The popup with a handle, movable about the viewport
+   * - 'assistant': A character on the page that speaks in a balloon (LOOP T-21)
    * - 'panel': Full-height side panel (right edge, no floating offset)
    * @default 'floating'
    */
   defaultViewMode?:
-    'floating' | 'floating-small' | 'floating-draggable' | 'panel';
+    | 'floating'
+    | 'floating-small'
+    | 'floating-draggable'
+    | 'assistant'
+    | 'panel';
+
+  /**
+   * The character of the floating assistant, by id (LOOP T-25): one of
+   * `ASSISTANT_CHARACTERS`.
+   * @default 'paperclip'
+   */
+  assistantCharacter?: string;
 
   /**
    * Callback when the user switches view mode via the header toggle.
@@ -247,6 +273,7 @@ export function ChatFloating({
   panelProps,
   launching = false,
   launchingMessage,
+  assistantCharacter = DEFAULT_ASSISTANT_CHARACTER,
 }: ChatFloatingProps) {
   // Store-based state
   const storeIsOpen = useChatOpen();
@@ -267,7 +294,7 @@ export function ChatFloating({
   const [isAnimating, setIsAnimating] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [viewMode, setViewMode] = useState<
-    'floating' | 'floating-small' | 'floating-draggable' | 'panel'
+    'floating' | 'floating-small' | 'floating-draggable' | 'assistant' | 'panel'
   >(defaultViewMode);
   const [focusTrigger, setFocusTrigger] = useState(0);
   const [panelInFlow, setPanelInFlow] = useState(false);
@@ -309,6 +336,97 @@ export function ChatFloating({
       resetDrag();
     }
   }, [viewMode, resetDrag]);
+
+  /*
+   * The floating assistant (LOOP T-21, T-22, T-27): a character that acts out
+   * the presence of what answers — read here from the chat's own loading and
+   * items — greets when it arrives, says goodbye when sent away, and is
+   * dragged about by itself, the conversation following it.
+   */
+  const ASSISTANT_SIZE = 88;
+  const assistantMode = viewMode === 'assistant' && !isMobile;
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatTool, setChatTool] = useState<PresenceTool>({
+    open: false,
+    pendingApproval: false,
+  });
+  const [answering, setAnswering] = useState(false);
+  const [arriving, setArriving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [assistantAway, setAssistantAway] = useState(false);
+  /* The agent's newest words, said in the balloon until heard (T-23). */
+  const [saying, setSaying] = useState<AssistantSaying | undefined>();
+  const [heardId, setHeardId] = useState<string | undefined>();
+  const [freshSaying, setFreshSaying] = useState(false);
+  useEffect(() => {
+    if (!saying || isOpen) {
+      return;
+    }
+    setFreshSaying(true);
+    const timer = setTimeout(() => setFreshSaying(false), 12000);
+    return () => clearTimeout(timer);
+  }, [saying?.id, saying?.text, isOpen]);
+  useEffect(() => {
+    if (isOpen && saying) {
+      setHeardId(saying.id);
+    }
+  }, [isOpen, saying]);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const stageDrag = useViewportDrag(stageRef);
+  useEffect(() => {
+    if (!assistantMode) {
+      return;
+    }
+    setAssistantAway(false);
+    setArriving(true);
+    const timer = setTimeout(() => setArriving(false), 1800);
+    return () => clearTimeout(timer);
+  }, [assistantMode]);
+  const assistantState = assistantStateOf(presenceState(chatBusy, chatTool), {
+    arriving,
+    leaving,
+    speaking: answering,
+  });
+  const unheard = !!saying && saying.id !== heardId;
+  const assistantBalloon =
+    assistantState === 'waiting'
+      ? { text: 'Waiting for you — open the conversation to answer.' }
+      : unheard && saying
+        ? { text: saying.text, more: saying.more }
+        : { text: description };
+  const balloonInsists =
+    assistantState === 'greeting' ||
+    assistantState === 'waiting' ||
+    (unheard && (assistantState === 'speaking' || freshSaying));
+  const panelOnLoadingChange = panelProps?.onLoadingChange;
+  const panelOnDisplayItemsChange = panelProps?.onDisplayItemsChange;
+  const handleLoadingChange = useCallback(
+    (loading: boolean) => {
+      setChatBusy(loading);
+      panelOnLoadingChange?.(loading);
+    },
+    [panelOnLoadingChange],
+  );
+  const handleDisplayItemsChange = useCallback(
+    (items: Parameters<NonNullable<typeof panelOnDisplayItemsChange>>[0]) => {
+      const tool = presenceToolOf(items);
+      setChatTool(previous =>
+        previous.open === tool.open &&
+        previous.pendingApproval === tool.pendingApproval
+          ? previous
+          : tool,
+      );
+      setAnswering(newestIsAnswer(items));
+      const said = latestSaying(items);
+      setSaying(previous =>
+        previous?.id === said?.id && previous?.text === said?.text
+          ? previous
+          : said,
+      );
+      panelOnDisplayItemsChange?.(items);
+    },
+    [panelOnDisplayItemsChange],
+  );
 
   // Handle view mode changes from the header segmented toggle
   const handleChatViewModeChange = useCallback(
@@ -518,6 +636,39 @@ export function ChatFloating({
     setTimeout(() => setIsAnimating(false), animationDuration);
   }, [isOpen, setIsOpen, onOpen, onClose, animationDuration]);
 
+  /* The assistant sent away: goodbye first, then a small way back (T-27). */
+  const dismissAssistant = useCallback(() => {
+    if (isOpen) {
+      handleToggle();
+    }
+    setLeaving(true);
+    setTimeout(() => {
+      setLeaving(false);
+      setAssistantAway(true);
+    }, 600);
+  }, [isOpen, handleToggle]);
+
+  /*
+   * The conversation as the assistant's balloon: above the character, its
+   * right edge on the character's, and never off the screen.
+   */
+  const balloonPlace = (): React.CSSProperties => {
+    const widthPx = typeof width === 'number' ? width : 400;
+    const heightPx = typeof height === 'number' ? height : 550;
+    if (stageDrag.position) {
+      return {
+        left: Math.max(8, stageDrag.position.left + ASSISTANT_SIZE - widthPx),
+        top: Math.max(8, stageDrag.position.top - heightPx - 16),
+        right: 'auto',
+        bottom: 'auto',
+      };
+    }
+    const corner = getPositionStyles();
+    return position.startsWith('bottom')
+      ? { ...corner, bottom: offset + ASSISTANT_SIZE + 16 }
+      : { ...corner, top: offset + ASSISTANT_SIZE + 16 };
+  };
+
   // Handle new chat
   const handleNewChat = useCallback(() => {
     if (useStoreMode) {
@@ -719,6 +870,7 @@ export function ChatFloating({
               }
             : getPositionStyles()
           : {}),
+        ...(assistantMode ? balloonPlace() : {}),
         ...(viewMode === 'panel' && !isMobile
           ? {
               ...(panelInFlow || dockedInMount
@@ -751,7 +903,8 @@ export function ChatFloating({
                 ? `${popupWidth}px`
                 : popupWidth
               : (viewMode === 'floating-small' ||
-                    viewMode === 'floating-draggable') &&
+                    viewMode === 'floating-draggable' ||
+                    viewMode === 'assistant') &&
                   !isMobile
                 ? typeof popupWidth === 'number'
                   ? `${popupWidth}px`
@@ -771,7 +924,8 @@ export function ChatFloating({
             : viewMode === 'floating' && !isMobile
               ? '100%'
               : (viewMode === 'floating-small' ||
-                    viewMode === 'floating-draggable') &&
+                    viewMode === 'floating-draggable' ||
+                    viewMode === 'assistant') &&
                   !isMobile
                 ? typeof popupHeight === 'number'
                   ? `${popupHeight}px`
@@ -786,7 +940,12 @@ export function ChatFloating({
         bg: 'canvas.default',
         border: '1px solid',
         borderColor: 'border.default',
-        borderRadius: viewMode === 'panel' || isMobile ? 0 : '12px',
+        borderRadius:
+          viewMode === 'panel' || isMobile
+            ? 0
+            : assistantMode
+              ? 'var(--theme-radius-bubble, 16px)'
+              : '12px',
         boxShadow: viewMode === 'panel' ? 'shadow.none' : 'shadow.extra-large',
         overflow: 'hidden',
         transform:
@@ -898,16 +1057,99 @@ export function ChatFloating({
         onApproveApproval={onApproveApproval}
         onRejectApproval={onRejectApproval}
         {...panelProps}
+        onLoadingChange={handleLoadingChange}
+        onDisplayItemsChange={handleDisplayItemsChange}
       >
         {children}
       </ChatBase>
     </Box>
   );
 
+  /*
+   * The floating popup's button. Words not yet heard make it blink for the
+   * person's attention, until the chat is opened; hovered, they show in a
+   * balloon above it in place of the tooltip.
+   */
+  const chatButton = (
+    <IconButton
+      icon={
+        buttonIcon ? (buttonIcon as React.ElementType) : CommentDiscussionIcon
+      }
+      aria-label={buttonTooltip}
+      onClick={handleToggle}
+      size="large"
+      sx={{
+        width: 56,
+        height: 56,
+        borderRadius: '50%',
+        bg: brandColor || 'accent.emphasis',
+        color: 'fg.onEmphasis',
+        boxShadow: 'shadow.large',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+        // Words not yet heard: the circle blinks for the person's
+        // attention, and stops once the chat is opened.
+        ...(unheard
+          ? {
+              animation: 'chatFloatingBlink 1.1s ease-in-out infinite',
+              '@keyframes chatFloatingBlink': {
+                '0%, 100%': {
+                  filter: 'brightness(1)',
+                  boxShadow: '0 0 0 0 rgba(0,0,0,0)',
+                },
+                '50%': {
+                  filter: 'brightness(1.25)',
+                  boxShadow:
+                    '0 0 0 6px var(--bgColor-accent-muted, rgba(84,174,255,0.4))',
+                },
+              },
+              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+            }
+          : {}),
+        '&:hover': {
+          bg: brandColor || 'accent.emphasis',
+          boxShadow: 'shadow.extra-large',
+        },
+      }}
+    />
+  );
+
   return (
     <>
+      {/* The floating assistant: the character, open or closed (T-21). */}
+      {assistantMode && !assistantAway && (
+        <AssistantStage
+          characterId={assistantCharacter}
+          state={assistantState}
+          size={ASSISTANT_SIZE}
+          place={
+            stageDrag.position
+              ? { left: stageDrag.position.left, top: stageDrag.position.top }
+              : getPositionStyles()
+          }
+          stageRef={stageRef}
+          onDragStart={stageDrag.onHandlePointerDown}
+          open={isOpen}
+          onToggle={handleToggle}
+          balloon={assistantBalloon}
+          insist={balloonInsists}
+          onDismiss={dismissAssistant}
+        />
+      )}
+      {/* Sent away: a small way back, where it stood (T-27). */}
+      {assistantMode && assistantAway && (
+        <Box sx={{ ...getPositionStyles() }}>
+          <IconButton
+            icon={CommentDiscussionIcon}
+            aria-label="Call the assistant back"
+            onClick={() => setAssistantAway(false)}
+            sx={{ borderRadius: '50%', boxShadow: 'shadow.medium' }}
+          />
+        </Box>
+      )}
+
       {/* Floating button when closed */}
-      {showButton && !isOpen && (
+      {showButton && !isOpen && !assistantMode && (
         <Box
           sx={{
             ...getPositionStyles(),
@@ -924,35 +1166,32 @@ export function ChatFloating({
             onMouseLeave={() => setIsHovered(false)}
           >
             {buttonGlow && <ButtonGlow color={brandColor} />}
-            <Tooltip
-              text={`${buttonTooltip}${shortcutHint ? ` (${shortcutHint})` : ''}`}
-              direction={position.includes('right') ? 'w' : 'e'}
-            >
-              <IconButton
-                icon={
-                  buttonIcon
-                    ? (buttonIcon as React.ElementType)
-                    : CommentDiscussionIcon
-                }
-                aria-label={buttonTooltip}
-                onClick={handleToggle}
-                size="large"
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  bg: brandColor || 'accent.emphasis',
-                  color: 'fg.onEmphasis',
-                  boxShadow: 'shadow.large',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-                  '&:hover': {
-                    bg: brandColor || 'accent.emphasis',
-                    boxShadow: 'shadow.extra-large',
-                  },
-                }}
+            {/*
+              Hovered with something said: the agent's newest words in a
+              balloon, as the floating assistant says them (T-23); otherwise
+              the tooltip.
+            */}
+            {isHovered && saying ? (
+              <SpeechBalloon
+                text={saying.text}
+                more={saying.more}
+                onOpen={handleToggle}
+                above={64}
+                side={position.startsWith('bottom') ? 'above' : 'below'}
+                align={position.includes('right') ? 'right' : 'left'}
+                tailAt={28}
               />
-            </Tooltip>
+            ) : null}
+            {saying ? (
+              chatButton
+            ) : (
+              <Tooltip
+                text={`${buttonTooltip}${shortcutHint ? ` (${shortcutHint})` : ''}`}
+                direction={position.includes('right') ? 'w' : 'e'}
+              >
+                {chatButton}
+              </Tooltip>
+            )}
 
             {/* Unread badge */}
             {messages.length > 0 && (
@@ -981,8 +1220,8 @@ export function ChatFloating({
               </Box>
             )}
 
-            {/* Pulse animation when has messages */}
-            {messages.length > 0 && (
+            {/* A ring going out while words are not yet heard */}
+            {unheard && (
               <Box
                 sx={{
                   position: 'absolute',

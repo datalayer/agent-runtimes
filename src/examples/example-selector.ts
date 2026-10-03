@@ -171,6 +171,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Simple cell example.',
   ),
   makeEntry(
+    'ChatAssistantExample',
+    () => import('./ChatAssistantExample'),
+    'The floating assistant: the chat as a character on the page.',
+  ),
+  makeEntry(
     'ChatCustomExample',
     () => import('./ChatCustomExample'),
     'Custom chat experience composition example.',

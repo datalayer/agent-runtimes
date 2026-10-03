@@ -21,11 +21,12 @@ afterEach(() => {
 });
 
 describe('the modes', () => {
-  it('are the three floating ones, then the docked one', () => {
+  it('are the four floating ones, then the docked one', () => {
     expect(CHAT_VIEW_MODES.map(option => option.mode)).toEqual([
       'floating',
       'floating-small',
       'floating-draggable',
+      'assistant',
       'sidebar',
     ]);
   });
@@ -37,10 +38,18 @@ describe('the modes', () => {
     expect(draggable?.label).toBe('Floating draggable');
   });
 
+  it('name the assistant after what it is (LOOP T-21)', () => {
+    const assistant = CHAT_VIEW_MODES.find(
+      option => option.mode === 'assistant',
+    );
+    expect(assistant?.label).toBe('Floating assistant');
+  });
+
   it('know which of them float', () => {
     expect(isFloatingChatViewMode('floating')).toBe(true);
     expect(isFloatingChatViewMode('floating-small')).toBe(true);
     expect(isFloatingChatViewMode('floating-draggable')).toBe(true);
+    expect(isFloatingChatViewMode('assistant')).toBe(true);
     expect(isFloatingChatViewMode('sidebar')).toBe(false);
     expect(isFloatingChatViewMode(undefined)).toBe(false);
   });

@@ -24,6 +24,7 @@ import {
   CommentDiscussionIcon,
   DeviceMobileIcon,
   GrabberIcon,
+  PaperclipIcon,
   SidebarExpandIcon,
   type Icon,
 } from '@primer/octicons-react';
@@ -35,6 +36,7 @@ export const VIEW_MODE_ICONS: Record<ChatViewMode, Icon> = {
   floating: CommentDiscussionIcon,
   'floating-small': DeviceMobileIcon,
   'floating-draggable': GrabberIcon,
+  assistant: PaperclipIcon,
   sidebar: SidebarExpandIcon,
 };
 

@@ -85,7 +85,11 @@ export interface ToolCallCompleteContext {
  * - 'sidebar': Docked sidebar panel — offered only where the host has a mount point for it
  */
 export type ChatViewMode =
-  'floating' | 'floating-small' | 'floating-draggable' | 'sidebar';
+  | 'floating'
+  | 'floating-small'
+  | 'floating-draggable'
+  | 'assistant'
+  | 'sidebar';
 
 /**
  * Companion "ephemeral surface" shown next to the chat.

@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PRESENCE_LINES, presenceState } from '../plugins/chat/presenceStatus';
+import { PRESENCE_LINES, presenceState } from '../presence/presenceStatus';
 
 describe('the presence of an application', () => {
   it('is ready between turns', () => {
