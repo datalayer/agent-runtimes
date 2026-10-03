@@ -438,3 +438,89 @@ def apps_deploy(
         markup=False,
         highlight=False,
     )
+
+
+def _store() -> Any:
+    """The caller's applications on the Spacer, or a said exit."""
+    import logging
+
+    from agent_runtimes.loop.apps.store import AppStore
+    from agent_runtimes.loop.launch import NotSignedIn, make_client
+
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    try:
+        client, token = make_client()
+    except NotSignedIn as refused:
+        console.print(f"[red]✗[/red] {refused} Sign in with `datalayer login`.")
+        raise typer.Exit(1)
+    return AppStore(client.urls.spacer_url, token)
+
+
+@app.command(name="pull")
+def apps_pull(
+    app_uid: str = typer.Argument(
+        ..., help="The application's id, as the Studio shows it."
+    ),
+    path: Path = typer.Option(
+        None, "--out", "-o", help="Where to write it; app.yaml by default."
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Overwrite a file that is there."
+    ),
+) -> None:
+    """Write an application's Appspec to a file (LOOP S-04).
+
+    The text the Studio keeps, comments included: a repository holds the same
+    file, and `push` saves it back.
+    """
+    import httpx
+
+    from agent_runtimes.loop.apps.deployments import DeployRefused
+    from agent_runtimes.loop.apps.store import pull
+
+    out = path or Path("app.yaml")
+    if out.exists() and not force:
+        console.print(f"[red]✗[/red] {out} is there already; --force overwrites it.")
+        raise typer.Exit(1)
+    try:
+        text, version = pull(_store(), app_uid)
+    except (DeployRefused, httpx.HTTPError) as refused:
+        console.print(f"[red]✗[/red] {refused}")
+        raise typer.Exit(1)
+    out.write_text(text)
+    console.print(f"[green]✓[/green] Version {version} written to {out}.")
+
+
+@app.command(name="push")
+def apps_push(
+    path: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="The Appspec, a YAML file."
+    ),
+    app_uid: str = typer.Option(..., "--app", help="The application it is saved as."),
+) -> None:
+    """Save a file as an application, as the Studio saves it (LOOP S-04).
+
+    A file that is not ready is refused. A changed specification is the next
+    version, and the one left behind is kept; the same one is not.
+    """
+    import httpx
+
+    from agent_runtimes.loop.apps.deployments import DeployRefused
+    from agent_runtimes.loop.apps.store import push
+
+    report = validate_file(path)
+    if report.verdict == NOT_READY:
+        for problem in report.problems:
+            console.print(f"[red]✗[/red] {problem}")
+        raise typer.Exit(1)
+    try:
+        version, done = push(_store(), app_uid, path.read_text())
+    except (DeployRefused, httpx.HTTPError) as refused:
+        console.print(f"[red]✗[/red] {refused}")
+        raise typer.Exit(1)
+    said = {
+        "saved": f"Saved as version {version}; the one before is kept.",
+        "rewritten": f"Saved; still version {version}, the specification is the same.",
+        "unchanged": f"Nothing to save: version {version} is this file.",
+    }[done]
+    console.print(f"[green]✓[/green] {said}")
