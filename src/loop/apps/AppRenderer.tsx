@@ -28,6 +28,7 @@ import type { AppSpec } from '../../types/agentspecs';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import { dumpAppspec } from './appspec';
+import type { PresenceState } from '../plugins/chat/presenceStatus';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
@@ -91,6 +92,12 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   app: AppSpec;
   /** What its record is kept under, on Datalayer: the application, its deployment. */
   instance?: AppInstance;
+  /**
+   * Told what the application is doing — idle, thinking, working, waiting for
+   * you — for a host that draws its face in a frame of its own (T-08). A
+   * stable function, such as a state setter.
+   */
+  onPresence?: (state: PresenceState) => void;
 };
 
 /**
@@ -109,6 +116,7 @@ export function AppRenderer({
   app,
   plugins = NO_PLUGINS,
   instance,
+  onPresence,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   const chatOnly = app.interface.layout === 'chat';
@@ -194,6 +202,7 @@ export function AppRenderer({
         name: app.name,
         face: app.emoji,
         welcome: app.interface.welcome || app.description,
+        onPresence,
       }}
       showTokenUsage={false}
       datalayerCreatePayload={datalayerCreatePayload}

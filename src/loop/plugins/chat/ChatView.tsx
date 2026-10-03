@@ -134,6 +134,8 @@ import {
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import type { ToolCallMessage } from '../../../types/chat';
+import { PresenceFace, PresenceLine } from './Presence';
+import { presenceState, type PresenceTool } from './presenceStatus';
 
 type ChatControls = {
   send: (message: string) => void;
@@ -304,6 +306,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [busy, setBusy] = useState(false);
   const [sendReady, setSendReady] = useState(false);
+  const [presenceTool, setPresenceTool] = useState<PresenceTool>({
+    open: false,
+    pendingApproval: false,
+  });
+  const presenceNow = presenceState(busy, presenceTool);
+  const onPresence = config?.presence?.onPresence;
+  // A host drawing the face in a frame of its own is told as it changes.
+  useEffect(() => {
+    onPresence?.(presenceNow);
+  }, [onPresence, presenceNow]);
 
   const handleSendReady = useCallback((controls: ChatControls | null) => {
     controlsRef.current = controls;
@@ -320,6 +332,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const handleDisplayItemsChange = useCallback(
     (items: Array<ChatMessage | ToolCallMessage>) => {
+      // The newest tool call, for an application's line of status (T-08).
+      let newest: ToolCallMessage | undefined;
+      for (let index = items.length - 1; index >= 0; index -= 1) {
+        const item = items[index] as ToolCallMessage;
+        if (typeof item.toolName === 'string' && item.toolCallId) {
+          newest = item;
+          break;
+        }
+      }
+      const open =
+        !!newest && newest.status !== 'complete' && newest.status !== 'error';
+      const pendingApproval =
+        open &&
+        (newest?.result as { pending_approval?: unknown } | undefined)
+          ?.pending_approval === true;
+      setPresenceTool(previous =>
+        previous.open === open && previous.pendingApproval === pendingApproval
+          ? previous
+          : { open, pendingApproval },
+      );
       const feed = turnFeedRef.current;
       if (!feed) {
         return;
@@ -1796,12 +1828,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // set the header's height.
             brandIcon={
               presence?.face ? (
-                <span aria-hidden style={{ fontSize: 20, lineHeight: 1 }}>
-                  {presence.face}
-                </span>
+                <PresenceFace
+                  face={presence.face}
+                  size={20}
+                  state={presenceNow}
+                />
               ) : (
                 <BrandIcon size={20} />
               )
+            }
+            // An application says what it is doing, in plain words, beside
+            // its name (T-08); an agent's chat keeps its header as it is.
+            headerContent={
+              presence ? <PresenceLine state={presenceNow} /> : undefined
             }
             emptyState={{
               // An application's own face, large: the thing a person's eye
