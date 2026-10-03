@@ -144,6 +144,19 @@ describe('the instant checks', () => {
     expect(ruled.verdict).toBe(PASSES);
   });
 
+  it('need attention for a Guard the runtime does not run (R-06)', () => {
+    const check = checkAppspec({
+      ...BASE,
+      checks: {
+        guards: ['sensitive-data-guard:0.0.1', 'consensus-guard:0.0.1'],
+      },
+    });
+    expect(check.verdict).toBe(NEEDS_ATTENTION);
+    expect(check.attention).toEqual([
+      'The Consensus Guard is judged by a Cog the runtime does not run yet: nothing is checked by it.',
+    ]);
+  });
+
   it('count a rule on a versioned tool as a rule on that tool', () => {
     const slack = checkAppspec({
       ...BASE,

@@ -307,8 +307,30 @@ function attentionNotes(app: AppSpec): string[] {
   if (app.record.include.length === 0) {
     notes.push('It keeps no record of what it did.');
   }
+  // A Guard the runtime does not run checks nothing (LOOP R-06): said here,
+  // where the builder decides, rather than found out in production.
+  for (const ref of app.checks.guards) {
+    const guard = own(GUARD_CATALOGUE, idOf(ref));
+    if (guard && !EXECUTED_GUARDS.includes(guard.id)) {
+      const judge =
+        guard.method === 'cog'
+          ? 'a Cog'
+          : guard.method === 'human'
+            ? 'a person'
+            : 'a method';
+      notes.push(
+        `The ${guard.name} is judged by ${judge} the runtime does not run yet: nothing is checked by it.`,
+      );
+    }
+  }
   return notes;
 }
+
+/** The Guards the runtime executes (agent-runtimes `loop/apps/guards.py`). */
+export const EXECUTED_GUARDS: readonly string[] = [
+  'sensitive-data-guard',
+  'tool-use-policy-guard',
+];
 
 /** Whether a spec of the catalogue says it is not offered today. */
 const isOff = (spec: unknown): boolean => {

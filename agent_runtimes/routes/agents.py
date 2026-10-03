@@ -2248,10 +2248,26 @@ async def create_agent(
             # An application's rules decide every tool call, in place of the
             # default approvals: asking twice for one call is not a rule.
             if running_app is not None:
+                from agent_runtimes.loop.apps.guards import (
+                    AppChecks,
+                    AppChecksCapability,
+                )
                 from agent_runtimes.loop.apps.plugins import rules_for
 
                 capabilities = _without_approval_capabilities(capabilities)
-                capabilities.insert(0, rules_for(running_app, agent_id=agent_id))
+                rules = rules_for(running_app, agent_id=agent_id)
+                capabilities.insert(0, rules)
+                # And its checks, after its rules: a call the rules refuse
+                # is not checked, and a Guard reads what the rules decided
+                # (LOOP R-06).
+                capabilities.insert(
+                    1,
+                    AppChecksCapability(
+                        checks=AppChecks.of(running_app),
+                        agent_id=agent_id,
+                        decide=rules.decide,
+                    ),
+                )
 
             # And always count what the runs cost.
             #

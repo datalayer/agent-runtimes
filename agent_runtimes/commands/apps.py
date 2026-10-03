@@ -121,6 +121,18 @@ def safety_notes(module: Any, application: Any) -> List[str]:
             )
     if not application.record.include:
         notes.append("It keeps no record of what it did.")
+    # A Guard the runtime does not run checks nothing (LOOP R-06).
+    from agent_runtimes.loop.apps.guards import EXECUTORS
+    from agent_runtimes.specs.guards import get_guard
+
+    for ref in application.checks.guards:
+        guard = get_guard(str(ref).split(":")[0])
+        if guard is not None and guard.id not in EXECUTORS:
+            judge = {"cog": "a Cog", "human": "a person"}.get(guard.method, "a method")
+            notes.append(
+                f"The {guard.name} is judged by {judge} the runtime does not run yet: "
+                "nothing is checked by it."
+            )
     return notes
 
 
