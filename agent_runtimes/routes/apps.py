@@ -12,7 +12,13 @@ other at launch.
 
 `GET /api/v1/apps/current` says which application the runtime runs, and
 `POST /api/v1/apps/decide` what it would do about a tool call — what an
-interface shows before it is made.
+interface shows before it is made. `GET /api/v1/apps` lists the applications
+the runtime knows.
+
+An application is a Reactor plugin here as in the page (LOOP §5.4): the
+runtime reads applications from the ``loop.app`` contribution point, and
+decides their tool calls with what extends their contribution
+(`agent_runtimes.loop.apps.plugins`).
 
 An application that its builder's checks would refuse is refused here too,
 with the same sentences (422): a runtime never runs what `loop apps validate`
@@ -26,14 +32,21 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from agent_runtimes.loop.apps.enforcement import AppRulesCapability, sentence_of
+from agent_runtimes.loop.apps.enforcement import sentence_of
 from agent_runtimes.loop.apps.loading import AppNotRunnable, agent_id_of, load_app
+from agent_runtimes.loop.apps.plugins import (
+    find_app,
+    list_apps,
+    register_app,
+    rules_for,
+)
 from agent_runtimes.types import AppSpec
 
 router = APIRouter(prefix="/apps", tags=["apps"])
 
-#: The application each agent of this runtime runs, by agent name.
-_RUNNING: Dict[str, AppSpec] = {}
+#: The id of the application each agent of this runtime runs, by agent name.
+#: The application itself is a contribution of its plugin.
+_RUNNING: Dict[str, str] = {}
 
 
 class ConfigureAppRequest(BaseModel):
@@ -55,7 +68,8 @@ class DecideRequest(BaseModel):
 
 def running_app(agent: str = "default") -> Optional[AppSpec]:
     """The application an agent of this runtime runs, or None."""
-    return _RUNNING.get(agent)
+    app_id = _RUNNING.get(agent)
+    return find_app(app_id) if app_id else None
 
 
 @router.post("/configure")
@@ -95,7 +109,9 @@ async def configure_app(
             model=app.model or None,
         ),
     )
-    _RUNNING["default"] = app
+    # Its own plugin, whether or not agent creation registered it already.
+    register_app(app)
+    _RUNNING["default"] = app.id
     return {
         **result,
         "app": {
@@ -105,6 +121,23 @@ async def configure_app(
             "emoji": app.emoji,
         },
         "setup": app.setup,
+    }
+
+
+@router.get("")
+async def apps() -> Dict[str, Any]:
+    """The applications this runtime knows: the catalogue's, and its own."""
+    return {
+        "apps": [
+            {
+                "id": app.id,
+                "version": app.version,
+                "name": app.name,
+                "emoji": app.emoji,
+                "kind": app.kind,
+            }
+            for app in list_apps()
+        ]
     }
 
 
@@ -130,7 +163,7 @@ async def decide(body: DecideRequest) -> Dict[str, Any]:
     app = running_app()
     if app is None:
         raise HTTPException(status_code=404, detail="This runtime runs no application.")
-    enforced = AppRulesCapability(app=app).decide(body.tool, body.arguments)
+    enforced = rules_for(app).decide(body.tool, body.arguments)
     decision = enforced.decision
     return {
         "behaviour": decision.behaviour,

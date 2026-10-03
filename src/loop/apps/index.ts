@@ -9,6 +9,8 @@
  * @module loop/apps
  */
 
+export * from './AppRenderer';
 export * from './appspec';
+export * from './checks';
 export * from './rules';
 export * from './yaml';

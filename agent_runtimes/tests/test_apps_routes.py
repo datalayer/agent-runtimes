@@ -13,7 +13,9 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from reactor import ContributionRegistry
 
+from agent_runtimes.loop.apps import plugins
 from agent_runtimes.loop.apps.loading import (
     AppNotRunnable,
     agent_id_of,
@@ -74,6 +76,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(agents, "_emit_agent_assigned_event", lambda **kwargs: None)
     monkeypatch.setitem(agents._agentspecs, "default", None)
     routes._RUNNING.clear()
+    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
     with TestClient(create_app()) as test_client:
         test_client.created = created
         yield test_client
@@ -152,3 +155,20 @@ def test_decide_says_what_the_application_would_do_without_doing_it(
         "/api/v1/apps/decide", json={"tool": "search_drive_files"}
     ).json()
     assert (drive["behaviour"], drive["because"]) == ("leave_to_me", "left_out")
+
+
+def test_the_runtime_lists_applications_from_reactor_and_runs_its_own(
+    client: Any,
+) -> None:
+    listed = client.get("/api/v1/apps").json()["apps"]
+    assert "web-research" in {app["id"] for app in listed}
+    edited = {**WEB_RESEARCH, "name": "Web research, edited"}
+    assert (
+        client.post("/api/v1/apps/configure", json={"app": edited}).status_code == 200
+    )
+    assert client.get("/api/v1/apps/current").json()["name"] == "Web research, edited"
+    names = {
+        app["id"]: app["name"] for app in client.get("/api/v1/apps").json()["apps"]
+    }
+    assert names["web-research"] == "Web research, edited"
+    assert plugins.REGISTRY.get(plugins.APP_POINT, plugins=["loop-app-web-research"])

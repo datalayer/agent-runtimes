@@ -1641,6 +1641,7 @@ async def create_agent(
                 connected_server_ids,
                 load_app,
             )
+            from agent_runtimes.loop.apps.plugins import register_app
 
             try:
                 running_app = load_app(request.app_spec)
@@ -1649,6 +1650,8 @@ async def create_agent(
                     status_code=422,
                     detail={"problems": refused.problems},
                 ) from None
+            # The application runs as a Reactor plugin of its own (LOOP F-13).
+            register_app(running_app)
             selected_mcp_servers = [
                 McpServerSelection(id=server, origin="catalog")
                 for server in connected_server_ids(running_app)
@@ -2240,12 +2243,10 @@ async def create_agent(
             # An application's rules decide every tool call, in place of the
             # default approvals: asking twice for one call is not a rule.
             if running_app is not None:
-                from agent_runtimes.loop.apps.enforcement import AppRulesCapability
+                from agent_runtimes.loop.apps.plugins import rules_for
 
                 capabilities = _without_approval_capabilities(capabilities)
-                capabilities.insert(
-                    0, AppRulesCapability(app=running_app, agent_id=agent_id)
-                )
+                capabilities.insert(0, rules_for(running_app, agent_id=agent_id))
 
             # And always count what the runs cost.
             #
