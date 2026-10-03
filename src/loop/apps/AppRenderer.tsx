@@ -131,6 +131,10 @@ export function AppRenderer({
             transport: 'ag-ui',
             agent_spec_id: agentIdOf(app),
             app_spec: dumpAppspec(app),
+            // Code Mode calls every tool through `execute_code`, which an
+            // application without a shell is refused: its tools are called
+            // one by one instead, each decided by its rules.
+            enable_codemode: Boolean(app.permissions?.computer?.shell),
           }
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps

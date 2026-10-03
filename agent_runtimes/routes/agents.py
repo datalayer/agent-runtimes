@@ -1652,6 +1652,11 @@ async def create_agent(
                 ) from None
             # The application runs as a Reactor plugin of its own (LOOP F-13).
             register_app(running_app)
+            # Code Mode calls every tool through `execute_code`, which an
+            # application without a shell is refused (rules.py): its tools are
+            # called one by one instead, each decided by its rules.
+            if not running_app.permissions.computer.shell:
+                request.enable_codemode = False
             selected_mcp_servers = [
                 McpServerSelection(id=server, origin="catalog")
                 for server in connected_server_ids(running_app)
