@@ -8,6 +8,11 @@ person's words and applied to what a tool does. This package is where they are
 decided.
 """
 
+from agent_runtimes.loop.apps.enforcement import (
+    AppRuleBlockedError,
+    AppRulesCapability,
+    Enforced,
+)
 from agent_runtimes.loop.apps.rules import (
     BEHAVIOURS,
     DEFAULT_BEHAVIOURS,
@@ -27,6 +32,9 @@ from agent_runtimes.loop.apps.rules import (
 )
 
 __all__ = [
+    "AppRuleBlockedError",
+    "AppRulesCapability",
+    "Enforced",
     "BEHAVIOURS",
     "DEFAULT_BEHAVIOURS",
     "Decision",
