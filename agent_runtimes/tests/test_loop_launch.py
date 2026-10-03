@@ -304,3 +304,68 @@ def test_an_application_is_configured_on_the_runtime_or_refused_in_sentences(
     assert calls[0][0] == "http://relay/api/v1/apps/configure"
     with pytest.raises(typer.BadParameter, match="no agent or Cog named"):
         commands.configure_on("http://relay", {"id": "refused"})
+
+
+@dataclass
+class Running:
+    runtime_name: str
+    environment: str
+    ingress: str
+    expired_at: Any
+
+
+def test_minutes_left_read_from_what_the_platform_says() -> None:
+    now = 1_760_000_000.0  # 2025-10-09T08:53:20Z
+    assert launch.minutes_left(now + 600, now=now) == 10
+    assert launch.minutes_left((now + 120) * 1000, now=now) == 2
+    assert launch.minutes_left("2025-10-09T09:03:20Z", now=now) == 10
+    assert launch.minutes_left("soon", now=now) is None
+    assert launch.minutes_left(now - 60, now=now) == 0
+
+
+def test_a_running_agent_runtime_is_offered_before_a_new_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtimes = [
+        Running(
+            "kernel-1", "python-cpu-env", "https://x/jupyter/server/p/kernel-1", None
+        ),
+        Running(
+            "runtime-9",
+            "ai-agents-env",
+            "https://r1.example/jupyter/server/p/runtime-9",
+            time.time() + 900,
+        ),
+    ]
+    offered: List[list] = []
+
+    def ask(question: str, choices: list, default: str) -> str:
+        offered.append(choices)
+        return default
+
+    picked = launch.choose_running(runtimes, can_ask=True, ask=ask)
+    assert picked is runtimes[1]
+    # Only agent runtimes, and a new one always possible.
+    assert [value for _, value in offered[0]] == ["runtime-9", "__new__"]
+    assert "min left" in offered[0][0][0]
+    assert (
+        launch.choose_running(runtimes, can_ask=True, ask=lambda *_: "__new__") is None
+    )
+    assert launch.choose_running(runtimes, can_ask=False) is None
+
+    client = FakeClient()
+    client.list_runtimes = lambda: runtimes  # type: ignore[attr-defined]
+    monkeypatch.setattr(launch, "make_client", lambda: (client, "the-token"))
+    monkeypatch.setattr(
+        launch, "_select", lambda question, choices, default: "runtime-9"
+    )
+    monkeypatch.setattr(launch, "wait_until_ready", lambda url, timeout=180.0: True)
+    monkeypatch.setattr(launch, "speak_ag_ui", lambda url, timeout=120.0: True)
+    back = launch.launch_cloud("crawler", can_ask=True)
+    try:
+        # Nothing launched: the runtime that runs is the one reached.
+        assert client.created == {}
+        assert back.runtime_name == "runtime-9" and back.minutes >= 14
+        assert back.relay.target == "https://r1.example/agent-runtimes/p/runtime-9"
+    finally:
+        back.relay.stop()

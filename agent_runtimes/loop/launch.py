@@ -406,6 +406,57 @@ def wait_until_ready(relay_url: str, timeout: float = 180.0) -> bool:
     return False
 
 
+def minutes_left(expired_at: Any, now: Optional[float] = None) -> Optional[int]:
+    """What remains of a reservation, in whole minutes, or None when unknown."""
+    from datetime import datetime
+
+    now = time.time() if now is None else now
+    try:
+        end = float(expired_at)
+    except (TypeError, ValueError):
+        try:
+            end = datetime.fromisoformat(
+                str(expired_at).replace("Z", "+00:00")
+            ).timestamp()
+        except ValueError:
+            return None
+    if end > 1e12:  # milliseconds
+        end /= 1000.0
+    return max(0, int((end - now) // 60))
+
+
+def choose_running(
+    runtimes: list[Any],
+    *,
+    can_ask: bool,
+    ask: Optional[Callable[..., Optional[str]]] = None,
+) -> Optional[Any]:
+    """A running agent runtime to go back to, or None to launch a new one (L-06)."""
+    agents = [
+        r for r in runtimes if str(getattr(r, "environment", "")).endswith("agents-env")
+    ]
+    if not agents or not can_ask:
+        return None
+    new = "__new__"
+    choices = []
+    for runtime in agents:
+        left = minutes_left(getattr(runtime, "expired_at", None))
+        remaining = f", {left} min left" if left is not None else ""
+        choices.append(
+            (
+                f"Reconnect to {runtime.runtime_name} — {runtime.environment}{remaining}",
+                runtime.runtime_name,
+            )
+        )
+    choices.append(("Launch a new runtime", new))
+    answer = (ask or _select)(
+        "You have agent runtimes running on Datalayer.", choices, choices[0][1]
+    )
+    if answer is None:
+        raise KeyboardInterrupt
+    return next((r for r in agents if r.runtime_name == answer), None)
+
+
 def speak_ag_ui(relay_url: str, timeout: float = 120.0) -> bool:
     """Whether the runtime's agent answers over AG-UI, which the terminal speaks.
 
@@ -444,6 +495,7 @@ def launch_cloud(
     agent_id: str,
     *,
     label: Optional[str] = None,
+    reconnect: bool = True,
     environment: Optional[str] = None,
     minutes: Optional[int] = None,
     can_ask: Optional[bool] = None,
@@ -454,6 +506,31 @@ def launch_cloud(
 
     asking = interactive() if can_ask is None else can_ask
     client, token = make_client()
+    if reconnect:
+        try:
+            running = client.list_runtimes()
+        except Exception:  # noqa: BLE001 - a listing that fails launches anew
+            running = []
+        again = choose_running(running, can_ask=asking)
+        if again is not None:
+            relay = Relay(
+                target=build_agent_runtimes_base_url(again.ingress), token=token
+            ).start()
+            back = CloudLaunch(
+                runtime_name=str(again.runtime_name),
+                environment=str(again.environment),
+                minutes=minutes_left(getattr(again, "expired_at", None)) or 0,
+                ingress=str(again.ingress),
+                relay=relay,
+                client=client,
+            )
+            status(f"Reconnecting to {back.runtime_name}…")
+            if wait_until_ready(relay.url, timeout=30.0) and speak_ag_ui(
+                relay.url, timeout=30.0
+            ):
+                return back
+            relay.stop()
+            status(f"{back.runtime_name} does not answer: launching a new runtime.")
     chosen = choose_environment(
         client.list_environments(), environment=environment, can_ask=asking
     )
