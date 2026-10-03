@@ -91,7 +91,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UIPluginSpec",
         "",
-        "",
         "# " + "=" * 76,
         "# UI Plugin Definitions",
         "# " + "=" * 76,

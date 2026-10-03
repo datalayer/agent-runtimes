@@ -13,7 +13,6 @@ from typing import Dict
 
 from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UIPluginSpec
 
-
 # ============================================================================
 # UI Plugin Definitions
 # ============================================================================

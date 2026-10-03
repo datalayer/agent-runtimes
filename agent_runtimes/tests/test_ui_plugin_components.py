@@ -23,7 +23,9 @@ def test_datalayers_own_carry_a_schema_their_example_meets() -> None:
         if component.standard:
             assert component.properties is None, component.id
             continue
-        assert component.properties is not None and component.example is not None, component.id
+        assert component.properties is not None and component.example is not None, (
+            component.id
+        )
         jsonschema.Draft202012Validator.check_schema(component.properties)
         jsonschema.validate(component.example, component.properties)
 

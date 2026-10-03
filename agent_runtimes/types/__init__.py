@@ -42,6 +42,8 @@ from .types import (
     BuiltinTool,
     ChatRequest,
     CogSpec,
+    ComponentBindingsSpec,
+    ComponentSpec,
     ContentSafetySpec,
     DataHandlingSpec,
     DataScopeSpec,
@@ -101,8 +103,6 @@ from .types import (
     TrackSpec,
     TriggerField,
     TriggerSpec,
-    ComponentBindingsSpec,
-    ComponentSpec,
     UIPluginSpec,
 )
 
