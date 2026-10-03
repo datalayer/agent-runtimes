@@ -127,7 +127,6 @@ _APPROVAL_CAPABILITY_NAMES = frozenset(
 )
 
 
-
 def get_library_agent_spec(agent_id: str) -> Any:
     """An agent of the library by id — or a Cog's, which is an agent equipped with Frames.
 
@@ -141,6 +140,7 @@ def get_library_agent_spec(agent_id: str) -> Any:
 
     cog = get_cog(agent_id)
     return cog.spec if cog is not None else None
+
 
 def _without_approval_capabilities(capabilities: list[Any]) -> list[Any]:
     """The capabilities minus every one that would ask a person to approve a tool."""
