@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy-docs.yaml'
   workflow_dispatch:
 
 concurrency:

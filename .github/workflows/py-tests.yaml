@@ -24,6 +24,11 @@ on:
 
   workflow_dispatch:
 
+# A newer push to the same pull request makes the older run worthless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   tests:
     runs-on: ubuntu-latest

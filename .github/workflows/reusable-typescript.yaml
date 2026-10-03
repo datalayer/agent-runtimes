@@ -67,6 +67,13 @@ jobs:
       with:
         node-version: ${{ inputs.node-version }}
 
+    - name: Cache npm downloads
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: npm-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('**/package.json') }}
+        restore-keys: npm-${{ runner.os }}-${{ inputs.node-version }}-
+
     - name: Install dependencies
       run: ${{ inputs.install-command }}
       working-directory: ${{ inputs.working-directory }}
