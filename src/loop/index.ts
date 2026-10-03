@@ -331,5 +331,7 @@ export {
   dumpAppspec,
   emptyAppspec,
   parseAppspec,
+  readAppspecYaml,
+  writeAppspecYaml,
   type ParsedAppspec,
 } from './apps';

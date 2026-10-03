@@ -31,6 +31,7 @@ agentspecs, is what all three have to agree on.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from agent_runtimes.specs.actions import SERVER_ACTIONS, TOOL_ACTIONS
@@ -216,14 +217,78 @@ def _by_classes(app: AppSpec, classes: Sequence[str]) -> List[str]:
     return [by_class.get(item, DEFAULT_BEHAVIOURS[item]) for item in classes]
 
 
-def behaviour_for(
+#: Why a call was decided as it was.
+NOT_CONNECTED = "not_connected"
+LEFT_OUT = "left_out"
+READ_ONLY = "read_only"
+RULE_ON_TOOL = "rule_on_tool"
+UNCLASSED = "unclassed"
+RULE_ON_CLASS = "rule_on_class"
+BY_DEFAULT = "default"
+
+
+@dataclass(frozen=True)
+class Decision:
+    """What an application does about a tool call, and why."""
+
+    behaviour: str
+    """`do_it`, `if_asked`, `ask_first` or `leave_to_me`."""
+
+    tool: str
+    """The tool, as `server.tool` or a catalogue id."""
+
+    classes: Tuple[str, ...]
+    """What the call does: its classes of action."""
+
+    because: str
+    """Which step decided: one of the reasons above."""
+
+    rule: str = ""
+    """The rule that decided, in its author's words; empty when none did."""
+
+    @property
+    def sentence(self) -> str:
+        """The decision as a sentence a person reads."""
+        does = " and ".join(_VERBS.get(item, item) for item in self.classes)
+        if self.because == NOT_CONNECTED:
+            return f"The application is not connected to what `{self.tool}` belongs to."
+        if self.because == LEFT_OUT:
+            return f"The application's connection leaves `{self.tool}` out."
+        if self.because == READ_ONLY:
+            return f"`{self.tool}` can {does}, and the connection only reads."
+        if self.because == UNCLASSED:
+            return f"Nobody has said what `{self.tool}` does, so it is left to you."
+        said = _SAYS[self.behaviour]
+        if self.rule:
+            return f"Your rule “{self.rule}”: {said}."
+        return f"`{self.tool}` can {does}, and no rule covers that: {said}."
+
+
+_VERBS = {
+    "read": "read",
+    "write": "create or change things",
+    "send": "send",
+    "buy": "buy",
+    "delete": "delete",
+    "publish": "share or publish",
+}
+
+_SAYS = {
+    DO_IT: "do it",
+    IF_ASKED: "do it if you asked",
+    ASK_FIRST: "ask you first",
+    LEAVE_TO_ME: "leave it to you",
+}
+
+
+def decision_for(
     app: AppSpec,
     tool: str,
     *,
     arguments: Optional[Mapping[str, Any]] = None,
     classes: Optional[Sequence[str]] = None,
-) -> str:
-    """What an application does when its agent calls a tool.
+) -> Decision:
+    """What an application does when its agent calls a tool, and why.
 
     `tool` is `server.tool` for a tool of an MCP server, or the id of a tool
     of the catalogue. Its classes are the catalogue's, unless given — a tool
@@ -234,6 +299,7 @@ def behaviour_for(
     Without them it is for the worst the tool can do.
     """
     server, name = split_ref(tool)
+    wanted = f"{server}.{name}" if server is not None else name
     if classes is not None:
         own, besides, possible = list(classes), [], list(classes)
     else:
@@ -241,22 +307,69 @@ def behaviour_for(
         own = classes_of(tool, {})
         now = possible if arguments is None else classes_of(tool, arguments)
         besides = [item for item in now if item not in own]
+    doing = tuple([*own, *besides])
     if server is not None:
         connection = _connection(app, server)
-        if connection is None or not _reaches(connection, name):
-            return LEAVE_TO_ME
+        if connection is None:
+            return Decision(LEAVE_TO_ME, wanted, doing, NOT_CONNECTED)
+        if not _reaches(connection, name):
+            return Decision(LEAVE_TO_ME, wanted, doing, LEFT_OUT)
         if connection.access == READ and any(item != READ for item in possible):
-            return LEAVE_TO_ME
-    wanted = f"{server}.{name}" if server is not None else name
+            acting = tuple(item for item in possible if item != READ)
+            return Decision(LEAVE_TO_ME, wanted, acting, READ_ONLY)
+    ruled = _rules_by_class(app)
+
+    def decided(items: Sequence[str]) -> List[Tuple[str, str]]:
+        """The behaviour for each class, with the rule that says it."""
+        return [ruled.get(item, (DEFAULT_BEHAVIOURS[item], "")) for item in items]
+
+    def strictest_of(found: List[Tuple[str, str]], because: str) -> Decision:
+        behaviour, rule = max(found, key=lambda pair: BEHAVIOURS.index(pair[0]))
+        return Decision(behaviour, wanted, doing, because if rule else BY_DEFAULT, rule)
+
     for rule in app.rules:
         tools = [
             target for target in rule.applies_to if target not in DEFAULT_BEHAVIOURS
         ]
         if any(_normal(named) == wanted for named in tools):
-            return strictest([rule.behaviour, *_by_classes(app, besides)])
-    if not own and not besides:
-        return LEAVE_TO_ME
-    return strictest(_by_classes(app, [*own, *besides]))
+            besides_decided = decided(besides)
+            stricter = [
+                pair
+                for pair in besides_decided
+                if BEHAVIOURS.index(pair[0]) > BEHAVIOURS.index(rule.behaviour)
+            ]
+            if stricter:
+                behaviour, by = max(
+                    stricter, key=lambda pair: BEHAVIOURS.index(pair[0])
+                )
+                return Decision(
+                    behaviour, wanted, doing, RULE_ON_CLASS if by else BY_DEFAULT, by
+                )
+            return Decision(rule.behaviour, wanted, doing, RULE_ON_TOOL, rule.action)
+    if not doing:
+        return Decision(LEAVE_TO_ME, wanted, (), UNCLASSED)
+    return strictest_of(decided(doing), RULE_ON_CLASS)
+
+
+def _rules_by_class(app: AppSpec) -> Dict[str, Tuple[str, str]]:
+    """The behaviour each class is ruled to, with the rule's own words."""
+    return {
+        target: (rule.behaviour, rule.action)
+        for rule in app.rules
+        for target in rule.applies_to
+        if target in DEFAULT_BEHAVIOURS
+    }
+
+
+def behaviour_for(
+    app: AppSpec,
+    tool: str,
+    *,
+    arguments: Optional[Mapping[str, Any]] = None,
+    classes: Optional[Sequence[str]] = None,
+) -> str:
+    """What an application does when its agent calls a tool: see `decision_for`."""
+    return decision_for(app, tool, arguments=arguments, classes=classes).behaviour
 
 
 def tool_behaviours(app: AppSpec) -> Dict[str, str]:
