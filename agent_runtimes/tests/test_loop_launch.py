@@ -274,3 +274,33 @@ def test_the_end_of_a_session_stops_the_runtime_unless_it_is_kept() -> None:
         _launched(client), can_ask=True, ask=lambda q, d: True, say=said.append
     )
     assert said[-1].startswith("Could not stop runtime-1")
+
+
+def test_an_application_is_configured_on_the_runtime_or_refused_in_sentences(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import typer
+
+    from agent_runtimes.commands import apps as commands
+
+    calls: List[tuple] = []
+
+    def post(url: str, json: dict, timeout: float) -> httpx.Response:
+        calls.append((url, json))
+        if json["app"].get("id") == "refused":
+            return httpx.Response(
+                422,
+                json={"detail": {"problems": ["There is no agent or Cog named 'x'."]}},
+                request=httpx.Request("POST", url),
+            )
+        return httpx.Response(
+            200, json={"setup": []}, request=httpx.Request("POST", url)
+        )
+
+    monkeypatch.setattr(httpx, "post", post)
+    assert commands.configure_on("http://relay", {"id": "web-research"}) == {
+        "setup": []
+    }
+    assert calls[0][0] == "http://relay/api/v1/apps/configure"
+    with pytest.raises(typer.BadParameter, match="no agent or Cog named"):
+        commands.configure_on("http://relay", {"id": "refused"})

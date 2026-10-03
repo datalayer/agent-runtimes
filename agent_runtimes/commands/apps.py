@@ -203,3 +203,164 @@ def apps_validate(
         raise typer.Exit(1)
     if strict and any(report.verdict == NEEDS_ATTENTION for report in reports):
         raise typer.Exit(2)
+
+
+#: The agentspec a local server is started with before an application is
+#: configured on it; the application's own agent replaces it.
+BOOTSTRAP_AGENT_SPEC_ID = "example-simple"
+
+
+def configure_on(base_url: str, document: Dict[str, Any]) -> Dict[str, Any]:
+    """Configure a runtime with an application; its refusal said in sentences."""
+    import httpx
+
+    response = httpx.post(
+        f"{base_url}/api/v1/apps/configure", json={"app": document}, timeout=120.0
+    )
+    if response.status_code == 422:
+        detail = response.json().get("detail") or {}
+        problems = detail.get("problems") if isinstance(detail, dict) else [str(detail)]
+        raise typer.BadParameter(
+            " ".join(problems or ["The runtime refused the application."])
+        )
+    if response.status_code >= 300:
+        raise RuntimeError(
+            f"The runtime did not take the application ({response.status_code}): {response.text[:300]}"
+        )
+    return response.json()
+
+
+@app.command(name="run")
+def apps_run(
+    path: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="The Appspec, a YAML or JSON file."
+    ),
+    local: bool = typer.Option(
+        False, "--local", help="Run it on this machine, without asking where."
+    ),
+    cloud: bool = typer.Option(
+        False, "--cloud", help="Run it on Datalayer, without asking where."
+    ),
+    environment: str = typer.Option(
+        None, "--environment", "-e", help="The Datalayer environment (with --cloud)."
+    ),
+    minutes: int = typer.Option(
+        None,
+        "--minutes",
+        "-m",
+        help="How long to reserve the cloud runtime (with --cloud).",
+    ),
+    keep: bool = typer.Option(
+        False, "--keep", help="Leave the cloud runtime running when the session ends."
+    ),
+    ask: str = typer.Option(
+        None, "--ask", help="Ask one question, print the answer and stop."
+    ),
+) -> None:
+    """Run an application in the terminal — here, or on Datalayer (LOOP L-05).
+
+    The runtime is configured with the application, so its rules decide every
+    tool call; its starters are the terminal's suggestions.
+    """
+    import asyncio
+
+    import yaml
+
+    from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
+    from agent_runtimes.loop.launch import (
+        CLOUD,
+        CLOUD_AGENT_NAME,
+        NotSignedIn,
+        choose_where,
+        finish_cloud,
+        launch_cloud,
+        speak_ag_ui,
+    )
+
+    document = yaml.safe_load(path.read_text())
+    if not isinstance(document, dict):
+        raise typer.BadParameter(f"{path} does not hold an application.")
+    try:
+        application = load_app(document)
+    except AppNotRunnable as refused:
+        for problem in refused.problems:
+            console.print(f"[red]✗[/red] {problem}")
+        raise typer.Exit(1)
+    if application.team:
+        console.print(
+            "[red]✗[/red] An application run by a team cannot run in the terminal yet."
+        )
+        raise typer.Exit(1)
+
+    import logging
+
+    # The terminal is the conversation: no request log over it.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    where = choose_where(local=local, cloud=cloud)
+    cloud_launch = None
+    process = None
+    if where == CLOUD:
+        try:
+            cloud_launch = launch_cloud(
+                BOOTSTRAP_AGENT_SPEC_ID,
+                label=f"{application.emoji} {application.name}",
+                environment=environment,
+                minutes=minutes,
+                status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+            )
+        except NotSignedIn:
+            console.print(
+                "[yellow]Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY.[/yellow]"
+            )
+            raise typer.Exit(1)
+        base_url = cloud_launch.server_url
+    else:
+        from agent_runtimes.chat.cli import (
+            _start_agent_runtime_server,
+            _wait_for_server,
+        )
+
+        process, port = _start_agent_runtime_server(BOOTSTRAP_AGENT_SPEC_ID)
+        if not _wait_for_server("127.0.0.1", port, timeout=60.0):
+            process.terminate()
+            console.print("[red]✗[/red] The local server did not start.")
+            raise typer.Exit(1)
+        base_url = f"http://127.0.0.1:{port}"
+
+    try:
+        configured = configure_on(base_url, document)
+        if not speak_ag_ui(base_url):
+            raise RuntimeError("The application's agent did not come up.")
+        for note in configured.get("setup") or []:
+            console.print(f"[yellow]•[/yellow] {note}")
+        agent_url = f"{base_url}/api/v1/ag-ui/{CLOUD_AGENT_NAME}/"
+        starters = [starter.message for starter in application.interface.starters]
+        where_said = (
+            f"on Datalayer ({cloud_launch.runtime_name})"
+            if cloud_launch
+            else "on this machine"
+        )
+        startup = f"{application.emoji}  {application.name} is running {where_said}"
+        if ask:
+            from agent_runtimes.chat.cli import _run_single_query_ag_ui
+
+            console.print(asyncio.run(_run_single_query_ag_ui(agent_url, ask)))
+        else:
+            from agent_runtimes.chat.tux import run_tux
+
+            asyncio.run(
+                run_tux(
+                    agent_url,
+                    base_url,
+                    agent_id=CLOUD_AGENT_NAME,
+                    extra_suggestions=starters,
+                    startup_message=startup,
+                )
+            )
+    finally:
+        if cloud_launch is not None:
+            finish_cloud(cloud_launch, keep=keep, can_ask=None if not ask else False)
+        elif process is not None:
+            process.terminate()
+            process.join(timeout=5.0)

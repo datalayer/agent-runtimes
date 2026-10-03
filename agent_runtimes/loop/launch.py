@@ -443,6 +443,7 @@ def speak_ag_ui(relay_url: str, timeout: float = 120.0) -> bool:
 def launch_cloud(
     agent_id: str,
     *,
+    label: Optional[str] = None,
     environment: Optional[str] = None,
     minutes: Optional[int] = None,
     can_ask: Optional[bool] = None,
@@ -457,7 +458,9 @@ def launch_cloud(
         client.list_environments(), environment=environment, can_ask=asking
     )
     reserved = choose_minutes(chosen, minutes=minutes, can_ask=asking)
-    status(f"Launching {agent_id} on Datalayer ({chosen.name}, {reserved} min)…")
+    status(
+        f"Launching {label or agent_id} on Datalayer ({chosen.name}, {reserved} min)…"
+    )
     runtime = client.create_runtime(
         environment=chosen.name, time_reservation=reserved, agent_spec_id=agent_id
     )
