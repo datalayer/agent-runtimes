@@ -44,6 +44,11 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
+      # `tsc -b` in the build has checked the package; the workspaces here,
+      # rather than in a workflow of their own that installs and builds again.
+      - name: Type check the workspaces
+        run: npm run type-check --workspaces --if-present
+
       - name: Run TypeScript tests
         env:
           TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}

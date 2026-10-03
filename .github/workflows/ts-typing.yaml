@@ -26,7 +26,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Pull requests are type-checked by Build, which has built already.
   type-check:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/reusable-typescript.yaml
     with:
       node-version: '22.x'
