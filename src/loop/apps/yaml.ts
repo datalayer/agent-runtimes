@@ -41,12 +41,7 @@ import {
   parseDocument,
 } from 'yaml';
 import type { AppSpec } from '../../types/agentspecs';
-import {
-  APPSPEC_KEY_ORDER,
-  dumpAppspec,
-  parseAppspec,
-  type ParsedAppspec,
-} from './appspec';
+import { dumpAppspec, parseAppspec, type ParsedAppspec } from './appspec';
 
 type Data = Record<string, unknown>;
 
@@ -110,14 +105,28 @@ const nodeOf = (document: Document, value: unknown): unknown =>
  * A node saying a value: the node itself when it already does, changed in
  * place where it can be, and a new one only when it is not the same kind of
  * thing any more.
+ *
+ * `before` is what the file said at this place, in the canonical form: a key
+ * the canonical form leaves out both before and now — a default written out
+ * by its author, `enabled: true`, `access: read` — is kept as it was written.
  */
-function merged(document: Document, node: unknown, value: unknown): unknown {
+function merged(
+  document: Document,
+  node: unknown,
+  value: unknown,
+  before: unknown,
+): unknown {
   if (isData(value) && isMap(node)) {
-    mergeMap(document, node as YAMLMap, value);
+    mergeMap(document, node as YAMLMap, value, isData(before) ? before : {});
     return node;
   }
   if (Array.isArray(value) && isSeq(node)) {
-    mergeSeq(document, node as YAMLSeq, value);
+    mergeSeq(
+      document,
+      node as YAMLSeq,
+      value,
+      Array.isArray(before) ? before : [],
+    );
     return node;
   }
   if (!isData(value) && !Array.isArray(value) && isScalar(node)) {
@@ -133,37 +142,53 @@ function merged(document: Document, node: unknown, value: unknown): unknown {
 const keyOf = (pair: Pair): string =>
   isScalar(pair.key) ? String(pair.key.value) : String(pair.key);
 
-/** A mapping made to say `value`: its own pairs kept, changed, removed or joined. */
+const has = (data: Data, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(data, key);
+
+/**
+ * A mapping made to say `value`: its own pairs kept, changed, removed or
+ * joined.
+ *
+ * A pair is removed only when the application stopped saying it: when the
+ * canonical form had it before and has it no more. One the canonical form
+ * never had — a default spelled out, a key this reader does not know — stays
+ * as it was written.
+ *
+ * A key that is new goes after the key the canonical form puts just before
+ * it, among those that are there, wherever the person put that one; first
+ * when nothing comes before it. The canonical form writes its keys in the
+ * spec's order, at every depth.
+ */
 function mergeMap(
   document: Document,
   map: YAMLMap,
   value: Data,
-  order?: readonly string[],
+  before: Data,
 ): void {
-  map.items = (map.items as Pair[]).filter(pair =>
-    Object.prototype.hasOwnProperty.call(value, keyOf(pair)),
-  );
+  map.items = (map.items as Pair[]).filter(pair => {
+    const key = keyOf(pair);
+    return has(value, key) || !has(before, key);
+  });
+  const order = Object.keys(value);
   for (const [key, item] of Object.entries(value)) {
     const pair = (map.items as Pair[]).find(
       existing => keyOf(existing) === key,
     );
     if (pair) {
-      pair.value = merged(document, pair.value, item) as Pair['value'];
+      pair.value = merged(
+        document,
+        pair.value,
+        item,
+        before[key],
+      ) as Pair['value'];
       continue;
     }
     const created = document.createPair(key, item);
-    // A key that is new goes after the key the spec puts just before it,
-    // among those that are there — wherever the person put that one. With
-    // no order to follow, or nothing before it, it goes last, or first.
-    const rank = order ? order.indexOf(key) : -1;
-    if (rank < 0) {
-      map.items.push(created);
-      continue;
-    }
+    const rank = order.indexOf(key);
     let after = -1;
     let best = -1;
     (map.items as Pair[]).forEach((existing, index) => {
-      const other = order!.indexOf(keyOf(existing));
+      const other = order.indexOf(keyOf(existing));
       if (other >= 0 && other < rank && other > best) {
         best = other;
         after = index;
@@ -174,17 +199,26 @@ function mergeMap(
 }
 
 /** A list made to say `value`: an item keeps its node when it can be told which it was. */
-function mergeSeq(document: Document, seq: YAMLSeq, value: unknown[]): void {
+function mergeSeq(
+  document: Document,
+  seq: YAMLSeq,
+  value: unknown[],
+  before: unknown[],
+): void {
   const nodes = seq.items as unknown[];
   const identity = identityOf(value, nodes);
   if (identity) {
     const byIdentity = new Map(
       nodes.map(node => [(node as YAMLMap).get(identity), node]),
     );
+    const beforeByIdentity = new Map(
+      before.filter(isData).map(item => [item[identity], item]),
+    );
     seq.items = value.map(item => {
-      const existing = byIdentity.get((item as Data)[identity]);
+      const key = (item as Data)[identity];
+      const existing = byIdentity.get(key);
       return existing
-        ? merged(document, existing, item)
+        ? merged(document, existing, item, beforeByIdentity.get(key))
         : nodeOf(document, item);
     });
     return;
@@ -192,7 +226,7 @@ function mergeSeq(document: Document, seq: YAMLSeq, value: unknown[]): void {
   // Nothing tells the items apart: they are followed by their place.
   seq.items = value.map((item, index) =>
     index < nodes.length
-      ? merged(document, nodes[index], item)
+      ? merged(document, nodes[index], item, before[index])
       : nodeOf(document, item),
   );
 }
@@ -209,7 +243,12 @@ export function writeAppspecYaml(app: AppSpec, previous?: string): string {
   if (previous !== undefined && previous.trim() !== '') {
     const document = parseDocument(previous);
     if (document.errors.length === 0 && isMap(document.contents)) {
-      mergeMap(document, document.contents as YAMLMap, data, APPSPEC_KEY_ORDER);
+      mergeMap(
+        document,
+        document.contents as YAMLMap,
+        data,
+        dumpAppspec(parseAppspec(document.toJS()).app),
+      );
       return document.toString(WRITING);
     }
   }

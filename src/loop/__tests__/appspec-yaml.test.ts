@@ -225,6 +225,47 @@ describe('writing into a file that exists', () => {
   });
 });
 
+describe('what the review asked', () => {
+  it('puts a new nested field where the spec puts it, not at the end', () => {
+    const written = edit(app => {
+      app.interface.welcome = 'Ask me about the Cloud product.';
+    });
+    const block = written.slice(written.indexOf('interface:'));
+    expect(block.indexOf('accent:')).toBeLessThan(block.indexOf('welcome:'));
+    expect(block.indexOf('welcome:')).toBeLessThan(block.indexOf('starters:'));
+  });
+
+  it('keeps a default its author wrote out, when nothing changed', () => {
+    const spelled = FILE.replace(
+      'kind: chat\n',
+      'kind: chat\nenabled: true # on by default\n',
+    )
+      .replace(
+        '  - server: tavily:0.0.1\n',
+        '  - server: tavily:0.0.1\n    access: read\n',
+      )
+      .concat('tags: []\n');
+    const { app, problems } = readAppspecYaml(spelled);
+    expect(problems).toEqual([]);
+    expect(writeAppspecYaml(app, spelled)).toBe(spelled);
+    // And when something else changes, the defaults stay too.
+    app.name = 'Help Desk';
+    const changed = writeAppspecYaml(app, spelled);
+    expect(changed).toContain('enabled: true # on by default');
+    expect(changed).toContain('    access: read\n');
+    expect(changed).toContain('tags: []');
+  });
+
+  it('removes a key whose value went back to the default', () => {
+    const off = FILE.replace('kind: chat\n', 'kind: chat\nenabled: false\n');
+    const { app } = readAppspecYaml(off);
+    app.enabled = true;
+    const written = writeAppspecYaml(app, off);
+    expect(written).not.toContain('enabled:');
+    expect(readAppspecYaml(written).app.enabled).toBe(true);
+  });
+});
+
 describe('what the first save settles', () => {
   it('puts one space before a comment and folds long text, once', () => {
     const loose = FILE.replace(
