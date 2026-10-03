@@ -2267,13 +2267,13 @@ async def create_agent(
                 )
 
                 capabilities = _without_approval_capabilities(capabilities)
-                instance = request.app_instance or {}
+                serving = request.app_instance or {}
                 # What it did, session by session, kept by ai-agents (R-07).
                 recorder = AppRecorder(
                     app=running_app,
-                    app_uid=str(instance.get("app_uid") or ""),
-                    deployment_uid=str(instance.get("deployment_uid") or ""),
-                    version=int(instance.get("version") or 0),
+                    app_uid=str(serving.get("app_uid") or ""),
+                    deployment_uid=str(serving.get("deployment_uid") or ""),
+                    version=int(serving.get("version") or 0),
                 )
                 rules = rules_for(running_app, agent_id=agent_id)
                 rules.record = recorder.decided
