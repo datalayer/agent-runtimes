@@ -77,7 +77,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setitem(agents._agentspecs, "default", None)
     routes._RUNNING.clear()
     monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
-    with TestClient(create_app()) as test_client:
+    with TestClient(create_app(), client=("127.0.0.1", 50000)) as test_client:
         test_client.created = created
         yield test_client
     routes._RUNNING.clear()

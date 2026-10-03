@@ -15,6 +15,12 @@ other at launch.
 interface shows before it is made. `GET /api/v1/apps` lists the applications
 the runtime knows.
 
+Every route checks who is calling before anything else (LOOP R-32,
+`agent_runtimes.loop.apps.callers`): a person for `configure`; for the
+others, a person, an embed token for the application, or nobody when the
+application is public — and a browser only from the origins its deployment
+allows. A call from the machine itself needs no token.
+
 An application is a Reactor plugin here as in the page (LOOP §5.4): the
 runtime reads applications from the ``loop.app`` contribution point, and
 decides their tool calls with what extends their contribution
@@ -29,9 +35,19 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from agent_runtimes.loop.apps.callers import (
+    ANONYMOUS,
+    LOCAL,
+    VERIFIER,
+    Caller,
+    CallerRefused,
+    bearer_of,
+    is_loopback,
+    origin_allowed,
+)
 from agent_runtimes.loop.apps.enforcement import sentence_of
 from agent_runtimes.loop.apps.loading import AppNotRunnable, agent_id_of, load_app
 from agent_runtimes.loop.apps.plugins import (
@@ -72,9 +88,69 @@ def running_app(agent: str = "default") -> Optional[AppSpec]:
     return find_app(app_id) if app_id else None
 
 
+def _platform_origins() -> tuple[str, ...]:
+    import os
+
+    return tuple(
+        url.strip().rstrip("/")
+        for url in (
+            os.environ.get("DATALAYER_UI_URL"),
+            os.environ.get("DATALAYER_RUN_URL"),
+        )
+        if url and url.strip()
+    )
+
+
+async def _caller(
+    request: Request, app: Optional[AppSpec], person_only: bool
+) -> Caller:
+    """Who is calling, or an HTTP refusal that says why."""
+    if is_loopback(request.client.host if request.client else None):
+        return LOCAL
+    origin = request.headers.get("origin")
+    embedded = app.deployment.embedded if app and app.deployment else None
+    allowed = _platform_origins() + tuple(embedded.origins if embedded else ())
+    if not origin_allowed(origin, allowed):
+        raise HTTPException(
+            status_code=403, detail=f"This application does not answer {origin}."
+        )
+    token = bearer_of(request.headers.get("authorization"))
+    if not token:
+        hosted = app.deployment.hosted if app and app.deployment else None
+        if not person_only and hosted is not None and hosted.visibility == "public":
+            return ANONYMOUS
+        raise HTTPException(
+            status_code=401,
+            detail="Who is calling is not said: send a token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try:
+        caller = await VERIFIER.verify(token, app.id if app else "")
+    except CallerRefused as refused:
+        raise HTTPException(status_code=refused.status, detail=refused.reason) from None
+    if person_only and caller.kind != "person":
+        raise HTTPException(
+            status_code=403,
+            detail="Only a person configures the application a runtime runs.",
+        )
+    return caller
+
+
+async def a_person(request: Request) -> Caller:
+    """A person, or the machine itself: who may configure the runtime."""
+    return await _caller(request, running_app(), person_only=True)
+
+
+async def a_caller(request: Request) -> Caller:
+    """Whoever the running application answers."""
+    return await _caller(request, running_app(), person_only=False)
+
+
 @router.post("/configure")
 async def configure_app(
-    http_request: Request, body: ConfigureAppRequest
+    http_request: Request,
+    body: ConfigureAppRequest,
+    caller: Caller = Depends(a_person),
 ) -> Dict[str, Any]:
     """Make the runtime's agent the one the application runs."""
     try:
@@ -125,7 +201,7 @@ async def configure_app(
 
 
 @router.get("")
-async def apps() -> Dict[str, Any]:
+async def apps(caller: Caller = Depends(a_person)) -> Dict[str, Any]:
     """The applications this runtime knows: the catalogue's, and its own."""
     return {
         "apps": [
@@ -142,7 +218,7 @@ async def apps() -> Dict[str, Any]:
 
 
 @router.get("/current")
-async def current_app() -> Dict[str, Any]:
+async def current_app(caller: Caller = Depends(a_caller)) -> Dict[str, Any]:
     """Which application the runtime runs."""
     app = running_app()
     if app is None:
@@ -158,7 +234,9 @@ async def current_app() -> Dict[str, Any]:
 
 
 @router.post("/decide")
-async def decide(body: DecideRequest) -> Dict[str, Any]:
+async def decide(
+    body: DecideRequest, caller: Caller = Depends(a_caller)
+) -> Dict[str, Any]:
     """What the application would do about a tool call, and why — without making it."""
     app = running_app()
     if app is None:
