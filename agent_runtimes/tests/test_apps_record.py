@@ -109,3 +109,21 @@ async def test_a_record_that_cannot_be_sent_never_fails_the_run():
         scripted("hello"), capabilities=[AppRecordCapability(recorder=recorder)]
     )
     assert (await agent.run("hi")).output == "hello"
+
+
+async def test_a_client_that_goes_once_it_has_its_answer_leaves_a_record():
+    import asyncio
+
+    from pydantic_ai.messages import PartDeltaEvent, PartStartEvent
+
+    spec = app(["outputs"])
+    agent, sent = recorded(spec, ["The news ", "is good."])
+    async with agent.run_stream_events("news?") as events:
+        async for event in events:
+            if isinstance(event, (PartStartEvent, PartDeltaEvent)):
+                break  # the client has what it came for, and goes
+    for _ in range(20):
+        if sent:
+            break
+        await asyncio.sleep(0.05)
+    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]

@@ -16,15 +16,23 @@ record that cannot be sent is logged, and never fails the run.
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
+from typing import Any, AsyncIterable, Awaitable, Callable, Dict, List, Optional, Set
 
 from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
-from pydantic_ai.messages import ToolCallPart
+from pydantic_ai.messages import (
+    AgentStreamEvent,
+    PartDeltaEvent,
+    PartStartEvent,
+    TextPart,
+    TextPartDelta,
+    ToolCallPart,
+)
 from pydantic_ai.tools import ToolDefinition
 
 from agent_runtimes.loop.apps.guards import redact
@@ -189,12 +197,26 @@ class AppRecorder:
 
 @dataclass
 class AppRecordCapability(AbstractCapability[Any]):
-    """Write the record of an application's sessions."""
+    """Write the record of an application's sessions.
+
+    Sent when the run ends — and, since a client that has its answer may go
+    before the run has ended (the terminal stops its runtime at once, a
+    browser closes its tab), also when the stream it was shown is cancelled,
+    in a task of its own. Once per run.
+    """
 
     recorder: AppRecorder
 
+    _sessions: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    _answers: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
+
+    def _key(self, ctx: RunContext[Any]) -> str:
+        return str(ctx.run_id or ctx.conversation_id or "run")
+
     async def before_run(self, ctx: RunContext[Any]) -> None:
-        self.recorder.start(str(ctx.conversation_id or ctx.run_id or "run"))
+        session = str(ctx.conversation_id or ctx.run_id or "run")
+        self._sessions[self._key(ctx)] = session
+        self.recorder.start(session)
 
     async def after_tool_execute(
         self,
@@ -216,18 +238,63 @@ class AppRecordCapability(AbstractCapability[Any]):
         )
         return result
 
+    async def _close(
+        self, ctx: RunContext[Any], summary: str, payload: Dict[str, Any]
+    ) -> None:
+        """Add the run's last entry and send its session, once."""
+        session = self._sessions.pop(self._key(ctx), None)
+        self._answers.pop(self._key(ctx), None)
+        if session is None:
+            return
+        _SESSION.set(session)
+        self.recorder.add("output", summary, payload)
+        await self.recorder.flush(session)
+
+    async def wrap_run_event_stream(
+        self, ctx: RunContext[Any], *, stream: AsyncIterable[AgentStreamEvent]
+    ) -> AsyncIterable[AgentStreamEvent]:
+        key = self._key(ctx)
+        cancelled = False
+        try:
+            async for event in stream:
+                if isinstance(event, PartStartEvent) and isinstance(
+                    event.part, TextPart
+                ):
+                    self._answers[key] = event.part.content
+                elif isinstance(event, PartDeltaEvent) and isinstance(
+                    event.delta, TextPartDelta
+                ):
+                    self._answers[key] = (
+                        self._answers.get(key, "") + event.delta.content_delta
+                    )
+                yield event
+        except (asyncio.CancelledError, GeneratorExit):
+            # The client went. A node's stream ending, or failing, is not
+            # this: the run goes on, or says how it stopped (`on_run_error`).
+            cancelled = True
+            raise
+        finally:
+            close = getattr(stream, "aclose", None)
+            if close is not None:
+                await close()
+            if cancelled and key in self._sessions:
+                # Cancelled: the client went, and the run will not end. Sent
+                # in a task of its own, which the cancellation does not take.
+                answer = self._answers.get(key, "")
+                asyncio.get_running_loop().create_task(
+                    self._close(ctx, _short(answer, 300), {"length": len(answer)})
+                )
+
     async def after_run(self, ctx: RunContext[Any], *, result: Any) -> Any:
         output = getattr(result, "output", "")
-        self.recorder.add("output", _short(output, 300), {"length": len(str(output))})
-        await self.recorder.flush(_SESSION.get())
+        await self._close(ctx, _short(output, 300), {"length": len(str(output))})
         return result
 
     async def on_run_error(self, ctx: RunContext[Any], *, error: BaseException) -> Any:
         # A run a rule or a check stopped is recorded too: that is when it matters.
-        self.recorder.add(
-            "output", f"Stopped: {_short(error, 300)}", {"error": type(error).__name__}
+        await self._close(
+            ctx, f"Stopped: {_short(error, 300)}", {"error": type(error).__name__}
         )
-        await self.recorder.flush(_SESSION.get())
         raise error
 
 
