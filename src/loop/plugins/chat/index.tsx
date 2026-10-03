@@ -70,6 +70,12 @@ function agentAction(
 /** What a host may set on the chat. */
 export type ChatPluginConfig = {
   /**
+   * The theme the conversation wears, by name: the person's unless said. An
+   * application says `loop` (LOOP T-06, T-12) — the conversation then takes
+   * the theme's bubbles, pills and colours whatever the page around it wears.
+   */
+  themeVariant?: string;
+  /**
    * What the empty prompt says.
    *
    * Configured on the plugin rather than passed to the workspace: the prompt

@@ -163,6 +163,9 @@ export function AppRenderer({
       // Where an application runs is decided by its host — the Studio's
       // Preview, the hosted page — not offered to its user.
       targetFixed
+      // Applications first (LOOP T-12): an application's conversation wears
+      // the `loop` theme; a host may say otherwise.
+      themeVariant="loop"
       datalayerCreatePayload={datalayerCreatePayload}
       {...embed}
       plugins={allPlugins}

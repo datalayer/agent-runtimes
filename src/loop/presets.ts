@@ -155,6 +155,8 @@ export type LoopPresetOptions = {
   datalayerCreatePayload?: Record<string, unknown>;
   /** The target is the host's to fix, even with the agent control hidden. */
   targetFixed?: boolean;
+  /** The theme the conversation wears, by name; the person's unless said. */
+  themeVariant?: string;
   /**
    * The agentspec the local agent is created from, by id.
    *
@@ -251,6 +253,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     datalayerAgentSpecId,
     datalayerCreatePayload,
     targetFixed,
+    themeVariant,
     floatingPrompt = false,
     editorSelector = false,
     editors = true,
@@ -276,6 +279,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       autoFocusPrompt,
       suggestionLabels,
       fullScreenTopOffset,
+      themeVariant,
     }),
     // The composer and the title bar are plugins of their own: the chat
     // assembles their props, these render them. In the preset by default —

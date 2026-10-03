@@ -1754,6 +1754,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         ) : null}
         <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
           <ChatBase
+            // The theme it wears, when the host names one (an application's).
+            themeVariant={config?.themeVariant}
             // The header says why, beside the title, for the same reason the
             // placeholder does: a dead control with no explanation is worse
             // than an absent one.
