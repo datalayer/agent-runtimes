@@ -24,6 +24,8 @@ import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
 import { assistantCharacter } from './characters';
 import { SpeechBalloon } from './SpeechBalloon';
+import { SpriteCharacter } from './SpriteCharacter';
+import type { AssistantCharacterData } from './formats/types';
 import type { AssistantState } from './state';
 
 /** The motions, by the state the stage is in. */
@@ -69,8 +71,8 @@ const MOTIONS = {
 const BODY = '& .assistant-body';
 
 export interface AssistantStageProps {
-  /** The character, by id (T-25). */
-  characterId: string;
+  /** The character: one Datalayer ships, by id (T-25), or one loaded from a file (T-26). */
+  character: string | AssistantCharacterData;
   /** What it acts out (T-22). */
   state: AssistantState;
   /** Its size, in pixels. */
@@ -98,7 +100,7 @@ export interface AssistantStageProps {
 }
 
 export function AssistantStage({
-  characterId,
+  character,
   state,
   size = 88,
   place,
@@ -110,7 +112,11 @@ export function AssistantStage({
   insist = false,
   onDismiss,
 }: AssistantStageProps): JSX.Element {
-  const { Drawing, name } = assistantCharacter(characterId);
+  const shipped =
+    typeof character === 'string' ? assistantCharacter(character) : undefined;
+  const name = shipped
+    ? shipped.name
+    : (character as AssistantCharacterData).name;
   const [hovered, setHovered] = useState(false);
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
@@ -233,7 +239,15 @@ export function AssistantStage({
           },
         }}
       >
-        <Drawing size={size} />
+        {shipped ? (
+          <shipped.Drawing size={size} />
+        ) : (
+          <SpriteCharacter
+            character={character as AssistantCharacterData}
+            state={state}
+            size={size}
+          />
+        )}
       </Box>
       {hovered && state !== 'goodbye' && (
         <IconButton

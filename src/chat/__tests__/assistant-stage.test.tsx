@@ -34,7 +34,7 @@ async function render(props: Partial<AssistantStageProps> = {}) {
   await act(async () => {
     root.render(
       <AssistantStage
-        characterId="paperclip"
+        character="paperclip"
         state="idle"
         place={{ left: 10, top: 10 }}
         stageRef={createRef<HTMLDivElement>()}

@@ -41,6 +41,7 @@ import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import { AssistantStage } from './assistant/AssistantStage';
 import { SpeechBalloon } from './assistant/SpeechBalloon';
 import { DEFAULT_ASSISTANT_CHARACTER } from './assistant/characters';
+import type { AssistantCharacterData } from './assistant/formats/types';
 import {
   assistantStateOf,
   latestSaying,
@@ -146,11 +147,12 @@ export interface ChatFloatingProps extends ChatCommonProps {
     | 'panel';
 
   /**
-   * The character of the floating assistant, by id (LOOP T-25): one of
-   * `ASSISTANT_CHARACTERS`.
+   * The character of the floating assistant: one Datalayer ships, by id
+   * (`ASSISTANT_CHARACTERS`, LOOP T-25), or one a person loaded from a file
+   * they hold the rights to (`readClippyCharacter`, `readAcsCharacter`, T-26).
    * @default 'paperclip'
    */
-  assistantCharacter?: string;
+  assistantCharacter?: string | AssistantCharacterData;
 
   /**
    * Callback when the user switches view mode via the header toggle.
@@ -1119,7 +1121,7 @@ export function ChatFloating({
       {/* The floating assistant: the character, open or closed (T-21). */}
       {assistantMode && !assistantAway && (
         <AssistantStage
-          characterId={assistantCharacter}
+          character={assistantCharacter}
           state={assistantState}
           size={ASSISTANT_SIZE}
           place={
