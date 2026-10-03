@@ -149,6 +149,9 @@ export function AppRenderer({
       graph={false}
       pluginsPanel={false}
       datalayerAgentSpecId={DATALAYER_BOOTSTRAP_AGENTSPEC}
+      // Where an application runs is decided by its host — the Studio's
+      // Preview, the hosted page — not offered to its user.
+      targetFixed
       datalayerCreatePayload={datalayerCreatePayload}
       {...embed}
       plugins={allPlugins}

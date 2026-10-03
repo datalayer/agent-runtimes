@@ -89,6 +89,23 @@ describe('choosing where the agent runs', () => {
 
     expect(output?.sandbox?.target.peek()).toBe('browser');
   });
+
+  it('starts where the host fixed the target, the control hidden', () => {
+    // An application deployed on Datalayer runs there: its host decided.
+    const reactor = buildReactorFromPlugins([
+      configurePlugin(AgentsPlugin, {
+        serverUrl: '',
+        target: 'datalayer',
+        showAgentVariants: false,
+        targetFixed: true,
+      }),
+    ]);
+    reactor.start();
+    const output = reactor.getOutput<{
+      sandbox?: { target: { peek: () => string } };
+    }>(AgentsPlugin.name);
+    expect(output?.sandbox?.target.peek()).toBe('datalayer');
+  });
 });
 
 describe('one switch per feature', () => {

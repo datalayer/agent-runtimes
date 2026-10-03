@@ -153,6 +153,8 @@ export type LoopPresetOptions = {
   datalayerAgentSpecId?: string;
   /** What the agent on that runtime is created with besides its spec — an `app_spec`. */
   datalayerCreatePayload?: Record<string, unknown>;
+  /** The target is the host's to fix, even with the agent control hidden. */
+  targetFixed?: boolean;
   /**
    * The agentspec the local agent is created from, by id.
    *
@@ -248,6 +250,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     localAgentSpec,
     datalayerAgentSpecId,
     datalayerCreatePayload,
+    targetFixed,
     floatingPrompt = false,
     editorSelector = false,
     editors = true,
@@ -295,6 +298,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       target,
       datalayerAgentSpecId,
       datalayerCreatePayload,
+      targetFixed,
       showAgentVariants,
       showAgentSummary: agentSummary,
       teamId,

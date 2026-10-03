@@ -126,6 +126,12 @@ export type AgentsConfig = {
    * decides its tool calls by its rules (LOOP R-05, R-03).
    */
   datalayerCreatePayload?: Record<string, unknown>;
+  /**
+   * The target is the host's decision, not the reader's: started there even
+   * with the control hidden. For an application that runs where it is
+   * deployed; a workspace leaves it unset.
+   */
+  targetFixed?: boolean;
 };
 
 export type AgentsOutput = {
@@ -169,8 +175,11 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
       sandbox: createSwitchableSandboxService({
         serverUrl: config.serverUrl,
         // Pinned when there is no choice to make: a host that hid the control
-        // must not be started on a target the reader cannot move off.
-        initialTarget: showVariants ? config.target : 'browser',
+        // must not be started on a target the reader cannot move off — unless
+        // the host fixed the target itself, as an application deployed on
+        // Datalayer is (AppRenderer): there is nothing for the reader to move.
+        initialTarget:
+          showVariants || config.targetFixed ? config.target : 'browser',
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
         // The capacity plugins' say, read at switch time — lazily, because a
