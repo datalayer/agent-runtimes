@@ -1172,7 +1172,8 @@ export function ChatMessageList({
               sx={{
                 p: 2,
                 overflowX: 'auto',
-                borderRadius: 2,
+                // The theme's bubble (LOOP T-03, T-06): today's 6px elsewhere.
+                borderRadius: 'var(--theme-radius-bubble, 6px)',
                 backgroundColor: isUser
                   ? 'accent.emphasis'
                   : speaker
@@ -1324,7 +1325,7 @@ export function ChatMessageList({
                 display: 'flex',
                 alignItems: 'center',
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 'var(--theme-radius-bubble, 6px)',
                 bg: 'canvas.subtle',
                 minHeight: '32px',
               }}
