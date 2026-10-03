@@ -15,6 +15,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import {
+  balloonSide,
   AssistantStage,
   type AssistantStageProps,
 } from '../assistant/AssistantStage';
@@ -142,5 +143,45 @@ describe('the floating assistant', () => {
       ).click();
     });
     expect(onDismiss).toHaveBeenCalledWith('session');
+  });
+});
+
+describe('where the balloon goes (T-23)', () => {
+  const viewport = { width: 1200, height: 800 };
+  it('stays inside the window wherever the character stands', () => {
+    expect(balloonSide({ left: 1000, top: 600 }, viewport)).toEqual({
+      side: 'above',
+      align: 'right',
+    });
+    expect(balloonSide({ left: 20, top: 600 }, viewport)).toEqual({
+      side: 'above',
+      align: 'left',
+    });
+    expect(balloonSide({ left: 20, top: 40 }, viewport)).toEqual({
+      side: 'below',
+      align: 'left',
+    });
+  });
+
+  it('reads a corner as well as a place', () => {
+    expect(balloonSide({ right: 20, bottom: 20 }, viewport)).toEqual({
+      side: 'above',
+      align: 'right',
+    });
+    expect(
+      balloonSide(
+        {
+          left: 20,
+          top: 20,
+          right: 'auto' as unknown,
+          bottom: 'auto' as unknown,
+        },
+        viewport,
+      ).side,
+    ).toBe('below');
+    expect(balloonSide({ left: '20px', top: '20px' }, viewport)).toEqual({
+      side: 'below',
+      align: 'left',
+    });
   });
 });

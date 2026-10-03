@@ -77,6 +77,42 @@ const AWAY_CHOICES: { away: AssistantAway; label: string }[] = [
   { away: 'always', label: 'Don\u2019t show again' },
 ];
 
+/** Room the balloon needs above the character before it goes below. */
+const BALLOON_ROOM = 200;
+
+/**
+ * Where the balloon goes so that it stays inside the window (T-23): toward
+ * the middle of the page from whichever half the character stands in, and
+ * below it when it stands too near the top.
+ */
+export function balloonSide(
+  place: { left?: unknown; top?: unknown; right?: unknown; bottom?: unknown },
+  viewport: { width: number; height: number } = {
+    width: typeof window === 'undefined' ? 1280 : window.innerWidth,
+    height: typeof window === 'undefined' ? 800 : window.innerHeight,
+  },
+): { side: 'above' | 'below'; align: 'left' | 'right' } {
+  const left = typeof place.left === 'number' ? place.left : undefined;
+  const top = typeof place.top === 'number' ? place.top : undefined;
+  const align =
+    left !== undefined
+      ? left < viewport.width / 2
+        ? 'left'
+        : 'right'
+      : place.left !== undefined && place.right === undefined
+        ? 'left'
+        : 'right';
+  const side =
+    top !== undefined
+      ? top < BALLOON_ROOM
+        ? 'below'
+        : 'above'
+      : place.top !== undefined && place.bottom === undefined
+        ? 'below'
+        : 'above';
+  return { side, align };
+}
+
 export interface AssistantStageProps {
   /** The character: one Datalayer ships, by id (T-25), or one loaded from a file (T-26). */
   character: string | AssistantCharacterData;
@@ -202,7 +238,8 @@ export function AssistantStage({
           more={balloon.more}
           onOpen={onToggle}
           above={size + 8}
-          align="right"
+          side={balloonSide(place).side}
+          align={balloonSide(place).align}
           tailAt={size / 2}
         />
       )}
