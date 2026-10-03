@@ -1644,10 +1644,10 @@ async def create_agent(
 
             try:
                 running_app = load_app(request.app_spec)
-            except AppNotRunnable as error:
+            except AppNotRunnable as refused:
                 raise HTTPException(
                     status_code=422,
-                    detail={"problems": error.problems},
+                    detail={"problems": refused.problems},
                 ) from None
             selected_mcp_servers = [
                 McpServerSelection(id=server, origin="catalog")
