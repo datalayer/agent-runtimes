@@ -393,6 +393,7 @@ class CompactionCapability(AbstractCapability[Any]):
         if reduced:
             self._compaction_count += 1
             request_context.messages = compacted
+            self._persist(ctx, messages, compacted)
         after_tokens = (
             estimate_token_count(compacted, self.tokenizer) if reduced else tokens
         )
@@ -408,6 +409,29 @@ class CompactionCapability(AbstractCapability[Any]):
             reduced=reduced,
         )
         return request_context
+
+    @staticmethod
+    def _persist(
+        ctx: RunContext[Any],
+        before: list[ModelMessage],
+        compacted: list[ModelMessage],
+    ) -> None:
+        """Make the compaction part of the run's history, not only of this request.
+
+        Since pydantic-ai 2.5x, `ModelRequestContext.messages` is what one request
+        sends, and the run's history is `RunContext.messages`, rewritten by
+        mutating it. Earlier versions persisted the request's messages, and
+        there the two lists are one: rewriting it again changes nothing.
+        """
+        history = getattr(ctx, "messages", None)
+        if not isinstance(history, list) or history is compacted:
+            return
+        # Only when the history is what was compacted: never cut a history
+        # this request did not see whole.
+        if len(history) == len(before) and all(
+            mine is theirs for mine, theirs in zip(history, before)
+        ):
+            history[:] = compacted
 
     async def _compact(
         self,
