@@ -186,6 +186,9 @@ async def configure_app(
             mcp_proxy_url=body.mcp_proxy_url,
             app_spec=body.app,
             model=app.model or None,
+            # An application is spoken to over AG-UI — by its page and by the
+            # terminal — whatever the runtime started its default agent on.
+            transport="ag-ui",
         ),
     )
     # Its own plugin, whether or not agent creation registered it already.

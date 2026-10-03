@@ -203,6 +203,26 @@ def is_agui_mounted(routes: Any, path: str) -> bool:
     )
 
 
+def ensure_agui_dispatch(app: Any, path: str, agent_id: str) -> None:
+    """One mount at `path`: the dispatch to the agent registered now.
+
+    A mount holding an app of its own — made at startup, or by an older
+    registration — answers before any mounted after it, with the agent it
+    was given. It is taken away, so that the dispatch answers.
+    """
+    routes = app.router.routes
+    stale = [
+        route
+        for route in routes
+        if getattr(route, "path", None) == path
+        and not isinstance(getattr(route, "app", None), AGUIDispatch)
+    ]
+    for route in stale:
+        routes.remove(route)
+    if not is_agui_mounted(routes, path):
+        app.mount(path, AGUIDispatch(agent_id), name=f"agui-{agent_id}")
+
+
 def get_agui_adapter(agent_id: str) -> "AGUITransport | None":
     """
     Get an AG-UI adapter by ID.

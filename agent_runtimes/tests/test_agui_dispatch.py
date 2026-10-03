@@ -43,3 +43,16 @@ def test_the_agent_registered_now_answers() -> None:
     assert client.post("/ag-ui/probe-agent/").text == "recreated"
     assert agui.is_agui_mounted(app.routes, "/ag-ui/probe-agent")
     agui.unregister_agui_agent("probe-agent")
+
+
+def test_a_stale_mount_gives_way_to_the_dispatch() -> None:
+    app = Starlette(routes=[])
+    app.mount("/ag-ui/probe-agent", Adapter("stale").get_app())
+    agui.register_agui_agent("probe-agent", Adapter("current"))  # type: ignore[arg-type]
+    agui.ensure_agui_dispatch(app, "/ag-ui/probe-agent", "probe-agent")
+    assert TestClient(app).post("/ag-ui/probe-agent/").text == "current"
+    assert (
+        len([r for r in app.routes if getattr(r, "path", "") == "/ag-ui/probe-agent"])
+        == 1
+    )
+    agui.unregister_agui_agent("probe-agent")

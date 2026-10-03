@@ -2618,16 +2618,13 @@ async def create_agent(
                 # Dynamically add the AG-UI mount to the FastAPI app
                 agui_app = get_agui_app(agent_id)
                 if agui_app and http_request.app:
-                    from .agui import AGUIDispatch, is_agui_mounted
+                    from .agui import ensure_agui_dispatch
 
                     # Mount path should NOT have trailing slash - Starlette Mount handles that
                     mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
-                    # Once per id: the dispatch answers with the agent
-                    # registered now, so a recreated agent is reached.
-                    if not is_agui_mounted(http_request.app.routes, mount_path):
-                        http_request.app.mount(
-                            mount_path, AGUIDispatch(agent_id), name=f"agui-{agent_id}"
-                        )
+                    # One mount per id, the dispatch: it answers with the
+                    # agent registered now, so a recreated agent is reached.
+                    ensure_agui_dispatch(http_request.app, mount_path, agent_id)
                     logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
             except Exception as e:
                 logger.warning(f"Could not register with AG-UI: {e}")
@@ -4683,6 +4680,7 @@ class ConfigureFromSpecRequest(BaseModel):
     emit_live_events: bool | None = None
     app_spec: dict[str, Any] | None = None
     app_instance: dict[str, Any] | None = None
+    transport: Literal["ag-ui", "vercel-ai", "acp", "a2a"] | None = None
     """An application's Appspec, when the agent is the one it runs."""
     model: str | None = None
     """The model, when it is not the agent spec's own."""
@@ -4800,7 +4798,9 @@ async def configure_from_spec_endpoint(
     # again, and its clients went on talking to the agent it replaced.
     from .agui import get_agui_adapter
 
-    served_on = "ag-ui" if get_agui_adapter(target_agent_name) is not None else None
+    served_on = body.transport or (
+        "ag-ui" if get_agui_adapter(target_agent_name) is not None else None
+    )
     create_request = CreateAgentRequest(
         name=target_agent_name,
         **({"transport": served_on} if served_on else {}),
