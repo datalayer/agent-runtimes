@@ -18,10 +18,12 @@ from agent_runtimes.commands.apps import (
     validate_file,
 )
 
-CATALOGUE = Path(__file__).resolve().parents[2] / "agentspecs" / "agentspecs" / "apps"
 runner = CliRunner()
 
 pytest.importorskip("agentspecs.apps")
+
+#: The applications of the agentspecs installed — the package carries them.
+CATALOGUE = Path(pytest.importorskip("agentspecs.apps").__file__).parent
 
 
 def write(tmp_path: Path, data: dict, name: str = "app.yaml") -> Path:

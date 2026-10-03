@@ -231,16 +231,13 @@ class AppRulesCapability(AbstractCapability[Any]):
     # --- deciding ----------------------------------------------------------------
 
     def decide(self, tool_name: str, args: Mapping[str, Any]) -> Enforced:
-        """What the application does about a call: the decision, and its parts."""
-        if tool_name in READING_TOOLS:
-            return Enforced(
-                tool_name, decision_for(self.app, tool_name, classes=["read"])
-            )
-        if tool_name in self.extra_classes:
-            classes = list(self.extra_classes[tool_name])
-            return Enforced(
-                tool_name, decision_for(self.app, tool_name, classes=classes)
-            )
+        """What the application does about a call: the decision, and its parts.
+
+        What reaches the outside world is resolved first — an MCP tool, the
+        tool `call_tool` calls, the tools code names — so that nothing the
+        session says of a tool (`extra_classes`) can grant a connection the
+        application does not have.
+        """
         if tool_name == "call_tool":
             requested = args.get("tool_name") or args.get("tool")
             inner = args.get("arguments")
@@ -254,6 +251,10 @@ class AppRulesCapability(AbstractCapability[Any]):
             return self._decide_code(tool_name, args)
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
+        if tool_name in READING_TOOLS:
+            return Enforced(
+                tool_name, decision_for(self.app, tool_name, classes=["read"])
+            )
         identities = self._catalogue_ids(tool_name)
         if identities:
             parts = tuple(
@@ -262,6 +263,13 @@ class AppRulesCapability(AbstractCapability[Any]):
             )
             return Enforced(
                 tool_name, _strictest(parts), parts if len(parts) > 1 else ()
+            )
+        # Only a tool that is neither of a server nor of the catalogue — the
+        # runtime's own, or the page's — may be classed by the session.
+        if tool_name in self.extra_classes:
+            classes = list(self.extra_classes[tool_name])
+            return Enforced(
+                tool_name, decision_for(self.app, tool_name, classes=classes)
             )
         return Enforced(tool_name, _unclassed(tool_name))
 

@@ -220,6 +220,27 @@ async def test_a_tool_nobody_classed_is_left_to_the_person_unless_the_session_sa
 
 
 @pytest.mark.asyncio
+async def test_what_the_session_says_of_a_tool_cannot_grant_a_connection() -> None:
+    told = Harness(
+        TRIAGE,
+        extra_classes={
+            "tavily_search": ["read"],
+            "google-workspace__search_drive_files": ["read"],
+            "google-workspace__send_gmail_message": ["read"],
+        },
+    )
+    # Not connected to Tavily: still not reached.
+    with pytest.raises(AppRuleBlockedError, match="not connected"):
+        await told.call("tavily_search", {})
+    # Left out by the connection's `only`: still left out.
+    with pytest.raises(AppRuleBlockedError, match="leaves"):
+        await told.call("google-workspace__search_drive_files", {})
+    # Classed by the catalogue as sending: still asks.
+    await told.call("google-workspace__send_gmail_message", {})
+    assert told.asked and told.asked[-1][1].behaviour == "ask_first"
+
+
+@pytest.mark.asyncio
 async def test_do_it_if_asked_asks_until_grants_are_recorded() -> None:
     granted = app(
         rules=[{"action": "Send", "applies_to": ["send"], "behaviour": "if_asked"}]

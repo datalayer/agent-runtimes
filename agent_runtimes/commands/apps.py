@@ -34,7 +34,8 @@ app = typer.Typer(
     invoke_without_command=True,
 )
 
-console = Console()
+# Wide and unwrapped: a verdict and a path are read, and grepped, on one line.
+console = Console(soft_wrap=True)
 
 #: What each class of action is called, for a person.
 _ACTIONS = {
