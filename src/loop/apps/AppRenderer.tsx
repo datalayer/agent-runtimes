@@ -124,7 +124,14 @@ export function AppRenderer({
   const datalayerCreatePayload = useMemo(
     () =>
       app.agent
-        ? { agent_spec_id: agentIdOf(app), app_spec: dumpAppspec(app) }
+        ? {
+            // Under the application's id, over AG-UI: what the workspace's
+            // chat addresses (`agentId` below).
+            name: app.id,
+            transport: 'ag-ui',
+            agent_spec_id: agentIdOf(app),
+            app_spec: dumpAppspec(app),
+          }
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [source],

@@ -76,16 +76,25 @@ export function DatalayerAgentBridge(): JSX.Element | null {
    * spec id in it and hands that over. Same thing, said in the place the
    * creation actually looks.
    */
+  // An application names its own agent and transport; a bare spec, the spec's.
+  const agentName =
+    typeof createPayload?.name === 'string' ? createPayload.name : agentSpecId;
+  const protocol =
+    createPayload?.transport === 'ag-ui' ||
+    createPayload?.transport === 'vercel-ai'
+      ? (createPayload.transport as 'ag-ui' | 'vercel-ai')
+      : undefined;
   const agentConfig = useMemo(
     () => ({
-      name: agentSpecId,
+      name: agentName,
+      ...(protocol ? { protocol } : {}),
       agentSpecId,
       model: AGENTSPECS[agentSpecId]?.model,
       description: AGENTSPECS[agentSpecId]?.description,
       // An application's spec, when the workspace runs one.
       ...(createPayload ? { createPayload } : {}),
     }),
-    [agentSpecId, createPayload],
+    [agentSpecId, agentName, protocol, createPayload],
   );
 
   const { runtime, status, error } = useAgentRuntimes({
