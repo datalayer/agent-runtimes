@@ -364,3 +364,77 @@ def apps_run(
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)
+
+
+@app.command(name="deploy")
+def apps_deploy(
+    app_uid: str = typer.Argument(
+        ..., help="The application's id, as the Studio shows it."
+    ),
+    version: int = typer.Option(
+        None,
+        "--version",
+        "-v",
+        help="The version to deploy; the latest saved by default.",
+    ),
+    slug: str = typer.Option(
+        None, "--slug", help="Its address, /apps/<slug>, on a first deploy."
+    ),
+    site: str = typer.Option(
+        None,
+        "--site",
+        envvar="DATALAYER_SITE_URL",
+        help="The site its address is on.",
+    ),
+) -> None:
+    """Deploy a version at the application's hosted address (LOOP S-06).
+
+    The deployment the Studio's Ship tab shows: deploying another version
+    moves it, and deploying a paused one resumes it. Prints the address and
+    the snippet that embeds it.
+    """
+    import logging
+
+    import httpx
+
+    from agent_runtimes.loop.apps.deployments import (
+        Deployments,
+        DeployRefused,
+        deploy,
+        deployment_path,
+    )
+    from agent_runtimes.loop.launch import NotSignedIn, make_client
+
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    try:
+        client, token = make_client()
+    except NotSignedIn as refused:
+        console.print(f"[red]✗[/red] {refused} Sign in with `datalayer login`.")
+        raise typer.Exit(1)
+    try:
+        deployment, done = deploy(
+            Deployments(client.urls.spacer_url, token), app_uid, version, slug
+        )
+    except (DeployRefused, httpx.HTTPError) as refused:
+        console.print(f"[red]✗[/red] {refused}")
+        raise typer.Exit(1)
+    origin = (site or "https://datalayer.ai").rstrip("/")
+    said = {
+        "created": "Deployed",
+        "moved": "Moved to",
+        "resumed": "Resumed at",
+        "unchanged": "Already at",
+    }[done]
+    console.print(f"[green]✓[/green] {said} version {deployment.version}.")
+    console.print(
+        f"  {origin}{deployment_path(deployment.slug)}  (private to you until it is shared)"
+    )
+    console.print(
+        "  To embed it (a private application also needs an embed token, from the Ship tab):"
+    )
+    console.print(
+        f'  <script src="{origin}/embed/datalayer-app.js" async></script>\n'
+        f'  <datalayer-app app="{app_uid}" origin="{origin}"></datalayer-app>',
+        markup=False,
+        highlight=False,
+    )
