@@ -915,6 +915,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
 
   /* The icon its spec asked for, at the size the empty state draws. */
   const BrandIcon = agentIcon(spec?.icon);
+  const presence = config?.presence;
   /* And the team's, for the level above it. */
   const TeamIcon = agentIcon(team?.team.icon);
 
@@ -1563,7 +1564,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     onSelectAgent: id => team?.select(id),
     // On unless the host said otherwise: a public page turns the counters
     // off, because they answer questions a visitor is not asking.
-    showTokenUsage: chatExtras.showTokenUsage ?? true,
+    showTokenUsage: chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true,
     showContextRing: true,
     agentUsage: contextUsage ?? undefined,
     showModelSelector: true,
@@ -1780,8 +1781,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 nothing about this one. The empty state is the first thing a
                 person sees and the only place the agent introduces itself.
               */
-            title={member?.name ?? spec?.name ?? agentId}
-            description={spec?.description}
+            title={presence?.name ?? member?.name ?? spec?.name ?? agentId}
+            description={presence?.welcome ?? spec?.description}
             /*
                 Two sizes, because it is drawn in two places.
 
@@ -1793,14 +1794,30 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // Big enough to read as the agent's mark rather than as
             // punctuation before its name, and still short enough not to
             // set the header's height.
-            brandIcon={<BrandIcon size={20} />}
+            brandIcon={
+              presence?.face ? (
+                <span aria-hidden style={{ fontSize: 20, lineHeight: 1 }}>
+                  {presence.face}
+                </span>
+              ) : (
+                <BrandIcon size={20} />
+              )
+            }
             emptyState={{
-              icon: <BrandIcon size={48} />,
+              // An application's own face, large: the thing a person's eye
+              // lands on first (LOOP T-08).
+              icon: presence?.face ? (
+                <span aria-hidden style={{ fontSize: 48, lineHeight: 1 }}>
+                  {presence.face}
+                </span>
+              ) : (
+                <BrandIcon size={48} />
+              ),
               // `ChatEmptyState` reads its heading from here and nowhere
               // else — the `title` above reaches the header only — so
               // without this the agent introduced itself as "Start a
               // conversation".
-              title: member?.name ?? spec?.name ?? agentId,
+              title: presence?.name ?? member?.name ?? spec?.name ?? agentId,
               /*
                 Two levels when there is a team: the team first — its name,
                 what it is for, what it can be asked — and under it the
@@ -2003,7 +2020,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // through the extras channel — the A2UI examples draw their
             // surface here. Wins over the notebook surfaces in ChatBase.
             renderToolResult={chatExtras.renderToolResult}
-            showTurnFooter={chatExtras.showTokenUsage ?? true}
+            showTurnFooter={
+              chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true
+            }
             onContextSnapshot={handleContextSnapshot}
             onLoadingChange={handleLoadingChange}
             onItemsChange={handleMessagesChange}

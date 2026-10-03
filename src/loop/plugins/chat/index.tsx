@@ -68,6 +68,15 @@ function agentAction(
 }
 
 /** What a host may set on the chat. */
+/** Who is answering, as the person meets them. */
+export interface ChatPresence {
+  name: string;
+  /** An emoji: its face where only an icon goes. */
+  face?: string;
+  /** What it says before anyone writes. */
+  welcome?: string;
+}
+
 export type ChatPluginConfig = {
   /**
    * The theme the conversation wears, by name: the person's unless said. An
@@ -75,6 +84,17 @@ export type ChatPluginConfig = {
    * the theme's bubbles, pills and colours whatever the page around it wears.
    */
   themeVariant?: string;
+  /**
+   * Who is answering, as the person meets them (LOOP T-08): a name, a face
+   * and a welcome, in place of the agent's id and a generic icon. An
+   * application sets its own.
+   */
+  presence?: ChatPresence;
+  /**
+   * Whether the counters — tokens, context — are shown under the prompt.
+   * On unless said: a person using an application is not asking.
+   */
+  showTokenUsage?: boolean;
   /**
    * What the empty prompt says.
    *

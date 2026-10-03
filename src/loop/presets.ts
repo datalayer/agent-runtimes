@@ -37,7 +37,11 @@ import {
   type AgentsConfig,
   type SandboxTarget,
 } from './plugins/agents';
-import { ChatPlugin, type ChatPluginConfig } from './plugins/chat';
+import {
+  ChatPlugin,
+  type ChatPluginConfig,
+  type ChatPresence,
+} from './plugins/chat';
 import { ChatHeaderPlugin } from './plugins/chat-header';
 import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
 import { ChatViewPlugin } from './plugins/chat-view';
@@ -157,6 +161,10 @@ export type LoopPresetOptions = {
   targetFixed?: boolean;
   /** The theme the conversation wears, by name; the person's unless said. */
   themeVariant?: string;
+  /** Who is answering, as the person meets them (LOOP T-08). */
+  presence?: ChatPresence;
+  /** Whether the counters are shown under the prompt; on unless said. */
+  showTokenUsage?: boolean;
   /**
    * The agentspec the local agent is created from, by id.
    *
@@ -254,6 +262,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     datalayerCreatePayload,
     targetFixed,
     themeVariant,
+    presence,
+    showTokenUsage,
     floatingPrompt = false,
     editorSelector = false,
     editors = true,
@@ -280,6 +290,8 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       suggestionLabels,
       fullScreenTopOffset,
       themeVariant,
+      presence,
+      showTokenUsage,
     }),
     // The composer and the title bar are plugins of their own: the chat
     // assembles their props, these render them. In the preset by default —

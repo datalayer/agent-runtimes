@@ -188,6 +188,14 @@ export function AppRenderer({
       // Applications first (LOOP T-12): an application's conversation wears
       // the `loop` theme; a host may say otherwise.
       themeVariant="loop"
+      // Its own face, name and welcome in the chat (T-08); no counters: a
+      // person using an application is not asking about tokens.
+      presence={{
+        name: app.name,
+        face: app.emoji,
+        welcome: app.interface.welcome || app.description,
+      }}
+      showTokenUsage={false}
       datalayerCreatePayload={datalayerCreatePayload}
       {...embed}
       plugins={allPlugins}
