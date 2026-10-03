@@ -96,7 +96,7 @@ export interface A2AAdapterConfig extends ProtocolAdapterConfig {
   /** Agent URL for .well-known/agent-card.json discovery */
   agentUrl?: string;
 
-  /** Enable A2UI extension */
+  /** Enable the A2UI UI plugin */
   enableA2UI?: boolean;
 }
 

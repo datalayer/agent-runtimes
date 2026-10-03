@@ -172,6 +172,8 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
   tags: ['example', 'worker', 'mail'],
   icon: 'mail',
   emoji: '📬',
+  avatar: '',
+  banner: '',
   setup: [
     "The agent 'worker-mail-triage:0.0.1' is not enabled.",
     "The MCP server 'google-workspace:0.0.1' is not enabled.",
@@ -364,6 +366,8 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
   tags: ['example', 'widget'],
   icon: 'number',
   emoji: '🧮',
+  avatar: '',
+  banner: '',
   setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
 };
 
@@ -522,6 +526,8 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   tags: ['example', 'decision', 'benchmarks'],
   icon: 'checklist',
   emoji: '🚢',
+  avatar: '',
+  banner: '',
   setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
 };
 
@@ -637,6 +643,8 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
   tags: ['example', 'research'],
   icon: 'search',
   emoji: '🔎',
+  avatar: '',
+  banner: '',
   setup: [],
 };
 

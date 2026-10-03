@@ -88,6 +88,33 @@ export interface AgentCapability {
 }
 
 /**
+ * A visual component a UI plugin renders (LOOP C-13), named as a surface names
+ * it. A standard one's properties are its protocol's own; Datalayer's own
+ * carry theirs as a JSON Schema, from which its properties form is drawn (C-14).
+ */
+export interface ComponentSpec {
+  /** The name a surface gives it (e.g. 'Table'). */
+  id: string;
+  name: string;
+  /** What it is for, in a sentence. */
+  description: string;
+  /** text, input, action, data, conversation, media, layout. */
+  category: string;
+  /** Its face on the palette. */
+  emoji: string;
+  /** Its properties are its protocol's own. */
+  standard: boolean;
+  /** Its properties as a JSON Schema, when it is Datalayer's own. */
+  properties?: Record<string, unknown>;
+  /** What it can be bound to: what it shows, what it sends. */
+  bindings?: { shows: string[]; sends: string[] };
+  /** What it reports. */
+  events: string[];
+  /** A valid configuration of it. */
+  example?: Record<string, unknown>;
+}
+
+/**
  * How an agent's answer becomes an interface: a protocol the host renders
  * (`agentspecs/ui-plugins`). An agent spec's `uiPlugin` names one.
  */
@@ -102,6 +129,10 @@ export interface UIPluginSpec {
   docsUrl: string;
   /** Whether an agent spec may name it today. */
   enabled: boolean;
+  /** The catalog its components are written in. */
+  catalog: string;
+  /** The visual components it renders (LOOP C-13). */
+  components: ComponentSpec[];
 }
 
 /** A check a Frame requires of the output of work done under it. */
@@ -561,6 +592,13 @@ export interface AppSpec {
   icon?: string;
   /** Its face: one emoji, shown wherever the application appears. */
   emoji: string;
+  /**
+   * Its avatar, by name: a drawing of the set people choose theirs from on
+   * their profile. Empty, its emoji stands for it.
+   */
+  avatar: string;
+  /** Its banner, by name, from the same profile's set. Empty, its id seeds one. */
+  banner: string;
 }
 
 export interface Agentspec {

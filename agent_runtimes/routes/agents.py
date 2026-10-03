@@ -1174,6 +1174,14 @@ class CreateAgentRequest(BaseModel):
             "before every tool call in place of the default approvals (LOOP R-03, R-05)."
         ),
     )
+    app_instance: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Which instance of the application this agent runs, as the platform "
+            "knows it: `app_uid` (its Spacer item), `deployment_uid`, `version`. "
+            "What its record is kept under (LOOP R-07)."
+        ),
+    )
     subagents: SubAgentsConfig | None = Field(
         default=None,
         description=(
@@ -1652,6 +1660,11 @@ async def create_agent(
                 ) from None
             # The application runs as a Reactor plugin of its own (LOOP F-13).
             register_app(running_app)
+            # Code Mode calls every tool through `execute_code`, which an
+            # application without a shell is refused (rules.py): its tools are
+            # called one by one instead, each decided by its rules.
+            if not running_app.permissions.computer.shell:
+                request.enable_codemode = False
             selected_mcp_servers = [
                 McpServerSelection(id=server, origin="catalog")
                 for server in connected_server_ids(running_app)
@@ -2243,10 +2256,46 @@ async def create_agent(
             # An application's rules decide every tool call, in place of the
             # default approvals: asking twice for one call is not a rule.
             if running_app is not None:
+                from agent_runtimes.loop.apps.guards import (
+                    AppChecks,
+                    AppChecksCapability,
+                )
                 from agent_runtimes.loop.apps.plugins import rules_for
+                from agent_runtimes.loop.apps.record import (
+                    AppRecordCapability,
+                    AppRecorder,
+                )
 
                 capabilities = _without_approval_capabilities(capabilities)
-                capabilities.insert(0, rules_for(running_app, agent_id=agent_id))
+                serving = request.app_instance or {}
+                # What it did, session by session, kept by ai-agents (R-07).
+                recorder = AppRecorder(
+                    app=running_app,
+                    app_uid=str(serving.get("app_uid") or ""),
+                    deployment_uid=str(serving.get("deployment_uid") or ""),
+                    version=int(serving.get("version") or 0),
+                )
+                rules = rules_for(running_app, agent_id=agent_id)
+                rules.record = recorder.decided
+                capabilities.insert(0, rules)
+                # And its checks, after its rules: a call the rules refuse
+                # is not checked, and a Guard reads what the rules decided
+                # (LOOP R-06).
+                capabilities.insert(
+                    1,
+                    AppChecksCapability(
+                        checks=AppChecks.of(running_app),
+                        agent_id=agent_id,
+                        decide=rules.decide,
+                        record=recorder.checked,
+                    ),
+                )
+                capabilities.insert(2, AppRecordCapability(recorder=recorder))
+                logger.info(
+                    "Application %s on agent %s: its rules, checks and record attached.",
+                    running_app.id,
+                    agent_id,
+                )
 
             # And always count what the runs cost.
             #
@@ -2569,13 +2618,13 @@ async def create_agent(
                 # Dynamically add the AG-UI mount to the FastAPI app
                 agui_app = get_agui_app(agent_id)
                 if agui_app and http_request.app:
+                    from .agui import ensure_agui_dispatch
+
                     # Mount path should NOT have trailing slash - Starlette Mount handles that
                     mount_path = f"{_api_prefix}/ag-ui/{agent_id}"
-                    # Use app.mount() for proper dynamic route registration
-                    # This is more reliable than manually manipulating app.routes
-                    http_request.app.mount(
-                        mount_path, agui_app, name=f"agui-{agent_id}"
-                    )
+                    # One mount per id, the dispatch: it answers with the
+                    # agent registered now, so a recreated agent is reached.
+                    ensure_agui_dispatch(http_request.app, mount_path, agent_id)
                     logger.info(f"Dynamically mounted AG-UI route: {mount_path}/")
             except Exception as e:
                 logger.warning(f"Could not register with AG-UI: {e}")
@@ -4630,6 +4679,8 @@ class ConfigureFromSpecRequest(BaseModel):
     evals_mode: str | None = None
     emit_live_events: bool | None = None
     app_spec: dict[str, Any] | None = None
+    app_instance: dict[str, Any] | None = None
+    transport: Literal["ag-ui", "vercel-ai", "acp", "a2a"] | None = None
     """An application's Appspec, when the agent is the one it runs."""
     model: str | None = None
     """The model, when it is not the agent spec's own."""
@@ -4742,8 +4793,17 @@ async def configure_from_spec_endpoint(
     # ── 4. Build the CreateAgentRequest that represents this spec ────
     server_codemode = os.environ.get("AGENT_RUNTIMES_CODEMODE", "").lower() == "true"
 
+    # Recreated on the transport it is served on: an agent served over AG-UI
+    # and recreated on the default transport was never registered for AG-UI
+    # again, and its clients went on talking to the agent it replaced.
+    from .agui import get_agui_adapter
+
+    served_on = body.transport or (
+        "ag-ui" if get_agui_adapter(target_agent_name) is not None else None
+    )
     create_request = CreateAgentRequest(
         name=target_agent_name,
+        **({"transport": served_on} if served_on else {}),
         agent_spec_id=body.agent_spec_id,
         agent_spec=body.agent_spec,
         enable_codemode=server_codemode,
@@ -4756,6 +4816,7 @@ async def configure_from_spec_endpoint(
         # and tools would execute without waiting for human sign-off.
         tools=list(spec.tools or []),
         app_spec=body.app_spec,
+        app_instance=body.app_instance,
         **({"model": body.model} if body.model else {}),
     )
     # Serialise to a dict for comparison (env_vars are excluded since

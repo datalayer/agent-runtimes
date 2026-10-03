@@ -118,6 +118,15 @@ export function LoopEmbed({
     [
       preset.serverUrl,
       preset.target,
+      preset.datalayerAgentSpecId,
+      preset.targetFixed,
+      preset.themeVariant,
+      preset.presence?.name,
+      preset.presence?.face,
+      preset.presence?.welcome,
+      preset.showTokenUsage,
+      // By its content: an application's spec written inline is a new object each render.
+      JSON.stringify(preset.datalayerCreatePayload ?? null),
       preset.defaultEditor,
       preset.showViewSelector,
       preset.hideChatHeader,
@@ -199,7 +208,19 @@ export function LoopEmbed({
           {shell}
         </WindowFrame>
       ) : (
-        <Box sx={{ height: '100%', minHeight: 0 }}>{shell}</Box>
+        // Filling its host, whatever the host is: in a flex row it used to
+        // shrink to the chat's own width and leave the rest of the frame bare.
+        <Box
+          sx={{
+            height: '100%',
+            minHeight: 0,
+            width: '100%',
+            flex: '1 1 auto',
+            minWidth: 0,
+          }}
+        >
+          {shell}
+        </Box>
       )}
     </QueryClientProvider>
   );

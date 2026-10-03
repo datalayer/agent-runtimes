@@ -24,13 +24,19 @@ on:
 
   workflow_dispatch:
 
+# A newer push to the same pull request makes the older run worthless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
+      # In parallel; on a pull request the oldest and the newest Python, on
+      # main all four.
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ${{ github.event_name == 'pull_request' && fromJSON('["3.10", "3.13"]') || fromJSON('["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
 
       - name: Install deps

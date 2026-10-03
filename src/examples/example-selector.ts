@@ -113,7 +113,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'A2UiAgentExample',
     () => import('./A2UiAgentExample'),
-    'A2UI Agent with built-in chat component and Python A2UI extension surface.',
+    'A2UI Agent with built-in chat component and Python A2UI UI plugin surface.',
   ),
   makeEntry(
     'AgUiAgenticExample',
@@ -169,6 +169,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'CellExample',
     () => import('./CellExample'),
     'Simple cell example.',
+  ),
+  makeEntry(
+    'ChatAssistantExample',
+    () => import('./ChatAssistantExample'),
+    'The floating assistant: the chat as a character on the page.',
   ),
   makeEntry(
     'ChatCustomExample',

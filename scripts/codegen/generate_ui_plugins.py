@@ -8,7 +8,7 @@ Generate Python and TypeScript code from YAML UI-plugin specifications.
 A UI plugin is how an agent's answer becomes an interface rather than text —
 a protocol the host knows how to render (A2UI, MCP Apps, MCP UI). One YAML per
 plugin under ``agentspecs/ui-plugins``; an agent spec's ``ui_plugin`` names
-one. They were called UI extensions before agentspecs 0.0.11.
+one. A plugin hosts the visual components it renders (LOOP C-13).
 
 Usage:
     python generate_ui_plugins.py \\
@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -53,6 +54,25 @@ def _ts(value: str) -> str:
     return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
+def _py_component(component: dict[str, Any]) -> str:
+    """A component as the Python that builds it."""
+    bindings = component.get("bindings")
+    return (
+        "ComponentSpec("
+        f"id={_py(component['id'])}, name={json.dumps(component['name'], ensure_ascii=False)}, "
+        f"description={json.dumps(component['description'].strip(), ensure_ascii=False)}, "
+        f"category={_py(component['category'])}, emoji={json.dumps(component['emoji'], ensure_ascii=False)}, "
+        f"standard={bool(component['standard'])}, "
+        f"properties={component.get('properties')!r}, "
+        + (
+            f"bindings=ComponentBindingsSpec(shows={bindings['shows']!r}, sends={bindings['sends']!r}), "
+            if bindings
+            else "bindings=None, "
+        )
+        + f"events={component.get('events') or []!r}, example={component.get('example')!r})"
+    )
+
+
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
     """Generate Python code from UI-plugin specifications."""
     lines = [
@@ -69,8 +89,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from typing import Dict",
         "",
-        "from agent_runtimes.types import UIPluginSpec",
-        "",
+        "from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UIPluginSpec",
         "",
         "# " + "=" * 76,
         "# UI Plugin Definitions",
@@ -88,6 +107,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    description={_py(str(spec.get('description', '')).strip())},",
                 f"    docs_url={_py(str(spec.get('docs_url', '')))},",
                 f"    enabled={bool(spec.get('enabled', True))},",
+                f"    catalog={_py(str(spec.get('catalog', '')))},",
+                "    components=[",
+                *[f"        {_py_component(c)}," for c in spec.get("components") or []],
+                "    ],",
                 ")",
                 "",
             ]
@@ -119,6 +142,25 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "def list_ui_plugins() -> list[UIPluginSpec]:",
             "    return list(UI_PLUGIN_CATALOGUE.values())",
             "",
+            "",
+            "#: The visual components the enabled UI plugins render, by the name a",
+            "#: surface gives them (LOOP C-13).",
+            "COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {",
+            "    component.id: component",
+            "    for plugin in UI_PLUGIN_CATALOGUE.values()",
+            "    if plugin.enabled",
+            "    for component in plugin.components",
+            "}",
+            "",
+            "",
+            "def get_component(name: str) -> ComponentSpec | None:",
+            '    """The component a layout names, or None."""',
+            "    return COMPONENT_CATALOGUE.get(name)",
+            "",
+            "",
+            "def list_components() -> list[ComponentSpec]:",
+            "    return list(COMPONENT_CATALOGUE.values())",
+            "",
         ]
     )
     return "\n".join(lines)
@@ -141,7 +183,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { UIPluginSpec } from '../types/agentspecs';",
+        "import type { ComponentSpec, UIPluginSpec } from '../types/agentspecs';",
         "",
     ]
     for spec in specs:
@@ -155,6 +197,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  description: {_ts(str(spec.get('description', '')).strip())},",
                 f"  docsUrl: {_ts(str(spec.get('docs_url', '')))},",
                 f"  enabled: {'true' if spec.get('enabled', True) else 'false'},",
+                f"  catalog: {_ts(str(spec.get('catalog', '')))},",
+                f"  components: {json.dumps([{**c, 'events': c.get('events', [])} for c in spec.get('components') or []], indent=2, ensure_ascii=False)},",
                 "};",
                 "",
             ]
@@ -175,6 +219,22 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "",
             "export function listUIPlugins(): UIPluginSpec[] {",
             "  return Object.values(UI_PLUGIN_CATALOGUE);",
+            "}",
+            "",
+            "/** The visual components the enabled UI plugins render, by the name a surface gives them (LOOP C-13). */",
+            "export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> = Object.fromEntries(",
+            "  Object.values(UI_PLUGIN_CATALOGUE)",
+            "    .filter(plugin => plugin.enabled)",
+            "    .flatMap(plugin => plugin.components.map(component => [component.id, component])),",
+            ");",
+            "",
+            "/** The component a layout names, or undefined. */",
+            "export function getComponent(name: string): ComponentSpec | undefined {",
+            "  return COMPONENT_CATALOGUE[name];",
+            "}",
+            "",
+            "export function listComponents(): ComponentSpec[] {",
+            "  return Object.values(COMPONENT_CATALOGUE);",
             "}",
             "",
         ]

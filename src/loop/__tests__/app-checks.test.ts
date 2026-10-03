@@ -10,11 +10,13 @@
 
 import { describe, expect, it } from 'vitest';
 import { APP_SOURCES } from '../../specs/apps';
+import { dumpAppspec, parseAppspec } from '../apps/appspec';
 import {
   NEEDS_ATTENTION,
   NOT_READY,
   PASSES,
   checkAppspec,
+  componentNamed,
 } from '../apps/checks';
 
 const BASE = {
@@ -143,6 +145,41 @@ describe('the instant checks', () => {
     expect(ruled.verdict).toBe(PASSES);
   });
 
+  it('refuse a component no UI plugin renders (C-13)', () => {
+    expect(componentNamed('ChoicePicker')?.standard).toBe(true);
+    expect(componentNamed('Table')?.properties).toBeDefined();
+    const check = checkAppspec({
+      ...BASE,
+      interface: {
+        components: ['Text', 'Marquee'],
+        surface: {
+          components: [
+            { id: 'root', component: 'Column', children: ['ticker'] },
+            { id: 'ticker', component: 'Marquee' },
+          ],
+        },
+      },
+    });
+    expect(check.verdict).toBe(NOT_READY);
+    expect(check.problems).toEqual([
+      'There is no component named “Marquee” in the catalog.',
+      "The surface's “ticker” is a “Marquee”, which the catalog does not have.",
+    ]);
+  });
+
+  it('need attention for a Guard the runtime does not run (R-06)', () => {
+    const check = checkAppspec({
+      ...BASE,
+      checks: {
+        guards: ['sensitive-data-guard:0.0.1', 'consensus-guard:0.0.1'],
+      },
+    });
+    expect(check.verdict).toBe(NEEDS_ATTENTION);
+    expect(check.attention).toEqual([
+      'The Consensus Guard is judged by a Cog the runtime does not run yet: nothing is checked by it.',
+    ]);
+  });
+
   it('count a rule on a versioned tool as a rule on that tool', () => {
     const slack = checkAppspec({
       ...BASE,
@@ -186,5 +223,24 @@ describe('the instant checks', () => {
         'permissions.computer.shell: is true or false.',
       ]),
     );
+  });
+
+  it('read an avatar and a banner chosen as a person chooses theirs, and refuse one misnamed', () => {
+    const chosen = parseAppspec({
+      ...BASE,
+      avatar: 'AstronautIcon',
+      banner: 'SvgTutorialsHero',
+    }).app;
+    expect([chosen.avatar, chosen.banner]).toEqual([
+      'AstronautIcon',
+      'SvgTutorialsHero',
+    ]);
+    const written = Object.keys(dumpAppspec(chosen));
+    expect(written.slice(-2)).toEqual(['avatar', 'banner']);
+    // Unchosen: nothing written, the emoji stands for it.
+    expect(dumpAppspec(parseAppspec(BASE).app)).not.toHaveProperty('avatar');
+    expect(
+      checkAppspec({ ...BASE, avatar: 'an astronaut' }).problems,
+    ).toContain('avatar: is named as its drawing is, `AstronautIcon`.');
   });
 });

@@ -31,6 +31,7 @@ import { getCog } from '../../specs/cogs';
 import { getFrame } from '../../specs/frames';
 import { getGate } from '../../specs/gates';
 import { GUARD_CATALOGUE } from '../../specs/guards';
+import { getComponent } from '../../specs/uiPlugins';
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { getMemory } from '../../specs/memory';
 import { getModel } from '../../specs/models';
@@ -39,7 +40,11 @@ import { getSkillSpec } from '../../specs/skills';
 import { getTeamSpec } from '../../specs/teams';
 import { getToolSpec } from '../../specs/tools';
 import { getTrack } from '../../specs/tracks';
-import type { ActionClass, AppSpec } from '../../types/agentspecs';
+import type {
+  ActionClass,
+  AppSpec,
+  ComponentSpec,
+} from '../../types/agentspecs';
 import { parseAppspec } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
 
@@ -62,6 +67,13 @@ const idOf = (ref: string): string => {
   const at = ref.lastIndexOf(':');
   return at > 0 && ref.slice(at + 1).includes('.') ? ref.slice(0, at) : ref;
 };
+
+/**
+ * The component a layout names (LOOP C-13), from the catalogs of the enabled
+ * UI plugins, by the name a surface gives it.
+ */
+export const componentNamed = (name: string): ComponentSpec | undefined =>
+  getComponent(name);
 
 const own = <T>(record: Record<string, T>, key: string): T | undefined =>
   Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
@@ -209,6 +221,19 @@ function referenceProblems(app: AppSpec): string[] {
   if (app.model && !getModel(app.model)) {
     missing('model', app.model);
   }
+  // The components it may use, and those its surface uses, are the catalog's (C-13).
+  for (const name of app.interface.components ?? []) {
+    if (!componentNamed(name)) {
+      problems.push(`There is no component named “${name}” in the catalog.`);
+    }
+  }
+  for (const node of app.interface.surface?.components ?? []) {
+    if (!componentNamed(String(node.component))) {
+      problems.push(
+        `The surface's “${String(node.id)}” is a “${String(node.component)}”, which the catalog does not have.`,
+      );
+    }
+  }
   const judge = app.decision?.judgmentModel;
   if (judge) {
     const model = getModel(judge);
@@ -307,8 +332,30 @@ function attentionNotes(app: AppSpec): string[] {
   if (app.record.include.length === 0) {
     notes.push('It keeps no record of what it did.');
   }
+  // A Guard the runtime does not run checks nothing (LOOP R-06): said here,
+  // where the builder decides, rather than found out in production.
+  for (const ref of app.checks.guards) {
+    const guard = own(GUARD_CATALOGUE, idOf(ref));
+    if (guard && !EXECUTED_GUARDS.includes(guard.id)) {
+      const judge =
+        guard.method === 'cog'
+          ? 'a Cog'
+          : guard.method === 'human'
+            ? 'a person'
+            : 'a method';
+      notes.push(
+        `The ${guard.name} is judged by ${judge} the runtime does not run yet: nothing is checked by it.`,
+      );
+    }
+  }
   return notes;
 }
+
+/** The Guards the runtime executes (agent-runtimes `loop/apps/guards.py`). */
+export const EXECUTED_GUARDS: readonly string[] = [
+  'sensitive-data-guard',
+  'tool-use-policy-guard',
+];
 
 /** Whether a spec of the catalogue says it is not offered today. */
 const isOff = (spec: unknown): boolean => {
@@ -465,8 +512,17 @@ export function documentShapeProblems(document: unknown): string[] {
     'memory',
     'emoji',
     'icon',
+    'avatar',
+    'banner',
   ]) {
     text(d[key], key);
+  }
+  // A drawing is named as it is in the profile's sets, `AstronautIcon`.
+  for (const key of ['avatar', 'banner']) {
+    const name = typeof d[key] === 'string' ? (d[key] as string).trim() : '';
+    if (name && !/^[A-Z][A-Za-z0-9]{0,63}$/.test(name)) {
+      at(key, 'is named as its drawing is, `AstronautIcon`');
+    }
   }
   for (const key of [
     'skills',

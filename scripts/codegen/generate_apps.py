@@ -415,6 +415,49 @@ def _drop_nulls(value: Any) -> Any:
     return value
 
 
+def generate_schema_typescript_code() -> str:
+    """The Appspec's JSON Schema, for the editors of the page (LOOP S-01, S-02).
+
+    Taken from the agentspecs the catalogue is generated from, so that what
+    an editor completes and explains is what the spec accepts.
+    """
+    from agentspecs.apps import json_schema
+
+    schema = json.dumps(json_schema(), indent=2, ensure_ascii=False, sort_keys=False)
+    return "\n".join(
+        [
+            "/*",
+            " * Copyright (c) 2025-2026 Datalayer, Inc.",
+            " * Distributed under the terms of the Modified BSD License.",
+            " */",
+            "",
+            "/**",
+            " * The Appspec's JSON Schema, generated from agentspecs by",
+            " * `scripts/codegen/generate_apps.py`. Do not edit.",
+            " *",
+            " * @module specs/appspecSchema",
+            " */",
+            "",
+            "/* eslint-disable */",
+            "",
+            "export type JsonSchema = {",
+            "  [key: string]: unknown;",
+            "  type?: string;",
+            "  description?: string;",
+            "  properties?: Record<string, JsonSchema>;",
+            "  items?: JsonSchema;",
+            "  enum?: readonly unknown[];",
+            "  anyOf?: readonly JsonSchema[];",
+            "  $ref?: string;",
+            "  $defs?: Record<string, JsonSchema>;",
+            "};",
+            "",
+            f"export const APPSPEC_SCHEMA: JsonSchema = {schema};",
+            "",
+        ]
+    )
+
+
 def main() -> None:
     """Generate the application catalogue and the action classes."""
     parser = argparse.ArgumentParser(
@@ -439,6 +482,10 @@ def main() -> None:
         ),
         (args.actions_python_output, generate_actions_python_code(actions)),
         (args.actions_typescript_output, generate_actions_typescript_code(actions)),
+        (
+            args.typescript_output.with_name("appspecSchema.ts"),
+            generate_schema_typescript_code(),
+        ),
     ]
     for path, text in outputs:
         path.parent.mkdir(parents=True, exist_ok=True)

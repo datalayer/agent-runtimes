@@ -137,6 +137,9 @@ const ANONYMOUS_EXAMPLES = new Set([
   'DocumentPageAgent',
   // The decks plugin in a Loop; the agent and the decks both live in the page.
   'DecksAgent',
+  // The floating assistant: the character, its balloon and its motions need
+  // no runtime; a conversation does, and says so when there is none.
+  'ChatAssistantExample',
 ]);
 
 const getExampleGroup = (id: string): string => {

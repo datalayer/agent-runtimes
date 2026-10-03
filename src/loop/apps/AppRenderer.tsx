@@ -28,6 +28,7 @@ import type { AppSpec } from '../../types/agentspecs';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import { dumpAppspec } from './appspec';
+import type { PresenceState } from '../../chat/presence/presenceStatus';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
@@ -76,9 +77,27 @@ export function defineAppPlugin(
   });
 }
 
+/** Which instance of an application runs, as the platform knows it (LOOP R-07). */
+export type AppInstance = {
+  /** Its `app` item. */
+  appUid?: string;
+  /** The deployment it runs as, when it is one. */
+  deploymentUid?: string;
+  /** The version that runs. */
+  version?: number;
+};
+
 export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
   /** The application to render. */
   app: AppSpec;
+  /** What its record is kept under, on Datalayer: the application, its deployment. */
+  instance?: AppInstance;
+  /**
+   * Told what the application is doing — idle, thinking, working, waiting for
+   * you — for a host that draws its face in a frame of its own (T-08). A
+   * stable function, such as a state setter.
+   */
+  onPresence?: (state: PresenceState) => void;
 };
 
 /**
@@ -88,11 +107,16 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
  * implies — a host that wants the editors beside a chat still says so.
  */
 /** No host plugins: one array, so that it never reads as a change. */
+/** The agentspec a runtime is allocated with before an application's agent is created on it. */
+export const DATALAYER_BOOTSTRAP_AGENTSPEC = 'example-simple';
+
 const NO_PLUGINS: PluginRef[] = [];
 
 export function AppRenderer({
   app,
   plugins = NO_PLUGINS,
+  instance,
+  onPresence,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   const chatOnly = app.interface.layout === 'chat';
@@ -111,6 +135,40 @@ export function AppRenderer({
   const allPlugins = useMemo(
     () => (appPlugin ? [appPlugin, ...plugins] : plugins),
     [appPlugin, plugins],
+  );
+  /*
+   * On Datalayer, the application runs on a runtime: allocated with a plain
+   * agentspec, its agent created there with the application's spec — so that
+   * the runtime registers it and decides every tool call by its rules (LOOP
+   * R-03, R-05), as `loop apps run --cloud` does.
+   */
+  const datalayerCreatePayload = useMemo(
+    () =>
+      app.agent
+        ? {
+            // Under the application's id, over AG-UI: what the workspace's
+            // chat addresses (`agentId` below).
+            name: app.id,
+            transport: 'ag-ui',
+            agent_spec_id: agentIdOf(app),
+            app_spec: dumpAppspec(app),
+            // Code Mode calls every tool through `execute_code`, which an
+            // application without a shell is refused: its tools are called
+            // one by one instead, each decided by its rules.
+            enable_codemode: Boolean(app.permissions?.computer?.shell),
+            ...(instance
+              ? {
+                  app_instance: {
+                    app_uid: instance.appUid ?? '',
+                    deployment_uid: instance.deploymentUid ?? '',
+                    version: instance.version ?? 0,
+                  },
+                }
+              : {}),
+          }
+        : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [source, instance?.appUid, instance?.deploymentUid, instance?.version],
   );
   if (!appPlugin) {
     return (
@@ -131,6 +189,23 @@ export function AppRenderer({
       showAgentVariants={false}
       graph={false}
       pluginsPanel={false}
+      datalayerAgentSpecId={DATALAYER_BOOTSTRAP_AGENTSPEC}
+      // Where an application runs is decided by its host — the Studio's
+      // Preview, the hosted page — not offered to its user.
+      targetFixed
+      // Applications first (LOOP T-12): an application's conversation wears
+      // the `loop` theme; a host may say otherwise.
+      themeVariant="loop"
+      // Its own face, name and welcome in the chat (T-08); no counters: a
+      // person using an application is not asking about tokens.
+      presence={{
+        name: app.name,
+        face: app.emoji,
+        welcome: app.interface.welcome || app.description,
+        onPresence,
+      }}
+      showTokenUsage={false}
+      datalayerCreatePayload={datalayerCreatePayload}
       {...embed}
       plugins={allPlugins}
     />

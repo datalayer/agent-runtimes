@@ -134,6 +134,12 @@ import {
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import type { ToolCallMessage } from '../../../types/chat';
+import { PresenceFace, PresenceLine } from '../../../chat/presence/Presence';
+import {
+  presenceState,
+  presenceToolOf,
+  type PresenceTool,
+} from '../../../chat/presence/presenceStatus';
 
 type ChatControls = {
   send: (message: string) => void;
@@ -304,6 +310,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [busy, setBusy] = useState(false);
   const [sendReady, setSendReady] = useState(false);
+  const [presenceTool, setPresenceTool] = useState<PresenceTool>({
+    open: false,
+    pendingApproval: false,
+  });
+  const presenceNow = presenceState(busy, presenceTool);
+  const onPresence = config?.presence?.onPresence;
+  // A host drawing the face in a frame of its own is told as it changes.
+  useEffect(() => {
+    onPresence?.(presenceNow);
+  }, [onPresence, presenceNow]);
 
   const handleSendReady = useCallback((controls: ChatControls | null) => {
     controlsRef.current = controls;
@@ -320,6 +336,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const handleDisplayItemsChange = useCallback(
     (items: Array<ChatMessage | ToolCallMessage>) => {
+      // The newest tool call, for an application's line of status (T-08).
+      const { open, pendingApproval } = presenceToolOf(items);
+      setPresenceTool(previous =>
+        previous.open === open && previous.pendingApproval === pendingApproval
+          ? previous
+          : { open, pendingApproval },
+      );
       const feed = turnFeedRef.current;
       if (!feed) {
         return;
@@ -915,6 +938,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
 
   /* The icon its spec asked for, at the size the empty state draws. */
   const BrandIcon = agentIcon(spec?.icon);
+  const presence = config?.presence;
   /* And the team's, for the level above it. */
   const TeamIcon = agentIcon(team?.team.icon);
 
@@ -1563,7 +1587,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     onSelectAgent: id => team?.select(id),
     // On unless the host said otherwise: a public page turns the counters
     // off, because they answer questions a visitor is not asking.
-    showTokenUsage: chatExtras.showTokenUsage ?? true,
+    showTokenUsage: chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true,
     showContextRing: true,
     agentUsage: contextUsage ?? undefined,
     showModelSelector: true,
@@ -1754,6 +1778,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         ) : null}
         <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
           <ChatBase
+            // The theme it wears, when the host names one (an application's).
+            themeVariant={config?.themeVariant}
             // The header says why, beside the title, for the same reason the
             // placeholder does: a dead control with no explanation is worse
             // than an absent one.
@@ -1778,8 +1804,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 nothing about this one. The empty state is the first thing a
                 person sees and the only place the agent introduces itself.
               */
-            title={member?.name ?? spec?.name ?? agentId}
-            description={spec?.description}
+            title={presence?.name ?? member?.name ?? spec?.name ?? agentId}
+            description={presence?.welcome ?? spec?.description}
             /*
                 Two sizes, because it is drawn in two places.
 
@@ -1791,14 +1817,37 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // Big enough to read as the agent's mark rather than as
             // punctuation before its name, and still short enough not to
             // set the header's height.
-            brandIcon={<BrandIcon size={20} />}
+            brandIcon={
+              presence?.face ? (
+                <PresenceFace
+                  face={presence.face}
+                  size={20}
+                  state={presenceNow}
+                />
+              ) : (
+                <BrandIcon size={20} />
+              )
+            }
+            // An application says what it is doing, in plain words, beside
+            // its name (T-08); an agent's chat keeps its header as it is.
+            headerContent={
+              presence ? <PresenceLine state={presenceNow} /> : undefined
+            }
             emptyState={{
-              icon: <BrandIcon size={48} />,
+              // An application's own face, large: the thing a person's eye
+              // lands on first (LOOP T-08).
+              icon: presence?.face ? (
+                <span aria-hidden style={{ fontSize: 48, lineHeight: 1 }}>
+                  {presence.face}
+                </span>
+              ) : (
+                <BrandIcon size={48} />
+              ),
               // `ChatEmptyState` reads its heading from here and nowhere
               // else — the `title` above reaches the header only — so
               // without this the agent introduced itself as "Start a
               // conversation".
-              title: member?.name ?? spec?.name ?? agentId,
+              title: presence?.name ?? member?.name ?? spec?.name ?? agentId,
               /*
                 Two levels when there is a team: the team first — its name,
                 what it is for, what it can be asked — and under it the
@@ -2001,7 +2050,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // through the extras channel — the A2UI examples draw their
             // surface here. Wins over the notebook surfaces in ChatBase.
             renderToolResult={chatExtras.renderToolResult}
-            showTurnFooter={chatExtras.showTokenUsage ?? true}
+            showTurnFooter={
+              chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true
+            }
             onContextSnapshot={handleContextSnapshot}
             onLoadingChange={handleLoadingChange}
             onItemsChange={handleMessagesChange}

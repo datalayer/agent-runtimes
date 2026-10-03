@@ -77,7 +77,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setitem(agents._agentspecs, "default", None)
     routes._RUNNING.clear()
     monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
-    with TestClient(create_app()) as test_client:
+    with TestClient(create_app(), client=("127.0.0.1", 50000)) as test_client:
         test_client.created = created
         yield test_client
     routes._RUNNING.clear()
@@ -113,6 +113,9 @@ def test_configure_runs_the_applications_agent_with_what_it_says(client: Any) ->
     assert request.agent_spec_id == "cog-crawler"
     assert request.model == "bedrock:us.anthropic.claude-sonnet-4-6"
     assert request.app_spec == WEB_RESEARCH
+    # Spoken to over AG-UI by its page and the terminal, whatever the runtime
+    # started its default agent on.
+    assert request.transport == "ag-ui"
     current = client.get("/api/v1/apps/current").json()
     assert (current["id"], current["kind"]) == ("web-research", "chat")
 

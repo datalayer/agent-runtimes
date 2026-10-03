@@ -33,3 +33,4 @@ export * from './tracks';
 export * from './ops';
 export * from './apps';
 export * from './actions';
+export * from './appspecSchema';

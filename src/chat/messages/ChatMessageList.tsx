@@ -1172,7 +1172,19 @@ export function ChatMessageList({
               sx={{
                 p: 2,
                 overflowX: 'auto',
-                borderRadius: 2,
+                // The theme's bubble (LOOP T-03, T-06): today's 6px elsewhere.
+                borderRadius: 'var(--theme-radius-bubble, 6px)',
+                // A message arriving, at the theme's pace (LOOP T-10): no
+                // motion in a theme that sets none, nor when motion is reduced.
+                animation:
+                  'chatMessageArrive var(--theme-motion-message, 0ms) var(--theme-motion-easing, ease) both',
+                '@keyframes chatMessageArrive': {
+                  from: { opacity: 0, transform: 'translateY(4px)' },
+                  to: { opacity: 1, transform: 'none' },
+                },
+                '@media (prefers-reduced-motion: reduce)': {
+                  animation: 'none',
+                },
                 backgroundColor: isUser
                   ? 'accent.emphasis'
                   : speaker
@@ -1324,7 +1336,7 @@ export function ChatMessageList({
                 display: 'flex',
                 alignItems: 'center',
                 p: 2,
-                borderRadius: 2,
+                borderRadius: 'var(--theme-radius-bubble, 6px)',
                 bg: 'canvas.subtle',
                 minHeight: '32px',
               }}

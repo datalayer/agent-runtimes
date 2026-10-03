@@ -37,7 +37,11 @@ import {
   type AgentsConfig,
   type SandboxTarget,
 } from './plugins/agents';
-import { ChatPlugin, type ChatPluginConfig } from './plugins/chat';
+import {
+  ChatPlugin,
+  type ChatPluginConfig,
+  type ChatPresence,
+} from './plugins/chat';
 import { ChatHeaderPlugin } from './plugins/chat-header';
 import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
 import { ChatViewPlugin } from './plugins/chat-view';
@@ -149,6 +153,18 @@ export type LoopPresetOptions = {
   teamId?: string;
   /** What a local agent is created from, when one is. */
   localAgent?: AgentsConfig['localAgent'];
+  /** The agentspec a Datalayer runtime is allocated with (the `datalayer` target). */
+  datalayerAgentSpecId?: string;
+  /** What the agent on that runtime is created with besides its spec — an `app_spec`. */
+  datalayerCreatePayload?: Record<string, unknown>;
+  /** The target is the host's to fix, even with the agent control hidden. */
+  targetFixed?: boolean;
+  /** The theme the conversation wears, by name; the person's unless said. */
+  themeVariant?: string;
+  /** Who is answering, as the person meets them (LOOP T-08). */
+  presence?: ChatPresence;
+  /** Whether the counters are shown under the prompt; on unless said. */
+  showTokenUsage?: boolean;
   /**
    * The agentspec the local agent is created from, by id.
    *
@@ -242,6 +258,12 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     pageLayoutTurnPanelFooter = 'full',
     localAgent,
     localAgentSpec,
+    datalayerAgentSpecId,
+    datalayerCreatePayload,
+    targetFixed,
+    themeVariant,
+    presence,
+    showTokenUsage,
     floatingPrompt = false,
     editorSelector = false,
     editors = true,
@@ -267,6 +289,9 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       autoFocusPrompt,
       suggestionLabels,
       fullScreenTopOffset,
+      themeVariant,
+      presence,
+      showTokenUsage,
     }),
     // The composer and the title bar are plugins of their own: the chat
     // assembles their props, these render them. In the preset by default —
@@ -287,6 +312,9 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     configurePlugin(AgentsPlugin, {
       serverUrl,
       target,
+      datalayerAgentSpecId,
+      datalayerCreatePayload,
+      targetFixed,
       showAgentVariants,
       showAgentSummary: agentSummary,
       teamId,

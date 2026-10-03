@@ -4,10 +4,10 @@
  */
 
 /**
- * A2UI extension for chat component.
+ * A2UI plugin for chat component.
  * Renders A2UI protocol messages from A2A agents using @a2ui/react v0.8.
  *
- * @module components/extensions/A2UIExtension
+ * @module components/uiPlugins/A2UIPlugin
  */
 
 import React from 'react';
@@ -15,9 +15,9 @@ import { A2UIViewer, initializeDefaultCatalog } from '@a2ui/react';
 import type { ComponentInstance } from '@a2ui/react';
 import type { ChatMessage } from '../types/messages';
 import type {
-  ActivityRendererExtension,
-  A2UIExtension as A2UIExtensionNamespace,
-} from '../types/extensions';
+  ActivityRendererUIPlugin,
+  A2UIPlugin as A2UIPluginNamespace,
+} from '../types/uiPlugins';
 
 initializeDefaultCatalog();
 
@@ -229,7 +229,7 @@ function renderSurfaces(context: A2UIContext): React.ReactElement {
  */
 export function createA2UIRenderer(
   _customRenderers?: Record<string, React.ComponentType<{ content: unknown }>>,
-): ActivityRendererExtension {
+): ActivityRendererUIPlugin {
   const contexts = new Map<string, A2UIContext>();
 
   const getContext = (sessionId: string): A2UIContext => {
@@ -257,9 +257,9 @@ export function createA2UIRenderer(
 }
 
 /**
- * A2UI Extension implementation class.
+ * A2UI UI plugin implementation class.
  */
-export class A2UIExtensionImpl implements ActivityRendererExtension {
+export class A2UIPluginImpl implements ActivityRendererUIPlugin {
   readonly name = 'a2ui';
   readonly type = 'activity-renderer' as const;
   readonly activityTypes = ['a2ui'];
@@ -317,4 +317,4 @@ export class A2UIExtensionImpl implements ActivityRendererExtension {
   };
 }
 
-export type { A2UIExtensionNamespace };
+export type { A2UIPluginNamespace };

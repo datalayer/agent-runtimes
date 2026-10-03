@@ -337,6 +337,7 @@ export {
   type AppCheck,
   defineAppPlugin,
   type AppRendererProps,
+  type AppInstance,
   readAppspecYaml,
   writeAppspecYaml,
   type ParsedAppspec,

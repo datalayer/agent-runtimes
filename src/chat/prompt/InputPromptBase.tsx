@@ -373,7 +373,8 @@ export function InputPromptBase({
           sx={{
             border: '1px solid',
             borderColor: 'border.default',
-            borderRadius: 2,
+            // The theme's card (LOOP T-03, T-06): today's 6px elsewhere.
+            borderRadius: 'var(--theme-radius-card, 6px)',
             bg: 'canvas.default',
             overflow: 'hidden',
             transition: 'border-color 0.2s ease',

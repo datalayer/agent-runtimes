@@ -32,6 +32,7 @@ import {
   type EditorToolbarContext,
 } from '../../core';
 import { createTurnFeed, feedWriters } from './turnState';
+import type { PresenceState } from '../../../chat/presence/presenceStatus';
 
 /**
  * An editor toolbar button that asks an agent to do something.
@@ -68,7 +69,40 @@ function agentAction(
 }
 
 /** What a host may set on the chat. */
+/** Who is answering, as the person meets them. */
+export interface ChatPresence {
+  name: string;
+  /** An emoji: its face where only an icon goes. */
+  face?: string;
+  /** What it says before anyone writes. */
+  welcome?: string;
+  /**
+   * Told what it is doing as it changes — idle, thinking, working, waiting
+   * for you — for a host that draws the face itself, in a frame of its own.
+   * Read once, when the workspace is built: pass a stable function, such as
+   * a state setter.
+   */
+  onPresence?: (state: PresenceState) => void;
+}
+
 export type ChatPluginConfig = {
+  /**
+   * The theme the conversation wears, by name: the person's unless said. An
+   * application says `loop` (LOOP T-06, T-12) — the conversation then takes
+   * the theme's bubbles, pills and colours whatever the page around it wears.
+   */
+  themeVariant?: string;
+  /**
+   * Who is answering, as the person meets them (LOOP T-08): a name, a face
+   * and a welcome, in place of the agent's id and a generic icon. An
+   * application sets its own.
+   */
+  presence?: ChatPresence;
+  /**
+   * Whether the counters — tokens, context — are shown under the prompt.
+   * On unless said: a person using an application is not asking.
+   */
+  showTokenUsage?: boolean;
   /**
    * What the empty prompt says.
    *

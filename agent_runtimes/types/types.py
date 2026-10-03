@@ -241,6 +241,41 @@ class ModelPricing(BaseModel):
     )
 
 
+class ComponentBindingsSpec(BaseModel):
+    """What a component can be bound to: what it shows, what it sends."""
+
+    shows: List[str] = Field(default_factory=list, description="The data it shows")
+    sends: List[str] = Field(default_factory=list, description="What it sends back")
+
+
+class ComponentSpec(BaseModel):
+    """A visual component a UI plugin renders (LOOP C-13), named as a surface
+    names it. A standard one's properties are its protocol's own; Datalayer's
+    own carry theirs as a JSON Schema, from which its properties form is drawn
+    (C-14).
+    """
+
+    id: str = Field(..., description="The name a surface gives it (e.g. 'Table')")
+    name: str = Field(..., description="Display name")
+    description: str = Field(..., description="What it is for, in a sentence")
+    category: str = Field(
+        ..., description="text, input, action, data, conversation, media, layout"
+    )
+    emoji: str = Field(..., description="Its face on the palette")
+    standard: bool = Field(..., description="Its properties are its protocol's own")
+    properties: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Its properties as a JSON Schema, when it is Datalayer's own",
+    )
+    bindings: Optional[ComponentBindingsSpec] = Field(
+        default=None, description="What it can be bound to"
+    )
+    events: List[str] = Field(default_factory=list, description="What it reports")
+    example: Optional[Dict[str, Any]] = Field(
+        default=None, description="A valid configuration of it"
+    )
+
+
 class UIPluginSpec(BaseModel):
     """How an agent's answer becomes an interface: a protocol the host
     renders (`agentspecs/ui-plugins`). An agent spec's `ui_plugin` names one.
@@ -258,6 +293,12 @@ class UIPluginSpec(BaseModel):
     docs_url: str = Field(default="", description="The protocol's own documentation")
     enabled: bool = Field(
         default=True, description="Whether an agent spec may name it today"
+    )
+    catalog: str = Field(
+        default="", description="The catalog its components are written in"
+    )
+    components: List[ComponentSpec] = Field(
+        default_factory=list, description="The visual components it renders (LOOP C-13)"
     )
 
 
@@ -1682,11 +1723,8 @@ class Agentspec(BaseModel):
     )
     ui_plugin: Optional[str] = Field(
         default=None,
-        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`. "
-        "Called a UI extension before agentspecs 0.0.11: `uiExtension` and `ui_extension` are still read.",
-        validation_alias=AliasChoices(
-            "uiPlugin", "ui_plugin", "uiExtension", "ui_extension"
-        ),
+        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`.",
+        validation_alias=AliasChoices("uiPlugin", "ui_plugin"),
         serialization_alias="uiPlugin",
     )
     trigger: Optional[Dict[str, Any]] = Field(
@@ -2288,6 +2326,14 @@ class AppSpec(BaseModel):
     emoji: str = Field(
         default="\U0001f440",
         description="Its face: one emoji, shown wherever the application appears",
+    )
+    avatar: str = Field(
+        default="",
+        description="Its avatar, by name, from the drawings people choose theirs from; its emoji when unsaid",
+    )
+    banner: str = Field(
+        default="",
+        description="Its banner, by name, from the set people choose theirs from; the one its id seeds when unsaid",
     )
 
 

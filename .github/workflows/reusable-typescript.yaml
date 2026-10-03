@@ -53,6 +53,12 @@ on:
         description: 'Datalayer API token for running expensive tests'
         required: false
 
+# The registry times out now and then: a fetch is tried again rather than the run lost.
+env:
+  npm_config_fetch_retries: '5'
+  npm_config_fetch_retry_mintimeout: '20000'
+  npm_config_fetch_retry_maxtimeout: '120000'
+
 jobs:
   typescript-checks:
     runs-on: ubuntu-latest
@@ -66,6 +72,13 @@ jobs:
       uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
+
+    - name: Cache npm downloads
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: npm-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles('**/package.json') }}
+        restore-keys: npm-${{ runner.os }}-${{ inputs.node-version }}-
 
     - name: Install dependencies
       run: ${{ inputs.install-command }}
