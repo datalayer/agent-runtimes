@@ -13,7 +13,9 @@ other at launch.
 `GET /api/v1/apps/current` says which application the runtime runs, and
 `POST /api/v1/apps/decide` what it would do about a tool call — what an
 interface shows before it is made. `GET /api/v1/apps` lists the applications
-the runtime knows.
+the runtime knows. `POST /api/v1/apps/feedback` keeps what a person says of a
+conversation — a thumb up or down, and a comment — in the application's
+record (LOOP V-18).
 
 Every route checks who is calling before anything else (LOOP R-32,
 `agent_runtimes.loop.apps.callers`): a person for `configure`; for the
@@ -58,6 +60,7 @@ from agent_runtimes.loop.apps.plugins import (
     register_app,
     rules_for,
 )
+from agent_runtimes.loop.apps.record import COMMENT_LIMIT, RecordNotSent, recorder_of
 from agent_runtimes.types import AppSpec
 
 router = APIRouter(prefix="/apps", tags=["apps"])
@@ -82,6 +85,18 @@ class DecideRequest(BaseModel):
 
     tool: str = Field(..., description="The tool, as the runtime names it")
     arguments: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FeedbackRequest(BaseModel):
+    """What a person says of a conversation with the application."""
+
+    session: str = Field(
+        ...,
+        min_length=1,
+        description="The conversation, as the chat names it: its AG-UI thread",
+    )
+    liked: bool = Field(..., description="The thumb: up or down")
+    comment: str = Field("", max_length=COMMENT_LIMIT)
 
 
 def running_app(agent: str = "default") -> Optional[AppSpec]:
@@ -265,3 +280,35 @@ async def decide(
             for part in enforced.parts
         ],
     }
+
+
+@router.post("/feedback")
+async def feedback(
+    body: FeedbackRequest, authorized: Authorized = Depends(a_caller)
+) -> Dict[str, Any]:
+    """Keep a person's word on a conversation in the application's record (V-18)."""
+    app = authorized.app
+    if app is None:
+        raise HTTPException(status_code=404, detail="This runtime runs no application.")
+    recorder = recorder_of(body.session)
+    if recorder is None or recorder.app.id != app.id:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No conversation {body.session} with {app.name} was recorded here.",
+        )
+    if not recorder.kept("feedback"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"{app.name} keeps no feedback: its record does not name it.",
+        )
+    caller = authorized.caller
+    try:
+        entry = await recorder.feedback(
+            body.session,
+            liked=body.liked,
+            comment=body.comment,
+            by=caller.uid or caller.kind,
+        )
+    except RecordNotSent as error:
+        raise HTTPException(status_code=502, detail=str(error)) from None
+    return {"kept": True, "summary": entry["summary"]}

@@ -175,3 +175,58 @@ def test_the_runtime_lists_applications_from_reactor_and_runs_its_own(
     }
     assert names["web-research"] == "Web research, edited"
     assert plugins.REGISTRY.get(plugins.APP_POINT, plugins=["loop-app-web-research"])
+
+
+def test_feedback_on_a_conversation_is_kept_in_the_record(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LOOP V-18: a thumb and a comment, through the recorder of the session."""
+    from agent_runtimes.loop.apps.record import AppRecorder
+
+    keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
+    assert client.post("/api/v1/apps/configure", json={"app": keeps}).status_code == 200
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    recorder = AppRecorder(app=load_app(keeps), app_uid="app-7", send=send)
+    recorder.start("thread-7")
+    answer = client.post(
+        "/api/v1/apps/feedback",
+        json={"session": "thread-7", "liked": True, "comment": "Clear."},
+    )
+    assert answer.status_code == 200, answer.text
+    assert answer.json() == {"kept": True, "summary": "Liked it: Clear."}
+    assert sent[0]["app_uid"] == "app-7"
+    assert sent[0]["entries"][0]["payload"] == {
+        "liked": True,
+        "comment": "Clear.",
+        "by": "local",
+    }
+    # A conversation it did not record, here, is not one to answer for.
+    unknown = client.post(
+        "/api/v1/apps/feedback", json={"session": "nowhere", "liked": False}
+    )
+    assert unknown.status_code == 404
+    assert "No conversation nowhere" in unknown.json()["detail"]
+
+
+def test_feedback_is_refused_when_the_application_keeps_none(client: Any) -> None:
+    from agent_runtimes.loop.apps.record import AppRecorder
+
+    assert (
+        client.post("/api/v1/apps/configure", json={"app": WEB_RESEARCH}).status_code
+        == 200
+    )
+
+    async def send(body: dict) -> None:
+        raise AssertionError("nothing is sent")
+
+    recorder = AppRecorder(app=load_app(WEB_RESEARCH), send=send)
+    recorder.start("thread-8")
+    refused = client.post(
+        "/api/v1/apps/feedback", json={"session": "thread-8", "liked": True}
+    )
+    assert refused.status_code == 409
+    assert "keeps no feedback" in refused.json()["detail"]

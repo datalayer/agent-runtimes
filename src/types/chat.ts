@@ -853,6 +853,11 @@ export interface ChatBaseProps {
       stop: () => void;
       /** Start the conversation over — what the header's + does. */
       newChat: () => void;
+      /**
+       * The conversation the next message goes to, as the runtime knows it
+       * (AG-UI's thread): what an application's record keeps it under.
+       */
+      thread: () => string;
     } | null,
   ) => void;
 

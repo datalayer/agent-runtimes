@@ -1146,6 +1146,12 @@ export type ChatTurnSnapshot = {
   user?: string;
   /** What the agent has said so far. */
   assistant?: string;
+  /**
+   * The conversation the turn belongs to, as the runtime knows it (AG-UI's
+   * thread) — what an application's record keeps its session under, and
+   * what feedback on it names (LOOP V-18). Absent when the chat does not say.
+   */
+  thread?: string;
   status: ChatTurnStatus;
   /**
    * The context window as the agent last reported it — what a turn footer

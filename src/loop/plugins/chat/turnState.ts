@@ -22,8 +22,11 @@ import type { ChatTurnSnapshot, ChatTurnStatus } from '../../core';
 export type TurnFeed = {
   /** The turn, for readers. */
   turn: ReadonlySignal<ChatTurnSnapshot>;
-  /** A new turn: the previous one is gone, this one holds the message. */
-  begin: (user: string) => void;
+  /**
+   * A new turn: the previous one is gone, this one holds the message, and
+   * the conversation it went to, when the chat knows it.
+   */
+  begin: (user: string, thread?: string) => void;
   /** The reply so far. Moves the turn to `streaming` on its first text. */
   assistant: (text: string) => void;
   /** The agent stopped, one way or another. */
@@ -40,13 +43,14 @@ export function createTurnFeed(): TurnFeed {
   const turn: Signal<ChatTurnSnapshot> = signal<ChatTurnSnapshot>(IDLE);
   return {
     turn,
-    begin: user => {
+    begin: (user, thread) => {
       // The window's fill carries over: it is the conversation's, not the
       // turn's, and the footer under a fresh turn should not read empty
       // until the agent reports again.
       turn.value = {
         id: turn.value.id + 1,
         user,
+        ...(thread ? { thread } : {}),
         status: 'thinking',
         usage: turn.value.usage,
       };

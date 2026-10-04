@@ -22,6 +22,12 @@ session's first one. A session a person opened names nothing.
 A session is a conversation when the run names one, a run otherwise. The
 record is sent after each run, with the token the run was made with; a
 record that cannot be sent is logged, and never fails the run.
+
+What a person says of a conversation — a thumb up or down, and a comment
+(LOOP V-18) — is written to the same record, as a ``feedback`` entry of that
+session, by the recorder that recorded it (`recorder_of`); only when the
+application's ``record.include`` names ``feedback``. Unlike the rest, it is
+sent at once and a failure to send it is said: the person is waiting for it.
 """
 
 from __future__ import annotations
@@ -68,6 +74,17 @@ _SESSION: contextvars.ContextVar[str] = contextvars.ContextVar(
 
 Send = Callable[[Dict[str, Any]], Awaitable[None]]
 
+#: The recorder of each session this runtime recorded, by session.
+_RECORDERS: Dict[str, "AppRecorder"] = {}
+
+#: The longest comment kept with a thumb.
+COMMENT_LIMIT = 2000
+
+
+def recorder_of(session: str) -> Optional["AppRecorder"]:
+    """The recorder that recorded a session on this runtime, or None."""
+    return _RECORDERS.get(session)
+
 
 def keep_days_of(app: AppSpec) -> int:
     """How many days the record is kept, from `record.keep_for`.
@@ -84,8 +101,20 @@ def _short(value: Any, limit: int = 500) -> str:
     return redact(str(value))[:limit]
 
 
+class RecordNotSent(RuntimeError):
+    """A record that did not reach ai-agents, and why, in a sentence."""
+
+
 async def send_to_ai_agents(body: Dict[str, Any]) -> None:
-    """Send a session's entries to ai-agents, with the token of the run."""
+    """Send a session's entries to ai-agents, with the token of the run.
+
+    Raises
+    ------
+    RecordNotSent
+        When there is no token or no ai-agents to send it to, or ai-agents
+        refused it. A run's record is logged and let go (`AppRecorder.flush`);
+        a person's feedback is said to them.
+    """
     import httpx
 
     try:
@@ -96,34 +125,33 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> None:
         token = None
     token = token or os.environ.get("DATALAYER_USER_TOKEN")
     if not token:
-        logger.info("The record of %s is not sent: no token.", body.get("app_uid"))
-        return
+        raise RecordNotSent(
+            f"The record of {body.get('app_uid')} is not sent: no token."
+        )
     from datalayer_core.utils.urls import DatalayerURLs
 
     url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
     if not url:
-        logger.info("The record of %s is not sent: no ai-agents.", body.get("app_uid"))
-        return
+        raise RecordNotSent(
+            f"The record of {body.get('app_uid')} is not sent: no ai-agents."
+        )
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.post(
             f"{url.rstrip('/')}/api/ai-agents/v1/apps/records",
             json=body,
             headers={"Authorization": f"Bearer {token}"},
         )
-        if response.status_code < 300:
-            logger.info(
-                "The record of %s sent: %d entries, session %s.",
-                body.get("app_uid"),
-                len(body.get("entries") or []),
-                body.get("session_uid"),
-            )
-        else:
-            logger.warning(
-                "The record of %s was refused (%s): %s",
-                body.get("app_uid"),
-                response.status_code,
-                response.text[:200],
-            )
+    if response.status_code >= 300:
+        raise RecordNotSent(
+            f"The record of {body.get('app_uid')} was refused "
+            f"({response.status_code}): {response.text[:200]}"
+        )
+    logger.info(
+        "The record of %s sent: %d entries, session %s.",
+        body.get("app_uid"),
+        len(body.get("entries") or []),
+        body.get("session_uid"),
+    )
 
 
 @dataclass
@@ -174,6 +202,7 @@ class AppRecorder:
         _SESSION.set(session)
         if session not in self._started:
             self._started.add(session)
+            _RECORDERS[session] = self
             if woken_by:
                 self._woken[session] = dict(woken_by)
             woken = self.woken(session)
@@ -184,11 +213,9 @@ class AppRecorder:
                 {"app": self.app.id, **({"woken_by": woken} if woken else {})},
             )
 
-    async def flush(self, session: str) -> None:
-        entries = self._pending.pop(session, [])
-        if not entries:
-            return
-        body = {
+    def _body(self, session: str, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """What is sent to ai-agents for a session's entries."""
+        return {
             "app_uid": self.app_uid or self.app.id,
             "session_uid": session,
             "deployment_uid": self.deployment_uid,
@@ -199,10 +226,63 @@ class AppRecorder:
             "keep_days": keep_days_of(self.app),
             "entries": entries,
         }
+
+    async def flush(self, session: str) -> None:
+        entries = self._pending.pop(session, [])
+        if not entries:
+            return
+        body = self._body(session, entries)
         try:
             await self.send(body)
         except Exception as error:  # noqa: BLE001 - a record is never worth a run
             logger.warning("The record of %s was not sent: %s", body["app_uid"], error)
+
+    async def feedback(
+        self, session: str, *, liked: bool, comment: str = "", by: str = ""
+    ) -> Dict[str, Any]:
+        """Write a person's word on a session to the record, and send it now.
+
+        Parameters
+        ----------
+        session : str
+            The session, as this recorder recorded it.
+        liked : bool
+            The thumb: up or down.
+        comment : str
+            What they said besides, if anything.
+        by : str
+            Who said it, as the runtime knows the caller.
+
+        Returns
+        -------
+        dict
+            The entry sent.
+
+        Raises
+        ------
+        ValueError
+            When this recorder did not record the session, or the
+            application keeps no feedback.
+        """
+        if session not in self._started:
+            raise ValueError(
+                f"No session {session!r} of {self.app.name} was recorded here."
+            )
+        if not self.kept("feedback"):
+            raise ValueError(
+                f"{self.app.name} keeps no feedback: its record does not name it."
+            )
+        said = redact(comment.strip())[:COMMENT_LIMIT]
+        entry = {
+            "kind": "feedback",
+            "summary": (
+                ("Liked it" if liked else "Did not like it")
+                + (f": {said}" if said else "")
+            )[:COMMENT_LIMIT],
+            "payload": {"liked": liked, "comment": said, "by": by},
+        }
+        await self.send(self._body(session, [entry]))
+        return entry
 
     # --- what the other capabilities tell it ---------------------------------------
 
@@ -346,4 +426,12 @@ class AppRecordCapability(AbstractCapability[Any]):
         raise error
 
 
-__all__ = ["AppRecordCapability", "AppRecorder", "INCLUDED_BY", "send_to_ai_agents"]
+__all__ = [
+    "AppRecordCapability",
+    "AppRecorder",
+    "COMMENT_LIMIT",
+    "INCLUDED_BY",
+    "RecordNotSent",
+    "recorder_of",
+    "send_to_ai_agents",
+]

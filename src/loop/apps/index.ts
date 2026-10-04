@@ -10,8 +10,10 @@
  */
 
 export * from './agent';
+export * from './AppFeedback';
 export * from './AppRenderer';
 export * from './appspec';
 export * from './checks';
+export * from './feedback';
 export * from './rules';
 export * from './yaml';

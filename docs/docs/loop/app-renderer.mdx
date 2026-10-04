@@ -102,11 +102,44 @@ runtime, no tool, no search. *Web research* then cites nothing it opened,
 which is why the page stays a preview until a signed-out visitor has a
 runtime that runs applications (LOOP H-27, R-30).
 
+## Feedback on its answers
+
+An application whose record keeps feedback — its Appspec's `record.include`
+names `feedback` — asks under each answer, once the answer is in, *Was this
+answer useful?* with a thumb up and a thumb down. A thumb opens a box for a
+comment, optional, and *Send*; the strip says where it goes: *What you say is
+kept with this conversation in its record, for its builder to read.* An
+application that keeps no feedback offers none.
+
+`AppRenderer` adds it as a plugin of its own (`defineAppFeedbackPlugin`, a
+`LoopPromptPanel` contribution above the prompt), so it is there in the
+Studio's Preview and on the hosted page alike. It reads the turn from
+`LoopChatTurn`, which now carries the conversation's AG-UI thread
+(`thread`) — the id the runtime records the session under.
+
+What is sent, to the runtime the conversation runs on:
+
+```http
+POST /api/v1/apps/feedback
+{"session": "<the thread>", "liked": true, "comment": "Clear."}
+```
+
+The runtime writes it through the recorder that recorded that conversation
+(`recorder_of`), as a `feedback` entry of its session — `{"liked", "comment",
+"by"}`, the comment cut at 2000 characters and its secrets redacted — and
+sends it to ai-agents at once, through the same `/api/ai-agents/v1/apps/records`
+every entry takes. It answers `404` for a conversation it did not record,
+`409` for an application that keeps no feedback, and `502` when the record
+could not be sent, with the reason; the strip says that sentence. The
+Studio's Readiness page counts what was kept (LOOP V-18).
+
 ## What is tested, and what is not
 
 Tested: the options per layout and the embed's inline mode
 (`app-layout.test.tsx`); the presence state (`presence-status.test.ts`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
-Not tested: no test renders `AppRenderer` and checks the header, the empty
+Feedback: what is offered, what is sent and what a refusal says
+(`app-feedback.test.ts`), and the runtime's route and recorder
+(`test_apps_routes.py`, `test_apps_record.py`). Not tested: no test renders `AppRenderer` and checks the header, the empty
 state or the line in a browser.

@@ -46,6 +46,8 @@ import {
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
 import { dumpAppspec } from './appspec';
+import { defineAppFeedbackPlugin } from './AppFeedback';
+import { keepsFeedback } from './feedback';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 
 /** The id of an agent or a Cog, without its version. */
@@ -248,12 +250,27 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [source, withPage],
   );
+  /*
+   * A thumb and a comment on each answer, kept in its record (LOOP V-18):
+   * only for an application whose record keeps feedback.
+   */
+  const keeps = keepsFeedback(app);
+  const feedbackPlugin = useMemo(
+    () => (keeps ? defineAppFeedbackPlugin(app) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [source, keeps],
+  );
   const allPlugins = useMemo(
     () =>
       appPlugin
-        ? [appPlugin, ...(pagePlugin ? [pagePlugin] : []), ...plugins]
+        ? [
+            appPlugin,
+            ...(pagePlugin ? [pagePlugin] : []),
+            ...(feedbackPlugin ? [feedbackPlugin] : []),
+            ...plugins,
+          ]
         : plugins,
-    [appPlugin, pagePlugin, plugins],
+    [appPlugin, pagePlugin, feedbackPlugin, plugins],
   );
   /*
    * On Datalayer, the application runs on a runtime: allocated with a plain

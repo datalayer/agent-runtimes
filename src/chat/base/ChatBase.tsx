@@ -4097,6 +4097,7 @@ function ChatBaseInner({
       // The same reset the header's + performs, for a host whose controls
       // live outside this component — the LOOP prompt's + reaches it here.
       newChat: handleNewChat,
+      thread: () => threadIdRef.current,
     });
     return () => {
       onSendReady(null);

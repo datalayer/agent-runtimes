@@ -13,7 +13,12 @@ from agent_runtimes.loop.apps.guards import (
     AppChecks,
     AppChecksCapability,
 )
-from agent_runtimes.loop.apps.record import AppRecordCapability, AppRecorder
+from agent_runtimes.loop.apps.record import (
+    AppRecordCapability,
+    AppRecorder,
+    RecordNotSent,
+    recorder_of,
+)
 from agent_runtimes.tests.test_apps_guards import AWS, scripted
 from agent_runtimes.types import AppSpec
 
@@ -250,3 +255,65 @@ async def test_a_stream_whose_closing_raises_still_sends_the_record():
             break
         await asyncio.sleep(0.05)
     assert [entry["summary"] for entry in sent[0]["entries"]][-1] == "An answer."
+
+
+# --- feedback (LOOP V-18) ---------------------------------------------------------
+
+
+def feedback_recorder(include: list[str]) -> tuple[AppRecorder, list]:
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    recorder = AppRecorder(app=app(include), app_uid="app-1", version=3, send=send)
+    return recorder, sent
+
+
+async def test_a_thumb_and_a_comment_are_kept_in_the_sessions_record():
+    recorder, sent = feedback_recorder(["outputs", "feedback"])
+    recorder.start("thread-1")
+    assert recorder_of("thread-1") is recorder
+    entry = await recorder.feedback(
+        "thread-1", liked=False, comment="  It missed the second question. ", by="u-9"
+    )
+    assert entry == {
+        "kind": "feedback",
+        "summary": "Did not like it: It missed the second question.",
+        "payload": {
+            "liked": False,
+            "comment": "It missed the second question.",
+            "by": "u-9",
+        },
+    }
+    # Sent at once, alone, under the session and the version it was about.
+    assert len(sent) == 1
+    assert (sent[0]["session_uid"], sent[0]["app_uid"], sent[0]["version"]) == (
+        "thread-1",
+        "app-1",
+        3,
+    )
+    assert sent[0]["entries"] == [entry]
+    up = await recorder.feedback("thread-1", liked=True)
+    assert up["summary"] == "Liked it"
+
+
+async def test_feedback_is_refused_where_it_cannot_be_kept():
+    recorder, sent = feedback_recorder(["outputs"])
+    recorder.start("thread-2")
+    with pytest.raises(ValueError, match="keeps no feedback"):
+        await recorder.feedback("thread-2", liked=True)
+    keeping, _ = feedback_recorder(["feedback"])
+    with pytest.raises(ValueError, match="No session 'elsewhere'"):
+        await keeping.feedback("elsewhere", liked=True)
+    assert sent == []
+
+
+async def test_feedback_that_cannot_be_sent_is_said():
+    async def refuse(body: dict) -> None:
+        raise RecordNotSent("The record of app-1 was refused (403): no.")
+
+    recorder = AppRecorder(app=app(["feedback"]), app_uid="app-1", send=refuse)
+    recorder.start("thread-3")
+    with pytest.raises(RecordNotSent, match="refused"):
+        await recorder.feedback("thread-3", liked=True)

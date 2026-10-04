@@ -152,6 +152,8 @@ type ChatControls = {
   send: (message: string) => void;
   stop: () => void;
   newChat: () => void;
+  /** The conversation the next message goes to (AG-UI's thread). */
+  thread: () => string;
 };
 
 /** No editor: the conversation on its own. */
@@ -553,7 +555,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       }
       setTransient(null);
       // A new turn: whatever the panel showed is gone, this message is it.
-      turnFeedRef.current?.begin(message);
+      turnFeedRef.current?.begin(message, controlsRef.current?.thread());
       const outcome = await workspace.submit(message);
       if (!outcome.handled) {
         /*
