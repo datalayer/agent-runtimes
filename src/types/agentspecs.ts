@@ -398,6 +398,13 @@ export interface ServerActionsSpec {
 /** What kind of application it is: what its user meets. */
 export type AppKind = 'chat' | 'widget' | 'decision' | 'worker';
 
+/**
+ * How an application was built: in Python (its `app.py`), on the Canvas (its
+ * page composed there) or written out as its spec. Carried beside the
+ * catalogue (`APP_BUILT`), since an Appspec does not hold it.
+ */
+export type AppBuilt = 'python' | 'canvas' | 'written';
+
 /** What an application does when it meets an action. */
 export type AppBehaviour = 'do_it' | 'if_asked' | 'ask_first' | 'leave_to_me';
 

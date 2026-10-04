@@ -17,6 +17,11 @@ read, write, send, buy, delete, publish — read from ``agentspecs.actions``.
 Each application is validated here, by ``agentspecs`` itself, and arrives
 with its layout said and with what it names that is not enabled (`setup`).
 
+How each was built travels beside it (``APP_BUILT``), since an Appspec does
+not hold it: ``python`` when ``apps/<id>/app.py`` sits beside its spec
+(agentspecs >= 0.0.15), ``canvas`` when its page says it was composed on the
+Canvas (``composed_by: canvas``, agentspecs >= 0.0.23), else ``written``.
+
 Usage:
     python generate_apps.py \\
       --specs-dir agentspecs/agentspecs/apps \\
@@ -57,6 +62,16 @@ def _flat(text: Any) -> str:
     return " ".join(str(text or "").split())
 
 
+def built_of(specs_dir: Path, identity: str, app: Any) -> str:
+    """How an application was built: `python`, `canvas` or `written`."""
+    if (specs_dir / identity / "app.py").is_file():
+        return "python"
+    surface = app.interface.surface
+    if surface is not None and surface.composed_by == "canvas":
+        return "canvas"
+    return "written"
+
+
 def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Every application, validated, as plain data — and the action classes."""
     apps_module = import_from_clone(specs_dir, "apps")
@@ -66,6 +81,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     behaviours: dict[str, dict[str, str]] = {}
     escalations: dict[str, dict[str, Any]] = {}
     sources: dict[str, Any] = {}
+    built: dict[str, str] = {}
     for identity in sorted(apps):
         app = apps[identity]
         spec = app.model_dump(mode="json", by_alias=True)
@@ -78,6 +94,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         }
         escalations[identity] = dict(sorted(apps_module.tool_escalations(app).items()))
         sources[identity] = apps_module.dump_app(app)
+        built[identity] = built_of(specs_dir, identity, app)
         for rule in spec["rules"]:
             rule["applies_to"] = (
                 [rule["applies_to"]]
@@ -129,6 +146,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         "behaviours": behaviours,
         "escalations": escalations,
         "sources": sources,
+        "built": built,
     }
     return specs, actions
 
@@ -174,7 +192,7 @@ ABOUT_ACTIONS = [
 ]
 
 
-def generate_python_code(specs: list[dict[str, Any]]) -> str:
+def generate_python_code(specs: list[dict[str, Any]], built: dict[str, str]) -> str:
     """Generate the Python application catalogue."""
     lines = [
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -185,7 +203,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         *HEADER,
         '"""',
         "",
-        "from typing import Dict",
+        "from typing import Dict, Literal",
         "",
         "from agent_runtimes.types import AppSpec",
         "",
@@ -215,6 +233,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         [
             "}",
             "",
+            "#: How each application was built: `python` (its `app.py`), `canvas` (its",
+            "#: page composed on the Canvas) or `written` (its spec written out).",
+            f"APP_BUILT: Dict[str, Literal['python', 'canvas', 'written']] = {built!r}",
+            "",
             "",
             "def get_app(app_id: str) -> AppSpec | None:",
             '    """An application, by `id` or `id:version`, or None."""',
@@ -235,7 +257,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
 
 def generate_typescript_code(
-    specs: list[dict[str, Any]], sources: dict[str, Any]
+    specs: list[dict[str, Any]], sources: dict[str, Any], built: dict[str, str]
 ) -> str:
     """Generate the TypeScript application catalogue."""
     lines = [
@@ -250,7 +272,7 @@ def generate_typescript_code(
         *[f" * {line}" for line in HEADER],
         " */",
         "",
-        "import type { AppKind, AppSpec } from '../types/agentspecs';",
+        "import type { AppBuilt, AppKind, AppSpec } from '../types/agentspecs';",
         "",
     ]
     for spec in specs:
@@ -286,6 +308,14 @@ def generate_typescript_code(
             " */",
             "export const APP_SOURCES: Record<string, Record<string, unknown>> = "
             + json.dumps(sources, indent=2, ensure_ascii=False)
+            + ";",
+            "",
+            "/**",
+            " * How each application was built: `python` (its `app.py`), `canvas` (its",
+            " * page composed on the Canvas) or `written` (its spec written out).",
+            " */",
+            "export const APP_BUILT: Record<string, AppBuilt> = "
+            + json.dumps(built, indent=2)
             + ";",
             "",
             "/** Every application of the catalogue, or those of a kind. */",
@@ -475,10 +505,10 @@ def main() -> None:
         sys.exit(1)
     specs, actions = load_specs(args.specs_dir)
     outputs = [
-        (args.python_output, generate_python_code(specs)),
+        (args.python_output, generate_python_code(specs, actions["built"])),
         (
             args.typescript_output,
-            generate_typescript_code(specs, actions["sources"]),
+            generate_typescript_code(specs, actions["sources"], actions["built"]),
         ),
         (args.actions_python_output, generate_actions_python_code(actions)),
         (args.actions_typescript_output, generate_actions_typescript_code(actions)),

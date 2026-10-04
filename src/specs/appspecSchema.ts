@@ -601,7 +601,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         composed_by: {
           default: '',
-          description: "Who composed it: a model's id, `developer`, `template`",
+          description:
+            "Who composed it: a model's id, `canvas` (a person on the Canvas), `developer`, `template`",
           title: 'Composed By',
           type: 'string',
         },

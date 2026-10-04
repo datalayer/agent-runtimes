@@ -13,7 +13,7 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { AppKind, AppSpec } from '../types/agentspecs';
+import type { AppBuilt, AppKind, AppSpec } from '../types/agentspecs';
 
 export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
@@ -1835,7 +1835,7 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
           text: 'Start over',
         },
       ],
-      composedBy: 'developer',
+      composedBy: 'canvas',
       composedAt: '',
     },
     assistant: 'paperclip',
@@ -3409,7 +3409,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             text: 'Start over',
           },
         ],
-        composed_by: 'developer',
+        composed_by: 'canvas',
       },
       assistant: 'paperclip',
     },
@@ -3527,6 +3527,24 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'search',
     emoji: '🔎',
   },
+};
+
+/**
+ * How each application was built: `python` (its `app.py`), `canvas` (its
+ * page composed on the Canvas) or `written` (its spec written out).
+ */
+export const APP_BUILT: Record<string, AppBuilt> = {
+  'customer-interview': 'python',
+  'data-quality': 'written',
+  'inbox-triage': 'written',
+  'model-choice': 'written',
+  'pipeline-report': 'written',
+  'quote-calculator': 'written',
+  'report-from-a-file': 'python',
+  'ship-or-fix': 'written',
+  'supplier-comparison': 'written',
+  'support-desk': 'canvas',
+  'web-research': 'written',
 };
 
 /** Every application of the catalogue, or those of a kind. */

@@ -10,7 +10,7 @@ This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 """
 
-from typing import Dict
+from typing import Dict, Literal
 
 from agent_runtimes.types import AppSpec
 
@@ -1592,7 +1592,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                         "text": "Start over",
                     },
                 ],
-                "composed_by": "developer",
+                "composed_by": "canvas",
                 "composed_at": "",
             },
             "assistant": "paperclip",
@@ -1762,6 +1762,22 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "supplier-comparison": SUPPLIER_COMPARISON_APP_0_0_1,
     "support-desk": SUPPORT_DESK_APP_0_0_1,
     "web-research": WEB_RESEARCH_APP_0_0_1,
+}
+
+#: How each application was built: `python` (its `app.py`), `canvas` (its
+#: page composed on the Canvas) or `written` (its spec written out).
+APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
+    "customer-interview": "python",
+    "data-quality": "written",
+    "inbox-triage": "written",
+    "model-choice": "written",
+    "pipeline-report": "written",
+    "quote-calculator": "written",
+    "report-from-a-file": "python",
+    "ship-or-fix": "written",
+    "supplier-comparison": "written",
+    "support-desk": "canvas",
+    "web-research": "written",
 }
 
 
