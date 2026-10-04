@@ -565,6 +565,9 @@ def test_a_model_the_cloud_runtime_cannot_run_is_refused_there(
     assert runtime.configured[-1]["agent_spec"]["model"] == (
         "bedrock:us.anthropic.claude-sonnet-4-6"
     )
+    # The runtime's one agent, recreated from the agentspec it runs.
+    assert runtime.configured[-1]["agent_spec_id"] == runtime.spec_id
+    assert runtime.configured[-1]["agent_id"] == "default"
     # Switching on Datalayer never moves the sandbox to this machine.
     assert runtime.configured[-1]["agent_spec"].get("sandbox_variant") != "local-eval"
 

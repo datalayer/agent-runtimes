@@ -1996,7 +1996,12 @@ function ChatBaseInner({
   const offeredModels = useMemo<ModelConfig[]>(() => {
     // Only what can actually be called — see `modelChoice` for the rule.
     // The runtime's answer, when it gave one, is the whole list.
-    const fromConfig = availableModels || configQuery.data?.models;
+    // A runtime that was asked and did not answer offers nothing: the
+    // agentspecs catalogue below is not its answer.
+    const fromConfig =
+      availableModels ||
+      configQuery.data?.models ||
+      (configQuery.isError ? [] : undefined);
     return offeredModelsFor(fromConfig, () => {
       /*
        * The catalogue, filtered to what is worth offering.
@@ -2025,7 +2030,12 @@ function ChatBaseInner({
         ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
         : [];
     });
-  }, [availableModels, configQuery.data?.models, browserModel]);
+  }, [
+    availableModels,
+    configQuery.data?.models,
+    configQuery.isError,
+    browserModel,
+  ]);
 
   /*
    * Who `@` may address.

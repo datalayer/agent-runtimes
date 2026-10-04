@@ -1,8 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""An agent's models: its ``model`` and ``model_additionals``, judged on what
-datalayer-ai-inference says it serves."""
+"""An agent's models: its ``model`` and ``model_additionals``.
+
+Judged on what datalayer-ai-inference says it serves.
+"""
 
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ from agent_runtimes.models.offered import InferenceModels, set_inference_models
 SONNET = "bedrock:us.anthropic.claude-sonnet-4-6"
 QWEN = "alibaba:qwen-max"
 OPUS = "bedrock:us.anthropic.claude-opus-5"
+JEV = "cloudflare:wrk/typesafe/jev"
 
 #: ai-inference's ``GET /api/ai-inference/v1/models`` on r1, 2026-10-04.
 LIVE_PAYLOAD: dict[str, Any] = {
@@ -33,7 +36,7 @@ LIVE_PAYLOAD: dict[str, Any] = {
 
 
 def _serve(monkeypatch: pytest.MonkeyPatch, handler: Any) -> list[httpx.Request]:
-    """ai-inference answered by ``handler``; the requests it got."""
+    """Serve ai-inference with ``handler``; return the requests it got."""
     seen: list[httpx.Request] = []
     real = httpx.AsyncClient
 
@@ -69,6 +72,18 @@ class TestWhatAiInferenceServes:
             "cloudflare:wrk/openai/gpt-oss-120b"
         )
         assert offered.catalogue_id("bedrock/no-such-model") is None
+
+    def test_the_three_providers_read_as_the_catalogue_names_them(self) -> None:
+        """Bedrock, Model Studio and Workers AI — Jev through Workers AI."""
+        payload = {
+            **LIVE_PAYLOAD,
+            "alibaba_models": ["alibaba/qwen-max"],
+            "cloudflare_models": ["cloudflare:wrk/typesafe/jev"],
+            "bedrock_anthropic_model_specs": [
+                {"id": "bedrock/us.anthropic.claude-opus-5", "name": "Opus 5"}
+            ],
+        }
+        assert sorted(offered.read_served(payload)) == sorted([SONNET, QWEN, JEV])
 
     def test_the_live_answer_reads_as_one_model(self) -> None:
         assert offered.read_served(LIVE_PAYLOAD) == [SONNET]
@@ -251,3 +266,43 @@ class TestTheSpecField:
             generate_agents.check_model_additionals(
                 [("", {"id": "a", "model_additionals": ["openai:gpt-9"]})], known
             )
+
+
+class TestTheInferenceModelsRoute:
+    """``/configure/inference/models``: the runtime's answer, no list of its own."""
+
+    def test_it_lists_what_ai_inference_serves(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from agent_runtimes.routes import configure
+
+        monkeypatch.setitem(
+            configure._inference_provider_override, "provider", "datalayer"
+        )
+        set_inference_models(
+            InferenceModels(served=(SONNET, QWEN), url="u", note="serves both.")
+        )
+        assert asyncio.run(configure.list_inference_models()) == {
+            "provider": "datalayer",
+            "models": [SONNET, QWEN],
+            "source": "ai-inference",
+            "note": "serves both.",
+        }
+
+    def test_without_its_answer_it_lists_nothing_and_says_why(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from agent_runtimes.routes import configure
+
+        monkeypatch.setitem(
+            configure._inference_provider_override, "provider", "datalayer"
+        )
+        set_inference_models(
+            InferenceModels(served=None, url="u", note="ai-inference did not answer.")
+        )
+        payload = asyncio.run(configure.list_inference_models())
+        assert payload["models"] == []
+        assert (payload["source"], payload["note"]) == (
+            "local",
+            "ai-inference did not answer.",
+        )

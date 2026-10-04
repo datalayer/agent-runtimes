@@ -1369,11 +1369,13 @@ async def create_agent(
                 request.description = library_spec.description
             # Use the model from the spec if the request still has the default,
             # or none at all: a caller that sends `model: ''` means the spec's
-            # model, not a model named ''.
-            if (
-                not request.model or request.model == DEFAULT_MODEL.value
-            ) and library_spec.model:
-                request.model = library_spec.model
+            # model, not a model named ''. The spec forwarded with the request
+            # names it before the library's: a switch (loop's `/models`, the
+            # chat's menu) is the library spec with another model.
+            if (not request.model or request.model == DEFAULT_MODEL.value) and (
+                _spec_value("model") or library_spec.model
+            ):
+                request.model = _spec_value("model") or library_spec.model
             if request.inference_provider == "local" and getattr(
                 library_spec, "inference_provider", None
             ):
@@ -1453,7 +1455,7 @@ async def create_agent(
                 request.description = _spec_value("description") or request.description
             if request.goal is None:
                 request.goal = _spec_value("goal")
-            if request.model == DEFAULT_MODEL.value:
+            if not request.model or request.model == DEFAULT_MODEL.value:
                 request.model = _spec_value("model") or request.model
             if request.inference_provider == "local":
                 inferred_provider = _spec_value(
@@ -4708,6 +4710,8 @@ class ConfigureFromSpecRequest(BaseModel):
     """An application's Appspec, when the agent is the one it runs."""
     model: str | None = None
     """The model, when it is not the agent spec's own."""
+    agent_id: str = "default"
+    """The agent to (re)create: ``default``, or the one ``loop`` talks to."""
 
 
 @router.post("/configure-from-spec")
@@ -4791,7 +4795,7 @@ async def configure_from_spec_endpoint(
             detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
         )
 
-    target_agent_name = "default"
+    target_agent_name = body.agent_id
 
     # ── 3. Configure sandbox if jupyter_sandbox is provided ──────────
     #    The sandbox is managed independently of the agent — it survives
@@ -4855,6 +4859,22 @@ async def configure_from_spec_endpoint(
     specs_changed = stored_spec != new_spec_dict
 
     if specs_changed:
+        # A model ai-inference does not serve is refused before the agent
+        # in place is deleted: a refused switch leaves it as it was.
+        from ..models.offered import agent_inference_provider, inference_refusal
+
+        wanted_model = body.model or (body.agent_spec or {}).get("model") or spec.model
+        refusal = (
+            inference_refusal(
+                str(wanted_model), agent_inference_provider(target_agent_name)
+            )
+            if wanted_model
+            else None
+        )
+        if refusal:
+            raise HTTPException(
+                status_code=400, detail=f"{refusal}: nothing was switched."
+            )
         if stored_spec is not None:
             logger.info(
                 "[configure-from-spec] Spec changed for '%s' — "
@@ -4985,7 +5005,12 @@ async def configure_from_spec_endpoint(
 
     asyncio.create_task(_background_mcp_and_sandbox())
 
-    effective_model = spec.model or DEFAULT_MODEL
+    # The model the agent runs on now: a switch's, not the library spec's.
+    effective_model = (
+        (_agentspecs.get(target_agent_name) or {}).get("model")
+        or spec.model
+        or DEFAULT_MODEL
+    )
     return {
         "success": True,
         "agent_id": target_agent_name,
@@ -4996,7 +5021,8 @@ async def configure_from_spec_endpoint(
         "evals_mode": body.evals_mode,
         "emit_live_events": body.emit_live_events,
         "message": (
-            f"Agent 'default' {'(re)created' if specs_changed else 'unchanged'} "
+            f"Agent '{target_agent_name}' "
+            f"{'(re)created' if specs_changed else 'unchanged'} "
             f"from spec '{body.agent_spec_id}'."
         ),
     }

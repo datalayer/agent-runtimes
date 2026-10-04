@@ -836,6 +836,9 @@ async def _create_and_register_cli_agent(
 
     _agentspecs[agent_id] = {
         "id": getattr(agent_spec, "id", agent_id),
+        # The library spec it was created from: its model_additionals are
+        # the models it may be switched to (offered_model_ids).
+        "agent_spec_id": agent_spec.id,
         "version": getattr(agent_spec, "version", "0.0.1"),
         "name": agent_spec.name,
         "description": agent_spec.description,

@@ -77,14 +77,16 @@ def read_served(payload: Mapping[str, Any]) -> list[str]:
     """The catalogue ids in ai-inference's ``/models`` answer.
 
     The service lists its default provider's models in ``models`` and, beside
-    them, the Bedrock and Cloudflare chat models it serves; a name the
-    catalogue does not know is left out.
+    them, each provider's chat models it serves under ``<provider>_models``
+    (``bedrock_anthropic_models``, ``alibaba_models``, ``cloudflare_models``:
+    Bedrock as ``bedrock/<id>``, Model Studio as ``alibaba/<id>``, Workers AI
+    as ``cloudflare:wrk/<vendor>/<model>``); a name the catalogue does not
+    know is left out.
     """
-    names: list[Any] = [
-        *(payload.get("models") or []),
-        *(payload.get("bedrock_anthropic_models") or []),
-        *(payload.get("cloudflare_models") or []),
-    ]
+    names: list[Any] = list(payload.get("models") or [])
+    for key, value in payload.items():
+        if key.endswith("_models") and isinstance(value, list):
+            names.extend(value)
     served: list[str] = []
     for name in names:
         if not isinstance(name, str):
@@ -252,8 +254,11 @@ def spec_model_ids(spec: Any) -> list[str]:
 
 
 def agent_inference_provider(agent_id: str | None) -> str:
-    """Where an agent's inference goes: its creation spec's ``inference_provider``,
-    else the runtime's (as the Vercel AI transport resolves it)."""
+    """Where an agent's inference goes.
+
+    Its creation spec's ``inference_provider``, else the runtime's (as the
+    Vercel AI transport resolves it).
+    """
     from agent_runtimes.models.models import effective_inference_provider
 
     if agent_id:

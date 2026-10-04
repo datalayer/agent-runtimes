@@ -187,16 +187,15 @@ The node-local configuration API exposes inference controls:
 - `PUT /api/v1/configure/inference/provider`
 - `GET /api/v1/configure/inference/models`
 
-`/inference/models` is provider-aware:
+`/inference/models` is the runtime's answer, never a list of its own:
 
-1. For `local`, returns an empty model list.
-2. For `datalayer`, proxies `datalayer-ai-inference /models`.
-3. If upstream returns no models (or is unavailable), Agent Node applies a
-   Bedrock Anthropic fallback list derived from `agentspecs` (with env
-   fallback), so the UI can still present usable choices.
-4. For `datalayer`, the payload may also include
-   `bedrock_anthropic_model_specs` metadata used by the UI to preselect the
-   active default model.
+1. For `local`, returns an empty model list: the runtime calls the providers
+   itself, and its keys decide (`/api/v1/configure/models`).
+2. For `datalayer`, returns the catalogue ids datalayer-ai-inference said it
+   serves when the runtime asked it, once, at startup.
+3. With `source` and `note`: who decided, and that in a sentence. When
+   ai-inference is not configured or did not answer, `models` is empty and
+   `note` says why — the UI shows that sentence instead of a model list.
 
 Mode is part of every heartbeat and every health report. Changing the mode
 in the local UI synchronously triggers an extra health report so the central
@@ -292,8 +291,8 @@ when the new mode differs from the persisted one.
    inference provider (`local | datalayer`).
 - `PUT  /api/v1/configure/inference/provider` — update runtime inference
    provider for subsequent launches/sessions.
-- `GET  /api/v1/configure/inference/models` — list available models for the
-   active provider (Bedrock Anthropic focused for `datalayer`).
+- `GET  /api/v1/configure/inference/models` — the models the runtime's
+   inference serves, as ai-inference answered it at startup, with a `note`.
 
 ### Central — `datalayer-runtimes`
 
@@ -357,10 +356,9 @@ The `src/AgentNode.tsx` app exposes these steps:
    Chat header entries are hidden until authenticated.
 2. **Configuration** — pick mode, billing entity, and sharing policy.
    Also pick **Inference** provider (`local` or `datalayer`).
-   When `datalayer` is selected, the UI shows available Bedrock Anthropic
-   models returned by `/api/v1/configure/inference/models` as a read-only
-   selector. The active option is preselected from model metadata/defaults,
-   and model switching is intentionally locked in this view.
+   When `datalayer` is selected, the UI lists the models ai-inference serves,
+   as `/api/v1/configure/inference/models` returns them, read-only — or the
+   runtime's sentence saying why there are none.
 3. **Agents** — an agent **gallery** built from the library
    (`GET /api/v1/agents/library`) and running agents (`GET /api/v1/agents`).
    Launching a card starts (or reuses) the agent and calls

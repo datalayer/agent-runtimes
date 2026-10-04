@@ -169,6 +169,15 @@ def _refusal(
     return None
 
 
+def _detail(response: httpx.Response) -> str:
+    """The runtime's reason for a refusal: its ``detail``, else its text."""
+    try:
+        detail = response.json().get("detail")
+    except Exception:  # noqa: BLE001
+        detail = None
+    return str(detail or response.text[:200])
+
+
 async def _switch(tux: "CliTux", model_id: str) -> None:
     """Switch the session to another model.
 
@@ -208,11 +217,20 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
                 timeout=10.0,
             )
             spec_response.raise_for_status()
-            payload = spec_response.json()
-            spec = payload.get("spec") if isinstance(payload, dict) else None
-            spec = dict(spec or payload or {})
+            spec = dict(spec_response.json())
     except Exception as error:  # noqa: BLE001
         tux.console.print(f"[red]Unable to read the agent spec: {error}[/red]")
+        return
+
+    # The agent is recreated from its library spec, with this model: the
+    # library spec keeps its model_additionals, so the models offered stay
+    # the same after the switch.
+    agent_spec_id = spec.get("agent_spec_id")
+    if not agent_spec_id:
+        tux.console.print(
+            f"[red]{agent_id} was not created from an agentspec: "
+            "nothing was switched.[/red]"
+        )
         return
 
     spec["model"] = model_id
@@ -240,12 +258,18 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
             response = await client.post(
                 f"{tux.server_url}/api/v1/agents/configure-from-spec",
                 json={
-                    "agent_spec_id": spec.get("id") or agent_id,
+                    "agent_spec_id": agent_spec_id,
                     "agent_spec": spec,
+                    "agent_id": agent_id,
                 },
                 timeout=60.0,
             )
-            response.raise_for_status()
+            if response.status_code >= 400:
+                tux.console.print(
+                    f"[red]{where or 'This runtime'} did not switch to {model_id} "
+                    f"({response.status_code}): {_detail(response)}[/red]"
+                )
+                return
     except Exception as error:  # noqa: BLE001
         tux.console.print(f"[red]Unable to switch model: {error}[/red]")
         return

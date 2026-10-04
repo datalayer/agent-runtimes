@@ -251,19 +251,14 @@ const DEFAULT_CONFIGURATION: AgentNodeConfiguration = {
 
 type InferenceProvider = 'local' | 'datalayer';
 
-type InferenceModelSpec = {
-  id: string;
-  name?: string;
-  description?: string;
-  default?: boolean;
-};
-
+/** `/api/v1/configure/inference/models`: what the runtime's inference serves. */
 type InferenceModelResponse = {
   provider?: string;
-  default_model?: string;
+  /** Catalogue ids, as ai-inference answered the runtime at its start. */
   models?: string[];
-  bedrock_anthropic_models?: string[];
-  bedrock_anthropic_model_specs?: InferenceModelSpec[];
+  /** Who decided, and that in a sentence — why the list is empty when it is. */
+  source?: string;
+  note?: string;
 };
 
 /**
@@ -578,9 +573,10 @@ export function AgentNode() {
   const [inferenceProvider, setInferenceProvider] =
     useState<InferenceProvider>('datalayer');
   const [inferenceModels, setInferenceModels] = useState<string[]>([]);
-  const [inferenceDefaultModel, setInferenceDefaultModel] = useState<
-    string | null
-  >(null);
+  // The runtime's sentence about its models, or why it gave none.
+  const [inferenceModelsNote, setInferenceModelsNote] = useState<string | null>(
+    null,
+  );
   const [configurationLoaded, setConfigurationLoaded] = useState(false);
   const [isActiveAgentRunning, setIsActiveAgentRunning] = useState(false);
   // The protocol the active agent actually speaks, as reported by the node.
@@ -1015,9 +1011,11 @@ export function AgentNode() {
   useEffect(() => {
     if (inferenceProvider !== 'datalayer') {
       setInferenceModels([]);
-      setInferenceDefaultModel(null);
+      setInferenceModelsNote(null);
       return;
     }
+    // The runtime's answer, as it had it from ai-inference: no list of its
+    // own when that answer is empty or did not come — the sentence says why.
     const loadInferenceModels = async () => {
       try {
         const response = await fetch(
@@ -1025,42 +1023,21 @@ export function AgentNode() {
         );
         if (!response.ok) {
           setInferenceModels([]);
-          setInferenceDefaultModel(null);
+          setInferenceModelsNote(
+            `The runtime did not list its models (${response.status}).`,
+          );
           return;
         }
         const payload: InferenceModelResponse = await response.json();
-        const fromModels = Array.isArray(payload.models)
-          ? payload.models.filter(Boolean)
-          : [];
-        const fromBedrock = Array.isArray(payload.bedrock_anthropic_models)
-          ? payload.bedrock_anthropic_models.filter(Boolean)
-          : [];
-        const fallback = [
-          'bedrock/us.anthropic.claude-3-5-sonnet-20240620-v1:0',
-          'bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0',
-          'bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0',
-        ];
-        const models =
-          fromModels.length > 0
-            ? fromModels
-            : fromBedrock.length > 0
-              ? fromBedrock
-              : fallback;
-        setInferenceModels(models);
-        const specDefault = Array.isArray(payload.bedrock_anthropic_model_specs)
-          ? payload.bedrock_anthropic_model_specs.find(s => s?.default)?.id
-          : undefined;
-        const selected =
-          (specDefault && models.includes(specDefault) ? specDefault : null) ||
-          (payload.default_model && models.includes(payload.default_model)
-            ? payload.default_model
-            : null) ||
-          models[0] ||
-          null;
-        setInferenceDefaultModel(selected);
-      } catch {
+        setInferenceModels(
+          Array.isArray(payload.models) ? payload.models.filter(Boolean) : [],
+        );
+        setInferenceModelsNote(payload.note ?? null);
+      } catch (error) {
         setInferenceModels([]);
-        setInferenceDefaultModel(null);
+        setInferenceModelsNote(
+          `The runtime did not list its models (${String(error)}).`,
+        );
       }
     };
     loadInferenceModels();
@@ -1875,23 +1852,25 @@ export function AgentNode() {
                           }}
                         >
                           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-                            Bedrock Anthropic model
+                            Models ai-inference serves
                           </Text>
                           {inferenceModels.length === 0 ? (
                             <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
-                              No model list available.
+                              {inferenceModelsNote ??
+                                'The runtime has not said which models ai-inference serves.'}
                             </Text>
                           ) : (
                             <ActionMenu>
                               <ActionMenu.Button>
-                                {inferenceDefaultModel || inferenceModels[0]}
+                                {inferenceModels.length === 1
+                                  ? inferenceModels[0]
+                                  : `${inferenceModels.length} models`}
                               </ActionMenu.Button>
                               <ActionMenu.Overlay width="large">
-                                <ActionList selectionVariant="single">
+                                <ActionList>
                                   {inferenceModels.map(model => (
                                     <ActionList.Item
                                       key={model}
-                                      selected={inferenceDefaultModel === model}
                                       inactiveText="Selection is locked"
                                     >
                                       {model}

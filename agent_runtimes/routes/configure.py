@@ -192,76 +192,6 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
     return f"{base}/api/ai-inference/v1"
 
 
-def _fallback_bedrock_models() -> list[str]:
-    """Resolve Bedrock model IDs from agentspecs, env overrides, and defaults."""
-    models = _bedrock_models_from_agentspecs()
-    if not models:
-        raw = (os.getenv("DATALAYER_BEDROCK_MODELS") or "").strip()
-        models = [m.strip() for m in raw.split(",") if m.strip()] if raw else []
-    default_model = (
-        os.getenv("DATALAYER_BEDROCK_MODEL")
-        or os.getenv("DATALAYER_BEDROCK_MODEL_ID")
-        or "bedrock/us.anthropic.claude-3-5-sonnet-20240620-v1:0"
-    )
-    if default_model and default_model not in models:
-        models.insert(0, default_model)
-    return models
-
-
-def _bedrock_models_from_agentspecs() -> list[str]:
-    """Load Bedrock model IDs from the agentspecs library (best-effort)."""
-
-    def _normalize(model_id: str) -> str:
-        """Convert legacy bedrock: model IDs to bedrock/ format."""
-        if model_id.startswith("bedrock:"):
-            return "bedrock/" + model_id.split(":", 1)[1]
-        return model_id
-
-    try:
-        from agentspecs.models import list_models
-
-        return [
-            _normalize(spec.id)
-            for spec in list_models()
-            if getattr(spec, "provider", None) == "bedrock"
-            and getattr(spec, "available", False)
-        ]
-    except Exception:  # noqa: BLE001
-        pass
-
-    try:
-        import importlib
-        import importlib.util
-        import pathlib
-
-        yaml_module = importlib.import_module("yaml")
-
-        spec = importlib.util.find_spec("agentspecs")
-        if spec is None or not spec.submodule_search_locations:
-            return []
-        models_dir = pathlib.Path(spec.submodule_search_locations[0]) / "models"
-        if not models_dir.is_dir():
-            return []
-        ids: list[str] = []
-        for yaml_file in sorted(models_dir.glob("*.yaml")):
-            data: dict[str, Any] = {}
-            try:
-                with open(yaml_file) as fh:
-                    data = yaml_module.safe_load(fh) or {}
-            except Exception:  # noqa: BLE001
-                data = {}
-            if (
-                data.get("provider") != "bedrock"
-                or not data.get("available", False)
-                or not isinstance(data.get("id"), str)
-            ):
-                continue
-            ids.append(_normalize(data["id"]))
-        return ids
-    except Exception:  # noqa: BLE001
-        return []
-
-
 class InferenceProviderRequest(BaseModel):
     provider: InferenceProvider
 
@@ -336,41 +266,22 @@ async def set_inference_provider(body: InferenceProviderRequest) -> dict[str, An
 
 @router.get("/inference/models")
 async def list_inference_models() -> dict[str, Any]:
-    """List available models for the current inference provider."""
+    """The models this runtime's inference serves, as the runtime knows them.
+
+    Through datalayer-ai-inference, its answer to the one request the runtime
+    makes at startup, in catalogue ids; ``note`` says it in a sentence, and
+    why the list is empty when it is (no ai-inference configured, or it did
+    not answer). Calling the providers directly, nothing is listed here: the
+    runtime's own keys decide (``/configure/models``).
+    """
+    from agent_runtimes.models.offered import load_inference_models, models_source
+
     provider = get_effective_inference_provider()
-    if provider != "datalayer":
-        return {
-            "provider": provider,
-            "models": [],
-        }
-
-    try:
-        import httpx
-
-        base_url = _normalize_ai_inference_base_url(
-            os.getenv("DATALAYER_AI_INFERENCE_URL")
-        )
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{base_url}/models")
-        if response.status_code == 200:
-            payload = response.json()
-            if isinstance(payload, dict):
-                fallback_models = _fallback_bedrock_models()
-                payload["provider"] = payload.get("provider") or "datalayer"
-                models = payload.get("models")
-                if not isinstance(models, list) or not any(models):
-                    payload["models"] = fallback_models
-                payload["default_model"] = payload.get("default_model") or (
-                    payload["models"][0] if payload.get("models") else None
-                )
-                return payload
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to fetch ai-inference models: %s", exc)
-
-    return {
-        "provider": "datalayer",
-        "models": _fallback_bedrock_models(),
-    }
+    served: list[str] = []
+    if provider == "datalayer":
+        served = list((await load_inference_models()).served or [])
+    source, note = models_source(provider)
+    return {"provider": provider, "models": served, "source": source, "note": note}
 
 
 @router.get("/models")

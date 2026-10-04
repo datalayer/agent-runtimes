@@ -1429,14 +1429,18 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           // In the chat's shape: the route says `available`, the menu and
           // the opening pick read `isAvailable`, and an unmapped row passes
           // for usable. See `readServerCatalogue`.
-          if (payload) {
-            setCatalogModels(readServerCatalogue(payload));
-          }
+          // A runtime that did not answer offers nothing: the agentspecs
+          // catalogue is not its answer.
+          setCatalogModels(payload ? readServerCatalogue(payload) : []);
         }
       })
       // No catalogue is not an error worth a banner: the menu simply has
       // nothing to offer, and the agent answers on whatever it was given.
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogModels([]);
+        }
+      });
     return () => {
       cancelled = true;
     };
