@@ -137,7 +137,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     AppCriterion: {
       additionalProperties: false,
-      description: 'What an alternative is judged on.',
+      description: 'What an alternative is weighed on.',
       properties: {
         name: {
           description: 'Its name',
@@ -159,7 +159,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         instructions: {
           default: '',
           description:
-            'What a judgment model is asked, or how a metric is computed',
+            'What a decision model is asked, or how a metric is computed',
           title: 'Instructions',
           type: 'string',
         },
@@ -208,7 +208,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'array',
         },
         criteria: {
-          description: 'What each is judged on',
+          description: 'What each is weighed on',
           items: {
             $ref: '#/$defs/AppCriterion',
           },
@@ -218,7 +218,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         min_confidence: {
           default: 0,
           description:
-            'A judgment less confident than this is put to the reader',
+            'An answer less confident than this is put to the reader',
           maximum: 1,
           minimum: 0,
           title: 'Min Confidence',
@@ -232,10 +232,10 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Scenarios',
           type: 'array',
         },
-        judgment_model: {
+        decision_model: {
           default: '',
-          description: 'The model that answers the judgments',
-          title: 'Judgment Model',
+          description: "The model that answers the decision's typed questions",
+          title: 'Decision Model',
           type: 'string',
         },
       },

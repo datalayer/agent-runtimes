@@ -186,22 +186,22 @@ def test_the_lines_run_in_order_in_one_session(
     assert not ANSI.search(out) and not ANSI.search(status)
 
 
-def test_a_switch_to_a_judgment_model_is_refused_not_an_error(
+def test_a_switch_to_a_decision_model_is_refused_not_an_error(
     served: FastAPI, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     jev = "cloudflare:wrk/typesafe/jev"
     set_inference_models(
         InferenceModels(
-            served=(SONNET, QWEN), judgments=(jev,), url="u", note="serves both"
+            served=(SONNET, QWEN), decisions=(jev,), url="u", note="serves both"
         )
     )
     tux = _local_session(served, monkeypatch)
     code = asyncio.run(cli._run_lines(tux, ["/models", f"/models {jev}"]))
     assert code == 0
     out = " ".join(_out(tux.console).split())
-    assert "Judgments Answers a decision's typed questions" in out
+    assert "Decisions Answers a decision's typed questions" in out
     assert (
-        f"{jev} answers typed judgments, not a conversation: an agent cannot "
+        f"{jev} answers typed decisions, not a conversation: an agent cannot "
         "run on it, so nothing was switched."
     ) in out
     assert agents_route._agentspecs[AGENT]["model"] == SONNET

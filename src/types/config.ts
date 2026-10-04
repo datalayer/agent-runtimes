@@ -84,13 +84,13 @@ export interface RemoteConfig {
   /** That decision in a sentence. */
   modelsNote?: string;
   /**
-   * The typed-judgment models ai-inference serves (Jev), apart from `models`:
+   * The typed-decision models ai-inference serves (Jev), apart from `models`:
    * a decision asks them, no agent runs on them, so they are never offered
    * as the agent's model.
    */
-  judgmentModels: ModelConfig[];
-  /** What a typed-judgment model is for, in a sentence. */
-  judgmentsNote: string;
+  decisionModels: ModelConfig[];
+  /** What a typed-decision model is for, in a sentence. */
+  decisionsNote: string;
   defaultModel?: string;
   builtinTools: BuiltinTool[];
   mcpServers?: MCPServerConfig[];

@@ -397,8 +397,8 @@ class FakeRuntime:
                                 "missing_env_vars": ["OPENAI_API_KEY"],
                             },
                         ],
-                        "judgment_models": [],
-                        "judgments_note": "Answers a decision's typed questions.",
+                        "decision_models": [],
+                        "decisions_note": "Answers a decision's typed questions.",
                     }
                 )
             if path == "/api/v1/configure/skills":

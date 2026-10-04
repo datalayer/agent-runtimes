@@ -11,7 +11,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 
 import os
 from enum import Enum
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from agent_runtimes.types import AIModel, ModelPricing
 
@@ -396,7 +396,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=64000,
-    capabilities=["chat", "tools", "judge"],
+    capabilities=["chat", "tools", "decider"],
     context_window=200000,
 )
 
@@ -421,14 +421,14 @@ CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1 = AIModel(
     id="cloudflare:gtw/typesafe/jev",
     version="0.0.1",
     name="Jev (Cloudflare AI Gateway)",
-    description="Typesafe's typed-judgment model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
+    description="Typesafe's typed-decision model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
     provider="cloudflare",
     provider_url="https://docs.typesafe.ai/models",
     default=False,
     available=True,
     required_env_vars=[],
     tokens_limit=None,
-    capabilities=["judgments"],
+    capabilities=["decisions"],
     billing="credits",
     route="ai-gateway",
     context_window=32000,
@@ -484,7 +484,7 @@ CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
     available=False,
     required_env_vars=[],
     tokens_limit=32768,
-    capabilities=["chat", "tools", "codemode", "judge"],
+    capabilities=["chat", "tools", "codemode", "decider"],
     billing="standard",
     route="workers-ai",
     context_window=128000,
@@ -549,14 +549,14 @@ CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1 = AIModel(
     id="cloudflare:wrk/typesafe/jev",
     version="0.0.1",
     name="Jev (Cloudflare Workers AI)",
-    description="Typesafe's typed-judgment model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
+    description="Typesafe's typed-decision model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
     provider="cloudflare",
     provider_url="https://docs.typesafe.ai/models",
     default=False,
     available=True,
     required_env_vars=[],
     tokens_limit=None,
-    capabilities=["judgments"],
+    capabilities=["decisions"],
     billing="credits",
     route="workers-ai",
     context_window=32000,
@@ -808,11 +808,11 @@ def list_models() -> list[AIModel]:
 
 
 def is_chat_model(model: AIModel) -> bool:
-    """A model a chat can run on: not a typed-judgment model (Jev), which
+    """A model a chat can run on: not a typed-decision model (Jev), which
     answers typed questions about a state and nothing else. A spec that
     states no capability is read as a chat model.
     """
-    return "judgments" not in model.capabilities
+    return "decisions" not in model.capabilities
 
 
 def list_chat_models() -> list[AIModel]:

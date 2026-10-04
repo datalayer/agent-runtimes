@@ -55,6 +55,25 @@ CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🕒",
 )
 
+DECIDE_TOOL_SPEC_0_0_1 = ToolSpec(
+    id="decide",
+    version="0.0.1",
+    name="Decide",
+    description="Ask Jev typed questions about a text — noul (does a statement hold, with its probability), choice (one of named options) or score (a step on a rubric) — and get the typed answers back, through datalayer-ai-inference.",
+    tags=["runtime", "decisions", "jev"],
+    enabled=True,
+    approval="auto",
+    timeout=None,
+    requires_approval=False,
+    runtime=ToolRuntimeSpec(
+        language="python",
+        package="agent_runtimes.tools.decisions",
+        method="decide",
+    ),
+    icon="law",
+    emoji="⚖️",
+)
+
 DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
     id="display-recipe",
     version="0.0.1",
@@ -366,6 +385,7 @@ UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
 TOOL_CATALOG: Dict[str, ToolSpec] = {
     "create-plan": CREATE_PLAN_TOOL_SPEC_0_0_1,
     "current-time": CURRENT_TIME_TOOL_SPEC_0_0_1,
+    "decide": DECIDE_TOOL_SPEC_0_0_1,
     "display-recipe": DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
     "example-create-plan": EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
     "example-current-time": EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,

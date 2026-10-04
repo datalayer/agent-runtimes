@@ -2016,7 +2016,7 @@ function ChatBaseInner({
        * four are current.
        */
       const catalogued = Object.values(AI_MODEL_CATALOGUE)
-        // A typed-judgment model answers typed questions, not a chat.
+        // A typed-decision model answers typed questions, not a chat.
         .filter(model => model.available && isChatModel(model))
         .map(model => ({
           id: model.id,
@@ -4649,13 +4649,13 @@ function ChatBaseInner({
       // agent has no config endpoint waits for ever otherwise.
       configLoading={configQuery.isLoading}
       models={offeredModels}
-      // Listed apart and read-only: a typed-judgment model is never the
+      // Listed apart and read-only: a typed-decision model is never the
       // agent's model.
-      judgments={
+      decisions={
         configQuery.data
           ? {
-              models: configQuery.data.judgmentModels,
-              note: configQuery.data.judgmentsNote,
+              models: configQuery.data.decisionModels,
+              note: configQuery.data.decisionsNote,
             }
           : undefined
       }

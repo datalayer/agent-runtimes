@@ -1,10 +1,10 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""The typed-judgment models ai-inference serves, listed apart as Judgments.
+"""The typed-decision models ai-inference serves, listed apart as Decisions.
 
 Jev on Workers AI answers a decision's typed questions, not a conversation:
-the runtime lists it under ``judgment_models`` when ai-inference does, never
+the runtime lists it under ``decision_models`` when ai-inference does, never
 among the models an agent may run on, and refuses a switch to it.
 """
 
@@ -19,7 +19,7 @@ from fastapi import FastAPI
 
 from agent_runtimes.models import offered
 from agent_runtimes.models.offered import (
-    JUDGMENTS_NOTE,
+    DECISIONS_NOTE,
     NO_TOKEN_NOTE,
     InferenceModels,
     give_inference_token,
@@ -50,12 +50,12 @@ R1_PAYLOAD: dict[str, Any] = {
     "bedrock_anthropic_models": ["bedrock/us.anthropic.claude-sonnet-4-6"],
     "alibaba_models": ["alibaba/qwen-max"],
     "cloudflare_models": [],
-    "judgment_models": [JEV],
+    "decision_models": [JEV],
 }
 
 REFUSAL = (
-    f"{JEV} answers typed judgments, not a conversation: an agent cannot run "
-    "on it, so nothing was switched. A decision asks it through /judgments."
+    f"{JEV} answers typed decisions, not a conversation: an agent cannot run "
+    "on it, so nothing was switched. A decision asks it through /decisions."
 )
 
 
@@ -65,18 +65,18 @@ def _given_a_token() -> None:
     give_inference_token("the-runtime-token")
 
 
-def _serving(judgments: tuple[str, ...]) -> None:
+def _serving(decisions: tuple[str, ...]) -> None:
     set_inference_models(
         InferenceModels(
-            served=(SONNET, QWEN), judgments=judgments, url="u", note="serves both"
+            served=(SONNET, QWEN), decisions=decisions, url="u", note="serves both"
         )
     )
 
 
 class TestWhatAiInferenceLists:
-    def test_jev_is_read_as_a_judgment_never_as_a_chat_model(self) -> None:
+    def test_jev_is_read_as_a_decision_never_as_a_chat_model(self) -> None:
         assert offered.read_served(R1_PAYLOAD) == [SONNET, QWEN]
-        assert offered.read_judgments(R1_PAYLOAD) == [JEV]
+        assert offered.read_decisions(R1_PAYLOAD) == [JEV]
 
     def test_it_is_kept_with_the_answer(self, monkeypatch: pytest.MonkeyPatch) -> None:
         real = httpx.AsyncClient
@@ -94,11 +94,11 @@ class TestWhatAiInferenceLists:
         set_inference_models(None)
         state = asyncio.run(offered.load_inference_models())
         assert state.served == (SONNET, QWEN)
-        assert state.judgments == (JEV,)
+        assert state.decisions == (JEV,)
 
 
 class TestTheRuntimesAnswer:
-    def test_carries_jev_under_judgments_when_ai_inference_lists_it(
+    def test_carries_jev_under_decisions_when_ai_inference_lists_it(
         self, runtime: FastAPI
     ) -> None:
         from agent_runtimes.routes.configure import list_catalog_models
@@ -108,12 +108,12 @@ class TestTheRuntimesAnswer:
         payload = asyncio.run(list_catalog_models(agent_id=AGENT))
 
         assert [m["id"] for m in payload["models"]] == [SONNET, QWEN]
-        assert payload["judgments_note"] == JUDGMENTS_NOTE
-        assert payload["judgment_models"] == [
+        assert payload["decisions_note"] == DECISIONS_NOTE
+        assert payload["decision_models"] == [
             {
                 "id": JEV,
                 "name": "Jev (Cloudflare Workers AI)",
-                "description": payload["judgment_models"][0]["description"],
+                "description": payload["decision_models"][0]["description"],
                 "provider": "cloudflare",
                 "available": True,
                 "reason": None,
@@ -129,7 +129,7 @@ class TestTheRuntimesAnswer:
         _serving(())
         _configure(runtime, agent_id=AGENT, agent_spec=THROUGH_AI_INFERENCE)
         payload = asyncio.run(list_catalog_models(agent_id=AGENT))
-        assert payload["judgment_models"] == []
+        assert payload["decision_models"] == []
 
     def test_without_a_token_they_are_listed_and_not_usable(
         self, runtime: FastAPI
@@ -143,7 +143,7 @@ class TestTheRuntimesAnswer:
         payload = asyncio.run(list_catalog_models(agent_id=AGENT))
 
         assert payload["note"] == NO_TOKEN_NOTE
-        rows = {m["id"]: m for m in payload["judgment_models"]}
+        rows = {m["id"]: m for m in payload["decision_models"]}
         assert JEV in rows
         assert all(
             (m["available"], m["reason"]) == (False, "No ai-inference token")
@@ -162,13 +162,13 @@ class TestTheRuntimesAnswer:
         payload = config.model_dump(by_alias=True)
         assert [m["id"] for m in payload["models"]] == [SONNET, QWEN]
         assert [
-            (m["id"], m["name"], m["isAvailable"]) for m in payload["judgmentModels"]
+            (m["id"], m["name"], m["isAvailable"]) for m in payload["decisionModels"]
         ] == [(JEV, "Jev (Cloudflare Workers AI)", True)]
-        assert payload["judgmentsNote"] == JUDGMENTS_NOTE
+        assert payload["decisionsNote"] == DECISIONS_NOTE
 
 
 class TestTheModelsCommand:
-    def test_prints_the_judgments_group(
+    def test_prints_the_decisions_group(
         self, runtime: FastAPI, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _serving((JEV,))
@@ -176,10 +176,10 @@ class TestTheModelsCommand:
         listing = _models(_tux(runtime, monkeypatch))
 
         assert "Models (2)" in listing
-        judgments = listing.index("Judgments")
-        assert listing.index(f"● {QWEN}") < judgments
+        decisions = listing.index("Decisions")
+        assert listing.index(f"● {QWEN}") < decisions
         assert (
-            f"Judgments {JUDGMENTS_NOTE} ● {JEV} Jev (Cloudflare Workers AI)"
+            f"Decisions {DECISIONS_NOTE} ● {JEV} Jev (Cloudflare Workers AI)"
         ) in listing
 
     def test_a_switch_to_jev_is_refused_and_the_agent_kept(

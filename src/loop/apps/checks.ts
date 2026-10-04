@@ -235,13 +235,13 @@ function referenceProblems(app: AppSpec): string[] {
       );
     }
   }
-  const judge = app.decision?.judgmentModel;
-  if (judge) {
-    const model = getModel(judge);
+  const decider = app.decision?.decisionModel;
+  if (decider) {
+    const model = getModel(decider);
     if (!model) {
-      problems.push(`There is no model named “${judge}” to judge with.`);
-    } else if (!(model.capabilities ?? []).includes('judgments')) {
-      problems.push(`The model “${judge}” does not answer typed judgments.`);
+      problems.push(`There is no model named “${decider}” to decide with.`);
+    } else if (!(model.capabilities ?? []).includes('decisions')) {
+      problems.push(`The model “${decider}” does not answer typed decisions.`);
     }
   }
   const run = new Set(app.checks.guards.map(idOf));

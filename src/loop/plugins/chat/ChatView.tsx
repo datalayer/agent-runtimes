@@ -53,8 +53,8 @@ import { ChatBase } from '../../../chat/base/ChatBase';
 import {
   offeredModels as offeredModelsFor,
   readServerCatalogue,
-  readServerJudgments,
-  type Judgments,
+  readServerDecisions,
+  type Decisions,
 } from '../../../chat/base/modelChoice';
 import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
 import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
@@ -1407,8 +1407,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const [catalogModels, setCatalogModels] = useState<ModelConfig[] | undefined>(
     undefined,
   );
-  // The typed-judgment models the runtime lists apart: shown, never picked.
-  const [judgments, setJudgments] = useState<Judgments | undefined>(undefined);
+  // The typed-decision models the runtime lists apart: shown, never picked.
+  const [decisions, setDecisions] = useState<Decisions | undefined>(undefined);
 
   useEffect(() => {
     /*
@@ -1438,7 +1438,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           // A runtime that did not answer offers nothing: the agentspecs
           // catalogue is not its answer.
           setCatalogModels(payload ? readServerCatalogue(payload) : []);
-          setJudgments(payload ? readServerJudgments(payload) : undefined);
+          setDecisions(payload ? readServerDecisions(payload) : undefined);
         }
       })
       // No catalogue is not an error worth a banner: the menu simply has
@@ -1465,7 +1465,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     () =>
       offeredModelsFor(catalogModels, () =>
         Object.values(AI_MODEL_CATALOGUE)
-          // A typed-judgment model answers typed questions, not a chat.
+          // A typed-decision model answers typed questions, not a chat.
           .filter(model => model.available && isChatModel(model))
           .map(model => ({
             id: model.id,
@@ -1636,7 +1636,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     agentUsage: contextUsage ?? undefined,
     showModelSelector: true,
     models: offeredModels,
-    judgments,
+    decisions,
     selectedModel: activeModel,
     onModelSelect: model => void selectModel(model),
     showToolsMenu: true,

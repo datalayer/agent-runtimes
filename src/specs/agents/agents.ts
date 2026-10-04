@@ -4585,7 +4585,7 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   id: 'example-simple',
   version: '0.0.1',
   name: 'A Simple Agent',
-  description: `A simple conversational agent. No tools, no MCP servers, no skills — just a helpful AI assistant you can chat with.`,
+  description: `A simple conversational agent with one tool, decide: it asks Jev typed questions (yes or no with a probability, a choice, a score) through datalayer-ai-inference. No MCP servers, no skills beyond events.`,
   tags: ['workflow', 'automation', 'analysis'],
   domain: undefined,
   enabled: true,
@@ -4597,7 +4597,7 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
       ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
       : undefined,
   ].filter(Boolean) as SkillSpec[],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  tools: [TOOL_MAP['runtime-echo:0.0.1'], TOOL_MAP['decide:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
@@ -4620,14 +4620,26 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
       text: 'Summarize the key points of a topic I describe',
       summary: 'Summarize a topic',
     },
+    {
+      text: "Is this support ticket urgent? 'Payouts have failed for 3 days.'",
+      summary: 'Decide: is it urgent?',
+    },
+    {
+      text: "Which team should handle: 'I was charged twice'? Billing, Tech or Sales.",
+      summary: 'Decide: which team?',
+    },
+    {
+      text: "Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
+      summary: 'Decide: score a review',
+    },
   ],
   welcomeMessage:
-    "Hi! I'm a simple assistant. I don't have any special tools, but I'm happy to chat, answer questions, and help you think through ideas.\n",
+    "Hi! I'm a simple assistant. I'm happy to chat, answer questions and help you think through ideas, and I can decide: ask me whether a ticket is urgent, which team should take it, or how positive a review is.\n",
   welcomeNotebook: undefined,
   welcomeDocument: undefined,
   sandboxVariant: 'jupyter-server',
   harness: 'pydantic-ai',
-  systemPrompt: `You are a helpful, friendly AI assistant. You do not have access to any external tools, MCP servers, or skills. Answer questions using your training knowledge, be concise, and let the user know if a question is outside your knowledge.
+  systemPrompt: `You are a helpful, friendly AI assistant. You have no MCP servers. You have a decide tool: when asked whether something holds (yes or no), which of named options fits, or where something sits on a scale, call decide with the text as the state and one typed question (noul, choice or score), then answer with what it decided and its probability or confidence. For anything else, answer from your training knowledge, be concise, and let the user know if a question is outside your knowledge.
 `,
   systemPromptCodemodeAddons: undefined,
   goal: undefined,

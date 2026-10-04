@@ -564,7 +564,7 @@ export interface AppDecisionSpec {
   criteria: AppCriterionSpec[];
   minConfidence: number;
   scenarios: AppScenarioSpec[];
-  judgmentModel: string;
+  decisionModel: string;
 }
 
 /**

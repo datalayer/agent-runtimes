@@ -13,8 +13,8 @@ from typing import Any
 
 from agent_runtimes.mcp.tools import tools_to_builtin_list
 from agent_runtimes.models.offered import (
-    JUDGMENTS_NOTE,
-    judgment_rows,
+    DECISIONS_NOTE,
+    decision_rows,
     model_rows,
     models_source,
 )
@@ -67,15 +67,15 @@ async def get_frontend_config(
         )
         models = model_rows(ids, tool_ids, inference_provider)
     source, note = models_source(inference_provider)
-    # The typed-judgment models, apart: listed, never a model to switch to.
-    judgments = [
+    # The typed-decision models, apart: listed, never a model to switch to.
+    decisions = [
         AIModelRuntime(
             id=row["id"],
             name=row["name"],
             is_available=row["available"],
             unavailable_reason=row["reason"],
         )
-        for row in judgment_rows(inference_provider)
+        for row in decision_rows(inference_provider)
     ]
 
     # Create response
@@ -87,8 +87,8 @@ async def get_frontend_config(
         disable_tool_approvals=disable_tool_approvals,
         models_source=source,
         models_note=note,
-        judgment_models=judgments,
-        judgments_note=JUDGMENTS_NOTE,
+        decision_models=decisions,
+        decisions_note=DECISIONS_NOTE,
     )
 
     logger.info(f"Built frontend config with {len(builtin_tools)} builtin_tools")

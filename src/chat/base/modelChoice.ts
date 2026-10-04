@@ -93,13 +93,13 @@ export type ServerCatalogueModel = {
 };
 
 /**
- * The typed-judgment models a runtime lists apart (Jev).
+ * The typed-decision models a runtime lists apart (Jev).
  *
  * They answer a decision's typed questions, not a conversation: the menu
  * shows them read-only, under their own heading, with `note` saying so, and
  * never offers one as the agent's model.
  */
-export type Judgments = {
+export type Decisions = {
   models: ModelConfig[];
   note: string;
 };
@@ -109,8 +109,8 @@ export type ServerCatalogue = {
   models?: ServerCatalogueModel[];
   source?: string;
   note?: string;
-  judgment_models: ServerCatalogueModel[];
-  judgments_note: string;
+  decision_models: ServerCatalogueModel[];
+  decisions_note: string;
 };
 
 /**
@@ -131,15 +131,15 @@ export function readServerCatalogue(
 }
 
 /**
- * The typed-judgment models of the runtime's answer, in the chat's shape.
+ * The typed-decision models of the runtime's answer, in the chat's shape.
  *
  * Read apart from `readServerCatalogue`, so no list a chat picks its model
  * from ever holds one.
  */
-export function readServerJudgments(payload: ServerCatalogue): Judgments {
+export function readServerDecisions(payload: ServerCatalogue): Decisions {
   return {
-    models: payload.judgment_models.map(readServerModel),
-    note: payload.judgments_note,
+    models: payload.decision_models.map(readServerModel),
+    note: payload.decisions_note,
   };
 }
 

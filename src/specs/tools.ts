@@ -57,6 +57,26 @@ export const CURRENT_TIME_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🕒',
 };
 
+export const DECIDE_TOOL_SPEC_0_0_1: ToolSpec = {
+  id: 'decide',
+  version: '0.0.1',
+  name: 'Decide',
+  description:
+    'Ask Jev typed questions about a text — noul (does a statement hold, with its probability), choice (one of named options) or score (a step on a rubric) — and get the typed answers back, through datalayer-ai-inference.',
+  tags: ['runtime', 'decisions', 'jev'],
+  enabled: true,
+  approval: 'auto',
+  timeout: undefined,
+  requiresApproval: false,
+  runtime: {
+    language: 'python',
+    package: 'agent_runtimes.tools.decisions',
+    method: 'decide',
+  },
+  icon: 'law',
+  emoji: '⚖️',
+};
+
 export const DISPLAY_RECIPE_TOOL_SPEC_0_0_1: ToolSpec = {
   id: 'display-recipe',
   version: '0.0.1',
@@ -381,6 +401,7 @@ export const UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1: ToolSpec = {
 export const TOOL_CATALOG: Record<string, ToolSpec> = {
   'create-plan': CREATE_PLAN_TOOL_SPEC_0_0_1,
   'current-time': CURRENT_TIME_TOOL_SPEC_0_0_1,
+  decide: DECIDE_TOOL_SPEC_0_0_1,
   'display-recipe': DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
   'example-create-plan': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
   'example-current-time': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,

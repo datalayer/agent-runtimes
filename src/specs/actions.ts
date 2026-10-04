@@ -34,6 +34,7 @@ export const ACTION_CLASSES: ActionClass[] = [
 export const TOOL_ACTIONS: Record<string, ActionClass[]> = {
   'create-plan': ['read'],
   'current-time': ['read'],
+  decide: ['read'],
   'display-recipe': ['read'],
   'example-create-plan': ['read'],
   'example-current-time': ['read'],

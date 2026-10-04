@@ -19,7 +19,7 @@ import {
   isOffered,
   offeredModels,
   readServerCatalogue,
-  readServerJudgments,
+  readServerDecisions,
   usableModels,
 } from './modelChoice';
 
@@ -166,7 +166,7 @@ describe("the runtime's answer", () => {
   });
 });
 
-describe('the typed-judgment models, read apart', () => {
+describe('the typed-decision models, read apart', () => {
   // `/configure/models` on a runtime through ai-inference on r1, 2026-10-04.
   const payload = {
     source: 'ai-inference',
@@ -175,7 +175,7 @@ describe('the typed-judgment models, read apart', () => {
       { id: 'bedrock:us.anthropic.claude-sonnet-4-6', available: true },
       { id: 'alibaba:qwen-max', available: true },
     ],
-    judgment_models: [
+    decision_models: [
       {
         id: 'cloudflare:wrk/typesafe/jev',
         name: 'Jev (Cloudflare Workers AI)',
@@ -183,7 +183,7 @@ describe('the typed-judgment models, read apart', () => {
         reason: null,
       },
     ],
-    judgments_note:
+    decisions_note:
       "Answers a decision's typed questions (yes or no, a choice, a score); agents do not chat with it.",
   };
 
@@ -197,7 +197,7 @@ describe('the typed-judgment models, read apart', () => {
   });
 
   it('come with their sentence, and their reason when not usable', () => {
-    expect(readServerJudgments(payload)).toEqual({
+    expect(readServerDecisions(payload)).toEqual({
       models: [
         {
           id: 'cloudflare:wrk/typesafe/jev',
@@ -205,11 +205,11 @@ describe('the typed-judgment models, read apart', () => {
           isAvailable: true,
         },
       ],
-      note: payload.judgments_note,
+      note: payload.decisions_note,
     });
-    const waiting = readServerJudgments({
+    const waiting = readServerDecisions({
       ...payload,
-      judgment_models: [
+      decision_models: [
         {
           id: 'cloudflare:wrk/typesafe/jev',
           name: 'Jev (Cloudflare Workers AI)',

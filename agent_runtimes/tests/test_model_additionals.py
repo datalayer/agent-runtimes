@@ -3,7 +3,7 @@
 
 """An agent's models: its ``model`` and ``model_additionals``.
 
-Judged on what datalayer-ai-inference says it serves.
+Read against what datalayer-ai-inference says it serves.
 """
 
 from __future__ import annotations
@@ -85,7 +85,7 @@ class TestWhatAiInferenceServes:
         assert offered.catalogue_id("bedrock/no-such-model") is None
 
     def test_the_three_providers_read_as_the_catalogue_names_them(self) -> None:
-        """Bedrock, Model Studio and Workers AI — Jev, a judgment model, apart."""
+        """Bedrock, Model Studio and Workers AI — Jev, a decision model, apart."""
         payload = {
             **LIVE_PAYLOAD,
             "alibaba_models": ["alibaba/qwen-max"],
@@ -95,7 +95,7 @@ class TestWhatAiInferenceServes:
             ],
         }
         assert sorted(offered.read_served(payload)) == sorted([SONNET, QWEN])
-        assert offered.read_judgments(payload) == []
+        assert offered.read_decisions(payload) == []
 
     def test_the_live_answer_reads_as_one_model(self) -> None:
         assert offered.read_served(LIVE_PAYLOAD) == [SONNET]

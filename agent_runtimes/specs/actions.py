@@ -21,6 +21,7 @@ ACTION_CLASSES: List[str] = ["read", "write", "send", "buy", "delete", "publish"
 TOOL_ACTIONS: Dict[str, List[str]] = {
     "create-plan": ["read"],
     "current-time": ["read"],
+    "decide": ["read"],
     "display-recipe": ["read"],
     "example-create-plan": ["read"],
     "example-current-time": ["read"],

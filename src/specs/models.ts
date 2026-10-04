@@ -389,7 +389,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
     'AWS_DEFAULT_REGION',
   ],
   tokensLimit: 64000,
-  capabilities: ['chat', 'tools', 'judge'],
+  capabilities: ['chat', 'tools', 'decider'],
   contextWindow: 200000,
 };
 
@@ -416,13 +416,13 @@ export const CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1: AIModel = {
   version: '0.0.1',
   name: 'Jev (Cloudflare AI Gateway)',
   description:
-    "Typesafe's typed-judgment model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
+    "Typesafe's typed-decision model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
   provider: 'cloudflare',
   providerUrl: 'https://docs.typesafe.ai/models',
   default: false,
   available: true,
   requiredEnvVars: [],
-  capabilities: ['judgments'],
+  capabilities: ['decisions'],
   billing: 'credits',
   route: 'ai-gateway',
   contextWindow: 32000,
@@ -483,7 +483,7 @@ export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: [],
   tokensLimit: 32768,
-  capabilities: ['chat', 'tools', 'codemode', 'judge'],
+  capabilities: ['chat', 'tools', 'codemode', 'decider'],
   billing: 'standard',
   route: 'workers-ai',
   contextWindow: 128000,
@@ -555,13 +555,13 @@ export const CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1: AIModel = {
   version: '0.0.1',
   name: 'Jev (Cloudflare Workers AI)',
   description:
-    "Typesafe's typed-judgment model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
+    "Typesafe's typed-decision model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
   provider: 'cloudflare',
   providerUrl: 'https://docs.typesafe.ai/models',
   default: false,
   available: true,
   requiredEnvVars: [],
-  capabilities: ['judgments'],
+  capabilities: ['decisions'],
   billing: 'credits',
   route: 'workers-ai',
   contextWindow: 32000,
@@ -778,12 +778,12 @@ export function getModel(modelId: string): AIModel | undefined {
 }
 
 /**
- * A model a chat can run on: not a typed-judgment model (Jev), which
+ * A model a chat can run on: not a typed-decision model (Jev), which
  * answers typed questions about a state and nothing else. A spec that
  * states no capability is read as a chat model.
  */
 export function isChatModel(model: AIModel): boolean {
-  return !(model.capabilities ?? []).includes('judgments');
+  return !(model.capabilities ?? []).includes('decisions');
 }
 
 /** The models a person choosing a chat model is offered from. */

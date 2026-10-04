@@ -356,7 +356,7 @@ function parseDecision(data: Data): AppDecisionSpec {
         ),
       ),
     })),
-    judgmentModel: text(data.judgment_model),
+    decisionModel: text(data.decision_model),
   };
 }
 
@@ -667,7 +667,7 @@ function dumpDecision(decision: AppDecisionSpec): Data {
             .part('weights', sorted(scenario.weights) as Data).data,
       ),
     )
-    .text('judgment_model', decision.judgmentModel).data;
+    .text('decision_model', decision.decisionModel).data;
 }
 
 /**

@@ -51,7 +51,7 @@ CAMEL = {
     "composed_by": "composedBy",
     "composed_at": "composedAt",
     "min_confidence": "minConfidence",
-    "judgment_model": "judgmentModel",
+    "decision_model": "decisionModel",
 }
 
 #: The keys whose value is carried as it is written: a component tree, weights by name.

@@ -2404,14 +2404,14 @@ async def create_agent(
             # makes through ai-inference, so its owner reads what each
             # application and deployment spent (LOOP R-09).
             serving_app = request.app_instance if running_app is not None else None
-            # A typed-judgment model, or a model ai-inference said it does
+            # A typed-decision model, or a model ai-inference said it does
             # not serve, is refused here, in a sentence, rather than at the
             # first message.
-            from ..models.offered import inference_refusal, judgment_refusal
+            from ..models.offered import decision_refusal, inference_refusal
 
-            judgment = judgment_refusal(request.model, switch=False)
-            if judgment:
-                raise HTTPException(status_code=400, detail=judgment)
+            decision = decision_refusal(request.model, switch=False)
+            if decision:
+                raise HTTPException(status_code=400, detail=decision)
             refusal = inference_refusal(request.model, request.inference_provider)
             if refusal:
                 raise HTTPException(status_code=400, detail=f"{refusal}.")
@@ -4867,21 +4867,21 @@ async def configure_from_spec_endpoint(
     specs_changed = stored_spec != new_spec_dict
 
     if specs_changed:
-        # A typed-judgment model, or a model ai-inference does not serve, is
+        # A typed-decision model, or a model ai-inference does not serve, is
         # refused before the agent in place is deleted: a refused switch
         # leaves it as it was.
         from ..models.offered import (
             agent_inference_provider,
+            decision_refusal,
             inference_refusal,
-            judgment_refusal,
         )
 
         wanted_model = body.model or (body.agent_spec or {}).get("model") or spec.model
-        judgment = (
-            judgment_refusal(str(wanted_model), switch=True) if wanted_model else None
+        decision = (
+            decision_refusal(str(wanted_model), switch=True) if wanted_model else None
         )
-        if judgment:
-            raise HTTPException(status_code=400, detail=judgment)
+        if decision:
+            raise HTTPException(status_code=400, detail=decision)
         refusal = (
             inference_refusal(
                 str(wanted_model), agent_inference_provider(target_agent_name)

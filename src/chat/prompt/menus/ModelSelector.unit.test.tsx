@@ -4,9 +4,9 @@
  */
 
 /**
- * The model menu's Judgments group: Jev shown, read-only.
+ * The model menu's Decisions group: Jev shown, read-only.
  *
- * A typed-judgment model answers a decision's questions, not a conversation:
+ * A typed-decision model answers a decision's questions, not a conversation:
  * its row says so and selects nothing.
  */
 
@@ -14,8 +14,8 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ActionList } from '@primer/react';
 import { describe, expect, it } from 'vitest';
-import { JudgmentsGroup } from './ModelSelector';
-import type { Judgments } from '../../base/modelChoice';
+import { DecisionsGroup } from './ModelSelector';
+import type { Decisions } from '../../base/modelChoice';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -34,7 +34,7 @@ async function render(element: React.ReactElement) {
   return { container, root };
 }
 
-const judgments = (isAvailable: boolean, reason?: string): Judgments => ({
+const decisions = (isAvailable: boolean, reason?: string): Decisions => ({
   models: [
     {
       id: 'cloudflare:wrk/typesafe/jev',
@@ -46,16 +46,16 @@ const judgments = (isAvailable: boolean, reason?: string): Judgments => ({
   note: NOTE,
 });
 
-describe('the Judgments group', () => {
+describe('the Decisions group', () => {
   it('lists Jev under its heading, with its sentence, and selects nothing', async () => {
     const { container, root } = await render(
       // As the menu draws it: an ActionMenu's list is a menu.
       <ActionList role="menu" selectionVariant="single">
-        <JudgmentsGroup judgments={judgments(true)} />
+        <DecisionsGroup decisions={decisions(true)} />
       </ActionList>,
     );
     const text = container.textContent ?? '';
-    expect(text).toContain('Judgments');
+    expect(text).toContain('Decisions');
     expect(text).toContain('Jev (Cloudflare Workers AI)');
     expect(text).toContain(NOTE);
     const item = [...container.querySelectorAll('li')].find(li =>
@@ -73,7 +73,7 @@ describe('the Judgments group', () => {
   it('says why it cannot be used, as the models above do', async () => {
     const { container, root } = await render(
       <ActionList role="menu">
-        <JudgmentsGroup judgments={judgments(false, 'No ai-inference token')} />
+        <DecisionsGroup decisions={decisions(false, 'No ai-inference token')} />
       </ActionList>,
     );
     expect(container.textContent).toContain(`No ai-inference token · ${NOTE}`);

@@ -467,8 +467,8 @@ class AIModel(BaseModel):
         default_factory=list,
         description=(
             "What the model can be trusted with: 'chat', 'tools', 'codemode', "
-            "'vision', 'thinking', 'judgments' (a typed-judgment model), "
-            "'judge' (a chat model that may be asked those questions). "
+            "'vision', 'thinking', 'decisions' (a typed-decision model), "
+            "'decider' (a chat model that may be asked those questions). "
             "Empty means unstated rather than incapable. "
             "A small local model that lists no 'tools' is warned about at "
             "selection instead of failing mysteriously mid-run."
@@ -1291,18 +1291,18 @@ class FrontendConfig(BaseModel):
         description="That decision in a sentence",
         alias="modelsNote",
     )
-    judgment_models: List[AIModelRuntime] = Field(
+    decision_models: List[AIModelRuntime] = Field(
         default_factory=list,
         description=(
-            "The typed-judgment models ai-inference serves (Jev), apart from "
+            "The typed-decision models ai-inference serves (Jev), apart from "
             "the models on offer: a decision asks them, no agent runs on them"
         ),
-        alias="judgmentModels",
+        alias="decisionModels",
     )
-    judgments_note: Optional[str] = Field(
+    decisions_note: Optional[str] = Field(
         default=None,
-        description="What a typed-judgment model is for, in a sentence",
-        alias="judgmentsNote",
+        description="What a typed-decision model is for, in a sentence",
+        alias="decisionsNote",
     )
     default_model: Optional[str] = Field(
         default=None,
@@ -2309,7 +2309,7 @@ class AppTriggerSpec(BaseModel):
 
 
 class AppCriterionSpec(BaseModel):
-    """What an alternative is judged on."""
+    """What an alternative is weighed on."""
 
     name: str
     kind: str = Field(default="metric")
@@ -2335,7 +2335,7 @@ class AppDecisionSpec(BaseModel):
     criteria: List[AppCriterionSpec] = Field(default_factory=list)
     min_confidence: float = Field(default=0)
     scenarios: List[AppScenarioSpec] = Field(default_factory=list)
-    judgment_model: str = Field(default="")
+    decision_model: str = Field(default="")
 
 
 class AppSpec(BaseModel):

@@ -371,9 +371,9 @@ async def list_catalog_models(
     A model installed locally with no spec is reported separately, as an
     invitation to add a spec — never as a silent option.
 
-    The typed-judgment models ai-inference lists (Jev) come apart, in
-    ``judgment_models`` with ``judgments_note``: a decision asks them through
-    ``/judgments``, and no agent may be switched to one.
+    The typed-decision models ai-inference lists (Jev) come apart, in
+    ``decision_models`` with ``decisions_note``: a decision asks them through
+    ``/decisions``, and no agent may be switched to one.
     """
     from agent_runtimes.models.local import (
         LOCAL_PROVIDERS,
@@ -382,10 +382,10 @@ async def list_catalog_models(
         split_model_id,
     )
     from agent_runtimes.models.offered import (
-        JUDGMENTS_NOTE,
+        DECISIONS_NOTE,
         agent_inference_provider,
         availability,
-        judgment_rows,
+        decision_rows,
         load_inference_models,
         models_source,
         offered_model_ids,
@@ -406,7 +406,7 @@ async def list_catalog_models(
     models: list[dict[str, Any]] = []
     catalogued_local: set[tuple[str, str]] = set()
 
-    # A chat picker's models: a typed-judgment model (Jev) is not one.
+    # A chat picker's models: a typed-decision model (Jev) is not one.
     offered = (
         [
             spec
@@ -495,8 +495,8 @@ async def list_catalog_models(
         "models": models,
         "source": source,
         "note": note,
-        "judgment_models": judgment_rows(provider),
-        "judgments_note": JUDGMENTS_NOTE,
+        "decision_models": decision_rows(provider),
+        "decisions_note": DECISIONS_NOTE,
         "local_runtimes": runtimes,
         "uncatalogued_local": uncatalogued,
     }
@@ -623,7 +623,7 @@ async def get_configuration(
             logger.debug(f"Got {len(mcp_servers)} servers from mcp_manager (fallback)")
 
         # The models on offer: an agent's own (its model and model_additionals),
-        # judged on what ai-inference said it serves.
+        # read against what ai-inference said it serves.
         from agent_runtimes.models.offered import (
             agent_inference_provider,
             load_inference_models,

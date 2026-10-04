@@ -276,7 +276,7 @@ class TestModelsCommand:
                                     "ollama:gemma3:4b",
                                 )
                             ],
-                            "judgment_models": [],
+                            "decision_models": [],
                         }
                     )
                 # The agent's creation spec, as the runtime answers it.

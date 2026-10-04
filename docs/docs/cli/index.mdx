@@ -109,11 +109,24 @@ loop --cloud -a crawler "Summarize the news"  # one query, then the runtime is s
 A runtime on Datalayer calls its models **through datalayer-ai-inference, with your own token**. It never calls a provider such as Bedrock with keys of its own:
 
 - **Every agent goes through ai-inference.** This holds whatever its agentspec's `inference_provider` says. An agentspec that says `local`, such as `example-simple`, still runs locally on your machine, and on Datalayer through ai-inference.
-- **The token is yours, narrowed to ai-inference.** When the runtime is assigned to you, IAM mints it from your session. It can call ai-inference's chat completions, its model list and its judgments, and every other Datalayer service refuses it. It lasts as long as the runtime's reservation. Every model call is metered on your account, as a call from the Datalayer UI is.
+- **The token is yours, narrowed to ai-inference.** When the runtime is assigned to you, IAM mints it from your session. It can call ai-inference's chat completions, its model list and its decisions, and every other Datalayer service refuses it. It lasts as long as the runtime's reservation. Every model call is metered on your account, as a call from the Datalayer UI is.
 - **What is offered is what ai-inference serves.** With your token, the runtime asks ai-inference which models it serves, and offers your agent those of its agentspec's `model` and `model_additionals` that ai-inference serves, such as Qwen (`alibaba:qwen-max`) beside Claude Sonnet.
 - **Before the token arrives, nothing is called.** A runtime waiting in the pool has no user, so it has no token yet. Until it is assigned, `/models` says `This runtime has no ai-inference token yet: …`, every model is marked `No ai-inference token`, and a message fails with that sentence.
-- **Judgments are listed apart.** ai-inference also serves typed-judgment models, such as Jev on Workers AI (`cloudflare:wrk/typesafe/jev`). `/models` lists them under **Judgments**, with one line saying what they are for: they answer a decision's typed questions, and agents do not chat with them. Each is marked usable when ai-inference serves it, by the same rule as the chat models: before the token arrives, it is listed and marked `No ai-inference token`. `/models cloudflare:wrk/typesafe/jev` is refused: `cloudflare:wrk/typesafe/jev answers typed judgments, not a conversation: an agent cannot run on it, so nothing was switched. A decision asks it through /judgments.` The agent stays as it was.
+- **Decisions are listed apart.** ai-inference also serves typed-decision models, such as Jev on Workers AI (`cloudflare:wrk/typesafe/jev`). `/models` lists them under **Decisions**, with one line saying what they are for: they answer a decision's typed questions, and agents do not chat with them. Each is marked usable when ai-inference serves it, by the same rule as the chat models: before the token arrives, it is listed and marked `No ai-inference token`. `/models cloudflare:wrk/typesafe/jev` is refused: `cloudflare:wrk/typesafe/jev answers typed decisions, not a conversation: an agent cannot run on it, so nothing was switched. A decision asks it through /decisions.` The agent stays as it was.
 - **When the token expires, the runtime stops calling models.** If a runtime outlives its token, it says when the token expired and calls no model any more. Start a new runtime.
+
+#### The decide tool
+
+An agent decides with Jev through its `decide` tool (agentspecs `tools/decide.yaml`). *A Simple Agent* (`example-simple`), the default cloud agent, has it, and suggests three decisions to try: is a support ticket urgent, which team should handle a request, how positive a review is.
+
+- **What it asks.** A text, the *state*, and one or more named questions about it, each of a type: `noul` (does a statement hold — answered with its probability), `choice` (which of at least two options — a probability per option and a confidence) or `score` (which step of at least two, lowest first — a probability per step and a confidence). The agent reads the typed answers back and says what was decided.
+- **Where it goes.** To ai-inference's `POST /decisions`, model `cloudflare:wrk/typesafe/jev`, with the runtime's ai-inference token — the one its model calls use. With no token, or no ai-inference configured (`DATALAYER_AI_INFERENCE_URL`), it asks nothing and the agent is told why in a sentence (`Nothing was decided. This runtime has no ai-inference token yet: …`).
+- **It only reads.** Its action class is `read`: it reaches nothing but ai-inference and changes nothing.
+
+```bash
+loop --local -a example-simple --no-codemode \
+  --prompt "Is this support ticket urgent? 'Payouts have failed for 3 days.' Use your decision tool."
+```
 
 #### Slash commands on a cloud runtime
 
@@ -154,7 +167,7 @@ It runs **on this machine** unless you say `--cloud`:
 | `2` | A choice would need asking, such as no `-a` on this machine. |
 | `130` | You pressed Ctrl-C. The runtime is still stopped, unless `--keep`. |
 
-A slash command that **refuses** what it is asked has not failed: it did its job. `/models <id>` with a model the runtime does not offer, or with a typed-judgment model such as `cloudflare:wrk/typesafe/jev`, prints its refusal (`… nothing was switched.`) and the run goes on to the next line, with exit code `0` at the end.
+A slash command that **refuses** what it is asked has not failed: it did its job. `/models <id>` with a model the runtime does not offer, or with a typed-decision model such as `cloudflare:wrk/typesafe/jev`, prints its refusal (`… nothing was switched.`) and the run goes on to the next line, with exit code `0` at the end.
 
 Check what a Datalayer runtime offers, switch to Qwen, ask it who it is, then try a model the runtime does not serve:
 
@@ -176,7 +189,7 @@ Its standard output has this shape (the runtime's name, the models offered and t
     ● bedrock:us.anthropic.claude-sonnet-4-6
     ● alibaba:qwen-max
 
-  Judgments
+  Decisions
     Answers a decision's typed questions (yes or no, a choice, a score); agents do not chat with it.
     ● cloudflare:wrk/typesafe/jev
         Jev (Cloudflare Workers AI)
@@ -264,7 +277,7 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/tools` | `Esc T` | List available tools |
 | `/mcp-servers` | `Esc M` | List MCP servers |
 | `/skills` | `Esc K` | List available skills |
-| `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer, and apart, under Judgments, the typed-judgment models ai-inference serves (no agent runs on them); `/models <id>` switches to one it can use. From a script: [Run without interaction](#run-without-interaction) |
+| `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer, and apart, under Decisions, the typed-decision models ai-inference serves (no agent runs on them); `/models <id>` switches to one it can use. From a script: [Run without interaction](#run-without-interaction) |
 | `/codemode-toggle` | `Esc O` | Toggle codemode on/off |
 | `/agents` | `Esc A` | List agents on the server |
 | `/tools-last` | `Esc L` | Show tool calls from last response |

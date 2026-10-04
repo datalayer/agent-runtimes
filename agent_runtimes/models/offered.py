@@ -12,7 +12,7 @@ startup (``GET {ai-inference}/models``), and kept.
 When the service is not asked (no ``DATALAYER_AI_INFERENCE_URL``) or does not
 answer, that is said in a sentence — logged, and carried by the config the
 chat and the CLI read (``source`` ``local`` and its ``note``) — and the models
-are then judged on this runtime's own configuration alone: its keys and the
+are then those of this runtime's own configuration alone: its keys and the
 catalogue's entitlement, unchecked against the service.
 
 **The token.** A runtime calls ai-inference with a token. On Datalayer it is
@@ -24,8 +24,8 @@ it has none, says so in a sentence, and calls no model — it never falls back
 to keys of its own. Elsewhere (a runtime started by hand) it is
 ``DATALAYER_AI_INFERENCE_API_KEY``, else ``DATALAYER_API_KEY``.
 
-**Judgments.** ai-inference also lists, apart, the typed-judgment models it
-serves (``judgment_models``: Jev on Workers AI). They answer a decision's
+**Decisions.** ai-inference also lists, apart, the typed-decision models it
+serves (``decision_models``: Jev on Workers AI). They answer a decision's
 typed questions and nothing else, so they are kept apart from the models an
 agent may run on: listed under their own name, never offered for a switch,
 and an agent asked to run on one is refused in a sentence.
@@ -68,8 +68,8 @@ class InferenceModels:
     url: str | None
     #: The answer in a sentence, for the log and for whoever lists models.
     note: str
-    #: Catalogue ids of the typed-judgment models it lists; ``None`` when unknown.
-    judgments: tuple[str, ...] | None = None
+    #: Catalogue ids of the typed-decision models it lists; ``None`` when unknown.
+    decisions: tuple[str, ...] | None = None
 
 
 _state: InferenceModels | None = None
@@ -94,18 +94,18 @@ def catalogue_id(name: str) -> str | None:
     return spec.id if spec is not None else None
 
 
-#: The key under which ai-inference lists its typed-judgment models.
-JUDGMENT_MODELS_KEY = "judgment_models"
+#: The key under which ai-inference lists its typed-decision models.
+DECISION_MODELS_KEY = "decision_models"
 
-#: What a typed-judgment model is for, in the line that lists them.
-JUDGMENTS_NOTE = (
+#: What a typed-decision model is for, in the line that lists them.
+DECISIONS_NOTE = (
     "Answers a decision's typed questions (yes or no, a choice, a score); "
     "agents do not chat with it."
 )
 
 
-def _catalogue_ids(names: list[Any], judgments: bool) -> list[str]:
-    """The catalogue ids of ``names``: its chat models, or its judgment models."""
+def _catalogue_ids(names: list[Any], decisions: bool) -> list[str]:
+    """The catalogue ids of ``names``: its chat models, or its decision models."""
     from agent_runtimes.specs.models import get_model, is_chat_model
 
     ids: list[str] = []
@@ -119,7 +119,7 @@ def _catalogue_ids(names: list[Any], judgments: bool) -> list[str]:
             )
             continue
         spec = get_model(model_id)
-        if spec is None or is_chat_model(spec) == judgments:
+        if spec is None or is_chat_model(spec) == decisions:
             continue
         if model_id not in ids:
             ids.append(model_id)
@@ -133,28 +133,28 @@ def read_served(payload: Mapping[str, Any]) -> list[str]:
     them, each provider's chat models it serves under ``<provider>_models``
     (``bedrock_anthropic_models``, ``alibaba_models``, ``cloudflare_models``:
     Bedrock as ``bedrock/<id>``, Model Studio as ``alibaba/<id>``, Workers AI
-    as ``cloudflare:wrk/<vendor>/<model>``). Its ``judgment_models`` are not
-    read here (``read_judgments``), and a typed-judgment model listed anywhere
+    as ``cloudflare:wrk/<vendor>/<model>``). Its ``decision_models`` are not
+    read here (``read_decisions``), and a typed-decision model listed anywhere
     is never a chat model; a name the catalogue does not know is left out.
     """
     names: list[Any] = list(payload.get("models") or [])
     for key, value in payload.items():
         if (
             key.endswith("_models")
-            and key != JUDGMENT_MODELS_KEY
+            and key != DECISION_MODELS_KEY
             and isinstance(value, list)
         ):
             names.extend(value)
-    return _catalogue_ids(names, judgments=False)
+    return _catalogue_ids(names, decisions=False)
 
 
-def read_judgments(payload: Mapping[str, Any]) -> list[str]:
-    """The catalogue ids of the typed-judgment models ai-inference lists.
+def read_decisions(payload: Mapping[str, Any]) -> list[str]:
+    """The catalogue ids of the typed-decision models ai-inference lists.
 
-    Its ``judgment_models``, e.g. ``cloudflare:wrk/typesafe/jev``; a name the
+    Its ``decision_models``, e.g. ``cloudflare:wrk/typesafe/jev``; a name the
     catalogue does not know, or knows as a chat model, is left out.
     """
-    value = payload.get(JUDGMENT_MODELS_KEY)
+    value = payload.get(DECISION_MODELS_KEY)
     return _catalogue_ids(list(value) if isinstance(value, list) else [], True)
 
 
@@ -315,7 +315,7 @@ async def load_inference_models(*, refresh: bool = False) -> InferenceModels:
             if not isinstance(payload, dict):
                 raise ValueError("its answer is not an object")
             served = read_served(payload)
-            judgments = read_judgments(payload)
+            decisions = read_decisions(payload)
         except Exception as error:  # noqa: BLE001 - said in a sentence, below
             _state = InferenceModels(
                 served=None,
@@ -331,7 +331,7 @@ async def load_inference_models(*, refresh: bool = False) -> InferenceModels:
 
         _state = InferenceModels(
             served=tuple(served),
-            judgments=tuple(judgments),
+            decisions=tuple(decisions),
             url=url,
             note=(
                 f"ai-inference at {url} serves {', '.join(served)}."
@@ -414,9 +414,9 @@ def availability(
     return True, None
 
 
-def judgment_refusal(model_id: str, *, switch: bool) -> str | None:
+def decision_refusal(model_id: str, *, switch: bool) -> str | None:
     """
-    Why an agent cannot run on a typed-judgment model, in a sentence, or ``None``.
+    Why an agent cannot run on a typed-decision model, in a sentence, or ``None``.
 
     Parameters
     ----------
@@ -429,7 +429,7 @@ def judgment_refusal(model_id: str, *, switch: bool) -> str | None:
     Returns
     -------
     str | None
-        The sentence, for a typed-judgment model (Jev); ``None`` for any other.
+        The sentence, for a typed-decision model (Jev); ``None`` for any other.
     """
     from agent_runtimes.specs.models import get_model, is_chat_model
 
@@ -438,14 +438,14 @@ def judgment_refusal(model_id: str, *, switch: bool) -> str | None:
         return None
     outcome = ", so nothing was switched" if switch else ""
     return (
-        f"{spec.id} answers typed judgments, not a conversation: an agent "
-        f"cannot run on it{outcome}. A decision asks it through /judgments."
+        f"{spec.id} answers typed decisions, not a conversation: an agent "
+        f"cannot run on it{outcome}. A decision asks it through /decisions."
     )
 
 
-def judgment_model_ids(inference_provider: str | None = None) -> list[str]:
+def decision_model_ids(inference_provider: str | None = None) -> list[str]:
     """
-    The typed-judgment models to list, apart from the models an agent may run on.
+    The typed-decision models to list, apart from the models an agent may run on.
 
     Parameters
     ----------
@@ -463,24 +463,24 @@ def judgment_model_ids(inference_provider: str | None = None) -> list[str]:
     from agent_runtimes.specs.models import is_chat_model, list_models
 
     state = _state
-    if state is not None and state.judgments is not None:
-        return list(state.judgments)
+    if state is not None and state.decisions is not None:
+        return list(state.decisions)
     provider = inference_provider or effective_inference_provider()
     if provider == "datalayer" and inference_token_refusal():
         return [model.id for model in list_models() if not is_chat_model(model)]
     return []
 
 
-def judgment_availability(
+def decision_availability(
     model_id: str, inference_provider: str | None = None
 ) -> tuple[bool, str | None]:
     """
-    Whether a decision can ask a typed-judgment model here, and why not.
+    Whether a decision can ask a typed-decision model here, and why not.
 
     Parameters
     ----------
     model_id : str
-        A typed-judgment model of the catalogue.
+        A typed-decision model of the catalogue.
     inference_provider : str | None
         Where the agent's inference goes; the runtime's when ``None``.
 
@@ -496,16 +496,16 @@ def judgment_availability(
     if provider == "datalayer" and inference_token_refusal():
         return False, "No ai-inference token"
     state = _state
-    if state is None or state.judgments is None:
+    if state is None or state.decisions is None:
         return False, "Not listed by ai-inference"
-    if model_id in state.judgments:
+    if model_id in state.decisions:
         return True, None
     return False, "Not served by ai-inference"
 
 
-def judgment_rows(inference_provider: str | None = None) -> list[dict[str, Any]]:
+def decision_rows(inference_provider: str | None = None) -> list[dict[str, Any]]:
     """
-    The typed-judgment models listed apart, each saying whether it can be used.
+    The typed-decision models listed apart, each saying whether it can be used.
 
     Parameters
     ----------
@@ -521,11 +521,11 @@ def judgment_rows(inference_provider: str | None = None) -> list[dict[str, Any]]
     from agent_runtimes.specs.models import get_model
 
     rows: list[dict[str, Any]] = []
-    for model_id in judgment_model_ids(inference_provider):
+    for model_id in decision_model_ids(inference_provider):
         spec = get_model(model_id)
         if spec is None:
             continue
-        usable, reason = judgment_availability(spec.id, inference_provider)
+        usable, reason = decision_availability(spec.id, inference_provider)
         rows.append(
             {
                 "id": spec.id,
@@ -534,7 +534,7 @@ def judgment_rows(inference_provider: str | None = None) -> list[dict[str, Any]]
                 "provider": spec.provider,
                 "available": usable,
                 "reason": reason,
-                "refusal": judgment_refusal(spec.id, switch=True),
+                "refusal": decision_refusal(spec.id, switch=True),
             }
         )
     return rows
@@ -630,13 +630,13 @@ def model_refusal(
 ) -> str | None:
     """Why an agent may not be switched to a model, in a sentence, or ``None``.
 
-    A typed-judgment model is refused first, whoever names it; a model that
+    A typed-decision model is refused first, whoever names it; a model that
     is not one of the agent's is refused; so is one the agent's inference
     does not serve, when ai-inference said what it serves.
     """
-    judgment = judgment_refusal(model_id, switch=True)
-    if judgment:
-        return judgment
+    decision = decision_refusal(model_id, switch=True)
+    if decision:
+        return decision
     offered = offered_model_ids(agent_id)
     if offered is not None and _canonical(model_id) not in {
         _canonical(m) for m in offered
@@ -687,7 +687,7 @@ def model_rows(
     for model_id in model_ids:
         spec = get_model(model_id)
         if spec is not None and not is_chat_model(spec):
-            # A typed-judgment model is listed apart (``judgment_rows``).
+            # A typed-decision model is listed apart (``decision_rows``).
             continue
         usable, reason = availability(model_id, inference_provider)
         rows.append(

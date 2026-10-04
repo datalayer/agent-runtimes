@@ -58,19 +58,19 @@ the rows around it:
   that sentence. Only an in-page agent, with no runtime to ask, offers the
   catalogue's available chat models instead.
 
-  Under the models, the menu shows a **Judgments** group, read-only: the
-  typed-judgment models ai-inference serves, such as Jev on Workers AI
+  Under the models, the menu shows a **Decisions** group, read-only: the
+  typed-decision models ai-inference serves, such as Jev on Workers AI
   (`cloudflare:wrk/typesafe/jev`, named as the agentspecs catalogue names it,
   *Jev (Cloudflare Workers AI)*). The runtime answers them apart, in
-  `judgmentModels` with `judgmentsNote` (`judgment_models` and
-  `judgments_note` on `/api/v1/configure/models`), never among `models`, so
+  `decisionModels` with `decisionsNote` (`decision_models` and
+  `decisions_note` on `/api/v1/configure/models`), never among `models`, so
   no row of the group can be picked as the agent's model. Each row says what
   it is for: it answers a decision's typed questions, and agents do not chat
   with it; when it cannot be used, it says why first, as the models above do
   (`No ai-inference token` on a runtime waiting for its token). A decision
-  asks it through ai-inference's `/judgments`, which this does not change. A
+  asks it through ai-inference's `/decisions`, which this does not change. A
   request naming it as the agent's model is refused with a 400: `… answers
-  typed judgments, not a conversation: an agent cannot run on it …`.
+  typed decisions, not a conversation: an agent cannot run on it …`.
 - **The context band**: `ContextPie` and the token counts, shown as soon as
   the agent accounts for itself.
 - **`draggable`** wraps the whole prompt in `FloatingCard`: an absolutely
