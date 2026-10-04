@@ -25,6 +25,10 @@ What a call is, before it is decided:
 Anything else is unknown, and unknown is left to the person, unless the
 session says what it does (`extra_classes`).
 
+Before that, the agent is given only the tools of its servers that the
+application's connections give, at their level (`prepare_tools`,
+`rules.gives`): a connection that only reads carries no tool that writes.
+
 Pure enough to test: the person is asked through `ask`, an awaitable the
 runtime gives (by default the tool-approval path that exists), and every
 decision is handed to `record` before it is acted on.
@@ -62,6 +66,7 @@ from agent_runtimes.loop.apps.rules import (
     UNCLASSED,
     Decision,
     decision_for,
+    gives,
     matches,
 )
 from agent_runtimes.specs.actions import SERVER_ACTIONS, TOOL_ACTIONS
@@ -306,6 +311,30 @@ class AppRulesCapability(AbstractCapability[Any]):
                 tool_name, Decision(DO_IT, tool_name, ("write",), "default")
             )
         return Enforced(tool_name, _strictest(parts), parts)
+
+    # --- what it is given --------------------------------------------------------
+
+    def given(self, tool_name: str) -> bool:
+        """Whether the agent is given a tool, by its runtime name (LOOP U-15).
+
+        A tool of an MCP server is given by a connection, at its level: one
+        that only reads gives only what only reads (`rules.gives`). A tool
+        whose server cannot be told is not given: it could never run. The
+        runtime's own tools, code and the catalogue's are given, and decided
+        when they are called.
+        """
+        if tool_name in CODE_TOOLS or tool_name in READING_TOOLS:
+            return True
+        if tool_name == "call_tool" or not self._is_mcp_tool(tool_name):
+            return True
+        ref = self.mcp_ref(tool_name)
+        return ref is not None and gives(self.app, ref)
+
+    async def prepare_tools(
+        self, ctx: RunContext[Any], tool_defs: list[ToolDefinition]
+    ) -> list[ToolDefinition]:
+        """Give the agent only the tools the application's connections give."""
+        return [tool_def for tool_def in tool_defs if self.given(tool_def.name)]
 
     # --- acting ------------------------------------------------------------------
 

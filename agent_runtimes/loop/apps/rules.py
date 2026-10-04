@@ -23,6 +23,11 @@ The decision, in order:
    with no rule, reading is done and anything that acts waits for a person —
    and the most restricted wins.
 
+Before any call, the first two steps decide what the agent is *given*
+(`gives`, LOOP U-15): a connection's level maps to its tools by their
+classes, so a read connection carries no tool that writes, and a tool nobody
+classed is taken to write.
+
 The same decision is written in `agentspecs.apps.behaviour_for`, and in
 TypeScript in `src/loop/apps/rules.ts`. `APP_BEHAVIOURS`, generated from
 agentspecs, is what all three have to agree on.
@@ -196,6 +201,42 @@ def _reaches(connection: AppConnectionSpec, tool_name: str) -> bool:
     return not connection.only or any(
         matches(tool_name, pattern) for pattern in connection.only
     )
+
+
+def gives(app: AppSpec, tool: str) -> bool:
+    """Whether the application is given a tool of a server: its connection's level.
+
+    A connection gives the tools of its server it reaches (`only`); one that
+    only reads gives only the tools that only read — what a tool does is its
+    action class, and a tool nobody classed is taken to write, so a read
+    connection does not give it. A tool of a server the application is not
+    connected to is not given.
+
+    Parameters
+    ----------
+    app : AppSpec
+        The application.
+    tool : str
+        The tool, as `server.tool`.
+
+    Returns
+    -------
+    bool
+        True when the agent is given the tool.
+
+    Raises
+    ------
+    ValueError
+        When `tool` names no server: a catalogue tool is given by the spec's
+        `tools`, not by a connection.
+    """
+    server, name = split_ref(tool)
+    if server is None:
+        raise ValueError(f"`{tool}` is not a tool of a server (`server.tool`).")
+    connection = _connection(app, server)
+    if connection is None or not _reaches(connection, name):
+        return False
+    return connection.access != READ or is_read_only(classes_of(f"{server}.{name}"))
 
 
 def _normal(target: str) -> str:

@@ -31,6 +31,7 @@ import {
   behaviourFor,
   classesOf,
   conditionHolds,
+  gives,
   isComparable,
   isPattern,
   isReadOnly,
@@ -356,5 +357,37 @@ describe('what a rule decides', () => {
         ).toBe(true);
       }
     }
+  });
+});
+
+describe('what a connection gives (U-15)', () => {
+  const at = (server: string, access: 'read' | 'write') =>
+    app({ connections: [{ server, access, as: 'owner', only: [] }] });
+
+  it('a read connection gives no tool that writes, anywhere in the catalogue', () => {
+    for (const [server, actions] of Object.entries(SERVER_ACTIONS)) {
+      for (const name of Object.keys(actions.tools)) {
+        const ref = `${server}.${name}`;
+        expect(gives(at(server, 'read'), ref), ref).toBe(
+          isReadOnly(classesOf(ref)),
+        );
+        expect(gives(at(server, 'write'), ref), ref).toBe(true);
+      }
+    }
+  });
+
+  it('takes a tool nobody classed to write', () => {
+    expect(gives(at('github', 'read'), 'github.create_issue')).toBe(false);
+    expect(gives(at('github', 'write'), 'github.create_issue')).toBe(true);
+  });
+
+  it('gives nothing without a connection, nor outside its only', () => {
+    const triage = APP_CATALOGUE['inbox-triage'];
+    expect(gives(triage, 'tavily.tavily_search')).toBe(false);
+    expect(gives(triage, 'google-workspace.search_drive_files')).toBe(false);
+    expect(gives(triage, 'google-workspace.send_gmail_message')).toBe(true);
+    expect(() => gives(triage, 'runtime-echo')).toThrow(
+      'not a tool of a server',
+    );
   });
 });

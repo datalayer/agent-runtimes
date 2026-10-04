@@ -215,6 +215,36 @@ const reaches = (connection: AppConnectionSpec, tool: string): boolean =>
   connection.only.length === 0 ||
   connection.only.some(pattern => matchesPattern(tool, pattern));
 
+/**
+ * Whether the application is given a tool of a server: its connection's
+ * level (LOOP U-15). A connection gives the tools of its server it reaches
+ * (`only`); one that only reads gives only the tools that only read — a tool
+ * nobody classed is taken to write, so a read connection does not give it.
+ * A tool of a server the application is not connected to is not given.
+ *
+ * The runtime gives its agent only these (`AppRulesCapability.prepare_tools`,
+ * through `agent_runtimes.loop.apps.rules.gives`, its Python twin).
+ *
+ * @throws When `tool` names no server: a catalogue tool is given by the
+ *   spec's `tools`, not by a connection.
+ */
+export function gives(
+  app: Pick<AppSpec, 'connections'>,
+  tool: string,
+): boolean {
+  const [server, name] = splitRef(tool);
+  if (server === undefined) {
+    throw new Error(`\`${tool}\` is not a tool of a server (\`server.tool\`).`);
+  }
+  const connection = connectionTo(app, server);
+  if (!connection || !reaches(connection, name)) {
+    return false;
+  }
+  return (
+    connection.access !== 'read' || isReadOnly(classesOf(`${server}.${name}`))
+  );
+}
+
 const isClass = (target: string): target is ActionClass =>
   Object.prototype.hasOwnProperty.call(DEFAULT_BEHAVIOURS, target);
 
