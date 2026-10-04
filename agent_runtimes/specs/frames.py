@@ -12,7 +12,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 
 from typing import Dict
 
-from agent_runtimes.types import FrameGuardSpec, FramePromptSpec, FrameSpec
+from agent_runtimes.types import FrameGuardSpec, FrameSpec
 
 # ============================================================================
 # Frame Definitions

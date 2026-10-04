@@ -214,6 +214,8 @@ examples = [
     "uvicorn",
 ]
 cli = [
+    # The CLI talks to its agent over AG-UI (`CliTux.send_message`).
+    "ag-ui-protocol>=0.1.19",
     "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
