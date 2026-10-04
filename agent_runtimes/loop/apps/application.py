@@ -639,7 +639,10 @@ def load_application(path: Union[str, Path]) -> Application:
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     try:
-        spec.loader.exec_module(module)
+        # Compiled from its source each time, never from a cached .pyc: a file
+        # edited within the same second, to the same size, is read as it is now
+        # (`loop apps run --watch`), and nothing is written beside it.
+        exec(compile(file.read_bytes(), str(file), "exec"), module.__dict__)  # noqa: S102
     finally:
         sys.modules.pop(module_name, None)
     found: List[Application] = []

@@ -35,10 +35,9 @@ What does **not** exist yet:
   reaches a Python application through the session API — start, message,
   action, settings change, stop, resume, over the wire and streamed — which
   is not built yet.
-- **Running an `app.py` from the command line.** `loop apps run` runs an
-  Appspec (YAML or JSON), not a Python file yet; `loop apps init` and
-  `loop apps build` (the file to its Appspec) are still to come.
-  `load_application` and `Application.spec` are what they will use.
+- **`loop apps init`**, which scaffolds an `app.py` from an example.
+  `loop apps build` and `loop apps run app.py` exist: see
+  [From the command line](#from-the-command-line).
 - **An agent with tools in process.** An application whose agent needs
   connections to MCP servers, skills, tools or a team runs on a runtime;
   built in this process, it is refused with the reason (see
@@ -327,6 +326,62 @@ drives an application from Python: `events` holds everything delivered, in
 order; `messages` the whole messages; `questions` everything asked; and
 `reply(answer)` answers the question being asked, or the next one.
 
+## From the command line
+
+`loop apps build` writes the Appspec an `app.py` amounts to — its
+`Application.spec`, as YAML — printed, or to a file with `--out`
+(`--force` to overwrite):
+
+```bash
+loop apps build app.py
+loop apps build app.py --out app.yaml
+```
+
+What the code decides is marked as code at the top of the spec, in comments,
+one line per handler, with where it is:
+
+```yaml
+# Built from app.py by `loop apps build`: the file is the source; edit it there.
+# What its code decides; without the file, its agent answers:
+# loop:code start: opening (app.py:7)
+# loop:code message: reply (app.py:12)
+schema: loop.app/v1
+id: echo-desk
+...
+```
+
+An Appspec refuses fields it does not define, so the marks are comments: the
+built file validates, is pushed and is deployed as any Appspec is. The build
+is refused, with a sentence and exit code 1, when the file does not load,
+defines no `Application` or more than one, or its spec does not validate (the
+reasons of `AppNotRunnable`).
+
+`loop apps validate`, `loop apps run` and `loop apps push` take an `app.py`
+as they take a spec: they build it first. `deploy` deploys a saved version
+by its id, so a Python application reaches it through `push`.
+
+`loop apps run app.py` runs it as it runs a spec — a runtime here
+(`--local`) or on Datalayer (`--cloud`), configured with the built Appspec,
+in the terminal's renderer, the starters as its suggestions — and the
+terminal is also the application's `AppHost`:
+
+- **In this process**, through a channel to the terminal: `start` when the
+  session opens, `message` when the application has one, an action with
+  `/action <name> [json]`, `stop` when the person leaves; `session.ask` asks
+  at the prompt. With a `message`, `--ask "…"` runs `start`, then it, once.
+- **On the runtime**: a message the code does not take, answered by the
+  runtime's agent with the application's rules, as for a spec.
+- **Waiting for the session API**: `settings` and `resume` from the person,
+  and schedules, have no way in from the terminal; and `session.agent` in the
+  code is built in this process, so an application whose agent needs
+  connections, skills or tools is refused there (see [The agent](#the-agent)).
+
+`--watch` builds the file again when it has changed, before the next turn:
+the runtime is configured with the new spec, and the session goes on with
+its state through the new code (`AppHost.resume`). A file that no longer
+builds is said, and the application as it was goes on. For a spec,
+`--watch` reconfigures the runtime the same way.
+
 ## What is verified, and what is not
 
 **Verified.** `agent_runtimes/tests/test_loop_app_api.py` runs every call on
@@ -338,7 +393,11 @@ nested steps and their errors; `ask` with text, choice, file and form, wrong
 answers and timeouts; state per session; the record; the agent's history
 across turns; a rule asking the person and a refusal raising; the local
 agent refusing what only a runtime brings; `load_application`. The example
-above was run as printed.
+above was run as printed. `agent_runtimes/tests/test_apps_build.py` covers
+`build`, its refusals and its marks, `validate` and `push` of an `app.py`,
+`run` serving one, the terminal routing to the code, and `--watch` rebuilding
+with the session's state kept; `loop apps run app.py --local --ask` was run
+against a local server.
 
 **Not verified.** A Python application reached from a browser, and one
 running on a runtime: both wait for the session API. The agent is scripted

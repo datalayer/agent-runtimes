@@ -16,6 +16,10 @@ call — the instant checks of the Studio — in a terminal and in CI:
 Its verdict is said in the Studio's words. *Not ready* when the spec is
 wrong; *Needs attention* when a safety check has something to say; otherwise
 the instant checks pass, which is not yet *Ready*: that takes its tests.
+
+An application written in Python, an ``app.py``, is built to its Appspec
+first (`loop apps build`, LOOP P-07): `validate`, `run` and `push` take one
+as they take a spec, and `run` runs its code in this process (P-08).
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ from rich.console import Console
 
 app = typer.Typer(
     name="apps",
-    help="Applications: validate an Appspec.",
+    help="Applications: build, run, validate, deploy.",
     invoke_without_command=True,
 )
 
@@ -136,13 +140,36 @@ def safety_notes(module: Any, application: Any) -> List[str]:
     return notes
 
 
-def validate_file(path: Path) -> Report:
-    """The instant checks of one Appspec file."""
+def read_document(path: Path) -> Dict[str, Any]:
+    """The Appspec a file holds or, for an ``app.py``, amounts to (LOOP P-09).
+
+    Raises
+    ------
+    AppNotRunnable
+        When an ``app.py`` does not build, with the reasons.
+    OSError, yaml.YAMLError
+        When a spec cannot be read.
+    """
     import yaml
+
+    from agent_runtimes.loop.apps.build import build, is_python
+
+    if is_python(path):
+        return build(path).document
+    return yaml.safe_load(path.read_text()) or {}
+
+
+def validate_file(path: Path) -> Report:
+    """The instant checks of one Appspec file, or of the spec an ``app.py`` builds."""
+    import yaml
+
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
 
     module = _require_agentspecs()
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = read_document(path)
+    except AppNotRunnable as refused:
+        return Report(str(path), NOT_READY, problems=refused.problems)
     except (OSError, yaml.YAMLError) as error:
         return Report(
             str(path), NOT_READY, problems=[f"The file cannot be read: {error}"]
@@ -178,7 +205,9 @@ def apps_callback(ctx: typer.Context) -> None:
 
 @app.command(name="validate")
 def apps_validate(
-    paths: List[Path] = typer.Argument(..., help="Appspec files (YAML)."),
+    paths: List[Path] = typer.Argument(
+        ..., help="Appspec files (YAML), or app.py files, built first."
+    ),
     strict: bool = typer.Option(
         False,
         "--strict",
@@ -217,6 +246,101 @@ def apps_validate(
         raise typer.Exit(2)
 
 
+@app.command(name="build")
+def apps_build(
+    path: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="The application, an app.py file."
+    ),
+    out: Path = typer.Option(
+        None, "--out", "-o", help="Where to write the Appspec; printed when unsaid."
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Overwrite a file that is there."
+    ),
+) -> None:
+    """Write the Appspec an app.py amounts to (LOOP P-07).
+
+    What its code decides is marked as code at the top of the spec. Refused,
+    with the reasons, when the file defines no application or more than one,
+    or its spec does not validate.
+    """
+    from agent_runtimes.loop.apps.build import build, is_python
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
+
+    if not is_python(path):
+        console.print(f"[red]✗[/red] {path} is not an app.py: a spec is built already.")
+        raise typer.Exit(1)
+    try:
+        built = build(path)
+    except AppNotRunnable as refused:
+        for problem in refused.problems:
+            console.print(f"[red]✗[/red] {problem}", highlight=False)
+        raise typer.Exit(1)
+    if out is None:
+        typer.echo(built.text, nl=False)
+        return
+    if out.exists() and not force:
+        console.print(f"[red]✗[/red] {out} is there already; --force overwrites it.")
+        raise typer.Exit(1)
+    out.write_text(built.text)
+    decided = len(built.marks)
+    console.print(
+        f"[green]✓[/green] {built.application.spec.name} written to {out}"
+        + (
+            f"; its code decides {decided} thing{'s' if decided != 1 else ''}."
+            if decided
+            else "."
+        ),
+        highlight=False,
+    )
+
+
+def _watcher(path: Path, base_url: str) -> Any:
+    """What builds the application again when its file changed, and reconfigures the runtime."""
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
+
+    seen = [path.stat().st_mtime]
+
+    def reload() -> Any:
+        mtime = path.stat().st_mtime
+        if mtime == seen[0]:
+            return None
+        seen[0] = mtime
+        try:
+            application = _application_of(path)
+            configure_on(base_url, application.document)
+        except typer.BadParameter as refused:
+            raise AppNotRunnable([str(refused.message)]) from None
+        return application
+
+    return reload
+
+
+def _application_of(path: Path) -> Any:
+    """The application of a file: built from an app.py, or attached to a spec.
+
+    Raises
+    ------
+    AppNotRunnable
+        When it would not run, with the reasons.
+    """
+    from agent_runtimes.loop.apps.application import Application
+    from agent_runtimes.loop.apps.build import build, is_python
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
+
+    if is_python(path):
+        return build(path).application
+    import yaml
+
+    try:
+        document = yaml.safe_load(path.read_text())
+    except (OSError, yaml.YAMLError) as error:
+        raise AppNotRunnable([f"{path} cannot be read: {error}"]) from None
+    if not isinstance(document, dict):
+        raise AppNotRunnable([f"{path} does not hold an application."])
+    return Application.from_spec(document)
+
+
 #: The agentspec a local server is started with before an application is
 #: configured on it; the application's own agent replaces it.
 BOOTSTRAP_AGENT_SPEC_ID = "example-simple"
@@ -245,7 +369,10 @@ def configure_on(base_url: str, document: Dict[str, Any]) -> Dict[str, Any]:
 @app.command(name="run")
 def apps_run(
     path: Path = typer.Argument(
-        ..., exists=True, dir_okay=False, help="The Appspec, a YAML or JSON file."
+        ...,
+        exists=True,
+        dir_okay=False,
+        help="The Appspec, a YAML or JSON file, or an app.py, built first.",
     ),
     local: bool = typer.Option(
         False, "--local", help="Run it on this machine, without asking where."
@@ -268,17 +395,25 @@ def apps_run(
     ask: str = typer.Option(
         None, "--ask", help="Ask one question, print the answer and stop."
     ),
+    watch: bool = typer.Option(
+        False,
+        "--watch",
+        "-w",
+        help="Build the application again when its file changes, before the next turn.",
+    ),
 ) -> None:
-    """Run an application in the terminal — here, or on Datalayer (LOOP L-05).
+    """Run an application in the terminal — here, or on Datalayer (LOOP L-05, P-08).
 
     The runtime is configured with the application, so its rules decide every
-    tool call; its starters are the terminal's suggestions.
+    tool call; its starters are the terminal's suggestions. An app.py is built
+    first, and its code runs in this process: what it reacts to — start, a
+    message, an action (/action <name> [json]), stop — is its code's; a
+    message it does not take is answered by the runtime's agent.
     """
     import asyncio
 
-    import yaml
-
-    from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
+    from agent_runtimes.loop.apps.build import is_python
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
     from agent_runtimes.loop.launch import (
         CLOUD,
         CLOUD_AGENT_NAME,
@@ -289,15 +424,15 @@ def apps_run(
         speak_ag_ui,
     )
 
-    document = yaml.safe_load(path.read_text())
-    if not isinstance(document, dict):
-        raise typer.BadParameter(f"{path} does not hold an application.")
     try:
-        application = load_app(document)
+        built = _application_of(path)
+        application = built.spec
     except AppNotRunnable as refused:
         for problem in refused.problems:
-            console.print(f"[red]✗[/red] {problem}")
+            console.print(f"[red]✗[/red] {problem}", highlight=False)
         raise typer.Exit(1)
+    document = built.document
+    has_code = is_python(path)
     if application.team:
         console.print(
             "[red]✗[/red] An application run by a team cannot run in the terminal yet."
@@ -354,10 +489,28 @@ def apps_run(
             else "on this machine"
         )
         startup = f"{application.emoji}  {application.name} is running {where_said}"
-        if ask:
+        if ask and has_code and built.handler("message") is not None:
+            from agent_runtimes.loop.apps.terminal import ask_once
+
+            asyncio.run(ask_once(built, ask, console))
+        elif ask:
             from agent_runtimes.chat.cli import _run_single_query_ag_ui
 
             console.print(asyncio.run(_run_single_query_ag_ui(agent_url, ask)))
+        elif has_code or watch:
+            from agent_runtimes.loop.apps.terminal import run_app_tux
+
+            asyncio.run(
+                run_app_tux(
+                    built,
+                    reload=_watcher(path, base_url) if watch else None,
+                    agent_url=agent_url,
+                    server_url=base_url,
+                    agent_id=CLOUD_AGENT_NAME,
+                    extra_suggestions=starters,
+                    startup_message=startup,
+                )
+            )
         else:
             from agent_runtimes.chat.tux import run_tux
 
@@ -510,10 +663,20 @@ def apps_pull(
     console.print(f"[green]✓[/green] Version {version} written to {out}.")
 
 
+def _spec_text(path: Path) -> str:
+    """The Appspec's text: the file's own, or the spec an app.py builds, its code marked."""
+    from agent_runtimes.loop.apps.build import build, is_python
+
+    return build(path).text if is_python(path) else path.read_text()
+
+
 @app.command(name="push")
 def apps_push(
     path: Path = typer.Argument(
-        ..., exists=True, dir_okay=False, help="The Appspec, a YAML file."
+        ...,
+        exists=True,
+        dir_okay=False,
+        help="The Appspec, a YAML file, or an app.py, built first.",
     ),
     app_uid: str = typer.Option(..., "--app", help="The application it is saved as."),
 ) -> None:
@@ -533,7 +696,7 @@ def apps_push(
             console.print(f"[red]✗[/red] {problem}")
         raise typer.Exit(1)
     try:
-        version, done = push(_store(), app_uid, path.read_text())
+        version, done = push(_store(), app_uid, _spec_text(path))
     except (DeployRefused, httpx.HTTPError) as refused:
         console.print(f"[red]✗[/red] {refused}")
         raise typer.Exit(1)
