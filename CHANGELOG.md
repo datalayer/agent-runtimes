@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.39
+
+- The session API: an application's sessions started, messaged, acted on, given settings, stopped and resumed over the wire, streamed as AG-UI events; a file given goes to the session's sandbox, and a Python example's code runs on the runtime ([Session API](https://agent-runtimes.datalayer.tech/docs/loop/session-api), R-04).
+- An application's page and embed speak to its agent through its session (R-04).
+- The preset per kind, a decision on the workspace, and the page drawn with the blocks contributed (R-01, R-01b, R-02).
+
 ## 1.3.38
 
 - A message from an application's page starts its turn: /status, /answer and /output follow it.
