@@ -47,6 +47,9 @@ dependencies = [
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
     "code-sandboxes>=1.10.0",
     "croniter",
+    # A component placed from Python (`Application.component`) is checked
+    # against its JSON Schema, as its properties form checks it.
+    "jsonschema>=4.18",
     # `datalayer_core.orchestration.Usage`, what an attempt spent as its worker
     # reported it, arrived in 1.2.2.
     # 1.2.3 is where a delegable agentspec becomes a discoverable, reachable

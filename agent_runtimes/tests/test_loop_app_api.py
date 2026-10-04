@@ -244,6 +244,55 @@ async def test_a_schedule_runs_in_a_session_of_its_own():
         await host.schedule("friday")
 
 
+# --- C-15: a component placed from Python ------------------------------------------
+
+
+def test_a_component_is_placed_on_the_surface_and_checked_against_its_schema():
+    document = interview().document
+    app = Application.from_spec(
+        {**document, "interface": {**document["interface"], "layout": "split"}}
+    )
+    app.component("root", "Column", children=["runs", "hello"])
+    node = app.component(
+        "runs", "Table", title="Runs", columns=["model", "cost"], rows={"path": "/runs"}
+    )
+    assert node == {
+        "id": "runs",
+        "component": "Table",
+        "title": "Runs",
+        "columns": ["model", "cost"],
+        "rows": {"path": "/runs"},
+    }
+    app.component("hello", "Text", text="Hello")
+    surface = app.spec.interface.surface
+    assert surface is not None
+    assert surface.protocol == "a2ui/v0.9"
+    assert [each["id"] for each in surface.components] == ["root", "runs", "hello"]
+    # Bound, a required property is the binding's.
+    assert app.component("bound", "Table", columns={"path": "/columns"})["columns"] == {
+        "path": "/columns"
+    }
+
+
+def test_a_component_its_schema_refuses_is_not_placed():
+    app = interview()
+    with pytest.raises(
+        ValueError,
+        match=r"runs is a Table its schema refuses: page_size: 0 is less than the minimum of 1",
+    ):
+        app.component("runs", "Table", columns=["model"], page_size=0)
+    with pytest.raises(ValueError, match=r"'columns' is a required property"):
+        app.component("runs", "Table", title="Runs")
+    with pytest.raises(ValueError, match="The catalog has no component 'Gauge'"):
+        app.component("speed", "Gauge")
+    app.component("runs", "Table", columns=["model"])
+    with pytest.raises(ValueError, match="already has a component named runs"):
+        app.component("runs", "Table", columns=["cost"])
+    assert app.document.get("interface", {}).get("surface", {}).get("components") == [
+        {"id": "runs", "component": "Table", "columns": ["model"]}
+    ]
+
+
 # --- P-03: the session --------------------------------------------------------------
 
 
