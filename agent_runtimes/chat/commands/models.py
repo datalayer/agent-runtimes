@@ -21,21 +21,28 @@ SHORTCUT = "escape d"
 GROUP = "Agents"
 
 
-def _catalog_ids() -> list[str]:
-    """Model ids for completion, from the catalog rather than the network."""
-    try:
-        from agent_runtimes.specs.models import AI_MODEL_CATALOGUE
+#: The model ids this session's runtime last listed: what ``/models <id>``
+#: completes against. Empty until the runtime answered.
+_listed_ids: list[str] = []
 
-        return sorted(AI_MODEL_CATALOGUE)
-    except Exception:  # noqa: BLE001
-        return []
+
+def _listed_model_ids() -> list[str]:
+    """Model ids for completion: the ones the runtime lists, not the catalog."""
+    return list(_listed_ids)
+
+
+def _remember_listed(payload: dict[str, Any]) -> None:
+    """Keep the ids the runtime listed, its chat models then its decision models."""
+    ids = [m["id"] for m in payload.get("models") or []]
+    ids += [m["id"] for m in payload.get("decision_models") or []]
+    _listed_ids[:] = ids
 
 
 ARGS = (
     CommandArgSpec(
         name="model-id",
-        description="Model to switch to, e.g. ollama:llama3.1:8b",
-        choices=_catalog_ids,
+        description="Model to switch to, among those this runtime lists",
+        choices=_listed_model_ids,
     ),
 )
 
@@ -57,10 +64,17 @@ async def _fetch_catalog(tux: "CliTux") -> Optional[dict[str, Any]]:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()
+            payload: dict[str, Any] = response.json()
     except Exception as error:  # noqa: BLE001
         tux.console.print(f"[red]Unable to fetch models: {error}[/red]")
         return None
+    _remember_listed(payload)
+    return payload
+
+
+async def prefetch(tux: "CliTux") -> None:
+    """Ask the runtime for its models once, so ``/models <id>`` completes them."""
+    await _fetch_catalog(tux)
 
 
 def _active_model(tux: "CliTux") -> str:

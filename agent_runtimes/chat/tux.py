@@ -1175,6 +1175,11 @@ class CliTux:
         except Exception:
             pass
 
+        # The models the runtime lists, for /models <id> to complete.
+        from .commands import models as _models_cmd
+
+        await _models_cmd.prefetch(self)
+
         self.show_welcome()
         if self.startup_message:
             # The message carries raw ANSI color codes; parse them so Rich
