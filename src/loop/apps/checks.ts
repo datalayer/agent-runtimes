@@ -46,7 +46,7 @@ import type {
   ComponentSpec,
 } from '../../types/agentspecs';
 import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
-import { parseAppspec } from './appspec';
+import { isAssistantCharacterId, parseAppspec } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
 
 export const NOT_READY = 'Not ready';
@@ -465,7 +465,6 @@ const ENUMS = {
   ],
   visibility: ['private', 'invited', 'organization', 'link', 'public'],
   mode: ['inline', 'bubble', 'panel', 'assistant'],
-  character: ['paperclip', 'wizard', 'cat', 'eyes'],
   trigger: ['schedule', 'event', 'once'],
   criterion: ['metric', 'noul', 'choice', 'score'],
   direction: ['higher', 'lower'],
@@ -589,7 +588,12 @@ export function documentShapeProblems(document: unknown): string[] {
   mapping(d.interface, 'interface', ui => {
     oneOf(ui.layout, ENUMS.layout, 'interface.layout');
     oneOf(ui.accent, ENUMS.accent, 'interface.accent');
-    oneOf(ui.assistant, ENUMS.character, 'interface.assistant');
+    if (ui.assistant !== undefined && !isAssistantCharacterId(ui.assistant)) {
+      at(
+        'interface.assistant',
+        'names a character by the id a plugin contributes it under, lowercase words joined by a hyphen: `paperclip`, `acme-owl`',
+      );
+    }
     text(ui.welcome, 'interface.welcome');
     texts(ui.components, 'interface.components');
     records(ui.starters, 'interface.starters', (item, where) => {

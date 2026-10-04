@@ -414,10 +414,13 @@ export type AppLayout = 'chat' | 'page' | 'split';
 export type AppAccent = 'green' | 'rose' | 'sky' | 'lime' | 'sun' | 'violet';
 
 /**
- * The character an application's floating assistant shows (LOOP T-24): one of
- * those Datalayer's plugin contributes.
+ * The character an application's floating assistant shows (LOOP T-24): the id
+ * an enabled plugin contributes it under to `loop.assistant.character` —
+ * Datalayer's are `paperclip`, `wizard`, `cat` and `eyes`. The spec checks
+ * its shape (`APP_ASSISTANT_CHARACTER_ID`); whether a plugin gives it is
+ * known only where the plugins are.
  */
-export type AppAssistantCharacter = 'paperclip' | 'wizard' | 'cat' | 'eyes';
+export type AppAssistantCharacter = string;
 
 /** How an application sits in another product's page (LOOP D-07). */
 export type AppEmbedMode = 'inline' | 'bubble' | 'panel' | 'assistant';
@@ -487,7 +490,10 @@ export interface AppInterfaceSpec {
   /** The components of the catalog the surface may use. */
   components: string[];
   surface?: AppSurfaceSpec;
-  /** The character its floating assistant shows; the paper clip when unsaid. */
+  /**
+   * The character its floating assistant shows; the paper clip when unsaid.
+   * Said, it wins over the one the person chose in their settings.
+   */
   assistant?: AppAssistantCharacter;
 }
 

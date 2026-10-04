@@ -342,7 +342,9 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         assistant: {
           anyOf: [
             {
-              $ref: '#/$defs/AssistantCharacter',
+              maxLength: 64,
+              pattern: '^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$',
+              type: 'string',
             },
             {
               type: 'null',
@@ -350,7 +352,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           ],
           default: null,
           description:
-            'The character its floating assistant shows: `paperclip`, `wizard`, `cat` or `eyes`. The paper clip when unsaid; a person may choose another in their settings',
+            "The character its floating assistant shows, by the id a plugin contributes it under (lowercase letters and digits, words joined by a hyphen): Datalayer's are `paperclip`, `wizard`, `cat` and `eyes`. The paper clip when unsaid; an id no enabled plugin contributes is refused where the plugins are known, the runtime and the page. Said here, it wins over a person's own choice in their settings",
+          title: 'Assistant',
         },
       },
       title: 'AppInterface',
@@ -717,13 +720,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       required: ['type'],
       title: 'AppTrigger',
       type: 'object',
-    },
-    AssistantCharacter: {
-      description:
-        "The character an application's floating assistant shows (LOOP T-24):\none of those a UI plugin contributes. Datalayer's are these four.",
-      enum: ['paperclip', 'wizard', 'cat', 'eyes'],
-      title: 'AssistantCharacter',
-      type: 'string',
     },
     Behaviour: {
       description:

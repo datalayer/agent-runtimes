@@ -247,7 +247,7 @@ describe('the instant checks', () => {
     ).toContain('avatar: is named as its drawing is, `AstronautIcon`.');
   });
 
-  it('read the assistant embed mode and a character for the assistant, and refuse others (D-07, T-24)', () => {
+  it('read the assistant embed mode and any character a plugin may contribute, and refuse an id of the wrong shape (D-07, T-24)', () => {
     const assistant = parseAppspec({
       ...BASE,
       interface: { assistant: 'wizard' },
@@ -260,17 +260,41 @@ describe('the instant checks', () => {
     expect(parseAppspec(written).app).toEqual(assistant);
     // Unchosen: nothing written, the paper clip.
     expect(parseAppspec(BASE).app.interface.assistant).toBeUndefined();
+    // A plugin's own character is named as Datalayer's are; whether an
+    // enabled plugin gives it is the page's to say, not the spec's.
+    for (const id of ['owl', 'acme-owl-2']) {
+      expect(
+        checkAppspec({ ...BASE, interface: { assistant: id } }).problems,
+      ).not.toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^interface\.assistant/),
+        ]),
+      );
+      expect(
+        parseAppspec({ ...BASE, interface: { assistant: id } }).app.interface
+          .assistant,
+      ).toBe(id);
+    }
+    for (const wrong of [
+      'Clippy',
+      'acme owl',
+      'owl-',
+      'acme.owl',
+      'o'.repeat(65),
+    ]) {
+      expect(
+        checkAppspec({ ...BASE, interface: { assistant: wrong } }).problems,
+      ).toContain(
+        'interface.assistant: names a character by the id a plugin contributes it under, lowercase words joined by a hyphen: `paperclip`, `acme-owl`.',
+      );
+    }
     expect(
       checkAppspec({
         ...BASE,
-        interface: { assistant: 'clippy' },
         deployment: { embedded: { mode: 'popup' } },
       }).problems,
-    ).toEqual(
-      expect.arrayContaining([
-        'interface.assistant: is one of paperclip, wizard, cat, eyes.',
-        'deployment.embedded.mode: is one of inline, bubble, panel, assistant.',
-      ]),
+    ).toContain(
+      'deployment.embedded.mode: is one of inline, bubble, panel, assistant.',
     );
   });
 });

@@ -18,6 +18,7 @@ import {
 } from '@datalayer/reactor';
 import {
   ASSISTANT_CHARACTERS,
+  DEFAULT_ASSISTANT_CHARACTER,
   type AssistantCharacter,
 } from '../../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../../chat/assistant/formats/types';
@@ -80,6 +81,54 @@ export function assistantCharacterNamed(
     );
   }
   return found.character;
+}
+
+/** Whose choice the character drawn is (T-24). */
+export type AssistantCharacterSaidBy = 'app' | 'person' | 'default';
+
+/** The character drawn, or why none can be. */
+export type AssistantCharacterChosen =
+  | {
+      id: string;
+      character: AssistantCharacter | AssistantCharacterData;
+      saidBy: AssistantCharacterSaidBy;
+    }
+  | { problem: string; saidBy: AssistantCharacterSaidBy };
+
+/**
+ * The character the floating assistant draws on a page (T-24): the one the
+ * application's Appspec names (`interface.assistant`), which wins; else the
+ * one the person chose in their settings; else the paper clip — each looked
+ * up in what the enabled plugins contribute. An id no enabled plugin gives
+ * is not replaced by another: it is said, with the ids there are.
+ */
+export function assistantCharacterFor(
+  contributed: ReadonlyArray<{
+    id: string;
+    character: AssistantCharacter | AssistantCharacterData;
+  }>,
+  choice: { app?: string; person?: string },
+): AssistantCharacterChosen {
+  const saidBy: AssistantCharacterSaidBy = choice.app
+    ? 'app'
+    : choice.person
+      ? 'person'
+      : 'default';
+  const id = choice.app ?? choice.person ?? DEFAULT_ASSISTANT_CHARACTER;
+  const found = contributed.find(entry => entry.id === id);
+  if (found) {
+    return { id, character: found.character, saidBy };
+  }
+  const whose =
+    saidBy === 'app'
+      ? 'This application names'
+      : saidBy === 'person'
+        ? 'Your settings name'
+        : 'The default is';
+  return {
+    saidBy,
+    problem: `${whose} the character “${id}”, which nothing enabled here draws; the characters are ${contributed.map(entry => entry.id).join(', ') || 'none'}.`,
+  };
 }
 
 export default AssistantCharactersPlugin;

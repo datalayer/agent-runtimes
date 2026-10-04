@@ -234,6 +234,55 @@ The *Chat Assistant* example does just this: its picker lists what the
 enabled plugins contribute, the owl of `src/examples/utils/owlCharacterPlugin.tsx`
 among them, and draws the one chosen.
 
+### Named by an application, chosen by a person
+
+An application names its character in its Appspec, by the id a plugin
+contributes it under: `interface.assistant: owl`. The spec (agentspecs
+0.0.27) checks only the id's shape — lowercase letters and digits, words
+joined by a hyphen, at most 64 characters — since which characters exist is
+known where the plugins are, not in the spec. A person may choose a character
+of their own, and whether the assistant shows at all, in their settings; on
+an application's page, **the application's own character wins** over the
+person's.
+
+`assistantCharacterFor(contributed, { app, person })` decides, in that order,
+and the paper clip when neither says: it returns the id, the character and
+who said it (`app`, `person` or `default`), or — when nothing enabled
+contributes that id — a sentence saying so, with the ids there are. An unknown
+id is never replaced by another character.
+
+### In the LOOP workspace
+
+`LoopAssistantPlugin` (`loop/plugins/assistant`) draws the assistant over a
+LOOP workspace — the `loop` page, an application's page, its Preview —
+through the workspace's `root` slot, from what the enabled plugins contribute.
+It is configured with the application's character and the person's:
+
+```tsx
+import { configurePlugin } from '@datalayer/reactor';
+import { AssistantCharactersPlugin } from '@datalayer/agent-runtimes/lib/loop/plugins/assistant-characters';
+import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/loop/plugins/assistant';
+
+<AppRenderer
+  app={app}
+  plugins={[
+    AssistantCharactersPlugin,
+    OwlCharacterPlugin,
+    configurePlugin(LoopAssistantPlugin, { app: app.interface.assistant, person: 'cat' }),
+  ]}
+/>
+```
+
+It acts out the workspace's chat turn (`LoopChatTurn`: thinking, working
+while a tool runs, speaking while the answer is written, idle), says the
+agent's newest words in its balloon while the conversation is out of sight,
+and is dragged and sent away as the chat's own assistant is. Clicked, it opens
+and closes the conversation panel on a page layout, and takes the person to
+the composer where the conversation is always on screen. An id nothing
+enabled contributes is said where the character would stand. Datalayer's
+landing adds it with the person's choice from their settings
+(`/settings/appearance`), unless they hid it.
+
 ## A character one brings
 
 :::caution The characters of Office are Microsoft's
@@ -381,7 +430,12 @@ above it where it was put down, and the wizard, the cat and the eyes draw.
 Each character's dark drawing and its contrast, light and dark, are tested
 (`assistant-characters-contrast.test.tsx`), and so is the stage drawing the
 chat's mode; a character contributed by a plugin is drawn in the *Chat
-Assistant* example and pictured (`character-owl-*.png`).
+Assistant* example and pictured (`character-owl-*.png`). The choice of a
+character — the application's over the person's over the paper clip, an
+unknown id said and not replaced — and the assistant in a LOOP workspace,
+drawn from a plugin's character and acting out the chat's turn, are tested
+(`loop-assistant.test.tsx`); an Appspec naming a plugin's character is read,
+and a wrongly shaped id refused (`app-checks.test.ts`).
 
 **Not verified yet.** A real `.acs` file someone holds the rights to (the
 reader is tested on a hand-built file, and the clippy.js reader on the
@@ -390,5 +444,5 @@ balloon seen in a browser; stepping aside, seen in a browser.
 
 **Not built yet.** Sounds are read but not played; the mouth overlays of an
 Agent character while it speaks; `.acf` files; answering an approval in the
-balloon itself; choosing a character in a person's settings; the *paused*
+balloon itself; the *paused*
 state, which arrives with pausing a deployment; the assistant as a mode of the embed and the hosted page.

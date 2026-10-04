@@ -2231,8 +2231,9 @@ class AppInterfaceSpec(BaseModel):
     assistant: Optional[str] = Field(
         default=None,
         description=(
-            "The character its floating assistant shows: `paperclip`, `wizard`, "
-            "`cat` or `eyes`; the paper clip when unsaid"
+            "The character its floating assistant shows, by the id a plugin "
+            "contributes it under (`paperclip`, `wizard`, `cat`, `eyes` are "
+            "Datalayer's); the paper clip when unsaid"
         ),
     )
 
