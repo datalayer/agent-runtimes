@@ -28,7 +28,7 @@ import {
   SURFACE_CATALOG_ID,
   type InlineSurfaceModel,
 } from '../a2ui-surface/InlineSurface';
-import { appPageAction, appPageData, appPageMessages } from './appPage';
+import { appPageAction, appPageData, appPageMessages } from './appPageModel';
 
 /** No chat in the workspace: the page reads a turn that never starts. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });

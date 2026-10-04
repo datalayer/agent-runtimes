@@ -28,7 +28,7 @@ import {
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopEditorView, type ChatSurfaceProps } from '../../core';
 import { AppPage } from './AppPage';
-import { APP_PAGE_SURFACE } from './appPage';
+import { APP_PAGE_SURFACE } from './appPageModel';
 
 export const APP_PAGE_PLUGIN_NAME = '@datalayer/loop-plugin-app-page';
 
@@ -68,5 +68,5 @@ export function defineAppPagePlugin(
 }
 
 export { AppPage, type AppPageProps } from './AppPage';
-export * from './appPage';
+export * from './appPageModel';
 export default defineAppPagePlugin;

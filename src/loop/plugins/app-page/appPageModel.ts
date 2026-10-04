@@ -23,7 +23,7 @@
  *
  * Pure: the plugin (`./index`) and its view (`./AppPage`) do the drawing.
  *
- * @module loop/plugins/app-page/appPage
+ * @module loop/plugins/app-page/appPageModel
  */
 
 import type { AppSettingSpec, AppSpec } from '../../../types/agentspecs';
