@@ -32,7 +32,7 @@ const sidebars = {
       type: 'category',
       label: 'Loop Web',
       link: { type: 'doc', id: 'loop/index' },
-      items: ['loop/python-applications'],
+      items: ['loop/python-applications', 'loop/embedding'],
     },
     { type: 'doc', id: 'cli/index', label: 'Loop CLI' },
     { type: 'doc', id: 'plugins/index', label: 'Plugins' },

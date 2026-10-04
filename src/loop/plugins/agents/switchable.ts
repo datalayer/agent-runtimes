@@ -309,114 +309,11 @@ export function createSwitchableSandboxService({
     }
   }
 
-  /**
-   * Create the agent whose per-agent Jupyter sandbox backs Local.
-   *
-   * The payload is passed rather than read from the closure: the caller has
-   * already established that it exists, and TypeScript cannot carry that
-   * narrowing across a function boundary.
-   */
-  async function ensureLocalAgent(
+  /** The agent backing Local, on this workspace's server. */
+  function ensureLocalAgent(
     createPayload: Record<string, unknown>,
   ): Promise<void> {
-    const id = agentId?.trim();
-    if (!id) {
-      throw new Error('Local needs an agent id before its runtime can start.');
-    }
-
-    let existing: Response;
-    try {
-      existing = await fetch(
-        `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}`,
-      );
-    } catch (reason) {
-      throw new Error(
-        `Local needs an agent-runtimes server at ${serverUrl}, and nothing answered there. ` +
-          `Start one and try again. (${
-            reason instanceof Error ? reason.message : String(reason)
-          })`,
-        { cause: reason },
-      );
-    }
-    if (existing.ok) {
-      // The agent is there, which does not mean its sandbox is. Reconfiguring
-      // or restarting the manager stops the per-agent sandboxes, because they
-      // were built under the previous settings — so coming back to Local after
-      // a spell on Jupyter finds the agent alive and nothing behind it. Asking
-      // for the sandbox is idempotent, so it costs a round trip and nothing
-      // else when one is already running.
-      await ensureLocalSandbox(id);
-      return;
-    }
-    if (existing.status !== 404) {
-      throw new Error(
-        `The server could not inspect local agent ${id} (${existing.status} ${existing.statusText}). ` +
-          (await detail(existing)),
-      );
-    }
-
-    const created = await fetch(`${serverUrl}/api/v1/agents`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        // Defaults first, so a blueprint that names its own transport or
-        // sandbox variant — the sandbox capacity plugins do — wins over
-        // them; the name last, because Local's agent id is not negotiable.
-        transport: 'ag-ui',
-        sandbox_variant: 'jupyter-server',
-        ...createPayload,
-        name: id,
-      }),
-    });
-    if (!created.ok && created.status !== 409) {
-      throw new Error(
-        `The server could not launch local agent ${id} (${created.status} ${created.statusText}). ` +
-          (await detail(created)),
-      );
-    }
-    // A 409 means somebody else created it between the two calls above, and
-    // that agent is as unlikely to have a sandbox as one found by the GET.
-    if (created.status === 409) {
-      await ensureLocalSandbox(id);
-    }
-  }
-
-  /**
-   * Make sure the agent has somewhere to run.
-   *
-   * Creating an agent starts its sandbox, so this is only ever needed for one
-   * that already existed. Selecting a target is an operation, not a
-   * preference: when the promise resolves the sandbox is meant to be up, and
-   * without this the kernel indicator sits empty and the notebook binds to
-   * nothing.
-   */
-  async function ensureLocalSandbox(id: string): Promise<void> {
-    const response = await fetch(
-      `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}/sandbox/ensure`,
-      { method: 'POST' },
-    );
-    if (!response.ok) {
-      throw new Error(
-        `The server could not start a sandbox for local agent ${id} ` +
-          `(${response.status} ${response.statusText}). ` +
-          (await detail(response)),
-      );
-    }
-  }
-
-  /**
-   * What the server said went wrong, when it said anything.
-   *
-   * FastAPI puts the reason in `detail`, and a status code on its own sends a
-   * reader to the network tab for something the response already contained.
-   */
-  async function detail(response: Response): Promise<string> {
-    try {
-      const body = (await response.json()) as { detail?: unknown };
-      return typeof body.detail === 'string' ? body.detail : '';
-    } catch {
-      return '';
-    }
+    return ensureServerAgent(serverUrl, agentId, createPayload);
   }
 
   function connectActive(): void {
@@ -541,4 +438,118 @@ export function createSwitchableSandboxService({
       connectActive();
     },
   };
+}
+
+/**
+ * Create the agent whose per-agent Jupyter sandbox backs Local, on the
+ * agent-runtimes server at `serverUrl`, unless it is there already — then
+ * only its sandbox is asked for. Exported for a host that addresses the
+ * agent without a workspace: the embed's floating modes (`AppEmbed`).
+ */
+export async function ensureServerAgent(
+  serverUrl: string,
+  agentId: string | undefined,
+  createPayload: Record<string, unknown>,
+): Promise<void> {
+  const id = agentId?.trim();
+  if (!id) {
+    throw new Error('Local needs an agent id before its runtime can start.');
+  }
+
+  let existing: Response;
+  try {
+    existing = await fetch(
+      `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}`,
+    );
+  } catch (reason) {
+    throw new Error(
+      `Local needs an agent-runtimes server at ${serverUrl}, and nothing answered there. ` +
+        `Start one and try again. (${
+          reason instanceof Error ? reason.message : String(reason)
+        })`,
+      { cause: reason },
+    );
+  }
+  if (existing.ok) {
+    // The agent is there, which does not mean its sandbox is. Reconfiguring
+    // or restarting the manager stops the per-agent sandboxes, because they
+    // were built under the previous settings — so coming back to Local after
+    // a spell on Jupyter finds the agent alive and nothing behind it. Asking
+    // for the sandbox is idempotent, so it costs a round trip and nothing
+    // else when one is already running.
+    await ensureServerSandbox(serverUrl, id);
+    return;
+  }
+  if (existing.status !== 404) {
+    throw new Error(
+      `The server could not inspect local agent ${id} (${existing.status} ${existing.statusText}). ` +
+        (await detail(existing)),
+    );
+  }
+
+  const created = await fetch(`${serverUrl}/api/v1/agents`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      // Defaults first, so a blueprint that names its own transport or
+      // sandbox variant — the sandbox capacity plugins do — wins over
+      // them; the name last, because Local's agent id is not negotiable.
+      transport: 'ag-ui',
+      sandbox_variant: 'jupyter-server',
+      ...createPayload,
+      name: id,
+    }),
+  });
+  if (!created.ok && created.status !== 409) {
+    throw new Error(
+      `The server could not launch local agent ${id} (${created.status} ${created.statusText}). ` +
+        (await detail(created)),
+    );
+  }
+  // A 409 means somebody else created it between the two calls above, and
+  // that agent is as unlikely to have a sandbox as one found by the GET.
+  if (created.status === 409) {
+    await ensureServerSandbox(serverUrl, id);
+  }
+}
+
+/**
+ * Make sure the agent has somewhere to run.
+ *
+ * Creating an agent starts its sandbox, so this is only ever needed for one
+ * that already existed. Selecting a target is an operation, not a
+ * preference: when the promise resolves the sandbox is meant to be up, and
+ * without this the kernel indicator sits empty and the notebook binds to
+ * nothing.
+ */
+async function ensureServerSandbox(
+  serverUrl: string,
+  id: string,
+): Promise<void> {
+  const response = await fetch(
+    `${serverUrl}/api/v1/agents/${encodeURIComponent(id)}/sandbox/ensure`,
+    { method: 'POST' },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `The server could not start a sandbox for local agent ${id} ` +
+        `(${response.status} ${response.statusText}). ` +
+        (await detail(response)),
+    );
+  }
+}
+
+/**
+ * What the server said went wrong, when it said anything.
+ *
+ * FastAPI puts the reason in `detail`, and a status code on its own sends a
+ * reader to the network tab for something the response already contained.
+ */
+async function detail(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    return typeof body.detail === 'string' ? body.detail : '';
+  } catch {
+    return '';
+  }
 }

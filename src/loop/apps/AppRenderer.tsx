@@ -112,6 +112,41 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
 };
 
 /**
+ * What an application's agent is created with on a Datalayer runtime: under
+ * the application's id, over AG-UI, with the application's own document —
+ * so that the runtime registers it and decides every tool call by its rules
+ * (LOOP R-03, R-05), as `loop apps run --cloud` does. One payload for every
+ * place it runs: the workspace (`AppRenderer`) and the embed's floating
+ * modes (`AppEmbed`).
+ */
+export function appDatalayerCreatePayload(
+  app: AppSpec,
+  instance?: AppInstance,
+): Record<string, unknown> {
+  return {
+    // Under the application's id, over AG-UI: what the workspace's
+    // chat addresses (`AppRenderer` gives it as `agentId`).
+    name: app.id,
+    transport: 'ag-ui',
+    agent_spec_id: agentIdOf(app),
+    app_spec: dumpAppspec(app),
+    // Code Mode calls every tool through `execute_code`, which an
+    // application without a shell is refused: its tools are called
+    // one by one instead, each decided by its rules.
+    enable_codemode: Boolean(app.permissions?.computer?.shell),
+    ...(instance
+      ? {
+          app_instance: {
+            app_uid: instance.appUid ?? '',
+            deployment_uid: instance.deploymentUid ?? '',
+            version: instance.version ?? 0,
+          },
+        }
+      : {}),
+  };
+}
+
+/**
  * An application in a LOOP workspace: its agent, its starters, its layout.
  *
  * Every other prop is `LoopEmbed`'s, and wins over what the application
@@ -163,30 +198,7 @@ export function AppRenderer({
    * R-03, R-05), as `loop apps run --cloud` does.
    */
   const datalayerCreatePayload = useMemo(
-    () =>
-      app.agent
-        ? {
-            // Under the application's id, over AG-UI: what the workspace's
-            // chat addresses (`agentId` below).
-            name: app.id,
-            transport: 'ag-ui',
-            agent_spec_id: agentIdOf(app),
-            app_spec: dumpAppspec(app),
-            // Code Mode calls every tool through `execute_code`, which an
-            // application without a shell is refused: its tools are called
-            // one by one instead, each decided by its rules.
-            enable_codemode: Boolean(app.permissions?.computer?.shell),
-            ...(instance
-              ? {
-                  app_instance: {
-                    app_uid: instance.appUid ?? '',
-                    deployment_uid: instance.deploymentUid ?? '',
-                    version: instance.version ?? 0,
-                  },
-                }
-              : {}),
-          }
-        : undefined,
+    () => (app.agent ? appDatalayerCreatePayload(app, instance) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [source, instance?.appUid, instance?.deploymentUid, instance?.version],
   );

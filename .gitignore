@@ -36,6 +36,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-embed
 dist-electron
 *.local
 

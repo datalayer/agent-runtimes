@@ -314,6 +314,23 @@ export { LoopCommandsPlugin, COMMANDS_PLUGIN_NAME } from './plugins/commands';
 export { PromptPlugin, PROMPT_PLUGIN_NAME } from './plugins/prompt';
 // Loop, ready to drop into somebody else's page.
 export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
+// An application in another product's page: the React component, the
+// `<datalayer-app>` element, and the snippet a host pastes (LOOP D-07 to D-09).
+export { AppEmbed, type AppEmbedProps } from './embed/AppEmbed';
+export {
+  defineDatalayerAppElement,
+  type DatalayerAppElementOptions,
+} from './embed/element';
+export {
+  EMBED_ATTRIBUTES,
+  EMBED_HOST_VARIABLES,
+  EMBED_TAG,
+  embedLookOf,
+  embedSnippetOf,
+  floatingViewOf,
+  type EmbedLook,
+  type EmbedSnippetOptions,
+} from './embed/embedConfig';
 export {
   SubagentActivityPlugin,
   SubagentPulse,
