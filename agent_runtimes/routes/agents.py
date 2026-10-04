@@ -2398,6 +2398,13 @@ async def create_agent(
             # makes through ai-inference, so its owner reads what each
             # application and deployment spent (LOOP R-09).
             serving_app = request.app_instance if running_app is not None else None
+            # A model ai-inference said it does not serve is refused here,
+            # in a sentence, rather than at the first message.
+            from ..models.offered import inference_refusal
+
+            refusal = inference_refusal(request.model, request.inference_provider)
+            if refusal:
+                raise HTTPException(status_code=400, detail=f"{refusal}.")
             remember_app_instance(agent_id, serving_app)
             try:
                 resolved_model = resolve_model_for_inference_provider(

@@ -39,6 +39,23 @@ export function usableModels(models: ModelConfig[]): ModelConfig[] {
   return usable.length > 0 ? usable : models;
 }
 
+/**
+ * The models a chat offers, given what its runtime answered.
+ *
+ * The runtime's answer is the list: an agent's own models (its `model` and
+ * `model_additionals`), each flagged with whether its inference serves it.
+ * When the runtime answered, nothing else is added — not even when its list
+ * is empty, which says the agent has nothing to switch to. `fallback` is
+ * asked only when there is no runtime to answer (an in-page agent) or it
+ * has not answered yet.
+ */
+export function offeredModels(
+  fromRuntime: ModelConfig[] | undefined,
+  fallback: () => ModelConfig[],
+): ModelConfig[] {
+  return usableModels(fromRuntime ?? fallback());
+}
+
 /** Whether `id` is on offer and usable — the selection may stand. */
 export const isOffered = (offered: ModelConfig[], id?: string): boolean =>
   Boolean(id) && offered.some(m => m.id === id && isUsable(m));
@@ -84,7 +101,10 @@ export type ServerCatalogueModel = {
  * its spec was known went to the first row — Alibaba, and its missing key.
  */
 export function readServerCatalogue(
-  payload: { models?: ServerCatalogueModel[] } | null | undefined,
+  payload:
+    | { models?: ServerCatalogueModel[]; source?: string; note?: string }
+    | null
+    | undefined,
 ): ModelConfig[] {
   return (payload?.models ?? []).map(model => {
     const missing = model.missing_env_vars ?? [];

@@ -500,62 +500,16 @@ def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
     """
     Create default AI model configurations from the generated model catalogue.
 
+    Each model with its availability, as ``agent_runtimes.models.offered``
+    decides it: ai-inference's own list when the runtime routes through it
+    and it answered, else entitlement and credentials here.
+
     Args:
         tool_ids: List of tool IDs to associate with models
 
     Returns:
-        List of AIModelRuntime configurations with availability based on environment variables
+        List of AIModelRuntime configurations.
     """
-    # Build AIModelRuntime instances from the generated catalogue
-    models = []
-    for spec_model in AI_MODEL_CATALOGUE_DICT.values():
-        """
-        Two questions, and only one of them used to be asked.
+    from agent_runtimes.models.offered import model_rows
 
-        `check_env_vars_available` answers readiness — are the credentials for
-        this provider set — and the registry's own `available` answers
-        entitlement, whether this deployment may call the model at all. Every
-        Bedrock model shares one set of AWS credentials, so readiness said yes
-        to all of them the moment those were present, and the menu offered
-        Fable 5 and the whole Opus family to an account entitled to none of
-        them. Picking one returned `AccessDeniedException` from Bedrock.
-
-        A model has to pass both to be selectable, and the reason it failed
-        travels with it: a missing API key is something the reader can go and
-        fix, and a model we are not entitled to is not, so telling them the
-        second is the first sends them off to do something pointless.
-        """
-        env_ready = credentials_ready(spec_model)
-        entitled = getattr(spec_model, "available", True)
-        is_available = env_ready and entitled
-
-        if entitled and not env_ready:
-            reason = "Missing API key"
-        elif not entitled:
-            reason = "Not enabled for this deployment"
-        else:
-            reason = None
-
-        model = AIModelRuntime(
-            id=spec_model.id,
-            name=spec_model.name,
-            builtin_tools=tool_ids,
-            required_env_vars=spec_model.required_env_vars,
-            is_available=is_available,
-            unavailable_reason=reason,
-        )
-        models.append(model)
-
-        # Log availability status
-        if is_available:
-            logger.info(f"Model {spec_model.name} is available")
-        else:
-            logger.debug(f"Model {spec_model.name} is unavailable ({reason})")
-
-    # Log summary
-    available_count = sum(1 for m in models if m.is_available)
-    logger.info(
-        f"Loaded {available_count}/{len(models)} available models based on environment variables"
-    )
-
-    return models
+    return model_rows(list(AI_MODEL_CATALOGUE_DICT), tool_ids)

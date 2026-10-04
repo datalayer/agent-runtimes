@@ -3546,6 +3546,7 @@ export const EXAMPLE_ONE_TRIGGER_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -4589,6 +4590,7 @@ export const EXAMPLE_SIMPLE_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']
@@ -5244,6 +5246,7 @@ export const JUPYTER_NOTEBOOK_COMPACTOR_AGENTSPEC_0_0_1: Agentspec = {
   domain: undefined,
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   tools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -7939,6 +7942,7 @@ export const WORKER_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']

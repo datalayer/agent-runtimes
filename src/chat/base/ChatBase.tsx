@@ -115,7 +115,11 @@ import {
   type PendingApproval,
 } from '../tools';
 import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
-import { initialModelId, isOffered, usableModels } from './modelChoice';
+import {
+  initialModelId,
+  isOffered,
+  offeredModels as offeredModelsFor,
+} from './modelChoice';
 // EphemeralDocument statically imports `@datalayer/jupyter-lexical` (which
 // initialises Lumino-backed nodes on load). Lazy-load it so notebook-only chats
 // never pull lexical into the bundle or trigger its module side effects.
@@ -1991,36 +1995,36 @@ function ChatBaseInner({
       : undefined;
   const offeredModels = useMemo<ModelConfig[]>(() => {
     // Only what can actually be called — see `modelChoice` for the rule.
+    // The runtime's answer, when it gave one, is the whole list.
     const fromConfig = availableModels || configQuery.data?.models;
-    if (fromConfig?.length) {
-      return usableModels(fromConfig);
-    }
-    /*
-     * The catalogue, filtered to what is worth offering.
-     *
-     * A server tells the chat which models it can reach and that answer wins.
-     * Without one — an in-page agent, or a server that has not answered yet —
-     * this used to offer the single model the protocol was built with, which
-     * is a menu with nothing to choose.
-     *
-     * `available` is the filter, not the whole catalogue: twenty-six models,
-     * most of them superseded, is a list nobody reads. The specs say which
-     * four are current.
-     */
-    const catalogued = Object.values(AI_MODEL_CATALOGUE)
-      // A typed-judgment model answers typed questions, not a chat.
-      .filter(model => model.available && isChatModel(model))
-      .map(model => ({
-        id: model.id,
-        name: model.name,
-        provider: model.provider,
-      }));
-    if (catalogued.length > 0) {
-      return usableModels(catalogued);
-    }
-    return browserModel
-      ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
-      : [];
+    return offeredModelsFor(fromConfig, () => {
+      /*
+       * The catalogue, filtered to what is worth offering.
+       *
+       * A server tells the chat which models it can reach and that answer wins.
+       * Without one — an in-page agent, or a server that has not answered yet —
+       * this used to offer the single model the protocol was built with, which
+       * is a menu with nothing to choose.
+       *
+       * `available` is the filter, not the whole catalogue: twenty-six models,
+       * most of them superseded, is a list nobody reads. The specs say which
+       * four are current.
+       */
+      const catalogued = Object.values(AI_MODEL_CATALOGUE)
+        // A typed-judgment model answers typed questions, not a chat.
+        .filter(model => model.available && isChatModel(model))
+        .map(model => ({
+          id: model.id,
+          name: model.name,
+          provider: model.provider,
+        }));
+      if (catalogued.length > 0) {
+        return catalogued;
+      }
+      return browserModel
+        ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
+        : [];
+    });
   }, [availableModels, configQuery.data?.models, browserModel]);
 
   /*

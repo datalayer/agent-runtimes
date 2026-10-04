@@ -1093,6 +1093,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         is_reload_parent = _is_reload_parent_process()
         logger.info(f"Reload parent check: {is_reload_parent}")
 
+        # ---- The models ai-inference serves, asked once ----
+        # Before any agent is created: a model it does not serve is refused,
+        # and the config the chat and the CLI read offers only those it does.
+        if not is_reload_parent:
+            from .models.offered import load_inference_models
+
+            await load_inference_models()
+
         # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
         no_config_mcp_servers = (
             os.environ.get("AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS", "").lower() == "true"

@@ -1271,7 +1271,25 @@ class FrontendConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     models: List[AIModelRuntime] = Field(
-        default_factory=list, description="Available AI models"
+        default_factory=list,
+        description=(
+            "The models on offer — for an agent, its model and its "
+            "model_additionals — each saying whether it can be used"
+        ),
+    )
+    models_source: Literal["ai-inference", "local"] = Field(
+        default="local",
+        description=(
+            "Who decided which models can be used: ai-inference's own list, "
+            "or this runtime's configuration when it did not route through "
+            "ai-inference or ai-inference did not answer"
+        ),
+        alias="modelsSource",
+    )
+    models_note: Optional[str] = Field(
+        default=None,
+        description="That decision in a sentence",
+        alias="modelsNote",
     )
     default_model: Optional[str] = Field(
         default=None,
@@ -1576,6 +1594,15 @@ class Agentspec(BaseModel):
         default=None,
         description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
     )
+    model_additionals: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Other models of the catalogue this agent may be switched to, "
+            "beside its `model`. The runtime offers those of them its "
+            "inference serves."
+        ),
+        alias="modelAdditionals",
+    )
     inference_provider: Literal["local", "datalayer"] = Field(
         default="local",
         description=(
@@ -1585,6 +1612,20 @@ class Agentspec(BaseModel):
         ),
         alias="inferenceProvider",
     )
+
+    @field_validator("model_additionals")
+    @classmethod
+    def _model_additionals_in_catalogue(cls, value: List[str]) -> List[str]:
+        """An additional model the catalogue does not know is refused."""
+        from agent_runtimes.specs.models import get_model
+
+        unknown = [model_id for model_id in value if get_model(model_id) is None]
+        if unknown:
+            raise ValueError(
+                f"model_additionals names models the catalogue does not know: "
+                f"{', '.join(unknown)}."
+            )
+        return value
 
     @field_validator("inference_provider", mode="before")
     @classmethod

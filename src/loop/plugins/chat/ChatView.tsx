@@ -50,7 +50,10 @@ import {
   useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
-import { readServerCatalogue } from '../../../chat/base/modelChoice';
+import {
+  offeredModels as offeredModelsFor,
+  readServerCatalogue,
+} from '../../../chat/base/modelChoice';
 import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
 import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
 import { useAnonymousSessionStore } from '../../../runtimes/browser/anonymousToken';
@@ -1396,7 +1399,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   );
   const skillsQuery = useSkills(true);
   const skillActions = useSkillActions(agentId);
-  const [catalogModels, setCatalogModels] = useState<ModelConfig[]>([]);
+  // `undefined` until the runtime answers: its answer is then the list.
+  const [catalogModels, setCatalogModels] = useState<ModelConfig[] | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     /*
@@ -1412,14 +1418,20 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       return undefined;
     }
     let cancelled = false;
-    void fetch(`${agentServerUrl}/api/v1/configure/models`)
-      .then(response => (response.ok ? response.json() : { models: [] }))
+    // The agent's own models (its model and model_additionals), each saying
+    // whether its inference serves it.
+    void fetch(
+      `${agentServerUrl}/api/v1/configure/models?agent_id=${encodeURIComponent(agentId)}`,
+    )
+      .then(response => (response.ok ? response.json() : null))
       .then(payload => {
         if (!cancelled) {
           // In the chat's shape: the route says `available`, the menu and
           // the opening pick read `isAvailable`, and an unmapped row passes
           // for usable. See `readServerCatalogue`.
-          setCatalogModels(readServerCatalogue(payload));
+          if (payload) {
+            setCatalogModels(readServerCatalogue(payload));
+          }
         }
       })
       // No catalogue is not an error worth a banner: the menu simply has
@@ -1428,7 +1440,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [agentServerUrl, inPage]);
+  }, [agentServerUrl, agentId, inPage]);
 
   /*
    * What to offer when the server has no catalogue of its own.
@@ -1440,16 +1452,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const offeredModels = useMemo<ModelConfig[]>(
     () =>
-      catalogModels.length > 0
-        ? catalogModels
-        : Object.values(AI_MODEL_CATALOGUE)
-            // A typed-judgment model answers typed questions, not a chat.
-            .filter(model => model.available && isChatModel(model))
-            .map(model => ({
-              id: model.id,
-              name: model.name,
-              provider: model.provider,
-            })),
+      offeredModelsFor(catalogModels, () =>
+        Object.values(AI_MODEL_CATALOGUE)
+          // A typed-judgment model answers typed questions, not a chat.
+          .filter(model => model.available && isChatModel(model))
+          .map(model => ({
+            id: model.id,
+            name: model.name,
+            provider: model.provider,
+          })),
+      ),
     [catalogModels],
   );
 

@@ -640,6 +640,11 @@ export interface Agentspec {
   enabled: boolean;
   /** AI model identifier to use for this agent */
   model?: string;
+  /**
+   * Other models of the catalogue this agent may be switched to, beside its
+   * `model`. The runtime offers those of them its inference serves.
+   */
+  modelAdditionals?: string[];
   /** Inference provider routing strategy */
   inferenceProvider?: 'local' | 'datalayer';
   /** MCP servers used by this agent */

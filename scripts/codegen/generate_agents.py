@@ -276,7 +276,42 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
             spec = resolve_spec(spec, by_id, fragments_by_id)
         resolved.append((subfolder, spec))
 
+    check_model_additionals(resolved, load_model_ids(specs_dir))
     return resolved
+
+
+def load_model_ids(specs_dir: Path) -> set[str]:
+    """Every id the models catalogue answers to: its ids and their aliases."""
+    ids: set[str] = set()
+    for yaml_file in sorted((specs_dir.parent / "models").glob("*.yaml")):
+        with open(yaml_file, "r") as f:
+            model = yaml.safe_load(f) or {}
+        if model.get("id"):
+            ids.add(str(model["id"]))
+        ids.update(str(alias) for alias in model.get("aliases") or [])
+    return ids
+
+
+def check_model_additionals(
+    specs: List[tuple[str, Dict[str, Any]]], model_ids: set[str]
+) -> None:
+    """Refuse an agent whose `model_additionals` names a model the catalogue does not know."""
+    problems = []
+    for _, spec in specs:
+        additionals = spec.get("model_additionals")
+        if additionals is None:
+            continue
+        if not isinstance(additionals, list):
+            problems.append(f"{spec.get('id')}: model_additionals is not a list")
+            continue
+        unknown = [str(m) for m in additionals if str(m) not in model_ids]
+        if unknown:
+            problems.append(
+                f"{spec.get('id')}: model_additionals names models the catalogue "
+                f"does not know: {', '.join(unknown)}"
+            )
+    if problems:
+        raise SystemExit("\n".join(problems))
 
 
 def generate_python_code(specs: List[tuple[str, Dict[str, Any]]]) -> str:
@@ -423,6 +458,12 @@ from agent_runtimes.types import (
             # Model field
             model_id = spec.get("model")
             model_str = f'"{model_id}"' if model_id else "None"
+            model_additionals = spec.get("model_additionals") or []
+            model_additionals_py_line = (
+                f"    model_additionals={_fmt_list(model_additionals)},\n"
+                if model_additionals
+                else ""
+            )
             inference_provider = spec.get("inference_provider")
             inference_provider_str = (
                 f'"{inference_provider}"' if inference_provider else "None"
@@ -547,7 +588,7 @@ from agent_runtimes.types import (
     domain={f'"{domain_value}"' if domain_value else "None"},
     enabled={spec.get("enabled", True)},
     model={model_str},
-    inference_provider={inference_provider_str},
+{model_additionals_py_line}    inference_provider={inference_provider_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
     tools={_fmt_list(tool_refs)},
@@ -1045,6 +1086,12 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             # Model field
             model_id = spec.get("model")
             model_ts = f"'{model_id}'" if model_id else "undefined"
+            model_additionals = spec.get("model_additionals") or []
+            model_additionals_ts_line = (
+                f"    modelAdditionals: {_fmt_ts_literal(model_additionals)},\n"
+                if model_additionals
+                else ""
+            )
             inference_provider = spec.get("inference_provider")
             inference_provider_ts = (
                 f"'{inference_provider}'" if inference_provider else "undefined"
@@ -1116,7 +1163,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     domain: {domain_ts},
     enabled: {str(spec.get("enabled", True)).lower()},
     model: {model_ts},
-{inference_provider_line}    mcpServers: [{mcp_servers_str}],
+{model_additionals_ts_line}{inference_provider_line}    mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
     tools: [{tools_str}],
 {disable_tool_approvals_line}    frontendTools: [{frontend_tools_str}],
@@ -1588,6 +1635,7 @@ export * from './tracks';
 export * from './ops';
 export * from './apps';
 export * from './actions';
+export * from './appspecSchema';
 """
     )
 

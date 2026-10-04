@@ -1057,6 +1057,16 @@ class VercelAITransport(BaseTransport):
         effective_inference_provider, inference_provider_source = (
             _resolve_effective_inference_provider(self._agent_id)
         )
+        if isinstance(model, str) and model:
+            # A model the agent does not offer, or ai-inference does not
+            # serve, is refused before anything runs.
+            from ..models.offered import model_refusal
+
+            refusal = model_refusal(self._agent_id, model, effective_inference_provider)
+            if refusal:
+                from starlette.responses import JSONResponse
+
+                return JSONResponse({"detail": refusal}, status_code=400)
         if effective_inference_provider == "datalayer" and isinstance(model, str):
             # Request body model strings must be wrapped so calls are proxied
             # through datalayer-ai-inference instead of direct/local routing.

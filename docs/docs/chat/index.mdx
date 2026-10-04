@@ -45,6 +45,18 @@ the rows around it:
   rather than disappearing when empty — plus `footerExtras`, a trailing-edge
   opening for the host's own controls (the Loop's **+** — start the
   conversation over — arrives that way).
+
+  The model menu lists what the agent runtime answers, and nothing else:
+  for an agent, its agentspec's `model` and `model_additionals`, those its
+  inference can run (`GET /api/v1/configure?agent_id=…`, `models`, each with
+  `isAvailable` and why not). Routed through datalayer-ai-inference, the
+  runtime asks the service which models it serves once, when it starts;
+  `modelsSource` says who decided (`ai-inference`, or `local` when the
+  runtime calls the providers itself or the service did not answer) and
+  `modelsNote` says it in a sentence. A request naming a model the agent
+  does not offer, or the service does not serve, is refused with a 400 and
+  that sentence. Only an in-page agent, with no runtime to ask, offers the
+  catalogue's available chat models instead.
 - **The context band**: `ContextPie` and the token counts, shown as soon as
   the agent accounts for itself.
 - **`draggable`** wraps the whole prompt in `FloatingCard`: an absolutely

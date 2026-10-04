@@ -41,11 +41,20 @@ ARGS = (
 
 
 async def _fetch_catalog(tux: "CliTux") -> Optional[dict[str, Any]]:
-    """The catalog with readiness and reachability, from this session's server."""
+    """The agent's models with readiness and reachability, from this session's runtime.
+
+    The runtime answers — local or on Datalayer, through the session's one
+    address — with the agent's ``model`` and ``model_additionals``, each
+    saying whether its inference serves it, and who decided (``source``,
+    ``note``).
+    """
+    agent_id = getattr(tux, "agent_id", "") or ""
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{tux.server_url}/api/v1/configure/models", timeout=10.0
+                f"{tux.server_url}/api/v1/configure/models",
+                params={"agent_id": agent_id} if agent_id else None,
+                timeout=10.0,
             )
             response.raise_for_status()
             return response.json()
@@ -82,11 +91,8 @@ async def _show(tux: "CliTux") -> None:
         else f"● Models ({len(models)})",
         style=STYLE_PRIMARY,
     )
-    if where:
-        tux.console.print(
-            "  What the cloud runtime offers, with its own keys — not this machine's.",
-            style=STYLE_MUTED,
-        )
+    if payload.get("note"):
+        tux.console.print(f"  {payload['note']}", style=STYLE_MUTED)
 
     if local:
         tux.console.print()
@@ -135,28 +141,31 @@ async def _show(tux: "CliTux") -> None:
                 tux.console.print(
                     f"        missing {', '.join(missing)}", style=STYLE_WARNING
                 )
+            elif not model.get("available") and model.get("reason"):
+                tux.console.print(f"        {model['reason']}", style=STYLE_WARNING)
 
     tux.console.print()
     tux.console.print("  /models <id> to switch", style=STYLE_MUTED)
     tux.console.print()
 
 
-def _cloud_refusal(
+def _refusal(
     catalog: Optional[dict[str, Any]], model_id: str, where: str
 ) -> Optional[str]:
-    """Why a cloud runtime cannot switch to a model, in a sentence, or None."""
+    """Why the runtime cannot switch to a model, in a sentence, or None."""
     if catalog is None:
         return f"{where} did not list its models: nothing was switched."
     entry = next(
         (m for m in catalog.get("models") or [] if m.get("id") == model_id), None
     )
     if entry is None:
-        return f"{where} does not offer {model_id}."
+        return f"{where} does not offer {model_id} to this agent: nothing was switched."
     if entry.get("local") and not entry.get("reachable"):
-        return f"{model_id} is not running on {where}."
+        return f"{model_id} is not running on {where}: nothing was switched."
     if not entry.get("local") and entry.get("available") is False:
-        missing = ", ".join(entry.get("missing_env_vars") or []) or "its key"
-        return f"{where} has no {missing} for {model_id}."
+        missing = ", ".join(entry.get("missing_env_vars") or [])
+        why = f"has no {missing} for it" if missing else (entry.get("reason") or "")
+        return f"{model_id} cannot be used on {where} ({why}): nothing was switched."
     return None
 
 
@@ -177,14 +186,13 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
     from ..tux import STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
 
     where = getattr(tux, "where", None)
-    if where:
-        # On Datalayer the runtime's catalogue decides, not this machine's:
-        # a model it does not offer, or has no key for, is refused before
-        # the agent is touched.
-        problem = _cloud_refusal(await _fetch_catalog(tux), model_id, where)
-        if problem:
-            tux.console.print(f"[red]{problem}[/red]")
-            return
+    # The runtime's answer decides — on Datalayer as locally, not this
+    # machine's catalogue: a model it does not offer this agent, or cannot
+    # use, is refused before the agent is touched.
+    problem = _refusal(await _fetch_catalog(tux), model_id, where or "this runtime")
+    if problem:
+        tux.console.print(f"[red]{problem}[/red]")
+        return
 
     model = get_model(model_id)
     if model is None:

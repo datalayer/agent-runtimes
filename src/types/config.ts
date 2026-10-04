@@ -70,7 +70,19 @@ export interface AgentConfig {
  * Remote configuration from server
  */
 export interface RemoteConfig {
+  /**
+   * The models on offer — for an agent, its `model` and `model_additionals` —
+   * each saying whether it can be used.
+   */
   models: ModelConfig[];
+  /**
+   * Who decided which models can be used: ai-inference's own list, or the
+   * runtime's configuration when it did not route through ai-inference or
+   * ai-inference did not answer.
+   */
+  modelsSource?: 'ai-inference' | 'local';
+  /** That decision in a sentence. */
+  modelsNote?: string;
   defaultModel?: string;
   builtinTools: BuiltinTool[];
   mcpServers?: MCPServerConfig[];

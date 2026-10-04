@@ -345,6 +345,7 @@ class FakeRuntime:
         self.library = set(library) | {spec_id}
         self.seen: List[tuple[str, str, Optional[str]]] = []
         self.configured: List[dict] = []
+        self.models_asked_for: List[Optional[str]] = []
         self.server: Any = None
         self.url = ""
 
@@ -369,8 +370,11 @@ class FakeRuntime:
                     {"agent": {"id": "default", "model": "bedrock:claude"}}
                 )
             if path == "/api/v1/configure/models":
+                runtime.models_asked_for.append(request.query_params.get("agent_id"))
                 return JSONResponse(
                     {
+                        "source": "ai-inference",
+                        "note": "ai-inference at https://x/api/ai-inference/v1 serves bedrock:us.anthropic.claude-sonnet-4-6.",
                         "models": [
                             {
                                 "id": "bedrock:us.anthropic.claude-sonnet-4-6",
@@ -383,7 +387,7 @@ class FakeRuntime:
                                 "available": False,
                                 "missing_env_vars": ["OPENAI_API_KEY"],
                             },
-                        ]
+                        ],
                     }
                 )
             if path == "/api/v1/configure/skills":
@@ -526,6 +530,9 @@ def test_the_slash_commands_read_the_cloud_runtime_as_the_person(
     assert "Models on runtime-9 on Datalayer (ai-agents-env) (2)" in said
     assert "bedrock:us.anthropic.claude-sonnet-4-6" in said
     assert "missing OPENAI_API_KEY" in said
+    # What the runtime said of its models, and for the session's agent.
+    assert "serves bedrock:us.anthropic.claude-sonnet-4-6." in said
+    assert runtime.models_asked_for == ["default"]
     assert "pdf" in said
     assert "cloud_search" in said
     assert "Tavily" in said or "tavily" in said
@@ -546,7 +553,10 @@ def test_a_model_the_cloud_runtime_cannot_run_is_refused_there(
     runtime, relay = cloud_runtime
     tux = _tux(relay.url)
     asyncio.run(tux.handle_command("/models openai:gpt-5"))
-    assert "has no OPENAI_API_KEY for openai:gpt-5" in _said(tux)
+    assert (
+        "openai:gpt-5 cannot be used on runtime-9 on Datalayer (ai-agents-env) "
+        "(has no OPENAI_API_KEY for it): nothing was switched." in _said(tux)
+    )
     assert not any(
         path == "/api/v1/agents/configure-from-spec" for _, path, _ in runtime.seen
     )

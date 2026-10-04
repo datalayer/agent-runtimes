@@ -17,6 +17,7 @@ import type { ModelConfig } from '../../types/chat';
 import {
   initialModelId,
   isOffered,
+  offeredModels,
   readServerCatalogue,
   usableModels,
 } from './modelChoice';
@@ -120,5 +121,46 @@ describe("the server's catalogue, read", () => {
   it('reads nothing from no catalogue', () => {
     expect(readServerCatalogue(null)).toEqual([]);
     expect(readServerCatalogue({})).toEqual([]);
+  });
+});
+
+describe("the runtime's answer", () => {
+  const catalogue = () => [sonnet46, unflagged];
+
+  it('is the list: the agent offers what its inference serves', () => {
+    // An agent on Sonnet 4.6 with Qwen as its additional model, which
+    // ai-inference does not serve: the menu has Sonnet alone.
+    const qwen = {
+      ...model('alibaba:qwen-max', false),
+      unavailableReason: 'Not served by ai-inference',
+    };
+    expect(offeredModels([sonnet46, qwen], catalogue)).toEqual([sonnet46]);
+  });
+
+  it('adds nothing from the catalogue, even when it is empty', () => {
+    expect(offeredModels([], catalogue)).toEqual([]);
+  });
+
+  it('is only replaced while there is no answer', () => {
+    expect(offeredModels(undefined, catalogue)).toEqual([sonnet46, unflagged]);
+  });
+
+  it('reads the agent rows of /configure/models with who decided', () => {
+    const offered = readServerCatalogue({
+      source: 'ai-inference',
+      note: 'ai-inference at https://r1/api/ai-inference/v1 serves bedrock:us.anthropic.claude-sonnet-4-6.',
+      models: [
+        { id: 'bedrock:us.anthropic.claude-sonnet-4-6', available: true },
+        {
+          id: 'alibaba:qwen-max',
+          available: false,
+          reason: 'Not served by ai-inference',
+        },
+      ],
+    });
+    expect(offeredModels(offered, catalogue).map(m => m.id)).toEqual([
+      'bedrock:us.anthropic.claude-sonnet-4-6',
+    ]);
+    expect(offered[1].unavailableReason).toBe('Not served by ai-inference');
   });
 });

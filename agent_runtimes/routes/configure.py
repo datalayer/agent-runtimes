@@ -374,11 +374,19 @@ async def list_inference_models() -> dict[str, Any]:
 
 
 @router.get("/models")
-async def list_catalog_models() -> dict[str, Any]:
+async def list_catalog_models(
+    agent_id: str | None = Query(
+        None,
+        description="An agent of this runtime: only its model and model_additionals",
+    ),
+) -> dict[str, Any]:
     """The model catalog, with readiness and — for local models — reachability.
 
     The list comes from agentspecs: that is what decides which models are
-    *offerable*. Discovery only reports what is **reachable right now**, because
+    *offerable* — for an agent, its ``model`` and ``model_additionals``.
+    Whether a hosted one can be used is ai-inference's answer when the
+    runtime routes through it and it answered (``source`` and ``note`` say
+    which). Discovery only reports what is **reachable right now**, because
     a local model is available when something is listening on a port, not when
     an API key happens to be set.
 
@@ -391,8 +399,23 @@ async def list_catalog_models() -> dict[str, Any]:
         discover_installed_models,
         split_model_id,
     )
-    from agent_runtimes.models.models import credentials_ready
-    from agent_runtimes.specs.models import list_chat_models
+    from agent_runtimes.models.offered import (
+        agent_inference_provider,
+        availability,
+        load_inference_models,
+        models_source,
+        offered_model_ids,
+    )
+    from agent_runtimes.specs.models import get_model, list_chat_models
+
+    await load_inference_models()
+    provider = agent_inference_provider(agent_id)
+    source, note = models_source(provider)
+    agent_models = offered_model_ids(agent_id)
+    if agent_id and agent_models is None:
+        raise HTTPException(
+            status_code=404, detail=f"No agent '{agent_id}' runs on this runtime."
+        )
 
     installed = discover_installed_models()
 
@@ -400,7 +423,12 @@ async def list_catalog_models() -> dict[str, Any]:
     catalogued_local: set[tuple[str, str]] = set()
 
     # A chat picker's models: a typed-judgment model (Jev) is not one.
-    for model in list_chat_models():
+    offered = (
+        [spec for spec in (get_model(m) for m in agent_models) if spec is not None]
+        if agent_models is not None
+        else list_chat_models()
+    )
+    for model in offered:
         missing = [
             name
             for name in model.required_env_vars
@@ -408,9 +436,9 @@ async def list_catalog_models() -> dict[str, Any]:
         ]
         # The spec's variables are not the whole answer: a model whose
         # credentials live in datalayer-ai-inference lists none, and needs its
-        # provider's own key when this process calls the provider directly.
-        # `credentials_ready` knows which of the two we are doing.
-        ready = not missing and credentials_ready(model)
+        # provider's own key when this process calls the provider directly;
+        # and when ai-inference said what it serves, that decides.
+        usable, unusable_reason = availability(model.id, provider)
         entry: dict[str, Any] = {
             "id": model.id,
             "name": model.name,
@@ -443,16 +471,12 @@ async def list_catalog_models() -> dict[str, Any]:
         else:
             entry["reachable"] = None
             entry["warning"] = None
-            # Two questions wear the same word here. The registry's `available`
-            # is entitlement — may this deployment call the model at all — and
-            # this key is readiness, whether the credentials are in place. Only
-            # readiness was being computed, and every Bedrock model shares one
-            # set of AWS credentials, so the whole family read as available and
-            # Bedrock answered `AccessDeniedException` when one was picked.
-            entitled = getattr(model, "available", True)
-            entry["available"] = bool(ready and entitled)
-            if not entitled:
-                entry["reason"] = "Not enabled for this deployment"
+            # Entitlement (the registry's `available`), readiness (the
+            # credentials) and, through ai-inference, whether it serves the
+            # model: `availability` asks all three, and says which failed.
+            entry["available"] = usable
+            if not usable:
+                entry["reason"] = unusable_reason
 
         models.append(entry)
 
@@ -475,6 +499,8 @@ async def list_catalog_models() -> dict[str, Any]:
 
     return {
         "models": models,
+        "source": source,
+        "note": note,
         "local_runtimes": runtimes,
         "uncatalogued_local": uncatalogued,
     }
@@ -600,11 +626,23 @@ async def get_configuration(
             mcp_servers = mcp_manager.get_servers()
             logger.debug(f"Got {len(mcp_servers)} servers from mcp_manager (fallback)")
 
+        # The models on offer: an agent's own (its model and model_additionals),
+        # judged on what ai-inference said it serves.
+        from agent_runtimes.models.offered import (
+            agent_inference_provider,
+            load_inference_models,
+            offered_model_ids,
+        )
+
+        await load_inference_models()
+
         # Build frontend config
         config = await get_frontend_config(
             tools=available_tools,
             mcp_servers=mcp_servers,
             disable_tool_approvals=get_tool_approvals_disabled(),
+            model_ids=offered_model_ids(agent_id),
+            inference_provider=agent_inference_provider(agent_id),
         )
 
         # If the caller provides an agent, prefer the model configured by that

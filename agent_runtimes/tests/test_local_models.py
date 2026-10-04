@@ -187,7 +187,7 @@ class TestCatalogEndpoint:
         )
         from agent_runtimes.routes.configure import list_catalog_models
 
-        return asyncio.run(list_catalog_models())
+        return asyncio.run(list_catalog_models(agent_id=None))
 
     def test_local_models_report_reachability_not_env_vars(
         self, monkeypatch: pytest.MonkeyPatch
@@ -260,7 +260,22 @@ class TestModelsCommand:
             async def __aexit__(self, *exc) -> None:
                 return None
 
-            async def get(self, url: str, timeout: float = 0) -> FakeResponse:
+            async def get(
+                self, url: str, timeout: float = 0, params: dict | None = None
+            ) -> FakeResponse:
+                if url.endswith("/api/v1/configure/models"):
+                    # The runtime offers the agent these, all usable.
+                    return FakeResponse(
+                        {
+                            "models": [
+                                {"id": model_id, "local": True, "reachable": True}
+                                for model_id in (
+                                    "ollama:llama3.1:8b",
+                                    "ollama:gemma3:4b",
+                                )
+                            ]
+                        }
+                    )
                 return FakeResponse(
                     {"spec": {"id": "loop-shell", "model": "openai:gpt-4o"}}
                 )
