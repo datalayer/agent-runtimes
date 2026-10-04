@@ -60,7 +60,14 @@ def _resolve_effective_inference_provider(
     agent_id: str | None = None,
 ) -> tuple[str, str]:
     """Best-effort resolve of effective inference provider and its source."""
-    # Prefer the per-agent creation spec when available.
+    # The runtime's override first: a Datalayer runtime routes every agent
+    # through ai-inference, whatever its spec says.
+    from ..routes.configure import configured_inference_provider_override
+
+    configured = configured_inference_provider_override()
+    if configured is not None:
+        return configured, "runtime-override"
+    # Then the per-agent creation spec when available.
     if agent_id:
         try:
             from ..routes.agents import _agentspecs

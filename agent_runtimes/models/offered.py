@@ -14,13 +14,26 @@ answer, that is said in a sentence — logged, and carried by the config the
 chat and the CLI read (``source`` ``local`` and its ``note``) — and the models
 are then judged on this runtime's own configuration alone: its keys and the
 catalogue's entitlement, unchecked against the service.
+
+**The token.** A runtime calls ai-inference with a token. On Datalayer it is
+the one the platform gives it when it is assigned to its user (``PUT
+/configure/inference/token``, which the companion calls): that user's own,
+narrowed by IAM to ai-inference and lasting as long as the runtime's
+reservation. A pooled runtime is started before it has a user, so until then
+it has none, says so in a sentence, and calls no model — it never falls back
+to keys of its own. Elsewhere (a runtime started by hand) it is
+``DATALAYER_AI_INFERENCE_API_KEY``, else ``DATALAYER_API_KEY``.
 """
 
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
+import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from typing import Any, Literal, Mapping
 
@@ -101,9 +114,118 @@ def read_served(payload: Mapping[str, Any]) -> list[str]:
     return served
 
 
-def _token() -> str | None:
-    """The token this runtime calls ai-inference with (see ``resolve_model_for_inference_provider``)."""
+class InferenceTokenMissing(RuntimeError):
+    """A model call through ai-inference with no token this runtime may use."""
+
+
+#: The token the platform gave this runtime, and when it expires (epoch
+#: seconds; ``None`` when it does not say). Process memory only.
+_given: dict[str, Any] = {"token": None, "expires_at": None}
+
+#: Said while a runtime waits for its token: a pooled runtime has no user yet.
+NO_TOKEN_NOTE = (
+    "This runtime has no ai-inference token yet: it is given one, its user's "
+    "own narrowed to ai-inference, when it is assigned to its user. Until then "
+    "it offers no model and calls none."
+)
+
+
+def _expiry_of(token: str) -> float | None:
+    """When a JWT says it expires, read without verifying it; ``None`` otherwise.
+
+    Only to say in a sentence that the token ran out before ai-inference
+    refuses it: ai-inference is what verifies the token.
+    """
+    parts = token.split(".")
+    if len(parts) != 3:
+        return None
+    try:
+        padded = parts[1] + "=" * (-len(parts[1]) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(padded))
+    except (binascii.Error, ValueError):
+        return None
+    exp = claims.get("exp") if isinstance(claims, dict) else None
+    return float(exp) if isinstance(exp, (int, float)) else None
+
+
+def give_inference_token(token: str | None) -> float | None:
+    """
+    Keep the token this runtime calls ai-inference with; ``None`` forgets it.
+
+    Parameters
+    ----------
+    token : str | None
+        The token the platform gave this runtime as it was assigned.
+
+    Returns
+    -------
+    float | None
+        When it expires, in epoch seconds, when it says.
+    """
+    value = (token or "").strip() or None
+    _given["token"] = value
+    _given["expires_at"] = _expiry_of(value) if value else None
+    return _given["expires_at"]
+
+
+def inference_token() -> str | None:
+    """
+    The token this runtime calls ai-inference with, or ``None``.
+
+    Returns
+    -------
+    str | None
+        The one the platform gave it, else ``DATALAYER_AI_INFERENCE_API_KEY``,
+        else ``DATALAYER_API_KEY``.
+    """
+    given = _given["token"]
+    if given:
+        return str(given)
     return os.getenv("DATALAYER_AI_INFERENCE_API_KEY") or os.getenv("DATALAYER_API_KEY")
+
+
+def inference_token_refusal() -> str | None:
+    """
+    Why this runtime cannot call ai-inference now, in a sentence, or ``None``.
+
+    Returns
+    -------
+    str | None
+        It has no token, or the one it was given expired.
+    """
+    if not inference_token():
+        return NO_TOKEN_NOTE
+    expires_at = _given["expires_at"]
+    if _given["token"] and expires_at is not None and expires_at <= time.time():
+        when = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(expires_at))
+        return (
+            f"The ai-inference token this runtime was given expired at {when}: "
+            "it calls no model any more. Start a new runtime."
+        )
+    return None
+
+
+async def inference_api_key() -> str:
+    """
+    The token for the next call to ai-inference, read as the call is made.
+
+    The OpenAI client asks it before each request, so a model built before the
+    runtime was assigned calls with the token it was given since.
+
+    Returns
+    -------
+    str
+        The token.
+
+    Raises
+    ------
+    InferenceTokenMissing
+        When there is none, or it expired: the call is not made.
+    """
+    refusal = inference_token_refusal()
+    if refusal:
+        raise InferenceTokenMissing(refusal)
+    return str(inference_token())
 
 
 async def load_inference_models(*, refresh: bool = False) -> InferenceModels:
@@ -129,7 +251,15 @@ async def load_inference_models(*, refresh: bool = False) -> InferenceModels:
             return _state
 
         url = _normalize_ai_inference_base_url(raw_url)
-        token = _token()
+        from agent_runtimes.models.models import effective_inference_provider
+
+        refusal = inference_token_refusal()
+        if refusal and effective_inference_provider() == "datalayer":
+            # Asked again when the token is given (``refresh``).
+            _state = InferenceModels(served=None, url=url, note=refusal)
+            logger.info(_state.note)
+            return _state
+        token = inference_token()
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         try:
             import httpx
@@ -189,6 +319,9 @@ def models_source(inference_provider: str | None = None) -> tuple[ModelsSource, 
             "This runtime calls the providers itself: the models offered are "
             "those its own keys reach.",
         )
+    refusal = inference_token_refusal()
+    if refusal:
+        return "ai-inference", refusal
     state = _state
     if state is None:
         return (
@@ -215,6 +348,8 @@ def availability(
     if spec is None:
         return False, "Not in the models catalogue"
     provider = inference_provider or effective_inference_provider()
+    if provider == "datalayer" and not spec.local and inference_token_refusal():
+        return False, "No ai-inference token"
     state = _state
     if (
         provider == "datalayer"
@@ -256,11 +391,16 @@ def spec_model_ids(spec: Any) -> list[str]:
 def agent_inference_provider(agent_id: str | None) -> str:
     """Where an agent's inference goes.
 
-    Its creation spec's ``inference_provider``, else the runtime's (as the
-    Vercel AI transport resolves it).
+    The runtime's override (a Datalayer runtime routes every agent through
+    ai-inference), else its creation spec's ``inference_provider``, else the
+    runtime's (as the Vercel AI transport resolves it).
     """
     from agent_runtimes.models.models import effective_inference_provider
+    from agent_runtimes.routes.configure import configured_inference_provider_override
 
+    override = configured_inference_provider_override()
+    if override is not None:
+        return override
     if agent_id:
         from agent_runtimes.routes.agents import get_stored_agent_spec
 

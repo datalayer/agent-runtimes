@@ -22,6 +22,7 @@ from agent_runtimes.models.models import (
     remember_app_instance,
     resolve_model_for_inference_provider,
 )
+from agent_runtimes.models.offered import give_inference_token
 
 DEPLOYMENT = {"app_uid": "01APP", "deployment_uid": "01DEP", "version": 3}
 
@@ -48,6 +49,7 @@ def test_an_agent_no_application_runs_names_nothing():
 
 def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
+    give_inference_token("the-runtime-token")
     model = resolve_model_for_inference_provider(
         "bedrock:x", "datalayer", app_instance=DEPLOYMENT
     )

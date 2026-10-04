@@ -17,7 +17,18 @@ import httpx
 import pytest
 
 from agent_runtimes.models import offered
-from agent_runtimes.models.offered import InferenceModels, set_inference_models
+from agent_runtimes.models.offered import (
+    InferenceModels,
+    give_inference_token,
+    set_inference_models,
+)
+
+
+@pytest.fixture(autouse=True)
+def _given_a_token() -> None:
+    """The runtime was given its ai-inference token: these tests route through it."""
+    give_inference_token("the-runtime-token")
+
 
 SONNET = "bedrock:us.anthropic.claude-sonnet-4-6"
 QWEN = "alibaba:qwen-max"
@@ -91,6 +102,8 @@ class TestWhatAiInferenceServes:
     def test_it_is_asked_once_with_the_runtime_s_token(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # A runtime started by hand: its token is in its environment.
+        give_inference_token(None)
         monkeypatch.setenv("DATALAYER_AI_INFERENCE_API_KEY", "the-key")
         seen = _serve(
             monkeypatch, lambda request: httpx.Response(200, json=LIVE_PAYLOAD)

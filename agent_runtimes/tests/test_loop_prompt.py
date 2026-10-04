@@ -28,7 +28,11 @@ from starlette.responses import StreamingResponse
 
 from agent_runtimes.chat import cli
 from agent_runtimes.loop import launch
-from agent_runtimes.models.offered import InferenceModels, set_inference_models
+from agent_runtimes.models.offered import (
+    InferenceModels,
+    give_inference_token,
+    set_inference_models,
+)
 from agent_runtimes.routes import agents as agents_route
 
 from .test_agents_create_integration import creation_spy  # noqa: F401
@@ -49,6 +53,13 @@ from .test_model_switch import (  # noqa: F401
     _configure,
     runtime,
 )
+
+
+@pytest.fixture(autouse=True)
+def _given_a_token() -> None:
+    """The runtime was given its ai-inference token: these tests route through it."""
+    give_inference_token("the-runtime-token")
+
 
 ANSI = re.compile(r"\x1b\[")
 

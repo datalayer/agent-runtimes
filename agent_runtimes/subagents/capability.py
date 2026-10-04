@@ -24,7 +24,7 @@ import asyncio
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.capabilities import AbstractCapability
@@ -99,6 +99,29 @@ def _remote_definition(sa: Any, a2a: Any) -> "SubagentDefinition | None":
             spec_id=spec_id,
             launch=getattr(a2a, "launch", None) or "auto",
             environment=getattr(a2a, "environment", None),
+        ),
+    )
+
+
+def _routed(model: str | Model, agent_id: str | None) -> str | Model:
+    """A subagent's model, routed as its parent's inference is.
+
+    A model named by its id goes where the parent agent's inference goes: on a
+    Datalayer runtime through ai-inference, with the runtime's token, rather
+    than to the provider with keys of the runtime's own. A model instance is
+    used as it is.
+    """
+    if not isinstance(model, str):
+        return model
+    from ..models.models import app_instance_of, resolve_model_for_inference_provider
+    from ..models.offered import agent_inference_provider
+
+    return cast(
+        "str | Model",
+        resolve_model_for_inference_provider(
+            model,
+            agent_inference_provider(agent_id),
+            app_instance=app_instance_of(agent_id),
         ),
     )
 
@@ -266,7 +289,7 @@ class SubagentsCapability(AbstractCapability[Any]):
                 )
                 continue
             self._agents[definition.name] = Agent(
-                model,
+                _routed(model, self.agent_id),
                 name=definition.name,
                 instructions=definition.instructions,
                 capabilities=_build_subagent_capabilities(

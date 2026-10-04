@@ -15,6 +15,7 @@ from fastapi import (
     HTTPException,
     Path,
     Query,
+    Request,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -174,6 +175,27 @@ def get_inference_provider_override() -> InferenceProvider | None:
     return _inference_provider_override["provider"]
 
 
+def configured_inference_provider_override() -> InferenceProvider | None:
+    """The provider this runtime routes every agent through, whatever its spec says.
+
+    Set at runtime (``PUT /configure/inference/provider``), else by
+    ``AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE`` — which the platform sets
+    to ``datalayer`` on a Datalayer runtime, so its agents call their models
+    through ai-inference although their agentspecs say ``local``.
+    """
+    override = get_inference_provider_override()
+    if override in {"local", "datalayer"}:
+        return override
+    configured = (
+        (os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "")
+        .strip()
+        .lower()
+    )
+    if configured in {"local", "datalayer"}:
+        return cast(InferenceProvider, configured)
+    return None
+
+
 def get_effective_inference_provider() -> InferenceProvider:
     """Resolve effective inference provider from override/env/defaults."""
     override = get_inference_provider_override()
@@ -261,6 +283,51 @@ async def set_inference_provider(body: InferenceProviderRequest) -> dict[str, An
     return {
         "success": True,
         "provider": body.provider,
+    }
+
+
+class InferenceTokenRequest(BaseModel):
+    """The token a runtime calls ai-inference with, as the companion gives it."""
+
+    token: str
+
+
+@router.put("/inference/token")
+async def give_inference_token_endpoint(
+    request: Request, body: InferenceTokenRequest
+) -> dict[str, Any]:
+    """Give this runtime the token it calls ai-inference with, and ask ai-inference again.
+
+    The companion calls it as the runtime is assigned to its user, with that
+    user's token narrowed by IAM to ai-inference. Only the pod itself may: the
+    token decides whose account every model call is metered on. Which models
+    ai-inference serves is asked again with it, so the models offered are
+    those it serves rather than the sentence a pooled runtime started with.
+    """
+    from agent_runtimes.loop.apps.callers import is_loopback
+    from agent_runtimes.models.offered import (
+        give_inference_token,
+        load_inference_models,
+        models_source,
+    )
+
+    if not is_loopback(request.client.host if request.client else None):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its ai-inference token.",
+        )
+    if not body.token.strip():
+        raise HTTPException(status_code=422, detail="The token is empty.")
+    expires_at = give_inference_token(body.token)
+    provider = get_effective_inference_provider()
+    served = list((await load_inference_models(refresh=True)).served or [])
+    source, note = models_source(provider)
+    return {
+        "provider": provider,
+        "expiresAt": expires_at,
+        "models": served,
+        "source": source,
+        "note": note,
     }
 
 

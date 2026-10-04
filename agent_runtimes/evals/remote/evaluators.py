@@ -233,11 +233,13 @@ def _default_judge() -> JudgeCall | None:
     if not url:
         import os  # noqa: PLC0415
 
+        from agent_runtimes.models.offered import inference_token  # noqa: PLC0415
+
         url = str(os.environ.get("DATALAYER_AI_INFERENCE_URL") or "").strip()
+        # The token the runtime calls ai-inference with: on Datalayer, its
+        # user's, narrowed to ai-inference.
         token = str(
-            os.environ.get("DATALAYER_API_KEY")
-            or os.environ.get("DATALAYER_TOKEN")
-            or ""
+            inference_token() or os.environ.get("DATALAYER_TOKEN") or ""
         ).strip()
     else:
         token = str(_judge_state.get("token") or "")

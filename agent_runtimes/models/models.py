@@ -463,26 +463,29 @@ def resolve_model_for_inference_provider(
         return model
 
     import httpx
+    from openai import AsyncOpenAI
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
 
+    from agent_runtimes.models.offered import inference_api_key
+
     http_timeout = httpx.Timeout(timeout, connect=30.0)
     base_url = _normalize_ai_inference_base_url(os.getenv("DATALAYER_AI_INFERENCE_URL"))
-    api_key = (
-        os.getenv("DATALAYER_AI_INFERENCE_API_KEY")
-        or os.getenv("DATALAYER_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-        or "datalayer"
-    )
 
+    # The token is read as each call is made, not now: a pooled runtime builds
+    # its agent before it is assigned and given its token, and a call without
+    # one is refused in a sentence (``InferenceTokenMissing``), never made
+    # with another key.
     provider = OpenAIProvider(
-        base_url=base_url,
-        api_key=api_key,
-        http_client=_create_inference_http_client(
-            http_timeout,
-            source="datalayer-ai-inference",
-            headers=app_usage_headers(app_instance),
-        ),
+        openai_client=AsyncOpenAI(
+            base_url=base_url,
+            api_key=inference_api_key,
+            http_client=_create_inference_http_client(
+                http_timeout,
+                source="datalayer-ai-inference",
+                headers=app_usage_headers(app_instance),
+            ),
+        )
     )
     logger.info(
         "Routing model '%s' through datalayer-ai-inference at %s",

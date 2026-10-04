@@ -104,11 +104,21 @@ loop --runtime 01k…                   # back to a running agent runtime
 loop --cloud -a crawler "Summarize the news"  # one query, then the runtime is stopped
 ```
 
+#### Models on a cloud runtime
+
+A runtime on Datalayer calls its models **through datalayer-ai-inference, with your own token**. It never calls a provider such as Bedrock with keys of its own:
+
+- **Every agent goes through ai-inference.** This holds whatever its agentspec's `inference_provider` says. An agentspec that says `local`, such as `example-simple`, still runs locally on your machine, and on Datalayer through ai-inference.
+- **The token is yours, narrowed to ai-inference.** When the runtime is assigned to you, IAM mints it from your session. It can call ai-inference's chat completions, its model list and its judgments, and every other Datalayer service refuses it. It lasts as long as the runtime's reservation. Every model call is metered on your account, as a call from the Datalayer UI is.
+- **What is offered is what ai-inference serves.** With your token, the runtime asks ai-inference which models it serves, and offers your agent those of its agentspec's `model` and `model_additionals` that ai-inference serves, such as Qwen (`alibaba:qwen-max`) beside Claude Sonnet.
+- **Before the token arrives, nothing is called.** A runtime waiting in the pool has no user, so it has no token yet. Until it is assigned, `/models` says `This runtime has no ai-inference token yet: …`, every model is marked `No ai-inference token`, and a message fails with that sentence.
+- **When the token expires, the runtime stops calling models.** If a runtime outlives its token, it says when the token expired and calls no model any more. Start a new runtime.
+
 #### Slash commands on a cloud runtime
 
 The terminal reaches a cloud runtime through a relay on your machine that adds your Datalayer token to every request. Every slash command reads the session's one server address, so on Datalayer `/models`, `/skills`, `/tools`, `/mcp`, `/status`, `/context` and the others query and act on the **cloud runtime**, exactly as they do on a local one:
 
-- `/models` lists the models the cloud runtime offers its agent, under `Models on RUNTIME on Datalayer`: the agentspec's `model` and `model_additionals`, each marked usable or not, and below the title who decided — on Datalayer, `ai-inference at … serves …`, the list the runtime asked datalayer-ai-inference for when it started. `/models <id>` switches the runtime's agent to a model only if the runtime offers it to this agent and can use it. The switch recreates the agent the session talks to from its agentspec, on that model — its `model_additionals` stay its models, so it can be switched back. Otherwise the switch is refused in a sentence (`… cannot be used on RUNTIME on Datalayer (Not served by ai-inference): nothing was switched.`), and the sandbox never moves to this machine. Asked directly (`POST /api/v1/agents/configure-from-spec`), the runtime refuses a model ai-inference does not serve before it touches the agent in place.
+- `/models` lists the models the cloud runtime offers its agent, under `Models on RUNTIME on Datalayer`: the agentspec's `model` and `model_additionals`, each marked usable or not, and below the title who decided — on Datalayer, `ai-inference at … serves …`, the list the runtime asked datalayer-ai-inference for when it was assigned to you. `/models <id>` switches the runtime's agent to a model only if the runtime offers it to this agent and can use it. The switch recreates the agent the session talks to from its agentspec, on that model — its `model_additionals` stay its models, so it can be switched back. Otherwise the switch is refused in a sentence (`… cannot be used on RUNTIME on Datalayer (Not served by ai-inference): nothing was switched.`), and the sandbox never moves to this machine. Asked directly (`POST /api/v1/agents/configure-from-spec`), the runtime refuses a model ai-inference does not serve before it touches the agent in place.
 - `/skills`, `/tools` and `/mcp` list and change the skills, tools and MCP servers of the cloud runtime's agent.
 - `/status` shows `Agent Runtime  RUNTIME on Datalayer (ENVIRONMENT)` and the relay it goes through.
 

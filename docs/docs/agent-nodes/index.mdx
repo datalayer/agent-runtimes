@@ -293,6 +293,11 @@ when the new mode differs from the persisted one.
    provider for subsequent launches/sessions.
 - `GET  /api/v1/configure/inference/models` — the models the runtime's
    inference serves, as ai-inference answered it at startup, with a `note`.
+- `PUT  /api/v1/configure/inference/token` — give the runtime the token it
+   calls ai-inference with, and ask ai-inference again which models it
+   serves. Only the pod itself may call it (`403` otherwise): on Datalayer,
+   the companion does, when the runtime is assigned, with its user's token
+   narrowed by IAM to ai-inference.
 
 ### Central — `datalayer-runtimes`
 

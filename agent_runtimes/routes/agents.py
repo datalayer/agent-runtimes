@@ -92,24 +92,22 @@ _PARAM_TOKEN_PATTERNS = [
 
 
 def _agent_node_inference_provider_override() -> str | None:
-    """Return an inference-provider override when running Agent Node mode."""
+    """The inference provider every agent of this runtime is created with, or ``None``.
+
+    The runtime's own override — set at runtime (``PUT
+    /configure/inference/provider``) or by
+    ``AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE``, which a Datalayer runtime
+    is started with — wins over what an agentspec says; in Agent Node mode,
+    a node routes through Datalayer.
+    """
+    from .configure import configured_inference_provider_override
+
+    override = configured_inference_provider_override()
+    if override is not None:
+        return override
+
     if not is_node_enabled():
         return None
-
-    try:
-        from .configure import get_inference_provider_override
-
-        runtime_override = get_inference_provider_override()
-        if runtime_override in {"local", "datalayer"}:
-            return runtime_override
-    except Exception:
-        pass
-
-    configured = (
-        (os.getenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "").strip().lower()
-    )
-    if configured:
-        return configured
 
     if (os.getenv("AGENT_NODE_ID") or "").strip():
         return "datalayer"

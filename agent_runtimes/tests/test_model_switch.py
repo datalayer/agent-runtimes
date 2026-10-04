@@ -22,7 +22,11 @@ from rich.console import Console
 
 from agent_runtimes.chat.commands import models as models_command
 from agent_runtimes.models import offered
-from agent_runtimes.models.offered import InferenceModels, set_inference_models
+from agent_runtimes.models.offered import (
+    InferenceModels,
+    give_inference_token,
+    set_inference_models,
+)
 from agent_runtimes.routes import agents as agents_route
 from agent_runtimes.routes import configure as configure_route
 from agent_runtimes.routes.agents import (
@@ -31,6 +35,13 @@ from agent_runtimes.routes.agents import (
 )
 
 from .test_agents_create_integration import creation_spy  # noqa: F401
+
+
+@pytest.fixture(autouse=True)
+def _given_a_token() -> None:
+    """The runtime was given its ai-inference token: these tests route through it."""
+    give_inference_token("the-runtime-token")
+
 
 SONNET = "bedrock:us.anthropic.claude-sonnet-4-6"
 QWEN = "alibaba:qwen-max"
