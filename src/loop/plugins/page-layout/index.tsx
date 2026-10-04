@@ -41,6 +41,11 @@
  *   stays here rather than moving with the layout: it renders the reply as
  *   the transcript does, with the chat's markdown and the turn footer.
  *
+ * Its other arrangement is the **split** (`arrangement: 'split'`, LOOP
+ * T-07): the conversation and the work side by side, one hairline between
+ * them that a person drags — the layout an Appspec names `split`, where
+ * `page` is this plugin's sheet. `AppRenderer` picks one by the application.
+ *
  * The layout component is imported statically: it is a few boxes, and a
  * layout that arrived late would draw the split first and the page a moment
  * after, which is a flash a reader notices.
@@ -69,6 +74,7 @@ import {
   type ChatTurnSnapshot,
 } from '../../core';
 import { TurnPanel, type TurnPanelFooter } from './TurnPanel';
+import { SplitLayout } from './SplitLayout';
 
 /*
  * The layout's state is primer-addons', re-exported under the names the
@@ -81,6 +87,15 @@ export {
   openPagePanel as openConversationPanel,
 } from '@datalayer/primer-addons/lib/reactor';
 export type { TurnPanelFooter } from './TurnPanel';
+export {
+  SplitLayout,
+  SPLIT_DEFAULT_SHARE,
+  SPLIT_KEY_STEP,
+  SPLIT_MAX_SHARE,
+  SPLIT_MIN_SHARE,
+  clampSplitShare,
+  splitShareForKey,
+} from './SplitLayout';
 /* The sheet's size is primer-addons' type; a host names it without a second import. */
 export type {
   PageSize,
@@ -92,6 +107,18 @@ export const LOOP_PAGE_LAYOUT_PLUGIN_NAME =
 
 /** What a host may set on the page layout. */
 export type LoopPageLayoutConfig = {
+  /**
+   * How the parts are arranged.
+   *
+   * `page` (the default): the work on a centred sheet, the composer over
+   * it, the conversation in a panel that opens when wanted. `split`: the
+   * conversation and the work side by side, the conversation on the left
+   * with the composer under it, one hairline between them that a person
+   * drags (`SplitLayout`) — an Appspec's `layout: split`. The split keeps
+   * the conversation on screen, so it has no turn panel, no conversation
+   * toggle and no display modes; the other settings are the page's.
+   */
+  arrangement?: 'page' | 'split';
   /**
    * Where the turn panel hangs on the composer.
    *
@@ -270,6 +297,7 @@ function ConversationToggle(): JSX.Element | null {
 export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
   name: LOOP_PAGE_LAYOUT_PLUGIN_NAME,
   config: {
+    arrangement: 'page',
     turnPanel: 'below',
     turnPanelFooter: 'full',
     prompt: 'docked',
@@ -278,10 +306,20 @@ export const LoopPageLayoutPlugin = definePlugin<LoopPageLayoutConfig>({
   },
   displayName: 'Page layout',
   description:
-    'The editor — or, in the chat view, the conversation — on a centred sheet, the prompt docked above it at the same width or floating over it as a draggable card, the current turn under the prompt, the conversation in a side panel.',
+    'The editor — or, in the chat view, the conversation — on a centred sheet, the prompt docked above it at the same width or floating over it as a draggable card, the current turn under the prompt, the conversation in a side panel; or, split, the conversation and the work side by side with a hairline to drag.',
   octicon: 'file',
   emoji: '\u{1F4C4}',
   build: ({ config, ...ctx }) => {
+    if (config.arrangement === 'split') {
+      // The conversation is on screen: the composer docked under it, and
+      // nothing that stands in for a transcript out of sight.
+      ctx.contribute(
+        LoopChatLayout,
+        { id: 'split-layout', prompt: 'docked', Component: SplitLayout },
+        { id: 'split-layout' },
+      );
+      return { components: [] };
+    }
     /*
       The layout, contributed per build because the composer's stance is
       configuration: `docked-top` means the layout owns the composer's width

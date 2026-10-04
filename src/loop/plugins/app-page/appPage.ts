@@ -238,7 +238,9 @@ const surfaceComponents = (app: Pick<AppSpec, 'interface'>) =>
 
 /**
  * Whether the workspace draws the application's page: a chat, a widget or a
- * worker with a page layout (`page`, `split`), or with a surface composed.
+ * worker whose layout has one (`page`, `split`). A `chat` layout is the
+ * conversation alone: a surface composed for it is not drawn, which
+ * `surfaceUnshown` says in a sentence.
  */
 export function hasAppPage(
   app: Pick<AppSpec, 'kind' | 'interface' | 'agent'>,
@@ -246,7 +248,25 @@ export function hasAppPage(
   if (!app.agent || !isAppPageKind(app.kind)) {
     return false;
   }
-  return app.interface.layout !== 'chat' || surfaceComponents(app).length > 0;
+  return app.interface.layout !== 'chat';
+}
+
+/**
+ * Why a composed surface is not drawn, or `null` when it is (or there is
+ * none): the application's layout is `chat`, the conversation alone.
+ */
+export function surfaceUnshown(
+  app: Pick<AppSpec, 'kind' | 'interface' | 'agent'>,
+): string | null {
+  if (
+    !app.agent ||
+    !isAppPageKind(app.kind) ||
+    app.interface.layout !== 'chat' ||
+    surfaceComponents(app).length === 0
+  ) {
+    return null;
+  }
+  return 'Its page is composed but its layout is chat, the conversation alone: choose page or split to show it.';
 }
 
 const STATUS_WORDS: Record<ChatTurnStatus, string> = {

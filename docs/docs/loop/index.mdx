@@ -414,11 +414,34 @@ starters, its layout, and its [presence](../chat/presence.mdx) — its face, nam
 welcome and line of status — in the chat. An application can also be written
 in Python: see [Applications in Python](./python-applications.mdx).
 
+### An application's layout
+
+`interface.layout` says how the application is drawn, and `AppRenderer` draws
+it on the workspace's own page-layout plugin (`appLayoutOptions(app)` says what
+it sets), not on a layout of its own:
+
+| Layout  | What is drawn |
+| ------- | ------------- |
+| `chat`  | The conversation alone — no page, no editor, no strip. A surface composed for a chat layout is not drawn: `surfaceUnshown(app)` says so in a sentence, for a builder to choose `page` or `split`. |
+| `page`  | The page layout: the page on a centred sheet, the composer a card over it that starts at the bottom, the current turn under the composer. The card's display modes put the composer in the conversation panel — beside the page, over its edge or in its corner. |
+| `split` | The page layout's split (`pageLayoutArrangement: 'split'`, `SplitLayout`): the conversation on the left with its composer under it, the page on the right, one hairline between them that a person drags or moves with the arrow keys, Home and End (20% to 80% for the conversation, 40% to start). |
+
+A decision has no page of its own here, so its `page` or `split` layout keeps
+the notebook and the document on the sheet or beside the conversation. A host
+still wins over the application: any `LoopEmbed` prop it passes —
+`pageLayoutArrangement`, `editors` — replaces what the layout implies.
+`frame` draws the application in the window-frame plugin's window, titled with
+its face and name. The embed's inline mode (`AppEmbed`, `<datalayer-app>`) is
+`AppRenderer`, so an embedded application is drawn by its layout too.
+
+Tested in `app-layout.test.tsx` (the options per layout, the split's
+contribution, the hairline by key and pointer, the embed's inline mode); not
+yet seen in a browser.
+
 ### An application's page
 
 A chat, a widget or a worker runs as its conversation. When it has a page —
-a `page` or `split` layout, or a surface composed in `interface.surface` —
-`AppRenderer` mounts the `app-page` plugin (`defineAppPagePlugin`), which
+a `page` or `split` layout — `AppRenderer` mounts the `app-page` plugin (`defineAppPagePlugin`), which
 contributes the page as the editor beside the chat (`LoopEditorView`), in place
 of the notebook and the document. It is drawn by the workspace's own A2UI
 renderer (`InlineSurface`, the one that draws surfaces in the transcript); an

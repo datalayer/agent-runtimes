@@ -121,6 +121,13 @@ export type LoopPresetOptions = {
    */
   pageLayout?: boolean;
   /**
+   * How the page layout arranges the parts: `page` (the default), the work
+   * on a sheet with the conversation in a panel; or `split`, the
+   * conversation and the work side by side with a hairline to drag. Only
+   * read with `pageLayout`.
+   */
+  pageLayoutArrangement?: 'page' | 'split';
+  /**
    * Where the page layout hangs the current turn on the composer: `below`
    * (the default), `above`, or `none`. Only read with `pageLayout`.
    */
@@ -256,6 +263,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     teamId,
     teamPicker = true,
     pageLayout = false,
+    pageLayoutArrangement = 'page',
     pageLayoutTurnPanel = 'below',
     pageLayoutPrompt = 'docked',
     pageLayoutPromptAnchor = 'top',
@@ -365,6 +373,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     ...(pageLayout
       ? [
           configurePlugin(LoopPageLayoutPlugin, {
+            arrangement: pageLayoutArrangement,
             turnPanel: pageLayoutTurnPanel,
             turnPanelFooter: pageLayoutTurnPanelFooter,
             prompt: pageLayoutPrompt,

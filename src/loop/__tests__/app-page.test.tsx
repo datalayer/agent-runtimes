@@ -175,7 +175,7 @@ describe("the catalogue's pages", () => {
 });
 
 describe('which applications have a page', () => {
-  it('is a chat, a widget or a worker with a page layout or a surface', () => {
+  it('is a chat, a widget or a worker with a page or split layout', () => {
     expect(hasAppPage(APP_CATALOGUE['web-research'])).toBe(false);
     expect(hasAppPage(APP_CATALOGUE['quote-calculator'])).toBe(true);
     expect(hasAppPage(APP_CATALOGUE['inbox-triage'])).toBe(true);
@@ -188,7 +188,14 @@ describe('which applications have a page', () => {
         composedAt: '',
       },
     });
-    expect(hasAppPage(composed)).toBe(true);
+    // A chat layout is the conversation alone, a surface composed or not.
+    expect(hasAppPage(composed)).toBe(false);
+    expect(
+      hasAppPage({
+        ...composed,
+        interface: { ...composed.interface, layout: 'page' },
+      }),
+    ).toBe(true);
   });
 
   it('is contributed as the editor beside the chat, which opens on it alone', () => {

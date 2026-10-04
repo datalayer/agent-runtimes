@@ -16,14 +16,20 @@
  *   created with the application in its payload — so the runtime reaches only
  *   what the application connects to and enforces its rules before every tool
  *   call — and the application's starters as the openers of the empty chat;
- * - the **layout of its kind**: a chat is the conversation alone, with the
- *   A2UI surfaces its answers draw;
+ * - its **layout**, as `interface.layout` says (`appLayoutOptions`, LOOP
+ *   T-07), on the workspace's own `page-layout` plugin: `chat` is the
+ *   conversation alone, with the A2UI surfaces its answers draw; `page` is
+ *   the page on a sheet with the composer over it and the conversation in a
+ *   panel the composer's display modes open; `split` is the conversation and
+ *   the page side by side, a hairline between them to drag;
  * - its **page**, when it has one (`hasAppPage`: a chat, a widget or a worker
- *   with a `page` or `split` layout, or a surface composed): its A2UI surface
- *   drawn beside the conversation by the `app-page` plugin, in place of the
- *   notebook and the document, fed from the conversation and answered
- *   through it (`APP_KIND_PATHS`). A decision's page stays the Studio's run
- *   page (R-02); a layout without a page keeps the editors.
+ *   with a `page` or `split` layout): its A2UI surface drawn by the
+ *   `app-page` plugin, in place of the notebook and the document, fed from
+ *   the conversation and answered through it (`APP_KIND_PATHS`). A
+ *   decision's page stays the Studio's run page (R-02); its layout keeps the
+ *   editors;
+ * - its **frame**, when the host asks (`frame`): the `window-frame` plugin's
+ *   window, its title the application's face and name.
  *
  * @module loop/apps/AppRenderer
  */
@@ -38,6 +44,7 @@ import {
   hasAppPage,
 } from '../plugins/app-page';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
+import type { LoopPresetOptions } from '../presets';
 import { dumpAppspec } from './appspec';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 
@@ -109,7 +116,59 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    * stable function, such as a state setter.
    */
   onPresence?: (state: PresenceState) => void;
+  /**
+   * Draw the application in a window (the `window-frame` plugin), its title
+   * the application's face and name. A host's own `frameTitle` wins.
+   */
+  frame?: boolean;
 };
+
+/** What `interface.layout` sets on the workspace. */
+export type AppLayoutOptions = Pick<
+  LoopPresetOptions,
+  | 'editors'
+  | 'showViewSelector'
+  | 'defaultEditor'
+  | 'pageLayout'
+  | 'pageLayoutArrangement'
+  | 'pageLayoutPrompt'
+  | 'pageLayoutPromptAnchor'
+  | 'pageLayoutTurnPanelFooter'
+>;
+
+/**
+ * The workspace an application's layout asks for (LOOP T-07).
+ *
+ * - `chat`: the conversation alone — no editor, no page, no strip.
+ * - `page`: the page layout — its page (or, without one, the editors) on the
+ *   sheet; the composer a card over it, starting at the bottom, whose display
+ *   modes put it in the conversation panel beside, over or in the corner of
+ *   the page; the current turn under the composer, its copy and dismiss only.
+ * - `split`: the page layout's split — the conversation on the left with its
+ *   composer, the page on the right, a hairline between them to drag.
+ *
+ * With a page, the page is the one editor, opened, without a strip to swap
+ * it; without one (a decision, whose page is the Studio's), the editors stay.
+ */
+export function appLayoutOptions(
+  app: Pick<AppSpec, 'kind' | 'interface' | 'agent'>,
+): AppLayoutOptions {
+  const layout = app.interface.layout;
+  if (layout === 'chat') {
+    return { editors: false, showViewSelector: false };
+  }
+  const withPage = hasAppPage(app);
+  return {
+    editors: !withPage,
+    showViewSelector: !withPage,
+    ...(withPage ? { defaultEditor: APP_PAGE_SURFACE } : {}),
+    pageLayout: true,
+    pageLayoutArrangement: layout === 'split' ? 'split' : 'page',
+    pageLayoutPrompt: 'floating',
+    pageLayoutPromptAnchor: 'bottom',
+    pageLayoutTurnPanelFooter: 'actions',
+  };
+}
 
 /**
  * What an application's agent is created with on a Datalayer runtime: under
@@ -163,9 +222,9 @@ export function AppRenderer({
   plugins = NO_PLUGINS,
   instance,
   onPresence,
+  frame = false,
   ...embed
 }: AppRendererProps): React.JSX.Element {
-  const chatOnly = app.interface.layout === 'chat';
   /*
    * The application plugin, made once per application. `LoopEmbed` rebuilds
    * its whole reactor when its plugins change, so a new plugin on every
@@ -215,12 +274,14 @@ export function AppRenderer({
       // The application's own agent: created under its id, so that its
       // spec is applied to an agent of its own, never to the one it extends.
       agentId={app.id}
-      // With a page, the page is the editor beside the chat, alone and
-      // without a strip to swap it; without one, a chat is the
-      // conversation alone and the other layouts keep the editors.
-      editors={!chatOnly && !withPage}
-      showViewSelector={!chatOnly && !withPage}
-      {...(withPage ? { defaultEditor: APP_PAGE_SURFACE } : {})}
+      // Drawn as its layout says: the conversation alone, the page with
+      // the conversation over it, or the two side by side.
+      {...appLayoutOptions(app)}
+      {...(frame
+        ? {
+            frameTitle: [app.emoji, app.name].filter(Boolean).join(' '),
+          }
+        : {})}
       teamPicker={false}
       showAgentVariants={false}
       graph={false}
