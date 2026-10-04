@@ -475,11 +475,15 @@ def resolve_model_for_inference_provider(
     # The token is read as each call is made, not now: a pooled runtime builds
     # its agent before it is assigned and given its token, and a call without
     # one is refused in a sentence (``InferenceTokenMissing``), never made
-    # with another key.
+    # with another key. A deployment's agent calls with its application's
+    # principal's token, and only with it (LOOP I-03).
+    from agent_runtimes.loop.apps.principal import api_key_for, deployment_of
+
+    deployment = deployment_of(app_instance)
     provider = OpenAIProvider(
         openai_client=AsyncOpenAI(
             base_url=base_url,
-            api_key=inference_api_key,
+            api_key=api_key_for(deployment) if deployment else inference_api_key,
             http_client=_create_inference_http_client(
                 http_timeout,
                 source="datalayer-ai-inference",

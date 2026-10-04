@@ -48,8 +48,12 @@ def test_an_agent_no_application_runs_names_nothing():
 
 
 def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
+    from agent_runtimes.loop.apps.principal import give_principal_token
+
     monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
     give_inference_token("the-runtime-token")
+    # A deployment calls as its application's principal (LOOP I-03).
+    give_principal_token("01DEP", "the-principal-token", expires_in=3600)
     model = resolve_model_for_inference_provider(
         "bedrock:x", "datalayer", app_instance=DEPLOYMENT
     )
@@ -83,6 +87,7 @@ def test_the_headers_reach_ai_inference_on_every_call(monkeypatch):
     assert seen[0].url.path == "/api/ai-inference/v1/chat/completions"
     assert seen[0].headers["x-datalayer-app-uid"] == "01APP"
     assert seen[0].headers["x-datalayer-deployment-uid"] == "01DEP"
+    assert seen[0].headers["authorization"] == "Bearer the-principal-token"
 
 
 def test_a_model_routed_for_no_application_sends_neither():

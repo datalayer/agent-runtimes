@@ -1064,6 +1064,31 @@ class VercelAITransport(BaseTransport):
         effective_inference_provider, inference_provider_source = (
             _resolve_effective_inference_provider(self._agent_id)
         )
+        # A deployment's agent acts as its application's principal: its token
+        # is asked for again, with this request's, when it runs out, and
+        # without one nothing runs (LOOP I-03).
+        from ..loop.apps.principal import (
+            PrincipalTokenMissing,
+            deployment_of,
+            ensure_principal_token,
+            principal_token,
+        )
+        from ..models.models import app_instance_of as _app_instance_of
+
+        serving_deployment = deployment_of(_app_instance_of(self._agent_id))
+        if serving_deployment:
+            asking = request.headers.get("authorization", "")
+            try:
+                await ensure_principal_token(
+                    serving_deployment,
+                    asking[7:].strip()
+                    if asking.lower().startswith("bearer ")
+                    else None,
+                )
+            except PrincipalTokenMissing as missing:
+                from starlette.responses import JSONResponse
+
+                return JSONResponse({"detail": str(missing)}, status_code=403)
         if isinstance(model, str) and model:
             # A model the agent does not offer, or ai-inference does not
             # serve, is refused before anything runs.
@@ -1372,6 +1397,14 @@ class VercelAITransport(BaseTransport):
             async with IdentityContextManager(identities_from_request):
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = self._get_runtime_toolsets()
+                if serving_deployment:
+                    from ..mcp.datalayer_gateway import toolsets_for_the_run
+
+                    # The Datalayer MCP gateway is reached as the deployment's
+                    # principal, never with the process's key (LOOP I-03).
+                    runtime_toolsets = toolsets_for_the_run(
+                        runtime_toolsets, principal_token(serving_deployment) or ""
+                    )
 
                 # Filter MCP toolsets to only expose tools the user has enabled.
                 # We check if each tool's name is in the known MCP tool inventory;

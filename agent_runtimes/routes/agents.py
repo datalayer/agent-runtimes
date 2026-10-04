@@ -1670,6 +1670,27 @@ async def create_agent(
                     status_code=422,
                     detail={"problems": refused.problems},
                 ) from None
+            # A deployment's agent acts as its application's principal, with
+            # the token ai-agents mints for it from the caller's: it is not
+            # made without one (LOOP I-03).
+            from agent_runtimes.loop.apps.principal import (
+                PrincipalTokenMissing,
+                deployment_of,
+                ensure_principal_token,
+            )
+
+            serving_deployment = deployment_of(request.app_instance)
+            if serving_deployment:
+                creator = http_request.headers.get("Authorization", "")
+                try:
+                    await ensure_principal_token(
+                        serving_deployment,
+                        creator[7:].strip()
+                        if creator.lower().startswith("bearer ")
+                        else None,
+                    )
+                except PrincipalTokenMissing as missing:
+                    raise HTTPException(status_code=422, detail=str(missing)) from None
             # The application runs as a Reactor plugin of its own (LOOP F-13).
             register_app(running_app)
             # Code Mode calls every tool through `execute_code`, which an

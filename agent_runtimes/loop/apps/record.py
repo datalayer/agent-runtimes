@@ -130,13 +130,29 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> None:
     """
     import httpx
 
-    try:
-        from agent_runtimes.context.identities import get_request_user_jwt
+    deployment = str(body.get("deployment_uid") or "").strip()
+    if deployment:
+        # A deployment's record is written by its application's principal,
+        # into its owner's record, and by nobody else (LOOP I-03).
+        from agent_runtimes.loop.apps.principal import (
+            principal_token,
+            principal_token_refusal,
+        )
 
-        token = get_request_user_jwt()
-    except Exception:  # noqa: BLE001 - no request context: the runtime's token
-        token = None
-    token = token or os.environ.get("DATALAYER_USER_TOKEN")
+        token = principal_token(deployment)
+        if not token:
+            raise RecordNotSent(
+                f"The record of {body.get('app_uid')} is not sent: "
+                f"{principal_token_refusal(deployment)}"
+            )
+    else:
+        try:
+            from agent_runtimes.context.identities import get_request_user_jwt
+
+            token = get_request_user_jwt()
+        except Exception:  # noqa: BLE001 - no request context: the runtime's token
+            token = None
+        token = token or os.environ.get("DATALAYER_USER_TOKEN")
     if not token:
         raise RecordNotSent(
             f"The record of {body.get('app_uid')} is not sent: no token."

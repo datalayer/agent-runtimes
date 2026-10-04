@@ -224,6 +224,42 @@ The record of a session nobody opened says what woke it: `woken_by`,
 `{"kind": "schedule", ...}` — the schedule, its cron, and on the platform
 the scheduler's run — sent with its entries and written on its first.
 
+### In whose name it acts on the platform
+
+A deployed application acts as itself: its **service principal**, made at
+its first deploy, with a token narrowed to what the version it runs was
+granted — never with the token of the person who launched the runtime.
+
+- **What it may reach** is read from the deployed version's Appspec — each
+  connection (its server, `read` or `write`, in whose name, its `only`), each
+  Space, and the parts of its computer turned on — and kept by the platform
+  as the deployment's grant (RFC 9396 `authorization_details`). An
+  application granted nothing has an empty list, and reaches nothing.
+- **Its token.** The agent of a deployment is created on a runtime with
+  `app_instance.deployment_uid` and the token of whoever opens its session
+  (the hosted page, the scheduler's tick). The runtime asks ai-agents for the
+  principal's token with it (`POST /api/ai-agents/v1/apps/deployments/{uid}/principal-token`)
+  before the agent is made, keeps it in memory by deployment
+  (`agent_runtimes.loop.apps.principal`), and asks again, with the latest
+  request's token, when less than five minutes of its hour are left.
+- **What it is used for**: the agent's model calls through ai-inference
+  (metered on the application's owner, naming the deployment and the
+  principal), the Datalayer MCP gateway, and the session's record. The
+  runtime's inference token and `DATALAYER_USER_TOKEN` are never used in its
+  place.
+- **Fail fast.** Without the token the agent is not created (422, in a
+  sentence); once it has expired the agent calls nothing and says so, and a
+  chat request is answered 403.
+- **Withdrawn, at once.** Every service reading the token asks whether its
+  grant still stands, and remembers the answer ten seconds. Moving the
+  deployment to a version granting less, pausing it, taking it down or
+  deleting the application revokes the grant, so the token stops being
+  honoured within ten seconds, not at its expiry.
+
+A Preview, a test run and an agent no application runs keep the runtime's
+own inference token: they are a person trying something, not a deployment
+acting alone.
+
 ## `AppHost`
 
 `AppHost(app, channel, *, agent=local_agent, recorder=None)` runs an
