@@ -30,15 +30,14 @@ def app(include: list[str]) -> AppSpec:
     )
 
 
-def recorded(spec: AppSpec, *turns: Any) -> tuple[Agent, list]:
+def recorded(spec: AppSpec, *turns: Any, **instance: Any) -> tuple[Agent, list]:
     sent: list = []
 
     async def send(body: dict) -> None:
         sent.append(body)
 
-    recorder = AppRecorder(
-        app=spec, app_uid="app-1", deployment_uid="dep-1", version=3, send=send
-    )
+    instance = {"deployment_uid": "dep-1", **instance}
+    recorder = AppRecorder(app=spec, app_uid="app-1", version=3, send=send, **instance)
     agent: Agent = Agent(
         scripted(*turns),
         capabilities=[
@@ -78,6 +77,22 @@ async def test_a_session_is_sent_with_what_it_did():
     ]
     assert body["entries"][1]["payload"]["tool"] == "search"
     assert body["entries"][2]["summary"] == "Here is the news."
+    # Real use: no purpose named.
+    assert (body["purpose"], body["launch_uid"]) == ("", "")
+
+
+async def test_a_test_session_says_it_is_a_test_and_of_which_launch():
+    agent, sent = recorded(
+        app(["outputs"]),
+        "An answer.",
+        deployment_uid="",
+        purpose="test",
+        launch_uid="launch-1",
+    )
+    await agent.run("hi")
+    body = sent[0]
+    assert (body["deployment_uid"], body["version"]) == ("", 3)
+    assert (body["purpose"], body["launch_uid"]) == ("test", "launch-1")
 
 
 async def test_only_what_the_application_keeps_is_kept():

@@ -9,6 +9,11 @@ answer — is sent to ai-agents (`/api/ai-agents/v1/apps/records`), which keeps
 the living instances of applications. Only what the application's
 `record.include` names is kept, for as long as its `record.keep_for` says.
 
+A session run to test the application (the Evals engine's runs) says so:
+the instance names its `purpose`, `test`, and the launch that ran it, and
+both are sent with its entries, so that ai-agents reads tests apart from
+real use. A session that names no purpose is real use.
+
 A session is a conversation when the run names one, a run otherwise. The
 record is sent after each run, with the token the run was made with; a
 record that cannot be sent is logged, and never fails the run.
@@ -125,6 +130,10 @@ class AppRecorder:
     app_uid: str = ""
     deployment_uid: str = ""
     version: int = 0
+    #: `test` when the session is run to test the application; real use otherwise.
+    purpose: str = ""
+    #: The launch that ran it, for a test.
+    launch_uid: str = ""
     send: Send = send_to_ai_agents
 
     _pending: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict, init=False)
@@ -166,6 +175,8 @@ class AppRecorder:
             "session_uid": session,
             "deployment_uid": self.deployment_uid,
             "version": self.version,
+            "purpose": self.purpose,
+            "launch_uid": self.launch_uid,
             "keep_days": keep_days_of(self.app),
             "entries": entries,
         }
