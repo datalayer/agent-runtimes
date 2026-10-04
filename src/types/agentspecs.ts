@@ -406,6 +406,15 @@ export type AppLayout = 'chat' | 'page' | 'split';
 /** The one colour of an application; everything else is neutral. */
 export type AppAccent = 'green' | 'rose' | 'sky' | 'lime' | 'sun' | 'violet';
 
+/**
+ * The character an application's floating assistant shows (LOOP T-24): one of
+ * those Datalayer's plugin contributes.
+ */
+export type AppAssistantCharacter = 'paperclip' | 'wizard' | 'cat' | 'eyes';
+
+/** How an application sits in another product's page (LOOP D-07). */
+export type AppEmbedMode = 'inline' | 'bubble' | 'panel' | 'assistant';
+
 /** Something an application reaches. */
 export interface AppConnectionSpec {
   /** An MCP server, `id` or `id:version`. */
@@ -471,6 +480,8 @@ export interface AppInterfaceSpec {
   /** The components of the catalog the surface may use. */
   components: string[];
   surface?: AppSurfaceSpec;
+  /** The character its floating assistant shows; the paper clip when unsaid. */
+  assistant?: AppAssistantCharacter;
 }
 
 export interface AppTestCaseSpec {
@@ -506,7 +517,7 @@ export interface AppDeploymentSpec {
     visibility: 'private' | 'invited' | 'organization' | 'link' | 'public';
     slug: string;
   };
-  embedded?: { mode: 'inline' | 'bubble' | 'panel'; origins: string[] };
+  embedded?: { mode: AppEmbedMode; origins: string[] };
 }
 
 /** What starts a worker's work. */

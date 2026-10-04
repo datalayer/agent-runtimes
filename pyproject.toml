@@ -29,7 +29,7 @@ dependencies = [
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
-    "agentspecs>=0.0.19",
+    "agentspecs>=0.0.20",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

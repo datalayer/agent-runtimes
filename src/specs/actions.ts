@@ -460,6 +460,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
  * to reproduce.
  */
 export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
+  'data-quality': {},
   'inbox-triage': {
     'google-workspace.append_table_rows': 'leave_to_me',
     'google-workspace.batch_modify_gmail_message_labels': 'do_it',
@@ -582,8 +583,10 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'google-workspace.update_drive_file': 'leave_to_me',
     'google-workspace.update_paragraph_style': 'leave_to_me',
   },
+  'model-choice': {},
   'quote-calculator': {},
   'ship-or-fix': {},
+  'supplier-comparison': {},
   'web-research': {
     'tavily.tavily_crawl': 'do_it',
     'tavily.tavily_extract': 'do_it',
@@ -601,6 +604,7 @@ export const APP_ESCALATIONS: Record<
   string,
   Record<string, AppEscalation[]>
 > = {
+  'data-quality': {},
   'inbox-triage': {
     'google-workspace.batch_modify_gmail_message_labels': [
       {
@@ -635,7 +639,9 @@ export const APP_ESCALATIONS: Record<
       },
     ],
   },
+  'model-choice': {},
   'quote-calculator': {},
   'ship-or-fix': {},
+  'supplier-comparison': {},
   'web-research': {},
 };

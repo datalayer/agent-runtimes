@@ -15,6 +15,140 @@
 
 import type { AppKind, AppSpec } from '../types/agentspecs';
 
+export const DATA_QUALITY_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'data-quality',
+  version: '0.0.1',
+  name: 'Data Quality Investigation',
+  kind: 'decision',
+  description:
+    'Which anomalies in this dataset should we fix first? For a data team, before a dataset is used for a decision.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'jupyter-data-analyst:0.0.1',
+  team: '',
+  instructions: '',
+  model: '',
+  skills: [],
+  tools: [],
+  context: [],
+  contents: ['The dataset under investigation'],
+  connections: [],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'page',
+    accent: 'green',
+    welcome: '',
+    starters: [],
+    settings: [],
+    components: [
+      'Card',
+      'Column',
+      'Row',
+      'List',
+      'Tabs',
+      'Text',
+      'Slider',
+      'ChoicePicker',
+      'TextField',
+      'Button',
+    ],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [],
+  },
+  record: {
+    keepFor: '1_years',
+    include: ['decisions', 'sources', 'checks'],
+    retentionDays: 365,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  decision: {
+    question: 'Which anomalies in this dataset should we fix first?',
+    alternatives: [],
+    criteria: [
+      {
+        name: 'Rows affected',
+        kind: 'metric',
+        weight: 2.0,
+        instructions:
+          'How many rows the anomaly touches, from a validation run in the sandbox.',
+        options: [],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Effect on the result',
+        kind: 'metric',
+        weight: 3.0,
+        instructions:
+          'How far the headline figures move when the anomaly is corrected.',
+        options: [],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Kind of anomaly',
+        kind: 'choice',
+        weight: 0.0,
+        instructions: 'What is this anomaly?',
+        options: [
+          'Genuine: a real extreme, to keep',
+          'Outlier: a value far from the rest, to check',
+          'Unit: a unit mismatch',
+          'Missing: a missing value',
+          'Duplicate: the same row twice',
+        ],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Safe to correct automatically',
+        kind: 'noul',
+        weight: 1.0,
+        instructions:
+          'Can the proposed correction be applied without a person checking each row?',
+        options: [],
+        direction: 'higher',
+        measure: '',
+      },
+    ],
+    minConfidence: 0.0,
+    scenarios: [],
+    judgmentModel: 'cloudflare:gtw/typesafe/jev',
+  },
+  enabled: true,
+  tags: ['example', 'decision', 'data-quality'],
+  icon: 'filter',
+  emoji: '🧹',
+  avatar: '',
+  banner: '',
+  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+};
+
 export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'inbox-triage',
@@ -178,6 +312,195 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     "The agent 'worker-mail-triage:0.0.1' is not enabled.",
     "The MCP server 'google-workspace:0.0.1' is not enabled.",
   ],
+};
+
+export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'model-choice',
+  version: '0.0.1',
+  name: 'Model Choice',
+  kind: 'decision',
+  description:
+    'Which chat model should this use case run on? For a team choosing a model for one job — a summarizer, a classifier, an agent — from what a benchmark run measured and what a judge reads in the answers.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'jupyter-data-analyst:0.0.1',
+  team: '',
+  instructions: '',
+  model: '',
+  skills: [],
+  tools: [],
+  context: [],
+  contents: [
+    'The benchmark run: one configuration per model, its task results, cost and latency',
+    'The Models page: how each model is billed (standard or credits) and who hosts it',
+  ],
+  connections: [],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'page',
+    accent: 'green',
+    welcome: '',
+    starters: [],
+    settings: [],
+    components: [
+      'Card',
+      'Column',
+      'Row',
+      'List',
+      'Tabs',
+      'Text',
+      'Slider',
+      'ChoicePicker',
+      'TextField',
+      'Button',
+    ],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [],
+  },
+  record: {
+    keepFor: '1_years',
+    include: ['decisions', 'sources', 'checks'],
+    retentionDays: 365,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  decision: {
+    question: 'Which chat model should this use case run on?',
+    alternatives: [],
+    criteria: [
+      {
+        name: 'Pass rate',
+        kind: 'metric',
+        weight: 3.0,
+        instructions: 'Share of tasks passed, from the run.',
+        options: [],
+        direction: 'higher',
+        measure: 'pass_rate',
+      },
+      {
+        name: 'Cost per task',
+        kind: 'metric',
+        weight: 2.0,
+        instructions: 'Credits spent per task, from the run; lower is better.',
+        options: [],
+        direction: 'lower',
+        measure: 'cost_per_task',
+      },
+      {
+        name: 'Latency',
+        kind: 'metric',
+        weight: 2.0,
+        instructions: 'Median seconds per task, from the run; lower is better.',
+        options: [],
+        direction: 'lower',
+        measure: 'seconds_per_task',
+      },
+      {
+        name: 'Answer quality',
+        kind: 'score',
+        weight: 3.0,
+        instructions:
+          'Reading the failures and what the run recorded, how good are this model’s answers for the use case?',
+        options: [
+          'Unusable: wrong or off-task answers',
+          'Rough: usable with rework',
+          'Good: usable as they are',
+          'Excellent: better than the reference',
+        ],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Follows the format',
+        kind: 'noul',
+        weight: 1.0,
+        instructions:
+          'Does this model keep to the output format the use case asks for?',
+        options: [],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Missing information',
+        kind: 'choice',
+        weight: 0.0,
+        instructions: 'What is missing to choose this model?',
+        options: [
+          'Price: the billing of this model is not known',
+          'Traces: the failures have no trajectory to read',
+          'Cases: the run is too small to tell',
+          'Nothing: everything needed is there',
+        ],
+        direction: 'higher',
+        measure: '',
+      },
+    ],
+    minConfidence: 0.6,
+    scenarios: [
+      {
+        name: 'Quality first',
+        weights: {
+          'Pass rate': 4.0,
+          'Cost per task': 0.0,
+          Latency: 1.0,
+          'Answer quality': 4.0,
+          'Follows the format': 1.0,
+        },
+      },
+      {
+        name: 'Cheapest that works',
+        weights: {
+          'Pass rate': 3.0,
+          'Cost per task': 4.0,
+          Latency: 1.0,
+          'Answer quality': 1.0,
+          'Follows the format': 1.0,
+        },
+      },
+      {
+        name: 'Fastest that works',
+        weights: {
+          'Pass rate': 3.0,
+          'Cost per task': 1.0,
+          Latency: 4.0,
+          'Answer quality': 1.0,
+          'Follows the format': 1.0,
+        },
+      },
+    ],
+    judgmentModel: 'cloudflare:gtw/typesafe/jev',
+  },
+  enabled: true,
+  tags: ['example', 'decision', 'benchmarks', 'models'],
+  icon: 'cpu',
+  emoji: '🧠',
+  avatar: '',
+  banner: '',
+  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
 };
 
 export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
@@ -531,6 +854,153 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
 };
 
+export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'supplier-comparison',
+  version: '0.0.1',
+  name: 'Supplier Comparison',
+  kind: 'decision',
+  description:
+    'Which supplier should we choose for these orders? For an operations or procurement lead, at each sourcing round.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'jupyter-data-analyst:0.0.1',
+  team: '',
+  instructions: '',
+  model: '',
+  skills: [],
+  tools: [],
+  context: [],
+  contents: ['Order history', 'Supplier price lists', 'Delivery records'],
+  connections: [],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'page',
+    accent: 'green',
+    welcome: '',
+    starters: [],
+    settings: [],
+    components: [
+      'Card',
+      'Column',
+      'Row',
+      'List',
+      'Tabs',
+      'Text',
+      'Slider',
+      'ChoicePicker',
+      'TextField',
+      'Button',
+    ],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [],
+  },
+  record: {
+    keepFor: '1_years',
+    include: ['decisions', 'sources', 'checks'],
+    retentionDays: 365,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  decision: {
+    question: 'Which supplier should we choose for these orders?',
+    alternatives: [],
+    criteria: [
+      {
+        name: 'Price',
+        kind: 'metric',
+        weight: 2.0,
+        instructions: 'Total cost of the orders at each supplier’s prices.',
+        options: [],
+        direction: 'lower',
+        measure: '',
+      },
+      {
+        name: 'Delivery reliability',
+        kind: 'metric',
+        weight: 2.0,
+        instructions:
+          'Share of past deliveries on time, from the delivery records.',
+        options: [],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Capacity',
+        kind: 'metric',
+        weight: 1.0,
+        instructions:
+          'Whether the supplier’s capacity covers the ordered volume.',
+        options: [],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Fit with requirements',
+        kind: 'score',
+        weight: 2.0,
+        instructions:
+          'How well does this supplier fit the stated requirements?',
+        options: [
+          'None: meets none of the stated requirements',
+          'Some: meets a few, misses the important ones',
+          'Most: meets the important ones, misses a few',
+          'All: meets every stated requirement',
+        ],
+        direction: 'higher',
+        measure: '',
+      },
+      {
+        name: 'Missing information',
+        kind: 'choice',
+        weight: 0.0,
+        instructions: 'What is missing to decide on this supplier?',
+        options: [
+          'Capacity: a capacity figure is missing',
+          'Delivery: a delivery record is missing',
+          'Price: a price is missing',
+          'Nothing: everything needed is there',
+        ],
+        direction: 'higher',
+        measure: '',
+      },
+    ],
+    minConfidence: 0.0,
+    scenarios: [],
+    judgmentModel: 'cloudflare:gtw/typesafe/jev',
+  },
+  enabled: true,
+  tags: ['example', 'decision', 'procurement'],
+  icon: 'package',
+  emoji: '🚚',
+  avatar: '',
+  banner: '',
+  setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+};
+
 export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'web-research',
@@ -649,9 +1119,12 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
 };
 
 export const APP_CATALOGUE: Record<string, AppSpec> = {
+  'data-quality': DATA_QUALITY_APP_0_0_1,
   'inbox-triage': INBOX_TRIAGE_APP_0_0_1,
+  'model-choice': MODEL_CHOICE_APP_0_0_1,
   'quote-calculator': QUOTE_CALCULATOR_APP_0_0_1,
   'ship-or-fix': SHIP_OR_FIX_APP_0_0_1,
+  'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_1,
   'web-research': WEB_RESEARCH_APP_0_0_1,
 };
 
@@ -677,6 +1150,77 @@ export function getApp(ref: string): AppSpec | undefined {
  * Appspec have to give back.
  */
 export const APP_SOURCES: Record<string, Record<string, unknown>> = {
+  'data-quality': {
+    schema: 'loop.app/v1',
+    id: 'data-quality',
+    name: 'Data Quality Investigation',
+    kind: 'decision',
+    description:
+      'Which anomalies in this dataset should we fix first? For a data team, before a dataset is used for a decision.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'jupyter-data-analyst:0.0.1',
+    contents: ['The dataset under investigation'],
+    interface: {
+      components: [
+        'Card',
+        'Column',
+        'Row',
+        'List',
+        'Tabs',
+        'Text',
+        'Slider',
+        'ChoicePicker',
+        'TextField',
+        'Button',
+      ],
+    },
+    record: {
+      include: ['decisions', 'sources', 'checks'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    decision: {
+      question: 'Which anomalies in this dataset should we fix first?',
+      criteria: [
+        {
+          name: 'Rows affected',
+          weight: 2.0,
+          instructions:
+            'How many rows the anomaly touches, from a validation run in the sandbox.',
+        },
+        {
+          name: 'Effect on the result',
+          weight: 3.0,
+          instructions:
+            'How far the headline figures move when the anomaly is corrected.',
+        },
+        {
+          name: 'Kind of anomaly',
+          kind: 'choice',
+          weight: 0.0,
+          instructions: 'What is this anomaly?',
+          options: [
+            'Genuine: a real extreme, to keep',
+            'Outlier: a value far from the rest, to check',
+            'Unit: a unit mismatch',
+            'Missing: a missing value',
+            'Duplicate: the same row twice',
+          ],
+        },
+        {
+          name: 'Safe to correct automatically',
+          kind: 'noul',
+          instructions:
+            'Can the proposed correction be applied without a person checking each row?',
+        },
+      ],
+      judgment_model: 'cloudflare:gtw/typesafe/jev',
+    },
+    tags: ['example', 'decision', 'data-quality'],
+    icon: 'filter',
+    emoji: '🧹',
+  },
   'inbox-triage': {
     schema: 'loop.app/v1',
     id: 'inbox-triage',
@@ -799,6 +1343,135 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'worker', 'mail'],
     icon: 'mail',
     emoji: '📬',
+  },
+  'model-choice': {
+    schema: 'loop.app/v1',
+    id: 'model-choice',
+    name: 'Model Choice',
+    kind: 'decision',
+    description:
+      'Which chat model should this use case run on? For a team choosing a model for one job — a summarizer, a classifier, an agent — from what a benchmark run measured and what a judge reads in the answers.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'jupyter-data-analyst:0.0.1',
+    contents: [
+      'The benchmark run: one configuration per model, its task results, cost and latency',
+      'The Models page: how each model is billed (standard or credits) and who hosts it',
+    ],
+    interface: {
+      components: [
+        'Card',
+        'Column',
+        'Row',
+        'List',
+        'Tabs',
+        'Text',
+        'Slider',
+        'ChoicePicker',
+        'TextField',
+        'Button',
+      ],
+    },
+    record: {
+      include: ['decisions', 'sources', 'checks'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    decision: {
+      question: 'Which chat model should this use case run on?',
+      criteria: [
+        {
+          name: 'Pass rate',
+          weight: 3.0,
+          instructions: 'Share of tasks passed, from the run.',
+          measure: 'pass_rate',
+        },
+        {
+          name: 'Cost per task',
+          weight: 2.0,
+          instructions:
+            'Credits spent per task, from the run; lower is better.',
+          direction: 'lower',
+          measure: 'cost_per_task',
+        },
+        {
+          name: 'Latency',
+          weight: 2.0,
+          instructions:
+            'Median seconds per task, from the run; lower is better.',
+          direction: 'lower',
+          measure: 'seconds_per_task',
+        },
+        {
+          name: 'Answer quality',
+          kind: 'score',
+          weight: 3.0,
+          instructions:
+            'Reading the failures and what the run recorded, how good are this model’s answers for the use case?',
+          options: [
+            'Unusable: wrong or off-task answers',
+            'Rough: usable with rework',
+            'Good: usable as they are',
+            'Excellent: better than the reference',
+          ],
+        },
+        {
+          name: 'Follows the format',
+          kind: 'noul',
+          instructions:
+            'Does this model keep to the output format the use case asks for?',
+        },
+        {
+          name: 'Missing information',
+          kind: 'choice',
+          weight: 0.0,
+          instructions: 'What is missing to choose this model?',
+          options: [
+            'Price: the billing of this model is not known',
+            'Traces: the failures have no trajectory to read',
+            'Cases: the run is too small to tell',
+            'Nothing: everything needed is there',
+          ],
+        },
+      ],
+      min_confidence: 0.6,
+      scenarios: [
+        {
+          name: 'Quality first',
+          weights: {
+            'Answer quality': 4.0,
+            'Cost per task': 0.0,
+            'Follows the format': 1.0,
+            Latency: 1.0,
+            'Pass rate': 4.0,
+          },
+        },
+        {
+          name: 'Cheapest that works',
+          weights: {
+            'Answer quality': 1.0,
+            'Cost per task': 4.0,
+            'Follows the format': 1.0,
+            Latency: 1.0,
+            'Pass rate': 3.0,
+          },
+        },
+        {
+          name: 'Fastest that works',
+          weights: {
+            'Answer quality': 1.0,
+            'Cost per task': 1.0,
+            'Follows the format': 1.0,
+            Latency: 4.0,
+            'Pass rate': 3.0,
+          },
+        },
+      ],
+      judgment_model: 'cloudflare:gtw/typesafe/jev',
+    },
+    tags: ['example', 'decision', 'benchmarks', 'models'],
+    icon: 'cpu',
+    emoji: '🧠',
   },
   'quote-calculator': {
     schema: 'loop.app/v1',
@@ -1047,6 +1720,88 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'decision', 'benchmarks'],
     icon: 'checklist',
     emoji: '🚢',
+  },
+  'supplier-comparison': {
+    schema: 'loop.app/v1',
+    id: 'supplier-comparison',
+    name: 'Supplier Comparison',
+    kind: 'decision',
+    description:
+      'Which supplier should we choose for these orders? For an operations or procurement lead, at each sourcing round.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'jupyter-data-analyst:0.0.1',
+    contents: ['Order history', 'Supplier price lists', 'Delivery records'],
+    interface: {
+      components: [
+        'Card',
+        'Column',
+        'Row',
+        'List',
+        'Tabs',
+        'Text',
+        'Slider',
+        'ChoicePicker',
+        'TextField',
+        'Button',
+      ],
+    },
+    record: {
+      include: ['decisions', 'sources', 'checks'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    decision: {
+      question: 'Which supplier should we choose for these orders?',
+      criteria: [
+        {
+          name: 'Price',
+          weight: 2.0,
+          instructions: 'Total cost of the orders at each supplier’s prices.',
+          direction: 'lower',
+        },
+        {
+          name: 'Delivery reliability',
+          weight: 2.0,
+          instructions:
+            'Share of past deliveries on time, from the delivery records.',
+        },
+        {
+          name: 'Capacity',
+          instructions:
+            'Whether the supplier’s capacity covers the ordered volume.',
+        },
+        {
+          name: 'Fit with requirements',
+          kind: 'score',
+          weight: 2.0,
+          instructions:
+            'How well does this supplier fit the stated requirements?',
+          options: [
+            'None: meets none of the stated requirements',
+            'Some: meets a few, misses the important ones',
+            'Most: meets the important ones, misses a few',
+            'All: meets every stated requirement',
+          ],
+        },
+        {
+          name: 'Missing information',
+          kind: 'choice',
+          weight: 0.0,
+          instructions: 'What is missing to decide on this supplier?',
+          options: [
+            'Capacity: a capacity figure is missing',
+            'Delivery: a delivery record is missing',
+            'Price: a price is missing',
+            'Nothing: everything needed is there',
+          ],
+        },
+      ],
+      judgment_model: 'cloudflare:gtw/typesafe/jev',
+    },
+    tags: ['example', 'decision', 'procurement'],
+    icon: 'package',
+    emoji: '🚚',
   },
   'web-research': {
     schema: 'loop.app/v1',

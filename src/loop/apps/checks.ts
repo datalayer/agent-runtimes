@@ -443,7 +443,8 @@ const ENUMS = {
     'feedback',
   ],
   visibility: ['private', 'invited', 'organization', 'link', 'public'],
-  mode: ['inline', 'bubble', 'panel'],
+  mode: ['inline', 'bubble', 'panel', 'assistant'],
+  character: ['paperclip', 'wizard', 'cat', 'eyes'],
   trigger: ['schedule', 'event', 'once'],
   criterion: ['metric', 'noul', 'choice', 'score'],
   direction: ['higher', 'lower'],
@@ -567,6 +568,7 @@ export function documentShapeProblems(document: unknown): string[] {
   mapping(d.interface, 'interface', ui => {
     oneOf(ui.layout, ENUMS.layout, 'interface.layout');
     oneOf(ui.accent, ENUMS.accent, 'interface.accent');
+    oneOf(ui.assistant, ENUMS.character, 'interface.assistant');
     text(ui.welcome, 'interface.welcome');
     texts(ui.components, 'interface.components');
     records(ui.starters, 'interface.starters', (item, where) => {

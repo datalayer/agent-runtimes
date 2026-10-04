@@ -243,4 +243,31 @@ describe('the instant checks', () => {
       checkAppspec({ ...BASE, avatar: 'an astronaut' }).problems,
     ).toContain('avatar: is named as its drawing is, `AstronautIcon`.');
   });
+
+  it('read the assistant embed mode and a character for the assistant, and refuse others (D-07, T-24)', () => {
+    const assistant = parseAppspec({
+      ...BASE,
+      interface: { assistant: 'wizard' },
+      deployment: { embedded: { mode: 'assistant' } },
+    }).app;
+    expect(assistant.interface.assistant).toBe('wizard');
+    expect(assistant.deployment.embedded?.mode).toBe('assistant');
+    const written = dumpAppspec(assistant);
+    expect(written.interface).toEqual({ assistant: 'wizard' });
+    expect(parseAppspec(written).app).toEqual(assistant);
+    // Unchosen: nothing written, the paper clip.
+    expect(parseAppspec(BASE).app.interface.assistant).toBeUndefined();
+    expect(
+      checkAppspec({
+        ...BASE,
+        interface: { assistant: 'clippy' },
+        deployment: { embedded: { mode: 'popup' } },
+      }).problems,
+    ).toEqual(
+      expect.arrayContaining([
+        'interface.assistant: is one of paperclip, wizard, cat, eyes.',
+        'deployment.embedded.mode: is one of inline, bubble, panel, assistant.',
+      ]),
+    );
+  });
 });

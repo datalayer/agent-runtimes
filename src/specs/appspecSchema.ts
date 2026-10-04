@@ -339,6 +339,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           default: null,
           description: 'The component tree, when there is one',
         },
+        assistant: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AssistantCharacter',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'The character its floating assistant shows: `paperclip`, `wizard`, `cat` or `eyes`. The paper clip when unsaid; a person may choose another in their settings',
+        },
       },
       title: 'AppInterface',
       type: 'object',
@@ -697,6 +710,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppTrigger',
       type: 'object',
     },
+    AssistantCharacter: {
+      description:
+        "The character an application's floating assistant shows (LOOP T-24):\none of those a UI plugin contributes. Datalayer's are these four.",
+      enum: ['paperclip', 'wizard', 'cat', 'eyes'],
+      title: 'AssistantCharacter',
+      type: 'string',
+    },
     Behaviour: {
       description:
         'What an application does when it meets an action: the four a person chooses from.',
@@ -712,7 +732,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     EmbedMode: {
       description: "How an application sits in another product's page.",
-      enum: ['inline', 'bubble', 'panel'],
+      enum: ['inline', 'bubble', 'panel', 'assistant'],
       title: 'EmbedMode',
       type: 'string',
     },
@@ -723,7 +743,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         mode: {
           $ref: '#/$defs/EmbedMode',
           default: 'inline',
-          description: '`inline`, `bubble` or `panel`',
+          description: '`inline`, `bubble`, `panel` or `assistant`',
         },
         origins: {
           description: 'The origins allowed to embed it',

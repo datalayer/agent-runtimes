@@ -2174,6 +2174,13 @@ class AppInterfaceSpec(BaseModel):
         description="The components of the catalog the surface may use",
     )
     surface: Optional[AppSurfaceSpec] = None
+    assistant: Optional[str] = Field(
+        default=None,
+        description=(
+            "The character its floating assistant shows: `paperclip`, `wizard`, "
+            "`cat` or `eyes`; the paper clip when unsaid"
+        ),
+    )
 
 
 class AppTestCaseSpec(BaseModel):
@@ -2219,7 +2226,9 @@ class AppHostedSpec(BaseModel):
 class AppEmbeddedSpec(BaseModel):
     """An application inside another product's page."""
 
-    mode: str = Field(default="inline", description="`inline`, `bubble` or `panel`")
+    mode: str = Field(
+        default="inline", description="`inline`, `bubble`, `panel` or `assistant`"
+    )
     origins: List[str] = Field(default_factory=list)
 
 

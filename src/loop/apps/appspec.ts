@@ -32,6 +32,8 @@
 
 import type {
   AppAccent,
+  AppAssistantCharacter,
+  AppEmbedMode,
   AppConnectionSpec,
   AppCriterionSpec,
   AppDecisionSpec,
@@ -62,6 +64,22 @@ export const APP_ACCENTS: AppAccent[] = [
   'lime',
   'sun',
   'violet',
+];
+
+/** The four ways an application sits in another product's page (LOOP D-07). */
+export const APP_EMBED_MODES: AppEmbedMode[] = [
+  'inline',
+  'bubble',
+  'panel',
+  'assistant',
+];
+
+/** The characters an Appspec may name for its floating assistant (LOOP T-24). */
+export const APP_ASSISTANT_CHARACTERS: AppAssistantCharacter[] = [
+  'paperclip',
+  'wizard',
+  'cat',
+  'eyes',
 ];
 
 const ACTION_CLASS_NAMES = [
@@ -295,6 +313,11 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   if (isData(data.surface)) {
     parsed.surface = parseSurface(data.surface);
   }
+  if (
+    APP_ASSISTANT_CHARACTERS.includes(data.assistant as AppAssistantCharacter)
+  ) {
+    parsed.assistant = data.assistant as AppAssistantCharacter;
+  }
   return parsed;
 }
 
@@ -350,11 +373,7 @@ function parseDeployment(data: Data): AppDeploymentSpec {
   }
   if (isData(data.embedded)) {
     deployment.embedded = {
-      mode: oneOf(
-        data.embedded.mode,
-        ['inline', 'bubble', 'panel'] as const,
-        'inline',
-      ),
+      mode: oneOf(data.embedded.mode, APP_EMBED_MODES, 'inline'),
       origins: texts(data.embedded.origins),
     };
   }
@@ -610,6 +629,9 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
     .list('components', spec.components);
   if (spec.surface) {
     writer.data.surface = dumpSurface(spec.surface);
+  }
+  if (spec.assistant) {
+    writer.data.assistant = spec.assistant;
   }
   return writer.data;
 }
