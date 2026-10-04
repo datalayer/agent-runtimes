@@ -88,8 +88,29 @@ export type ServerCatalogueModel = {
   name?: string;
   available?: boolean;
   missing_env_vars?: string[];
-  reason?: string;
+  reason?: string | null;
   warning?: string | null;
+};
+
+/**
+ * The typed-judgment models a runtime lists apart (Jev).
+ *
+ * They answer a decision's typed questions, not a conversation: the menu
+ * shows them read-only, under their own heading, with `note` saying so, and
+ * never offers one as the agent's model.
+ */
+export type Judgments = {
+  models: ModelConfig[];
+  note: string;
+};
+
+/** The runtime's `/configure/models` answer, as far as the chat reads it. */
+export type ServerCatalogue = {
+  models?: ServerCatalogueModel[];
+  source?: string;
+  note?: string;
+  judgment_models: ServerCatalogueModel[];
+  judgments_note: string;
 };
 
 /**
@@ -106,20 +127,36 @@ export function readServerCatalogue(
     | null
     | undefined,
 ): ModelConfig[] {
-  return (payload?.models ?? []).map(model => {
-    const missing = model.missing_env_vars ?? [];
-    const reason =
-      model.reason ??
-      (missing.length > 0 ? `Set ${missing.join(', ')}` : undefined) ??
-      model.warning ??
-      undefined;
-    return {
-      id: model.id,
-      name: model.name ?? model.id,
-      isAvailable: model.available !== false,
-      ...(reason && model.available === false
-        ? { unavailableReason: reason }
-        : {}),
-    };
-  });
+  return (payload?.models ?? []).map(readServerModel);
+}
+
+/**
+ * The typed-judgment models of the runtime's answer, in the chat's shape.
+ *
+ * Read apart from `readServerCatalogue`, so no list a chat picks its model
+ * from ever holds one.
+ */
+export function readServerJudgments(payload: ServerCatalogue): Judgments {
+  return {
+    models: payload.judgment_models.map(readServerModel),
+    note: payload.judgments_note,
+  };
+}
+
+/** One row of the runtime's answer, in the chat's shape. */
+function readServerModel(model: ServerCatalogueModel): ModelConfig {
+  const missing = model.missing_env_vars ?? [];
+  const reason =
+    model.reason ??
+    (missing.length > 0 ? `Set ${missing.join(', ')}` : undefined) ??
+    model.warning ??
+    undefined;
+  return {
+    id: model.id,
+    name: model.name ?? model.id,
+    isAvailable: model.available !== false,
+    ...(reason && model.available === false
+      ? { unavailableReason: reason }
+      : {}),
+  };
 }

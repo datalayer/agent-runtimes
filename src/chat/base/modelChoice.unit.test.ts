@@ -19,6 +19,7 @@ import {
   isOffered,
   offeredModels,
   readServerCatalogue,
+  readServerJudgments,
   usableModels,
 } from './modelChoice';
 
@@ -162,5 +163,62 @@ describe("the runtime's answer", () => {
       'bedrock:us.anthropic.claude-sonnet-4-6',
     ]);
     expect(offered[1].unavailableReason).toBe('Not served by ai-inference');
+  });
+});
+
+describe('the typed-judgment models, read apart', () => {
+  // `/configure/models` on a runtime through ai-inference on r1, 2026-10-04.
+  const payload = {
+    source: 'ai-inference',
+    note: 'ai-inference serves Sonnet and Qwen.',
+    models: [
+      { id: 'bedrock:us.anthropic.claude-sonnet-4-6', available: true },
+      { id: 'alibaba:qwen-max', available: true },
+    ],
+    judgment_models: [
+      {
+        id: 'cloudflare:wrk/typesafe/jev',
+        name: 'Jev (Cloudflare Workers AI)',
+        available: true,
+        reason: null,
+      },
+    ],
+    judgments_note:
+      "Answers a decision's typed questions (yes or no, a choice, a score); agents do not chat with it.",
+  };
+
+  it('are never among the models a chat picks from', () => {
+    const offered = readServerCatalogue(payload);
+    expect(offered.map(m => m.id)).not.toContain('cloudflare:wrk/typesafe/jev');
+    expect(isOffered(offered, 'cloudflare:wrk/typesafe/jev')).toBe(false);
+    expect(initialModelId(offered, 'cloudflare:wrk/typesafe/jev')).toBe(
+      'bedrock:us.anthropic.claude-sonnet-4-6',
+    );
+  });
+
+  it('come with their sentence, and their reason when not usable', () => {
+    expect(readServerJudgments(payload)).toEqual({
+      models: [
+        {
+          id: 'cloudflare:wrk/typesafe/jev',
+          name: 'Jev (Cloudflare Workers AI)',
+          isAvailable: true,
+        },
+      ],
+      note: payload.judgments_note,
+    });
+    const waiting = readServerJudgments({
+      ...payload,
+      judgment_models: [
+        {
+          id: 'cloudflare:wrk/typesafe/jev',
+          name: 'Jev (Cloudflare Workers AI)',
+          available: false,
+          reason: 'No ai-inference token',
+        },
+      ],
+    });
+    expect(waiting.models[0].isAvailable).toBe(false);
+    expect(waiting.models[0].unavailableReason).toBe('No ai-inference token');
   });
 });

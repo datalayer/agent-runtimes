@@ -14,14 +14,42 @@ import { Box } from '@datalayer/primer-addons';
 import { AiModelIcon } from '@primer/octicons-react';
 
 import type { ModelConfig } from '../../../types';
+import type { Judgments } from '../../base/modelChoice';
+
+/**
+ * The typed-judgment models, read-only under the models.
+ *
+ * A decision asks them through `/judgments`; an agent cannot run on one, so
+ * no row here selects anything. Each says so, in the runtime's sentence, and
+ * why it cannot be used when it cannot — the same rule as the models above.
+ */
+export function JudgmentsGroup({ judgments }: { judgments: Judgments }) {
+  return (
+    <ActionList.Group selectionVariant={false}>
+      <ActionList.GroupHeading>Judgments</ActionList.GroupHeading>
+      {judgments.models.map(model => (
+        <ActionList.Item key={model.id} disabled sx={{ color: 'fg.muted' }}>
+          {model.name}
+          <ActionList.Description variant="block">
+            {model.isAvailable === false
+              ? `${model.unavailableReason ?? 'Not usable here'} · ${judgments.note}`
+              : judgments.note}
+          </ActionList.Description>
+        </ActionList.Item>
+      ))}
+    </ActionList.Group>
+  );
+}
 
 export function ModelSelector({
   models,
+  judgments,
   selectedModel,
   onModelSelect,
   isA2AProtocol,
 }: {
   models: ModelConfig[];
+  judgments?: Judgments;
   selectedModel: string;
   onModelSelect: (modelId: string) => void;
   isA2AProtocol: boolean;
@@ -91,6 +119,12 @@ export function ModelSelector({
                 )}
               </ActionList.Item>
             ))}
+            {judgments && judgments.models.length > 0 && (
+              <>
+                <ActionList.Divider />
+                <JudgmentsGroup judgments={judgments} />
+              </>
+            )}
           </ActionList>
         </ActionMenu.Overlay>
       </ActionMenu>

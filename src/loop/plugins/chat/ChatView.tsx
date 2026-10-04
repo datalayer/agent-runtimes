@@ -53,6 +53,8 @@ import { ChatBase } from '../../../chat/base/ChatBase';
 import {
   offeredModels as offeredModelsFor,
   readServerCatalogue,
+  readServerJudgments,
+  type Judgments,
 } from '../../../chat/base/modelChoice';
 import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
 import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
@@ -1405,6 +1407,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const [catalogModels, setCatalogModels] = useState<ModelConfig[] | undefined>(
     undefined,
   );
+  // The typed-judgment models the runtime lists apart: shown, never picked.
+  const [judgments, setJudgments] = useState<Judgments | undefined>(undefined);
 
   useEffect(() => {
     /*
@@ -1434,6 +1438,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           // A runtime that did not answer offers nothing: the agentspecs
           // catalogue is not its answer.
           setCatalogModels(payload ? readServerCatalogue(payload) : []);
+          setJudgments(payload ? readServerJudgments(payload) : undefined);
         }
       })
       // No catalogue is not an error worth a banner: the menu simply has
@@ -1631,6 +1636,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     agentUsage: contextUsage ?? undefined,
     showModelSelector: true,
     models: offeredModels,
+    judgments,
     selectedModel: activeModel,
     onModelSelect: model => void selectModel(model),
     showToolsMenu: true,

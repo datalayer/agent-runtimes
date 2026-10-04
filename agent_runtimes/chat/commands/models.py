@@ -144,6 +144,19 @@ async def _show(tux: "CliTux") -> None:
             elif not model.get("available") and model.get("reason"):
                 tux.console.print(f"        {model['reason']}", style=STYLE_WARNING)
 
+    judgments = payload["judgment_models"]
+    if judgments:
+        # Listed apart: a decision asks them, no agent runs on them.
+        tux.console.print()
+        tux.console.print("  Judgments", style=STYLE_ACCENT)
+        tux.console.print(f"    {payload['judgments_note']}", style=STYLE_MUTED)
+        for model in judgments:
+            marker = "[green]●[/green]" if model["available"] else "○"
+            tux.console.print(f"    {marker} {model['id']}", style=STYLE_MUTED)
+            tux.console.print(f"        {model['name']}", style=STYLE_MUTED)
+            if not model["available"]:
+                tux.console.print(f"        {model['reason']}", style=STYLE_WARNING)
+
     tux.console.print()
     tux.console.print("  /models <id> to switch", style=STYLE_MUTED)
     tux.console.print()
@@ -155,6 +168,13 @@ def _refusal(
     """Why the runtime cannot switch to a model, in a sentence, or None."""
     if catalog is None:
         return f"{where} did not list its models: nothing was switched."
+    judgment = next(
+        (m for m in catalog["judgment_models"] if m["id"] == model_id), None
+    )
+    if judgment is not None:
+        # The runtime's own sentence: a typed-judgment model answers a
+        # decision's questions, not a conversation.
+        return str(judgment["refusal"])
     entry = next(
         (m for m in catalog.get("models") or [] if m.get("id") == model_id), None
     )

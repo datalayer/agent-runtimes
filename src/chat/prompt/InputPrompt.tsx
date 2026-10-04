@@ -66,6 +66,7 @@ const ContextPie = lazy(() =>
 
 /** One agent the footer may offer. */
 import type { FooterAgent } from '../../types/chat';
+import type { Judgments } from '../base/modelChoice';
 
 /*
  * Re-exported, not defined here.
@@ -270,6 +271,11 @@ export interface InputPromptProps {
   */
   // ---- Model ----
   models?: ModelConfig[];
+  /**
+   * The typed-judgment models the runtime lists apart (Jev): shown read-only
+   * under the models, never one to pick. See `modelChoice`'s `Judgments`.
+   */
+  judgments?: Judgments;
   selectedModel?: string;
   onModelSelect?: (modelId: string) => void;
 
@@ -357,6 +363,7 @@ export function InputPrompt({
   hasSkillsData,
   configLoading = false,
   models = [],
+  judgments,
   selectedModel = '',
   onModelSelect = () => {},
   availableTools = [],
@@ -625,6 +632,7 @@ export function InputPrompt({
                           {modelsOffered && (
                             <ModelSelector
                               models={models}
+                              judgments={judgments}
                               selectedModel={selectedModel}
                               onModelSelect={onModelSelect}
                               isA2AProtocol={isA2AProtocol}

@@ -1291,6 +1291,19 @@ class FrontendConfig(BaseModel):
         description="That decision in a sentence",
         alias="modelsNote",
     )
+    judgment_models: List[AIModelRuntime] = Field(
+        default_factory=list,
+        description=(
+            "The typed-judgment models ai-inference serves (Jev), apart from "
+            "the models on offer: a decision asks them, no agent runs on them"
+        ),
+        alias="judgmentModels",
+    )
+    judgments_note: Optional[str] = Field(
+        default=None,
+        description="What a typed-judgment model is for, in a sentence",
+        alias="judgmentsNote",
+    )
     default_model: Optional[str] = Field(
         default=None,
         description="Default model ID to select",

@@ -14,6 +14,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 - LOOP R-09: an application's model calls name it — `X-Datalayer-App-Uid` and `X-Datalayer-Deployment-Uid` on every call through ai-inference.
 - LOOP V-09: `loop apps validate --safety`, the safety set every application runs ([Loop CLI](https://agent-runtimes.datalayer.tech/cli)).
 - A runtime on Datalayer calls its models through ai-inference with its user's token narrowed to ai-inference, given when it is assigned (`PUT /api/v1/configure/inference/token`); until then it says so and calls none — [Models on a cloud runtime](https://agent-runtimes.datalayer.tech/cli#models-on-a-cloud-runtime).
+- The typed-judgment models ai-inference serves, Jev on Workers AI (`cloudflare:wrk/typesafe/jev`), listed as Judgments: apart from the models an agent may run on (`judgment_models` and `judgments_note` on `/api/v1/configure/models`, `judgmentModels` and `judgmentsNote` on `/api/v1/configure`), under their own heading in `/models` and, read-only, in the chat's model menu; `/models cloudflare:wrk/typesafe/jev`, and any request naming a typed-judgment model as an agent's, is refused in a sentence — [Models on a cloud runtime](https://agent-runtimes.datalayer.tech/cli#models-on-a-cloud-runtime), [Chat](https://agent-runtimes.datalayer.tech/chat).
 
 ## 1.3.30
 

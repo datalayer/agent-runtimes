@@ -370,6 +370,10 @@ async def list_catalog_models(
 
     A model installed locally with no spec is reported separately, as an
     invitation to add a spec — never as a silent option.
+
+    The typed-judgment models ai-inference lists (Jev) come apart, in
+    ``judgment_models`` with ``judgments_note``: a decision asks them through
+    ``/judgments``, and no agent may be switched to one.
     """
     from agent_runtimes.models.local import (
         LOCAL_PROVIDERS,
@@ -378,13 +382,15 @@ async def list_catalog_models(
         split_model_id,
     )
     from agent_runtimes.models.offered import (
+        JUDGMENTS_NOTE,
         agent_inference_provider,
         availability,
+        judgment_rows,
         load_inference_models,
         models_source,
         offered_model_ids,
     )
-    from agent_runtimes.specs.models import get_model, list_chat_models
+    from agent_runtimes.specs.models import get_model, is_chat_model, list_chat_models
 
     await load_inference_models()
     provider = agent_inference_provider(agent_id)
@@ -402,7 +408,11 @@ async def list_catalog_models(
 
     # A chat picker's models: a typed-judgment model (Jev) is not one.
     offered = (
-        [spec for spec in (get_model(m) for m in agent_models) if spec is not None]
+        [
+            spec
+            for spec in (get_model(m) for m in agent_models)
+            if spec is not None and is_chat_model(spec)
+        ]
         if agent_models is not None
         else list_chat_models()
     )
@@ -479,6 +489,8 @@ async def list_catalog_models(
         "models": models,
         "source": source,
         "note": note,
+        "judgment_models": judgment_rows(provider),
+        "judgments_note": JUDGMENTS_NOTE,
         "local_runtimes": runtimes,
         "uncatalogued_local": uncatalogued,
     }

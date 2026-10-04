@@ -12,7 +12,12 @@ import logging
 from typing import Any
 
 from agent_runtimes.mcp.tools import tools_to_builtin_list
-from agent_runtimes.models.offered import model_rows, models_source
+from agent_runtimes.models.offered import (
+    JUDGMENTS_NOTE,
+    judgment_rows,
+    model_rows,
+    models_source,
+)
 from agent_runtimes.specs.models import DEFAULT_MODEL, list_chat_models
 from agent_runtimes.types import (
     AIModelRuntime,
@@ -62,6 +67,16 @@ async def get_frontend_config(
         )
         models = model_rows(ids, tool_ids, inference_provider)
     source, note = models_source(inference_provider)
+    # The typed-judgment models, apart: listed, never a model to switch to.
+    judgments = [
+        AIModelRuntime(
+            id=row["id"],
+            name=row["name"],
+            is_available=row["available"],
+            unavailable_reason=row["reason"],
+        )
+        for row in judgment_rows(inference_provider)
+    ]
 
     # Create response
     config = FrontendConfig(
@@ -72,6 +87,8 @@ async def get_frontend_config(
         disable_tool_approvals=disable_tool_approvals,
         models_source=source,
         models_note=note,
+        judgment_models=judgments,
+        judgments_note=JUDGMENTS_NOTE,
     )
 
     logger.info(f"Built frontend config with {len(builtin_tools)} builtin_tools")

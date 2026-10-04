@@ -4649,6 +4649,16 @@ function ChatBaseInner({
       // agent has no config endpoint waits for ever otherwise.
       configLoading={configQuery.isLoading}
       models={offeredModels}
+      // Listed apart and read-only: a typed-judgment model is never the
+      // agent's model.
+      judgments={
+        configQuery.data
+          ? {
+              models: configQuery.data.judgmentModels,
+              note: configQuery.data.judgmentsNote,
+            }
+          : undefined
+      }
       selectedModel={selectedModel}
       onModelSelect={setSelectedModel}
       availableTools={builtinTools}

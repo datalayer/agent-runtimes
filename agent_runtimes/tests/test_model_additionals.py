@@ -85,7 +85,7 @@ class TestWhatAiInferenceServes:
         assert offered.catalogue_id("bedrock/no-such-model") is None
 
     def test_the_three_providers_read_as_the_catalogue_names_them(self) -> None:
-        """Bedrock, Model Studio and Workers AI — Jev through Workers AI."""
+        """Bedrock, Model Studio and Workers AI — Jev, a judgment model, apart."""
         payload = {
             **LIVE_PAYLOAD,
             "alibaba_models": ["alibaba/qwen-max"],
@@ -94,7 +94,8 @@ class TestWhatAiInferenceServes:
                 {"id": "bedrock/us.anthropic.claude-opus-5", "name": "Opus 5"}
             ],
         }
-        assert sorted(offered.read_served(payload)) == sorted([SONNET, QWEN, JEV])
+        assert sorted(offered.read_served(payload)) == sorted([SONNET, QWEN])
+        assert offered.read_judgments(payload) == []
 
     def test_the_live_answer_reads_as_one_model(self) -> None:
         assert offered.read_served(LIVE_PAYLOAD) == [SONNET]
