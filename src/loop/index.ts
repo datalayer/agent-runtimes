@@ -234,6 +234,21 @@ export {
   type A2uiSceneOptions,
 } from './plugins/a2ui-scene';
 export {
+  APP_KIND_PATHS,
+  APP_PAGE_PLUGIN_NAME,
+  APP_PAGE_SURFACE,
+  AppPage,
+  appKindPaths,
+  appPageAction,
+  appPageData,
+  defineAppPagePlugin,
+  hasAppPage,
+  type AppKindPaths,
+  type AppPageAction,
+  type AppPageKind,
+  type AppPagePath,
+} from './plugins/app-page';
+export {
   GraphViewPlugin,
   GRAPH_PLUGIN_NAME,
   GRAPH_VIEW_TYPE,

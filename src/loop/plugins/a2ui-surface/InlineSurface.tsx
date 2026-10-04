@@ -13,6 +13,11 @@
  * follows, and what keeps a generated form from being the one light card in
  * a dark workspace.
  *
+ * The same renderer draws an application's page (`loop/plugins/app-page`):
+ * there the surface is fed live `data` by path as the conversation moves, and
+ * an action is handed the surface it came from, so that what a block wrote
+ * into its data model can be read when a button is pressed.
+ *
  * @module loop/plugins/a2ui-surface/InlineSurface
  */
 
@@ -35,7 +40,9 @@ import {
   A2uiSurfaceComposed,
 } from '../../../components/a2ui';
 
-type Surface = SurfaceModel<ReactComponentImplementation>;
+/** A surface as the renderer holds it: its data model is `dataModel`. */
+export type InlineSurfaceModel = SurfaceModel<ReactComponentImplementation>;
+type Surface = InlineSurfaceModel;
 
 /** The catalogue a surface is rewritten to before it is drawn. */
 export const SURFACE_CATALOG_ID = basicCatalog.id;
@@ -47,14 +54,25 @@ const INHERIT_THEME: CSSProperties = {
   ['--a2ui-color-outline' as never]: 'var(--borderColor-default)',
 };
 
+/** Values to publish into a surface, by path. */
+export type InlineSurfaceData = Record<string, unknown>;
+
 export function InlineSurface({
   messages,
   onAction,
   validationError,
+  data,
 }: {
   messages: A2uiMessage[];
-  onAction: (action: A2uiClientAction) => void;
+  /** Told of an action, with the surface it came from. */
+  onAction: (action: A2uiClientAction, surface?: Surface) => void;
   validationError?: string | null;
+  /**
+   * Values published into every surface's data model, by path, after the
+   * messages are processed and whenever one changes. Only a path whose value
+   * changed is written: what a person typed elsewhere in the model stays.
+   */
+  data?: InlineSurfaceData;
 }): JSX.Element | null {
   // Reached through a ref: the processor is built once, and the handler it
   // was built with must not go stale when the host's does not.
@@ -64,10 +82,18 @@ export function InlineSurface({
     () =>
       new MessageProcessor<ReactComponentImplementation>(
         [basicCatalog],
-        action => onActionRef.current(action),
+        action =>
+          onActionRef.current(
+            action,
+            processorRef.current?.model.getSurface(action.surfaceId),
+          ),
       ),
     [],
   );
+  const processorRef = useRef<
+    MessageProcessor<ReactComponentImplementation> | undefined
+  >(undefined);
+  processorRef.current = processor;
   const [surfaces, setSurfaces] = useState<Surface[]>([]);
 
   useEffect(() => {
@@ -84,16 +110,46 @@ export function InlineSurface({
   }, [processor]);
 
   // Once: the messages are one tool result, processed when it arrives.
+  // A tree the catalog refuses is said, where it would have been drawn,
+  // rather than thrown out of an effect and taking the page down with it.
   const processedRef = useRef(false);
+  const [processError, setProcessError] = useState<string | null>(null);
   useEffect(() => {
     if (processedRef.current) {
       return;
     }
     processedRef.current = true;
-    processor.processMessages(messages);
+    try {
+      processor.processMessages(messages);
+    } catch (error) {
+      setProcessError(
+        `This surface could not be drawn: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }, [messages, processor]);
 
-  if (surfaces.length === 0) {
+  // After the messages: the surfaces exist by then, created synchronously.
+  const publishedRef = useRef<InlineSurfaceData>({});
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+    const published = publishedRef.current;
+    for (const [path, value] of Object.entries(data)) {
+      if (Object.is(published[path], value)) {
+        continue;
+      }
+      published[path] = value;
+      for (const surface of processor.model.surfacesMap.values()) {
+        surface.dataModel.set(path, value);
+      }
+    }
+  }, [data, processor]);
+
+  const notice = validationError || processError;
+  if (surfaces.length === 0 && !notice) {
     return null;
   }
 
@@ -108,7 +164,7 @@ export function InlineSurface({
           gap: 2,
         }}
       >
-        {validationError ? (
+        {notice ? (
           <Box
             role="alert"
             sx={{
@@ -122,7 +178,7 @@ export function InlineSurface({
               fontSize: 1,
             }}
           >
-            {validationError}
+            {notice}
           </Box>
         ) : null}
         {surfaces.map(surface => (

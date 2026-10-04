@@ -414,6 +414,40 @@ starters, its layout, and its [presence](../chat/presence.mdx) — its face, nam
 welcome and line of status — in the chat. An application can also be written
 in Python: see [Applications in Python](./python-applications.mdx).
 
+### An application's page
+
+A chat, a widget or a worker runs as its conversation. When it has a page —
+a `page` or `split` layout, or a surface composed in `interface.surface` —
+`AppRenderer` mounts the `app-page` plugin (`defineAppPagePlugin`), which
+contributes the page as the editor beside the chat (`LoopEditorView`), in place
+of the notebook and the document. It is drawn by the workspace's own A2UI
+renderer (`InlineSurface`, the one that draws surfaces in the transcript); an
+application with a page layout and no surface composed gets the default page
+of its kind. A decision's page is still the Studio's run page.
+
+The page's data model is published from the conversation, by path, and what a
+block writes there reaches the application through the chat — a message sent,
+the answer stopped, the conversation started over. Nothing else: there is no
+server call behind a button. `APP_KIND_PATHS` says it per kind, each entry with
+its words, and `appKindPaths(app)` adds the application's settings:
+
+| Kind   | Publishes                                                   | Takes                              | Buttons            |
+| ------ | ----------------------------------------------------------- | ---------------------------------- | ------------------ |
+| chat   | `/app`, `/question`, `/answer`, `/status`, `/inputs/<id>`   | `/draft`, `/inputs/<id>`           | `send`, `stop`, `new` |
+| widget | `/app`, `/output`, `/status`, `/inputs/<id>`                | `/inputs/<id>`                     | `run`, `stop`      |
+| worker | `/app`, `/goal`, `/activity`, `/report`, `/status`          | `/draft`                           | `send`, `stop`     |
+
+`/status` is where the answer stands, in a word (Ready, Thinking, Answering,
+Answered, Stopped). `/inputs/<id>` is a setting of `interface.settings`, as the
+input that holds it does (a `ChoicePicker` holds a list). `send` sends the
+context's `message`, or what is written at `/draft`, and for a chat adds the
+settings in words when they changed since the last message; `run` sends every
+value written under `/inputs`, one `Label: value` per line. A setting reaches
+the application in the words of a message until the session API carries a
+settings change. A button the kind does not handle, or a send with nothing
+written, is refused in a sentence on the page; a tree the A2UI catalog refuses
+is said where it would have been drawn.
+
 ## Extending Loop
 
 A host plugin is ordinary reactor code. One that adds an editor, its tools,

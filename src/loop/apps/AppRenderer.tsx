@@ -17,7 +17,13 @@
  *   what the application connects to and enforces its rules before every tool
  *   call — and the application's starters as the openers of the empty chat;
  * - the **layout of its kind**: a chat is the conversation alone, with the
- *   A2UI surfaces its answers draw; the other layouts keep the editors.
+ *   A2UI surfaces its answers draw;
+ * - its **page**, when it has one (`hasAppPage`: a chat, a widget or a worker
+ *   with a `page` or `split` layout, or a surface composed): its A2UI surface
+ *   drawn beside the conversation by the `app-page` plugin, in place of the
+ *   notebook and the document, fed from the conversation and answered
+ *   through it (`APP_KIND_PATHS`). A decision's page stays the Studio's run
+ *   page (R-02); a layout without a page keeps the editors.
  *
  * @module loop/apps/AppRenderer
  */
@@ -26,6 +32,11 @@ import { useMemo } from 'react';
 import type { PluginRef, ReactorPlugin } from '@datalayer/reactor';
 import type { AppSpec } from '../../types/agentspecs';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
+import {
+  APP_PAGE_SURFACE,
+  defineAppPagePlugin,
+  hasAppPage,
+} from '../plugins/app-page';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import { dumpAppspec } from './appspec';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
@@ -132,9 +143,18 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [source],
   );
+  const withPage = hasAppPage(app);
+  const pagePlugin = useMemo(
+    () => (withPage ? defineAppPagePlugin(app) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [source, withPage],
+  );
   const allPlugins = useMemo(
-    () => (appPlugin ? [appPlugin, ...plugins] : plugins),
-    [appPlugin, plugins],
+    () =>
+      appPlugin
+        ? [appPlugin, ...(pagePlugin ? [pagePlugin] : []), ...plugins]
+        : plugins,
+    [appPlugin, pagePlugin, plugins],
   );
   /*
    * On Datalayer, the application runs on a runtime: allocated with a plain
@@ -183,8 +203,12 @@ export function AppRenderer({
       // The application's own agent: created under its id, so that its
       // spec is applied to an agent of its own, never to the one it extends.
       agentId={app.id}
-      editors={!chatOnly}
-      showViewSelector={!chatOnly}
+      // With a page, the page is the editor beside the chat, alone and
+      // without a strip to swap it; without one, a chat is the
+      // conversation alone and the other layouts keep the editors.
+      editors={!chatOnly && !withPage}
+      showViewSelector={!chatOnly && !withPage}
+      {...(withPage ? { defaultEditor: APP_PAGE_SURFACE } : {})}
       teamPicker={false}
       showAgentVariants={false}
       graph={false}

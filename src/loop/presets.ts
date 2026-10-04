@@ -67,6 +67,11 @@ export type LoopPresetOptions = {
    * A surface id rather than a fixed union, because the surfaces are
    * contributed: an editor plugin the preset has never heard of is still a
    * valid answer, and `'none'` is how a host asks for the chat alone.
+   *
+   * The notebook when unsaid, and none when `editors` is off. Said with
+   * `editors` off, it is honoured: the surface of a plugin the host mounts —
+   * an application's page — opens beside the chat without the notebook and
+   * the document.
    */
   defaultEditor?: ChatPluginConfig['defaultSurface'];
   /** Whether the chat offers its surface switcher. */
@@ -238,7 +243,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
   const {
     serverUrl,
     target = 'browser',
-    defaultEditor = 'notebook',
+    defaultEditor: askedEditor,
     showViewSelector = true,
     hideChatHeader = false,
     chatHeaderButtons = false,
@@ -273,12 +278,13 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     windowFrame = false,
     firstPromptHook,
   } = options;
+  const defaultEditor = askedEditor ?? (editors ? 'notebook' : 'none');
 
   return [
     // The chat owns the editor beside it, so which one opens is its
     // configuration rather than the workspace's.
     configurePlugin(ChatPlugin, {
-      defaultSurface: editors ? defaultEditor : 'none',
+      defaultSurface: defaultEditor,
       // The chat's strip stands down when the header selector offers the
       // same choice; see `editorSelector` — and when there is no editor
       // to choose.
@@ -352,7 +358,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // happens to be on is a workspace with a trap in it. The selector itself
     // stays behind the old switch.
     configurePlugin(ShellPlugin, {
-      defaultEditor: editors ? defaultEditor : 'none',
+      defaultEditor,
       showSelector: editors && editorSelector,
     }),
     ...(floatingPrompt ? [PromptPlugin] : []),
