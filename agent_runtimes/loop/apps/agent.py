@@ -101,7 +101,8 @@ def _agent_spec(reference: str) -> Optional[Agentspec]:
 def local_agent(app: AppSpec) -> Agent:
     """The agent of an application, built in this process from its spec.
 
-    Its model and instructions are the application's, else its agent's. What
+    Its model is the application's, else its agent's; its instructions are its
+    agent's prompt followed by the application's own, as on a runtime. What
     only a runtime brings — connections to MCP servers, skills, tools, a team —
     is refused rather than left out: an application that would run without
     what it names is not that application.
@@ -151,7 +152,10 @@ def local_agent(app: AppSpec) -> Agent:
         problems.append(f"{app.id} names no model, nor does its agent.")
     if problems:
         raise AppNotRunnable(problems)
-    instructions = app.instructions or (spec.system_prompt if spec else "") or None
+    # As the runtime's create route and the browser build it: the agent's own
+    # prompt (a Cog's, its Frames included), then the application's.
+    parts = [spec.system_prompt if spec else "", app.instructions or ""]
+    instructions = "\n\n".join(part for part in parts if part) or None
     provider = spec.inference_provider if spec is not None else None
     return Agent(
         resolve_model_for_inference_provider(model, provider),
