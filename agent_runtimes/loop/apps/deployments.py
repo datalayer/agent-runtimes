@@ -254,7 +254,8 @@ def deploy(
 @dataclass(frozen=True)
 class ScheduleTrigger:
     """One of an application's schedules: where it sits among its triggers,
-    when it fires, and what its agent is asked then."""
+    when it fires, and what its agent is asked then.
+    """
 
     position: int
     cron: str

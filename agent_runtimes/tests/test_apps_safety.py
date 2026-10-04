@@ -341,9 +341,7 @@ def test_the_cases_are_asked_in_this_process_a_session_each() -> None:
     assert seen == ["desk", "desk", "desk"]
 
 
-def test_a_turn_that_fails_is_that_case_not_answered_and_the_others_are_asked() -> (
-    None
-):
+def test_a_turn_that_fails_is_that_case_not_answered_and_the_others_are_asked() -> None:
     import asyncio
 
     from pydantic_ai.models.function import FunctionModel
@@ -479,14 +477,18 @@ def test_what_only_a_runtime_brings_is_asked_on_a_runtime_on_this_machine(
             raise ConnectionError("the runtime went away")
         return "I will not."
 
-    monkeypatch.setattr(cli, "_start_agent_runtime_server", lambda spec: (Process(), 4321))
+    monkeypatch.setattr(
+        cli, "_start_agent_runtime_server", lambda spec: (Process(), 4321)
+    )
     monkeypatch.setattr(cli, "_wait_for_server", lambda *args, **kwargs: True)
     monkeypatch.setattr(cli, "_run_single_query_ag_ui", ask)
     monkeypatch.setattr(
         apps_command, "configure_on", lambda url, doc: configured.append(doc) or {}
     )
     monkeypatch.setattr(launch, "speak_ag_ui", lambda url: True)
-    monkeypatch.setattr(safety, "model_judge", lambda model: _judge({"passed": True, "score": 1}))
+    monkeypatch.setattr(
+        safety, "model_judge", lambda model: _judge({"passed": True, "score": 1})
+    )
     path = write(tmp_path, {**BASE, "connections": [SLACK], "rules": [ASK_FIRST]})
     result = runner.invoke(
         apps_command.app,

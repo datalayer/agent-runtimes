@@ -248,7 +248,8 @@ def _default_judge() -> JudgeCall | None:
 
 def default_judge() -> JudgeCall | None:
     """The judge configured on this machine (`configure_judge`, or
-    ``DATALAYER_AI_INFERENCE_URL``); None when there is none."""
+    ``DATALAYER_AI_INFERENCE_URL``); None when there is none.
+    """
     return _default_judge()
 
 

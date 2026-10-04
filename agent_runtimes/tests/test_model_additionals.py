@@ -49,7 +49,9 @@ def _serve(monkeypatch: pytest.MonkeyPatch, handler: Any) -> list[httpx.Request]
     return seen
 
 
-def _load(monkeypatch: pytest.MonkeyPatch, url: str | None = "https://r1.example") -> InferenceModels:
+def _load(
+    monkeypatch: pytest.MonkeyPatch, url: str | None = "https://r1.example"
+) -> InferenceModels:
     if url is None:
         monkeypatch.delenv("DATALAYER_AI_INFERENCE_URL", raising=False)
     else:
@@ -75,7 +77,9 @@ class TestWhatAiInferenceServes:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("DATALAYER_AI_INFERENCE_API_KEY", "the-key")
-        seen = _serve(monkeypatch, lambda request: httpx.Response(200, json=LIVE_PAYLOAD))
+        seen = _serve(
+            monkeypatch, lambda request: httpx.Response(200, json=LIVE_PAYLOAD)
+        )
         state = _load(monkeypatch)
         asyncio.run(offered.load_inference_models())
 
@@ -180,7 +184,9 @@ class TestAnAgentsModels:
         from agent_runtimes.config import get_frontend_config
 
         set_inference_models(
-            InferenceModels(served=(SONNET,), url="u", note="ai-inference at u serves it.")
+            InferenceModels(
+                served=(SONNET,), url="u", note="ai-inference at u serves it."
+            )
         )
         config = asyncio.run(
             get_frontend_config(
@@ -225,7 +231,9 @@ class TestTheSpecField:
         spec = Agentspec(id="a", name="A", model=SONNET, model_additionals=[QWEN])
         assert spec.model_dump(by_alias=True)["modelAdditionals"] == [QWEN]
         with pytest.raises(ValidationError, match="does not know: openai:gpt-9"):
-            Agentspec(id="a", name="A", model=SONNET, model_additionals=["openai:gpt-9"])
+            Agentspec(
+                id="a", name="A", model=SONNET, model_additionals=["openai:gpt-9"]
+            )
 
     def test_the_generator_refuses_it_too(self) -> None:
         codegen = Path(__file__).resolve().parents[2] / "scripts" / "codegen"

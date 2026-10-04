@@ -654,7 +654,7 @@ def load_application(path: Union[str, Path]) -> Application:
         # Compiled from its source each time, never from a cached .pyc: a file
         # edited within the same second, to the same size, is read as it is now
         # (`loop apps run --watch`), and nothing is written beside it.
-        exec(compile(file.read_bytes(), str(file), "exec"), module.__dict__)  # noqa: S102
+        exec(compile(file.read_bytes(), str(file), "exec"), module.__dict__)  # noqa: S102  # nosec B102
     finally:
         sys.modules.pop(module_name, None)
     found: List[Application] = []

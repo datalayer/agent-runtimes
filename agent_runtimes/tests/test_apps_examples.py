@@ -3,7 +3,8 @@
 
 """The examples written in Python (LOOP E-02): each `app.py` of agentspecs'
 catalogue builds the spec committed beside it, and its code runs in process,
-the person played by a `MemoryChannel` and the model scripted."""
+the person played by a `MemoryChannel` and the model scripted.
+"""
 
 import asyncio
 from pathlib import Path

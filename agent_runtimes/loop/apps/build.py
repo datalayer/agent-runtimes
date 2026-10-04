@@ -175,7 +175,8 @@ def read_code_marks(text: str) -> List[CodeMark]:
 
 def _written(document: Dict[str, Any]) -> Dict[str, Any]:
     """A document as its spec is written: a rule on one class of action names it
-    alone, as agentspecs and the TypeScript writer write it."""
+    alone, as agentspecs and the TypeScript writer write it.
+    """
     from agentspecs.actions import ActionClass
 
     classes = {item.value for item in ActionClass}

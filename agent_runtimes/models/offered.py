@@ -91,7 +91,9 @@ def read_served(payload: Mapping[str, Any]) -> list[str]:
             continue
         model_id = catalogue_id(name)
         if model_id is None:
-            logger.debug("ai-inference serves %s, which the catalogue does not know.", name)
+            logger.debug(
+                "ai-inference serves %s, which the catalogue does not know.", name
+            )
         elif model_id not in served:
             served.append(model_id)
     return served
@@ -341,9 +343,8 @@ def inference_refusal(
     if usable or reason != "Not served by ai-inference":
         return None
     served = _state.served if _state is not None and _state.served else ()
-    return (
-        f"ai-inference does not serve {model_id}"
-        + (f" (it serves {', '.join(served)})" if served else "")
+    return f"ai-inference does not serve {model_id}" + (
+        f" (it serves {', '.join(served)})" if served else ""
     )
 
 
@@ -376,6 +377,8 @@ def model_rows(
             )
         )
     logger.debug(
-        "%d of %d models can be used.", sum(1 for r in rows if r.is_available), len(rows)
+        "%d of %d models can be used.",
+        sum(1 for r in rows if r.is_available),
+        len(rows),
     )
     return rows
