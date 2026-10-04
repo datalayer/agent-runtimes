@@ -184,3 +184,57 @@ export function keepAway(away: AssistantAway): void {
     // Without storage the choice holds for the page.
   }
 }
+
+/** A box on the screen, as `getBoundingClientRect` gives it. */
+export interface ScreenBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * What the assistant never sits over (T-27): an open dialog or overlay —
+ * Primer's `Dialog`, an `ActionMenu` or `SelectPanel` overlay, a native
+ * `<dialog>` — and the composer of a chat.
+ */
+export const ASSISTANT_OBSTACLES = [
+  '[role="dialog"]',
+  '[role="alertdialog"]',
+  'dialog[open]',
+  '[class*="prc-Overlay-Overlay"]',
+  '[data-chat-composer]',
+].join(', ');
+
+/** How near the pointer works, in pixels, before the assistant steps aside. */
+export const POINTER_ROOM = 24;
+
+/** How long the pointer stays away before the assistant comes back, in ms. */
+export const POINTER_CALM_MS = 1500;
+
+/** Whether two boxes share any area, the first grown by `margin`. */
+export function boxesMeet(a: ScreenBox, b: ScreenBox, margin = 0): boolean {
+  return (
+    a.left - margin < b.right &&
+    b.left < a.right + margin &&
+    a.top - margin < b.bottom &&
+    b.top < a.bottom + margin
+  );
+}
+
+/**
+ * Whether the pointer at `point` works where the assistant stands: over it,
+ * or within `POINTER_ROOM` of it — a press beside it is aimed at what it
+ * hides or crowds.
+ */
+export function pointerNear(
+  box: ScreenBox,
+  point: { x: number; y: number },
+  room = POINTER_ROOM,
+): boolean {
+  return boxesMeet(
+    box,
+    { left: point.x, top: point.y, right: point.x, bottom: point.y },
+    room,
+  );
+}

@@ -1201,6 +1201,7 @@ export function ChatFloating({
           balloon={assistantBalloon}
           insist={balloonInsists}
           onDismiss={dismissAssistant}
+          ownRef={popupRef}
         />
       )}
 

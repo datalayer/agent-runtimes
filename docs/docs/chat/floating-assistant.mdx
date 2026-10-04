@@ -114,6 +114,27 @@ it back, however long it went for, and forgets the choice.
 A press that moves is a drag, not a click: dragging the character never
 opens the conversation.
 
+## Out of the way
+
+The character never stands over something the person needs:
+
+- **an open dialog or overlay** — a Primer `Dialog`, an `ActionMenu` or
+  `SelectPanel` overlay, a native `<dialog>`, anything with the role
+  `dialog` or `alertdialog`;
+- **another chat's composer** — the box one types in, in any chat of the
+  page (its own conversation's composer does not count);
+- **the pointer at work** — a press, or a drag, over it or within 24 pixels
+  of it, outside the character and its own conversation.
+
+It **steps aside**: it fades out, leaves the tab order and lets the pointer
+through to what was under it. It comes back once the dialog or the composer
+is no longer under it, and once the pointer has been away from it for a
+second and a half — a pointer still moving there keeps it aside, so it does
+not reappear under the pointer. A pointer only passing by does not move it,
+and its own menu, open, puts nothing aside. The page is looked over every
+400 milliseconds (`useKeepClear`, in `AssistantStage.tsx`; the rules in
+`state.ts`).
+
 ## Datalayer's characters
 
 Four characters are drawn for this assistant and owned by Datalayer
@@ -266,7 +287,9 @@ when there is none.
 a word and the away choices (`assistant.test.ts`); the stage in the DOM — the
 character drawn, the balloon while closed and never over the open
 conversation, a click against a drag, sending it away, where the balloon
-goes (`assistant-stage.test.tsx`); the clippy.js and `.acs` readers, the
+goes, stepping aside for a dialog, an overlay, another chat's composer and
+the pointer at work, and not for its own conversation
+(`assistant-stage.test.tsx`); the clippy.js and `.acs` readers, the
 Agent image compression and the mapping of states (`assistant-formats.test.ts`,
 on hand-built files); the player's frames and branches
 (`sprite-character.test.ts`). Seen in Chrome on 2026-10-04, in the examples
@@ -277,12 +300,11 @@ above it where it was put down, and the wizard, the cat and the eyes draw.
 **Not verified yet.** A real `.acs` file someone holds the rights to (the
 reader is tested on a hand-built file, and the clippy.js reader on the
 clippy.js characters, in memory, not kept); the floating popup's blink and
-balloon seen in a browser.
+balloon seen in a browser; stepping aside, seen in a browser.
 
 **Not built yet.** Sounds are read but not played; the mouth overlays of an
 Agent character while it speaks; `.acf` files; dark-mode drawings of
 Datalayer's characters and their contrast test; answering an approval in the
-balloon itself; keeping the character clear of other chats, dialogs and
-where the pointer aims; choosing a character in a person's settings or in an
+balloon itself; choosing a character in a person's settings or in an
 application's spec; the *paused* state, which arrives with pausing a
 deployment; the assistant as a mode of the embed and the hosted page.

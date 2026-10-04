@@ -16,7 +16,10 @@ import {
 } from '../assistant/characters';
 import {
   ASSISTANT_AWAY_KEY,
+  POINTER_ROOM,
   SAYING_LIMIT,
+  boxesMeet,
+  pointerNear,
   keepAway,
   keptAway,
   assistantStateOf,
@@ -163,5 +166,31 @@ describe('how long the assistant is sent away for (T-27)', () => {
     expect(keptAway()).toBe('none');
     keepAway('none');
     expect(keptAway()).toBe('none');
+  });
+});
+
+describe('what the assistant keeps clear of (T-27)', () => {
+  const stage = { left: 100, top: 100, right: 188, bottom: 188 };
+
+  it('meets a box that shares any area with it, not one that only touches it', () => {
+    expect(
+      boxesMeet(stage, { left: 150, top: 0, right: 300, bottom: 120 }),
+    ).toBe(true);
+    expect(
+      boxesMeet(stage, { left: 188, top: 100, right: 300, bottom: 188 }),
+    ).toBe(false);
+    expect(
+      boxesMeet(stage, { left: 190, top: 100, right: 300, bottom: 188 }, 4),
+    ).toBe(true);
+  });
+
+  it('counts the pointer as near over it and within its room beside it', () => {
+    expect(pointerNear(stage, { x: 140, y: 140 })).toBe(true);
+    expect(pointerNear(stage, { x: 100 - POINTER_ROOM + 1, y: 140 })).toBe(
+      true,
+    );
+    expect(pointerNear(stage, { x: 100 - POINTER_ROOM - 1, y: 140 })).toBe(
+      false,
+    );
   });
 });

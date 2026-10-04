@@ -351,6 +351,8 @@ export function InputPromptBase({
           // Named so the turn-end refocus can ask whether the caret is already
           // somewhere inside this prompt before it reaches for it.
           ref={containerRef}
+          // What the floating assistant never sits over (LOOP T-27).
+          data-chat-composer=""
           onFocusCapture={() => {
             if (selfFocused.current) {
               selfFocused.current = false;

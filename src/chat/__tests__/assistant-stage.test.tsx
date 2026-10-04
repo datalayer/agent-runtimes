@@ -7,7 +7,8 @@
  * The floating assistant on the page (LOOP T-21 to T-23, T-27): the
  * character acts its state, its balloon says the agent's words while the
  * conversation is closed, a click opens it, a drag does not, and it can be
- * sent away.
+ * sent away; it steps aside for a dialog, another chat's composer and the
+ * pointer at work (T-27).
  */
 
 import React, { act, createRef } from 'react';
@@ -19,6 +20,7 @@ import {
   AssistantStage,
   type AssistantStageProps,
 } from '../assistant/AssistantStage';
+import { POINTER_CALM_MS } from '../assistant/state';
 
 const mounted: Array<() => void> = [];
 
@@ -189,5 +191,172 @@ describe('where the balloon goes (T-23)', () => {
       side: 'above',
       align: 'right',
     });
+  });
+});
+
+/** Puts `element` on the screen at `box`, which jsdom does not lay out. */
+function placeAt(
+  element: Element,
+  box: { left: number; top: number; width: number; height: number },
+) {
+  element.getBoundingClientRect = () =>
+    ({
+      ...box,
+      x: box.left,
+      y: box.top,
+      right: box.left + box.width,
+      bottom: box.top + box.height,
+      toJSON: () => box,
+    }) as DOMRect;
+}
+
+/** The character stands at 1000,600, 88 square. */
+const STAGE = { left: 1000, top: 600, width: 88, height: 88 };
+
+async function renderPlaced(props: Partial<AssistantStageProps> = {}) {
+  const rendered = await render(props);
+  const stage = rendered.container.querySelector(
+    '[data-assistant-state]',
+  ) as HTMLElement;
+  placeAt(stage, STAGE);
+  return { ...rendered, stage };
+}
+
+/** Lets the page be looked over again. */
+async function tick(ms = 450) {
+  await act(async () => {
+    vi.advanceTimersByTime(ms);
+  });
+}
+
+function addToPage(html: string, box: Parameters<typeof placeAt>[1]) {
+  const host = document.createElement('div');
+  host.innerHTML = html;
+  const element = host.firstElementChild as HTMLElement;
+  document.body.appendChild(element);
+  placeAt(element, box);
+  return element;
+}
+
+describe('keeping clear (T-27)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('steps aside while an open dialog is under it, and comes back when it closes', async () => {
+    vi.useFakeTimers();
+    const { stage } = await renderPlaced();
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+    // A dialog elsewhere on the page is no reason.
+    const far = addToPage('<div role="dialog"></div>', {
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 300,
+    });
+    await tick();
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+    const dialog = addToPage('<div role="dialog"></div>', {
+      left: 700,
+      top: 400,
+      width: 400,
+      height: 300,
+    });
+    await tick();
+    expect(stage.getAttribute('data-assistant-aside')).toBe('obstacle');
+    expect(stage.style.visibility || getComputedStyle(stage).visibility).toBe(
+      'hidden',
+    );
+    dialog.remove();
+    far.remove();
+    await tick();
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+  });
+
+  it('steps aside for a Primer overlay and for another chat’s composer, not for its own conversation', async () => {
+    vi.useFakeTimers();
+    const own = document.createElement('div');
+    document.body.appendChild(own);
+    const { stage } = await renderPlaced({ ownRef: { current: own } });
+    // Its own conversation's composer, right against it.
+    own.innerHTML = '<div data-chat-composer=""></div>';
+    placeAt(own.firstElementChild as Element, {
+      left: 980,
+      top: 560,
+      width: 300,
+      height: 80,
+    });
+    await tick();
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+    const composer = addToPage('<div data-chat-composer=""></div>', {
+      left: 900,
+      top: 650,
+      width: 300,
+      height: 80,
+    });
+    await tick();
+    expect(stage.getAttribute('data-assistant-aside')).toBe('obstacle');
+    composer.remove();
+    addToPage('<div class="prc-Overlay-Overlay-dVyJl"></div>', {
+      left: 1050,
+      top: 500,
+      width: 200,
+      height: 200,
+    });
+    await tick();
+    expect(stage.getAttribute('data-assistant-aside')).toBe('obstacle');
+  });
+
+  it('gets out of the pointer’s way while it works beside it, and comes back once it has gone', async () => {
+    vi.useFakeTimers();
+    const { stage } = await renderPlaced();
+    const page = document.createElement('div');
+    document.body.appendChild(page);
+    const at = (type: string, x: number, y: number, buttons = 0) =>
+      act(async () => {
+        page.dispatchEvent(
+          new MouseEvent(type, {
+            bubbles: true,
+            clientX: x,
+            clientY: y,
+            buttons,
+          }),
+        );
+      });
+    // Passing by is not working.
+    await at('pointermove', 1010, 610);
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+    // A press far off is not near it.
+    await at('pointerdown', 200, 200, 1);
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+    // A press just beside it is.
+    await at('pointerdown', 990, 620, 1);
+    expect(stage.getAttribute('data-assistant-aside')).toBe('pointer');
+    // The pointer stays about where it stood: it stays aside.
+    await tick(POINTER_CALM_MS - 200);
+    await at('pointermove', 1030, 640);
+    await tick(POINTER_CALM_MS - 200);
+    expect(stage.getAttribute('data-assistant-aside')).toBe('pointer');
+    // Gone, and calm: it comes back.
+    await at('pointermove', 200, 200);
+    await tick(POINTER_CALM_MS);
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+  });
+
+  it('is not put aside by a press on itself', async () => {
+    vi.useFakeTimers();
+    const { stage } = await renderPlaced();
+    const button = stage.querySelector('button') as HTMLButtonElement;
+    await act(async () => {
+      button.dispatchEvent(
+        new MouseEvent('pointerdown', {
+          bubbles: true,
+          clientX: 1040,
+          clientY: 640,
+          buttons: 1,
+        }),
+      );
+    });
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
   });
 });

@@ -8,7 +8,10 @@
  * a corner, acting out what the application is doing, with a balloon that
  * says a word while the conversation is closed. Clicked, it opens the
  * conversation; dragged, it moves, and the conversation follows; sent away,
- * it says goodbye and leaves a small way back.
+ * it says goodbye and leaves a small way back. It never sits over an open
+ * dialog, an overlay or another chat's composer, nor where the pointer is
+ * working: it steps aside — out of sight and out of the pointer's way — until
+ * the place is clear again.
  *
  * Its motions are one set for every character, by the parts each drawing
  * names (`assistant-body`, `-pupils`, `-lids`, `-mouth`), and nothing moves
@@ -18,7 +21,7 @@
  */
 
 import type { JSX, RefObject } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActionList, ActionMenu, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
@@ -26,7 +29,14 @@ import { assistantCharacter, type AssistantCharacter } from './characters';
 import { SpeechBalloon } from './SpeechBalloon';
 import { SpriteCharacter } from './SpriteCharacter';
 import type { AssistantCharacterData } from './formats/types';
-import type { AssistantAway, AssistantState } from './state';
+import {
+  ASSISTANT_OBSTACLES,
+  POINTER_CALM_MS,
+  boxesMeet,
+  pointerNear,
+  type AssistantAway,
+  type AssistantState,
+} from './state';
 
 /** The motions, by the state the stage is in. */
 const MOTIONS = {
@@ -123,6 +133,109 @@ export function balloonSide(
   return { side, align };
 }
 
+/** How often the page is looked over for what the assistant must not cover. */
+const CLEAR_CHECK_MS = 400;
+
+/** Why the assistant has stepped aside, if it has (T-27). */
+export type AssistantAside = 'obstacle' | 'pointer' | undefined;
+
+/**
+ * Whether the assistant steps aside (T-27): while an open dialog, an overlay
+ * or another chat's composer is under it (`obstacle`), and while the pointer
+ * works over or beside it — pressing, or dragging — until it has been away for
+ * `POINTER_CALM_MS` (`pointer`). Its own conversation, `own`, is neither, and
+ * nothing counts while `paused` (its own menu is open).
+ *
+ * The page is looked over on a short timer rather than watched: a dialog
+ * opens, a composer scrolls or a chat is dragged under it without a mutation
+ * this could hear, and a few rectangles every 400ms cost nothing.
+ */
+export function useKeepClear(
+  stageRef: RefObject<HTMLElement | null>,
+  own: RefObject<HTMLElement | null> | undefined,
+  paused: boolean,
+): AssistantAside {
+  const [obstructed, setObstructed] = useState(false);
+  const [pointerBusy, setPointerBusy] = useState(false);
+  useEffect(() => {
+    if (paused) {
+      setObstructed(false);
+      return;
+    }
+    const check = () => {
+      const stage = stageRef.current;
+      if (!stage) {
+        return;
+      }
+      const box = stage.getBoundingClientRect();
+      const mine = own?.current;
+      const hit = Array.from(
+        document.querySelectorAll<HTMLElement>(ASSISTANT_OBSTACLES),
+      ).some(element => {
+        if (
+          stage.contains(element) ||
+          element.contains(stage) ||
+          mine?.contains(element)
+        ) {
+          return false;
+        }
+        const other = element.getBoundingClientRect();
+        return other.width > 0 && other.height > 0 && boxesMeet(box, other);
+      });
+      setObstructed(hit);
+    };
+    check();
+    const timer = window.setInterval(check, CLEAR_CHECK_MS);
+    return () => window.clearInterval(timer);
+  }, [stageRef, own, paused]);
+  useEffect(() => {
+    if (paused) {
+      setPointerBusy(false);
+      return;
+    }
+    let calm: ReturnType<typeof setTimeout> | undefined;
+    let aside = false;
+    const onPointer = (event: PointerEvent) => {
+      const stage = stageRef.current;
+      const target = event.target as Node | null;
+      if (
+        !stage ||
+        (target && (stage.contains(target) || own?.current?.contains(target)))
+      ) {
+        return;
+      }
+      // A pointer passing by is not working; once aside, any move near keeps
+      // it aside, so it does not come back under a pointer still there.
+      if (event.type === 'pointermove' && event.buttons === 0 && !aside) {
+        return;
+      }
+      if (
+        !pointerNear(stage.getBoundingClientRect(), {
+          x: event.clientX,
+          y: event.clientY,
+        })
+      ) {
+        return;
+      }
+      aside = true;
+      setPointerBusy(true);
+      clearTimeout(calm);
+      calm = setTimeout(() => {
+        aside = false;
+        setPointerBusy(false);
+      }, POINTER_CALM_MS);
+    };
+    document.addEventListener('pointerdown', onPointer, true);
+    document.addEventListener('pointermove', onPointer, true);
+    return () => {
+      clearTimeout(calm);
+      document.removeEventListener('pointerdown', onPointer, true);
+      document.removeEventListener('pointermove', onPointer, true);
+    };
+  }, [stageRef, own, paused]);
+  return obstructed ? 'obstacle' : pointerBusy ? 'pointer' : undefined;
+}
+
 export interface AssistantStageProps {
   /** The character: one Datalayer ships, by id (T-25), or one loaded from a file (T-26). */
   character: string | AssistantCharacter | AssistantCharacterData;
@@ -150,6 +263,11 @@ export interface AssistantStageProps {
   insist?: boolean;
   /** Send it away (T-27): for the page, for the session, or for good. */
   onDismiss: (away: AssistantAway) => void;
+  /**
+   * Its own conversation's window: a dialog or composer there is not one it
+   * steps aside for, nor is the pointer working there (T-27).
+   */
+  ownRef?: RefObject<HTMLElement | null>;
 }
 
 export function AssistantStage({
@@ -164,6 +282,7 @@ export function AssistantStage({
   balloon,
   insist = false,
   onDismiss,
+  ownRef,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -180,17 +299,27 @@ export function AssistantStage({
   const [menuOpen, setMenuOpen] = useState(false);
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
-  const showBalloon = !open && !!balloon && (hovered || insist);
+  const aside = useKeepClear(stageRef, ownRef, menuOpen);
+  const showBalloon = !aside && !open && !!balloon && (hovered || insist);
   return (
     <Box
       ref={stageRef}
       data-assistant-state={state}
+      data-assistant-aside={aside}
       sx={{
         position: 'fixed',
         zIndex: 1002,
         ...place,
         width: size,
         height: size,
+        // Aside (T-27): out of sight, out of the tab order and let through
+        // to what is under it; back as soon as the place is clear.
+        opacity: aside ? 0 : 1,
+        visibility: aside ? 'hidden' : 'visible',
+        pointerEvents: aside ? 'none' : undefined,
+        transition: aside
+          ? 'opacity 150ms ease, visibility 0s linear 150ms'
+          : 'opacity 150ms ease',
         ...MOTIONS,
         '& .assistant-lids ellipse': {
           transformBox: 'fill-box',
@@ -310,7 +439,7 @@ export function AssistantStage({
           />
         )}
       </Box>
-      {(hovered || menuOpen) && state !== 'goodbye' && (
+      {(hovered || menuOpen) && !aside && state !== 'goodbye' && (
         <Box sx={{ position: 'absolute', top: '-6px', right: '-6px' }}>
           <ActionMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <ActionMenu.Anchor>
