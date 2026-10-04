@@ -32,8 +32,9 @@ def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> Ap
     its page from a UI plugin in ``plugins_off`` — the catalogue ids its
     organization has turned off (LOOP C-12) — among it.
     """
-    from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
     from agentspecs import apps as spec
+
+    from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
 
     try:
         validated = spec.parse_app(dict(document))
