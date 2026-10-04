@@ -2907,9 +2907,13 @@ function ChatBaseInner({
     const currentlyFetching = store.isFetching(historyScopeId);
     const storedMessages = store.getMessages(historyScopeId);
 
-    // 1) Fast local hydration for view switches in the same browser session.
+    // 1) Fast local hydration for view switches in the same browser session:
+    // only into an empty conversation. The saved copy holds messages, not
+    // tool calls, and this effect runs again on every change of the socket's
+    // state — put over a live conversation, it erased its tool cards, a
+    // pending approval among them, at the socket's first retry.
     if (storedMessages.length > 0) {
-      setDisplayItems(storedMessages);
+      setDisplayItems(prev => (prev.length > 0 ? prev : storedMessages));
       setHistoryLoaded(true);
     }
 
@@ -3238,20 +3242,27 @@ function ChatBaseInner({
             const isNewMessage =
               !currentId || (incomingId && incomingId !== currentId);
 
-            if (currentAssistantMessageRef.current && !isNewMessage) {
+            if (currentId && !isNewMessage) {
+              /*
+               * The message to write to is the one current now, as the event
+               * arrives — not whichever the ref names when React gets round
+               * to running the updater. A whole answer in one network chunk
+               * queues every delta's updater in the same task, and the turn's
+               * end clears the ref before any of them runs: read lazily, all
+               * but the first found nothing to update, and the conversation
+               * and the balloon showed only the answer's first word.
+               */
+              const rawContent = event.message.content;
+              const sanitizedContent =
+                typeof rawContent === 'string'
+                  ? sanitizeAssistantContent(rawContent)
+                  : (rawContent ?? '');
               setDisplayItems(prev => {
                 const newItems = [...prev];
                 const idx = newItems.findIndex(
-                  item =>
-                    !isToolCallMessage(item) &&
-                    item.id === currentAssistantMessageRef.current?.id,
+                  item => !isToolCallMessage(item) && item.id === currentId,
                 );
                 if (idx >= 0 && !isToolCallMessage(newItems[idx])) {
-                  const rawContent = event.message?.content;
-                  const sanitizedContent =
-                    typeof rawContent === 'string'
-                      ? sanitizeAssistantContent(rawContent)
-                      : (rawContent ?? '');
                   newItems[idx] = {
                     ...(newItems[idx] as ChatMessage),
                     content: sanitizedContent,
@@ -3259,17 +3270,10 @@ function ChatBaseInner({
                 }
                 return newItems;
               });
-              if (useStoreMode && currentAssistantMessageRef.current) {
-                const rawContent = event.message?.content;
-                const sanitizedContent =
-                  typeof rawContent === 'string'
-                    ? sanitizeAssistantContent(rawContent)
-                    : (rawContent ?? '');
-                useChatStore
-                  .getState()
-                  .updateMessage(currentAssistantMessageRef.current.id, {
-                    content: sanitizedContent,
-                  });
+              if (useStoreMode) {
+                useChatStore.getState().updateMessage(currentId, {
+                  content: sanitizedContent,
+                });
               }
             } else {
               const content = event.message.content;
