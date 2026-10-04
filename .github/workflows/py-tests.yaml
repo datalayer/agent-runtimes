@@ -57,10 +57,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
 
+      # Editable: a build of the package needs the frontend built first
+      # (hatch_build.py refuses one without its pages), which these tests do not.
       - name: Install dev tools
         run: |
-          uv pip install .
-          uv pip install .[test]
+          uv pip install -e .[test]
           uv pip install dbus-python keyring secretstorage
 
       - name: Unlock keyring

@@ -60,7 +60,8 @@ jobs:
       # (torch, scikit-learn, streamlit), which no page is generated from.
       - name: Install dependencies
         run: |
-          uv pip install . pydoc-markdown
+          # Editable: a build of the package needs the frontend built first.
+          uv pip install -e . pydoc-markdown
           npm install --no-audit --no-fund
           cd docs && npm install --no-audit --no-fund
 

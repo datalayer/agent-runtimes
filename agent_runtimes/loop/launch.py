@@ -325,6 +325,9 @@ class CloudLaunch:
     ingress: str
     relay: Relay
     client: Any = field(repr=False)
+    #: The runtime's own Jupyter server token: the one the Datalayer UI opens
+    #: the runtime's notebooks with.
+    jupyter_token: str = field(repr=False)
     credits: float = 0.0
     #: Whether this session went back to a runtime that was already running.
     attached: bool = False
@@ -347,6 +350,19 @@ class CloudLaunch:
     @property
     def agent_url(self) -> str:
         return f"{self.relay.url}/api/v1/ag-ui/{CLOUD_AGENT_NAME}/"
+
+    @property
+    def jupyter_url(self) -> str:
+        """The runtime's Jupyter server as a browser reaches it, with its token.
+
+        The pod's Jupyter server is served at the runtime's ingress, as the
+        Datalayer UI reaches it; the address the runtime reports for its
+        sandbox (``127.0.0.1:2300``) is the pod's own. The token is the
+        runtime's, valid while it runs — not the person's.
+        """
+        from urllib.parse import quote
+
+        return f"{self.ingress.rstrip('/')}?token={quote(self.jupyter_token, safe='')}"
 
     def stop(self) -> bool:
         """Stop the runtime and the relay. Whether the runtime said it stopped."""
@@ -848,6 +864,7 @@ def _attach(
         ingress=str(runtime.ingress),
         relay=relay,
         client=client,
+        jupyter_token=str(runtime.jupyter_token),
         attached=True,
     )
     status(f"Reconnecting to {back.runtime_name}…")
@@ -944,6 +961,7 @@ def launch_cloud(
         ingress=str(created.ingress),
         relay=relay,
         client=client,
+        jupyter_token=str(created.jupyter_token),
         credits=credits_for(chosen, reserved),
         agent_spec_id=agent_id,
     )
@@ -1009,3 +1027,17 @@ def build_url(launch: CloudLaunch) -> str:
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
     return f"{build_agent_runtimes_base_url(launch.ingress)}/api/v1/ag-ui/{CLOUD_AGENT_NAME}/"
+
+
+def runtime_of_url(url: str) -> Optional[str]:
+    """The runtime a Datalayer runtime's address names (`build_url`'s), or None.
+
+    ``https://<host>/agent-runtimes/<pool>/<uid>/…`` names runtime ``<uid>``:
+    `loop connect` goes back to it as `loop --runtime <uid>` does, through a
+    relay with the person's token.
+    """
+    import re
+    from urllib.parse import urlparse
+
+    found = re.search(r"/agent-runtimes/[^/]+/([^/]+)(?:/|$)", urlparse(url).path)
+    return found.group(1) if found else None

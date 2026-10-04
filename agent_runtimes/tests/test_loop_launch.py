@@ -197,6 +197,7 @@ class FakeClient:
             {
                 "runtime_name": "runtime-1",
                 "ingress": "https://r1.example/jupyter/server/pool/runtime-1",
+                "jupyter_token": "the-jupyter-token",
             },
         )()
 
@@ -262,6 +263,7 @@ def _launched(client: FakeClient) -> CloudLaunch:
         "https://r1.example/jupyter/server/p/runtime-1",
         relay,
         client,
+        "the-jupyter-token",
     )
 
 
@@ -328,6 +330,7 @@ class Running:
     environment: str
     ingress: str
     expired_at: Any
+    jupyter_token: str = "the-jupyter-token"
 
 
 def test_minutes_left_read_from_what_the_platform_says() -> None:

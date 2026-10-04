@@ -79,7 +79,8 @@ jobs:
           test "$name" = "@datalayer/agent-runtimes"
 
       # The hatch build hook copies dist/ into agent_runtimes/static/dist, so
-      # the frontend has to be built first (above).
+      # the frontend has to be built first (above). It refuses a build that
+      # lacks a page the server serves, or a file such a page loads.
       - name: Build the Python package
         run: |
           python -m pip install --upgrade build
@@ -95,7 +96,15 @@ jobs:
           ls dist-py
           test -f "dist-py/agent_runtimes-${tag}-py3-none-any.whl"
           test -f "dist-py/agent_runtimes-${tag}.tar.gz"
-          unzip -Z1 "dist-py/agent_runtimes-${tag}-py3-none-any.whl" | grep -qx 'agent_runtimes/static/dist/index.html'
+          # The pages the terminal opens (/browser, /notebook, /document), in
+          # both. Listed to files first: `grep -q` closing a pipe early would
+          # fail the listing under pipefail.
+          unzip -Z1 "dist-py/agent_runtimes-${tag}-py3-none-any.whl" > wheel-files.txt
+          tar -tzf "dist-py/agent_runtimes-${tag}.tar.gz" > sdist-files.txt
+          for page in index.html agent.html agent-notebook.html agent-document.html; do
+            grep -qx "agent_runtimes/static/dist/${page}" wheel-files.txt
+            grep -qx "agent_runtimes-${tag}/agent_runtimes/static/dist/${page}" sdist-files.txt
+          done
 
       - uses: actions/upload-artifact@v4
         with:

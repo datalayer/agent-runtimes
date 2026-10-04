@@ -51,7 +51,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install .
+          # Editable: a build of the package needs the frontend built first.
+          uv pip install -e .
           uv pip install pre-commit
 
       - name: Run pre-commit

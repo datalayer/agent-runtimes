@@ -1092,6 +1092,7 @@ def run_prompts(
             server_url=server_url,
             agent_id=agent_name,
             eggs=eggs,
+            jupyter_url=cloud_launch.jupyter_url if cloud_launch else None,
             where=cloud_launch.label if cloud_launch else None,
         )
         return asyncio.run(_run_lines(tux, prompts))
@@ -1555,9 +1556,14 @@ def main_callback(
                     f"{_summary_line}"
                 )
 
-                # Extract Jupyter URL for the /jupyter slash command
+                # The Jupyter server for /jupyter, /notebook and /document,
+                # as the browser reaches it.
                 jupyter_url = None
-                if startup_info:
+                if cloud_launch is not None:
+                    # The runtime's ingress and its own token: what the runtime
+                    # reports for its sandbox is the pod's local address.
+                    jupyter_url = cloud_launch.jupyter_url
+                elif startup_info:
                     sandbox_info = startup_info.get("sandbox", {})
                     jupyter_url = sandbox_info.get("jupyter_url")
                     if not jupyter_url:
@@ -1720,14 +1726,29 @@ def connect(
 ) -> None:
     """Connect to a remote agent server.
 
+    A Datalayer runtime's address (``…/agent-runtimes/<pool>/<uid>/…``, as
+    ``loop`` prints it for a kept runtime) goes back to that runtime as
+    ``loop --runtime <uid>`` does: through a relay with your Datalayer token,
+    with every slash command.
+
     Examples:
 
         loop connect http://localhost:8000/api/v1/ag-ui/my-agent/
 
         loop connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
 
-        loop connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
+        loop connect https://r1.datalayer.run/agent-runtimes/ai-agents-pool/<uid>/api/v1/ag-ui/default/
     """
+    from agent_runtimes.loop.launch import runtime_of_url
+
+    on_datalayer = runtime_of_url(url)
+    if on_datalayer is not None:
+        if transport != Transport.ag_ui:
+            raise typer.BadParameter(
+                "A Datalayer runtime is reached over AG-UI: drop --transport."
+            )
+        app(args=["--runtime", on_datalayer])
+        return
     try:
         from agent_runtimes.transports.clients import ACPClient, AGUIClient
     except ImportError:

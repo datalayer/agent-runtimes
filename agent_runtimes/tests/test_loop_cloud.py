@@ -66,6 +66,7 @@ class Running:
     runtime_name: str
     environment: str
     ingress: str = "https://r1.example/jupyter/server/pool/runtime-9"
+    jupyter_token: str = "the-jupyter-token"
     expired_at: Any = None
     uid: str = ""
     name: str = ""
@@ -336,6 +337,7 @@ def test_a_runtime_gone_back_to_is_left_running_without_somebody_to_ask() -> Non
         "https://r1.example/jupyter/server/p/runtime-9",
         relay,
         client,
+        "the-jupyter-token",
         attached=True,
     )
     said: List[str] = []

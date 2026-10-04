@@ -91,7 +91,7 @@ Launching example-simple on Datalayer (ai-agents-env, 30 min, at most 1.44 credi
 - **The agent**: the platform configures a runtime's agent only from an agentspec. Without `-a`, it is `example-simple`, the agent `loop` starts with, and one grey line says so. `-a <agentspec>` picks another; your local API keys never filter it.
 - **Running runtimes**: if you already have an agent runtime running, `loop` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. If you also pass `-a`, the runtime's agent is reconfigured from that agentspec.
 - **Cost**: a minute costs the environment's burning rate. The reservation (`--minutes`, 30 by default) caps what the runtime can cost, and it is checked against the credits you have left before the launch.
-- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found.
+- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`, which goes back to it as `loop --runtime <name>` does) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found.
 
 Each refusal is one sentence, and nothing is launched: not signed in, no credits (or not enough for the reservation), an environment that cannot hold an agent, a runtime that is not running, the launch refused by the platform, or an agentspec the runtime's library does not have.
 
@@ -148,6 +148,7 @@ The terminal reaches a cloud runtime through a relay on your machine that adds y
 - `/skills`, `/tools` and `/mcp` list and change the skills, tools and MCP servers of the cloud runtime's agent.
 - `/status` shows `Agent Runtime  RUNTIME on Datalayer (ENVIRONMENT)` and the relay it goes through.
 - `/suggestions` lists the agentspec's suggestions, each as its summary and the text it sends, and asks which one to send.
+- `/notebook` and `/document` open the agent's notebook and document pages in your browser, served by the cloud runtime through the relay (`http://127.0.0.1:<port>/static/agent-notebook.html?agentId=default&jupyterBaseUrl=…&jupyterToken=…`). The relay adds your Datalayer token to every request the page makes, so your token is not in the URL; the page works while `loop` runs. The page runs its code on the runtime's Jupyter server, at the runtime's address on Datalayer, with the runtime's own Jupyter token, as the Datalayer UI does. That token is in the URL, and so in your browser history, until the runtime stops. The same holds after `loop --runtime <name>` and `loop connect <url>`.
 
 Nothing falls back to this machine. If the cloud runtime does not answer, a command that needs it is not run, and `loop` says so in a sentence. `/help`, `/exit`, `/status` and the other commands that read nothing from the runtime still work.
 
@@ -280,6 +281,9 @@ agent-runtimes chat connect http://localhost:8000/api/v1/ag-ui/chat/
 
 # ACP (WebSocket)
 agent-runtimes chat connect ws://localhost:8000/api/v1/acp/ws/chat -t acp
+
+# A runtime on Datalayer, at the address loop printed for it: the same as loop --runtime <uid>
+loop connect https://r1.datalayer.run/agent-runtimes/ai-agents-pool/<uid>/api/v1/ag-ui/default/
 ```
 
 ### List Remote Agents
@@ -307,6 +311,8 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/agents` | `Esc A` | List agents on the server |
 | `/tools-last` | `Esc L` | Show tool calls from last response |
 | `/context-export` | `Esc E` | Export context to CSV |
+| `/notebook` | `Esc N` | Open the agent's notebook page in your browser, on the session's Jupyter server: locally, the local server's; on Datalayer, through the relay, with the runtime's Jupyter server. See [Slash commands on a cloud runtime](#slash-commands-on-a-cloud-runtime) |
+| `/document` | `Esc F` | Open the agent's document page in your browser, the same way as `/notebook` |
 | `/exit` | `Esc Q` | Exit the interactive session |
 
 ### Banner and Animations
