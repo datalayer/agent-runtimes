@@ -1372,10 +1372,16 @@ async def create_agent(
             # model, not a model named ''. The spec forwarded with the request
             # names it before the library's: a switch (loop's `/models`, the
             # chat's menu) is the library spec with another model.
-            if (not request.model or request.model == DEFAULT_MODEL.value) and (
-                _spec_value("model") or library_spec.model
-            ):
-                request.model = _spec_value("model") or library_spec.model
+            forwarded_model = _spec_value("model")
+            spec_model = (
+                forwarded_model
+                if isinstance(forwarded_model, str) and forwarded_model
+                else library_spec.model
+            )
+            if (
+                not request.model or request.model == DEFAULT_MODEL.value
+            ) and spec_model:
+                request.model = spec_model
             if request.inference_provider == "local" and getattr(
                 library_spec, "inference_provider", None
             ):

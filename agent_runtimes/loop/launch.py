@@ -438,7 +438,8 @@ def read_credits(client: Any) -> Optional[float]:
     """The credits left on the account, from IAM's usage, or None."""
     try:
         payload = client._get_usage_credits()
-        return float((payload.get("credits") or {}).get("credits"))
+        credits = (payload.get("credits") or {}).get("credits")
+        return float(credits) if credits is not None else None
     except Exception:  # noqa: BLE001 - unknown is said as unknown
         return None
 
@@ -948,8 +949,8 @@ def launch_cloud(
         missing = library_has(relay.url, agent_id) is False
         launch.stop()
         if missing:
-            error = unavailable(agent_id, launch.runtime_name)
-            raise CloudRefused(f"{error} The runtime was stopped.")
+            refused = unavailable(agent_id, launch.runtime_name)
+            raise CloudRefused(f"{refused} The runtime was stopped.")
         raise RuntimeError(
             f"The agent of {launch.runtime_name} did not come up; the runtime was stopped."
         )

@@ -16,16 +16,23 @@ os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 # reaches the API, so a placeholder is all this needs.
 os.environ.setdefault("OPENAI_API_KEY", "test-openai-key-not-used")
 
+from collections.abc import Iterator  # noqa: E402
+
 import pytest  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def _ai_inference_not_asked():
+def _ai_inference_not_asked() -> Iterator[None]:
     """No test asks the real ai-inference which models it serves.
 
     The runtime asks once and keeps the answer; a test that needs an answer
     sets it (``set_inference_models``). Without this, a test reaching the
     config routes would ask whatever ``DATALAYER_AI_INFERENCE_URL`` names.
+
+    Yields
+    ------
+    None
+        While the test runs on the answer set here.
     """
     from agent_runtimes.models.offered import InferenceModels, set_inference_models
 

@@ -15,7 +15,7 @@ import asyncio
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any, List, Optional, TypeVar
 
 import httpx
 import pytest
@@ -39,6 +39,15 @@ from agent_runtimes.loop.launch import (
     offer_lines,
     read_offer,
 )
+
+_T = TypeVar("_T")
+
+
+def _kept(store: list[Any], item: Any, result: _T) -> _T:
+    """Keep ``item`` in ``store`` and answer ``result``, as a stub recording its calls."""
+    store.append(item)
+    return result
+
 
 AGENTS = {"capabilities": [{"name": "agent", "enabled": True}]}
 SANDBOX = {"capabilities": [{"name": "sandbox", "enabled": True}]}
@@ -234,7 +243,7 @@ def test_attaching_launches_nothing_and_makes_the_agent_the_chosen_one(
     monkeypatch.setattr(
         launch,
         "ensure_agentspec",
-        lambda url, spec, runtime_name, token: asked.append((spec, token)) or True,
+        lambda url, spec, runtime_name, token: _kept(asked, (spec, token), True),
     )
     back = launch.launch_cloud("crawler", runtime="runtime-9", can_ask=False)
     try:
@@ -604,7 +613,7 @@ def test_where_is_asked_before_the_agentspec(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(
         cli,
         "_choose_where_at_start",
-        lambda local, cloud: order.append(f"where cloud={cloud}") or CLOUD,
+        lambda local, cloud: _kept(order, f"where cloud={cloud}", CLOUD),
     )
 
     def launched(agent_id: Any, **kwargs: Any) -> Any:
@@ -615,7 +624,7 @@ def test_where_is_asked_before_the_agentspec(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(
         cli,
         "_pick_agentspec_interactive",
-        lambda cloud=False: order.append("pick") or "x",
+        lambda cloud=False: _kept(order, "pick", "x"),
     )
     result = CliRunner().invoke(cli.app, ["--runtime", "runtime-9"])
     assert result.exit_code == 0

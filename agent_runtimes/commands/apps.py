@@ -308,14 +308,14 @@ def apps_validate(
                 console.print(
                     "  Its tests decide whether it is ready.", highlight=False
                 )
-            for line in report.safety:
+            for check in report.safety:
                 mark = {
                     "held": "[green]✓[/green]",
                     "failed": "[red]✗[/red]",
                     "not_answered": "[red]✗[/red]",
-                }.get(line.get("state", ""), "·")
-                said = f" — {line['says']}" if line.get("says") else ""
-                console.print(f"  {mark} {line['title']}{said}", highlight=False)
+                }.get(check.get("state", ""), "·")
+                said = f" — {check['says']}" if check.get("says") else ""
+                console.print(f"  {mark} {check['title']}{said}", highlight=False)
             if report.safety_says:
                 console.print(f"  {report.safety_says}", highlight=False)
     if any(report.verdict == NOT_READY for report in reports):

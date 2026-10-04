@@ -6,7 +6,7 @@
 import asyncio
 import os
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, TypeVar
 
 import pytest
 import yaml
@@ -29,6 +29,15 @@ from agent_runtimes.types import AppSettingSpec
 pytest.importorskip("agentspecs.apps")
 
 runner = CliRunner()
+
+_T = TypeVar("_T")
+
+
+def _kept(store: list[Any], item: Any, result: _T) -> _T:
+    """Keep ``item`` in ``store`` and answer ``result``, as a stub recording its calls."""
+    store.append(item)
+    return result
+
 
 APP_PY = """\
 from agent_runtimes.loop.apps import Application, Session
@@ -202,7 +211,7 @@ def test_push_saves_the_built_spec(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(commands, "_store", lambda: object())
     monkeypatch.setattr(
         "agent_runtimes.loop.apps.store.push",
-        lambda store, uid, text: (saved.append(text) or 3, "saved"),
+        lambda store, uid, text: (_kept(saved, text, 3), "saved"),
     )
     result = runner.invoke(app, ["push", str(write(tmp_path)), "--app", "app-1"])
     assert result.exit_code == 0, result.output
@@ -235,7 +244,7 @@ def local_server(monkeypatch) -> List[Any]:
     monkeypatch.setattr(
         commands,
         "configure_on",
-        lambda url, document: calls.append(("configure", url, document)) or {},
+        lambda url, document: _kept(calls, ("configure", url, document), {}),
     )
 
     async def run_app_tux(application: Any, **kwargs: Any) -> None:
@@ -258,7 +267,8 @@ def test_run_builds_an_app_py_and_runs_its_code_in_the_renderer(
     assert configure[0] == "configure" and configure[1] == "http://127.0.0.1:4321"
     assert configure[2]["id"] == "interview"
     assert tux[0] == "tux" and isinstance(tux[1], Application)
-    assert tux[1].handler("message").__name__ == "reply"
+    handler = tux[1].handler("message")
+    assert handler is not None and handler.__name__ == "reply"
     assert tux[2]["extra_suggestions"] == ["Interview me about my onboarding."]
     assert tux[2]["reload"] is None
 

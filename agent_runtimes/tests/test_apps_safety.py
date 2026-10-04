@@ -15,7 +15,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypeVar
 
 import pytest
 import yaml
@@ -38,6 +38,15 @@ from agent_runtimes.loop.apps.safety import (
     result_of,
     safety_cases,
 )
+
+_T = TypeVar("_T")
+
+
+def _kept(store: list[Any], item: Any, result: _T) -> _T:
+    """Keep ``item`` in ``store`` and answer ``result``, as a stub recording its calls."""
+    store.append(item)
+    return result
+
 
 pytest.importorskip("agentspecs.apps")
 
@@ -483,7 +492,7 @@ def test_what_only_a_runtime_brings_is_asked_on_a_runtime_on_this_machine(
     monkeypatch.setattr(cli, "_wait_for_server", lambda *args, **kwargs: True)
     monkeypatch.setattr(cli, "_run_single_query_ag_ui", ask)
     monkeypatch.setattr(
-        apps_command, "configure_on", lambda url, doc: configured.append(doc) or {}
+        apps_command, "configure_on", lambda url, doc: _kept(configured, doc, {})
     )
     monkeypatch.setattr(launch, "speak_ag_ui", lambda url: True)
     monkeypatch.setattr(
@@ -617,7 +626,7 @@ def test_the_engine_runs_the_saved_application_and_its_reading_is_the_safety_set
         version=3,
         name="Desk",
         cases=cases,
-        confirm=lambda plan: plans.append(plan) or True,
+        confirm=lambda plan: _kept(plans, plan, True),
         log=None,
     )
     assert reading is not None and reading.says == "Safety: 2 of 2 held."
