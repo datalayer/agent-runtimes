@@ -70,6 +70,22 @@ controls or as a self-painting block, and disappear entirely when empty.
 spec's suggestions as clickable chips — centred at the top of the canvas,
 where the first message will appear beneath it.
 
+## Display modes
+
+`ChatFloating` shows a chat in five ways, offered by the toggle in its
+header: *Full-height popup*, *Floating popup*, *Floating draggable*,
+*Floating assistant* — a character on the page that speaks in a balloon —
+and *Sidebar panel*, when the page gives it a place to dock. See [The
+floating assistant](./floating-assistant.mdx) for the modes, the character,
+its balloon, and the floating popup that blinks and speaks on hover.
+
+## An application's presence
+
+An application's chat shows its face, its name and its welcome, and one
+line saying what it is doing — *Ready*, *Thinking…*, *Working…*, *Waiting
+for you* — with a quiet ring around the face. See [An application's
+presence](./presence.mdx), and `ChatPresence` and `onPresence` for a host.
+
 ## Where the pieces meet Loop
 
 In the Loop workspace, all of this is assembled by the chat *plugin*: the

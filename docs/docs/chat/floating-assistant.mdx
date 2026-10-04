@@ -1,0 +1,288 @@
+---
+sidebar_position: 1
+title: The floating assistant
+---
+
+# The floating assistant
+
+A chat can live on the page as a **character**, after the Office Assistant:
+it sits in a corner, idle and alive, acts out what the agent is doing, and
+says the agent's words in a speech balloon. Click it and the conversation
+opens in a balloon beside it; drag it and it moves, the conversation
+following; send it away and it leaves a way back.
+
+It is the fifth way `ChatFloating` shows a chat, and needs nothing from the
+page, as the other floating modes do.
+
+## The five display modes
+
+The header of an open chat offers the modes as a segmented toggle, in this
+order (`CHAT_VIEW_MODES`, in `chat/viewModes.ts`):
+
+| Mode | Label | What it is |
+| --- | --- | --- |
+| `floating` | Full-height popup | A panel pinned to the edge of the window, full height. |
+| `floating-small` | Floating popup | A popup over a round button in a corner. |
+| `floating-draggable` | Floating draggable | The popup with a handle, moved about the window. |
+| `assistant` | Floating assistant | A character in a corner that speaks in a balloon (a paper clip in the toggle). |
+| `sidebar` | Sidebar panel | The chat docked into the page. |
+
+The four floating modes need nothing from the page. *Sidebar panel* has to
+dock somewhere: the host passes `sidebarMountPoint` (an element, or a
+selector for one), and without it the option is shown greyed out, with the
+tooltip *No mount point for a sidebar on this page*.
+
+On a narrow screen (under 640 pixels) the character is not drawn: the round
+button of the floating popup stands in its place.
+
+## The character and its motions
+
+The character acts out the state of what answers — the same state an
+application's [presence](./presence.mdx) says in its line of status — plus
+three moments of its own. One set of motions serves every character
+(`chat/assistant/state.ts`, `AssistantStage.tsx`):
+
+| State | When | What it does |
+| --- | --- | --- |
+| `idle` | Between turns | Floats gently and blinks now and then. |
+| `thinking` | A turn runs and no tool is open | Tilts its head, eyes up. |
+| `working` | A tool has not returned | A quick sway, eyes down to the work. |
+| `waiting` | A tool waits on the person's approval | Calls for attention; the balloon says *Waiting for you*. |
+| `greeting` | It has just appeared | Two hops on arrival. |
+| `speaking` | The answer is being written | Its mouth moves while the words arrive. |
+| `goodbye` | It is being sent away | Shrinks away. |
+
+The state is read from the chat itself — whether a turn is running and the
+newest tool call — never from the model's words (`assistantStateOf`). Going
+and arriving win, being short; then *waiting*, which must never be missed;
+then *speaking* over *thinking*.
+
+Nothing moves for a reader whose system asks for reduced motion
+(`prefers-reduced-motion`): each state stands as one still frame.
+
+## The speech balloon
+
+While the conversation is closed, **the agent's newest words appear in a
+balloon over the character**, as the Office Assistant said them
+(`latestSaying`):
+
+- only the agent's own messages with text — not the person's words, not a
+  tool call;
+- Markdown read as plain words (code blocks dropped, links reduced to their
+  text);
+- cut at a word after 220 characters, with *Open the conversation* for the
+  rest;
+- shown while the words arrive and for 12 seconds after, and on a hover until
+  the conversation has been opened — opening it counts the words as read;
+- while an approval is asked, the balloon says *Waiting for you — open the
+  conversation to answer.*
+
+With nothing new to say, a hover shows the chat's `description` — its
+welcome. The balloon stays inside the window: it opens toward the middle of
+the page from whichever half the character stands in, and below the
+character when it stands near the top (`balloonSide`).
+
+Open, the balloon is the conversation itself: the chat and its composer,
+above the character, wherever it was put down.
+
+## The floating popup speaks too
+
+The same reading of the agent's words serves the plain *Floating popup*.
+Closed, its round button **blinks while the agent has said something not yet
+read** — a soft pulse of the accent, with a ring going out — and **hovered,
+it shows those words in the same balloon**, with *Open the conversation*.
+Once the chat is opened the words count as read and the blinking stops. The
+blink is still under reduced motion.
+
+## Sending it away, and calling it back
+
+Hovering the character shows a small control in its corner. Its menu sends
+the assistant away for as long as the person says:
+
+| Choice | How long | Kept in |
+| --- | --- | --- |
+| *Hide for now* | This page | Nothing: a reload brings it back |
+| *Hide for this session* | Until the browser session ends | The session's storage |
+| *Don't show again* | For good | The browser's local storage |
+
+It says goodbye, and the popup's round button takes its place. Clicked, that
+button **calls it back** when it went *for now*, and **opens the chat**
+otherwise. Choosing *Floating assistant* in the header's toggle always calls
+it back, however long it went for, and forgets the choice.
+
+A press that moves is a drag, not a click: dragging the character never
+opens the conversation.
+
+## Datalayer's characters
+
+Four characters are drawn for this assistant and owned by Datalayer
+(`ASSISTANT_CHARACTERS`, in `chat/assistant/characters.tsx`):
+
+| Id | Name |
+| --- | --- |
+| `paperclip` | Paper clip (the default) |
+| `wizard` | Wizard |
+| `cat` | Cat |
+| `eyes` | L👀P eyes |
+
+Each is an SVG drawing that names its moving parts — `assistant-body`,
+`assistant-pupils`, `assistant-lids`, `assistant-mouth` — and the stage
+animates those parts by state, so every character has every motion. An id
+that is not one of these is refused with the list of those that are.
+
+## A character one brings
+
+:::caution The characters of Office are Microsoft's
+
+Clippy, Merlin, Links, Rocky, The Dot and the other characters of Microsoft
+Office are Microsoft's. They are not shipped with Agent Runtimes. Load only
+a character file you have the right to use.
+
+:::
+
+A person or an organisation can bring a character of their own, in one of
+two formats. The readers (`chat/assistant/formats`) run **in the page**: the
+file is read there, drawn there, and **sent nowhere**.
+
+- **A Microsoft Agent character** — one `.acs` file:
+  `readAcsCharacter(await file.arrayBuffer())`. Its header, character,
+  palette, states, animations, frames, branches and sounds are read, its
+  images decompressed and composited into a sprite sheet on a canvas.
+- **A clippy.js character** — its `agent.js`, its map image (`map.png`), and
+  a `sounds-mp3.js` or `sounds-ogg.js` if there is one:
+  `readClippyCharacter({ agentJs, mapPng, soundsJs })`. The JavaScript is
+  read as data and never run: code where data is expected is refused.
+
+Both give one shape, `AssistantCharacterData` — a sprite sheet, frames that
+index into it, animations by name — that `SpriteCharacter` plays: frames
+stepped as authored, branches taken by their weights, the animation chosen
+by the state. Each state above is mapped to the character's own animations
+by the names Office characters use (`Thinking`, `Processing`,
+`GetAttention`, `Greeting`, `Explain`, `GoodBye`…) and by the states an Agent
+file declares (`Showing`, `Speaking`, `Hiding`, `IdlingLevel1`…); a state
+with no match plays the idle animations (`stateAnimations`).
+
+A file that cannot be read is refused with a sentence that says why
+(`AssistantCharacterFormatError`). A Microsoft Agent `.acf`, whose
+animations live in separate `.aca` files, is refused for now: load the
+`.acs` of the character.
+
+## Using it
+
+`ChatFloating` takes two props for the assistant:
+
+| Prop | Type | Default | |
+| --- | --- | --- | --- |
+| `defaultViewMode` | `'floating' \| 'floating-small' \| 'floating-draggable' \| 'assistant' \| 'panel'` | `'floating'` | `'assistant'` opens on the character. |
+| `assistantCharacter` | `string \| AssistantCharacterData` | `'paperclip'` | A Datalayer character by id, or one read from a file. |
+
+The chat's `description` is what the character says on a hover before
+anything else has been said.
+
+From the *Chat Assistant* example (`src/examples/ChatAssistantExample.tsx`),
+with a picker of Datalayer's characters and a file input for a character one
+brings:
+
+```tsx
+import { useState } from 'react';
+import { ChatFloating } from '@datalayer/agent-runtimes';
+import { ASSISTANT_CHARACTERS } from '@datalayer/agent-runtimes/lib/chat/assistant/characters';
+import {
+  readAcsCharacter,
+  readClippyCharacter,
+  type AssistantCharacterData,
+} from '@datalayer/agent-runtimes/lib/chat/assistant/formats';
+
+/** One .acs file, or a clippy.js character's agent.js and map image. */
+async function readPicked(files: File[]): Promise<AssistantCharacterData> {
+  const acs = files.find(file => file.name.toLowerCase().endsWith('.acs'));
+  if (acs) {
+    return readAcsCharacter(await acs.arrayBuffer());
+  }
+  const agentJs = files.find(file => file.name.toLowerCase() === 'agent.js');
+  const mapPng = files.find(file => /\.(png|gif|webp|jpe?g)$/i.test(file.name));
+  const soundsJs = files.find(file => /^sounds-.*\.js$/i.test(file.name));
+  if (!agentJs || !mapPng) {
+    throw new Error('Pick one .acs file, or a clippy.js agent.js and its map image.');
+  }
+  return readClippyCharacter({
+    agentJs: await agentJs.text(),
+    mapPng,
+    soundsJs: soundsJs ? await soundsJs.text() : undefined,
+  });
+}
+
+export function Page() {
+  const [character, setCharacter] = useState<string | AssistantCharacterData>(
+    ASSISTANT_CHARACTERS[0].id,
+  );
+  return (
+    <>
+      {ASSISTANT_CHARACTERS.map(option => (
+        <button key={option.id} onClick={() => setCharacter(option.id)}>
+          {option.name}
+        </button>
+      ))}
+      <p>
+        The characters of Microsoft Office are Microsoft's. Load only a
+        character file you have the right to use. It is read in this page and
+        sent nowhere.
+      </p>
+      <input
+        type="file"
+        multiple
+        accept=".acs,.js,.png,.gif,.webp,.jpg,.jpeg"
+        onChange={async event =>
+          setCharacter(await readPicked(Array.from(event.target.files ?? [])))
+        }
+      />
+      <ChatFloating
+        // A new character is a new stage: it greets again.
+        key={typeof character === 'string' ? character : character.sprite}
+        defaultViewMode="assistant"
+        assistantCharacter={character}
+        protocol="vercel-ai"
+        endpoint="http://127.0.0.1:8765/api/v1/vercel-ai/assistant"
+        title="Assistant"
+        description="Hello! Ask me anything about this page."
+        position="bottom-right"
+        useStore={false}
+      />
+    </>
+  );
+}
+```
+
+To try it, run the examples app (`npm run examples`) and open *Chat
+Assistant*. The character, its balloon and its motions need no account and
+no runtime; a conversation needs the local server on port 8765, and says so
+when there is none.
+
+## What is verified, and what is not
+
+**Verified.** Unit tests cover the modes and their order
+(`viewModes.test.ts`); the state acted out, the balloon's words, the cut at
+a word and the away choices (`assistant.test.ts`); the stage in the DOM — the
+character drawn, the balloon while closed and never over the open
+conversation, a click against a drag, sending it away, where the balloon
+goes (`assistant-stage.test.tsx`); the clippy.js and `.acs` readers, the
+Agent image compression and the mapping of states (`assistant-formats.test.ts`,
+on hand-built files); the player's frames and branches
+(`sprite-character.test.ts`). Seen in Chrome on 2026-10-04, in the examples
+app signed out: the paper clip arrives greeting and settles to idle, a hover
+shows the welcome in its balloon, a drag moves it and the conversation opens
+above it where it was put down, and the wizard, the cat and the eyes draw.
+
+**Not verified yet.** A real `.acs` file someone holds the rights to (the
+reader is tested on a hand-built file, and the clippy.js reader on the
+clippy.js characters, in memory, not kept); the floating popup's blink and
+balloon seen in a browser.
+
+**Not built yet.** The ring going out around the popup's button is not yet
+stilled under reduced motion (the blink is); sounds are read but not played; the mouth overlays of an
+Agent character while it speaks; `.acf` files; dark-mode drawings of
+Datalayer's characters and their contrast test; answering an approval in the
+balloon itself; keeping the character clear of other chats, dialogs and
+where the pointer aims; choosing a character in a person's settings or in an
+application's spec; the *paused* state, which arrives with pausing a
+deployment; the assistant as a mode of the embed and the hosted page.

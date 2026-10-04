@@ -1,0 +1,347 @@
+---
+sidebar_position: 2
+title: Applications in Python
+---
+
+# Applications in Python
+
+An application can be written in Python, for logic no block covers. The API
+lives in `agent_runtimes.loop.apps`, in agent-runtimes itself — no other
+package to install. It uses the words of the Appspec: an *application*, its
+*rules*, its *settings*, a *session*.
+
+Three pieces:
+
+- **`Application`** — the application: what it declares (its Appspec) and
+  the code that reacts to its sessions.
+- **`AppHost`** — what runs it in this process: it opens sessions and tells
+  the application what the person does.
+- **`Session`** — one conversation of one person with the application,
+  handed to its code: to write, stream, show steps, ask, keep state, record,
+  and call the application's agent. What the person sees goes through a
+  **`Channel`**.
+
+## What runs today, and what waits
+
+Everything on this page runs **in process**, today: an application is
+declared, a host opens its sessions and drives them, and its agent answers
+with its rules, checks and record on. It is tested (see the end of the
+page).
+
+What does **not** exist yet:
+
+- **The page's channel.** The one channel there is, `MemoryChannel`, lives in
+  this process: a test or a script plays the person. A person in a browser
+  reaches a Python application through the session API — start, message,
+  action, settings change, stop, resume, over the wire and streamed — which
+  is not built yet.
+- **Running an `app.py` from the command line.** `loop apps run` runs an
+  Appspec (YAML or JSON), not a Python file yet; `loop apps init` and
+  `loop apps build` (the file to its Appspec) are still to come.
+  `load_application` and `Application.spec` are what they will use.
+- **An agent with tools in process.** An application whose agent needs
+  connections to MCP servers, skills, tools or a team runs on a runtime;
+  built in this process, it is refused with the reason (see
+  [The agent](#the-agent)).
+- **Tests and checks in code** (`@app.test`, `@app.check`, `@app.tool`) and
+  what an answer shows beyond text (tables, charts, buttons).
+
+## A runnable example
+
+A customer interview: it asks the person what they want to learn when the
+session starts, answers each message through its agent inside a step, and
+saves an insight from a button. The person is played by a `MemoryChannel`,
+and the agent by pydantic-ai's `TestModel`, so the script runs with no key
+and no network:
+
+```python title="interview.py"
+import asyncio
+
+from pydantic_ai import Agent
+from pydantic_ai.models.test import TestModel
+
+from agent_runtimes.loop.apps import (
+    AppHost,
+    Application,
+    ChoiceQuestion,
+    MemoryChannel,
+    Session,
+)
+from agent_runtimes.loop.apps.record import AppRecorder
+
+# The application: what it declares is its Appspec.
+app = Application(id="customer-interview", kind="chat", agent="cog-crawler:0.0.1")
+app.starter("Onboarding", "Interview me about my onboarding.")
+app.rule("send the summary by email", applies_to="send", behaviour="ask_first")
+app.setting("tone", "select", "Tone", options=["warm", "dry"], default="warm")
+app.setting("depth", "slider", "Depth", default=3, min=1, max=5)
+
+
+# What it reacts to.
+@app.start
+async def opening(session: Session) -> None:
+    session.state["goal"] = await session.ask("What do you want to learn?")
+
+
+@app.message
+async def reply(session: Session, text: str) -> None:
+    async with session.step("Thinking", kind="model", input=text) as step:
+        answer = await session.agent.run(text, goal=session.state["goal"])
+        step.output = answer.text
+    await session.send(answer.text)
+
+
+@app.action("save")
+async def save(session: Session, payload: dict) -> None:
+    session.state["kept"] = await session.record(payload, summary="An insight")
+    keep = await session.ask(ChoiceQuestion("Keep interviewing?", ("Yes", "No")))
+    session.state["done"] = keep == "No"
+
+
+async def main() -> None:
+    channel = MemoryChannel()
+    sent: list = []
+
+    async def send(body: dict) -> None:  # the record, kept here and not sent
+        sent.append(body)
+
+    host = AppHost(
+        app,
+        channel,
+        # A model that answers without being called: no key, no network.
+        agent=lambda spec: Agent(TestModel(custom_output_text="Tell me about week one.")),
+        recorder=AppRecorder(app=app.spec, send=send),
+    )
+
+    channel.reply("why people leave")            # the answer to `start`'s question
+    session = await host.open(user="ada", settings={"depth": 4})
+    print(session.state, session.settings)
+
+    await host.message(session, "Hello")
+    print(channel.messages[-1].author, "-", channel.messages[-1].text)
+
+    await host.settings(session, {"tone": "dry"})
+    channel.reply("No")
+    await host.action(session, "save", {"insight": "pricing is unclear"})
+    print(session.state)
+    print([type(q).__name__ for q in channel.questions])
+
+
+asyncio.run(main())
+```
+
+```text
+$ python interview.py
+{'goal': 'why people leave'} {'tone': 'warm', 'depth': 4}
+Customer interview - Tell me about week one.
+{'goal': 'why people leave', 'kept': False, 'done': True}
+['TextQuestion', 'ChoiceQuestion']
+```
+
+`kept` is `False`: the application keeps no outputs in its record unless its
+Appspec's `record.include` names them (see [The record](#the-record)).
+
+The scenario is the one `agent_runtimes/tests/test_loop_app_api.py` runs
+(`interview()`, `hosted()`), where the model is scripted turn by turn.
+
+## `Application`
+
+```python
+from agent_runtimes.loop.apps import Application
+
+app = Application(
+    id="customer-interview",
+    kind="chat",                       # chat, widget, decision or worker
+    agent="cog-crawler:0.0.1",         # or team="…"
+    name="Customer interview",         # its id in words when unsaid
+    description="Interviews a customer about their onboarding.",
+    instructions="Never ask a leading question.",
+    model="",                          # in place of its agent's model
+    goal="",                           # for a worker
+    version="0.0.1",
+)
+```
+
+Or attach code to an Appspec that already exists — read from its YAML, or as
+an `AppSpec`:
+
+```python
+app = Application.from_spec(spec)
+```
+
+### Declarations: plain calls
+
+What an application declares is its Appspec. Each call adds to it:
+
+| Call | Declares |
+| --- | --- |
+| `app.starter(label, message)` | A first message offered to the person. |
+| `app.setting(id, type, label, *, options=(), default=None, min=None, max=None)` | A setting of the session: `select`, `text`, `toggle`, `slider` or `number`. |
+| `app.rule(action, *, applies_to, behaviour)` | When it acts alone and when it asks: `applies_to` names classes of action (`send`, `write`…) or tools (`server.tool`); `behaviour` is `do_it`, `if_asked`, `ask_first` or `leave_to_me`. |
+| `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches, read or write, in the owner's or the person's name, limited to the tools `only` names. |
+
+`app.spec` is the Appspec they amount to, **validated** as any Appspec is:
+an application that would not run raises `AppNotRunnable` with its reasons,
+in sentences. `app.document` is the same as a plain dict, as its YAML would
+say it.
+
+### Reactions: decorators
+
+What an application reacts to, one handler per moment — sync or async, the
+session always first:
+
+| Decorator | Called with | When |
+| --- | --- | --- |
+| `@app.start` | `(session)` | A session starts. |
+| `@app.message` | `(session, text)` | The person writes. Without a handler, the application's agent answers, streamed. |
+| `@app.action(name)` | `(session, payload)` | The person presses the button of that name. |
+| `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. |
+| `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
+| `@app.resume` | `(session)` | An earlier session is reopened, its state back. |
+| `@app.schedule(cron, *, description="", prompt="")` | `(session)` | On a schedule, in a session of its own. Also adds the schedule to the Appspec's triggers. |
+
+A second handler for the same moment, action or schedule raises
+`ValueError`.
+
+## `AppHost`
+
+`AppHost(app, channel, *, agent=local_agent, recorder=None)` runs an
+application in this process. A runtime, a test or a script drives it:
+
+| Method | Does |
+| --- | --- |
+| `await host.open(user=None, settings=None)` | Opens a session and runs `start`. Returns the `Session`. |
+| `await host.message(session, text)` | Runs `message`, or lets the agent answer. |
+| `await host.action(session, name, payload=None)` | Runs the action; an unknown one raises `KeyError`. |
+| `await host.settings(session, values)` | Checks the values, keeps them, runs `settings`. A value its input does not take raises `InvalidAnswer`. |
+| `await host.stop(session)` | Cancels what runs in the session, then runs `stop`. |
+| `await host.resume(session_id, state, user=None, settings=None)` | Reopens a session with its state, and runs `resume`. |
+| `await host.schedule(name)` | Runs a schedule now, in a new session. |
+
+Each handler runs as one turn: it can be stopped, and the record of the turn
+is sent when it ends. `agent` says how the application's agent is built
+(`local_agent` unless said); `recorder` where its record goes (to the
+platform unless said).
+
+`load_application(path)` returns the one `Application` an `app.py` defines;
+a file with none, or more than one, raises `ValueError`.
+
+## `Session`
+
+A session is made by the host and handed to the application's code — never
+made by that code.
+
+| | |
+| --- | --- |
+| `session.id` | The session's id: its conversation and its record. |
+| `session.user` | Who the person is, when the host knows. |
+| `session.state` | A dict the application keeps across the turns of this session; each session has its own. |
+| `session.settings` | The person's settings, by id, their defaults filled in; a copy. |
+| `session.app` | The application, as its Appspec says it. |
+
+### Writing to the person
+
+- `await session.send(text, author=None)` — a message, by the application's
+  name unless said. Returns the `Message`.
+- `await session.stream(tokens, author=None)` — a message as it comes,
+  piece by piece, from any iterable or async iterable of strings; each piece
+  is delivered as a `Delta`, then the whole `Message`.
+  `await session.stream(session.agent.stream(text))` shows the agent's
+  answer as the model writes it.
+
+### Steps
+
+```python
+async with session.step("Searching", kind="tool", input=query) as step:
+    step.output = await search(query)
+```
+
+A step shows the person what the application is doing while it does it.
+`kind` is `run` (the default), `tool`, `model` or `retrieval`. A step opened
+inside another is nested in it. Each is delivered twice: when it starts, and
+when it ends — with its output, or with the error that ended it.
+
+### Asking
+
+`await session.ask(question, timeout=None)` stops and asks the person, then
+goes on with their answer:
+
+| Question | The answer |
+| --- | --- |
+| a `str`, or `TextQuestion(prompt)` | Text. |
+| `ChoiceQuestion(prompt, options)` | One of the options. |
+| `FileQuestion(prompt, accept=(), max_bytes=20 MB)` | An `UploadedFile` (`name`, `media_type`, `content`); `accept` lists media types (`image/*`) or extensions (`.pdf`). |
+| `FormQuestion(prompt, fields)` | A dict by field id. The fields are settings (`AppSettingSpec`): the same inputs, checked the same way, defaults filled in. |
+
+An answer that does not answer the question raises `InvalidAnswer`, in a
+sentence; no answer within `timeout` seconds raises `AskTimeout`.
+
+### The record
+
+`await session.record(payload, summary="", kind="output")` writes an entry
+to the application's record and sends it at once. `kind` is `output`,
+`tool_call`, `decision`, `check`, `approval` or `feedback`. It returns
+whether the application keeps entries of that kind: only those its
+Appspec's `record.include` names (`outputs`, `actions`, `decisions`,
+`checks`, `approvals`, `feedback`) are kept.
+
+### The agent
+
+`session.agent` is the application's agent in this session (`AppAgent`),
+with its rules, its checks and its record attached:
+
+- `await session.agent.run(prompt, **context)` — the whole answer, an
+  `Answer` with `text` and `output`. Keyword arguments are told to the agent
+  for this turn (`goal="…"`).
+- `session.agent.stream(prompt, **context)` — the answer's text, piece by
+  piece.
+
+Every run is a turn of the session's conversation: the history is kept from
+turn to turn. A rule that says *ask first* asks the person of this session —
+a `ChoiceQuestion` with *Allow* and *Refuse* — and a refusal raises
+`AppRuleBlockedError`.
+
+The host builds the agent. `local_agent`, the default, builds it in this
+process from the Appspec: the application's model and instructions, else its
+agent's. What only a runtime brings — connections, skills, tools, a team —
+is refused with `AppNotRunnable` rather than left out, as is an application
+that names no model. A host may pass its own `agent=` factory, as the
+example does.
+
+## Channels
+
+A session talks to the person through a `Channel`: anything with two
+methods.
+
+```python
+class Channel(Protocol):
+    async def deliver(self, event: Message | Delta | Step) -> None: ...
+    async def ask(self, session_id: str, question: Question) -> Any: ...
+```
+
+A channel that cannot ask raises with a sentence; it never answers for the
+person.
+
+`MemoryChannel` is the one in this process, for tests and for whoever
+drives an application from Python: `events` holds everything delivered, in
+order; `messages` the whole messages; `questions` everything asked; and
+`reply(answer)` answers the question being asked, or the next one.
+
+## What is verified, and what is not
+
+**Verified.** `agent_runtimes/tests/test_loop_app_api.py` runs every call on
+this page in process: declarations becoming a validated Appspec, attaching
+to an existing one, one handler per moment; start, message, action,
+settings, stop, resume and schedule through an `AppHost`; the agent
+answering, streamed, when there is no message handler; `send`, `stream`,
+nested steps and their errors; `ask` with text, choice, file and form, wrong
+answers and timeouts; state per session; the record; the agent's history
+across turns; a rule asking the person and a refusal raising; the local
+agent refusing what only a runtime brings; `load_application`. The example
+above was run as printed.
+
+**Not verified.** A Python application reached from a browser, and one
+running on a runtime: both wait for the session API. The agent is scripted
+in the tests; no test calls a real model through this API.
+
+**Not built yet.** See [What runs today, and what waits](#what-runs-today-and-what-waits).
