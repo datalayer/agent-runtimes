@@ -188,7 +188,7 @@ ui = [
 # ceiling is restated here so that installing it resolves in seconds instead of
 # discovering the same cap through sixty google-adk releases.
 a2ui = [
-    "a2ui-agent-sdk>=0.6.0",
+    "a2ui-agent-sdk>=0.7.0",
 ]
 memory = [
     "mem0ai>=2.0.1",

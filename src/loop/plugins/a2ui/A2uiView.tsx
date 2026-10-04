@@ -17,10 +17,7 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Box, Text } from '@primer/react';
-import {
-  basicCatalog,
-  type ReactComponentImplementation,
-} from '@a2ui/react/v0_9';
+import type { ReactComponentImplementation } from '@a2ui/react/v0_9';
 import {
   MessageProcessor,
   type A2uiClientAction,
@@ -28,7 +25,10 @@ import {
   type SurfaceModel,
 } from '@a2ui/web_core/v0_9';
 import { useSignalValue } from '@datalayer/reactor/react';
-import { A2uiSurfaceComposed } from '../../../components/a2ui';
+import {
+  A2uiSurfaceComposed,
+  datalayerCatalog,
+} from '../../../components/a2ui';
 import type { LoopViewProps } from '../../core';
 import { useSandboxService } from '../agents';
 
@@ -63,7 +63,7 @@ export default function A2uiView({ workspace }: LoopViewProps): JSX.Element {
   const processor = useMemo(
     () =>
       new MessageProcessor<ReactComponentImplementation>(
-        [basicCatalog],
+        [datalayerCatalog],
         action => {
           // The round-trip: what the reader did goes back to the code that drew
           // the surface, and the surface it returns replaces this one. Without

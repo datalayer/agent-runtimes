@@ -16,7 +16,9 @@
  * The same renderer draws an application's page (`loop/plugins/app-page`):
  * there the surface is fed live `data` by path as the conversation moves, and
  * an action is handed the surface it came from, so that what a block wrote
- * into its data model can be read when a button is pressed.
+ * into its data model can be read when a button is pressed. It draws from
+ * Datalayer's catalog: the basic one, any block shown only while its
+ * `visible_when` holds.
  *
  * @module loop/plugins/a2ui-surface/InlineSurface
  */
@@ -24,10 +26,7 @@
 import type { CSSProperties, JSX } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import {
-  basicCatalog,
-  type ReactComponentImplementation,
-} from '@a2ui/react/v0_9';
+import type { ReactComponentImplementation } from '@a2ui/react/v0_9';
 import {
   MessageProcessor,
   type A2uiClientAction,
@@ -38,6 +37,7 @@ import {
   A2UI_RENDER_SCOPE_SX,
   A2uiMarkdownProvider,
   A2uiSurfaceComposed,
+  datalayerCatalog,
 } from '../../../components/a2ui';
 
 /** A surface as the renderer holds it: its data model is `dataModel`. */
@@ -45,7 +45,7 @@ export type InlineSurfaceModel = SurfaceModel<ReactComponentImplementation>;
 type Surface = InlineSurfaceModel;
 
 /** The catalogue a surface is rewritten to before it is drawn. */
-export const SURFACE_CATALOG_ID = basicCatalog.id;
+export const SURFACE_CATALOG_ID = datalayerCatalog.id;
 
 const INHERIT_THEME: CSSProperties = {
   ['--a2ui-color-surface' as never]: 'var(--bgColor-muted)',
@@ -81,7 +81,7 @@ export function InlineSurface({
   const processor = useMemo(
     () =>
       new MessageProcessor<ReactComponentImplementation>(
-        [basicCatalog],
+        [datalayerCatalog],
         action =>
           onActionRef.current(
             action,
