@@ -235,6 +235,26 @@ class TestTheTokenGiven:
         assert chat_request.url.path == "/api/ai-inference/v1/chat/completions"
         assert chat_request.headers["authorization"] == f"Bearer {token}"
 
+    def test_the_runtime_s_own_provider_keys_are_not_asked_for(
+        self, datalayer_runtime: list[httpx.Request], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # On Datalayer the keys are ai-inference's: a runtime without AWS keys
+        # is not told it misses them.
+        for name in (
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_DEFAULT_REGION",
+        ):
+            monkeypatch.delenv(name, raising=False)
+        offered.give_inference_token(_jwt(time.time() + 3600))
+        asyncio.run(offered.load_inference_models())
+
+        response = TestClient(_app()).get("/api/v1/configure/models")
+
+        assert response.status_code == 200
+        sonnet = next(m for m in response.json()["models"] if m["id"] == SONNET)
+        assert sonnet["missing_env_vars"] == []
+
     def test_an_expired_one_is_said_and_calls_nothing(
         self, datalayer_runtime: list[httpx.Request]
     ) -> None:

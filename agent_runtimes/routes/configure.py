@@ -417,11 +417,17 @@ async def list_catalog_models(
         else list_chat_models()
     )
     for model in offered:
-        missing = [
-            name
-            for name in model.required_env_vars
-            if not os.getenv(name.split(":")[0])
-        ]
+        # Through ai-inference the provider's keys are ai-inference's: this
+        # process needs none of them.
+        missing = (
+            []
+            if provider == "datalayer"
+            else [
+                name
+                for name in model.required_env_vars
+                if not os.getenv(name.split(":")[0])
+            ]
+        )
         # The spec's variables are not the whole answer: a model whose
         # credentials live in datalayer-ai-inference lists none, and needs its
         # provider's own key when this process calls the provider directly;
