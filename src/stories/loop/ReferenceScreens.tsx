@@ -37,6 +37,12 @@ import { PresenceFace, PresenceLine } from '../../chat/presence/Presence';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import { AssistantStage } from '../../chat/assistant/AssistantStage';
 import type { AssistantState } from '../../chat/assistant/state';
+import { buildReactorFromPlugins } from '@datalayer/reactor';
+import {
+  AssistantCharactersPlugin,
+  assistantCharacterNamed,
+} from '../../loop/plugins/assistant-characters';
+import { OwlCharacterPlugin } from '../../examples/utils/owlCharacterPlugin';
 import type { DisplayItem } from '../../types/chat';
 
 /** The four screens, by the name a picture and a story take. */
@@ -58,6 +64,15 @@ export const ASSISTANT_PICTURES = [
   'aside',
 ] as const;
 export type AssistantPicture = (typeof ASSISTANT_PICTURES)[number];
+
+/**
+ * The characters pictured idle, each in light and dark (T-25, T-24):
+ * Datalayer's wizard, cat and L👀P eyes — the paper clip's idle is
+ * `assistant-idle` — and the owl an example plugin contributes, drawn
+ * through `loop.assistant.character`.
+ */
+export const CHARACTER_PICTURES = ['wizard', 'cat', 'eyes', 'owl'] as const;
+export type CharacterPicture = (typeof CHARACTER_PICTURES)[number];
 
 export type ReferenceMode = 'light' | 'dark';
 
@@ -508,6 +523,47 @@ export function AssistantScreen({
         insist={!!balloon}
         onDismiss={() => undefined}
       />
+    </Box>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The characters (T-25, T-24)
+// ---------------------------------------------------------------------------
+
+/** Datalayer's characters and the example plugin's owl, as contributed. */
+const characterReactor = buildReactorFromPlugins([
+  AssistantCharactersPlugin,
+  OwlCharacterPlugin,
+]);
+characterReactor.start();
+
+/**
+ * One character idle in the page's corner, read from what the enabled
+ * plugins contribute; `ready` is drawn with it.
+ */
+export function CharacterScreen({
+  character,
+  ready,
+}: {
+  character: CharacterPicture;
+  ready?: ReactNode;
+}): JSX.Element {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const drawn = assistantCharacterNamed(characterReactor, character);
+  return (
+    <Box sx={{ flex: 1, position: 'relative' }}>
+      <AssistantStage
+        character={drawn}
+        state="idle"
+        place={{ right: 48, bottom: 48 }}
+        stageRef={stageRef}
+        onDragStart={() => undefined}
+        open={false}
+        onToggle={() => undefined}
+        onDismiss={() => undefined}
+      />
+      {ready}
     </Box>
   );
 }

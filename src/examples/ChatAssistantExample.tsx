@@ -7,19 +7,43 @@
  * The floating assistant (LOOP T-21 to T-27): the chat as a character on the
  * page, after the Office Assistant — Datalayer's own characters, chosen
  * here, acting out what the agent does and speaking in a balloon.
+ *
+ * The characters offered are what the enabled plugins contribute to
+ * `loop.assistant.character` (T-24): Datalayer's four, and an owl from a
+ * small example plugin (`utils/owlCharacterPlugin`).
  */
 
 import React, { useState } from 'react';
+import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { Button, Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
-import { ASSISTANT_CHARACTERS } from '../chat/assistant/characters';
+import type { AssistantCharacter } from '../chat/assistant/characters';
+import {
+  AssistantCharactersPlugin,
+  assistantCharacterNamed,
+  assistantCharactersOf,
+} from '../loop/plugins/assistant-characters';
+import { OwlCharacterPlugin } from './utils/owlCharacterPlugin';
 import {
   readAcsCharacter,
   readClippyCharacter,
   type AssistantCharacterData,
 } from '../chat/assistant/formats';
+
+/** The plugins this page enables: Datalayer's characters and the owl's. */
+const reactor = buildReactorFromPlugins([
+  AssistantCharactersPlugin,
+  OwlCharacterPlugin,
+]);
+reactor.start();
+
+/** The catalogue: what the enabled plugins contribute. */
+const CATALOGUE = assistantCharactersOf(reactor).map(entry => ({
+  id: entry.id,
+  name: entry.character.name,
+}));
 
 /**
  * A character file a person picked, read in the page (T-26): one `.acs`, or
@@ -47,8 +71,13 @@ async function readPicked(files: File[]): Promise<AssistantCharacterData> {
 
 const ChatAssistantExample: React.FC = () => {
   const [character, setCharacter] = useState<string | AssistantCharacterData>(
-    ASSISTANT_CHARACTERS[0].id,
+    'paperclip',
   );
+  // A character chosen by id is the one its plugin contributes.
+  const drawn: AssistantCharacter | AssistantCharacterData =
+    typeof character === 'string'
+      ? assistantCharacterNamed(reactor, character)
+      : character;
   const [loadError, setLoadError] = useState<string | undefined>();
   return (
     <ThemedProvider>
@@ -64,7 +93,7 @@ const ChatAssistantExample: React.FC = () => {
             it, hover it to send it away.
           </Text>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            {ASSISTANT_CHARACTERS.map(option => (
+            {CATALOGUE.map(option => (
               <Button
                 key={option.id}
                 variant={option.id === character ? 'primary' : 'default'}
@@ -73,6 +102,7 @@ const ChatAssistantExample: React.FC = () => {
                   setLoadError(undefined);
                 }}
                 aria-pressed={option.id === character}
+                data-assistant-character={option.id}
               >
                 {option.name}
               </Button>
@@ -124,7 +154,7 @@ const ChatAssistantExample: React.FC = () => {
         <ChatFloating
           key={typeof character === 'string' ? character : character.sprite}
           defaultViewMode="assistant"
-          assistantCharacter={character}
+          assistantCharacter={drawn}
           protocol="vercel-ai"
           endpoint="http://127.0.0.1:8765/api/v1/vercel-ai/assistant"
           title="Assistant"

@@ -142,7 +142,10 @@ speaking (with its balloon) — and the paper clip stepped aside for a dialog
 are pictures, in the light and the dark mode, that `npm run test:pictures`
 takes in Chrome and compares with the ones kept in `pictures/baselines/`. A
 change in how the assistant is drawn fails that run with a picture of the
-difference; see *Pictures as tests* in `TESTING.md` to accept it.
+difference; see *Pictures as tests* in `TESTING.md` to accept it. So are the
+wizard, the cat, the L👀P eyes and a character contributed by a plugin (the
+owl below), each idle in its light and its dark drawing:
+`npm run test:pictures -- -g "assistant|character"` takes only these.
 
 ## Datalayer's characters
 
@@ -160,6 +163,76 @@ Each is an SVG drawing that names its moving parts — `assistant-body`,
 `assistant-pupils`, `assistant-lids`, `assistant-mouth` — and the stage
 animates those parts by state, so every character has every motion. An id
 that is not one of these is refused with the list of those that are.
+
+### In dark mode
+
+Each character has a drawing of its own for the dark page, not the light
+drawing on black. The stage reads the chat's colour mode from the theme
+(Primer's `colorScheme`) and draws the matching one (`Drawing({ size,
+mode })`, `mode` being `'light'` or `'dark'`). The dark drawings take the
+`loop` theme's dark tokens: lines that were ink become the dark mode's ink
+(`loopColors.inkDark`), the paper clip's steel and the wizard's violets go
+lighter, the cat's whiskers turn light and its outline gives way to its fur,
+and the L👀P eyes keep their whites with a near-black pupil (`loopColors.black`)
+and a grey lid so a blink still shows.
+
+Both drawings are tested for contrast as the theme's own faces are
+(`assistant-characters-contrast.test.tsx`, after primer-addons'
+`loopContrast.test.ts`): each character names its key colours by mode
+(`keyColours`) — every colour along its edge, and its eyes — and the test
+holds them at **3 to 1**, WCAG's threshold for graphics and the parts of an
+interface one must see (SC 1.4.11, non-text contrast; 4.5 to 1 is for body
+text), against the page's canvas and every accent's stage, light and dark: the
+edge against the page, the pupil against the white of the eye, and the eye
+against what it sits on (the page, or the face). It also checks the drawing
+uses those colours. The light paper clip's wire was darkened to pass it
+(`#9AA0AA`, 2.2 to 1 on white, to `#7A808A`), and the light cat got an
+outline.
+
+## A character from a plugin
+
+The characters are a contribution point, `loop.assistant.character`
+(`LoopAssistantCharacter` in `loop/core`): the catalogue is what the enabled
+plugins contribute and nothing else. Datalayer's four come from their own
+plugin (`AssistantCharactersPlugin`, `loop/plugins/assistant-characters`);
+disabled, they leave the catalogue. A plugin contributes a character — a
+drawing, as Datalayer's are, or a character read from a file — under an id:
+
+```tsx
+import { contribution, definePlugin } from '@datalayer/reactor';
+import { LoopAssistantCharacter } from '@datalayer/agent-runtimes/lib/loop/core';
+import type { AssistantCharacter } from '@datalayer/agent-runtimes/lib/chat/assistant/characters';
+
+const OWL: AssistantCharacter = {
+  id: 'owl',
+  name: 'Owl',
+  // An SVG naming the parts the stage animates: assistant-body,
+  // assistant-pupils, assistant-lids, assistant-mouth; `mode` is the chat's.
+  Drawing: ({ size, mode = 'light' }) => <svg width={size} height={size}>…</svg>,
+};
+
+export const OwlCharacterPlugin = definePlugin({
+  name: '@datalayer/example-plugin-owl-character',
+  contributes: [
+    contribution(LoopAssistantCharacter, { id: 'owl', character: OWL }, { id: 'owl' }),
+  ],
+});
+```
+
+A page reads the catalogue from its reactor with `assistantCharactersOf`
+and a character by id with `assistantCharacterNamed`, which refuses an id no
+enabled plugin contributes with the list of those that are:
+
+```tsx
+const reactor = buildReactorFromPlugins([AssistantCharactersPlugin, OwlCharacterPlugin]);
+await reactor.start();
+assistantCharactersOf(reactor).map(entry => entry.id); // paperclip, wizard, cat, eyes, owl
+<ChatFloating defaultViewMode="assistant" assistantCharacter={assistantCharacterNamed(reactor, 'owl')} … />
+```
+
+The *Chat Assistant* example does just this: its picker lists what the
+enabled plugins contribute, the owl of `src/examples/utils/owlCharacterPlugin.tsx`
+among them, and draws the one chosen.
 
 ## A character one brings
 
@@ -205,14 +278,14 @@ animations live in separate `.aca` files, is refused for now: load the
 | Prop | Type | Default | |
 | --- | --- | --- | --- |
 | `defaultViewMode` | `'floating' \| 'floating-small' \| 'floating-draggable' \| 'assistant' \| 'panel'` | `'floating'` | `'assistant'` opens on the character. |
-| `assistantCharacter` | `string \| AssistantCharacterData` | `'paperclip'` | A Datalayer character by id, or one read from a file. |
+| `assistantCharacter` | `string \| AssistantCharacter \| AssistantCharacterData` | `'paperclip'` | A Datalayer character by id, a contributed drawing, or one read from a file. |
 
 The chat's `description` is what the character says on a hover before
 anything else has been said.
 
 From the *Chat Assistant* example (`src/examples/ChatAssistantExample.tsx`),
 with a picker of Datalayer's characters and a file input for a character one
-brings:
+brings (the example itself lists the contributed characters, as above):
 
 ```tsx
 import { useState } from 'react';
@@ -305,6 +378,10 @@ on hand-built files); the player's frames and branches
 app signed out: the paper clip arrives greeting and settles to idle, a hover
 shows the welcome in its balloon, a drag moves it and the conversation opens
 above it where it was put down, and the wizard, the cat and the eyes draw.
+Each character's dark drawing and its contrast, light and dark, are tested
+(`assistant-characters-contrast.test.tsx`), and so is the stage drawing the
+chat's mode; a character contributed by a plugin is drawn in the *Chat
+Assistant* example and pictured (`character-owl-*.png`).
 
 **Not verified yet.** A real `.acs` file someone holds the rights to (the
 reader is tested on a hand-built file, and the clippy.js reader on the
@@ -312,8 +389,6 @@ clippy.js characters, in memory, not kept); the floating popup's blink and
 balloon seen in a browser; stepping aside, seen in a browser.
 
 **Not built yet.** Sounds are read but not played; the mouth overlays of an
-Agent character while it speaks; `.acf` files; dark-mode drawings of
-Datalayer's characters and their contrast test; answering an approval in the
-balloon itself; choosing a character in a person's settings or in an
-application's spec; the *paused* state, which arrives with pausing a
-deployment; the assistant as a mode of the embed and the hosted page.
+Agent character while it speaks; `.acf` files; answering an approval in the
+balloon itself; choosing a character in a person's settings; the *paused*
+state, which arrives with pausing a deployment; the assistant as a mode of the embed and the hosted page.

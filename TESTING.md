@@ -75,6 +75,9 @@ npm run test:pictures
 # Only some themes, for a quicker run
 PICTURES_THEMES=loop,datalayer npm run test:pictures
 
+# Only the floating assistant's pictures (its states and the characters)
+npm run test:pictures -- -g "assistant|character"
+
 # Accept what changed as the new baselines, then commit pictures/baselines/
 npm run test:pictures:accept
 ```
@@ -83,9 +86,11 @@ npm run test:pictures:accept
   registry (`themeConfigs` of `@datalayer/primer-addons`), light and dark, at
   960×640; and the paper clip — idle, thinking, working, waiting, speaking,
   stepped aside for a dialog — in the `loop` theme, light and dark, at
-  480×360. 84 pictures, some 3 MB.
+  480×360; and the wizard, the cat, the L👀P eyes and the owl an example
+  plugin contributes (`loop.assistant.character`), idle, each in its light
+  and its dark drawing. 92 pictures, some 3 MB.
 - **Where they come from.** `html/pictures.html?screen=approval&theme=loop&mode=dark`
-  (or `?assistant=thinking&mode=light`) renders one of them: the real chat
+  (or `?assistant=thinking&mode=light`, or `?character=owl&mode=dark`) renders one of them: the real chat
   components — `ChatBaseHeader` with the presence, `ChatMessageList`,
   `InputPrompt`, `ToolCallDisplay`'s approval card, `AssistantStage` — with
   fixed data (`src/stories/loop/ReferenceScreens.tsx`). The same screens are

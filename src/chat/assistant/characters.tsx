@@ -14,21 +14,63 @@
  * state — `assistant-body`, `assistant-pupils`, `assistant-lids`,
  * `assistant-mouth` — so one set of motions serves every character.
  *
+ * Each is drawn twice, for the chat's colour mode: a light drawing for the
+ * light page and a dark one for the `loop` theme's dark page, by its dark
+ * tokens (`loopColors.inkDark`, `grayDark`, `black`). Their edges and eyes
+ * are held to 3 to 1 against both pages by a test (`keyColours`).
+ *
  * @module chat/assistant/characters
  */
 
 import type { JSX } from 'react';
+import { loopColors } from '@datalayer/primer-addons/lib/theme';
+
+/** The colour mode a character is drawn for: the chat's own. */
+export type AssistantColorMode = 'light' | 'dark';
+
+/**
+ * What a drawing must keep readable, by mode (T-25, tested as T-15 tests the
+ * faces): the colours that meet the page along its edge, and its eyes.
+ */
+export interface AssistantCharacterKeyColours {
+  /** Every colour drawn along the character's edge, where it meets the page. */
+  edges: string[];
+  eye: {
+    /** The white of the eye. */
+    white: string;
+    /** The ring drawn round it. */
+    ring: string;
+    /** The pupil. */
+    pupil: string;
+    /** What the eye sits on: the page, or the face's colour. */
+    on: 'page' | string;
+  };
+}
 
 /** A character Datalayer ships. */
 export interface AssistantCharacter {
   id: string;
   /** Its name, as the picker shows it. */
   name: string;
-  /** The drawing, at the size asked; its parts animate by class. */
-  Drawing: (props: { size: number }) => JSX.Element;
+  /**
+   * The drawing, at the size asked, for the chat's colour mode (light when
+   * unsaid); its parts animate by class.
+   */
+  Drawing: (props: { size: number; mode?: AssistantColorMode }) => JSX.Element;
+  /** Its key colours in each mode, for the contrast test (T-25). */
+  keyColours?: Record<AssistantColorMode, AssistantCharacterKeyColours>;
 }
 
-const INK = '#1D1D1F';
+const INK = loopColors.ink;
+const INK_DARK = loopColors.inkDark;
+
+interface EyeColours {
+  white: string;
+  ring: string;
+  pupil: string;
+  /** The lid: the face's colour, closed for a blink. */
+  lid: string;
+}
 
 /** Two eyes with lids that blink and pupils that look about. */
 function Eyes({
@@ -36,11 +78,13 @@ function Eyes({
   cy,
   gap,
   r,
+  colours,
 }: {
   cx: number;
   cy: number;
   gap: number;
   r: number;
+  colours: EyeColours;
 }): JSX.Element {
   const left = cx - gap / 2;
   const right = cx + gap / 2;
@@ -50,16 +94,16 @@ function Eyes({
         cx={left}
         cy={cy}
         r={r}
-        fill="#FFFFFF"
-        stroke={INK}
+        fill={colours.white}
+        stroke={colours.ring}
         strokeWidth={1.5}
       />
       <circle
         cx={right}
         cy={cy}
         r={r}
-        fill="#FFFFFF"
-        stroke={INK}
+        fill={colours.white}
+        stroke={colours.ring}
         strokeWidth={1.5}
       />
       <g className="assistant-pupils">
@@ -67,25 +111,25 @@ function Eyes({
           cx={left + r * 0.15}
           cy={cy + r * 0.1}
           r={r * 0.45}
-          fill={INK}
+          fill={colours.pupil}
         />
         <circle
           cx={right + r * 0.15}
           cy={cy + r * 0.1}
           r={r * 0.45}
-          fill={INK}
+          fill={colours.pupil}
         />
         <circle
           cx={left + r * 0.3}
           cy={cy - r * 0.1}
           r={r * 0.14}
-          fill="#FFFFFF"
+          fill={colours.white}
         />
         <circle
           cx={right + r * 0.3}
           cy={cy - r * 0.1}
           r={r * 0.14}
-          fill="#FFFFFF"
+          fill={colours.white}
         />
       </g>
       {/* The lids: closed for a blink, by scaling from the top of each eye. */}
@@ -95,22 +139,118 @@ function Eyes({
           cy={cy}
           rx={r + 0.5}
           ry={r + 0.5}
-          fill="currentColor"
+          fill={colours.lid}
         />
         <ellipse
           cx={right}
           cy={cy}
           rx={r + 0.5}
           ry={r + 0.5}
-          fill="currentColor"
+          fill={colours.lid}
         />
       </g>
     </g>
   );
 }
 
+/**
+ * Each drawing's colours, light and dark. The dark ones are drawn for the
+ * `loop` theme's dark page (near-black, `loopColors.black`) and not the light
+ * drawing on black: lines that were ink turn to the dark mode's ink, the
+ * steel and the violets go lighter, outlines that a light page needs give
+ * way to the fill's own edge.
+ */
+const PAPER_CLIP = {
+  light: {
+    wire: '#7A808A',
+    shine: '#E3E6EB',
+    line: INK,
+    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#B8BDC6' },
+  },
+  dark: {
+    wire: '#C9CED6',
+    shine: '#8D93A0',
+    line: INK_DARK,
+    eye: {
+      white: INK_DARK,
+      ring: loopColors.grayDark,
+      pupil: INK,
+      lid: '#8D93A0',
+    },
+  },
+};
+
+const WIZARD = {
+  light: {
+    hat: '#6E5CD6',
+    brim: '#4A3C9E',
+    robe: '#5B4BB7',
+    face: '#F2D3B3',
+    faceEdge: '#A0694A',
+    beard: '#F4F4F6',
+    beardEdge: '#7A808A',
+    star: '#F8D469',
+    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#F2D3B3' },
+  },
+  dark: {
+    hat: '#9C88F0',
+    brim: '#7B67DB',
+    robe: '#8F7CE8',
+    face: '#E8C4A0',
+    faceEdge: '#E8C4A0',
+    beard: '#E4E4EA',
+    beardEdge: loopColors.grayDark,
+    star: '#F8D469',
+    eye: { white: INK_DARK, ring: INK, pupil: INK, lid: '#E8C4A0' },
+  },
+};
+
+const CAT = {
+  light: {
+    fur: '#F4A261',
+    edge: '#B4571A',
+    tail: '#E08A45',
+    ear: '#F6A5C1',
+    nose: '#B83A6B',
+    whiskers: INK,
+    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#F4A261' },
+  },
+  dark: {
+    fur: '#F4A261',
+    edge: '#F4A261',
+    tail: '#E08A45',
+    ear: '#F6A5C1',
+    nose: '#B83A6B',
+    whiskers: INK_DARK,
+    eye: { white: INK_DARK, ring: INK, pupil: INK, lid: '#F4A261' },
+  },
+};
+
+const LOOP_EYES = {
+  light: {
+    eye: { white: loopColors.white, ring: INK, pupil: INK, lid: '#E3E6EB' },
+  },
+  dark: {
+    eye: {
+      white: INK_DARK,
+      ring: INK_DARK,
+      pupil: loopColors.black,
+      lid: loopColors.grayDark,
+    },
+  },
+};
+
 /** A paper clip of our own: a bent wire with eyes on its upper loop. */
-function PaperClip({ size }: { size: number }): JSX.Element {
+function PaperClip({
+  size,
+  mode = 'light',
+}: {
+  size: number;
+  mode?: AssistantColorMode;
+}): JSX.Element {
+  const c = PAPER_CLIP[mode];
+  const wire =
+    'M40 86 L40 30 Q40 14 52 14 Q64 14 64 30 L64 74 Q64 82 56 82 Q48 82 48 74 L48 36';
   return (
     <svg
       width={size}
@@ -118,44 +258,44 @@ function PaperClip({ size }: { size: number }): JSX.Element {
       viewBox="0 0 96 96"
       role="img"
       aria-label="Paper clip"
-      style={{ color: '#B8BDC6' }}
+      data-assistant-mode={mode}
     >
       <g className="assistant-body">
         <path
-          d="M40 86 L40 30 Q40 14 52 14 Q64 14 64 30 L64 74 Q64 82 56 82 Q48 82 48 74 L48 36"
+          d={wire}
           fill="none"
-          stroke="#9AA0AA"
+          stroke={c.wire}
           strokeWidth={6}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
-          d="M40 86 L40 30 Q40 14 52 14 Q64 14 64 30 L64 74 Q64 82 56 82 Q48 82 48 74 L48 36"
+          d={wire}
           fill="none"
-          stroke="#E3E6EB"
+          stroke={c.shine}
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
           d="M36 22 Q42 18 47 21"
-          stroke={INK}
+          stroke={c.line}
           strokeWidth={2}
           fill="none"
           strokeLinecap="round"
         />
         <path
           d="M57 21 Q62 18 68 22"
-          stroke={INK}
+          stroke={c.line}
           strokeWidth={2}
           fill="none"
           strokeLinecap="round"
         />
-        <Eyes cx={52} cy={30} gap={16} r={6.5} />
+        <Eyes cx={52} cy={30} gap={16} r={6.5} colours={c.eye} />
         <path
           className="assistant-mouth"
           d="M48 44 Q52 47 56 44"
-          stroke={INK}
+          stroke={c.line}
           strokeWidth={2}
           fill="none"
           strokeLinecap="round"
@@ -166,7 +306,14 @@ function PaperClip({ size }: { size: number }): JSX.Element {
 }
 
 /** A wizard: a starred hat, a white beard, kind eyes. */
-function Wizard({ size }: { size: number }): JSX.Element {
+function Wizard({
+  size,
+  mode = 'light',
+}: {
+  size: number;
+  mode?: AssistantColorMode;
+}): JSX.Element {
+  const c = WIZARD[mode];
   return (
     <svg
       width={size}
@@ -174,25 +321,32 @@ function Wizard({ size }: { size: number }): JSX.Element {
       viewBox="0 0 96 96"
       role="img"
       aria-label="Wizard"
-      style={{ color: '#F2D3B3' }}
+      data-assistant-mode={mode}
     >
       <g className="assistant-body">
-        <path d="M24 92 Q48 58 72 92 Z" fill="#5B4BB7" />
-        <circle cx={48} cy={48} r={17} fill="#F2D3B3" />
+        <path d="M24 92 Q48 58 72 92 Z" fill={c.robe} />
+        <circle
+          cx={48}
+          cy={48}
+          r={17}
+          fill={c.face}
+          stroke={c.faceEdge}
+          strokeWidth={1.5}
+        />
         <path
           d="M31 50 Q48 92 65 50 Q57 60 48 60 Q39 60 31 50 Z"
-          fill="#F4F4F6"
-          stroke="#D9DAE0"
-          strokeWidth={1}
+          fill={c.beard}
+          stroke={c.beardEdge}
+          strokeWidth={1.2}
         />
-        <path d="M22 36 L48 2 L74 36 Q48 30 22 36 Z" fill="#6E5CD6" />
-        <path d="M20 37 Q48 29 76 37 Q48 43 20 37 Z" fill="#4A3C9E" />
+        <path d="M22 36 L48 2 L74 36 Q48 30 22 36 Z" fill={c.hat} />
+        <path d="M20 37 Q48 29 76 37 Q48 43 20 37 Z" fill={c.brim} />
         <path
           d="M52 14 l2 4 4 1 -3 3 1 4 -4 -2 -4 2 1 -4 -3 -3 4 -1 Z"
-          fill="#F8D469"
+          fill={c.star}
         />
-        <circle cx={40} cy={26} r={1.8} fill="#F8D469" />
-        <Eyes cx={48} cy={46} gap={13} r={5} />
+        <circle cx={40} cy={26} r={1.8} fill={c.star} />
+        <Eyes cx={48} cy={46} gap={13} r={5} colours={c.eye} />
         <path
           className="assistant-mouth"
           d="M44 58 Q48 61 52 58"
@@ -207,7 +361,15 @@ function Wizard({ size }: { size: number }): JSX.Element {
 }
 
 /** A cat: round, two ears, whiskers, a tail. */
-function Cat({ size }: { size: number }): JSX.Element {
+function Cat({
+  size,
+  mode = 'light',
+}: {
+  size: number;
+  mode?: AssistantColorMode;
+}): JSX.Element {
+  const c = CAT[mode];
+  const tail = 'M70 84 Q90 78 84 58';
   return (
     <svg
       width={size}
@@ -215,24 +377,58 @@ function Cat({ size }: { size: number }): JSX.Element {
       viewBox="0 0 96 96"
       role="img"
       aria-label="Cat"
-      style={{ color: '#F4A261' }}
+      data-assistant-mode={mode}
     >
       <g className="assistant-body">
         <path
-          d="M70 84 Q90 78 84 58"
-          stroke="#E08A45"
-          strokeWidth={6}
+          d={tail}
+          stroke={c.edge}
+          strokeWidth={8}
           fill="none"
           strokeLinecap="round"
         />
-        <ellipse cx={48} cy={78} rx={24} ry={14} fill="#F4A261" />
-        <path d="M24 30 L28 8 L42 22 Z" fill="#F4A261" />
-        <path d="M72 30 L68 8 L54 22 Z" fill="#F4A261" />
-        <path d="M28 26 L30 14 L38 22 Z" fill="#F6A5C1" />
-        <path d="M68 26 L66 14 L58 22 Z" fill="#F6A5C1" />
-        <circle cx={48} cy={42} r={24} fill="#F4A261" />
-        <Eyes cx={48} cy={38} gap={18} r={6.5} />
-        <path d="M45 48 L51 48 L48 52 Z" fill="#B83A6B" />
+        <path
+          d={tail}
+          stroke={c.tail}
+          strokeWidth={5}
+          fill="none"
+          strokeLinecap="round"
+        />
+        <ellipse
+          cx={48}
+          cy={78}
+          rx={24}
+          ry={14}
+          fill={c.fur}
+          stroke={c.edge}
+          strokeWidth={1.5}
+        />
+        <path
+          d="M24 30 L28 8 L42 22 Z"
+          fill={c.fur}
+          stroke={c.edge}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+        <path
+          d="M72 30 L68 8 L54 22 Z"
+          fill={c.fur}
+          stroke={c.edge}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+        />
+        <path d="M28 26 L30 14 L38 22 Z" fill={c.ear} />
+        <path d="M68 26 L66 14 L58 22 Z" fill={c.ear} />
+        <circle
+          cx={48}
+          cy={42}
+          r={24}
+          fill={c.fur}
+          stroke={c.edge}
+          strokeWidth={1.5}
+        />
+        <Eyes cx={48} cy={38} gap={18} r={6.5} colours={c.eye} />
+        <path d="M45 48 L51 48 L48 52 Z" fill={c.nose} />
         <path
           className="assistant-mouth"
           d="M43 55 Q48 58 53 55"
@@ -243,7 +439,7 @@ function Cat({ size }: { size: number }): JSX.Element {
         />
         <path
           d="M30 48 L18 46 M30 52 L18 54 M66 48 L78 46 M66 52 L78 54"
-          stroke={INK}
+          stroke={c.whiskers}
           strokeWidth={1.2}
           strokeLinecap="round"
         />
@@ -253,7 +449,14 @@ function Cat({ size }: { size: number }): JSX.Element {
 }
 
 /** The L👀P eyes: the product's own face, two eyes and nothing else. */
-function LoopEyes({ size }: { size: number }): JSX.Element {
+function LoopEyes({
+  size,
+  mode = 'light',
+}: {
+  size: number;
+  mode?: AssistantColorMode;
+}): JSX.Element {
+  const c = LOOP_EYES[mode];
   return (
     <svg
       width={size}
@@ -261,14 +464,14 @@ function LoopEyes({ size }: { size: number }): JSX.Element {
       viewBox="0 0 96 96"
       role="img"
       aria-label="L👀P eyes"
-      style={{ color: '#FFFFFF' }}
+      data-assistant-mode={mode}
     >
       <g className="assistant-body">
-        <Eyes cx={48} cy={50} gap={40} r={18} />
+        <Eyes cx={48} cy={50} gap={40} r={18} colours={c.eye} />
         <path
           className="assistant-mouth"
           d="M42 80 Q48 84 54 80"
-          stroke={INK}
+          stroke={mode === 'dark' ? INK_DARK : INK}
           strokeWidth={2.5}
           fill="none"
           strokeLinecap="round"
@@ -279,12 +482,87 @@ function LoopEyes({ size }: { size: number }): JSX.Element {
   );
 }
 
+const eyeOf = (eye: EyeColours, on: 'page' | string) => ({
+  white: eye.white,
+  ring: eye.ring,
+  pupil: eye.pupil,
+  on,
+});
+
 /** The characters Datalayer ships, in the order a picker shows them. */
 export const ASSISTANT_CHARACTERS: readonly AssistantCharacter[] = [
-  { id: 'paperclip', name: 'Paper clip', Drawing: PaperClip },
-  { id: 'wizard', name: 'Wizard', Drawing: Wizard },
-  { id: 'cat', name: 'Cat', Drawing: Cat },
-  { id: 'eyes', name: 'L👀P eyes', Drawing: LoopEyes },
+  {
+    id: 'paperclip',
+    name: 'Paper clip',
+    Drawing: PaperClip,
+    keyColours: {
+      light: {
+        edges: [PAPER_CLIP.light.wire, PAPER_CLIP.light.line],
+        eye: eyeOf(PAPER_CLIP.light.eye, 'page'),
+      },
+      dark: {
+        edges: [PAPER_CLIP.dark.wire, PAPER_CLIP.dark.line],
+        eye: eyeOf(PAPER_CLIP.dark.eye, 'page'),
+      },
+    },
+  },
+  {
+    id: 'wizard',
+    name: 'Wizard',
+    Drawing: Wizard,
+    keyColours: {
+      light: {
+        edges: [
+          WIZARD.light.hat,
+          WIZARD.light.brim,
+          WIZARD.light.robe,
+          WIZARD.light.faceEdge,
+          WIZARD.light.beardEdge,
+        ],
+        eye: eyeOf(WIZARD.light.eye, WIZARD.light.face),
+      },
+      dark: {
+        edges: [
+          WIZARD.dark.hat,
+          WIZARD.dark.brim,
+          WIZARD.dark.robe,
+          WIZARD.dark.faceEdge,
+          WIZARD.dark.beardEdge,
+        ],
+        eye: eyeOf(WIZARD.dark.eye, WIZARD.dark.face),
+      },
+    },
+  },
+  {
+    id: 'cat',
+    name: 'Cat',
+    Drawing: Cat,
+    keyColours: {
+      light: {
+        edges: [CAT.light.edge, CAT.light.whiskers],
+        eye: eyeOf(CAT.light.eye, CAT.light.fur),
+      },
+      dark: {
+        edges: [CAT.dark.edge, CAT.dark.whiskers],
+        eye: eyeOf(CAT.dark.eye, CAT.dark.fur),
+      },
+    },
+  },
+  {
+    id: 'eyes',
+    name: 'L👀P eyes',
+    Drawing: LoopEyes,
+    keyColours: {
+      light: {
+        edges: [LOOP_EYES.light.eye.ring],
+        eye: eyeOf(LOOP_EYES.light.eye, 'page'),
+      },
+      dark: {
+        edges: [LOOP_EYES.dark.eye.white],
+        eye: eyeOf(LOOP_EYES.dark.eye, 'page'),
+      },
+    },
+  },
 ];
 
 /** The character an assistant shows when none is chosen. */

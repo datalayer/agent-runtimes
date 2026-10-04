@@ -22,7 +22,7 @@
 
 import type { JSX, RefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { ActionList, ActionMenu, IconButton } from '@primer/react';
+import { ActionList, ActionMenu, IconButton, useTheme } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
 import { assistantCharacter, type AssistantCharacter } from './characters';
@@ -295,6 +295,9 @@ export function AssistantStage({
   const name = shipped
     ? shipped.name
     : (character as AssistantCharacterData).name;
+  // Drawn for the chat's colour mode: the dark drawing on a dark page (T-25).
+  const { colorScheme } = useTheme();
+  const colorMode = colorScheme?.startsWith('dark') ? 'dark' : 'light';
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // Where the press began: a press that moves is a drag, not a click.
@@ -430,7 +433,7 @@ export function AssistantStage({
         }}
       >
         {shipped ? (
-          <shipped.Drawing size={size} />
+          <shipped.Drawing size={size} mode={colorMode} />
         ) : (
           <SpriteCharacter
             character={character as AssistantCharacterData}

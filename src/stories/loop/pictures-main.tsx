@@ -7,7 +7,8 @@
  * The page the pictures are taken of (LOOP T-16): one reference screen, or
  * one state of the floating assistant, in one theme and one mode, chosen by
  * the address — `html/pictures.html?screen=approval&theme=loop&mode=dark`,
- * or `?assistant=thinking&mode=light`.
+ * or `?assistant=thinking&mode=light`, or a character idle,
+ * `?character=wizard&mode=dark` (Datalayer's, or the owl a plugin contributes).
  *
  * It sets `data-pictures-ready` on the document once the fonts are in and two
  * frames have painted, which is what the capture waits for.
@@ -27,6 +28,9 @@ import type { ThemeVariant } from '@datalayer/primer-addons';
 import {
   ASSISTANT_PICTURES,
   AssistantScreen,
+  CHARACTER_PICTURES,
+  CharacterScreen,
+  type CharacterPicture,
   REFERENCE_SCREEN_COMPONENTS,
   REFERENCE_SCREENS,
   REFERENCE_THEMES,
@@ -47,6 +51,7 @@ const theme = (
 const mode: ReferenceMode = params.get('mode') === 'dark' ? 'dark' : 'light';
 const screen = params.get('screen') as ReferenceScreen | null;
 const assistant = params.get('assistant') as AssistantPicture | null;
+const character = params.get('character') as CharacterPicture | null;
 
 function Ready(): null {
   useEffect(() => {
@@ -68,6 +73,13 @@ function Ready(): null {
 }
 
 function Page(): JSX.Element {
+  if (character && CHARACTER_PICTURES.includes(character)) {
+    return (
+      <ReferenceTheme theme={theme} mode={mode}>
+        <CharacterScreen character={character} ready={<Ready />} />
+      </ReferenceTheme>
+    );
+  }
   if (assistant && ASSISTANT_PICTURES.includes(assistant)) {
     return (
       <ReferenceTheme theme={theme} mode={mode}>

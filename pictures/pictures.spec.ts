@@ -13,7 +13,9 @@
  * `pictures/test-results/`: fix it, or accept it with
  * `npm run test:pictures:accept`.
  *
- * `PICTURES_THEMES=loop,datalayer` narrows the themes for a quicker run.
+ * `PICTURES_THEMES=loop,datalayer` narrows the themes for a quicker run;
+ * `npm run test:pictures -- -g "assistant|character"` takes only the floating
+ * assistant's pictures.
  * `PICTURES_CSS` adds a stylesheet to every page before it is pictured — to
  * see what a token change would do before making it, e.g.
  * `PICTURES_CSS='[data-datalayer-theme-scope] { --theme-radius-bubble: 20px !important }'`.
@@ -51,6 +53,9 @@ const ASSISTANT = [
   'speaking',
   'aside',
 ] as const;
+// Each character idle, light and dark (T-25), and the owl an example plugin
+// contributes (T-24); the paper clip's is `assistant-idle`.
+const CHARACTERS = ['wizard', 'cat', 'eyes', 'owl'] as const;
 
 async function show(page: Page, query: string): Promise<void> {
   const errors: string[] = [];
@@ -115,6 +120,27 @@ for (const mode of MODES) {
           await expect(stage).not.toHaveAttribute('data-assistant-aside', /.+/);
         }
         await expect(page).toHaveScreenshot(`assistant-${picture}-${mode}.png`);
+      });
+    }
+  });
+}
+
+// Datalayer's characters, each in its own drawing for the mode (T-25), and a
+// character a plugin contributes (T-24), idle in the theme of applications.
+for (const mode of MODES) {
+  test.describe(`character · ${mode}`, () => {
+    test.use({ colorScheme: mode, viewport: { width: 480, height: 360 } });
+    for (const character of CHARACTERS) {
+      test(character, async ({ page }) => {
+        await show(page, `character=${character}&theme=loop&mode=${mode}`);
+        await expect(
+          page.locator(
+            `[data-assistant-state="idle"] svg[data-assistant-mode="${mode}"]`,
+          ),
+        ).toBeVisible();
+        await expect(page).toHaveScreenshot(
+          `character-${character}-${mode}.png`,
+        );
       });
     }
   });
