@@ -29,7 +29,11 @@ import {
   type Icon,
 } from '@primer/octicons-react';
 import type { ChatViewMode } from '../../types/chat';
-import { CHAT_VIEW_MODES, SIDEBAR_NEEDS_MOUNT_POINT } from '../viewModes';
+import {
+  ASSISTANT_NEEDS_A_FLOATING_CHAT,
+  CHAT_VIEW_MODES,
+  SIDEBAR_NEEDS_MOUNT_POINT,
+} from '../viewModes';
 
 /** The drawing of each mode. */
 export const VIEW_MODE_ICONS: Record<ChatViewMode, Icon> = {
@@ -83,7 +87,9 @@ export function ChatViewModeToggle({
             text={
               disabled && mode === 'sidebar'
                 ? `${label} — ${SIDEBAR_NEEDS_MOUNT_POINT}`
-                : label
+                : disabled && mode === 'assistant'
+                  ? `${label} — ${ASSISTANT_NEEDS_A_FLOATING_CHAT}`
+                  : label
             }
             direction={tooltipDirection}
           >

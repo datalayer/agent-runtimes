@@ -24,6 +24,8 @@ import type { ExecutionState } from '@datalayer/jupyter-react/kernel-indicator';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import type { FrontendToolDefinition } from '../../types/tools';
 import type { ContextSnapshotData } from '../../types/context';
+import type { AssistantCharacter } from '../../chat/assistant/characters';
+import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
@@ -620,6 +622,24 @@ export type ChatSuggestionContribution = {
 
 export const LoopChatSuggestion =
   defineContributionPoint<ChatSuggestionContribution>('loop.chat.suggestion');
+
+/**
+ * A character the floating assistant may show (LOOP T-24): a drawing — one
+ * of Datalayer's own (T-25) or a plugin's — or a character read from a file
+ * a person holds the rights to (T-26). The catalogue of characters is what
+ * the enabled plugins contribute here, and nothing else; an application
+ * names one by id (`interface.assistant`).
+ */
+export type AssistantCharacterContribution = {
+  /** Stable id, what an application names. */
+  id: string;
+  character: AssistantCharacter | AssistantCharacterData;
+};
+
+export const LoopAssistantCharacter =
+  defineContributionPoint<AssistantCharacterContribution>(
+    'loop.assistant.character',
+  );
 
 /**
  * The per-example chat extras a host feeds the loop's conversation live.

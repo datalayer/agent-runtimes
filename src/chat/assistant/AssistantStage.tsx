@@ -22,7 +22,7 @@ import { useRef, useState } from 'react';
 import { ActionList, ActionMenu, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
-import { assistantCharacter } from './characters';
+import { assistantCharacter, type AssistantCharacter } from './characters';
 import { SpeechBalloon } from './SpeechBalloon';
 import { SpriteCharacter } from './SpriteCharacter';
 import type { AssistantCharacterData } from './formats/types';
@@ -115,7 +115,7 @@ export function balloonSide(
 
 export interface AssistantStageProps {
   /** The character: one Datalayer ships, by id (T-25), or one loaded from a file (T-26). */
-  character: string | AssistantCharacterData;
+  character: string | AssistantCharacter | AssistantCharacterData;
   /** What it acts out (T-22). */
   state: AssistantState;
   /** Its size, in pixels. */
@@ -155,8 +155,14 @@ export function AssistantStage({
   insist = false,
   onDismiss,
 }: AssistantStageProps): JSX.Element {
+  // A shipped one by id, a drawing contributed by a plugin (T-24), or a
+  // character read from a file (T-26).
   const shipped =
-    typeof character === 'string' ? assistantCharacter(character) : undefined;
+    typeof character === 'string'
+      ? assistantCharacter(character)
+      : 'Drawing' in character
+        ? character
+        : undefined;
   const name = shipped
     ? shipped.name
     : (character as AssistantCharacterData).name;

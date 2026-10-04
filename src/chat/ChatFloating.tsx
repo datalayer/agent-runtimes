@@ -40,7 +40,10 @@ import { useViewportDrag } from './useViewportDrag';
 import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import { AssistantStage } from './assistant/AssistantStage';
 import { SpeechBalloon } from './assistant/SpeechBalloon';
-import { DEFAULT_ASSISTANT_CHARACTER } from './assistant/characters';
+import {
+  DEFAULT_ASSISTANT_CHARACTER,
+  type AssistantCharacter,
+} from './assistant/characters';
 import type { AssistantCharacterData } from './assistant/formats/types';
 import {
   assistantStateOf,
@@ -155,7 +158,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * they hold the rights to (`readClippyCharacter`, `readAcsCharacter`, T-26).
    * @default 'paperclip'
    */
-  assistantCharacter?: string | AssistantCharacterData;
+  assistantCharacter?: string | AssistantCharacter | AssistantCharacterData;
 
   /**
    * Callback when the user switches view mode via the header toggle.

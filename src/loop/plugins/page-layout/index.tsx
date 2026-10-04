@@ -168,6 +168,9 @@ export type PageLayoutChatPlacement = {
   panelMode: 'docked' | 'overlay' | 'popup';
 };
 
+/** The modes the page layout does not place. */
+const PAGE_LAYOUT_DISABLED_MODES: readonly ChatViewMode[] = ['assistant'];
+
 export function pageLayoutForChatMode(
   mode: ChatViewMode,
 ): PageLayoutChatPlacement {
@@ -197,7 +200,15 @@ export function setPageLayoutChatMode(mode: ChatViewMode): void {
 /** The toggle in the floating composer's footer. */
 function ChatModeAction(): JSX.Element {
   const mode = useSignalValue(pageLayoutChatMode);
-  return <ChatViewModeToggle value={mode} onChange={setPageLayoutChatMode} />;
+  // The page layout places the chat itself: the floating assistant, which
+  // ChatFloating draws, is offered greyed out with its reason (T-21).
+  return (
+    <ChatViewModeToggle
+      value={mode}
+      onChange={setPageLayoutChatMode}
+      disabledModes={PAGE_LAYOUT_DISABLED_MODES}
+    />
+  );
 }
 
 /**
