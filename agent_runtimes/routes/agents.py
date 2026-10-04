@@ -40,7 +40,10 @@ from ..events import create_event
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
-from ..models.models import resolve_model_for_inference_provider
+from ..models.models import (
+    remember_app_instance,
+    resolve_model_for_inference_provider,
+)
 from ..services import (
     SandboxVariant,
     create_codemode_toolset,
@@ -2391,10 +2394,16 @@ async def create_agent(
                     agent_id,
                 )
 
+            # The application instance it serves names every model call it
+            # makes through ai-inference, so its owner reads what each
+            # application and deployment spent (LOOP R-09).
+            serving_app = request.app_instance if running_app is not None else None
+            remember_app_instance(agent_id, serving_app)
             try:
                 resolved_model = resolve_model_for_inference_provider(
                     request.model,
                     request.inference_provider,
+                    app_instance=serving_app,
                 )
                 pydantic_agent = PydanticAgent(resolved_model, **agent_kwargs)
             except Exception as exc:
@@ -2409,6 +2418,7 @@ async def create_agent(
                     resolved_model = resolve_model_for_inference_provider(
                         request.model,
                         request.inference_provider,
+                        app_instance=serving_app,
                     )
                     pydantic_agent = PydanticAgent(resolved_model, **agent_kwargs)
                 else:

@@ -5,7 +5,7 @@
 
 import logging
 import os
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from pydantic_ai.settings import ModelSettings
 
@@ -151,11 +151,60 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
     return f"{base}/api/ai-inference/v1"
 
 
+#: The headers datalayer-ai-inference reads the application and deployment
+#: of a call from, and stamps on its usage record (LOOP R-09). Spelled as
+#: ``datalayer_common.usage_dimensions`` spells them.
+APP_UID_HEADER = "X-Datalayer-App-Uid"
+DEPLOYMENT_UID_HEADER = "X-Datalayer-Deployment-Uid"
+
+#: The application instance each agent of this runtime serves, by agent id:
+#: what a model resolved again for one request (the Vercel AI transport) is
+#: attributed with, as the agent's own model was at creation.
+_APP_INSTANCES: dict[str, dict[str, Any]] = {}
+
+
+def remember_app_instance(
+    agent_id: str, app_instance: Mapping[str, Any] | None
+) -> None:
+    """Keep the application instance an agent serves; ``None`` forgets it."""
+    if app_instance:
+        _APP_INSTANCES[agent_id] = dict(app_instance)
+    else:
+        _APP_INSTANCES.pop(agent_id, None)
+
+
+def app_instance_of(agent_id: str | None) -> dict[str, Any] | None:
+    """The application instance an agent serves, or ``None``."""
+    return _APP_INSTANCES.get(agent_id or "")
+
+
+def app_usage_headers(app_instance: Mapping[str, Any] | None) -> dict[str, str]:
+    """The headers naming an application's instance on a model call.
+
+    Its ``app_uid`` and, when it is a deployment's, its ``deployment_uid``:
+    ai-inference meters the call on the caller's account with both, so the
+    owner reads what each application and each deployment spent. A Preview
+    or a test has its application and no deployment; an agent no
+    application runs sends neither.
+    """
+    if not app_instance:
+        return {}
+    app_uid = str(app_instance.get("app_uid") or "").strip()
+    if not app_uid:
+        return {}
+    headers = {APP_UID_HEADER: app_uid}
+    deployment_uid = str(app_instance.get("deployment_uid") or "").strip()
+    if deployment_uid:
+        headers[DEPLOYMENT_UID_HEADER] = deployment_uid
+    return headers
+
+
 def _create_inference_http_client(
     timeout: Any,
     *,
     source: str,
     follow_redirects: bool = True,
+    headers: Mapping[str, str] | None = None,
 ) -> Any:
     """Create an httpx AsyncClient that logs outbound inference request URLs."""
     import httpx
@@ -171,6 +220,7 @@ def _create_inference_http_client(
     return httpx.AsyncClient(
         timeout=timeout,
         follow_redirects=follow_redirects,
+        headers=dict(headers or {}),
         event_hooks={"request": [_log_request]},
     )
 
@@ -376,12 +426,14 @@ def resolve_model_for_inference_provider(
     model: str,
     inference_provider: str | None = None,
     timeout: float = 60.0,
+    app_instance: Mapping[str, Any] | None = None,
 ) -> Any:
     """Return a model object/string honoring the requested inference provider.
 
     - ``local`` (default): preserves existing direct model behavior.
     - ``datalayer``: routes OpenAI-compatible requests through the
-      datalayer-ai-inference service URL.
+      datalayer-ai-inference service URL, naming ``app_instance``'s
+      application and deployment on every call (``app_usage_headers``).
     """
     # A local model is routed to the machine it runs on, whatever inference
     # provider was requested: sending a prompt meant for Ollama to a hosted
@@ -429,6 +481,7 @@ def resolve_model_for_inference_provider(
         http_client=_create_inference_http_client(
             http_timeout,
             source="datalayer-ai-inference",
+            headers=app_usage_headers(app_instance),
         ),
     )
     logger.info(

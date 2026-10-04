@@ -1061,11 +1061,17 @@ class VercelAITransport(BaseTransport):
             # Request body model strings must be wrapped so calls are proxied
             # through datalayer-ai-inference instead of direct/local routing.
             try:
-                from ..models.models import resolve_model_for_inference_provider
+                from ..models.models import (
+                    app_instance_of,
+                    resolve_model_for_inference_provider,
+                )
 
                 model = resolve_model_for_inference_provider(
                     model,
                     "datalayer",
+                    # Attributed to the application the agent serves, as
+                    # its own model is (LOOP R-09).
+                    app_instance=app_instance_of(self._agent_id),
                 )
             except Exception as exc:
                 logger.warning(
