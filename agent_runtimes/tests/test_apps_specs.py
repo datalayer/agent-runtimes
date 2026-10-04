@@ -102,7 +102,10 @@ class TestTheCatalogue:
             "decision",
             "worker",
         }
-        assert [found.id for found in list_apps("worker")] == ["inbox-triage"]
+        assert [found.id for found in list_apps("worker")] == [
+            "inbox-triage",
+            "pipeline-report",
+        ]
         assert get_app("web-research") is APP_CATALOGUE["web-research"]
         assert get_app("web-research:0.0.1") is APP_CATALOGUE["web-research"]
         assert get_app("nope") is None

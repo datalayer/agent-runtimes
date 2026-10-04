@@ -109,12 +109,16 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         path.stem: validate_file(path) for path in sorted(CATALOGUE.glob("*.yaml"))
     }
     assert set(reports) == {
+        "customer-interview",
         "data-quality",
         "inbox-triage",
         "model-choice",
+        "pipeline-report",
         "quote-calculator",
+        "report-from-a-file",
         "ship-or-fix",
         "supplier-comparison",
+        "support-desk",
         "web-research",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())

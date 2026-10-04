@@ -371,6 +371,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
 #: servers it connects to, as agentspecs decides it: `do_it`, `if_asked`,
 #: `ask_first` or `leave_to_me`. What the rules engine has to reproduce.
 APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
+    "customer-interview": {},
     "data-quality": {},
     "inbox-triage": {
         "google-workspace.append_table_rows": "leave_to_me",
@@ -495,9 +496,12 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
         "google-workspace.update_paragraph_style": "leave_to_me",
     },
     "model-choice": {},
+    "pipeline-report": {},
     "quote-calculator": {},
+    "report-from-a-file": {},
     "ship-or-fix": {},
     "supplier-comparison": {},
+    "support-desk": {},
     "web-research": {
         "tavily.tavily_crawl": "do_it",
         "tavily.tavily_extract": "do_it",
@@ -510,6 +514,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
 #: Where what a tool is asked changes what an application does about it: by
 #: application and tool, each condition and the behaviour when it holds.
 APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
+    "customer-interview": {},
     "data-quality": {},
     "inbox-triage": {
         "google-workspace.batch_modify_gmail_message_labels": [
@@ -546,8 +551,11 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
         ],
     },
     "model-choice": {},
+    "pipeline-report": {},
     "quote-calculator": {},
+    "report-from-a-file": {},
     "ship-or-fix": {},
     "supplier-comparison": {},
+    "support-desk": {},
     "web-research": {},
 }
