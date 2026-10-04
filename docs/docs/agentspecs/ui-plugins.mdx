@@ -1,0 +1,86 @@
+---
+title: UI Plugins and Components
+---
+
+# UI Plugins and the catalog of visual components
+
+A **UI plugin** is how an agent's answer becomes an interface rather than text: a
+protocol the host renders — A2UI today; MCP Apps and MCP UI are listed and not enabled.
+Each plugin hosts **the catalog of visual components** it renders (LOOP C-13): A2UI's
+18 standard v0.9 components (`Text`, `Row`, `Card`, `Button`, `ChoicePicker`…) and
+Datalayer's own six — `Table`, `Chart`, `FileUpload`, `Chat`, `Evidence` and `Form` —
+each of which carries its properties as a JSON Schema, what it can be bound to, the
+events it reports and a valid example.
+
+The plugins are specs of [Agentspecs](./index.mdx) (`agentspecs/ui-plugins/*.yaml`).
+Their fields, every component and how an Appspec's surface names one are documented
+there: [UI Plugins](https://agentspecs.datalayer.tech/agents/ui-plugins) and
+[the catalog of visual components](https://agentspecs.datalayer.tech/agents/ui-plugins/components).
+This page is about the lookups Agent Runtimes generates from them.
+
+## The generated lookups
+
+`make specs` generates the plugins into one catalogue per language — do not edit them
+by hand:
+
+| | Python | TypeScript |
+|---|---|---|
+| Module | `agent_runtimes.specs.ui_plugins` | `src/specs/uiPlugins.ts` (`@datalayer/agent-runtimes/lib/specs/uiPlugins`, also re-exported from `@datalayer/agent-runtimes`) |
+| The plugins, by id | `UI_PLUGIN_CATALOGUE` | `UI_PLUGIN_CATALOGUE` |
+| One plugin | `get_ui_plugin(plugin_id)` | `getUIPlugin(pluginId)` |
+| Every plugin | `list_ui_plugins()` | `listUIPlugins()` |
+| The components, by the name a surface gives them | `COMPONENT_CATALOGUE` | `COMPONENT_CATALOGUE` |
+| One component, or none | `get_component(name)` → `ComponentSpec \| None` | `getComponent(name)` → `ComponentSpec \| undefined` |
+| Every component | `list_components()` | `listComponents()` |
+| Types | `UIPluginSpec`, `ComponentSpec`, `ComponentBindingsSpec` (`agent_runtimes.types`) | `UIPluginSpec`, `ComponentSpec` (`src/types/agentspecs.ts`) |
+
+`COMPONENT_CATALOGUE` holds the components of the **enabled** plugins only: a plugin
+that is listed and not enabled contributes none, and a component no enabled plugin
+renders is `None` / `undefined`.
+
+A `ComponentSpec` says:
+
+| Field | Meaning |
+|---|---|
+| `id` | The name a surface gives it (`Table`). |
+| `name` | What a builder reads on the palette. |
+| `description` | What it is for, in a sentence. |
+| `category` | `text`, `input`, `action`, `data`, `conversation`, `media` or `layout`. |
+| `emoji` | Its face on the palette. |
+| `standard` | Its properties are the protocol's own (A2UI's), and not carried here. |
+| `properties` | For Datalayer's own: its properties as a JSON Schema — what the Canvas draws its properties form from. |
+| `bindings` | For Datalayer's own: what it `shows` and what it `sends`. |
+| `events` | What it reports. |
+| `example` | A configuration of it, valid against `properties`. |
+
+```python
+from agent_runtimes.specs.ui_plugins import COMPONENT_CATALOGUE, get_component
+
+table = get_component("Table")
+table.properties["required"]       # ['columns']
+table.bindings.shows, table.events  # (['rows'], ['select'])
+get_component("Marquee")           # None: no enabled plugin renders it
+len(COMPONENT_CATALOGUE)           # 24
+```
+
+```ts
+import { getComponent, listComponents } from '@datalayer/agent-runtimes/lib/specs/uiPlugins';
+
+const chart = getComponent('Chart');
+chart?.properties; // its JSON Schema: kind, x, y, title, series
+listComponents().filter(c => !c.standard).map(c => c.id);
+// ['Table', 'Chart', 'FileUpload', 'Chat', 'Evidence', 'Form']
+```
+
+## Where they are read
+
+- **The application checks** (`src/loop/apps/checks.ts`): `componentNamed` is
+  `getComponent`, and `checkApp` says an application is not ready when its
+  `interface.components`, or a node of its `surface`, names a component the catalog does
+  not have — the same sentences as `app_problems` in Agentspecs.
+- **Tests** hold the catalogue to the plugins (`agent_runtimes/tests/test_ui_plugin_components.py`):
+  the component catalog is A2UI's own, Datalayer's components carry a schema their
+  example meets, and an unknown name is `None`.
+
+Not built yet: a version per component, and the standard components' properties as a
+JSON Schema of the catalog's own (they are A2UI's today).

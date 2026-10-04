@@ -42,7 +42,12 @@ const sidebars = {
     { type: 'doc', id: 'hooks/index', label: 'Hooks' },
     { type: 'doc', id: 'agent-nodes/index', label: 'Nodes' },
     { type: 'doc', id: 'endpoints/index', label: 'Endpoints' },
-    { type: 'doc', id: 'agentspecs/index', label: 'Agentspecs' },
+    {
+      type: 'category',
+      label: 'Agentspecs',
+      link: { type: 'doc', id: 'agentspecs/index' },
+      items: ['agentspecs/ui-plugins'],
+    },
   ],
 };
 
