@@ -510,6 +510,11 @@ export interface AppRecordSpec {
   keepFor: string;
   retentionDays: number;
   include: string[];
+  /**
+   * Whether its conversations may be used to suggest tests (LOOP V-16): off
+   * unless said, and only those kept while it is on are sampled.
+   */
+  suggestTests: boolean;
 }
 
 /** Optional checks from the catalogue. */

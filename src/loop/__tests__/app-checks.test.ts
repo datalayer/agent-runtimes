@@ -69,6 +69,9 @@ describe('the instant checks', () => {
         'A worker says what starts its work, under `triggers`.',
       ]),
     );
+    expect(
+      checkAppspec({ ...BASE, record: { suggest_tests: 'yes' } }).problems,
+    ).toContain('record.suggest_tests: is true or false.');
     expect(checkAppspec({ ...BASE, team: 'jupyter' }).problems).toContain(
       'An application names who does the work: an `agent`, or a `team`, and not both.',
     );

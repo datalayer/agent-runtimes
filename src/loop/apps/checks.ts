@@ -637,6 +637,12 @@ export function documentShapeProblems(document: unknown): string[] {
           oneOf(item, ENUMS.record, `record.include.${index}`),
         );
     }
+    if (
+      record.suggest_tests !== undefined &&
+      typeof record.suggest_tests !== 'boolean'
+    ) {
+      at('record.suggest_tests', 'is true or false');
+    }
   });
   mapping(d.checks, 'checks', checks => {
     texts(checks.guards, 'checks.guards');

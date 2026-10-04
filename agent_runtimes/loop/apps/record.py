@@ -28,6 +28,13 @@ What a person says of a conversation — a thumb up or down, and a comment
 session, by the recorder that recorded it (`recorder_of`); only when the
 application's ``record.include`` names ``feedback``. Unlike the rest, it is
 sent at once and a failure to send it is said: the person is waiting for it.
+
+What was said — each turn of a conversation, what the person asked and what
+it answered — is kept as a ``turn`` entry, under ``conversations``, the
+item of ``record.include`` that names it. Each turn says whether the
+application let its conversations be used to suggest tests when it was had
+(``record.suggest_tests``, LOOP V-16): only a turn kept while it was on may
+be sampled into a suggested test, and ai-agents samples no other.
 """
 
 from __future__ import annotations
@@ -44,11 +51,13 @@ from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import (
     AgentStreamEvent,
     FinalResultEvent,
+    ModelRequest,
     PartDeltaEvent,
     PartStartEvent,
     TextPart,
     TextPartDelta,
     ToolCallPart,
+    UserPromptPart,
 )
 from pydantic_ai.tools import ToolDefinition
 
@@ -65,6 +74,7 @@ INCLUDED_BY = {
     "approval": "approvals",
     "output": "outputs",
     "feedback": "feedback",
+    "turn": "conversations",
 }
 
 #: The session the current run belongs to.
@@ -79,6 +89,9 @@ _RECORDERS: Dict[str, "AppRecorder"] = {}
 
 #: The longest comment kept with a thumb.
 COMMENT_LIMIT = 2000
+
+#: The longest question, and the longest answer, a turn keeps.
+TURN_LIMIT = 4000
 
 
 def recorder_of(session: str) -> Optional["AppRecorder"]:
@@ -284,6 +297,25 @@ class AppRecorder:
         await self.send(self._body(session, [entry]))
         return entry
 
+    def turned(self, asked: str, answered: str) -> None:
+        """Keep a turn of the conversation: what was asked, what it answered.
+
+        Kept under ``conversations``; it says whether the application let its
+        conversations suggest tests then (``record.suggest_tests``).
+        """
+        asked = redact(asked.strip())[:TURN_LIMIT]
+        if not asked:
+            return
+        self.add(
+            "turn",
+            asked,
+            {
+                "asked": asked,
+                "answered": redact(answered.strip())[:TURN_LIMIT],
+                "suggest_tests": bool(self.app.record.suggest_tests),
+            },
+        )
+
     # --- what the other capabilities tell it ---------------------------------------
 
     def decided(self, enforced: Any) -> None:
@@ -329,6 +361,22 @@ class AppRecordCapability(AbstractCapability[Any]):
     def _key(self, ctx: RunContext[Any]) -> str:
         return str(ctx.run_id or ctx.conversation_id or "run")
 
+    @staticmethod
+    def _asked(ctx: RunContext[Any]) -> str:
+        """What the person asked in this run: its prompt, else the last one in its messages."""
+        prompt = ctx.prompt
+        if prompt is None:
+            for message in reversed(ctx.messages or []):
+                if not isinstance(message, ModelRequest):
+                    continue
+                parts = [p for p in message.parts if isinstance(p, UserPromptPart)]
+                if parts:
+                    prompt = parts[-1].content
+                    break
+        if isinstance(prompt, str):
+            return prompt
+        return " ".join(item for item in prompt or [] if isinstance(item, str))
+
     async def before_run(self, ctx: RunContext[Any]) -> None:
         session = str(ctx.conversation_id or ctx.run_id or "run")
         logger.info("Recording %s, session %s.", self.recorder.app.id, session)
@@ -356,14 +404,24 @@ class AppRecordCapability(AbstractCapability[Any]):
         return result
 
     async def _close(
-        self, ctx: RunContext[Any], summary: str, payload: Dict[str, Any]
+        self,
+        ctx: RunContext[Any],
+        summary: str,
+        payload: Dict[str, Any],
+        answered: Optional[str] = None,
     ) -> None:
-        """Add the run's last entry and send its session, once."""
+        """Add the run's last entries and send its session, once.
+
+        A run that answered keeps its turn, what was asked and what it
+        answered; one that stopped keeps how it stopped.
+        """
         session = self._sessions.pop(self._key(ctx), None)
         self._answers.pop(self._key(ctx), None)
         if session is None:
             return
         _SESSION.set(session)
+        if answered is not None and self.recorder.kept("turn"):
+            self.recorder.turned(self._asked(ctx), answered)
         self.recorder.add("output", summary, payload)
         await self.recorder.flush(session)
 
@@ -404,7 +462,13 @@ class AppRecordCapability(AbstractCapability[Any]):
                 # it, as the terminal does) takes away.
                 answer = self._answers.get(key, "")
                 task = asyncio.get_running_loop().create_task(
-                    self._close(ctx, _short(answer, 300), {"length": len(answer)})
+                    self._close(
+                        ctx,
+                        _short(answer, 300),
+                        {"length": len(answer)},
+                        # A client gone before the answer leaves no turn.
+                        answered=answer if final else None,
+                    )
                 )
                 # Held until done: a task nothing refers to may be collected.
                 self._sending.add(task)
@@ -415,7 +479,9 @@ class AppRecordCapability(AbstractCapability[Any]):
 
     async def after_run(self, ctx: RunContext[Any], *, result: Any) -> Any:
         output = getattr(result, "output", "")
-        await self._close(ctx, _short(output, 300), {"length": len(str(output))})
+        await self._close(
+            ctx, _short(output, 300), {"length": len(str(output))}, answered=str(output)
+        )
         return result
 
     async def on_run_error(self, ctx: RunContext[Any], *, error: BaseException) -> Any:
@@ -432,6 +498,7 @@ __all__ = [
     "COMMENT_LIMIT",
     "INCLUDED_BY",
     "RecordNotSent",
+    "TURN_LIMIT",
     "recorder_of",
     "send_to_ai_agents",
 ]

@@ -402,6 +402,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Include',
           type: 'array',
         },
+        suggest_tests: {
+          default: false,
+          description:
+            'Whether its conversations may be used to suggest tests: a few, sampled from those kept while it is on, proposed to its builder; off unless said',
+          title: 'Suggest Tests',
+          type: 'boolean',
+        },
       },
       title: 'AppRecord',
       type: 'object',

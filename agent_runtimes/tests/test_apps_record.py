@@ -35,6 +35,20 @@ def app(include: list[str]) -> AppSpec:
     )
 
 
+def app_suggesting(include: list[str]) -> AppSpec:
+    """An application that lets its conversations suggest tests (LOOP V-16)."""
+    return AppSpec.model_validate(
+        {
+            **app(include).model_dump(),
+            "record": {
+                "keep_for": "90_days",
+                "include": include,
+                "suggest_tests": True,
+            },
+        }
+    )
+
+
 def recorded(spec: AppSpec, *turns: Any, **instance: Any) -> tuple[Agent, list]:
     sent: list = []
 
@@ -317,3 +331,83 @@ async def test_feedback_that_cannot_be_sent_is_said():
     recorder.start("thread-3")
     with pytest.raises(RecordNotSent, match="refused"):
         await recorder.feedback("thread-3", liked=True)
+
+
+# --- each turn of a conversation (LOOP V-16) ----------------------------------------
+
+
+async def test_a_turn_keeps_what_was_asked_and_answered_under_conversations():
+    agent, sent = recorded(app(["conversations", "outputs"]), "Here is the news.")
+    await agent.run("news?")
+    kinds = [entry["kind"] for entry in sent[0]["entries"]]
+    assert kinds == ["session", "turn", "output"]
+    turn = sent[0]["entries"][1]
+    assert turn["summary"] == "news?"
+    # Not used to suggest tests unless the application said so when it was had.
+    assert turn["payload"] == {
+        "asked": "news?",
+        "answered": "Here is the news.",
+        "suggest_tests": False,
+    }
+
+
+async def test_a_turn_says_its_conversation_may_suggest_tests_when_it_may():
+    agent, sent = recorded(app_suggesting(["conversations"]), "Here is the news.")
+    await agent.run("news?")
+    turn = next(entry for entry in sent[0]["entries"] if entry["kind"] == "turn")
+    assert turn["payload"]["suggest_tests"] is True
+
+
+async def test_no_turn_is_kept_unless_conversations_are():
+    agent, sent = recorded(app_suggesting(["outputs"]), "Here is the news.")
+    await agent.run("news?")
+    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]
+
+
+async def test_a_stopped_run_keeps_no_turn():
+    spec = app(["conversations", "outputs", "checks"])
+    agent, sent = recorded(spec, ("search", {"q": AWS}), "done")
+    with pytest.raises(AppCheckBlockedError):
+        await agent.run("go")
+    assert "turn" not in [entry["kind"] for entry in sent[0]["entries"]]
+
+
+async def test_an_ag_ui_turn_keeps_the_question_from_its_messages():
+    import asyncio
+
+    import httpx
+
+    pytest.importorskip("ag_ui")
+    from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
+    from starlette.applications import Starlette
+    from starlette.routing import Route
+
+    agent, sent = recorded(app(["conversations"]), ["Python is ", "a language."])
+
+    async def endpoint(request: Any) -> Any:
+        return await AGUIAdapter.dispatch_request(request, agent=agent)
+
+    server = Starlette(routes=[Route("/", endpoint, methods=["POST"])])
+    body = {
+        "threadId": "t-2",
+        "runId": "r-2",
+        "state": {},
+        "messages": [{"id": "m1", "role": "user", "content": "What is Python?"}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {},
+    }
+    transport = httpx.ASGITransport(app=server)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://runtime"
+    ) as client:
+        async with client.stream("POST", "/", json=body) as response:
+            async for _ in response.aiter_lines():
+                pass
+    for _ in range(20):
+        if sent:
+            break
+        await asyncio.sleep(0.05)
+    turn = next(entry for entry in sent[0]["entries"] if entry["kind"] == "turn")
+    assert turn["payload"]["asked"] == "What is Python?"
+    assert turn["payload"]["answered"] == "Python is a language."

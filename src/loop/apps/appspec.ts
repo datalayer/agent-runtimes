@@ -182,6 +182,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
       keepFor: DEFAULT_KEEP_FOR,
       retentionDays: retentionDays(DEFAULT_KEEP_FOR),
       include: [...DEFAULT_RECORD_INCLUDE],
+      suggestTests: false,
     },
     checks: { guards: [], gates: [], track: '' },
     deployment: {},
@@ -497,6 +498,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
       include: Array.isArray(record.include)
         ? texts(record.include)
         : [...DEFAULT_RECORD_INCLUDE],
+      suggestTests: record.suggest_tests === true,
     },
     checks: {
       guards: texts(checks.guards),
@@ -754,7 +756,8 @@ export function dumpAppspec(app: AppSpec): Data {
       'record',
       new Writer()
         .text('keep_for', app.record.keepFor, DEFAULT_KEEP_FOR)
-        .list('include', app.record.include, DEFAULT_RECORD_INCLUDE).data,
+        .list('include', app.record.include, DEFAULT_RECORD_INCLUDE)
+        .value('suggest_tests', app.record.suggestTests, false).data,
     )
     .part(
       'checks',

@@ -113,6 +113,7 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '1_years',
     include: ['conversations', 'outputs', 'feedback'],
+    suggestTests: false,
     retentionDays: 365,
   },
   checks: {
@@ -193,6 +194,7 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '1_years',
     include: ['decisions', 'sources', 'checks'],
+    suggestTests: false,
     retentionDays: 365,
   },
   checks: {
@@ -391,6 +393,7 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '1_years',
     include: ['conversations', 'actions', 'decisions', 'approvals', 'checks'],
+    suggestTests: false,
     retentionDays: 365,
   },
   checks: {
@@ -495,6 +498,7 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '1_years',
     include: ['decisions', 'sources', 'checks'],
+    suggestTests: false,
     retentionDays: 365,
   },
   checks: {
@@ -841,6 +845,7 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
       'sources',
       'outputs',
     ],
+    suggestTests: false,
     retentionDays: 2555,
   },
   checks: {
@@ -1105,6 +1110,7 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '90_days',
     include: ['actions', 'outputs'],
+    suggestTests: false,
     retentionDays: 90,
   },
   checks: {
@@ -1323,6 +1329,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '90_days',
     include: ['actions', 'outputs'],
+    suggestTests: false,
     retentionDays: 90,
   },
   checks: {
@@ -1407,6 +1414,7 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '1_years',
     include: ['decisions', 'sources', 'checks'],
+    suggestTests: false,
     retentionDays: 365,
   },
   checks: {
@@ -1567,6 +1575,7 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '1_years',
     include: ['decisions', 'sources', 'checks'],
+    suggestTests: false,
     retentionDays: 365,
   },
   checks: {
@@ -1869,6 +1878,7 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '1_years',
     include: ['conversations', 'sources', 'feedback'],
+    suggestTests: false,
     retentionDays: 365,
   },
   checks: {
@@ -1990,6 +2000,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
   record: {
     keepFor: '90_days',
     include: ['conversations', 'sources', 'feedback'],
+    suggestTests: false,
     retentionDays: 90,
   },
   checks: {

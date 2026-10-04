@@ -213,6 +213,25 @@ describe('writing an Appspec', () => {
     ).toEqual({ layout: 'chat' });
   });
 
+  it('writes that its conversations may suggest tests only when they may (V-16)', () => {
+    const chat = emptyAppspec('chat');
+    expect(chat.record.suggestTests).toBe(false);
+    expect(parseAppspec({ kind: 'chat' }).app.record.suggestTests).toBe(false);
+    const allowed = {
+      ...chat,
+      record: { ...chat.record, suggestTests: true },
+    };
+    expect(dumpAppspec(allowed).record).toEqual({ suggest_tests: true });
+    expect(parseAppspec(dumpAppspec(allowed)).app.record.suggestTests).toBe(
+      true,
+    );
+    // Only `true` says yes: anything else is no.
+    expect(
+      parseAppspec({ kind: 'chat', record: { suggest_tests: 'yes' } }).app
+        .record.suggestTests,
+    ).toBe(false);
+  });
+
   it('writes a deployment that is there, even with nothing to say of it', () => {
     const app = {
       ...emptyAppspec('chat'),

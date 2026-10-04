@@ -110,6 +110,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "1_years",
             "include": ["conversations", "outputs", "feedback"],
+            "suggest_tests": False,
             "retention_days": 365,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -180,6 +181,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "1_years",
             "include": ["decisions", "sources", "checks"],
+            "suggest_tests": False,
             "retention_days": 365,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -365,6 +367,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "1_years",
             "include": ["conversations", "actions", "decisions", "approvals", "checks"],
+            "suggest_tests": False,
             "retention_days": 365,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -458,6 +461,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "1_years",
             "include": ["decisions", "sources", "checks"],
+            "suggest_tests": False,
             "retention_days": 365,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -751,6 +755,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
                 "sources",
                 "outputs",
             ],
+            "suggest_tests": False,
             "retention_days": 2555,
         },
         "checks": {
@@ -973,6 +978,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "90_days",
             "include": ["actions", "outputs"],
+            "suggest_tests": False,
             "retention_days": 90,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -1150,6 +1156,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "90_days",
             "include": ["actions", "outputs"],
+            "suggest_tests": False,
             "retention_days": 90,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -1220,6 +1227,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "1_years",
             "include": ["decisions", "sources", "checks"],
+            "suggest_tests": False,
             "retention_days": 365,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -1368,6 +1376,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "1_years",
             "include": ["decisions", "sources", "checks"],
+            "suggest_tests": False,
             "retention_days": 365,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -1622,6 +1631,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "1_years",
             "include": ["conversations", "sources", "feedback"],
+            "suggest_tests": False,
             "retention_days": 365,
         },
         "checks": {"guards": [], "gates": [], "track": ""},
@@ -1723,6 +1733,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         "record": {
             "keep_for": "90_days",
             "include": ["conversations", "sources", "feedback"],
+            "suggest_tests": False,
             "retention_days": 90,
         },
         "checks": {"guards": [], "gates": [], "track": ""},

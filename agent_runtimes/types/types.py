@@ -2260,6 +2260,10 @@ class AppRecordSpec(BaseModel):
     keep_for: str = Field(default="1_years")
     retention_days: int = Field(default=365, description="The retention, as days")
     include: List[str] = Field(default_factory=list)
+    suggest_tests: bool = Field(
+        default=False,
+        description="Whether its conversations may be used to suggest tests (LOOP V-16)",
+    )
 
 
 class AppChecksSpec(BaseModel):

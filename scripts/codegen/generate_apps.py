@@ -47,6 +47,7 @@ CAMEL = {
     "ready_at": "readyAt",
     "keep_for": "keepFor",
     "retention_days": "retentionDays",
+    "suggest_tests": "suggestTests",
     "composed_by": "composedBy",
     "composed_at": "composedAt",
     "min_confidence": "minConfidence",

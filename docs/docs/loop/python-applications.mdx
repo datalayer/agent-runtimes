@@ -301,10 +301,20 @@ sentence; no answer within `timeout` seconds raises `AskTimeout`.
 
 `await session.record(payload, summary="", kind="output")` writes an entry
 to the application's record and sends it at once. `kind` is `output`,
-`tool_call`, `decision`, `check`, `approval` or `feedback`. It returns
-whether the application keeps entries of that kind: only those its
+`tool_call`, `decision`, `check`, `approval`, `feedback` or `turn`. It
+returns whether the application keeps entries of that kind: only those its
 Appspec's `record.include` names (`outputs`, `actions`, `decisions`,
-`checks`, `approvals`, `feedback`) are kept.
+`checks`, `approvals`, `feedback`, `conversations`) are kept.
+
+Each turn of a conversation that ends in an answer is kept by itself, as a
+`turn` entry, when `record.include` names `conversations`: what the person
+asked and what it answered — `{"asked", "answered", "suggest_tests"}`, each
+text redacted as every entry is and cut at 4,000 characters. A run that was
+stopped, or whose client went before the answer, keeps none. `suggest_tests`
+is the Appspec's `record.suggest_tests` when the turn was had: whether the
+application let its conversations be used to suggest tests to its builder.
+Off unless said, and only a turn kept while it was on is ever sampled into a
+suggested test.
 
 ### The agent
 
