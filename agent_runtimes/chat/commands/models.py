@@ -74,12 +74,25 @@ async def _show(tux: "CliTux") -> None:
     local = [m for m in models if m.get("local")]
     hosted = [m for m in models if not m.get("local")]
 
+    where = getattr(tux, "where", None)
     tux.console.print()
-    tux.console.print(f"● Models ({len(models)})", style=STYLE_PRIMARY)
+    tux.console.print(
+        f"● Models on {where} ({len(models)})"
+        if where
+        else f"● Models ({len(models)})",
+        style=STYLE_PRIMARY,
+    )
+    if where:
+        tux.console.print(
+            "  What the cloud runtime offers, with its own keys — not this machine's.",
+            style=STYLE_MUTED,
+        )
 
     if local:
         tux.console.print()
-        tux.console.print("  Local", style=STYLE_ACCENT)
+        tux.console.print(
+            "  Local to the runtime" if where else "  Local", style=STYLE_ACCENT
+        )
         for model in local:
             marker = "[green]●[/green]" if model.get("reachable") else "○"
             selected = " [green](active)[/green]" if model["id"] == active else ""
@@ -128,6 +141,25 @@ async def _show(tux: "CliTux") -> None:
     tux.console.print()
 
 
+def _cloud_refusal(
+    catalog: Optional[dict[str, Any]], model_id: str, where: str
+) -> Optional[str]:
+    """Why a cloud runtime cannot switch to a model, in a sentence, or None."""
+    if catalog is None:
+        return f"{where} did not list its models: nothing was switched."
+    entry = next(
+        (m for m in catalog.get("models") or [] if m.get("id") == model_id), None
+    )
+    if entry is None:
+        return f"{where} does not offer {model_id}."
+    if entry.get("local") and not entry.get("reachable"):
+        return f"{model_id} is not running on {where}."
+    if not entry.get("local") and entry.get("available") is False:
+        missing = ", ".join(entry.get("missing_env_vars") or []) or "its key"
+        return f"{where} has no {missing} for {model_id}."
+    return None
+
+
 async def _switch(tux: "CliTux", model_id: str) -> None:
     """Switch the session to another model.
 
@@ -143,6 +175,16 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
     from agent_runtimes.specs.models import get_model
 
     from ..tux import STYLE_MUTED, STYLE_PRIMARY, STYLE_WARNING
+
+    where = getattr(tux, "where", None)
+    if where:
+        # On Datalayer the runtime's catalogue decides, not this machine's:
+        # a model it does not offer, or has no key for, is refused before
+        # the agent is touched.
+        problem = _cloud_refusal(await _fetch_catalog(tux), model_id, where)
+        if problem:
+            tux.console.print(f"[red]{problem}[/red]")
+            return
 
     model = get_model(model_id)
     if model is None:
@@ -170,7 +212,11 @@ async def _switch(tux: "CliTux", model_id: str) -> None:
 
     # A local model with a cloud sandbox would keep the tokens home while
     # sending the code away, which is the opposite of what was asked for.
-    if model.local and spec.get("sandbox_variant") != LOCAL_SANDBOX_VARIANT:
+    if (
+        model.local
+        and not where
+        and spec.get("sandbox_variant") != LOCAL_SANDBOX_VARIANT
+    ):
         spec["sandbox_variant"] = LOCAL_SANDBOX_VARIANT
         notes.append(f"sandbox moved to {LOCAL_SANDBOX_VARIANT} (local model)")
 

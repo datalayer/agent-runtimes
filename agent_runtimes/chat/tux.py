@@ -48,6 +48,12 @@ STYLE_ACCENT = Style(color="rgb(46,204,113)")  # Green bright 0x2ECC71 - highlig
 STYLE_MUTED = Style(color="rgb(89,89,92)")  # Gray 0x59595C - supporting text
 STYLE_WHITE = Style(color="white")  # Primary text in dark mode
 STYLE_ERROR = Style(color="red")  # Error states
+
+#: The slash commands that read nothing from the agent's runtime: they run
+#: when a cloud runtime does not answer, and every other one is refused then.
+RUNS_WITHOUT_RUNTIME = frozenset(
+    {"help", "exit", "cls", "about", "gif", "rain", "status", "tools-last"}
+)
 STYLE_WARNING = Style(color="yellow")  # Warning states
 
 # Context grid symbols
@@ -128,6 +134,7 @@ class CliTux:
         jupyter_url: Optional[str] = None,
         extra_suggestions: Optional[list[str]] = None,
         startup_message: Optional[str] = None,
+        where: Optional[str] = None,
     ):
         """Initialize the TUX.
 
@@ -139,8 +146,15 @@ class CliTux:
             jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
             extra_suggestions: Additional suggestions provided via --suggestions flag
             startup_message: Optional startup summary line shown right after banner
+            where: Where the agent runs when it is not this machine, in words
+                (a cloud runtime on Datalayer, reached through ``server_url``)
         """
         self.agent_url = agent_url
+        # `server_url` is the one address every slash command reads and acts
+        # on. On Datalayer it is the local relay to the cloud runtime, which
+        # carries the person's token: commands do not know the difference,
+        # and nothing falls back to this machine.
+        self.where = where
         self.server_url = server_url.rstrip("/")
         self.agent_id = agent_id
         self.eggs = eggs
@@ -597,6 +611,11 @@ class CliTux:
 
         if cmd_name in self.commands:
             cmd = self.commands[cmd_name]
+            if cmd.handler and self.where and cmd.name not in RUNS_WITHOUT_RUNTIME:
+                problem = await self.runtime_problem()
+                if problem:
+                    self.console.print(problem, style=STYLE_ERROR)
+                    return ""
             if cmd.handler:
                 result = await cmd.handler(args)
                 # Commands may return a string to use as the next prompt
@@ -611,6 +630,19 @@ class CliTux:
                 style=STYLE_MUTED,
             )
             return ""  # Handled (error shown)
+
+    async def runtime_problem(self) -> Optional[str]:
+        """Why the cloud runtime cannot be read now, in a sentence, or None."""
+        import httpx
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.server_url}/health", timeout=10.0)
+        except httpx.HTTPError as error:
+            return f"The relay to {self.where} is gone ({type(error).__name__}): restart loop."
+        status = response.status_code
+        problem = f"{self.where} does not answer (status {status}): nothing was run, here or there."
+        return None if status == 200 else problem
 
     def _approvals_ws_url(self) -> str:
         """Build the tool-approvals websocket URL for this agent."""
@@ -1112,6 +1144,7 @@ async def run_tux(
     jupyter_url: Optional[str] = None,
     extra_suggestions: Optional[list[str]] = None,
     startup_message: Optional[str] = None,
+    where: Optional[str] = None,
 ) -> None:
     """Run theLoop assistant TUX.
 
@@ -1123,6 +1156,7 @@ async def run_tux(
         jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
         extra_suggestions: Additional suggestions provided via --suggestions flag
         startup_message: Optional startup summary line shown right after banner
+        where: Where the agent runs when it is not this machine, in words
     """
     tux = CliTux(
         agent_url,
@@ -1132,5 +1166,6 @@ async def run_tux(
         jupyter_url=jupyter_url,
         extra_suggestions=extra_suggestions,
         startup_message=startup_message,
+        where=where,
     )
     await tux.run()

@@ -82,11 +82,13 @@ def choose_where(
     ask: Optional[Callable[..., Optional[str]]] = None,
     can_ask: Optional[bool] = None,
     preferences: Path = PREFERENCES,
+    cloud_offered: bool = True,
 ) -> str:
     """Where the agent runs: what the flags say, else what the person answers.
 
     Without a person to ask, on this machine — a script never starts
-    something billed by surprise.
+    something billed by surprise. Nor is Datalayer offered to somebody who
+    is not signed in (``cloud_offered``): there is then nothing to ask.
     """
     if local and cloud:
         raise ValueError("Use only one of --local or --cloud.")
@@ -94,6 +96,8 @@ def choose_where(
         return LOCAL
     if cloud:
         return CLOUD
+    if not cloud_offered:
+        return LOCAL
     if not (interactive() if can_ask is None else can_ask):
         return LOCAL
     last = _read_preferences(preferences).get("where")
@@ -102,7 +106,10 @@ def choose_where(
         "Where should the agent run?",
         [
             ("On this machine — a local server, with your own model keys", LOCAL),
-            ("On Datalayer — a cloud runtime, billed by the minute", CLOUD),
+            (
+                "On Datalayer — a cloud runtime with Datalayer's models, billed by the minute",
+                CLOUD,
+            ),
         ],
         default,
     )
@@ -158,6 +165,9 @@ def _free_port() -> int:
         return int(sock.getsockname()[1])
 
 
+#: What the relay answers, with a 502, when the cloud runtime does not.
+RUNTIME_SILENT = "The cloud runtime does not answer"
+
 #: Headers a relay does not pass on: the hop's own, and what it sets itself.
 _HOP_HEADERS = frozenset(
     {
@@ -182,13 +192,13 @@ def relay_app(target: str, token: str) -> Any:
     from starlette.applications import Starlette
     from starlette.background import BackgroundTask
     from starlette.requests import Request
-    from starlette.responses import StreamingResponse
+    from starlette.responses import JSONResponse, StreamingResponse
     from starlette.routing import Route
 
     base = target.rstrip("/")
     client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=None))
 
-    async def forward(request: Request) -> StreamingResponse:
+    async def forward(request: Request) -> Any:
         url = f"{base}/{request.path_params.get('path', '')}"
         if request.url.query:
             url = f"{url}?{request.url.query}"
@@ -196,12 +206,20 @@ def relay_app(target: str, token: str) -> Any:
             k: v for k, v in request.headers.items() if k.lower() not in _HOP_HEADERS
         }
         headers["authorization"] = f"Bearer {token}"
-        upstream = await client.send(
-            client.build_request(
-                request.method, url, headers=headers, content=await request.body()
-            ),
-            stream=True,
-        )
+        try:
+            upstream = await client.send(
+                client.build_request(
+                    request.method, url, headers=headers, content=await request.body()
+                ),
+                stream=True,
+            )
+        except httpx.HTTPError as error:
+            # Said once, here, for every slash command: the session is on
+            # Datalayer and nothing falls back to this machine.
+            return JSONResponse(
+                {"detail": f"{RUNTIME_SILENT} ({type(error).__name__})."},
+                status_code=502,
+            )
         return StreamingResponse(
             upstream.aiter_raw(),
             status_code=upstream.status_code,
@@ -275,6 +293,15 @@ class NotSignedIn(Exception):
     """No Datalayer credentials: nothing can be launched there."""
 
 
+class CloudRefused(Exception):
+    """Datalayer will not run this agent: the message is the sentence to say.
+
+    No credits, a reservation the credits cannot cover, a launch the platform
+    refused, an environment that cannot hold an agent, a runtime that is not
+    running, an agentspec the runtime does not have.
+    """
+
+
 @dataclass
 class CloudLaunch:
     """A cloud runtime launched for this session, and the relay that reaches it."""
@@ -286,10 +313,19 @@ class CloudLaunch:
     relay: Relay
     client: Any = field(repr=False)
     credits: float = 0.0
+    #: Whether this session went back to a runtime that was already running.
+    attached: bool = False
+    #: The agentspec the runtime's agent was created from, when known.
+    agent_spec_id: Optional[str] = None
 
     @property
     def server_url(self) -> str:
         return self.relay.url
+
+    @property
+    def label(self) -> str:
+        """Where the session's agent runs, in words: for `/status` and the banner."""
+        return f"{self.runtime_name} on Datalayer ({self.environment})"
 
     @property
     def port(self) -> int:
@@ -320,6 +356,144 @@ def make_client() -> tuple[Any, str]:
     if not token:
         raise NotSignedIn("No Datalayer credentials were found.")
     return client, token
+
+
+def signed_in() -> bool:
+    """Whether Datalayer credentials are on this machine. Nothing is called."""
+    try:
+        make_client()
+    except NotSignedIn:
+        return False
+    except Exception:  # noqa: BLE001 - a client that cannot be built offers nothing
+        return False
+    return True
+
+
+def agent_capable(environment: Any) -> bool:
+    """Whether an environment can hold an agent runtime.
+
+    The platform's environments declare their capabilities, and only those
+    with ``agent`` can (``ai-agents-env`` today). An environment that declares
+    none — a user environment — is not ruled out: it is offered only when
+    named (``--environment``).
+    """
+    capabilities = (getattr(environment, "metadata", None) or {}).get("capabilities")
+    if not isinstance(capabilities, list) or not capabilities:
+        return False
+    return any(
+        isinstance(cap, dict)
+        and cap.get("name") == "agent"
+        and cap.get("enabled", True) is not False
+        for cap in capabilities
+    )
+
+
+def declares_capabilities(environment: Any) -> bool:
+    """Whether an environment says what it can do."""
+    capabilities = (getattr(environment, "metadata", None) or {}).get("capabilities")
+    return isinstance(capabilities, list) and bool(capabilities)
+
+
+def is_agent_runtime(runtime: Any) -> bool:
+    """Whether a running runtime is an agent runtime, as against a kernel."""
+    return str(getattr(runtime, "environment", "")).endswith("agents-env")
+
+
+@dataclass
+class CloudOffer:
+    """What Datalayer offers this person, read from its API before anything is launched."""
+
+    #: Every environment the account sees.
+    environments: list[Any]
+    #: The person's running runtimes, of every kind.
+    running: list[Any]
+    #: Credits left, or None when the usage service did not say.
+    credits: Optional[float] = None
+
+    @property
+    def agent_environments(self) -> list[Any]:
+        """The environments that can hold an agent."""
+        return [env for env in self.environments if agent_capable(env)]
+
+    @property
+    def agent_runtimes(self) -> list[Any]:
+        """The running runtimes that are agent runtimes."""
+        return [r for r in self.running if is_agent_runtime(r)]
+
+
+def read_credits(client: Any) -> Optional[float]:
+    """The credits left on the account, from IAM's usage, or None."""
+    try:
+        payload = client._get_usage_credits()
+        return float((payload.get("credits") or {}).get("credits"))
+    except Exception:  # noqa: BLE001 - unknown is said as unknown
+        return None
+
+
+def read_offer(client: Any) -> CloudOffer:
+    """The environments, the running runtimes and the credits, read-only."""
+    try:
+        environments = list(client.list_environments())
+    except Exception as error:  # noqa: BLE001
+        raise CloudRefused(
+            f"Datalayer did not list its environments: {error}"
+        ) from None
+    try:
+        running = list(client.list_runtimes())
+    except Exception:  # noqa: BLE001 - a listing that fails launches anew
+        running = []
+    return CloudOffer(environments, running, read_credits(client))
+
+
+def offer_lines(offer: CloudOffer) -> list[str]:
+    """What Datalayer offers, as the lines shown before anything is chosen."""
+    lines: list[str] = []
+    if offer.credits is None:
+        lines.append("Credits: not known (the usage service did not say).")
+    else:
+        lines.append(f"Credits: {offer.credits:,.2f} left.")
+    agents = offer.agent_environments
+    if agents:
+        lines.append("Agent environments:")
+        for env in agents:
+            title = f" — {env.title}" if getattr(env, "title", "") else ""
+            lines.append(
+                f"  ● {env.name}{title}, {credits_for(env, 1):.3f} credits a minute"
+            )
+    else:
+        lines.append("Agent environments: none offered to this account.")
+    running = offer.agent_runtimes
+    if running:
+        lines.append("Running agent runtimes:")
+        for runtime in running:
+            left = minutes_left(getattr(runtime, "expired_at", None))
+            remaining = f", {left} min left" if left is not None else ""
+            lines.append(
+                f"  ● {runtime.runtime_name} — {runtime.environment}{remaining}"
+            )
+    else:
+        lines.append("Running agent runtimes: none.")
+    lines.append(
+        "Models: the runtime's own, through Datalayer — not this machine's keys; "
+        "/models lists them once connected."
+    )
+    return lines
+
+
+def check_credits(credits: Optional[float], environment: Any, minutes: int) -> None:
+    """Refuse a reservation the credits left cannot cover."""
+    if credits is None:
+        return
+    if credits <= 0:
+        raise CloudRefused(
+            "No credits left on Datalayer: add credits to the account, or run it on this machine (--local)."
+        )
+    cost = credits_for(environment, minutes)
+    if cost > credits:
+        raise CloudRefused(
+            f"Reserving {minutes} min of {environment.name} costs at most {cost:.2f} credits "
+            f"and {credits:.2f} are left: reserve fewer minutes (--minutes)."
+        )
 
 
 def choose_environment(
@@ -432,9 +606,7 @@ def choose_running(
     ask: Optional[Callable[..., Optional[str]]] = None,
 ) -> Optional[Any]:
     """A running agent runtime to go back to, or None to launch a new one (L-06)."""
-    agents = [
-        r for r in runtimes if str(getattr(r, "environment", "")).endswith("agents-env")
-    ]
+    agents = [r for r in runtimes if is_agent_runtime(r)]
     if not agents or not can_ask:
         return None
     new = "__new__"
@@ -491,67 +663,251 @@ def speak_ag_ui(relay_url: str, timeout: float = 120.0) -> bool:
     return False
 
 
+def library_has(relay_url: str, agent_spec_id: str) -> Optional[bool]:
+    """Whether the runtime's library has an agentspec, or None when it does not say."""
+    import httpx
+
+    try:
+        response = httpx.get(
+            f"{relay_url}/api/v1/agents/library/{agent_spec_id}", timeout=15.0
+        )
+    except httpx.HTTPError:
+        return None
+    if response.status_code == 404:
+        return False
+    return True if response.status_code < 300 else None
+
+
+def runtime_agentspec(relay_url: str) -> Optional[str]:
+    """The agentspec the runtime's agent was created from, or None."""
+    import httpx
+
+    try:
+        response = httpx.get(
+            f"{relay_url}/api/v1/configure/agents/{CLOUD_AGENT_NAME}/spec",
+            timeout=15.0,
+        )
+        if response.status_code != 200:
+            return None
+        payload = response.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    spec_id = payload.get("agent_spec_id") if isinstance(payload, dict) else None
+    return str(spec_id) if spec_id else None
+
+
+def unavailable(agent_spec_id: str, runtime_name: str) -> CloudRefused:
+    """The refusal of an agentspec the runtime's library does not have."""
+    return CloudRefused(
+        f"The agentspec {agent_spec_id} is not available on {runtime_name}: "
+        "its library does not have it (the runtime's agentspecs are older or newer than this machine's)."
+    )
+
+
+def ensure_agentspec(
+    relay_url: str, agent_spec_id: str, *, runtime_name: str, token: str
+) -> bool:
+    """Make the runtime's agent the chosen agentspec's. Whether it was changed.
+
+    A runtime holds one agent, ``default``. Going back to a runtime with
+    another agentspec reconfigures that agent from the spec, through the
+    same route the platform's companion calls at launch.
+    """
+    import httpx
+
+    if runtime_agentspec(relay_url) == agent_spec_id:
+        return False
+    if library_has(relay_url, agent_spec_id) is False:
+        raise unavailable(agent_spec_id, runtime_name)
+    try:
+        response = httpx.post(
+            f"{relay_url}/api/v1/agents/configure-from-spec",
+            json={
+                "agent_spec_id": agent_spec_id,
+                "transport": "ag-ui",
+                "user_token": token,
+            },
+            timeout=120.0,
+        )
+    except httpx.HTTPError as error:
+        raise CloudRefused(
+            f"{runtime_name} did not take the agentspec {agent_spec_id}: {error}"
+        ) from None
+    if response.status_code == 404:
+        raise unavailable(agent_spec_id, runtime_name)
+    if response.status_code >= 300:
+        raise CloudRefused(
+            f"{runtime_name} did not take the agentspec {agent_spec_id} "
+            f"({response.status_code}): {response.text[:200]}"
+        )
+    return True
+
+
+def find_running(offer: CloudOffer, name: str) -> Any:
+    """The running agent runtime ``--runtime`` names, by its name, uid or given name."""
+    for runtime in offer.running:
+        names = {
+            str(getattr(runtime, attr, "") or "")
+            for attr in ("runtime_name", "uid", "name")
+        }
+        if name in names:
+            if not is_agent_runtime(runtime):
+                raise CloudRefused(
+                    f"{name} runs {runtime.environment}, which holds no agent."
+                )
+            return runtime
+    listed = ", ".join(str(r.runtime_name) for r in offer.agent_runtimes) or "none"
+    raise CloudRefused(
+        f"No agent runtime named {name} is running on Datalayer (running: {listed})."
+    )
+
+
+def pick_environment(
+    offer: CloudOffer,
+    *,
+    environment: Optional[str],
+    can_ask: bool,
+    ask: Optional[Callable[..., Optional[str]]] = None,
+) -> Any:
+    """An environment that can hold the agent: named, else the agents' one, else asked."""
+    if environment:
+        named = next((e for e in offer.environments if e.name == environment), None)
+        if (
+            named is not None
+            and declares_capabilities(named)
+            and not agent_capable(named)
+        ):
+            agents = ", ".join(e.name for e in offer.agent_environments) or "none"
+            raise CloudRefused(
+                f"{environment} cannot hold an agent (it has no agent capability); agent environments: {agents}."
+            )
+        if named is not None:
+            return named
+    try:
+        return choose_environment(
+            offer.agent_environments,
+            environment=environment,
+            can_ask=can_ask,
+            ask=ask,
+        )
+    except ValueError as error:
+        raise CloudRefused(str(error)) from None
+
+
+def _attach(
+    runtime: Any,
+    *,
+    agent_spec_id: Optional[str],
+    client: Any,
+    token: str,
+    status: Callable[[str], None],
+) -> Optional[CloudLaunch]:
+    """Reach a running runtime through a relay, or None when it does not answer."""
+    from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
+
+    relay = Relay(
+        target=build_agent_runtimes_base_url(runtime.ingress), token=token
+    ).start()
+    back = CloudLaunch(
+        runtime_name=str(runtime.runtime_name),
+        environment=str(runtime.environment),
+        minutes=minutes_left(getattr(runtime, "expired_at", None)) or 0,
+        ingress=str(runtime.ingress),
+        relay=relay,
+        client=client,
+        attached=True,
+    )
+    status(f"Reconnecting to {back.runtime_name}…")
+    if not wait_until_ready(relay.url, timeout=30.0):
+        relay.stop()
+        return None
+    try:
+        if agent_spec_id and ensure_agentspec(
+            relay.url, agent_spec_id, runtime_name=back.runtime_name, token=token
+        ):
+            status(f"{back.runtime_name} now runs {agent_spec_id}.")
+    except CloudRefused:
+        relay.stop()
+        raise
+    if not speak_ag_ui(relay.url, timeout=30.0):
+        relay.stop()
+        return None
+    back.agent_spec_id = agent_spec_id or runtime_agentspec(relay.url)
+    return back
+
+
 def launch_cloud(
-    agent_id: str,
+    agent_id: Optional[str],
     *,
     label: Optional[str] = None,
     reconnect: bool = True,
     environment: Optional[str] = None,
     minutes: Optional[int] = None,
+    runtime: Optional[str] = None,
+    offer: Optional[CloudOffer] = None,
     can_ask: Optional[bool] = None,
     status: Callable[[str], None] = lambda message: None,
+    choose_agentspec: Optional[Callable[[], str]] = None,
 ) -> CloudLaunch:
-    """Launch a cloud runtime for an agent, and the relay that reaches it."""
+    """Launch a cloud runtime for an agent, or go back to one, and the relay that reaches it.
+
+    ``runtime`` names a running runtime to attach to, and nothing is launched.
+    Otherwise a running agent runtime is offered first (L-06), then a new one
+    is reserved in an agent environment, priced against the credits left.
+    ``choose_agentspec`` asks for the agentspec only once a new runtime is
+    being launched, when ``agent_id`` is not given.
+    """
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
     asking = interactive() if can_ask is None else can_ask
     client, token = make_client()
+    offer = offer or read_offer(client)
+    if runtime:
+        named = find_running(offer, runtime)
+        back = _attach(
+            named, agent_spec_id=agent_id, client=client, token=token, status=status
+        )
+        if back is None:
+            raise CloudRefused(f"{named.runtime_name} is running but does not answer.")
+        return back
     if reconnect:
-        try:
-            running = client.list_runtimes()
-        except Exception:  # noqa: BLE001 - a listing that fails launches anew
-            running = []
-        again = choose_running(running, can_ask=asking)
+        again = choose_running(offer.running, can_ask=asking)
         if again is not None:
-            relay = Relay(
-                target=build_agent_runtimes_base_url(again.ingress), token=token
-            ).start()
-            back = CloudLaunch(
-                runtime_name=str(again.runtime_name),
-                environment=str(again.environment),
-                minutes=minutes_left(getattr(again, "expired_at", None)) or 0,
-                ingress=str(again.ingress),
-                relay=relay,
-                client=client,
+            back = _attach(
+                again, agent_spec_id=agent_id, client=client, token=token, status=status
             )
-            status(f"Reconnecting to {back.runtime_name}…")
-            if wait_until_ready(relay.url, timeout=30.0) and speak_ag_ui(
-                relay.url, timeout=30.0
-            ):
+            if back is not None:
                 return back
-            relay.stop()
-            status(f"{back.runtime_name} does not answer: launching a new runtime.")
-    chosen = choose_environment(
-        client.list_environments(), environment=environment, can_ask=asking
-    )
+            status(f"{again.runtime_name} does not answer: launching a new runtime.")
+    if not agent_id:
+        if choose_agentspec is None:
+            raise CloudRefused("Name the agentspec to launch (--agentspec-id).")
+        agent_id = choose_agentspec()
+    chosen = pick_environment(offer, environment=environment, can_ask=asking)
     reserved = choose_minutes(chosen, minutes=minutes, can_ask=asking)
+    check_credits(offer.credits, chosen, reserved)
     status(
-        f"Launching {label or agent_id} on Datalayer ({chosen.name}, {reserved} min)…"
+        f"Launching {label or agent_id} on Datalayer ({chosen.name}, {reserved} min, "
+        f"at most {credits_for(chosen, reserved):.2f} credits)…"
     )
-    runtime = client.create_runtime(
-        environment=chosen.name, time_reservation=reserved, agent_spec_id=agent_id
-    )
+    try:
+        created = client.create_runtime(
+            environment=chosen.name, time_reservation=reserved, agent_spec_id=agent_id
+        )
+    except (RuntimeError, ValueError) as error:
+        raise CloudRefused(f"Datalayer refused the launch: {error}") from None
     relay = Relay(
-        target=build_agent_runtimes_base_url(runtime.ingress), token=token
+        target=build_agent_runtimes_base_url(created.ingress), token=token
     ).start()
     launch = CloudLaunch(
-        runtime_name=str(runtime.runtime_name),
+        runtime_name=str(created.runtime_name),
         environment=chosen.name,
         minutes=reserved,
-        ingress=str(runtime.ingress),
+        ingress=str(created.ingress),
         relay=relay,
         client=client,
         credits=credits_for(chosen, reserved),
+        agent_spec_id=agent_id,
     )
     status(f"Waiting for runtime {launch.runtime_name}…")
     if not wait_until_ready(relay.url):
@@ -560,7 +916,11 @@ def launch_cloud(
             f"The cloud runtime {launch.runtime_name} did not answer in time; it was stopped."
         )
     if not speak_ag_ui(relay.url):
+        missing = library_has(relay.url, agent_id) is False
         launch.stop()
+        if missing:
+            error = unavailable(agent_id, launch.runtime_name)
+            raise CloudRefused(f"{error} The runtime was stopped.")
         raise RuntimeError(
             f"The agent of {launch.runtime_name} did not come up; the runtime was stopped."
         )
@@ -577,7 +937,9 @@ def finish_cloud(
 ) -> None:
     """At the end of a session: stop the runtime, unless the person keeps it."""
     asking = interactive() if can_ask is None else can_ask
-    if keep:
+    # A runtime this session went back to was running before it: without
+    # somebody to ask, it is left as it was found.
+    if keep or (launch.attached and not asking):
         launch.relay.stop()
         say(
             f"The runtime {launch.runtime_name} keeps running until its reservation ends. Stop it with `loop agents terminate {launch.runtime_name}`."

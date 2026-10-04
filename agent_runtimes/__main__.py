@@ -315,6 +315,45 @@ def main_callback(
         "-s",
         help="Extra suggestions (comma-separated) when defaulting to chat mode.",
     ),
+    local: bool = typer.Option(
+        False,
+        "--local",
+        help="Run the agent on this machine, without asking where (chat mode).",
+    ),
+    cloud: bool = typer.Option(
+        False,
+        "--cloud",
+        help=(
+            "Run the agent on Datalayer, in a cloud runtime billed by the minute, "
+            "without asking where (chat mode). Needs `datalayer login` or DATALAYER_API_KEY."
+        ),
+    ),
+    runtime: str | None = typer.Option(
+        None,
+        "--runtime",
+        "-r",
+        help=(
+            "Attach to an agent runtime already running on Datalayer, by its name "
+            "(implies --cloud; nothing is launched)."
+        ),
+    ),
+    environment: str | None = typer.Option(
+        None,
+        "--environment",
+        "-e",
+        help="The Datalayer environment of a new cloud runtime (default: ai-agents-env).",
+    ),
+    minutes: int | None = typer.Option(
+        None,
+        "--minutes",
+        "-m",
+        help="How long to reserve a new cloud runtime for, in minutes (default 30).",
+    ),
+    keep: bool = typer.Option(
+        False,
+        "--keep",
+        help="Leave the cloud runtime running when the session ends.",
+    ),
 ) -> None:
     """Main callback to handle global options."""
     overrides = {
@@ -416,6 +455,19 @@ def main_callback(
             chat_args.append("--no-codemode")
         if suggestions:
             chat_args.extend(["--suggestions", suggestions])
+        # Where the agent runs (LOOP L-01, L-02, L-06).
+        if local:
+            chat_args.append("--local")
+        if cloud:
+            chat_args.append("--cloud")
+        if runtime:
+            chat_args.extend(["--runtime", runtime])
+        if environment:
+            chat_args.extend(["--environment", environment])
+        if minutes is not None:
+            chat_args.extend(["--minutes", str(minutes)])
+        if keep:
+            chat_args.append("--keep")
         # Forward any additional CLI args to chat so `loop --<chat-option>`
         # behaves like `loop chat --<chat-option>`.
         chat_args.extend(ctx.args)

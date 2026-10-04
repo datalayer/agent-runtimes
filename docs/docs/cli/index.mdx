@@ -58,6 +58,57 @@ agent-runtimes chat "What is Python?"
 agent-runtimes chat -a crawler "Search for AI trends"
 ```
 
+### Here, or on Datalayer
+
+`loop` asks **where** the agent runs before it asks which agent: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the minute). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`); otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise: a script never starts something billed by surprise.
+
+Choosing Datalayer shows what is real on your account, read from the API before anything is launched:
+
+```text
+? Where should the agent run?
+    On this machine — a local server, with your own model keys
+  ❯ On Datalayer — a cloud runtime with Datalayer's models, billed by the minute
+
+Credits: 12,809.47 left.
+Agent environments:
+  ● ai-agents-env — AI Agents Environment, 0.048 credits a minute
+Running agent runtimes: none.
+Models: the runtime's own, through Datalayer — not this machine's keys; /models lists them once connected.
+
+Agentspecs on Datalayer: every enabled one.
+  …
+Choose an agentspec [1-7] [6]:
+? For how many minutes? (0.05 credits a minute; stopped when you leave, if you say so) [30]
+Launching example-simple on Datalayer (ai-agents-env, 30 min, at most 1.44 credits)…
+● Runtime 01k… on Datalayer — ai-agents-env, reserved 30 min (at most 1.44 credits)
+```
+
+- **Agentspecs**: on Datalayer every enabled agentspec is offered. Your local API keys do not filter them: the runtime brings its models and your Datalayer secrets.
+- **Environments**: only those that can hold an agent (the `agent` capability, `ai-agents-env` today). A user environment can be named with `--environment`; one that declares no agent capability is refused.
+- **Running runtimes**: when you already have an agent runtime running, `loop` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. With `--agentspec-id` too, the runtime's agent is reconfigured from that agentspec.
+- **Cost**: a minute costs the environment's burning rate. The reservation (`--minutes`, 30 by default) caps what the runtime can cost, and it is checked against the credits you have left before the launch.
+- **At the end**: `loop` asks whether to stop the runtime, because it is billed until it is stopped or its reservation ends. `--keep` leaves it running, and `loop` prints how to reconnect (`loop connect <url>`) and how to stop it (`loop agents terminate <name>`). A one-shot query (`loop --cloud -a crawler "…"`) stops the runtime it launched once the query is answered. A runtime you attached to without a terminal is left as it was found.
+
+Each refusal is one sentence, and nothing is launched: not signed in, no credits (or not enough for the reservation), an environment that cannot hold an agent, a runtime that is not running, the launch refused by the platform, or an agentspec the runtime's library does not have.
+
+```bash
+loop --local                          # on this machine, without asking
+loop --cloud -a crawler               # on Datalayer, a new runtime
+loop --cloud -a crawler -m 15 --keep  # reserved for 15 minutes, left running at the end
+loop --runtime 01k…                   # back to a running agent runtime
+loop --cloud -a crawler "Summarize the news"  # one query, then the runtime is stopped
+```
+
+#### Slash commands on a cloud runtime
+
+The terminal reaches a cloud runtime through a relay on your machine that adds your Datalayer token to every request. Every slash command reads the session's one server address, so on Datalayer `/models`, `/skills`, `/tools`, `/mcp`, `/status`, `/context` and the others query and act on the **cloud runtime**, exactly as they do on a local one:
+
+- `/models` lists the models the cloud runtime offers, with its own keys, under `Models on RUNTIME on Datalayer`. `/models <id>` switches the runtime's agent to a model only if the runtime offers it and has its key. Otherwise the switch is refused in a sentence, and the sandbox never moves to this machine.
+- `/skills`, `/tools` and `/mcp` list and change the skills, tools and MCP servers of the cloud runtime's agent.
+- `/status` shows `Agent Runtime  RUNTIME on Datalayer (ENVIRONMENT)` and the relay it goes through.
+
+Nothing falls back to this machine. If the cloud runtime does not answer, a command that needs it is not run, and `loop` says so in a sentence. `/help`, `/exit`, `/status` and the other commands that read nothing from the runtime still work.
+
 ### Connect to a Remote Server
 
 Use the `connect` subcommand to attach to an existing server:
@@ -113,6 +164,12 @@ agent-runtimes chat --eggs
 | `--debug` | `-d` | off | Verbose logging |
 | `--no-codemode` | | off | Disable codemode |
 | `--eggs` | | off | Enable Easter egg slash commands |
+| `--local` | | asked | Run the agent on this machine, without asking where |
+| `--cloud` | | asked | Run the agent on Datalayer, in a new or running cloud runtime |
+| `--runtime` | `-r` | | Attach to an agent runtime running on Datalayer, by name (implies `--cloud`) |
+| `--environment` | `-e` | `ai-agents-env` | Environment of a new cloud runtime |
+| `--minutes` | `-m` | `30` | How long to reserve a new cloud runtime for |
+| `--keep` | | off | Leave the cloud runtime running when the session ends |
 | `--version` | `-v` | | Show version info |
 
 ### Programmatic Usage

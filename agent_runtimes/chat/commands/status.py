@@ -100,7 +100,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
         tux.console.print("  API: [red]Disconnected[/red]", style=STYLE_MUTED)
 
     # Runtime startup block (matches startup display format)
-    startup_block = _format_startup_info(runtime_host, runtime_port, startup_info)
+    startup_block = _format_startup_info(
+        runtime_host, runtime_port, startup_info, where=getattr(tux, "where", None)
+    )
     if startup_block:
         tux.console.print(Text.from_ansi(startup_block))
         tux.console.print()

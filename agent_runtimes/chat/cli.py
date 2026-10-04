@@ -477,7 +477,9 @@ def _fetch_startup_info(host: str, port: int) -> dict | None:
     return None
 
 
-def _format_startup_info(host: str, port: int, info: dict | None) -> str:
+def _format_startup_info(
+    host: str, port: int, info: dict | None, where: Optional[str] = None
+) -> str:
     """Format startup info for CLI display.
 
     Args:
@@ -494,7 +496,11 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
         # Keep values vertically aligned regardless of label length.
         lines.append(f"  {GREEN_MEDIUM}{label:<13}{RESET} {value}")
 
-    add_row("Agent Runtime", f"http://{host}:{port}")
+    if where:
+        # On Datalayer: the runtime, and the relay on this machine reaching it.
+        add_row("Agent Runtime", f"{where}  {GRAY}(via http://{host}:{port}){RESET}")
+    else:
+        add_row("Agent Runtime", f"http://{host}:{port}")
 
     if info:
         agent_info = info.get("agent", {})
@@ -613,12 +619,16 @@ def _parse_agentspec_context_ids() -> list[str]:
     return [part.strip() for part in raw.split(",") if part.strip()]
 
 
-def _pick_agentspec_interactive() -> str:
+def _pick_agentspec_interactive(cloud: bool = False) -> str:
     """Show available agent specs and let the user pick one interactively.
 
     Specs are split into two groups:
             ○ Invalid – disabled or missing env vars (shown first for reference)
             ● Valid   – enabled with all required env vars present (selectable)
+
+    On Datalayer (``cloud``) this machine's keys say nothing: the runtime
+    brings its models and the person's Datalayer secrets, so every enabled
+    spec is selectable and no model is checked against local env vars.
 
     The first valid spec is proposed as the default (press Enter to select it).
 
@@ -649,11 +659,26 @@ def _pick_agentspec_interactive() -> str:
 
         # Resolve model credentials from env vars and list available model specs.
         available_model_ids, available_model_lines, total_models = (
-            _available_model_ids_by_env()
+            (set(), [], 0) if cloud else _available_model_ids_by_env()
         )
 
+        unavailable_reason = (
+            "disabled" if cloud else "disabled or missing MCP/model env vars"
+        )
+
+        def selectable(spec: Any) -> bool:
+            if cloud:
+                return bool(spec.enabled)
+            return _spec_has_valid_env(spec, available_model_ids)
+
         print()
-        if total_models > 0:
+        if cloud:
+            print(f"{GREEN_LIGHT}Agentspecs on Datalayer:{RESET} every enabled one.")
+            print(
+                f"{GRAY}The cloud runtime brings the models and your Datalayer secrets, "
+                f"not this machine's keys; /models lists its models once connected.{RESET}"
+            )
+        elif total_models > 0:
             print(
                 f"{GREEN_LIGHT}Model specs available by env vars:{RESET} "
                 f"{len(available_model_ids)}/{total_models}"
@@ -670,11 +695,11 @@ def _pick_agentspec_interactive() -> str:
         # Partition into valid (enabled + MCP/model env vars) and the rest, each sorted by id.
         # Display invalid first, then valid, while keeping selection restricted to valid.
         valid_specs = sorted(
-            [s for s in specs if _spec_has_valid_env(s, available_model_ids)],
+            [s for s in specs if selectable(s)],
             key=lambda s: s.id,
         )
         other_specs = sorted(
-            [s for s in specs if not _spec_has_valid_env(s, available_model_ids)],
+            [s for s in specs if not selectable(s)],
             key=lambda s: s.id,
         )
         ordered = other_specs + valid_specs
@@ -717,7 +742,7 @@ def _pick_agentspec_interactive() -> str:
             env_vars: set[str] = set()
             for mcp in spec.mcp_servers:
                 env_vars.update(mcp.required_env_vars)
-            if env_vars:
+            if env_vars and not cloud:
                 env_parts: list[str] = []
                 for var in sorted(env_vars):
                     if os.environ.get(var):
@@ -734,7 +759,9 @@ def _pick_agentspec_interactive() -> str:
                     model_spec = get_model(model_ref)
                 except Exception:
                     model_spec = None
-                if model_spec is not None:
+                if model_spec is not None and cloud:
+                    print(f"       model: {GRAY}{model_spec.id}{RESET}")
+                elif model_spec is not None:
                     model_ok = model_spec.id in available_model_ids
                     model_color = GREEN_LIGHT if model_ok else RED
                     print(f"       model: {model_color}{model_spec.id}{RESET}")
@@ -774,7 +801,7 @@ def _pick_agentspec_interactive() -> str:
                 return chosen.id
             elif 0 <= idx < len(ordered):
                 print(
-                    f"{GRAY}Agent spec #{choice} is not available (disabled or missing MCP/model env vars).{RESET}"
+                    f"{GRAY}Agent spec #{choice} is not available ({unavailable_reason}).{RESET}"
                 )
                 print(
                     f"{GRAY}Please choose a valid (●) spec or press Enter for the default.{RESET}"
@@ -791,7 +818,7 @@ def _pick_agentspec_interactive() -> str:
             invalid_match = [s for s in other_specs if s.id == choice]
             if invalid_match:
                 print(
-                    f"{GRAY}Agent spec '{choice}' is not available (disabled or missing MCP/model env vars).{RESET}"
+                    f"{GRAY}Agent spec '{choice}' is not available ({unavailable_reason}).{RESET}"
                 )
             elif not show_all_specs and choice.lower() in {
                 "show-all",
@@ -808,21 +835,69 @@ def _pick_agentspec_interactive() -> str:
             raise typer.Exit(0)
 
 
+def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
+    """Here or on Datalayer, asked before the agentspec (LOOP L-01).
+
+    Datalayer is offered only to somebody signed in; nobody else is asked,
+    and is told in one line how to be offered it.
+    """
+    from agent_runtimes.loop.launch import choose_where, interactive, signed_in
+
+    offered = local or cloud or signed_in()
+    if not offered and interactive():
+        print(
+            f"{GRAY}Running on this machine. Sign in (`datalayer login`) to be offered Datalayer's cloud runtimes too.{RESET}"
+        )
+    return choose_where(local=local, cloud=cloud, cloud_offered=offered)
+
+
 def _launch_on_datalayer(
-    agent_id: str, *, environment: Optional[str], minutes: Optional[int]
+    agent_id: Optional[str],
+    *,
+    environment: Optional[str],
+    minutes: Optional[int],
+    runtime: Optional[str] = None,
 ) -> Any:
-    """A cloud runtime for the agent, or None to run it on this machine instead."""
+    """A cloud runtime for the agent, or None to run it on this machine instead.
+
+    What Datalayer offers is read and shown first — the credits left, the
+    agent environments and what a minute of each costs, the agent runtimes
+    already running — then a running one is attached to (``runtime``, or
+    chosen) or a new one is launched for the agentspec, chosen here when
+    not given. Every refusal is one sentence and the exit.
+    """
     from rich.console import Console
 
-    from agent_runtimes.loop.launch import NotSignedIn, interactive, launch_cloud
+    from agent_runtimes.loop.launch import (
+        CloudRefused,
+        NotSignedIn,
+        interactive,
+        launch_cloud,
+        make_client,
+        offer_lines,
+        read_offer,
+    )
 
     console = Console()
     try:
+        client, _ = make_client()
+        offer = read_offer(client)
+        console.print()
+        for line in offer_lines(offer):
+            console.print(f"[dim]{line}[/dim]")
+        console.print()
         launch = launch_cloud(
             agent_id,
             environment=environment,
             minutes=minutes,
+            runtime=runtime,
+            offer=offer,
             status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+            choose_agentspec=(
+                (lambda: _pick_agentspec_interactive(cloud=True))
+                if interactive()
+                else None
+            ),
         )
     except NotSignedIn:
         console.print(
@@ -836,11 +911,21 @@ def _launch_on_datalayer(
             ).ask():
                 return None
         raise typer.Exit(1)
-    console.print(
-        f"[green]●[/green] Runtime [bold]{launch.runtime_name}[/bold] on Datalayer — "
-        f"{launch.environment}, reserved {launch.minutes} min "
-        f"[dim](at most {launch.credits:.1f} credits)[/dim]"
-    )
+    except CloudRefused as refused:
+        console.print(f"[red]✗[/red] {refused}")
+        raise typer.Exit(1)
+    if launch.attached:
+        console.print(
+            f"[green]●[/green] Back on runtime [bold]{launch.runtime_name}[/bold] on Datalayer — "
+            f"{launch.environment}, {launch.minutes} min left "
+            "[dim](billed until it is stopped or its reservation ends)[/dim]"
+        )
+    else:
+        console.print(
+            f"[green]●[/green] Runtime [bold]{launch.runtime_name}[/bold] on Datalayer — "
+            f"{launch.environment}, reserved {launch.minutes} min "
+            f"[dim](at most {launch.credits:.2f} credits)[/dim]"
+        )
     return launch
 
 
@@ -913,6 +998,16 @@ def main_callback(
         "--keep",
         help="Leave the cloud runtime running when the session ends (with --cloud).",
     ),
+    runtime: Optional[str] = typer.Option(
+        None,
+        "--runtime",
+        "-r",
+        help=(
+            "Attach to an agent runtime already running on Datalayer, by its name "
+            "(implies --cloud; nothing is launched). With --agentspec-id, its agent "
+            "is made that agentspec's."
+        ),
+    ),
     show_version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
     ),
@@ -934,6 +1029,14 @@ def main_callback(
         loop "What is Python?"      # Single query mode
 
         loop -a crawler "Search for AI trends"  # Single query with specific agent
+
+        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the minute
+
+        loop --runtime <name>       # Back to an agent runtime running on Datalayer
+
+    Where the agent runs is asked first — on this machine, or on Datalayer
+    when signed in — unless --local, --cloud or --runtime says so. Without a
+    terminal it runs here.
     """
     # If a subcommand was invoked, don't run the default behavior
     if ctx.invoked_subcommand is not None:
@@ -959,6 +1062,10 @@ def main_callback(
         [s.strip() for s in suggestions.split(",") if s.strip()] if suggestions else []
     )
 
+    if runtime and local:
+        raise typer.BadParameter("--runtime attaches on Datalayer: drop --local.")
+    cloud = cloud or bool(runtime)
+
     # Resolve agent spec: use provided ID or pick interactively
     agent_id = agentspec_id
     if agent_id is None:
@@ -974,20 +1081,26 @@ def main_callback(
             extra_suggestions=extra_suggestions,
         )
         preview_tux.show_welcome()
-        agent_id = _pick_agentspec_interactive()
 
-    # Where it runs (LOOP L-01): what the flags say, else what the person
-    # answers — on this machine, or on Datalayer.
-    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME, choose_where
+    # Where it runs (LOOP L-01), asked before the agentspec: what the flags
+    # say, else what the person answers — on this machine, or on Datalayer.
+    # The agentspecs offered depend on it: this machine's keys gate them
+    # here, and say nothing on Datalayer.
+    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME
 
-    where = choose_where(local=local, cloud=cloud) if agent_id else "local"
+    where = _choose_where_at_start(local=local, cloud=cloud)
     cloud_launch = None
     if where == CLOUD:
         cloud_launch = _launch_on_datalayer(
-            agent_id, environment=environment, minutes=minutes
+            agent_id, environment=environment, minutes=minutes, runtime=runtime
         )
         if cloud_launch is None:
             where = "local"
+        else:
+            # A runtime gone back to may not say its agentspec: its agent is `default`.
+            agent_id = cloud_launch.agent_spec_id or agent_id or CLOUD_AGENT_NAME
+    if cloud_launch is None and agent_id is None:
+        agent_id = _pick_agentspec_interactive()
     runtime_agent_name = (
         CLOUD_AGENT_NAME if cloud_launch else DEFAULT_RUNTIME_AGENT_NAME
     )
@@ -1134,7 +1247,14 @@ def main_callback(
 
                 # Display startup info
                 startup_info = _fetch_startup_info("127.0.0.1", actual_port)
-                print(_format_startup_info("127.0.0.1", actual_port, startup_info))
+                print(
+                    _format_startup_info(
+                        "127.0.0.1",
+                        actual_port,
+                        startup_info,
+                        where=cloud_launch.label if cloud_launch else None,
+                    )
+                )
                 print()
 
                 # Confirmation message based on the selected agent spec.
@@ -1246,6 +1366,7 @@ def main_callback(
                             jupyter_url=jupyter_url,
                             extra_suggestions=extra_suggestions,
                             startup_message=startup_message,
+                            where=cloud_launch.label if cloud_launch else None,
                         )
                     )
                 finally:

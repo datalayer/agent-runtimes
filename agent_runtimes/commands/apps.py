@@ -417,6 +417,7 @@ def apps_run(
     from agent_runtimes.loop.launch import (
         CLOUD,
         CLOUD_AGENT_NAME,
+        CloudRefused,
         NotSignedIn,
         choose_where,
         finish_cloud,
@@ -460,6 +461,9 @@ def apps_run(
             console.print(
                 "[yellow]Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY.[/yellow]"
             )
+            raise typer.Exit(1)
+        except CloudRefused as refused:
+            console.print(f"[red]✗[/red] {refused}")
             raise typer.Exit(1)
         base_url = cloud_launch.server_url
     else:

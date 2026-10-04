@@ -29,12 +29,16 @@ from agent_runtimes.loop.launch import (
     minutes_problem,
 )
 
+#: What the platform's agents environment declares (``ai-agents-env``).
+AGENT_CAPABILITIES = {"capabilities": [{"name": "agent", "enabled": True}]}
+
 
 @dataclass
 class Env:
     name: str
     title: str = ""
     burning_rate: float = 0.01
+    metadata: Any = None
 
 
 def test_the_flags_answer_where_and_a_script_runs_here(tmp_path: Path) -> None:
@@ -171,7 +175,7 @@ class FakeClient:
         return "the-token"
 
     def list_environments(self) -> list:
-        return [Env("ai-agents-env", "Agents", 0.02)]
+        return [Env("ai-agents-env", "Agents", 0.02, AGENT_CAPABILITIES)]
 
     def create_runtime(self, **kwargs: Any) -> Any:
         self.created = kwargs
@@ -361,6 +365,7 @@ def test_a_running_agent_runtime_is_offered_before_a_new_one(
     )
     monkeypatch.setattr(launch, "wait_until_ready", lambda url, timeout=180.0: True)
     monkeypatch.setattr(launch, "speak_ag_ui", lambda url, timeout=120.0: True)
+    monkeypatch.setattr(launch, "ensure_agentspec", lambda *args, **kwargs: False)
     back = launch.launch_cloud("crawler", can_ask=True)
     try:
         # Nothing launched: the runtime that runs is the one reached.
