@@ -649,6 +649,10 @@ export const LoopAssistantCharacter =
     'loop.assistant.character',
   );
 
+// A block the Canvas may place (LOOP C-12), in a module of its own so that
+// the palette is read without the rest of the contracts.
+export { LoopCanvasBlock, type CanvasBlockContribution } from './canvasBlocks';
+
 /**
  * The per-example chat extras a host feeds the loop's conversation live.
  *
