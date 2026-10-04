@@ -115,11 +115,12 @@ npm run test:pictures:accept
   every page before it is pictured:
   `PICTURES_THEMES=loop PICTURES_CSS='[data-datalayer-theme-scope] { --theme-radius-frame: 20px !important }' npm run test:pictures`
   shows what that change would do, as differences.
-- **Fonts.** The pictures use whatever face the theme resolves on the machine
-  that takes them. The `loop` theme asks for Inter and falls back to the
-  system sans-serif; until Inter is served (LOOP T-04) they are drawn in the
-  fallback, and once it is, they change and are accepted again. Baselines are
-  taken on Linux: another system draws text differently and accepts its own.
+- **Fonts.** The `loop` pictures are drawn in Inter, served by the pictures
+  page's own Vite: it imports `@datalayer/primer-addons/style/loop-face.css`
+  (LOOP T-04) and is ready only once both weights, 400 and 600, are in. The
+  other themes use whatever face they resolve on the machine that takes them.
+  Baselines are taken on Linux: another system draws text differently and
+  accepts its own.
 
 ## The Cloudflare model specs against Cloudflare's listing
 

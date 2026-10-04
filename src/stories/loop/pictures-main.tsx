@@ -10,8 +10,9 @@
  * or `?assistant=thinking&mode=light`, or a character idle,
  * `?character=wizard&mode=dark` (Datalayer's, or the owl a plugin contributes).
  *
- * It sets `data-pictures-ready` on the document once the fonts are in and two
- * frames have painted, which is what the capture waits for.
+ * It sets `data-pictures-ready` on the document once the fonts are in — Inter
+ * in its two weights, served by this page (T-04) — and two frames have
+ * painted, which is what the capture waits for.
  *
  * @module stories/loop/pictures-main
  */
@@ -41,6 +42,9 @@ import {
 } from './ReferenceScreens';
 
 import '../../../style/primer-primitives.css';
+// The `loop` theme's face (LOOP T-04): Inter and its metric-matched fallback,
+// served by this page's own Vite, as the landing serves them from its build.
+import '@datalayer/primer-addons/style/loop-face.css';
 
 const params = new URLSearchParams(window.location.search);
 const theme = (
@@ -56,15 +60,22 @@ const character = params.get('character') as CharacterPicture | null;
 function Ready(): null {
   useEffect(() => {
     let cancelled = false;
-    void document.fonts.ready.then(() => {
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (!cancelled) {
-            document.documentElement.setAttribute('data-pictures-ready', '');
-          }
-        }),
-      );
-    });
+    // Inter is fetched only once text asks for it: ask for both weights, so
+    // that the picture is never taken in the fallback.
+    void Promise.all([
+      document.fonts.load('400 14px "Inter Variable"'),
+      document.fonts.load('600 14px "Inter Variable"'),
+    ])
+      .then(() => document.fonts.ready)
+      .then(() => {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (!cancelled) {
+              document.documentElement.setAttribute('data-pictures-ready', '');
+            }
+          }),
+        );
+      });
     return () => {
       cancelled = true;
     };
