@@ -39,7 +39,7 @@ import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import type { AppSpec } from '../../types/agentspecs';
 import { parseAppspec, type ParsedAppspec } from '../apps/appspec';
 import { readAppspecYaml } from '../apps/yaml';
-import { AppEmbed } from './AppEmbed';
+import { AppEmbed, embedAssistantCharacter } from './AppEmbed';
 import {
   EMBED_HOST_VARIABLES,
   EMBED_OBSERVED_ATTRIBUTES,
@@ -451,6 +451,15 @@ export function defineDatalayerAppElement(
       } catch (error) {
         this.say((error as Error).message);
         return;
+      }
+      // A character nothing contributes is said in place, as an attribute
+      // that is not one is (D-07, T-24).
+      if (look.mode === 'assistant') {
+        const chosen = embedAssistantCharacter(source.app);
+        if ('problem' in chosen) {
+          this.say(chosen.problem);
+          return;
+        }
       }
       this.setAttribute('data-embed-mode', look.mode);
       const shadow = this.skeleton(loopThemeStyles.css);

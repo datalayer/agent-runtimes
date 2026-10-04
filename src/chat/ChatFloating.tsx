@@ -68,7 +68,12 @@ import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
-import type { ChatCommonProps, ChatViewMode, ProtocolConfig } from '../types';
+import type {
+  ChatCommonProps,
+  ChatViewMode,
+  ProtocolConfig,
+  ThemeOverrides,
+} from '../types';
 
 /**
  * ChatFloating props — extends ChatCommonProps with floating/popup-specific configuration.
@@ -85,6 +90,13 @@ export interface ChatFloatingProps extends ChatCommonProps {
 
   /** Default open state */
   defaultOpen?: boolean;
+
+  /**
+   * Properties laid over the theme the conversation wears, by mode — an
+   * application's accent (LOOP T-05): the chat sets its theme again inside
+   * it, so the accent the page around it set does not reach its bubbles.
+   */
+  themeOverrides?: ThemeOverrides;
 
   /** width */
   width?: number | string;
@@ -274,6 +286,7 @@ export function ChatFloating({
   showTokenUsage = true,
   showContextRing = false,
   themeVariant,
+  themeOverrides,
   colorMode,
   runtimeId,
   historyEndpoint,
@@ -1054,6 +1067,7 @@ export function ChatFloating({
         useStore={useStoreMode}
         protocol={protocol}
         themeVariant={themeVariant}
+        themeOverrides={themeOverrides}
         colorMode={colorMode}
         autoFocus={isOpen}
         focusTrigger={focusTrigger}

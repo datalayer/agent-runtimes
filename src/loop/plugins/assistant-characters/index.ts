@@ -12,8 +12,10 @@
  */
 
 import {
+  buildReactorFromPlugins,
   contribution,
   definePlugin,
+  type PluginRef,
   type ReactorPlugin,
 } from '@datalayer/reactor';
 import {
@@ -63,6 +65,23 @@ export function assistantCharactersOf(
   return reactor
     .getContributions(LoopAssistantCharacter)
     .map(entry => entry.value);
+}
+
+/**
+ * What these plugins contribute, enabled on their own: for a host with no
+ * workspace to read them from — the embed's floating assistant (D-07) —
+ * which enables Datalayer's characters and whatever plugins it is given.
+ */
+export function assistantCharactersFrom(
+  plugins: PluginRef[],
+): { id: string; character: AssistantCharacter | AssistantCharacterData }[] {
+  const reactor = buildReactorFromPlugins(plugins);
+  reactor.start();
+  try {
+    return assistantCharactersOf(reactor);
+  } finally {
+    reactor.stop();
+  }
 }
 
 /**

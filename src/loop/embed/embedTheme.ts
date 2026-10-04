@@ -32,6 +32,7 @@ import {
   type ThemeStyles,
 } from '@datalayer/primer-addons';
 import type { AppAccent } from '../../types/agentspecs';
+import type { ThemeOverrides } from '../../types/chat';
 
 /** One mode's properties, with the theme's face replaced by the host's. */
 function withFace(
@@ -75,6 +76,32 @@ export function embedThemeStyles({
     light: mode('light'),
     dark: mode('dark'),
   };
+}
+
+/**
+ * The same accent and face laid over the conversation's own theme (T-05,
+ * D-11): the chat sets the `loop` theme again inside it, which would put the
+ * theme's mint and face back over what the embed set around it. The
+ * accent's properties in each mode, and, when the host named a face, every
+ * property of the theme that names its own.
+ */
+export function embedThemeOverrides({
+  accent,
+  font = '',
+}: {
+  accent: AppAccent;
+  font?: string;
+}): ThemeOverrides {
+  const mode = (which: 'light' | 'dark'): Record<string, string> => {
+    const theme = loopThemeStyles[which] as Record<string, unknown>;
+    const faced = Object.fromEntries(
+      Object.entries(withFace(theme, font)).filter(
+        ([name, value]) => typeof value === 'string' && value !== theme[name],
+      ),
+    ) as Record<string, string>;
+    return { ...faced, ...loopAccentStyles(accent, which) };
+  };
+  return { light: mode('light'), dark: mode('dark') };
 }
 
 /**

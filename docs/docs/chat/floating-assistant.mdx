@@ -251,6 +251,16 @@ who said it (`app`, `person` or `default`), or — when nothing enabled
 contributes that id — a sentence saying so, with the ids there are. An unknown
 id is never replaced by another character.
 
+### In an embedded application
+
+The embed's assistant mode (`<datalayer-app mode="assistant">`, `AppEmbed`)
+decides the same way, with no person's choice — a visitor to another
+product has none there: the application's own character, else the paper clip,
+looked up with `assistantCharacterFor` in what Datalayer's characters and the
+host's plugins contribute (`AppEmbed`'s `plugins`; the element takes none, so
+it draws one of the four). An id nothing contributes is said in the element's
+place. See [Embedding](../loop/embedding).
+
 ### In the LOOP workspace
 
 `LoopAssistantPlugin` (`loop/plugins/assistant`) draws the assistant over a
@@ -445,4 +455,4 @@ balloon seen in a browser; stepping aside, seen in a browser.
 **Not built yet.** Sounds are read but not played; the mouth overlays of an
 Agent character while it speaks; `.acf` files; answering an approval in the
 balloon itself; the *paused*
-state, which arrives with pausing a deployment; the assistant as a mode of the embed and the hosted page.
+state, which arrives with pausing a deployment; the assistant on the hosted page.

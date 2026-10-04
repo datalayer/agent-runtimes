@@ -28,7 +28,7 @@ different one with the `mode` attribute.
 | `inline`    | The application where the element is. If it has a page, the page is drawn beside the conversation (`AppRenderer`). This is the default.                                                                |
 | `bubble`    | A round button in the corner, showing the application's face, that opens the conversation in a popup: the copilot pattern.                                                                           |
 | `panel`     | The conversation at the right edge of the page, at full height.                                                                                                                                       |
-| `assistant` | The application's character on the page, speaking in a balloon ([the floating assistant](../chat/floating-assistant)). The character is the one the Appspec names in `interface.assistant`, the paper clip when it names none. |
+| `assistant` | The application's character on the page, speaking in a balloon ([the floating assistant](../chat/floating-assistant)). The character is the one the Appspec names in `interface.assistant`, the paper clip when it names none, looked up among the characters contributed: Datalayer's four, and in React whatever the host's `plugins` contribute. An id nothing contributes is said in place of the application. |
 
 The three floating modes are `ChatFloating`'s (`floating-small`, `panel`,
 `assistant`). Each takes the application's name, welcome, starters and face.
@@ -103,6 +103,11 @@ element's shadow root, which contains:
 - the `loop` theme as CSS custom properties, set on the theme's own element
   inside the root, with the application's accent applied in light and dark
   (`embedThemeStyles`);
+- the same accent and face laid over the conversation's own theme
+  (`embedThemeOverrides`, the chat's `themeOverrides`): the chat sets the
+  `loop` theme again inside it, and without them its bubbles and its button
+  would wear the theme's default mint and face whatever the embed set around
+  it. Inline, floating and as the assistant alike;
 - the theme's own stylesheet, with its controls drawn as pills, scoped to that
   element. A stylesheet in the host's `<head>` cannot reach into a shadow
   tree, so the element writes this one into the root itself;
@@ -179,8 +184,14 @@ import { AppEmbed } from '@datalayer/agent-runtimes/lib/loop';
   colorMode="auto"
   font="Georgia, serif"
   serverUrl="http://localhost:8765" // a Datalayer runtime when unset
+  plugins={[OwlCharacterPlugin]} // characters beside Datalayer's four
 />;
 ```
+
+`plugins` are the host's own plugins for the assistant mode: the characters
+they contribute to `loop.assistant.character` are there beside Datalayer's
+four, so an Appspec may name one of them (`interface.assistant: owl`). The
+element takes no plugins, so an embedded application draws one of the four.
 
 `AppEmbed` is the renderer the element draws. In a React host it uses
 Primer's portal root, and the styles go where the host's bundler puts them.
@@ -221,7 +232,9 @@ Tested (vitest, `src/loop/__tests__/embed-config.test.ts`,
 - the theme with the accent and the host's face, the reset and the scoped
   stylesheet;
 - the element: drawn in its shadow root in the Appspec's mode, the host's
-  `mode` winning, the assistant with the Appspec's character, a public `app`
+  `mode` winning, the assistant with the Appspec's character (or the paper
+  clip, or one a host plugin contributes, or the sentence saying none does),
+  the accent and the face inside the conversation, a public `app`
   framed, a decision framed, a lapsed token reported;
 - the agent: created with the application's spec on Datalayer or on the
   host's server, and addressed over AG-UI.

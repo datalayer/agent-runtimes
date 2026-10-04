@@ -17,7 +17,10 @@
  * - **panel** — the conversation at the right edge of the page, at full
  *   height;
  * - **assistant** — the application's character on the page, speaking in a
- *   balloon (§6.9), the one its Appspec names (`interface.assistant`).
+ *   balloon (§6.9): the one its Appspec names (`interface.assistant`), else
+ *   the paper clip, looked up in what is contributed — Datalayer's four and
+ *   the host's own plugins (T-24); an id nothing contributes is said, never
+ *   replaced.
  *
  * The three floating modes are `ChatFloating`'s, given the application's
  * name, welcome, starters and accent, and its agent's endpoint — created
@@ -25,18 +28,23 @@
  * rules there as it does inline.
  *
  * In the `loop` theme with the application's accent (T-12, T-05), which the
- * host may override with the face and the mode (D-11).
+ * host may override with the face and the mode (D-11) — around the
+ * conversation and inside it, where the chat sets its theme again.
  *
  * @module loop/embed/AppEmbed
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, JSX, ReactNode } from 'react';
+import type { PluginRef } from '@datalayer/reactor';
 import { registerPortalRoot } from '@primer/react';
 import { DatalayerThemeProvider, loopTheme } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import type { AppAccent, AppEmbedMode, AppSpec } from '../../types/agentspecs';
 import type { ProtocolConfig } from '../../types/protocol';
+import type { ThemeOverrides } from '../../types/chat';
+import type { AssistantCharacter } from '../../chat/assistant/characters';
+import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 import { ChatFloating } from '../../chat/ChatFloating';
 import { useAgentRuntimes } from '../../hooks/useAgentRuntimes';
 import {
@@ -48,8 +56,14 @@ import {
 } from '../apps/AppRenderer';
 import { LoopAgentBlueprint } from '../core';
 import { ensureServerAgent } from '../plugins/agents/switchable';
+import {
+  AssistantCharactersPlugin,
+  assistantCharacterFor,
+  assistantCharactersFrom,
+  type AssistantCharacterChosen,
+} from '../plugins/assistant-characters';
 import { floatingViewOf, type EmbedColorMode } from './embedConfig';
-import { embedThemeStyles } from './embedTheme';
+import { embedThemeOverrides, embedThemeStyles } from './embedTheme';
 
 export type AppEmbedProps = {
   /** The application. */
@@ -78,7 +92,32 @@ export type AppEmbedProps = {
    * shadow root's styles stop at its edge. A React host leaves it off.
    */
   ownPortal?: boolean;
+  /**
+   * The host's plugins, for the assistant's character: what they contribute
+   * to `loop.assistant.character` is there beside Datalayer's four. The
+   * element passes none.
+   */
+  plugins?: PluginRef[];
 };
+
+/** No host plugins: one array, so that it never reads as a change. */
+const NO_PLUGINS: PluginRef[] = [];
+
+/**
+ * The character the assistant mode draws (T-24, D-07): the application's own
+ * (`interface.assistant`), else the paper clip, from what Datalayer's
+ * characters and the host's plugins contribute — as a page decides it, with
+ * no person's choice, since a visitor to another product has none here.
+ */
+export function embedAssistantCharacter(
+  app: AppSpec,
+  plugins: PluginRef[] = NO_PLUGINS,
+): AssistantCharacterChosen {
+  return assistantCharacterFor(
+    assistantCharactersFrom([AssistantCharactersPlugin, ...plugins]),
+    { app: app.interface.assistant },
+  );
+}
 
 /** The application's agent as `ChatFloating` addresses it. */
 type AgentEndpoint = {
@@ -201,6 +240,10 @@ type FloatingProps = {
   app: AppSpec;
   view: 'floating-small' | 'panel' | 'assistant';
   colorMode: 'light' | 'dark';
+  /** The accent and face inside the conversation. */
+  themeOverrides: ThemeOverrides;
+  /** The assistant's character, in the assistant mode. */
+  character?: AssistantCharacter | AssistantCharacterData;
 };
 
 /** The bubble, the panel and the assistant: `ChatFloating` in that mode. */
@@ -208,6 +251,8 @@ function FloatingChat({
   app,
   view,
   colorMode,
+  themeOverrides,
+  character,
   agent,
 }: FloatingProps & { agent: AgentEndpoint }): JSX.Element {
   const welcome = app.interface.welcome || app.description;
@@ -216,7 +261,7 @@ function FloatingChat({
       // A new agent is a new conversation.
       key={agent.protocol?.endpoint ?? 'waiting'}
       defaultViewMode={view}
-      assistantCharacter={app.interface.assistant ?? 'paperclip'}
+      {...(character ? { assistantCharacter: character } : {})}
       protocol={agent.protocol}
       authToken={agent.protocol?.authToken}
       title={app.name}
@@ -229,6 +274,7 @@ function FloatingChat({
         message: starter.message,
       }))}
       themeVariant="loop"
+      themeOverrides={themeOverrides}
       colorMode={colorMode}
       showTokenUsage={false}
       showSettingsButton={false}
@@ -344,14 +390,35 @@ export function AppEmbed({
   instance,
   height = 640,
   ownPortal = false,
+  plugins = NO_PLUGINS,
 }: AppEmbedProps): JSX.Element {
   const system = useSystemMode();
   const resolvedMode = colorMode === 'auto' ? system : colorMode;
   const shownAs = mode ?? app.deployment.embedded?.mode ?? 'inline';
   const view = floatingViewOf(shownAs);
+  const worn = accent ?? app.interface.accent;
+  const themeOverrides = useMemo(
+    () => embedThemeOverrides({ accent: worn, font }),
+    [worn, font],
+  );
+  const named = app.interface.assistant;
+  const assistant = useMemo(
+    () =>
+      view === 'assistant' ? embedAssistantCharacter(app, plugins) : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view, named, plugins],
+  );
+  if (assistant && 'problem' in assistant) {
+    return (
+      <p role="status" className="datalayer-app-said">
+        {assistant.problem}
+      </p>
+    );
+  }
+  const character = assistant?.character;
   return (
     <EmbedThemed
-      accent={accent ?? app.interface.accent}
+      accent={worn}
       colorMode={resolvedMode}
       font={font}
       style={
@@ -368,6 +435,8 @@ export function AppEmbed({
           view={view}
           serverUrl={serverUrl}
           colorMode={resolvedMode}
+          themeOverrides={themeOverrides}
+          character={character}
         />
       ) : view ? (
         <DatalayerFloating
@@ -375,6 +444,8 @@ export function AppEmbed({
           view={view}
           instance={instance}
           colorMode={resolvedMode}
+          themeOverrides={themeOverrides}
+          character={character}
         />
       ) : (
         <AppRenderer
@@ -382,6 +453,9 @@ export function AppEmbed({
           target={serverUrl ? 'local' : 'datalayer'}
           {...(serverUrl ? { serverUrl } : {})}
           instance={instance}
+          // The host's accent and face over the application's own, inside
+          // its conversation too.
+          themeOverrides={themeOverrides}
         />
       )}
     </EmbedThemed>

@@ -31,7 +31,7 @@ import {
   Text,
   Truncate,
 } from '@primer/react';
-import { useColorPalette } from '@datalayer/primer-addons';
+import { loopShapeVars, useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { computed, signal } from '@datalayer/reactor';
 import type { ChatLayoutContribution } from '../../core';
@@ -168,6 +168,12 @@ const NO_SURFACE = '';
  * small control reads as an error state, and this one is an invitation.
  */
 const FULLSCREEN_HINT_PERIOD_MS = 1400;
+
+/**
+ * An application's face in the empty state: the page's size of the three a
+ * face is drawn at (LOOP T-19, `--loop-face-large`, 72px).
+ */
+const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);
 
 export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /* The active theme's own colours. Read from the store rather than a
@@ -1624,7 +1630,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       promptActions.length > 0 ? (
         <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
       ) : undefined,
-    showAgentsMenu: true,
+    /*
+      An application's conversation keeps none of the session's controls
+      under its composer — the agents, the model, the tools and their servers,
+      the skills (LOOP T-17, T-18): a person using an application is not
+      choosing them, and its builder chose them in its spec. An agent's chat
+      keeps them.
+    */
+    showAgentsMenu: !presence,
     showInlineAgentsMenu: false,
     agents: footerAgents,
     selectedAgentId: selectedMemberId,
@@ -1634,18 +1647,18 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     showTokenUsage: chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true,
     showContextRing: true,
     agentUsage: contextUsage ?? undefined,
-    showModelSelector: true,
+    showModelSelector: !presence,
     models: offeredModels,
     decisions,
     selectedModel: activeModel,
     onModelSelect: model => void selectModel(model),
-    showToolsMenu: true,
+    showToolsMenu: !presence,
     availableTools: offeredTools,
     mcpServers: configQuery.data?.mcpServers ?? [],
     // Live from the host example, when one feeds it: the footer's MCP status
     // indicator. (Codemode surfaces through the toggle below, not a blob.)
     mcpStatusData: chatExtras.mcpStatusData ?? undefined,
-    showSkillsMenu: true,
+    showSkillsMenu: !presence,
     skills: skillsQuery.data?.skills ?? [],
     skillsLoading: skillsQuery.isLoading,
     enabledSkills,
@@ -1880,10 +1893,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               presence ? <PresenceLine state={presenceNow} /> : undefined
             }
             emptyState={{
-              // An application's own face, large: the thing a person's eye
-              // lands on first (LOOP T-08).
+              // An application's own face, at the page's size of the three
+              // (LOOP T-08, T-19): the thing a person's eye lands on first.
               icon: presence?.face ? (
-                <span aria-hidden style={{ fontSize: 48, lineHeight: 1 }}>
+                <span
+                  aria-hidden
+                  style={{ fontSize: FACE_LARGE, lineHeight: 1 }}
+                >
                   {presence.face}
                 </span>
               ) : (

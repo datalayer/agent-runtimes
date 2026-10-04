@@ -15,11 +15,16 @@ An application names an emoji (its face), a name and a welcome in its
 Appspec. In its chat:
 
 - the **header** shows the face beside the name, with the line of status;
-- the **empty state** shows the face large, the name as its heading, and the
-  welcome under it — the first thing a person reads, before anyone writes —
-  with the application's starters as chips;
+- the **empty state** shows the face at the page's size, 72px (the largest
+  of the three sizes a face is drawn at, `--loop-face-large`), the name as its
+  heading, and the welcome under it — the first thing a person reads, before
+  anyone writes — with the application's starters as chips;
 - the token and context counters under the prompt are **off**: a person
-  using an application is not asking about tokens.
+  using an application is not asking about tokens;
+- the session's controls under the prompt — the agents, the model, the tools
+  and their servers, the skills — are **gone**: a person using an application
+  is not choosing them, its builder did in its spec. An agent's chat keeps
+  them.
 
 An application without a face of its own shows the product's mark in its
 place.

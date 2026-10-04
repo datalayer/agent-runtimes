@@ -18,7 +18,11 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
+import { contribution, definePlugin } from '@datalayer/reactor';
+import { loopAccentStyles } from '@datalayer/primer-addons';
 import { emptyAppspec, dumpAppspec } from '../apps/appspec';
+import { LoopAssistantCharacter } from '../core';
+import { ASSISTANT_CHARACTERS } from '../../chat/assistant/characters';
 import type { AppSpec } from '../../types/agentspecs';
 
 const seen = vi.hoisted(() => ({
@@ -118,7 +122,7 @@ describe('AppEmbed, the React component', () => {
     const { root } = await render(<AppEmbed app={app} />);
     const props = seen.floating.at(-1)!;
     expect(props.defaultViewMode).toBe('assistant');
-    expect(props.assistantCharacter).toBe('wizard');
+    expect(props.assistantCharacter.id).toBe('wizard');
     expect(props.title).toBe('Support Desk');
     expect(props.description).toBe('Ask me about your order.');
     expect(props.suggestions).toEqual([
@@ -126,6 +130,70 @@ describe('AppEmbed, the React component', () => {
     ]);
     expect(props.themeVariant).toBe('loop');
     await act(async () => root.unmount());
+  });
+
+  it('draws a character the host’s plugins contribute, and says one nothing contributes', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const owl = { ...ASSISTANT_CHARACTERS[0], id: 'owl', name: 'Owl' };
+    const OwlPlugin = definePlugin({
+      name: 'test-owl',
+      contributes: [
+        contribution(
+          LoopAssistantCharacter,
+          { id: 'owl', character: owl },
+          { id: 'owl' },
+        ),
+      ],
+    });
+    const app = chatApp(a => {
+      a.interface.assistant = 'owl';
+    });
+    const plugins = [OwlPlugin];
+    const one = await render(
+      <AppEmbed app={app} mode="assistant" plugins={plugins} />,
+    );
+    expect(seen.floating.at(-1)!.assistantCharacter).toBe(owl);
+    await act(async () => one.root.unmount());
+    seen.floating.length = 0;
+    const two = await render(<AppEmbed app={app} mode="assistant" />);
+    expect(seen.floating).toHaveLength(0);
+    expect(two.container.textContent).toBe(
+      'This application names the character “owl”, which nothing enabled here draws; the characters are paperclip, wizard, cat, eyes.',
+    );
+    await act(async () => two.root.unmount());
+  });
+
+  it('draws the paper clip when the application names no character', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const { root } = await render(
+      <AppEmbed app={chatApp()} mode="assistant" />,
+    );
+    expect(seen.floating.at(-1)!.assistantCharacter.id).toBe('paperclip');
+    await act(async () => root.unmount());
+  });
+
+  it('carries the accent and the face into the conversation, the host’s over the application’s', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const app = chatApp(a => {
+      a.interface.accent = 'rose';
+    });
+    const one = await render(<AppEmbed app={app} mode="bubble" />);
+    const floating = seen.floating.at(-1)!.themeOverrides;
+    expect(floating.light).toEqual(loopAccentStyles('rose', 'light'));
+    expect(floating.dark).toEqual(loopAccentStyles('rose', 'dark'));
+    await act(async () => one.root.unmount());
+    const two = await render(
+      <AppEmbed
+        app={app}
+        mode="inline"
+        accent="violet"
+        font="Georgia, serif"
+      />,
+    );
+    const inline = seen.renderer.at(-1)!.themeOverrides;
+    expect(inline.light).toMatchObject(loopAccentStyles('violet', 'light'));
+    expect(inline.light['--fontStack-sansSerif']).toBe('Georgia, serif');
+    await act(async () => two.root.unmount());
   });
 
   it('floats a bubble as the popup and a panel at the edge', async () => {
@@ -296,8 +364,13 @@ deployment:
     expect(shadow.querySelector('.datalayer-app-portal')).not.toBeNull();
     expect(seen.floating.at(-1)).toMatchObject({
       defaultViewMode: 'assistant',
-      assistantCharacter: 'cat',
+      assistantCharacter: { id: 'cat' },
     });
+    // The spec's accent inside the conversation, where the chat sets its
+    // theme again.
+    expect(seen.floating.at(-1)!.themeOverrides.light).toEqual(
+      loopAccentStyles('sun', 'light'),
+    );
     // Nothing of it in the page's own tree, and nothing of its theme on the
     // page: no tokens on the host's <body>, no portal root of its own there.
     expect(document.body.querySelector('[data-testid="floating"]')).toBeNull();
@@ -313,6 +386,22 @@ deployment:
     await act(async () => element.setAttribute('mode', 'bubble'));
     await settle();
     expect(seen.floating.at(-1)!.defaultViewMode).toBe('floating-small');
+    await act(async () => element.remove());
+  });
+
+  it('says a character nothing contributes, in place', async () => {
+    const element = document.createElement('datalayer-app');
+    element.innerHTML =
+      '<script type="application/json">{"id":"a","name":"A","kind":"chat","agent":"x","interface":{"assistant":"owl"},"deployment":{"embedded":{"mode":"assistant"}}}</script>';
+    await act(async () => {
+      document.body.appendChild(element);
+    });
+    await settle();
+    expect(element.getAttribute('data-embed-mode')).toBe('inline');
+    expect(element.shadowRoot!.textContent).toContain(
+      'This application names the character “owl”, which nothing enabled here draws',
+    );
+    expect(seen.floating).toHaveLength(0);
     await act(async () => element.remove());
   });
 
