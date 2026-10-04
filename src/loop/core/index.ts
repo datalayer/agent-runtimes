@@ -594,6 +594,14 @@ export type AgentBlueprintContribution = {
   specId?: string;
   /** Extra fields merged into the server's create-agent payload. */
   createPayload?: Record<string, unknown>;
+  /**
+   * What the agent is told on top of its spec's system prompt — an
+   * application's instructions — when the page turns it, as a runtime
+   * appends them.
+   */
+  instructions?: string;
+  /** The model it runs on in the page, in place of its spec's. */
+  model?: string;
 };
 
 export const LoopAgentBlueprint =

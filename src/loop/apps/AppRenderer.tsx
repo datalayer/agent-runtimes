@@ -92,6 +92,11 @@ export function defineAppPlugin(
       text: starter.label,
       message: starter.message,
     })),
+    // In the page, the agent is told what a runtime tells it: its own
+    // spec's prompt, then the application's instructions; on the
+    // application's model when it names one (`loop/apps/agent`).
+    instructions: app.instructions,
+    model: app.model,
   });
 }
 

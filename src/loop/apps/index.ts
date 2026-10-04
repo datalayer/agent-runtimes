@@ -9,6 +9,7 @@
  * @module loop/apps
  */
 
+export * from './agent';
 export * from './AppRenderer';
 export * from './appspec';
 export * from './checks';

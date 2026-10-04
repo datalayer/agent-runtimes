@@ -414,6 +414,13 @@ starters, its layout, and its [presence](../chat/presence.mdx) — its face, nam
 welcome and line of status — in the chat. An application can also be written
 in Python: see [Applications in Python](./python-applications.mdx).
 
+On the `browser` target the agent is told what a runtime tells it: its agent's
+system prompt — a Cog's from the Cogs catalogue, its Frames already in it —
+then the application's own `instructions`, on the application's `model` when it
+names one, else its agent's (`resolveAgentspec`, `agentInstructions` in
+`loop/apps`). An application whose agent resolves to nothing is not run: the
+chat says so in a sentence instead.
+
 ### An application's layout
 
 `interface.layout` says how the application is drawn, and `AppRenderer` draws

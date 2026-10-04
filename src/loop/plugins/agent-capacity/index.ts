@@ -49,6 +49,10 @@ export type AgentCapacityOptions = {
   createPayload?: Record<string, unknown>;
   /** The openers the empty chat offers for this capacity. */
   suggestions?: ChatSuggestionItem[];
+  /** What the agent is told on top of its spec's prompt when the page turns it. */
+  instructions?: string;
+  /** The model it runs on in the page, in place of its spec's. */
+  model?: string;
 };
 
 export function defineAgentCapacityPlugin(
@@ -64,6 +68,8 @@ export function defineAgentCapacityPlugin(
     codemode,
     createPayload,
     suggestions,
+    instructions,
+    model,
   } = options;
   return definePlugin({
     name: `@datalayer/loop-plugin-agent-${key}`,
@@ -83,6 +89,8 @@ export function defineAgentCapacityPlugin(
             enable_codemode: codemode ?? false,
             ...createPayload,
           },
+          ...(instructions ? { instructions } : {}),
+          ...(model ? { model } : {}),
         },
         { id: key },
       ),

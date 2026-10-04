@@ -56,7 +56,11 @@ import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/An
 import { useAnonymousSessionStore } from '../../../runtimes/browser/anonymousToken';
 import { browserProtocolConfig } from '../../../runtimes/browser';
 import { useBrowserInference } from '../../../hooks/useBrowserInference';
-import { getAgentspecs } from '../../../specs/agents';
+import {
+  agentInstructions,
+  inPageAgentRefusal,
+  resolveAgentspec,
+} from '../../apps/agent';
 import type { ProtocolConfig } from '../../../types/protocol';
 import {
   targetRunsAgentInPage,
@@ -843,10 +847,25 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * icon for want of this lookup — it used the document tools and called
    * nobody.
    */
-  const blueprintSpecId = useContributions(LoopAgentBlueprint)[0]?.value.specId;
+  const blueprint = useContributions(LoopAgentBlueprint)[0]?.value;
+  const blueprintSpecId = blueprint?.specId;
+  /*
+   * An agent of the catalogue or a Cog's, as a runtime resolves it: an
+   * application on a Cog looked up among the agentspecs alone was turned in
+   * the page with no instructions at all (LOOP H-01).
+   */
   const spec =
-    getAgentspecs(member?.specId ?? agentId) ??
-    (blueprintSpecId ? getAgentspecs(blueprintSpecId) : undefined);
+    resolveAgentspec(member?.specId ?? agentId) ??
+    (blueprintSpecId ? resolveAgentspec(blueprintSpecId) : undefined);
+  /*
+   * The blueprint's words and model — an application's — on top of its
+   * spec's, for the agent it contributes; never for a team's member.
+   */
+  const blueprintTurn = member ? undefined : blueprint;
+  // Turned in the page, an agent that resolves to nothing is refused rather
+  // than run bare.
+  const inPageRefusal =
+    inPage && !member ? inPageAgentRefusal(blueprintSpecId, spec) : undefined;
   /*
    * The team's name for a member first, then the spec's own.
    *
@@ -1164,12 +1183,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * for something that was never theirs.
    */
   const expiredKeyIsTemporary = !signedInUser;
-  const chatDisabled = gateBlocked || keyExpired;
+  const chatDisabled = gateBlocked || keyExpired || Boolean(inPageRefusal);
   const disabledReason = keyExpired
     ? expiredKeyIsTemporary
       ? 'This demo runs on a shared key, and its time is up. Sign in to keep going.'
       : 'Your key has expired. Sign in to keep going.'
-    : gateReason;
+    : (inPageRefusal ?? gateReason);
 
   /*
    * The prompt's text, held here rather than inside `InputPrompt`.
@@ -1202,7 +1221,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * the member being addressed changes.
    */
   const [pickedModel, setPickedModel] = useState<string>();
-  const activeModel = pickedModel ?? spec?.model ?? workspace.model ?? '';
+  const activeModel =
+    pickedModel ?? blueprintTurn?.model ?? spec?.model ?? workspace.model ?? '';
   /*
    * The team, in the shape the footer asks for.
    *
@@ -1308,7 +1328,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       inPage
         ? browserProtocolConfig({
             agentId: member?.specId ?? agentId,
-            instructions: spec?.systemPrompt,
+            instructions: agentInstructions(spec, blueprintTurn?.instructions),
             model: activeModel || undefined,
             inference,
             // Who this member may hand work to, and what they are told. Both
@@ -1351,6 +1371,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       agentTools,
       team,
       spec,
+      blueprintTurn,
       activeModel,
       agentServerUrl,
     ],
