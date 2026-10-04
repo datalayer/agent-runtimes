@@ -1689,7 +1689,7 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
     },
   },
   interface: {
-    layout: 'chat',
+    layout: 'page',
     accent: 'violet',
     welcome:
       'Ask me about the product. I answer from its documentation and show you where; when it does not say, I tell you.',
@@ -2067,7 +2067,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     rules: [
       {
         action: 'Send the summary by email',
-        applies_to: ['send'],
+        applies_to: 'send',
         behaviour: 'ask_first',
       },
     ],
@@ -2910,7 +2910,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     rules: [
       {
         action: 'Send the report by email',
-        applies_to: ['send'],
+        applies_to: 'send',
         behaviour: 'leave_to_me',
       },
     ],
@@ -3265,6 +3265,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       "Answer from the documents you were given only, and cite the passage each answer rests on. When they do not hold the answer, say so and offer to hand the question to a person; never guess. Do nothing on an account: changing, refunding or deleting is a person's.",
     contents: ['Product documentation', 'Returns policy'],
     interface: {
+      layout: 'page',
       accent: 'violet',
       welcome:
         'Ask me about the product. I answer from its documentation and show you where; when it does not say, I tell you.',

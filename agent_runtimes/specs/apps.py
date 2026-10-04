@@ -1477,7 +1477,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
             "computer": {"browse": False, "files": False, "shell": False},
         },
         "interface": {
-            "layout": "chat",
+            "layout": "page",
             "accent": "violet",
             "welcome": "Ask me about the product. I answer from its documentation and show you where; when it does not say, I tell you.",
             "starters": [

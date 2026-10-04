@@ -173,6 +173,23 @@ def read_code_marks(text: str) -> List[CodeMark]:
     return marks
 
 
+def _written(document: Dict[str, Any]) -> Dict[str, Any]:
+    """A document as its spec is written: a rule on one class of action names it
+    alone, as agentspecs and the TypeScript writer write it."""
+    from agentspecs.actions import ActionClass
+
+    classes = {item.value for item in ActionClass}
+    rules = [
+        {**rule, "applies_to": rule["applies_to"][0]}
+        if isinstance(rule.get("applies_to"), list)
+        and len(rule["applies_to"]) == 1
+        and rule["applies_to"][0] in classes
+        else rule
+        for rule in document.get("rules") or []
+    ]
+    return {**document, "rules": rules} if rules else document
+
+
 def build(path: Union[str, Path]) -> Built:
     """Build an ``app.py``: the application it defines, and its Appspec.
 
@@ -212,7 +229,7 @@ def build(path: Union[str, Path]) -> Built:
     application.spec  # noqa: B018 - refused here, with its reasons
     return Built(
         application=application,
-        document=application.document,
+        document=_written(application.document),
         marks=code_marks(application, file.name),
         source=file.name,
     )
