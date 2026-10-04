@@ -1825,6 +1825,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           <ChatBase
             // The theme it wears, when the host names one (an application's).
             themeVariant={config?.themeVariant}
+            themeOverrides={config?.themeOverrides}
             // The header says why, beside the title, for the same reason the
             // placeholder does: a dead control with no explanation is worse
             // than an absent one.

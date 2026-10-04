@@ -265,9 +265,11 @@ function ThemedChatBoundary({
   children,
   themeVariant,
   colorMode,
+  themeOverrides,
 }: React.PropsWithChildren<{
   themeVariant?: string;
   colorMode?: 'light' | 'dark' | 'auto';
+  themeOverrides?: ChatBaseProps['themeOverrides'];
 }>) {
   const storeColorMode = useThemeStore(s => s.colorMode);
   const storeThemeVariant = useThemeStore(s => s.theme);
@@ -277,10 +279,13 @@ function ThemedChatBoundary({
   const themeConfig = getThemeConfig(resolvedThemeVariant as any);
   const resolvedMode =
     resolvedColorMode === 'auto' ? systemMode : resolvedColorMode;
-  const modeStyles =
-    resolvedMode === 'dark'
+  const modeStyles = {
+    ...(resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
-      : themeConfig.themeStyles.light;
+      : themeConfig.themeStyles.light),
+    // What the host lays over the theme: an application's accent (T-05).
+    ...themeOverrides?.[resolvedMode],
+  };
   const themeBackground =
     (modeStyles as Record<string, string>).backgroundColor ?? '';
   return (
@@ -706,6 +711,7 @@ export function ChatBase(props: ChatBaseProps) {
     disableInternalJupyterTheme = false,
     themeVariant,
     colorMode,
+    themeOverrides,
   } = props;
 
   // Resolve protocol: string Protocol overrides type in agentRuntimeConfig or
@@ -744,7 +750,11 @@ export function ChatBase(props: ChatBaseProps) {
   const wrappedContent = disableInternalJupyterTheme ? (
     content
   ) : (
-    <ThemedChatBoundary themeVariant={themeVariant} colorMode={colorMode}>
+    <ThemedChatBoundary
+      themeVariant={themeVariant}
+      colorMode={colorMode}
+      themeOverrides={themeOverrides}
+    >
       {content}
     </ThemedChatBoundary>
   );

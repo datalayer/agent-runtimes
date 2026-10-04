@@ -13,6 +13,7 @@
  * @module chat/presence/Presence
  */
 
+import type { ReactNode } from 'react';
 import { Box, Text } from '@primer/react';
 import { PRESENCE_LINES, type PresenceState } from './presenceStatus';
 
@@ -23,7 +24,11 @@ export function PresenceFace({
   size,
   state,
 }: {
-  face: string;
+  /**
+   * The face: an emoji, drawn at `size`, or a host's own drawing of it — an
+   * avatar on its disc (I-07) — as wide as `size`.
+   */
+  face: ReactNode;
   size: number;
   state: PresenceState;
 }) {

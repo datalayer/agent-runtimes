@@ -33,6 +33,7 @@ import {
 } from '../../core';
 import { createTurnFeed, feedWriters } from './turnState';
 import type { PresenceState } from '../../../chat/presence/presenceStatus';
+import type { ThemeOverrides } from '../../../types/chat';
 
 /**
  * An editor toolbar button that asks an agent to do something.
@@ -92,6 +93,11 @@ export type ChatPluginConfig = {
    * the theme's bubbles, pills and colours whatever the page around it wears.
    */
   themeVariant?: string;
+  /**
+   * Laid over that theme, by mode: an application's accent (LOOP T-05), so
+   * that its bubbles and its one button wear its colour and not the theme's.
+   */
+  themeOverrides?: ThemeOverrides;
   /**
    * Who is answering, as the person meets them (LOOP T-08): a name, a face
    * and a welcome, in place of the agent's id and a generic icon. An

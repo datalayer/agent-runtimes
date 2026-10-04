@@ -55,6 +55,7 @@ import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
+import type { ThemeOverrides } from '../types/chat';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -173,6 +174,8 @@ export type LoopPresetOptions = {
   targetFixed?: boolean;
   /** The theme the conversation wears, by name; the person's unless said. */
   themeVariant?: string;
+  /** Laid over that theme, by mode: an application's accent (LOOP T-05). */
+  themeOverrides?: ThemeOverrides;
   /** Who is answering, as the person meets them (LOOP T-08). */
   presence?: ChatPresence;
   /** Whether the counters are shown under the prompt; on unless said. */
@@ -275,6 +278,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     datalayerCreatePayload,
     targetFixed,
     themeVariant,
+    themeOverrides,
     presence,
     showTokenUsage,
     floatingPrompt = false,
@@ -304,6 +308,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       suggestionLabels,
       fullScreenTopOffset,
       themeVariant,
+      themeOverrides,
       presence,
       showTokenUsage,
     }),

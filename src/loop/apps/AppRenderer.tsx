@@ -36,7 +36,9 @@
 
 import { useMemo } from 'react';
 import type { PluginRef, ReactorPlugin } from '@datalayer/reactor';
+import { loopAccentStyles } from '@datalayer/primer-addons';
 import type { AppSpec } from '../../types/agentspecs';
+import type { ThemeOverrides } from '../../types/chat';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
 import {
   APP_PAGE_SURFACE,
@@ -224,6 +226,22 @@ export const DATALAYER_BOOTSTRAP_AGENTSPEC = 'example-simple';
 
 const NO_PLUGINS: PluginRef[] = [];
 
+/**
+ * The application's accent over the theme its conversation wears, in both
+ * modes (LOOP T-05): its bubbles and its one button in its own colour, and
+ * not in the theme's default — the chat sets its theme again inside it, so
+ * what the page around it set does not reach in.
+ */
+export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
+  const accent = app.interface?.accent;
+  return accent
+    ? {
+        light: loopAccentStyles(accent, 'light'),
+        dark: loopAccentStyles(accent, 'dark'),
+      }
+    : undefined;
+}
+
 export function AppRenderer({
   app,
   plugins = NO_PLUGINS,
@@ -283,6 +301,12 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [source, instance?.appUid, instance?.deploymentUid, instance?.version],
   );
+  const accent = app.interface?.accent;
+  const themeOverrides = useMemo(
+    () => appThemeOverrides(app),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [accent],
+  );
   if (!appPlugin) {
     return (
       <div role="status" style={{ padding: 16 }}>
@@ -315,6 +339,7 @@ export function AppRenderer({
       // Applications first (LOOP T-12): an application's conversation wears
       // the `loop` theme; a host may say otherwise.
       themeVariant="loop"
+      themeOverrides={themeOverrides}
       // Its own face, name and welcome in the chat (T-08); no counters: a
       // person using an application is not asking about tokens.
       presence={{

@@ -835,6 +835,12 @@ export interface ChatCommonProps {
 /**
  * ChatBase props
  */
+/** Properties laid over a theme's own, by mode. */
+export type ThemeOverrides = {
+  light?: Record<string, string>;
+  dark?: Record<string, string>;
+};
+
 export interface ChatBaseProps {
   /**
    * Hands an imperative send function to the host, once the chat is able to
@@ -1080,6 +1086,13 @@ export interface ChatBaseProps {
 
   /** Optional theme variant override for companion notebook/document surfaces. */
   themeVariant?: string;
+
+  /**
+   * Properties laid over the theme's own, by mode — an application's accent
+   * over the theme it wears (LOOP T-05): without them the chat would wear the
+   * theme's default accent whatever the page around it set.
+   */
+  themeOverrides?: ThemeOverrides;
 
   /** Optional color mode override for companion notebook/document surfaces. */
   colorMode?: 'light' | 'dark' | 'auto';

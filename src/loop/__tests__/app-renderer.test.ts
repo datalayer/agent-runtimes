@@ -12,7 +12,12 @@
 import { describe, expect, it } from 'vitest';
 import { LoopAgentBlueprint, LoopChatSuggestion } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
-import { agentIdOf, defineAppPlugin } from '../apps/AppRenderer';
+import { loopAccentStyles } from '@datalayer/primer-addons';
+import {
+  agentIdOf,
+  appThemeOverrides,
+  defineAppPlugin,
+} from '../apps/AppRenderer';
 import { dumpAppspec } from '../apps/appspec';
 
 const contributed = (
@@ -63,5 +68,30 @@ describe('the application plugin', () => {
     );
     expect(agentIdOf({ agent: '', team: 'jupyter:0.0.1' })).toBe('jupyter');
     expect(agentIdOf({ agent: 'x', team: '' })).toBe('x');
+  });
+});
+
+describe('the application’s accent in its conversation (LOOP T-05, T-18)', () => {
+  it('is laid over the theme the chat wears, in both modes', () => {
+    const research = APP_CATALOGUE['web-research'];
+    expect(research.interface.accent).toBe('sky');
+    // The chat sets its theme again inside it: without this, its bubbles and
+    // its links would wear the theme's mint whatever the page around it set.
+    expect(appThemeOverrides(research)).toEqual({
+      light: loopAccentStyles('sky', 'light'),
+      dark: loopAccentStyles('sky', 'dark'),
+    });
+    expect(appThemeOverrides(research)?.light?.['--loop-accent']).toBe(
+      '#8CCBF9',
+    );
+  });
+
+  it('lays nothing over an application that names none', () => {
+    const research = APP_CATALOGUE['web-research'];
+    const plain = {
+      ...research,
+      interface: { ...research.interface, accent: undefined },
+    } as unknown as typeof research;
+    expect(appThemeOverrides(plain)).toBeUndefined();
   });
 });
