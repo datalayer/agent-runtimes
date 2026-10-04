@@ -19,11 +19,21 @@ const sidebars = {
   tutorialSidebar: [
     { type: 'doc', id: 'index', label: 'Agent Runtimes' },
     { type: 'doc', id: 'features/index', label: 'Features' },
-    { type: 'doc', id: 'chat/index', label: 'Chat' },
+    {
+      type: 'category',
+      label: 'Chat',
+      link: { type: 'doc', id: 'chat/index' },
+      items: ['chat/floating-assistant', 'chat/presence'],
+    },
     { type: 'doc', id: 'programmatic-tools/index', label: 'Programmatic Tools' },
     { type: 'doc', id: 'subagents/index', label: 'Subagents' },
     { type: 'doc', id: 'loop-repl/index', label: 'Loop REPL' },
-    { type: 'doc', id: 'loop/index', label: 'Loop Web' },
+    {
+      type: 'category',
+      label: 'Loop Web',
+      link: { type: 'doc', id: 'loop/index' },
+      items: ['loop/python-applications'],
+    },
     { type: 'doc', id: 'cli/index', label: 'Loop CLI' },
     { type: 'doc', id: 'plugins/index', label: 'Plugins' },
     { type: 'doc', id: 'protocols/index', label: 'Protocols' },

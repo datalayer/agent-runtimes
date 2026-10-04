@@ -1265,6 +1265,13 @@ export function ChatFloating({
                       opacity: 0,
                     },
                   },
+                  // Still, as a ring held around the button, for a reader
+                  // who asks the system for reduced motion (T-28).
+                  '@media (prefers-reduced-motion: reduce)': {
+                    animation: 'none',
+                    transform: 'scale(1.15)',
+                    opacity: 0.6,
+                  },
                 }}
               />
             )}
