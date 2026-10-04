@@ -91,6 +91,8 @@ describe('addressing the agent', () => {
       'workspace.sandbox.agentBaseUrl || workspace.serverUrl',
     );
     expect(chat).toContain('${agentServerUrl}/api/v1/ag-ui/');
+    // An application's agent, through its session API (LOOP R-04).
+    expect(chat).toContain('${agentServerUrl}/api/v1/apps/agents/');
     // And nothing still reaches for the host's URL directly.
     expect(chat).not.toContain('${workspace.serverUrl}/api/v1/');
   });

@@ -35,6 +35,7 @@ const sidebars = {
       items: [
         'loop/app-renderer',
         'loop/python-applications',
+        'loop/session-api',
         'loop/embedding',
       ],
     },

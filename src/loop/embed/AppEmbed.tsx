@@ -155,7 +155,8 @@ function useServerAgent(app: AppSpec, serverUrl: string): AgentEndpoint {
           setState({
             protocol: {
               type: 'ag-ui',
-              endpoint: `${base}/api/v1/ag-ui/${app.id}/`,
+              // Its session API: each thread a session (LOOP R-04).
+              endpoint: `${base}/api/v1/apps/agents/${encodeURIComponent(app.id)}/ag-ui/`,
               agentId: app.id,
             },
           });
@@ -220,7 +221,8 @@ function useDatalayerAgent(
   return {
     protocol: {
       type: 'ag-ui',
-      endpoint: `${runtime.agentBaseUrl}/api/v1/ag-ui/${app.id}/`,
+      // Its session API: each thread a session (LOOP R-04).
+      endpoint: `${runtime.agentBaseUrl}/api/v1/apps/agents/${encodeURIComponent(app.id)}/ag-ui/`,
       agentId: app.id,
       authToken: token,
     },

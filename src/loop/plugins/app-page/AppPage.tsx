@@ -7,7 +7,8 @@
  * An application's page, drawn beside its conversation: its A2UI surface on
  * the workspace's own renderer (`InlineSurface`), fed by the chat's current
  * turn and its conversation, its buttons — and a Chat block's message, a File
- * upload's files — answered through the chat's controls.
+ * upload's files — answered through the chat's controls, what the page did
+ * going with the chat's run to the application's session (LOOP R-04).
  *
  * It draws the blocks the workspace's plugins contribute to the Canvas's
  * palette (`loop.canvas.block`, R-01b) and nothing else, so that what the
@@ -139,10 +140,21 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
       } else if ('newChat' in outcome) {
         controls.newChat?.();
       } else {
-        // The chat's own send, as a surface in the transcript submits; the
-        // prompt channel when the chat has not reported itself yet.
+        // The chat's own send, with what the page did besides — the block's
+        // action, its files, the settings — for the application's session
+        // (R-04); the prompt channel when the chat has not reported itself
+        // yet, which carries words only.
         if (controls.send) {
-          controls.send(outcome.send);
+          const refused = controls.send(outcome.send, { loop: outcome.loop });
+          if (refused) {
+            setRefusal(refused);
+            return;
+          }
+        } else if (outcome.loop.files) {
+          setRefusal(
+            'The conversation is not ready for a file yet: try again.',
+          );
+          return;
         } else {
           workspaceRef.current.prompts.submit(outcome.send);
         }

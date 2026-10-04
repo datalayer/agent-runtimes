@@ -171,7 +171,9 @@ describe('a Chat block on a chat application’s page', () => {
       );
     });
     // The chat's own send: the conversation the page shows, not a second one.
-    expect(send).toHaveBeenCalledWith('And last month’s?');
+    expect(send).toHaveBeenCalledWith('And last month’s?', {
+      loop: { action: { name: 'send', payload: {} }, settings: {} },
+    });
     expect(send).toHaveBeenCalledTimes(1);
 
     // Started over: the welcome again.
@@ -229,8 +231,21 @@ describe('a File upload on a widget’s page', () => {
       button => button.textContent?.trim() === 'Choose a file and run',
     )!;
     await act(async () => run.click());
-    expect(send).toHaveBeenCalledWith(
-      'Report: Summary\n\nThe file orders.csv (text/csv):\n```\nregion,orders\nNorth,12\n```',
+    // The file goes to the application's session with the run (R-04), which
+    // puts it where the application reads it.
+    expect(send).toHaveBeenCalledTimes(1);
+    const [said, forwarded] = send.mock.calls[0];
+    expect(said).toBe('Report: Summary');
+    expect(forwarded.loop.action).toEqual({ name: 'run', payload: {} });
+    expect(forwarded.loop.settings).toEqual({
+      report: 'Summary',
+      question: '',
+    });
+    expect(forwarded.loop.files).toMatchObject([
+      { name: 'orders.csv', type: 'text/csv', size: 23 },
+    ]);
+    expect(atob(forwarded.loop.files[0].data_url.split(',')[1])).toBe(
+      'region,orders\nNorth,12\n',
     );
   });
 
@@ -269,9 +284,10 @@ describe('a File upload on a widget’s page', () => {
     });
     await act(async () => new Promise(resolve => setTimeout(resolve, 20)));
     expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0][0]).toContain(
-      'The file tiny.csv (text/csv):\n```\na,b\n1,2\n```',
-    );
+    expect(send.mock.calls[0][1].loop).toMatchObject({
+      action: { name: 'upload', payload: {} },
+      files: [{ name: 'tiny.csv', type: 'text/csv' }],
+    });
   });
 });
 

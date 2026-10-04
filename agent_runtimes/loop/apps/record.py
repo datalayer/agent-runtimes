@@ -87,6 +87,10 @@ Send = Callable[[Dict[str, Any]], Awaitable[None]]
 #: The recorder of each session this runtime recorded, by session.
 _RECORDERS: Dict[str, "AppRecorder"] = {}
 
+#: The recorder of each application's agent on this runtime, by agent id: the
+#: one the session API writes a session's start to (LOOP R-04).
+_AGENT_RECORDERS: Dict[str, "AppRecorder"] = {}
+
 #: The longest comment kept with a thumb.
 COMMENT_LIMIT = 2000
 
@@ -97,6 +101,19 @@ TURN_LIMIT = 4000
 def recorder_of(session: str) -> Optional["AppRecorder"]:
     """The recorder that recorded a session on this runtime, or None."""
     return _RECORDERS.get(session)
+
+
+def keep_agent_recorder(agent_id: str, recorder: Optional["AppRecorder"]) -> None:
+    """Keep the recorder an application's agent was made with; ``None`` forgets it."""
+    if recorder is None:
+        _AGENT_RECORDERS.pop(agent_id, None)
+    else:
+        _AGENT_RECORDERS[agent_id] = recorder
+
+
+def agent_recorder(agent_id: str) -> Optional["AppRecorder"]:
+    """The recorder of an application's agent on this runtime, or None."""
+    return _AGENT_RECORDERS.get(agent_id)
 
 
 def keep_days_of(app: AppSpec) -> int:
@@ -227,7 +244,18 @@ class AppRecorder:
         """What woke a session: its own, or every session's; empty when a person opened it."""
         return self._woken.get(session) or self.woken_by
 
-    def start(self, session: str, *, woken_by: Optional[Dict[str, Any]] = None) -> None:
+    def start(
+        self,
+        session: str,
+        *,
+        woken_by: Optional[Dict[str, Any]] = None,
+        resumed: bool = False,
+    ) -> None:
+        """Make ``session`` the one entries are added to, and say it started.
+
+        A session resumed from its record (LOOP R-04) says it resumed, in an
+        entry of the same session: its record goes on where it stopped.
+        """
         _SESSION.set(session)
         if session not in self._started:
             self._started.add(session)
@@ -237,9 +265,14 @@ class AppRecorder:
             woken = self.woken(session)
             self.add(
                 "session",
-                f"A session of {self.app.name} started"
+                f"A session of {self.app.name} "
+                + ("resumed" if resumed else "started")
                 + (f", woken by its {woken.get('kind')}" if woken else ""),
-                {"app": self.app.id, **({"woken_by": woken} if woken else {})},
+                {
+                    "app": self.app.id,
+                    **({"woken_by": woken} if woken else {}),
+                    **({"resumed": True} if resumed else {}),
+                },
             )
 
     def _body(self, session: str, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -515,6 +548,8 @@ __all__ = [
     "INCLUDED_BY",
     "RecordNotSent",
     "TURN_LIMIT",
+    "agent_recorder",
+    "keep_agent_recorder",
     "recorder_of",
     "send_to_ai_agents",
 ]

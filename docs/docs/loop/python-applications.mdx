@@ -30,11 +30,11 @@ page).
 
 What does **not** exist yet:
 
-- **The page's channel.** The one channel there is, `MemoryChannel`, lives in
-  this process: a test or a script plays the person. A person in a browser
-  reaches a Python application through the session API — start, message,
-  action, settings change, stop, resume, over the wire and streamed — which
-  is not built yet.
+- **A Python application of your own on a runtime.** A runtime runs the
+  code of the catalogue's Python examples through the
+  [Session API](./session-api) — its channel the session, what it shows
+  streamed as AG-UI events, what it asks answered from the page — and an
+  `app.py` saved elsewhere runs as the spec it builds, answered by its agent.
 - **`loop apps init`**, which scaffolds an `app.py` from an example.
   `loop apps build` and `loop apps run app.py` exist: see
   [From the command line](#from-the-command-line).
@@ -439,10 +439,12 @@ terminal is also the application's `AppHost`:
   at the prompt. With a `message`, `--ask "…"` runs `start`, then it, once.
 - **On the runtime**: a message the code does not take, answered by the
   runtime's agent with the application's rules, as for a spec.
-- **Waiting for the session API**: `settings` and `resume` from the person,
-  and schedules, have no way in from the terminal; and `session.agent` in the
+- **Not from the terminal**: `settings` and `resume` from the person, and
+  schedules, have no way in from the terminal; and `session.agent` in the
   code is built in this process, so an application whose agent needs
   connections, skills or tools is refused there (see [The agent](#the-agent)).
+  On a runtime, the [Session API](./session-api) carries all three, and
+  `session.agent` is the agent the runtime made, with its tools.
 
 `--watch` builds the file again when it has changed, before the next turn:
 the runtime is configured with the new spec, and the session goes on with
@@ -467,8 +469,10 @@ above was run as printed. `agent_runtimes/tests/test_apps_build.py` covers
 with the session's state kept; `loop apps run app.py --local --ask` was run
 against a local server.
 
-**Not verified.** A Python application reached from a browser, and one
-running on a runtime: both wait for the session API. The agent is scripted
-in the tests; no test calls a real model through this API.
+**Not verified.** A Python application reached from a browser on a cloud
+runtime: the [Session API](./session-api) runs one in process in its tests
+(`test_app_sessions.py`, *Report from a File* taking its file from the page),
+not yet live. The agent is scripted in the tests; no test calls a real model
+through this API.
 
 **Not built yet.** See [What runs today, and what waits](#what-runs-today-and-what-waits).

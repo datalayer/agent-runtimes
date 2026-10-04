@@ -204,6 +204,10 @@ class AppAgent:
     history: List[ModelMessage] = field(default_factory=list)
     """The conversation so far, as the model saw it."""
 
+    toolsets: List[Any] = field(default_factory=list)
+    """What every run reaches besides the agent's own tools: on a runtime,
+    the MCP servers and sandbox its agent was made with (LOOP R-04)."""
+
     async def run(self, prompt: str, **context: Any) -> Answer:
         """Ask the agent, and wait for its whole answer.
 
@@ -225,6 +229,7 @@ class AppAgent:
             message_history=self.history or None,
             instructions=_context(context),
             capabilities=self.capabilities,
+            toolsets=self.toolsets or None,
         )
         self.history = result.all_messages()
         return Answer(text=str(result.output), output=result.output)
@@ -250,6 +255,7 @@ class AppAgent:
             message_history=self.history or None,
             instructions=_context(context),
             capabilities=self.capabilities,
+            toolsets=self.toolsets or None,
         ) as events:
             async for event in events:
                 if isinstance(event, PartStartEvent) and isinstance(

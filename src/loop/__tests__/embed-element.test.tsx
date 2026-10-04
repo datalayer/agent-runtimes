@@ -220,7 +220,7 @@ describe('AppEmbed, the React component', () => {
     expect(seen.floating.at(-1)!.protocol).toEqual({
       type: 'ag-ui',
       endpoint:
-        'https://r1.example/agent-runtimes/pod/api/v1/ag-ui/support-desk/',
+        'https://r1.example/agent-runtimes/pod/api/v1/apps/agents/support-desk/ag-ui/',
       agentId: 'support-desk',
       authToken: 'jwt',
     });
@@ -262,7 +262,7 @@ describe('AppEmbed, the React component', () => {
       app_spec: dumpAppspec(app),
     });
     expect(seen.floating.at(-1)!.protocol).toMatchObject({
-      endpoint: 'http://localhost:8765/api/v1/ag-ui/support-desk/',
+      endpoint: 'http://localhost:8765/api/v1/apps/agents/support-desk/ag-ui/',
     });
     await act(async () => root.unmount());
   });

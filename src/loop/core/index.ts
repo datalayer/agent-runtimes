@@ -305,8 +305,15 @@ export type ViewControls = {
    * rendered surface, whose values the agent should answer. The chat had
    * this control from the start and kept it to itself; a host with a
    * message had no way in.
+   *
+   * `forwardedProps` go with the run as AG-UI's: an application's page says
+   * there what it did besides the message (`loop`, LOOP R-04). Answers why
+   * the message cannot go, when it cannot.
    */
-  send?: (message: string) => void;
+  send?: (
+    message: string,
+    forwardedProps?: Record<string, unknown>,
+  ) => string | void;
 };
 
 /** Props every view receives. */

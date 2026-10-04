@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -123,9 +123,15 @@ class Authorized:
     app: Optional[AppSpec]
 
 
-async def _authorize(request: Request, person_only: bool) -> Authorized:
-    """Who is calling, or an HTTP refusal that says why."""
-    app = running_app()
+async def _authorize(
+    request: Request, person_only: bool, for_app: Optional[AppSpec] = None
+) -> Authorized:
+    """Who is calling, or an HTTP refusal that says why.
+
+    For the application the runtime runs, or the one ``for_app`` names — the
+    application of an agent a session is opened on (LOOP R-04).
+    """
+    app = for_app if for_app is not None else running_app()
     origin = request.headers.get("origin")
     embedded = app.deployment.embedded if app and app.deployment else None
     allowed = platform_origins() + tuple(embedded.origins if embedded else ())
@@ -334,3 +340,406 @@ async def feedback(
     except RecordNotSent as error:
         raise HTTPException(status_code=502, detail=str(error)) from None
     return {"kept": True, "summary": entry["summary"]}
+
+
+# --- the session API (LOOP R-04) ------------------------------------------------
+#
+# An application's sessions over the wire: start, message, action, settings
+# change, stop and resume, each streamed as AG-UI events (`text/event-stream`),
+# the first a `loop.session` custom event saying what the session is. And an
+# application's agent spoken to over AG-UI as any agent is, each thread a
+# session: what the chat of an application's page sends.
+
+
+class StartSessionRequest(BaseModel):
+    """What a session is started with."""
+
+    agent: str = Field(
+        ...,
+        min_length=1,
+        description="The agent the platform made for the application on this runtime",
+    )
+    app_uid: str = Field("", description="Its `app` item, checked against the agent's")
+    version: int = Field(
+        0, ge=0, description="The version, checked against the agent's"
+    )
+    deployment_uid: str = Field(
+        "",
+        description="The deployment it runs as, checked against the agent's; none for a Preview",
+    )
+    opener: str = Field("", description="The first message, answered at once")
+    settings: Dict[str, Any] = Field(default_factory=dict)
+    session: str = Field("", description="Its uid, when the caller names it")
+    woken_by: Dict[str, Any] = Field(
+        default_factory=dict, description="What woke it, when nobody opened it (R-14)"
+    )
+
+
+class SessionMessageRequest(BaseModel):
+    """A message, or an answer."""
+
+    text: str = Field(..., description="What the person says, or answers")
+
+
+class SessionActionRequest(BaseModel):
+    """A page block's action, and the files given with it."""
+
+    name: str = Field(
+        ..., min_length=1, description="The action, as its block names it"
+    )
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    text: str = Field("", description="What the page says the action asks, in words")
+    files: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Files given with it, as File upload gives them: {name, type, size, data_url}",
+    )
+
+
+class SessionSettingsRequest(BaseModel):
+    """A settings change."""
+
+    values: Dict[str, Any] = Field(..., description="The settings changed, by id")
+
+
+class ResumeSessionRequest(BaseModel):
+    """What a session is resumed with."""
+
+    agent: str = Field(
+        "",
+        description="The application's agent here, for a session this runtime no longer holds",
+    )
+
+
+#: The most sessions a runtime holds; the oldest idle ones go first.
+SESSIONS_HELD = 500
+
+
+def _refused(refusal: Any) -> HTTPException:
+    """A refusal of the session API as an HTTP one."""
+    return HTTPException(status_code=refusal.status, detail=refusal.reason)
+
+
+def _stream(chunks: Any) -> Any:
+    """AG-UI events, streamed."""
+    from fastapi.responses import StreamingResponse
+
+    return StreamingResponse(
+        chunks,
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _acts_as(
+    instance: Dict[str, Any], caller: Caller, bearer: str
+) -> Dict[str, str]:
+    """In whose name a session runs: a deployment's principal, else the person (I-03).
+
+    A deployment's principal's token is asked for again with the caller's
+    token when it runs out, as every request of the session may.
+    """
+    from agent_runtimes.loop.apps.principal import (
+        PrincipalTokenMissing,
+        deployment_of,
+        ensure_principal_token,
+        principal_uid_of,
+    )
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    deployment = deployment_of(instance)
+    if not deployment:
+        return {"kind": "person", "uid": caller.uid}
+    try:
+        await ensure_principal_token(deployment, bearer or None)
+    except PrincipalTokenMissing as missing:
+        raise _refused(SessionRefused(403, str(missing))) from None
+    return {
+        "kind": "principal",
+        "uid": principal_uid_of(deployment),
+        "deployment_uid": deployment,
+    }
+
+
+def _prune() -> None:
+    """Forget the oldest idle sessions beyond what a runtime holds."""
+    from agent_runtimes.loop.apps import sessions
+
+    held = sessions._SESSIONS
+    idle = [uid for uid, live in held.items() if live.state in ("open", "stopped")]
+    for uid in idle[: max(0, len(held) - SESSIONS_HELD + 1)]:
+        held.pop(uid, None)
+
+
+def _check_instance(
+    body: StartSessionRequest, app: AppSpec, instance: Dict[str, Any]
+) -> None:
+    """The session asked for is the one the agent runs: the same deployment, or a Preview."""
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    runs = str(instance.get("deployment_uid") or "")
+    if body.deployment_uid != runs:
+        raise _refused(
+            SessionRefused(
+                409,
+                f"The agent {body.agent} runs {app.name} as deployment {runs}, "
+                f"not {body.deployment_uid}."
+                if runs and body.deployment_uid
+                else f"The agent {body.agent} runs {app.name} as deployment {runs}: "
+                "a Preview runs on an agent of its own."
+                if runs
+                else f"The agent {body.agent} runs a Preview of {app.name}, not "
+                f"deployment {body.deployment_uid}.",
+            )
+        )
+    app_uid = str(instance.get("app_uid") or "")
+    if body.app_uid and app_uid and body.app_uid != app_uid:
+        raise _refused(
+            SessionRefused(
+                409, f"The agent {body.agent} runs {app_uid}, not {body.app_uid}."
+            )
+        )
+    version = int(instance.get("version") or 0)
+    if body.version and version and body.version != version:
+        raise _refused(
+            SessionRefused(
+                409,
+                f"The agent {body.agent} runs version {version}, not {body.version}.",
+            )
+        )
+
+
+async def _held(uid: str, request: Request) -> Tuple[Any, str]:
+    """A session of this runtime its caller may drive, and the caller's token."""
+    from agent_runtimes.context.identities import set_request_user_jwt
+    from agent_runtimes.loop.apps.sessions import session_of
+
+    live = session_of(uid)
+    if live is None:
+        raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
+    authorized = await _authorize(request, False, live.app)
+    if not live.answers_to(authorized.caller):
+        # Somebody else's is not said to exist.
+        raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
+    bearer = bearer_of(request.headers.get("authorization"))
+    set_request_user_jwt(bearer or None)
+    live.acts_as = await _acts_as(live.instance, authorized.caller, bearer)
+    return live, bearer
+
+
+@router.post("/sessions")
+async def start_session(body: StartSessionRequest, request: Request) -> Any:
+    """Start a session of the application an agent of this runtime runs."""
+    from agent_runtimes.context.identities import set_request_user_jwt
+    from agent_runtimes.loop.apps.sessions import SessionRefused, agent_app, new_session
+
+    try:
+        app, instance = agent_app(body.agent)
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+    authorized = await _authorize(request, False, app)
+    _check_instance(body, app, instance)
+    bearer = bearer_of(request.headers.get("authorization"))
+    set_request_user_jwt(bearer or None)
+    acts_as = await _acts_as(instance, authorized.caller, bearer)
+    _prune()
+    try:
+        live = new_session(
+            agent_id=body.agent,
+            app=app,
+            instance=instance,
+            opened_by=authorized.caller,
+            acts_as=acts_as,
+            settings=body.settings,
+            uid=body.session,
+        )
+        return _stream(
+            live.open(
+                opener=body.opener.strip(),
+                woken_by=body.woken_by or None,
+                head=live.session_event(),
+                bearer=bearer,
+            )
+        )
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.get("/sessions")
+async def list_sessions(request: Request, agent: str = "") -> Dict[str, Any]:
+    """The caller's sessions held by this runtime, of one agent or all."""
+    from agent_runtimes.loop.apps import sessions
+
+    authorized = await _authorize(request, False)
+    return {
+        "sessions": [
+            live.describe()
+            for live in sessions._SESSIONS.values()
+            if (not agent or live.agent_id == agent)
+            and live.answers_to(authorized.caller)
+        ]
+    }
+
+
+@router.get("/sessions/{uid}")
+async def get_session(uid: str, request: Request) -> Dict[str, Any]:
+    """What a session is: its application, in whose name it runs, where it stands."""
+    live, _ = await _held(uid, request)
+    return dict(live.describe())
+
+
+@router.post("/sessions/{uid}/messages")
+async def session_message(
+    uid: str, body: SessionMessageRequest, request: Request
+) -> Any:
+    """A message: the next turn, or the answer to what the application asked."""
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, bearer = await _held(uid, request)
+    try:
+        return _stream(
+            live.message(body.text, bearer=bearer, head=live.session_event())
+        )
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.post("/sessions/{uid}/actions")
+async def session_action(uid: str, body: SessionActionRequest, request: Request) -> Any:
+    """A page block's action, with the files given with it."""
+    from agent_runtimes.loop.apps.sessions import SessionRefused, given_files
+
+    live, bearer = await _held(uid, request)
+    try:
+        return _stream(
+            live.action(
+                body.name,
+                payload=body.payload,
+                text=body.text,
+                files=given_files(body.files),
+                bearer=bearer,
+                head=live.session_event(),
+            )
+        )
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.put("/sessions/{uid}/settings")
+async def session_settings(
+    uid: str, body: SessionSettingsRequest, request: Request
+) -> Any:
+    """A settings change: checked against the application's inputs, then kept."""
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, _ = await _held(uid, request)
+    try:
+        return _stream(live.change_settings(body.values, head=live.session_event()))
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.post("/sessions/{uid}/stop")
+async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
+    """Stop a session: what runs is cancelled; it waits to be resumed."""
+    live, _ = await _held(uid, request)
+    await live.stop()
+    return dict(live.describe())
+
+
+@router.post("/sessions/{uid}/resume")
+async def resume_session(uid: str, body: ResumeSessionRequest, request: Request) -> Any:
+    """Resume a stopped session — or, from its record, one this runtime no longer holds."""
+    from agent_runtimes.context.identities import set_request_user_jwt
+    from agent_runtimes.loop.apps.sessions import (
+        SessionRefused,
+        agent_app,
+        conversation_from_record,
+        new_session,
+        session_of,
+    )
+
+    try:
+        if session_of(uid) is not None:
+            live, _ = await _held(uid, request)
+            return _stream(live.resume(head=live.session_event()))
+        if not body.agent:
+            raise SessionRefused(
+                404,
+                f"No session {uid} is held here: say which agent runs its application, "
+                "and it is resumed from its record.",
+            )
+        app, instance = agent_app(body.agent)
+        authorized = await _authorize(request, False, app)
+        bearer = bearer_of(request.headers.get("authorization"))
+        set_request_user_jwt(bearer or None)
+        acts_as = await _acts_as(instance, authorized.caller, bearer)
+        messages = await conversation_from_record(uid, app, instance, bearer)
+        _prune()
+        live = new_session(
+            agent_id=body.agent,
+            app=app,
+            instance=instance,
+            opened_by=authorized.caller,
+            acts_as=acts_as,
+            uid=uid,
+            messages=messages,
+            resumed=True,
+        )
+        return _stream(live.resume(head=live.session_event()))
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.post("/agents/{agent}/ag-ui/")
+async def session_agui(agent: str, request: Request) -> Any:
+    """An application's agent over AG-UI, each thread a session of it.
+
+    What the chat of an application's page sends: an AG-UI run whose thread
+    is the session — opened at its first run — and whose
+    ``forwardedProps.loop`` carries what the page did besides the message
+    (its settings, a block's action, the files given).
+    """
+    from agent_runtimes.context.identities import set_request_user_jwt
+    from agent_runtimes.loop.apps.sessions import (
+        SessionRefused,
+        agent_app,
+        new_session,
+        session_of,
+    )
+
+    try:
+        app, instance = agent_app(agent)
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+    authorized = await _authorize(request, False, app)
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=422, detail="An AG-UI run is JSON.") from None
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=422, detail="An AG-UI run is a JSON object.")
+    bearer = bearer_of(request.headers.get("authorization"))
+    set_request_user_jwt(bearer or None)
+    thread = str(body.get("threadId") or "")
+    forwarded = body.get("forwardedProps")
+    loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
+    try:
+        live = session_of(thread)
+        if live is None:
+            acts_as = await _acts_as(instance, authorized.caller, bearer)
+            _prune()
+            live = new_session(
+                agent_id=agent,
+                app=app,
+                instance=instance,
+                opened_by=authorized.caller,
+                acts_as=acts_as,
+                uid=thread,
+            )
+        elif live.agent_id != agent or not live.answers_to(authorized.caller):
+            raise SessionRefused(404, f"No session {thread} of {agent} is held here.")
+        else:
+            live.acts_as = await _acts_as(instance, authorized.caller, bearer)
+        return _stream(live.run_agui(body, loop=loop or {}, bearer=bearer))
+    except SessionRefused as refused:
+        raise _refused(refused) from None

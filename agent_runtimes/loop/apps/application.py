@@ -39,7 +39,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 
 import jsonschema
 
-from agent_runtimes.loop.apps.agent import AgentFactory, local_agent
+from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
@@ -527,6 +527,10 @@ class AppHost:
         How the agent the application runs is built; in this process when unsaid.
     recorder : AppRecorder, optional
         Where the record is kept; one that sends it to ai-agents when unsaid.
+    agent_maker : callable, optional
+        The agent a session's code calls, made for that session: on a
+        runtime, the agent the runtime made for the application (LOOP R-04);
+        built from ``agent`` when unsaid.
     """
 
     def __init__(
@@ -536,11 +540,13 @@ class AppHost:
         *,
         agent: AgentFactory = local_agent,
         recorder: Optional[AppRecorder] = None,
+        agent_maker: Optional[Callable[[Session], AppAgent]] = None,
     ) -> None:
         self.app = app
         self.channel = channel
         self.spec = app.spec
         self._agent = agent
+        self._agent_maker = agent_maker
         self.recorder = recorder or AppRecorder(app=self.spec)
         self._running: Dict[str, asyncio.Task[Any]] = {}
         self._stopped: set[str] = set()
@@ -551,6 +557,7 @@ class AppHost:
             self.channel,
             agent_factory=self._agent,
             recorder=self.recorder,
+            agent_maker=self._agent_maker,
             **kwargs,
         )
 
@@ -575,6 +582,7 @@ class AppHost:
         *,
         user: Optional[str] = None,
         settings: Optional[Mapping[str, Any]] = None,
+        id: Optional[str] = None,
     ) -> Session:
         """Open a session, and run the application's ``start``.
 
@@ -584,13 +592,16 @@ class AppHost:
             Who the user is.
         settings : mapping, optional
             The user's settings, beside their defaults.
+        id : str, optional
+            The session's id, when whoever opens it names it — the session
+            API's uid (LOOP R-04); a new one when unsaid.
 
         Returns
         -------
         Session
             The session.
         """
-        session = self._session(user=user, settings=settings)
+        session = self._session(user=user, settings=settings, id=id)
         handler = self.app.handler("start")
         if handler is not None:
             await self._react(session, handler)

@@ -31,10 +31,11 @@ import {
   appPageMessages,
   defaultAppSurface,
   defineAppPagePlugin,
-  filesInWords,
+  givenFiles,
   hasAppPage,
   inputsInWords,
-  MAX_FILE_CHARACTERS,
+  MAX_FILE_BYTES,
+  settingsOf,
 } from '../plugins/app-page';
 import {
   InlineSurface,
@@ -293,10 +294,17 @@ describe('what a button does', () => {
       { name: 'send' },
       data({ '/draft': ' Hello ', '/inputs': inputs }),
     );
+    // What the page did goes with it to the session (R-04): the button,
+    // and the settings as the session takes them.
+    const loop = {
+      action: { name: 'send', payload: {} },
+      settings: { product: 'Desktop', short: true },
+    };
     expect(first).toEqual({
       send: 'Hello\n\nProduct: Desktop\nShort answers: yes',
       inputs: 'Product: Desktop\nShort answers: yes',
       clear: ['/draft'],
+      loop,
     });
     const again = appPageAction(
       chat,
@@ -308,6 +316,7 @@ describe('what a button does', () => {
       send: 'And then?',
       inputs: 'Product: Desktop\nShort answers: yes',
       clear: [],
+      loop,
     });
     expect(appPageAction(chat, { name: 'send' }, data({}))).toEqual({
       refused: 'Nothing to send: write a message first.',
@@ -325,6 +334,14 @@ describe('what a button does', () => {
       send: 'Seats: 50\nPlan: Team\nTerm: Annual',
       inputs: 'Seats: 50\nPlan: Team\nTerm: Annual',
       clear: [],
+      loop: {
+        action: { name: 'run', payload: {} },
+        settings: settingsOf(quote, {
+          seats: 50,
+          plan: ['Team'],
+          term: ['Annual'],
+        }),
+      },
     });
     expect(appPageAction(quote, { name: 'run' }, data({}))).toEqual({
       refused: 'Quote Calculator has no inputs to run on: set one first.',
@@ -345,7 +362,7 @@ describe('what a button does', () => {
     data_url: `data:${type};base64,${btoa(text)}`,
   });
 
-  it('runs a widget on a text file given, its contents in the message', () => {
+  it('runs a widget on the files given, which go to its session', () => {
     const report = APP_CATALOGUE['report-from-a-file'];
     const inputs = { report: ['Summary'], question: '' };
     const files = [given('orders.csv', 'text/csv', csv)];
@@ -354,10 +371,17 @@ describe('what a button does', () => {
       { name: 'run' },
       data({ '/inputs': inputs, '/files': files }),
     );
+    // The file is not read here: the session puts it where the application
+    // reads it, or refuses it in a sentence (LOOP R-04).
     expect(run).toEqual({
-      send: 'Report: Summary\n\nThe file orders.csv (text/csv):\n```\nregion,orders\nNorth,12\nSouth,7\n```',
+      send: 'Report: Summary',
       inputs: 'Report: Summary',
       clear: [],
+      loop: {
+        action: { name: 'run', payload: {} },
+        files,
+        settings: { report: 'Summary', question: '' },
+      },
     });
     // A File upload's own action: the files in its context, else at /files.
     expect(
@@ -366,10 +390,16 @@ describe('what a button does', () => {
         { name: 'upload', context: { files } },
         data({ '/inputs': inputs }),
       ),
-    ).toEqual(run);
+    ).toEqual({
+      ...run,
+      loop: {
+        ...(run as { loop: object }).loop,
+        action: { name: 'upload', payload: {} },
+      },
+    });
     expect(
       appPageAction(report, { name: 'upload' }, data({ '/files': files })),
-    ).toMatchObject({ send: expect.stringContaining('North,12') });
+    ).toMatchObject({ loop: { files } });
     expect(
       appPageAction(
         report,
@@ -377,18 +407,21 @@ describe('what a button does', () => {
         data({ '/inputs': inputs }),
       ),
     ).toEqual({ refused: 'No file was given: choose one first.' });
+    // A widget with no inputs is run on the files themselves, whatever they are.
+    const pdf = given('contract.pdf', 'application/pdf', '%PDF');
+    expect(
+      appPageAction(
+        appOf('widget'),
+        { name: 'upload', context: { files: [pdf] } },
+        data({}),
+      ),
+    ).toMatchObject({ send: 'Run on contract.pdf.', loop: { files: [pdf] } });
   });
 
-  it('refuses a file it cannot hand over, in a sentence', () => {
+  it('refuses what is not a file, or a file larger than a session takes, in a sentence', () => {
     const widget = appOf('widget');
     const refusedFor = (files: unknown) =>
       appPageAction(widget, { name: 'upload', context: { files } }, data({}));
-    expect(
-      refusedFor([given('contract.pdf', 'application/pdf', '%PDF')]),
-    ).toEqual({
-      refused:
-        "contract.pdf is not a text file: the page hands its application a file's text, in its message.",
-    });
     expect(refusedFor([{ name: 'x.csv' }])).toEqual({
       refused:
         'File 1 is not a file as File upload gives it ({name, type, size, data_url}).',
@@ -396,25 +429,32 @@ describe('what a button does', () => {
     expect(refusedFor('orders.csv')).toEqual({
       refused: 'What was given as files is not a list of files.',
     });
-    const long = 'a'.repeat(MAX_FILE_CHARACTERS + 1);
-    expect(refusedFor([given('big.txt', 'text/plain', long)])).toEqual({
-      refused: `big.txt is too long to send in a message: ${(MAX_FILE_CHARACTERS + 1).toLocaleString('en')} characters, at most ${MAX_FILE_CHARACTERS.toLocaleString('en')}.`,
+    expect(
+      refusedFor([
+        {
+          ...given('big.bin', 'application/octet-stream', 'x'),
+          size: MAX_FILE_BYTES + 1,
+        },
+      ]),
+    ).toEqual({
+      refused: `big.bin is ${(MAX_FILE_BYTES + 1).toLocaleString('en')} bytes: a session takes files of at most ${MAX_FILE_BYTES.toLocaleString('en')}.`,
     });
-    // A CSV the browser types as a spreadsheet is read by its extension;
-    // UTF-8 is decoded, and a fence in the file does not end the block.
-    const words = filesInWords([
-      given('notes.csv', 'application/vnd.ms-excel', 'a\n```\n'),
-      {
-        name: 'café.txt',
-        type: 'text/plain',
-        size: 5,
-        data_url: 'data:text/plain;base64,Y2Fmw6k=',
-      },
-    ]);
-    expect(words).toEqual({
-      words:
-        'The file notes.csv (application/vnd.ms-excel):\n~~~~\na\n```\n~~~~\n\nThe file café.txt (text/plain):\n```\ncafé\n```',
+    expect(givenFiles(undefined)).toEqual({ files: [] });
+  });
+
+  it('gives the session the settings as it takes them', () => {
+    const app = appOf('widget', {
+      settings: [
+        ...SETTINGS,
+        { id: 'count', type: 'number', label: 'Count', options: [] },
+        { id: 'note', type: 'text', label: 'Note', options: [] },
+      ],
     });
+    expect(
+      settingsOf(app, { product: ['Desktop'], short: 0, count: '3', note: 7 }),
+    ).toEqual({ product: 'Desktop', short: false, count: 3, note: '7' });
+    // Nothing chosen, nothing written: not said.
+    expect(settingsOf(app, { product: [], count: '' })).toEqual({});
   });
 
   it('stops, starts over, and refuses what the kind does not do', () => {

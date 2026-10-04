@@ -192,6 +192,8 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         provider: string;
         accessToken: string;
       }>;
+      /** What goes with the run besides the conversation (AG-UI's). */
+      forwardedProps?: Record<string, unknown>;
     },
   ): Promise<void> {
     // Held in a local as well as the field: by the time the `finally` below
@@ -289,7 +291,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         skills: options.skills,
       }),
       context: [],
-      forwardedProps: null,
+      forwardedProps: options?.forwardedProps ?? null,
       // Include model for per-request model override
       ...(options?.model && { model: options.model }),
       // Include identities for tool execution with OAuth tokens

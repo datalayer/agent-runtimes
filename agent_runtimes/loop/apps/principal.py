@@ -42,6 +42,7 @@ __all__ = [
     "give_principal_token",
     "principal_token",
     "principal_token_refusal",
+    "principal_uid_of",
 ]
 
 #: Asked again when less than this is left: a session in progress never meets
@@ -94,6 +95,11 @@ def principal_token_refusal(deployment_uid: str) -> Optional[str]:
             "it calls nothing more. Open a new session."
         )
     return None
+
+
+def principal_uid_of(deployment_uid: str) -> str:
+    """The uid of the principal a deployment's agent acts as, or ``""`` when it holds none."""
+    return str((_HELD.get(deployment_uid) or {}).get("principal_uid") or "")
 
 
 def principal_token(deployment_uid: str) -> Optional[str]:

@@ -14,8 +14,10 @@ This is an application's session, not the workspace's: `LoopSession`
 with an agent, and knows nothing of applications.
 
 A session talks to its user through a `Channel`: the page, the terminal, a
-test. Until the session API carries it (LOOP R-04), the one channel there is
-lives in this process (`MemoryChannel`).
+test. In this process the channel is a `MemoryChannel`; on a runtime it is the
+session API's (`agent_runtimes.loop.apps.sessions`, LOOP R-04), which
+streams what the application shows as AG-UI events and brings back what the
+page answers.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ from typing import (
     Any,
     AsyncIterable,
     AsyncIterator,
+    Callable,
     Dict,
     Iterable,
     List,
@@ -376,6 +379,7 @@ class Session:
         user: Optional[str] = None,
         state: Optional[Dict[str, Any]] = None,
         settings: Optional[Mapping[str, Any]] = None,
+        agent_maker: Optional[Callable[["Session"], AppAgent]] = None,
     ) -> None:
         self.app = app
         """The application, as its spec says it."""
@@ -388,6 +392,7 @@ class Session:
         self.channel = channel
         self._settings = form_values(app.interface.settings, settings or {})
         self._agent_factory = agent_factory
+        self._agent_maker = agent_maker
         self._recorder = recorder
         self._agent: Optional[AppAgent] = None
 
@@ -595,7 +600,12 @@ class Session:
         """The application's agent, in this session: its rules, checks and record on.
 
         A rule or a Gate that asks the person asks the user of this session.
+        On a runtime it is the agent the runtime made for the application,
+        with the rules, checks and record it was made with
+        (``agent_maker``, LOOP R-04).
         """
+        if self._agent is None and self._agent_maker is not None:
+            self._agent = self._agent_maker(self)
         if self._agent is None:
             self._agent = AppAgent(
                 app=self.app,

@@ -2297,6 +2297,7 @@ async def create_agent(
                 from agent_runtimes.loop.apps.record import (
                     AppRecordCapability,
                     AppRecorder,
+                    keep_agent_recorder,
                 )
 
                 capabilities = _without_approval_capabilities(capabilities)
@@ -2312,6 +2313,8 @@ async def create_agent(
                     # What woke it, when nobody opened it (R-14).
                     woken_by=dict(serving.get("woken_by") or {}),
                 )
+                # The session API writes a session's start to it (R-04).
+                keep_agent_recorder(agent_id, recorder)
                 rules = rules_for(running_app, agent_id=agent_id)
                 rules.record = recorder.decided
                 capabilities.insert(0, rules)
@@ -3140,6 +3143,10 @@ async def delete_agent(
 
     # Remove the stored creation spec
     _agentspecs.pop(agent_id, None)
+    # And what the session API knew of it (LOOP R-04).
+    from agent_runtimes.loop.apps.record import keep_agent_recorder
+
+    keep_agent_recorder(agent_id, None)
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.

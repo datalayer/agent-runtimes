@@ -15,9 +15,11 @@
  * data model at a path the application takes, and what a button does reaches
  * the application through the chat's own channels: a message sent, the
  * answer stopped, the conversation started over. Nothing here is a server
- * API; a setting reaches the application in the words of the message it is
- * sent with, until the session API carries a settings change (R-04), and so
- * does a text file given to a widget, its contents in the message (E-01).
+ * API: what a button did besides its message — the block's action, the files
+ * given, the settings — goes with the chat's own run to the application's
+ * session (LOOP R-04, `forwardedProps.loop`), which puts a file where the
+ * application reads it; a setting also reaches a written application in the
+ * words of its message.
  *
  * A decision is not here: its page is drawn by the Studio's run page, with
  * its own paths (`INTERFACE_PATHS`), until it moves onto the workspace (R-02).
@@ -122,7 +124,7 @@ const MESSAGES: AppPagePath = {
 const FILES: AppPagePath = {
   path: '/files',
   meaning:
-    'The files given on the page, each {name, type, size, data_url}: a text file’s contents go with the next run.',
+    'The files given on the page, each {name, type, size, data_url}: they go to the application’s session with the next run, put in its sandbox when it has a shell, a text file in the message when it has none.',
   words: 'The files given',
   list: true,
 };
@@ -185,7 +187,7 @@ export const APP_KIND_PATHS: Record<AppPageKind, AppKindPaths> = {
       {
         name: 'run',
         meaning:
-          'Run it on its inputs: every value written under /inputs is sent, and each text file at /files, with the context’s message when there is one.',
+          'Run it on its inputs: every value written under /inputs is sent, and each file at /files, with the context’s message when there is one.',
         words: 'Run it on its inputs',
         context: ['message'],
         asks: { message: 'What it says before the inputs' },
@@ -428,91 +430,114 @@ export function inputsInWords(
 }
 
 /**
- * The most of a file's text a message carries: about thirty thousand
- * tokens. A larger file is refused in a sentence rather than sent for the
- * model to refuse.
+ * The largest file a session takes: what the session API refuses above
+ * (`agent_runtimes.loop.apps.sessions.MAX_FILE_BYTES`), said here before
+ * the file is sent.
  */
-export const MAX_FILE_CHARACTERS = 120_000;
+export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
-/** The kinds of file read as text, besides `text/*`. */
-const TEXT_TYPES = new Set([
-  'application/json',
-  'application/xml',
-  'application/yaml',
-  'application/x-yaml',
-  'application/csv',
-]);
-
-/** The extensions read as text whatever type the browser gives. */
-const TEXT_EXTENSIONS = /\.(csv|tsv|txt|md|json|jsonl|xml|ya?ml|log)$/i;
-
-/** The words of a data URL, decoded as UTF-8. */
-function dataUrlText(dataUrl: string): string {
-  const comma = dataUrl.indexOf(',');
-  if (!dataUrl.startsWith('data:') || comma < 0) {
-    throw new Error('it is not a data URL');
-  }
-  const body = dataUrl.slice(comma + 1);
-  if (!dataUrl.slice(0, comma).endsWith(';base64')) {
-    return decodeURIComponent(body);
-  }
-  const bytes = Uint8Array.from(atob(body), char => char.charCodeAt(0));
-  return new TextDecoder('utf-8').decode(bytes);
-}
+/** A file as File upload gives it, and as the session API takes it. */
+export type GivenFile = {
+  name: string;
+  type: string;
+  size: number;
+  data_url: string;
+};
 
 /**
- * The files given on the page with their contents, for the message a widget
- * is run with — or why one cannot go: it is not a file as File upload gives
- * it, not text, or too long for a message.
+ * The files given on the page, as the session API takes them — or why they
+ * cannot go: what was given is not files as File upload gives them, or one
+ * is larger than a session takes. What becomes of each — put in the
+ * application's sandbox, or its text in the message — is the session's to
+ * decide (LOOP R-04).
  */
-export function filesInWords(
+export function givenFiles(
   files: unknown,
-): { words: string } | { refused: string } {
+): { files: GivenFile[] } | { refused: string } {
   if (files === undefined || files === null) {
-    return { words: '' };
+    return { files: [] };
   }
   if (!Array.isArray(files)) {
     return { refused: 'What was given as files is not a list of files.' };
   }
-  const parts: string[] = [];
+  const given: GivenFile[] = [];
   for (const [index, file] of files.entries()) {
-    const given = (file ?? {}) as Record<string, unknown>;
-    if (typeof given.name !== 'string' || typeof given.data_url !== 'string') {
+    const item = (file ?? {}) as Record<string, unknown>;
+    if (typeof item.name !== 'string' || typeof item.data_url !== 'string') {
       return {
         refused: `File ${index + 1} is not a file as File upload gives it ({name, type, size, data_url}).`,
       };
     }
-    const name = given.name;
-    const type = typeof given.type === 'string' ? given.type : '';
-    if (
-      !type.startsWith('text/') &&
-      !TEXT_TYPES.has(type) &&
-      !TEXT_EXTENSIONS.test(name)
-    ) {
+    const size = typeof item.size === 'number' ? item.size : 0;
+    if (size > MAX_FILE_BYTES) {
       return {
-        refused: `${name} is not a text file: the page hands its application a file's text, in its message.`,
+        refused: `${item.name} is ${size.toLocaleString('en')} bytes: a session takes files of at most ${MAX_FILE_BYTES.toLocaleString('en')}.`,
       };
     }
-    let text: string;
-    try {
-      text = dataUrlText(given.data_url);
-    } catch (error) {
-      return {
-        refused: `${name} could not be read: ${(error as Error).message}.`,
-      };
-    }
-    if (text.length > MAX_FILE_CHARACTERS) {
-      return {
-        refused: `${name} is too long to send in a message: ${text.length.toLocaleString('en')} characters, at most ${MAX_FILE_CHARACTERS.toLocaleString('en')}.`,
-      };
-    }
-    const fence = text.includes('```') ? '~~~~' : '```';
-    parts.push(
-      `The file ${name} (${type || 'text'}):\n${fence}\n${text.replace(/\n$/, '')}\n${fence}`,
-    );
+    given.push({
+      name: item.name,
+      type: typeof item.type === 'string' ? item.type : '',
+      size,
+      data_url: item.data_url,
+    });
   }
-  return { words: parts.join('\n\n') };
+  return { files: given };
 }
+
+/**
+ * The application's settings as the page holds them, as the session API
+ * takes them: a choice as the option chosen, a number as a number, a toggle
+ * as on or off — each setting the page has a value for.
+ */
+export function settingsOf(
+  app: Pick<AppSpec, 'interface'>,
+  inputs: unknown,
+): Record<string, unknown> {
+  const values =
+    inputs && typeof inputs === 'object'
+      ? (inputs as Record<string, unknown>)
+      : {};
+  const settings: Record<string, unknown> = {};
+  for (const setting of app.interface.settings) {
+    const value = values[setting.id];
+    if (value === undefined || value === null) {
+      continue;
+    }
+    switch (setting.type) {
+      case 'select': {
+        const chosen = Array.isArray(value) ? value[0] : value;
+        if (chosen !== undefined && chosen !== '') {
+          settings[setting.id] = String(chosen);
+        }
+        break;
+      }
+      case 'toggle':
+        settings[setting.id] = Boolean(value);
+        break;
+      case 'slider':
+      case 'number':
+        if (value !== '' && !Number.isNaN(Number(value))) {
+          settings[setting.id] = Number(value);
+        }
+        break;
+      default:
+        settings[setting.id] = String(value);
+    }
+  }
+  return settings;
+}
+
+/**
+ * What the page did besides its message, for the session API: the action of
+ * the block pressed, the files given with it, the settings it holds. Sent
+ * with the chat's own run (AG-UI's `forwardedProps.loop`), so that what it
+ * answers streams in the conversation (LOOP R-04).
+ */
+export type AppPageLoop = {
+  action: { name: string; payload: Record<string, unknown> };
+  files?: GivenFile[];
+  settings?: Record<string, unknown>;
+};
 
 /** What a button asked, as the surface hands it over. */
 export type AppPageEvent = {
@@ -525,6 +550,8 @@ export type AppPageOutcome =
   | {
       /** A message for the application, sent as the person's next turn. */
       send: string;
+      /** What the page did besides, for the session it is sent in. */
+      loop: AppPageLoop;
       /** The inputs in words as sent, to tell a change next time. */
       inputs: string;
       /** Paths to empty once it is sent. */
@@ -559,6 +586,17 @@ export function appPageAction(
   const given = event.context?.message;
   const message = typeof given === 'string' ? given.trim() : '';
   const inputs = paths.inputs ? inputsInWords(app, read('/inputs')) : '';
+  const settings = paths.inputs ? settingsOf(app, read('/inputs')) : undefined;
+  const payload = Object.fromEntries(
+    Object.entries(event.context ?? {}).filter(
+      ([key]) => key !== 'message' && key !== 'files',
+    ),
+  );
+  const loop = (files?: GivenFile[]): AppPageLoop => ({
+    action: { name: event.name, payload },
+    ...(files && files.length > 0 ? { files } : {}),
+    ...(settings ? { settings } : {}),
+  });
   switch (event.name) {
     case 'stop':
       return { stop: true };
@@ -566,23 +604,24 @@ export function appPageAction(
       return { newChat: true };
     case 'run':
     case 'upload': {
-      const given = event.context?.files;
-      const files = filesInWords(
-        event.name === 'upload' && given !== undefined
-          ? given
+      const context = event.context?.files;
+      const files = givenFiles(
+        event.name === 'upload' && context !== undefined
+          ? context
           : read(FILES.path),
       );
       if ('refused' in files) {
         return files;
       }
-      if (event.name === 'upload' && !files.words) {
+      if (event.name === 'upload' && files.files.length === 0) {
         return { refused: 'No file was given: choose one first.' };
       }
-      const text = [[message, inputs].filter(Boolean).join('\n'), files.words]
-        .filter(Boolean)
-        .join('\n\n');
+      const names = files.files.map(file => file.name).join(', ');
+      const text =
+        [message, inputs].filter(Boolean).join('\n') ||
+        (names ? `Run on ${names}.` : '');
       return text
-        ? { send: text, inputs, clear: [] }
+        ? { send: text, inputs, clear: [], loop: loop(files.files) }
         : { refused: `${app.name} has no inputs to run on: set one first.` };
     }
     default: {
@@ -597,6 +636,7 @@ export function appPageAction(
         send: changed ? `${written}\n\n${inputs}` : written,
         inputs,
         clear: message ? [] : [DRAFT.path],
+        loop: loop(),
       };
     }
   }

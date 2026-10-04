@@ -3779,7 +3779,12 @@ function ChatBaseInner({
   // handleSend
   // ========================================================================
   const handleSend = useCallback(
-    async (messageOverride?: string) => {
+    async (
+      messageOverride?: string,
+      // AG-UI's: what goes with the run besides the conversation — an
+      // application's page says there what it did (LOOP R-04).
+      forwardedProps?: Record<string, unknown>,
+    ) => {
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
@@ -3906,6 +3911,7 @@ function ChatBaseInner({
             builtinTools: enabledMcpToolNames,
             skills: enabledSkillIds,
             identities: connectedIdentitiesRef.current,
+            ...(forwardedProps ? { forwardedProps } : {}),
           } as Parameters<typeof adapterRef.current.sendMessage>[1]);
         }
       } catch (err) {
@@ -4100,8 +4106,8 @@ function ChatBaseInner({
       return undefined;
     }
     onSendReady({
-      send: (message: string) => {
-        void handleSend(message);
+      send: (message: string, forwardedProps?: Record<string, unknown>) => {
+        void handleSend(message, forwardedProps);
       },
       stop: handleStop,
       // The same reset the header's + performs, for a host whose controls

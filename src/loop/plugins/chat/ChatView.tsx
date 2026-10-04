@@ -151,7 +151,7 @@ import {
 } from '../../../chat/presence/presenceStatus';
 
 type ChatControls = {
-  send: (message: string) => void;
+  send: (message: string, forwardedProps?: Record<string, unknown>) => void;
   stop: () => void;
   newChat: () => void;
   /** The conversation the next message goes to (AG-UI's thread). */
@@ -474,23 +474,42 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     feed.assistant(reply);
   }, []);
 
-  const heldForAdapter = useRef<string[]>([]);
+  const heldForAdapter = useRef<
+    Array<[string, Record<string, unknown> | undefined]>
+  >([]);
+  /** Whether the agent is turned in this page: read by `sendNow`, set below. */
+  const inPageRef = useRef(false);
   /*
    * Every message that goes to the agent goes through here: the composer's
    * (through the workspace's dispatch and the prompt channel), a host's, and
    * one sent from the application's page (`viewControls.send`) — so each
    * begins its turn, and a page reading the turn sees it asked and answered.
+   *
+   * What the page did besides the message goes with it as AG-UI's
+   * `forwardedProps` (`loop`, LOOP R-04): the application's session takes a
+   * file there. An agent turned in this page has no session, and no file is
+   * handed to it: said, rather than dropped.
    */
-  const sendNow = useCallback((message: string) => {
-    // A new turn: whatever the panel showed is gone, this message is it.
-    turnFeedRef.current?.begin(message, controlsRef.current?.thread());
-    const send = controlsRef.current?.send;
-    if (!send) {
-      heldForAdapter.current.push(message);
-      return;
-    }
-    send(message);
-  }, []);
+  const sendNow = useCallback(
+    (
+      message: string,
+      forwardedProps?: Record<string, unknown>,
+    ): string | void => {
+      const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
+      if (inPageRef.current && loop?.files && loop.files.length > 0) {
+        return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
+      }
+      // A new turn: whatever the panel showed is gone, this message is it.
+      turnFeedRef.current?.begin(message, controlsRef.current?.thread());
+      const send = controlsRef.current?.send;
+      if (!send) {
+        heldForAdapter.current.push([message, forwardedProps]);
+        return;
+      }
+      send(message, forwardedProps);
+    },
+    [],
+  );
 
   // One writer, so neither fact can erase the other.
   useEffect(() => {
@@ -535,8 +554,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       0,
       heldForAdapter.current.length,
     );
-    for (const message of held) {
-      controlsRef.current?.send(message);
+    for (const [message, forwardedProps] of held) {
+      controlsRef.current?.send(message, forwardedProps);
     }
   }, [sendReady]);
 
@@ -825,6 +844,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const inPage = targetRunsAgentInPage(
     (workspace.sandbox.target as SandboxTarget) ?? 'local',
   );
+  inPageRef.current = inPage;
 
   /*
    * Who is being addressed, when this workspace runs a team.
@@ -1367,7 +1387,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           })
         : {
             type: 'ag-ui',
-            endpoint: `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
+            // An application's agent is spoken to through its session API
+            // (LOOP R-04): each thread a session, recorded under its uid,
+            // run in the name the application runs in, and taking what the
+            // page did besides the message — the same AG-UI events back.
+            endpoint: blueprintTurn?.createPayload?.app_spec
+              ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
+              : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
             agentId,
             // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
             // strip one trailing `config`/`configure` segment to find the API

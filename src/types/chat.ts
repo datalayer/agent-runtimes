@@ -855,7 +855,8 @@ export interface ChatBaseProps {
    */
   onSendReady?: (
     controls: {
-      send: (message: string) => void;
+      /** Send a message; `forwardedProps` go with its run (AG-UI's). */
+      send: (message: string, forwardedProps?: Record<string, unknown>) => void;
       stop: () => void;
       /** Start the conversation over — what the header's + does. */
       newChat: () => void;

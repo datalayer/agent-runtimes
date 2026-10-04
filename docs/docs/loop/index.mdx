@@ -489,21 +489,22 @@ turn as a message typed does, so `/status`, `/answer` and a widget's `/output`
 follow what a button or a block sent.
 
 `/files` is what a `FileUpload` block gives, `[{name, type, size, data_url}]`.
-`run` sends each text file there after the inputs, `The file <name> (<type>):`
-and its contents in a fenced block — the way a widget's inputs reach its agent,
-in its message; `upload`, a File upload's own action, runs at once on the
-files of its context (else those at `/files`). A file that is not text (by its
-type, `text/*`, JSON, XML, YAML, or its extension, `.csv`, `.tsv`, `.txt`,
-`.md`, `.json`, `.jsonl`, `.xml`, `.yaml`, `.log`), or longer than
-`MAX_FILE_CHARACTERS` (120,000), is refused in a sentence and nothing is sent.
+`run` sends the files there with the inputs, and `upload`, a File upload's own
+action, runs at once on the files of its context (else those at `/files`):
+they go to the application's session with the chat's run
+(`forwardedProps.loop`, see [Session API](./session-api)), which puts each in
+the sandbox of an application with a shell, whatever its type and size, gives
+a text file in the message to one without, and refuses anything else in a
+sentence. What is not a list of files, or a file over `MAX_FILE_BYTES`
+(25 MB), is refused on the page and nothing is sent.
 
 ```json
 {"id": "file", "component": "FileUpload", "label": "The CSV", "accept": [".csv"],
  "files": {"path": "/files"}}
 ```
 
-A setting, and a file, reach the application in the words of a message until
-the session API carries them. A button the kind does not handle, or a send with nothing
+A setting reaches a written application in the words of its message, and
+every application's session as a value (`forwardedProps.loop.settings`). A button the kind does not handle, or a send with nothing
 written, is refused in a sentence on the page; a tree the A2UI catalog refuses
 is said where it would have been drawn.
 

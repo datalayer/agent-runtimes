@@ -194,6 +194,8 @@ export interface ProtocolAdapter {
         provider: string;
         accessToken: string;
       }>;
+      /** What goes with the run besides the conversation (AG-UI's `forwardedProps`). */
+      forwardedProps?: Record<string, unknown>;
     },
   ): Promise<void>;
 
