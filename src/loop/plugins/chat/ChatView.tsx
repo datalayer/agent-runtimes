@@ -1355,6 +1355,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestion]);
 
+  /*
+   * An application's session checks who is calling (LOOP R-32, R-04): its
+   * chat says so with the person's token. The embed hands its own.
+   */
+  const runsApp = Boolean(blueprintTurn?.createPayload?.app_spec);
+  const iamToken = useIAMStore(state => state.token);
   const protocol = useMemo<ProtocolConfig>(
     () =>
       inPage
@@ -1391,9 +1397,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // (LOOP R-04): each thread a session, recorded under its uid,
             // run in the name the application runs in, and taking what the
             // page did besides the message — the same AG-UI events back.
-            endpoint: blueprintTurn?.createPayload?.app_spec
+            endpoint: runsApp
               ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
               : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
+            ...(runsApp && iamToken ? { authToken: iamToken } : {}),
             agentId,
             // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
             // strip one trailing `config`/`configure` segment to find the API
@@ -1412,6 +1419,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       blueprintTurn,
       activeModel,
       agentServerUrl,
+      runsApp,
+      iamToken,
     ],
   );
 
