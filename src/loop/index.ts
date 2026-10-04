@@ -95,6 +95,7 @@ export {
   type ChatLayoutContribution,
   type ChatLayoutParts,
   type ChatTurnContribution,
+  type ConversationEntry,
   type ChatTurnSnapshot,
   type ChatTurnStatus,
   type LoopChatExtrasValue,

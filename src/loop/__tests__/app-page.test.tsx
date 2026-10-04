@@ -31,8 +31,10 @@ import {
   appPageMessages,
   defaultAppSurface,
   defineAppPagePlugin,
+  filesInWords,
   hasAppPage,
   inputsInWords,
+  MAX_FILE_CHARACTERS,
 } from '../plugins/app-page';
 import {
   InlineSurface,
@@ -103,10 +105,15 @@ describe('what each kind gives its page', () => {
       '/question',
       '/answer',
       '/status',
+      '/messages',
     ]);
     expect(APP_KIND_PATHS.widget.actions.map(action => action.name)).toEqual([
       'run',
+      'upload',
       'stop',
+    ]);
+    expect(APP_KIND_PATHS.widget.accepts.map(entry => entry.path)).toEqual([
+      '/files',
     ]);
   });
 
@@ -231,26 +238,32 @@ describe('what the conversation publishes', () => {
     activity: 'Searching the documentation…',
   };
 
-  it('gives a chat the question, the answer and where it stands', () => {
-    expect(appPageData(appOf('chat'), turn)).toEqual({
+  const conversation = [
+    { role: 'user' as const, text: 'How do I reset my password?' },
+    { role: 'assistant' as const, text: 'From the settings page.' },
+  ];
+
+  it('gives a chat the question, the answer, where it stands and the conversation', () => {
+    expect(appPageData(appOf('chat'), turn, conversation)).toEqual({
       '/app': 'A chat',
       '/status': 'Answering',
       '/question': 'How do I reset my password?',
       '/answer': 'From the settings page.',
+      '/messages': conversation,
     });
   });
 
   it('gives a widget its output, a worker its goal, activity and report', () => {
-    expect(appPageData(appOf('widget'), turn)['/output']).toBe(
+    expect(appPageData(appOf('widget'), turn, conversation)['/output']).toBe(
       'From the settings page.',
     );
-    expect(appPageData(appOf('worker'), turn)).toMatchObject({
+    expect(appPageData(appOf('worker'), turn, conversation)).toMatchObject({
       '/goal': 'Keep the inbox sorted.',
       '/activity': 'Searching the documentation…',
       '/report': 'From the settings page.',
     });
     expect(
-      appPageData(appOf('worker'), { id: 0, status: 'idle' }),
+      appPageData(appOf('worker'), { id: 0, status: 'idle' }, []),
     ).toMatchObject({ '/status': 'Ready', '/activity': '', '/report': '' });
   });
 
@@ -263,6 +276,8 @@ describe('what the conversation publishes', () => {
       draft: '',
     });
     expect(appPageInitialData(appOf('widget'))).not.toHaveProperty('draft');
+    expect(appPageInitialData(appOf('widget')).files).toEqual([]);
+    expect(appPageInitialData(appOf('chat'))).not.toHaveProperty('files');
   });
 });
 
@@ -320,6 +335,86 @@ describe('what a button does', () => {
         short: false,
       }),
     ).toBe('Short answers: no');
+  });
+
+  const csv = 'region,orders\nNorth,12\nSouth,7\n';
+  const given = (name: string, type: string, text: string) => ({
+    name,
+    type,
+    size: text.length,
+    data_url: `data:${type};base64,${btoa(text)}`,
+  });
+
+  it('runs a widget on a text file given, its contents in the message', () => {
+    const report = APP_CATALOGUE['report-from-a-file'];
+    const inputs = { report: ['Summary'], question: '' };
+    const files = [given('orders.csv', 'text/csv', csv)];
+    const run = appPageAction(
+      report,
+      { name: 'run' },
+      data({ '/inputs': inputs, '/files': files }),
+    );
+    expect(run).toEqual({
+      send: 'Report: Summary\n\nThe file orders.csv (text/csv):\n```\nregion,orders\nNorth,12\nSouth,7\n```',
+      inputs: 'Report: Summary',
+      clear: [],
+    });
+    // A File upload's own action: the files in its context, else at /files.
+    expect(
+      appPageAction(
+        report,
+        { name: 'upload', context: { files } },
+        data({ '/inputs': inputs }),
+      ),
+    ).toEqual(run);
+    expect(
+      appPageAction(report, { name: 'upload' }, data({ '/files': files })),
+    ).toMatchObject({ send: expect.stringContaining('North,12') });
+    expect(
+      appPageAction(
+        report,
+        { name: 'upload', context: { files: [] } },
+        data({ '/inputs': inputs }),
+      ),
+    ).toEqual({ refused: 'No file was given: choose one first.' });
+  });
+
+  it('refuses a file it cannot hand over, in a sentence', () => {
+    const widget = appOf('widget');
+    const refusedFor = (files: unknown) =>
+      appPageAction(widget, { name: 'upload', context: { files } }, data({}));
+    expect(
+      refusedFor([given('contract.pdf', 'application/pdf', '%PDF')]),
+    ).toEqual({
+      refused:
+        "contract.pdf is not a text file: the page hands its application a file's text, in its message.",
+    });
+    expect(refusedFor([{ name: 'x.csv' }])).toEqual({
+      refused:
+        'File 1 is not a file as File upload gives it ({name, type, size, data_url}).',
+    });
+    expect(refusedFor('orders.csv')).toEqual({
+      refused: 'What was given as files is not a list of files.',
+    });
+    const long = 'a'.repeat(MAX_FILE_CHARACTERS + 1);
+    expect(refusedFor([given('big.txt', 'text/plain', long)])).toEqual({
+      refused: `big.txt is too long to send in a message: ${(MAX_FILE_CHARACTERS + 1).toLocaleString('en')} characters, at most ${MAX_FILE_CHARACTERS.toLocaleString('en')}.`,
+    });
+    // A CSV the browser types as a spreadsheet is read by its extension;
+    // UTF-8 is decoded, and a fence in the file does not end the block.
+    const words = filesInWords([
+      given('notes.csv', 'application/vnd.ms-excel', 'a\n```\n'),
+      {
+        name: 'café.txt',
+        type: 'text/plain',
+        size: 5,
+        data_url: 'data:text/plain;base64,Y2Fmw6k=',
+      },
+    ]);
+    expect(words).toEqual({
+      words:
+        'The file notes.csv (application/vnd.ms-excel):\n~~~~\na\n```\n~~~~\n\nThe file café.txt (text/plain):\n```\ncafé\n```',
+    });
   });
 
   it('stops, starts over, and refuses what the kind does not do', () => {
@@ -433,11 +528,11 @@ describe('the page drawn', () => {
       root.render(
         <InlineSurface
           messages={messages}
-          data={appPageData(app, {
-            id: 1,
-            status: 'done',
-            assistant: output,
-          })}
+          data={appPageData(
+            app,
+            { id: 1, status: 'done', assistant: output },
+            [],
+          )}
           onAction={onAction}
         />,
       );

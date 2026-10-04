@@ -1166,11 +1166,30 @@ export type ChatTurnSnapshot = {
   activity?: string;
 };
 
+/**
+ * One message of the conversation, as a page shows it (LOOP R-01, C-18): a
+ * person's or the assistant's words, or a tool the assistant called — what
+ * the Chat component draws, bound to a chat application's `/messages`.
+ */
+export type ConversationEntry =
+  | { role: 'user' | 'assistant'; text: string }
+  | {
+      role: 'tool';
+      name: string;
+      args: Record<string, unknown>;
+      result?: unknown;
+    };
+
 export type ChatTurnContribution = {
   /** Stable id, for the registry and the graph. */
   id: string;
   /** The turn, live. */
   turn: ReadonlySignal<ChatTurnSnapshot>;
+  /**
+   * The whole conversation, live: every message and tool call in order, the
+   * reply as it streams included; empty again when the chat starts over.
+   */
+  conversation: ReadonlySignal<ConversationEntry[]>;
 };
 
 export const LoopChatTurn =

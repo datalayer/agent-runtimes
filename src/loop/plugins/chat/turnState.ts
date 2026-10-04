@@ -12,12 +12,22 @@
  * previous turn), `assistant` as the reply arrives, `end` when the agent
  * stops. Readers hold the signal.
  *
+ * Beside the turn, the whole conversation (`conversation`), for a page that
+ * shows it as the Chat component does: the chat view hands it every change
+ * of its items, streaming included.
+ *
  * @module loop/plugins/chat/turnState
  */
 
 import { signal, type ReadonlySignal, type Signal } from '@datalayer/reactor';
 import type { ContextSnapshotData } from '../../../types';
-import type { ChatTurnSnapshot, ChatTurnStatus } from '../../core';
+import type { DisplayItem, ToolCallMessage } from '../../../types/chat';
+import type { ChatMessage } from '../../../types/messages';
+import type {
+  ChatTurnSnapshot,
+  ChatTurnStatus,
+  ConversationEntry,
+} from '../../core';
 
 export type TurnFeed = {
   /** The turn, for readers. */
@@ -35,14 +45,85 @@ export type TurnFeed = {
   usage: (snapshot: ContextSnapshotData | undefined) => void;
   /** What the agent is doing now, or nothing. */
   activity: (label: string | undefined) => void;
+  /** The conversation, for readers. */
+  conversation: ReadonlySignal<ConversationEntry[]>;
+  /** The chat's items as they now stand, streaming included. */
+  items: (items: DisplayItem[]) => void;
 };
+
+/** A message's words, whether its content is a string or parts. */
+export function messageText(message: ChatMessage): string {
+  const content = message.content;
+  return typeof content === 'string'
+    ? content
+    : content
+        .map(part =>
+          typeof part === 'string'
+            ? part
+            : ((part as { text?: string }).text ?? ''),
+        )
+        .join('');
+}
+
+const isToolCall = (item: DisplayItem): item is ToolCallMessage =>
+  (item as ToolCallMessage).type === 'tool-call';
+
+/**
+ * The conversation as a page shows it: each person's and assistant's
+ * message with words in it, and each tool call by its name, its arguments
+ * and its result once it has one. A system message is the chat's own and is
+ * left out.
+ */
+export function conversationOf(items: DisplayItem[]): ConversationEntry[] {
+  const entries: ConversationEntry[] = [];
+  for (const item of items) {
+    if (isToolCall(item)) {
+      entries.push({
+        role: 'tool',
+        name: item.toolName,
+        args: item.args ?? {},
+        ...(item.result === undefined ? {} : { result: item.result }),
+      });
+      continue;
+    }
+    if (item.role !== 'user' && item.role !== 'assistant') {
+      continue;
+    }
+    const text = messageText(item);
+    if (text.trim()) {
+      entries.push({ role: item.role, text });
+    }
+  }
+  return entries;
+}
+
+/** Whether two conversations say the same, entry by entry. */
+const sameConversation = (
+  one: ConversationEntry[],
+  other: ConversationEntry[],
+): boolean =>
+  one.length === other.length &&
+  one.every(
+    (entry, index) => JSON.stringify(entry) === JSON.stringify(other[index]),
+  );
 
 const IDLE: ChatTurnSnapshot = { id: 0, status: 'idle' };
 
 export function createTurnFeed(): TurnFeed {
   const turn: Signal<ChatTurnSnapshot> = signal<ChatTurnSnapshot>(IDLE);
+  const conversation: Signal<ConversationEntry[]> = signal<ConversationEntry[]>(
+    [],
+  );
   return {
     turn,
+    conversation,
+    items: items => {
+      const next = conversationOf(items);
+      // Nothing new: readers do not re-render for an identical conversation.
+      if (!sameConversation(conversation.value, next)) {
+        conversation.value = next;
+      }
+    },
     begin: (user, thread) => {
       // The window's fill carries over: it is the conversation's, not the
       // turn's, and the footer under a fresh turn should not read empty

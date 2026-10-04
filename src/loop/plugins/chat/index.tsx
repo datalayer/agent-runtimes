@@ -296,7 +296,12 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
     const feed = createTurnFeed();
     ctx.contribute(
       LoopChatTurn,
-      { id: 'chat-turn', turn: feed.turn, ...feedWriters(feed) },
+      {
+        id: 'chat-turn',
+        turn: feed.turn,
+        conversation: feed.conversation,
+        ...feedWriters(feed),
+      },
       { id: 'chat-turn' },
     );
     return {};

@@ -62,7 +62,11 @@ const turn = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
 const TurnPlugin = definePlugin({
   name: 'test-chat-turn',
   contributes: [
-    contribution(LoopChatTurn, { id: 'turn', turn }, { id: 'turn' }),
+    contribution(
+      LoopChatTurn,
+      { id: 'turn', turn, conversation: signal([]) },
+      { id: 'turn' },
+    ),
   ],
 });
 

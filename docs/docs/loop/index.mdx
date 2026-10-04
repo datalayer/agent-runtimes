@@ -463,8 +463,8 @@ its words, and `appKindPaths(app)` adds the application's settings:
 
 | Kind   | Publishes                                                   | Takes                              | Buttons            |
 | ------ | ----------------------------------------------------------- | ---------------------------------- | ------------------ |
-| chat   | `/app`, `/question`, `/answer`, `/status`, `/inputs/<id>`   | `/draft`, `/inputs/<id>`           | `send`, `stop`, `new` |
-| widget | `/app`, `/output`, `/status`, `/inputs/<id>`                | `/inputs/<id>`                     | `run`, `stop`      |
+| chat   | `/app`, `/question`, `/answer`, `/status`, `/messages`, `/inputs/<id>` | `/draft`, `/inputs/<id>`  | `send`, `stop`, `new` |
+| widget | `/app`, `/output`, `/status`, `/inputs/<id>`                | `/files`, `/inputs/<id>`           | `run`, `upload`, `stop` |
 | worker | `/app`, `/goal`, `/activity`, `/report`, `/status`          | `/draft`                           | `send`, `stop`     |
 
 `/status` is where the answer stands, in a word (Ready, Thinking, Answering,
@@ -472,9 +472,35 @@ Answered, Stopped). `/inputs/<id>` is a setting of `interface.settings`, as the
 input that holds it does (a `ChoicePicker` holds a list). `send` sends the
 context's `message`, or what is written at `/draft`, and for a chat adds the
 settings in words when they changed since the last message; `run` sends every
-value written under `/inputs`, one `Label: value` per line. A setting reaches
-the application in the words of a message until the session API carries a
-settings change. A button the kind does not handle, or a send with nothing
+value written under `/inputs`, one `Label: value` per line.
+
+`/messages` is the whole conversation, in order, as the `Chat` component draws
+it: `{role: 'user' | 'assistant', text}`, and `{role: 'tool', name, args,
+result}` for a tool called — empty again when the chat starts over. The chat
+plugin keeps it beside the turn (`LoopChatTurn`'s `conversation`), from every
+change of the chat's items, the reply as it streams included. A `Chat` block
+bound to it (`messages: {path: /messages}`, `message: {path: /draft}`, its
+action `send`) is the application's own conversation: what is written in it is
+sent through the chat's own send, as the page's composer sends, and begins a
+turn as a message typed does, so `/status`, `/answer` and a widget's `/output`
+follow what a button or a block sent.
+
+`/files` is what a `FileUpload` block gives, `[{name, type, size, data_url}]`.
+`run` sends each text file there after the inputs, `The file <name> (<type>):`
+and its contents in a fenced block — the way a widget's inputs reach its agent,
+in its message; `upload`, a File upload's own action, runs at once on the
+files of its context (else those at `/files`). A file that is not text (by its
+type, `text/*`, JSON, XML, YAML, or its extension, `.csv`, `.tsv`, `.txt`,
+`.md`, `.json`, `.jsonl`, `.xml`, `.yaml`, `.log`), or longer than
+`MAX_FILE_CHARACTERS` (120,000), is refused in a sentence and nothing is sent.
+
+```json
+{"id": "file", "component": "FileUpload", "label": "The CSV", "accept": [".csv"],
+ "files": {"path": "/files"}}
+```
+
+A setting, and a file, reach the application in the words of a message until
+the session API carries them. A button the kind does not handle, or a send with nothing
 written, is refused in a sentence on the page; a tree the A2UI catalog refuses
 is said where it would have been drawn.
 

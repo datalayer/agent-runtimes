@@ -118,5 +118,10 @@ its `sends` binding points, then dispatches its `action`, whose context reads th
 loading the renderers; the renderers' module refuses to load when it and the catalog
 disagree, so a component added to the catalog without a renderer fails at once.
 
+On an application's page, a chat publishes its conversation at `/messages` for a
+`Chat` block, and a widget takes a `FileUpload`'s files at `/files` and hands a text
+file's contents to its agent when it is run (`upload` runs it at once): see *An
+application's page* on the Loop page.
+
 Not built yet: a version per component, and the standard components' properties as a
 JSON Schema of the catalog's own (they are A2UI's today).

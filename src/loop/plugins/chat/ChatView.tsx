@@ -129,7 +129,7 @@ import {
   type LoopChatExtrasValue,
   type LoopViewProps,
 } from '../../core';
-import { turnWritersOf, type TurnFeed } from './turnState';
+import { messageText, turnWritersOf, type TurnFeed } from './turnState';
 import {
   isInactiveSurfaceContribution,
   orderToolContributions,
@@ -364,6 +364,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       if (!feed) {
         return;
       }
+      // The whole conversation, for a page that shows it (a Chat block).
+      feed.items(items);
       const SETTLED = new Set([
         'complete',
         'completed',
@@ -463,25 +465,31 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         break;
       }
     }
-    const textOf = (message: ChatMessage): string => {
-      const content = message.content;
-      return typeof content === 'string'
-        ? content
-        : content
-            .map(part =>
-              typeof part === 'string'
-                ? part
-                : ((part as { text?: string }).text ?? ''),
-            )
-            .join('');
-    };
     const reply = messages
       .slice(lastUser + 1)
       .filter(message => message.role === 'assistant')
-      .map(textOf)
+      .map(messageText)
       .filter(text => text.trim().length > 0)
       .join('\n\n');
     feed.assistant(reply);
+  }, []);
+
+  const heldForAdapter = useRef<string[]>([]);
+  /*
+   * Every message that goes to the agent goes through here: the composer's
+   * (through the workspace's dispatch and the prompt channel), a host's, and
+   * one sent from the application's page (`viewControls.send`) — so each
+   * begins its turn, and a page reading the turn sees it asked and answered.
+   */
+  const sendNow = useCallback((message: string) => {
+    // A new turn: whatever the panel showed is gone, this message is it.
+    turnFeedRef.current?.begin(message, controlsRef.current?.thread());
+    const send = controlsRef.current?.send;
+    if (!send) {
+      heldForAdapter.current.push(message);
+      return;
+    }
+    send(message);
   }, []);
 
   // One writer, so neither fact can erase the other.
@@ -492,11 +500,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             busy,
             stop: controlsRef.current?.stop,
             newChat: controlsRef.current?.newChat,
-            send: controlsRef.current?.send,
+            send: sendNow,
           }
         : null,
     );
-  }, [busy, sendReady, setViewControls]);
+  }, [busy, sendReady, setViewControls, sendNow]);
 
   // Stop reporting when the view goes away, or the shell would keep a stop
   // button for something that is no longer there.
@@ -513,18 +521,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * again. Held instead, and sent the moment the adapter is ready, which is
    * the next second or two rather than minutes.
    */
-  const heldForAdapter = useRef<string[]>([]);
   useEffect(
-    () =>
-      workspace.prompts.subscribe(message => {
-        const send = controlsRef.current?.send;
-        if (!send) {
-          heldForAdapter.current.push(message);
-          return;
-        }
-        send(message);
-      }),
-    [workspace.prompts],
+    () => workspace.prompts.subscribe(sendNow),
+    [workspace.prompts, sendNow],
   );
 
   // The adapter arrived: whatever was said while it was starting goes now.
@@ -562,8 +561,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         inputPromptConfig?.firstPromptHook?.();
       }
       setTransient(null);
-      // A new turn: whatever the panel showed is gone, this message is it.
-      turnFeedRef.current?.begin(message, controlsRef.current?.thread());
+      // The turn begins where the message goes out (`sendNow`): a command
+      // the workspace runs is not one.
       const outcome = await workspace.submit(message);
       if (!outcome.handled) {
         /*

@@ -16,6 +16,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  conversationOf,
   createTurnFeed,
   feedWriters,
   turnWritersOf,
@@ -106,12 +107,76 @@ describe('the turn feed', () => {
     const contributed = {
       id: 'chat-turn',
       turn: feed.turn,
+      conversation: feed.conversation,
       ...feedWriters(feed),
     };
     expect(turnWritersOf(contributed)).toBe(feed);
     expect(turnWritersOf({ id: 'x', turn: feed.turn })).toBeUndefined();
     expect(turnWritersOf(undefined)).toBeUndefined();
     // The public shape stays a plain id + signal for readers.
-    expect(Object.keys(contributed)).toEqual(['id', 'turn']);
+    expect(Object.keys(contributed)).toEqual(['id', 'turn', 'conversation']);
+  });
+});
+
+describe('the conversation', () => {
+  const at = new Date(0);
+
+  it('is every message with words and every tool call, in order', () => {
+    expect(
+      conversationOf([
+        { id: 's', role: 'system', content: 'Be brief.', createdAt: at },
+        { id: 'u', role: 'user', content: 'Weather in Paris?', createdAt: at },
+        {
+          id: 't',
+          type: 'tool-call',
+          toolCallId: 't',
+          toolName: 'web_search',
+          args: { q: 'Paris weather' },
+          status: 'executing',
+        },
+        { id: 'e', role: 'assistant', content: '  ', createdAt: at },
+        {
+          id: 'a',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Sunny, ' }, 'and 21°C.'] as never,
+          createdAt: at,
+        },
+      ]),
+    ).toEqual([
+      { role: 'user', text: 'Weather in Paris?' },
+      { role: 'tool', name: 'web_search', args: { q: 'Paris weather' } },
+      { role: 'assistant', text: 'Sunny, and 21°C.' },
+    ]);
+  });
+
+  it('follows the chat, streaming included, and is empty again on a new chat', () => {
+    const feed = createTurnFeed();
+    expect(feed.conversation.value).toEqual([]);
+    const ask = {
+      id: 'u',
+      role: 'user' as const,
+      content: 'Hi',
+      createdAt: at,
+    };
+    feed.items([ask]);
+    const first = feed.conversation.value;
+    expect(first).toEqual([{ role: 'user', text: 'Hi' }]);
+    // The same conversation again publishes nothing new.
+    feed.items([{ ...ask }]);
+    expect(feed.conversation.value).toBe(first);
+    feed.items([
+      ask,
+      { id: 'a', role: 'assistant', content: 'Hel', createdAt: at },
+    ]);
+    feed.items([
+      ask,
+      { id: 'a', role: 'assistant', content: 'Hello.', createdAt: at },
+    ]);
+    expect(feed.conversation.value.at(-1)).toEqual({
+      role: 'assistant',
+      text: 'Hello.',
+    });
+    feed.items([]);
+    expect(feed.conversation.value).toEqual([]);
   });
 });

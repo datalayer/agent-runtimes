@@ -6,7 +6,8 @@
 /**
  * An application's page, drawn beside its conversation: its A2UI surface on
  * the workspace's own renderer (`InlineSurface`), fed by the chat's current
- * turn, its buttons answered through the chat's controls.
+ * turn and its conversation, its buttons — and a Chat block's message, a File
+ * upload's files — answered through the chat's controls.
  *
  * @module loop/plugins/app-page/AppPage
  */
@@ -21,6 +22,7 @@ import type { AppSpec } from '../../../types/agentspecs';
 import {
   LoopChatTurn,
   type ChatTurnSnapshot,
+  type ConversationEntry,
   type LoopWorkspaceContext,
 } from '../../core';
 import {
@@ -32,6 +34,7 @@ import { appPageAction, appPageData, appPageMessages } from './appPageModel';
 
 /** No chat in the workspace: the page reads a turn that never starts. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
+const NO_CONVERSATION = signal<ConversationEntry[]>([]);
 
 export type AppPageProps = {
   app: AppSpec;
@@ -41,11 +44,17 @@ export type AppPageProps = {
 export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
   const entries = useContributions(LoopChatTurn);
   const turn = useSignalValue(entries[0]?.value.turn ?? NO_TURN);
+  const conversation = useSignalValue(
+    entries[0]?.value.conversation ?? NO_CONVERSATION,
+  );
   const messages = useMemo(
     () => appPageMessages(app, SURFACE_CATALOG_ID) as A2uiMessage[],
     [app],
   );
-  const data = useMemo(() => appPageData(app, turn), [app, turn]);
+  const data = useMemo(
+    () => appPageData(app, turn, conversation),
+    [app, turn, conversation],
+  );
   const [refusal, setRefusal] = useState<string | null>(null);
   // The workspace changes as the chat reports itself; the handler reads the latest.
   const workspaceRef = useRef(workspace);
