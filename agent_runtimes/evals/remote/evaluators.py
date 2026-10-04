@@ -246,6 +246,12 @@ def _default_judge() -> JudgeCall | None:
     return make_judge(url=url, token=token)
 
 
+def default_judge() -> JudgeCall | None:
+    """The judge configured on this machine (`configure_judge`, or
+    ``DATALAYER_AI_INFERENCE_URL``); None when there is none."""
+    return _default_judge()
+
+
 def _judge_prompt(
     *, output_text: str, expected_text: str, rubric: str, failure_modes: tuple[str, ...]
 ) -> str:

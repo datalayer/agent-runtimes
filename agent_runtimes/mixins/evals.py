@@ -176,6 +176,21 @@ class EvalsMixin:
             account_uid=account_uid,
         )
 
+    def evals_get_eval(
+        self,
+        evalset_id: str,
+        *,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """The evalset, its cases with their ids and metadata."""
+        return self._evals_request(
+            f"/evalsets/{evalset_id}",
+            method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
     def evals_list_subjects(
         self,
         *,
@@ -357,6 +372,24 @@ class EvalsMixin:
         return self._evals_request(
             f"/runs/{run_id}",
             method="GET",
+            billing_entity_uid=billing_entity_uid,
+            account_uid=account_uid,
+        )
+
+    def evals_list_case_results(
+        self,
+        run_id: str,
+        *,
+        limit: int = 500,
+        offset: int = 0,
+        billing_entity_uid: Optional[str] = None,
+        account_uid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """What a run made of each case: its status, failure mode and the judge's explanation."""
+        return self._evals_request(
+            f"/runs/{run_id}/cases",
+            method="GET",
+            params={"limit": limit, "offset": offset},
             billing_entity_uid=billing_entity_uid,
             account_uid=account_uid,
         )
