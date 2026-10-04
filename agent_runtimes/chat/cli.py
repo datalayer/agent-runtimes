@@ -906,6 +906,209 @@ def _launch_on_datalayer(
     return launch
 
 
+def _say(message: str) -> None:
+    """Say a status line on standard error, which ``--prompt`` keeps answers off."""
+    print(message, file=sys.stderr, flush=True)
+
+
+def _interrupted(signum: int, frame: Any) -> None:
+    """Turn a termination into an interrupt, so that cleanup runs."""
+    raise KeyboardInterrupt
+
+
+async def _run_lines(tux: Any, lines: List[str]) -> int:
+    """Run each line in the session, in order: the exit code.
+
+    Parameters
+    ----------
+    tux : CliTux
+        The session the lines run in.
+    lines : list of str
+        What ``--prompt`` gave, each run as if typed at the prompt.
+
+    Returns
+    -------
+    int
+        0 when every line ran, 1 at the first that errored (the rest are
+        not run).
+    """
+    tux.running = True
+    try:
+        for number, line in enumerate(lines, 1):
+            _say(f"[{number}/{len(lines)}] {line}")
+            if not await tux.run_line(line):
+                _say(f"Stopped at step {number} of {len(lines)}: {tux.last_error}")
+                return 1
+            if not tux.running:  # /exit
+                break
+        return 0
+    finally:
+        if tux._agui_client is not None:
+            await tux._agui_client.disconnect()
+            tux._agui_client = None
+
+
+def run_prompts(
+    prompts: List[str],
+    *,
+    agent_id: Optional[str],
+    local: bool = False,
+    cloud: bool = False,
+    runtime: Optional[str] = None,
+    environment: Optional[str] = None,
+    minutes: Optional[int] = None,
+    keep: bool = False,
+    port: int = 0,
+    codemode: bool = True,
+    debug: bool = False,
+    eggs: bool = False,
+) -> int:
+    """``loop --prompt``: launch the agent, run each line in one session, stop it.
+
+    The session starts as interactive ``loop`` starts it — on this machine,
+    or on Datalayer through `launch_cloud` — but asks nothing: every choice
+    comes from the options or their defaults, and a choice that would need
+    asking is refused in a sentence. Each prompt then runs through
+    `CliTux.run_line`, as if typed: ``/command`` is that slash command,
+    anything else a message whose answer is printed. The cloud runtime is
+    stopped at the end unless ``keep``, on an error or an interrupt too, and
+    a local server always is.
+
+    Parameters
+    ----------
+    prompts : list of str
+        The lines to run, in order.
+    agent_id : str or None
+        The agentspec (``-a``). Needed on this machine; on Datalayer it
+        defaults to the agent ``loop`` starts with.
+    local, cloud : bool
+        Where the agent runs (``--local``, ``--cloud``); on this machine
+        unless said.
+    runtime : str or None
+        A running Datalayer runtime to attach to (``--runtime``).
+    environment : str or None
+        The environment of a new cloud runtime (``--environment``).
+    minutes : int or None
+        How long to reserve a new cloud runtime for (``--minutes``).
+    keep : bool
+        Leave the cloud runtime running at the end (``--keep``).
+    port : int
+        The local server's port, 0 for any free one.
+    codemode : bool
+        Whether the local agent runs with codemode.
+    debug : bool
+        Whether the local server logs.
+    eggs : bool
+        Whether the Easter egg commands are registered.
+
+    Returns
+    -------
+    int
+        0 when every line ran; 1 when the launch was refused, the runtime did
+        not start or answer, or a line errored; 2 when the options leave a
+        choice that would need asking; 130 when interrupted.
+    """
+    from agent_runtimes.loop.launch import (
+        CLOUD,
+        CLOUD_AGENT_NAME,
+        CloudRefused,
+        NotSignedIn,
+        choose_where,
+        finish_cloud,
+        launch_cloud,
+    )
+
+    global _subprocess_ref
+
+    # This module's handlers kill the process outright; here an interrupt
+    # must reach the cleanup below, which stops what is billed.
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, _interrupted)
+    cloud_launch = None
+    try:
+        if runtime and local:
+            _say("--runtime attaches on Datalayer: drop --local.")
+            return 2
+        try:
+            where = choose_where(
+                local=local, cloud=cloud or bool(runtime), can_ask=False
+            )
+        except ValueError as error:
+            _say(str(error))
+            return 2
+        if where == CLOUD:
+            try:
+                cloud_launch = launch_cloud(
+                    agent_id,
+                    environment=environment,
+                    minutes=minutes,
+                    runtime=runtime,
+                    can_ask=False,
+                    status=_say,
+                    note=_say,
+                )
+            except NotSignedIn:
+                _say(
+                    "Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY."
+                )
+                return 1
+            except (CloudRefused, RuntimeError, ValueError) as refused:
+                _say(str(refused))
+                return 1
+            _say(
+                f"Runtime {cloud_launch.runtime_name} on Datalayer ({cloud_launch.environment}, "
+                f"{cloud_launch.minutes} min) runs {cloud_launch.agent_spec_id or CLOUD_AGENT_NAME}."
+            )
+            server_url = cloud_launch.server_url
+            agent_name = CLOUD_AGENT_NAME
+        else:
+            if not agent_id:
+                _say(
+                    "Name the agent to run on this machine with -a <agentspec>: "
+                    "--prompt asks nothing."
+                )
+                return 2
+            _say(f"Starting {agent_id} on this machine…")
+            process, actual_port = _start_agent_runtime_server(
+                agent_id,
+                port=port,
+                transport=Transport.ag_ui,
+                codemode=codemode,
+                debug=debug,
+            )
+            _subprocess_ref = process
+            if not _wait_for_server("127.0.0.1", actual_port, timeout=60.0):
+                _say(f"The agent runtime for {agent_id} did not start on this machine.")
+                return 1
+            server_url = f"http://127.0.0.1:{actual_port}"
+            agent_name = DEFAULT_RUNTIME_AGENT_NAME
+
+        from .tux import CliTux
+
+        tux = CliTux(
+            agent_url=f"{server_url}/api/v1/ag-ui/{agent_name}/",
+            server_url=server_url,
+            agent_id=agent_name,
+            eggs=eggs,
+            where=cloud_launch.label if cloud_launch else None,
+        )
+        return asyncio.run(_run_lines(tux, prompts))
+    except KeyboardInterrupt:
+        _say("Interrupted.")
+        return 130
+    finally:
+        # A second interrupt does not cut the cleanup short.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        try:
+            if cloud_launch is not None:
+                finish_cloud(cloud_launch, keep=keep, can_ask=False, say=_say)
+            _cleanup_subprocess()
+        finally:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+
+
 @app.callback(invoke_without_command=True)
 def main_callback(
     ctx: typer.Context,
@@ -994,6 +1197,17 @@ def main_callback(
     show_version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
     ),
+    prompts: Optional[List[str]] = typer.Option(
+        None,
+        "--prompt",
+        "-q",
+        help=(
+            "Run without interaction: launch the agent, run this line as if typed "
+            "(a /slash command, else a message whose answer is printed), then stop. "
+            "Repeat it for several lines, run in order in one session. Nothing is "
+            "asked; exits non-zero when a line errors."
+        ),
+    ),
 ) -> None:
     """Agent Runtimes Chat assistant.
 
@@ -1017,6 +1231,8 @@ def main_callback(
 
         loop --runtime <name>       # Back to an agent runtime running on Datalayer
 
+        loop --cloud -a example-simple --prompt "/models" --prompt "Hello"
+
     Where the agent runs is asked first — on this machine, or on Datalayer
     when signed in — unless --local, --cloud or --runtime says so. Without a
     terminal it runs here.
@@ -1030,6 +1246,28 @@ def main_callback(
     if show_version:
         _show_version()
         raise typer.Exit(0)
+
+    if prompts:
+        if query:
+            raise typer.BadParameter(
+                "Give the lines with --prompt only, not as arguments as well."
+            )
+        raise typer.Exit(
+            run_prompts(
+                prompts,
+                agent_id=agentspec_id,
+                local=local,
+                cloud=cloud,
+                runtime=runtime,
+                environment=environment,
+                minutes=minutes,
+                keep=keep,
+                port=port,
+                codemode=not codemode_disabled,
+                debug=debug,
+                eggs=eggs,
+            )
+        )
 
     global _subprocess_ref
 

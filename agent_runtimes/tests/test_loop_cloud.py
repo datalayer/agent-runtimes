@@ -594,7 +594,8 @@ def test_a_cloud_runtime_that_does_not_answer_runs_no_command() -> None:
         object.__setattr__(spec, "handler", handler)
         asyncio.run(tux.handle_command("/models"))
         assert ran == []
-        assert "does not answer (status 502)" in _said(tux)
+        # An error: said on standard error when piped, and kept as the line's.
+        assert "does not answer (status 502)" in str(tux.last_error)
         # What needs no runtime still runs.
         assert asyncio.run(tux.handle_command("/help")) == ""
     finally:

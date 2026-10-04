@@ -58,6 +58,8 @@ agent-runtimes chat "What is Python?"
 agent-runtimes chat -a crawler "Search for AI trends"
 ```
 
+For several lines in one session, slash commands among them, see [Run without interaction](#run-without-interaction).
+
 ### Here, or on Datalayer
 
 `loop` asks **where** the agent runs first: *on this machine* (a local server, with your own model keys) or *on Datalayer* (a cloud runtime, billed by the minute). Datalayer is offered once you are signed in (`datalayer login`, or `DATALAYER_API_KEY`). Otherwise `loop` says so in one line and runs here. Without a terminal it always runs here unless a flag says otherwise, so a script never starts something billed by surprise.
@@ -85,7 +87,7 @@ Launching example-simple on Datalayer (ai-agents-env, 30 min, at most 1.44 credi
 ● Runtime 01k… on Datalayer — ai-agents-env, reserved 30 min (at most 1.44 credits)
 ```
 
-- **Environments**: every environment that declares its capabilities is listed, with its description and its cost per minute. Only those with the `agent` capability (`ai-agents-env` today) can be picked; the others are greyed out with the reason. The default is the first that can launch an agent. Your own environments declare no capabilities, so they are not listed, but you can still name one with `--environment`. Naming one that says it cannot hold an agent is refused.
+- **Environments**: every environment that declares its capabilities is listed, with its description and its cost per minute. Only those with the `agent` capability (`ai-agents-env` today) can be picked; the others are greyed out with the reason. The default is the first that can launch an agent. Without anybody to ask, `ai-agents-env` is taken, or the only environment that can hold an agent; when several others could, `loop` asks you to name one with `--environment`. Your own environments declare no capabilities, so they are not listed, but you can still name one with `--environment`. Naming one that says it cannot hold an agent is refused.
 - **The agent**: the platform configures a runtime's agent only from an agentspec. Without `-a`, it is `example-simple`, the agent `loop` starts with, and one grey line says so. `-a <agentspec>` picks another; your local API keys never filter it.
 - **Running runtimes**: if you already have an agent runtime running, `loop` offers to go back to it before launching a new one, so you do not pay twice. `--runtime <name>` attaches without asking. If you also pass `-a`, the runtime's agent is reconfigured from that agentspec.
 - **Cost**: a minute costs the environment's burning rate. The reservation (`--minutes`, 30 by default) caps what the runtime can cost, and it is checked against the credits you have left before the launch.
@@ -111,6 +113,80 @@ The terminal reaches a cloud runtime through a relay on your machine that adds y
 - `/status` shows `Agent Runtime  RUNTIME on Datalayer (ENVIRONMENT)` and the relay it goes through.
 
 Nothing falls back to this machine. If the cloud runtime does not answer, a command that needs it is not run, and `loop` says so in a sentence. `/help`, `/exit`, `/status` and the other commands that read nothing from the runtime still work.
+
+To check a runtime's models from a script or CI, without typing them in, see [Run without interaction](#run-without-interaction).
+
+### Run without interaction
+
+`--prompt` (short `-q`) runs `loop` without a person at the keyboard. `loop` starts the agent, runs each line you give it as if you had typed it at the prompt, prints what comes back, stops the agent and exits:
+
+- **Repeat it** for several lines. They run in the order given, in **one session**, so a model switched by one line is the model the next line talks to, and the conversation carries over.
+- A line that starts with `/` runs that **slash command**, the same as at the prompt: `/models`, `/models <id>`, `/skills`, `/tools`, `/status` and the others.
+- Any other line is a **message** to the agent, and its answer is printed.
+
+It runs **on this machine** unless you say `--cloud`:
+
+- **On this machine** (`--local`, the default), name the agent with `-a <agentspec>`. The local server `loop` starts is stopped at the end.
+- **On Datalayer** (`--cloud`), a new cloud runtime is launched for the run, as interactive `loop --cloud` launches one. `-a` names its agent (`example-simple` when you leave it out), `-e` its environment (`ai-agents-env` by default) and `-m` how many minutes to reserve (30 by default). `-r <name>` runs the lines on a runtime that is already running instead, and nothing is launched.
+- **At the end** the cloud runtime is stopped, also when a line fails or you press Ctrl-C. `--keep` leaves it running, and `loop` prints how to stop it (`loop agents terminate <name>`). A runtime you attached to with `-r` was running before, so it is left running.
+
+**Nothing is asked.** Every choice comes from the options or their defaults. When a choice would need a person, the run stops before anything starts and says why in one sentence: no `-a` on this machine, several environments that could hold the agent and none named, or a number of minutes out of range.
+
+**Output.** The answers and what the slash commands print go to standard output. Everything else goes to standard error: the launch, each line as it starts (`[2/4] /models alibaba:qwen-max`), the tokens a turn used, errors, and the stop. When standard output is not a terminal (a pipe, a file, CI), nothing is coloured or animated and long lines are not wrapped, so the output can be read by another program or searched with `grep`.
+
+**Exit codes.**
+
+| Code | When |
+|------|------|
+| `0` | Every line ran. |
+| `1` | The launch was refused (not signed in, no credits, an environment that cannot hold an agent), the runtime did not start or did not answer, or a line failed: an unknown slash command, or an answer from the agent that was an error. The run stops at the first line that fails. |
+| `2` | A choice would need asking, such as no `-a` on this machine. |
+| `130` | You pressed Ctrl-C. The runtime is still stopped, unless `--keep`. |
+
+A slash command that **refuses** what it is asked has not failed: it did its job. `/models <id>` with a model the runtime does not offer prints its refusal (`… nothing was switched.`) and the run goes on to the next line, with exit code `0` at the end.
+
+Check what a Datalayer runtime offers, switch to Qwen, ask it who it is, then try a model the runtime does not serve:
+
+```bash
+loop --cloud -a example-simple -m 10 \
+  --prompt "/models" \
+  --prompt "/models alibaba:qwen-max" \
+  --prompt "Who are you and which model are you? One sentence." \
+  --prompt "/models bedrock:us.anthropic.claude-opus-5"
+```
+
+Its standard output has this shape (the runtime's name, the models offered and the answer's words vary):
+
+```text
+● Models on RUNTIME on Datalayer (ai-agents-env) (2)
+  ai-inference at … serves bedrock:us.anthropic.claude-sonnet-4-6, alibaba:qwen-max.
+
+  Cloud
+    ● bedrock:us.anthropic.claude-sonnet-4-6
+    ● alibaba:qwen-max
+
+  /models <id> to switch
+
+● Model: Alibaba Qwen-Max
+  alibaba:qwen-max
+
+I am Qwen, a large language model created by Alibaba Cloud.
+RUNTIME on Datalayer (ai-agents-env) does not offer bedrock:us.anthropic.claude-opus-5 to this agent: nothing was switched.
+```
+
+Standard error has the launch, `[1/4] /models` to `[4/4] /models bedrock:us.anthropic.claude-opus-5`, and `Stopped RUNTIME.` at the end. The exit code is `0`.
+
+In CI, keep the output and fail the job when a line fails:
+
+```bash
+loop --cloud -a example-simple -m 5 \
+  -q "/models" \
+  -q "Answer with the single word: ready" \
+  > answers.txt
+grep -qi "ready" answers.txt
+```
+
+Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `loop --local -a example-simple -q "/models"`.
 
 ### An application's safety set
 
@@ -172,7 +248,7 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/tools` | `Esc T` | List available tools |
 | `/mcp-servers` | `Esc M` | List MCP servers |
 | `/skills` | `Esc K` | List available skills |
-| `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer; `/models <id>` switches to one it can use |
+| `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer; `/models <id>` switches to one it can use. From a script: [Run without interaction](#run-without-interaction) |
 | `/codemode-toggle` | `Esc O` | Toggle codemode on/off |
 | `/agents` | `Esc A` | List agents on the server |
 | `/tools-last` | `Esc L` | Show tool calls from last response |
@@ -204,6 +280,7 @@ agent-runtimes chat --eggs
 | `--environment` | `-e` | first agent-capable | Environment of a new cloud runtime, without asking |
 | `--minutes` | `-m` | `30` | How long to reserve a new cloud runtime for |
 | `--keep` | | off | Leave the cloud runtime running when the session ends |
+| `--prompt` | `-q` | | Run this line (a slash command or a message) without interaction, then stop; repeatable, see [Run without interaction](#run-without-interaction) |
 | `--version` | `-v` | | Show version info |
 
 ### Programmatic Usage

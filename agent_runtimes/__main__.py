@@ -359,6 +359,16 @@ def main_callback(
         "--keep",
         help="Leave the cloud runtime running when the session ends.",
     ),
+    prompts: list[str] | None = typer.Option(
+        None,
+        "--prompt",
+        "-q",
+        help=(
+            "Run without interaction (chat mode): launch the agent, run this line "
+            "as if typed (a /slash command, else a message whose answer is "
+            "printed), then stop. Repeatable, run in order in one session."
+        ),
+    ),
 ) -> None:
     """Main callback to handle global options."""
     overrides = {
@@ -473,6 +483,8 @@ def main_callback(
             chat_args.extend(["--minutes", str(minutes)])
         if keep:
             chat_args.append("--keep")
+        for prompt in prompts or []:
+            chat_args.extend(["--prompt", prompt])
         # Forward any additional CLI args to chat so `loop --<chat-option>`
         # behaves like `loop chat --<chat-option>`.
         chat_args.extend(ctx.args)

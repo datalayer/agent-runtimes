@@ -552,7 +552,9 @@ def choose_environment(
     Every environment the SDK lists that says what it can do is shown, with
     its description and what a minute costs; only those that can launch an
     agent can be picked. The default is the first of those
-    (``ai-agents-env`` when offered). Named with ``--environment``, an
+    (``ai-agents-env`` when offered). Without somebody to ask, the default
+    is taken only when it is ``ai-agents-env`` or the one that fits: several
+    others are refused, to be named. Named with ``--environment``, an
     environment that says it cannot hold an agent is refused; one that says
     nothing is tried.
     """
@@ -579,6 +581,12 @@ def choose_environment(
     if not agent_capable(default):
         default = supported[0]
     if not can_ask:
+        if default.name != DEFAULT_ENVIRONMENT and len(supported) > 1:
+            raise CloudRefused(
+                f"Several environments can launch an agent "
+                f"({', '.join(e.name for e in supported)}) and {DEFAULT_ENVIRONMENT} "
+                "is not one of them: name one with --environment."
+            )
         return default
     answer = (ask or _select)(
         "In which environment? (only those that can launch an agent can be picked)",
