@@ -133,6 +133,47 @@ describe('what each kind gives its page', () => {
   });
 });
 
+describe("the catalogue's pages", () => {
+  /** Every absolute `{path}` a block binds, at any depth. */
+  const pathsOf = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? value.flatMap(pathsOf)
+      : value && typeof value === 'object'
+        ? [
+            ...(typeof (value as { path?: unknown }).path === 'string' &&
+            Object.keys(value).length === 1
+              ? [(value as { path: string }).path]
+              : []),
+            ...Object.values(value).flatMap(pathsOf),
+          ].filter(path => path.startsWith('/'))
+        : [];
+
+  it('bind only what their kind publishes and takes', () => {
+    const surfaced = Object.values(APP_CATALOGUE).filter(
+      app => hasAppPage(app) && app.interface.surface,
+    );
+    expect(surfaced.map(app => app.id)).toContain('quote-calculator');
+    for (const app of surfaced) {
+      const paths = appKindPaths(app);
+      const known = new Set(
+        [...paths.publishes, ...paths.accepts].map(entry => entry.path),
+      );
+      const handled = new Set(paths.actions.map(action => action.name));
+      for (const node of app.interface.surface!.components) {
+        for (const path of pathsOf(node)) {
+          expect(known.has(path), `${app.id}: ${node.id} binds ${path}`).toBe(
+            true,
+          );
+        }
+        const event = (node.action as { event?: { name?: string } })?.event;
+        if (event?.name) {
+          expect(handled.has(event.name), `${app.id}: ${node.id}`).toBe(true);
+        }
+      }
+    }
+  });
+});
+
 describe('which applications have a page', () => {
   it('is a chat, a widget or a worker with a page layout or a surface', () => {
     expect(hasAppPage(APP_CATALOGUE['web-research'])).toBe(false);
@@ -259,8 +300,8 @@ describe('what a button does', () => {
       data({ '/inputs': { seats: 50, plan: ['Team'], term: ['Annual'] } }),
     );
     expect(outcome).toEqual({
-      send: 'seats: 50\nplan: Team\nterm: Annual',
-      inputs: 'seats: 50\nplan: Team\nterm: Annual',
+      send: 'Seats: 50\nPlan: Team\nTerm: Annual',
+      inputs: 'Seats: 50\nPlan: Team\nTerm: Annual',
       clear: [],
     });
     expect(appPageAction(quote, { name: 'run' }, data({}))).toEqual({

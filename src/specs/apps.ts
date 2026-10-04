@@ -536,7 +536,31 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
     accent: 'sun',
     welcome: '',
     starters: [],
-    settings: [],
+    settings: [
+      {
+        id: 'seats',
+        type: 'slider',
+        label: 'Seats',
+        options: [],
+        default: 10.0,
+        min: 1.0,
+        max: 1000.0,
+      },
+      {
+        id: 'plan',
+        type: 'select',
+        label: 'Plan',
+        options: ['Team', 'Business', 'Enterprise'],
+        default: 'Team',
+      },
+      {
+        id: 'term',
+        type: 'select',
+        label: 'Term',
+        options: ['Monthly', 'Annual'],
+        default: 'Annual',
+      },
+    ],
     components: [
       'Card',
       'Column',
@@ -589,7 +613,20 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
           value: {
             path: '/inputs/plan',
           },
-          options: ['Team', 'Business', 'Enterprise'],
+          options: [
+            {
+              label: 'Team',
+              value: 'Team',
+            },
+            {
+              label: 'Business',
+              value: 'Business',
+            },
+            {
+              label: 'Enterprise',
+              value: 'Enterprise',
+            },
+          ],
         },
         {
           id: 'term',
@@ -598,7 +635,16 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
           value: {
             path: '/inputs/term',
           },
-          options: ['Monthly', 'Annual'],
+          options: [
+            {
+              label: 'Monthly',
+              value: 'Monthly',
+            },
+            {
+              label: 'Annual',
+              value: 'Annual',
+            },
+          ],
         },
         {
           id: 'run',
@@ -624,21 +670,21 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
         {
           id: 'result-body',
           component: 'Column',
-          children: ['total', 'lines'],
+          children: ['status', 'output'],
         },
         {
-          id: 'total',
+          id: 'status',
           component: 'Text',
           text: {
-            path: '/outputs/total',
+            path: '/status',
           },
-          variant: 'h3',
+          variant: 'caption',
         },
         {
-          id: 'lines',
+          id: 'output',
           component: 'Text',
           text: {
-            path: '/outputs/lines',
+            path: '/output',
           },
         },
       ],
@@ -1487,6 +1533,30 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     contents: ['Price list'],
     interface: {
       accent: 'sun',
+      settings: [
+        {
+          id: 'seats',
+          type: 'slider',
+          label: 'Seats',
+          default: 10.0,
+          min: 1.0,
+          max: 1000.0,
+        },
+        {
+          id: 'plan',
+          type: 'select',
+          label: 'Plan',
+          options: ['Team', 'Business', 'Enterprise'],
+          default: 'Team',
+        },
+        {
+          id: 'term',
+          type: 'select',
+          label: 'Term',
+          options: ['Monthly', 'Annual'],
+          default: 'Annual',
+        },
+      ],
       components: [
         'Card',
         'Column',
@@ -1535,7 +1605,20 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             id: 'plan',
             component: 'ChoicePicker',
             label: 'Plan',
-            options: ['Team', 'Business', 'Enterprise'],
+            options: [
+              {
+                label: 'Team',
+                value: 'Team',
+              },
+              {
+                label: 'Business',
+                value: 'Business',
+              },
+              {
+                label: 'Enterprise',
+                value: 'Enterprise',
+              },
+            ],
             value: {
               path: '/inputs/plan',
             },
@@ -1544,7 +1627,16 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             id: 'term',
             component: 'ChoicePicker',
             label: 'Term',
-            options: ['Monthly', 'Annual'],
+            options: [
+              {
+                label: 'Monthly',
+                value: 'Monthly',
+              },
+              {
+                label: 'Annual',
+                value: 'Annual',
+              },
+            ],
             value: {
               path: '/inputs/term',
             },
@@ -1573,21 +1665,21 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           {
             id: 'result-body',
             component: 'Column',
-            children: ['total', 'lines'],
+            children: ['status', 'output'],
           },
           {
-            id: 'total',
+            id: 'status',
             component: 'Text',
             text: {
-              path: '/outputs/total',
+              path: '/status',
             },
-            variant: 'h3',
+            variant: 'caption',
           },
           {
-            id: 'lines',
+            id: 'output',
             component: 'Text',
             text: {
-              path: '/outputs/lines',
+              path: '/output',
             },
           },
         ],
