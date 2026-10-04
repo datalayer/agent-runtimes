@@ -183,5 +183,11 @@ describe('where the balloon goes (T-23)', () => {
       side: 'below',
       align: 'left',
     });
+    // A dragged place arrives in pixels, as strings (a number in sx from 0
+    // to 12 would be read as the space scale).
+    expect(balloonSide({ left: '1000px', top: '600px' }, viewport)).toEqual({
+      side: 'above',
+      align: 'right',
+    });
   });
 });

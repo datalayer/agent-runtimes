@@ -48,7 +48,11 @@ export function SpeechBalloon({
       data-speech-balloon=""
       sx={{
         position: 'absolute',
-        ...(side === 'above' ? { bottom: above } : { top: above }),
+        // Pixels, as strings: a number here is read as the theme's space
+        // scale (`-7` would be `-space[7]`, 48px).
+        ...(side === 'above'
+          ? { bottom: `${above}px` }
+          : { top: `${above}px` }),
         [align]: 0,
         maxWidth: 280,
         width: 'max-content',
@@ -66,8 +70,8 @@ export function SpeechBalloon({
         '&::after': {
           content: '""',
           position: 'absolute',
-          ...(side === 'above' ? { bottom: -7 } : { top: -7 }),
-          [align]: tailAt - 6,
+          ...(side === 'above' ? { bottom: '-7px' } : { top: '-7px' }),
+          [align]: `${tailAt - 6}px`,
           width: 12,
           height: 12,
           bg: 'canvas.default',

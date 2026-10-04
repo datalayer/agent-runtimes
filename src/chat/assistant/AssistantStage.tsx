@@ -80,6 +80,16 @@ const AWAY_CHOICES: { away: AssistantAway; label: string }[] = [
 /** Room the balloon needs above the character before it goes below. */
 const BALLOON_ROOM = 200;
 
+/** A place's length in pixels, given as a number or as `"<n>px"`. */
+function pixels(value: unknown): number | undefined {
+  if (typeof value === 'number') {
+    return value;
+  }
+  const match =
+    typeof value === 'string' ? /^(-?\d+(?:\.\d+)?)px$/.exec(value) : null;
+  return match ? Number(match[1]) : undefined;
+}
+
 /**
  * Where the balloon goes so that it stays inside the window (T-23): toward
  * the middle of the page from whichever half the character stands in, and
@@ -92,8 +102,8 @@ export function balloonSide(
     height: typeof window === 'undefined' ? 800 : window.innerHeight,
   },
 ): { side: 'above' | 'below'; align: 'left' | 'right' } {
-  const left = typeof place.left === 'number' ? place.left : undefined;
-  const top = typeof place.top === 'number' ? place.top : undefined;
+  const left = pixels(place.left);
+  const top = pixels(place.top);
   const align =
     left !== undefined
       ? left < viewport.width / 2
@@ -121,7 +131,7 @@ export interface AssistantStageProps {
   /** Its size, in pixels. */
   size?: number;
   /** Where it sits once moved, or the corner it starts in. */
-  place: { left: number; top: number } | React.CSSProperties;
+  place: React.CSSProperties;
   /** The element the drag measures. */
   stageRef: RefObject<HTMLDivElement | null>;
   /** Starts a drag. */
@@ -301,7 +311,7 @@ export function AssistantStage({
         )}
       </Box>
       {(hovered || menuOpen) && state !== 'goodbye' && (
-        <Box sx={{ position: 'absolute', top: -6, right: -6 }}>
+        <Box sx={{ position: 'absolute', top: '-6px', right: '-6px' }}>
           <ActionMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <ActionMenu.Anchor>
               <IconButton

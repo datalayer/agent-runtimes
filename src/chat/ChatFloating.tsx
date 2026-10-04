@@ -207,6 +207,16 @@ function useIsMobile(breakpoint = 640): boolean {
 }
 
 /**
+ * A length in pixels, as a string: a number in `sx` from 0 to 12 is read as
+ * the theme's space scale (`left: 8` is 64px).
+ */
+const px = (value: number): string => `${Math.round(value)}px`;
+
+/** Kept between 8px from the window's start and `max`. */
+const clamp = (value: number, max: number): number =>
+  Math.max(8, Math.min(value, Math.max(8, max)));
+
+/**
  * ChatFloating component
  * A floating chat window built on ChatBase
  */
@@ -385,7 +395,7 @@ export function ChatFloating({
     }
   }, [isOpen, saying]);
   const stageRef = useRef<HTMLDivElement>(null);
-  const stageDrag = useViewportDrag(stageRef);
+  const stageDrag = useViewportDrag(stageRef, { whole: true });
   useEffect(() => {
     if (!assistantShown) {
       return;
@@ -680,9 +690,28 @@ export function ChatFloating({
     const widthPx = typeof width === 'number' ? width : 400;
     const heightPx = typeof height === 'number' ? height : 550;
     if (stageDrag.position) {
+      // Toward the page's inside: above the character, below it, or beside
+      // it when the window is too short for either.
+      const { left, top } = stageDrag.position;
+      const onLeft = left + ASSISTANT_SIZE / 2 < window.innerWidth / 2;
+      const above = top - heightPx - 16;
+      const below = top + ASSISTANT_SIZE + 16;
+      const beside = above < 8 && below + heightPx > window.innerHeight - 8;
+      const x = beside
+        ? onLeft
+          ? left + ASSISTANT_SIZE + 16
+          : left - widthPx - 16
+        : onLeft
+          ? left
+          : left + ASSISTANT_SIZE - widthPx;
+      const y = beside
+        ? top + ASSISTANT_SIZE - heightPx
+        : above >= 8
+          ? above
+          : below;
       return {
-        left: Math.max(8, stageDrag.position.left + ASSISTANT_SIZE - widthPx),
-        top: Math.max(8, stageDrag.position.top - heightPx - 16),
+        left: px(clamp(x, window.innerWidth - widthPx - 8)),
+        top: px(clamp(y, window.innerHeight - heightPx - 8)),
         right: 'auto',
         bottom: 'auto',
       };
@@ -887,8 +916,8 @@ export function ChatFloating({
         ...(viewMode === 'floating-draggable' && !isMobile
           ? drag.position
             ? {
-                left: drag.position.left,
-                top: drag.position.top,
+                left: px(drag.position.left),
+                top: px(drag.position.top),
                 right: 'auto',
                 bottom: 'auto',
               }
@@ -1104,6 +1133,9 @@ export function ChatFloating({
         buttonIcon ? (buttonIcon as React.ElementType) : CommentDiscussionIcon
       }
       aria-label={buttonTooltip}
+      // With words to say, the balloon stands in for the tooltip: Primer's
+      // own would cover it.
+      unsafeDisableTooltip={!!saying}
       onClick={
         assistantMode && assistantAway === 'page'
           ? callAssistantBack
@@ -1156,7 +1188,10 @@ export function ChatFloating({
           size={ASSISTANT_SIZE}
           place={
             stageDrag.position
-              ? { left: stageDrag.position.left, top: stageDrag.position.top }
+              ? {
+                  left: px(stageDrag.position.left),
+                  top: px(stageDrag.position.top),
+                }
               : getPositionStyles()
           }
           stageRef={stageRef}
