@@ -516,7 +516,9 @@ def test_the_safety_options_go_with_safety(tmp_path: Path) -> None:
         apps_command.app, ["validate", str(path), "--safety", "--cloud"]
     )
     assert cloud.exit_code == 2
-    assert "--app" in cloud.output
+    # Typer colours its errors on CI, which splits an option's name with
+    # escape codes: read the words as a person reads them.
+    assert "--app" in re.sub(r"\x1b\[[0-9;]*m", "", cloud.output)
 
 
 # --- on Datalayer, through the Evals engine (mocked: a launch is billed) ---------
