@@ -18,7 +18,8 @@
  * an action is handed the surface it came from, so that what a block wrote
  * into its data model can be read when a button is pressed. It draws from
  * Datalayer's catalog: the basic one, any block shown only while its
- * `visible_when` holds.
+ * `visible_when` holds — or, given one, a catalog narrowed to the blocks
+ * the workspace's plugins contribute (`catalogOfBlocks`).
  *
  * @module loop/plugins/a2ui-surface/InlineSurface
  */
@@ -28,6 +29,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import type { ReactComponentImplementation } from '@a2ui/react/v0_9';
 import {
+  Catalog,
   MessageProcessor,
   type A2uiClientAction,
   type A2uiMessage,
@@ -62,8 +64,11 @@ export function InlineSurface({
   onAction,
   validationError,
   data,
+  catalog = datalayerCatalog,
 }: {
   messages: A2uiMessage[];
+  /** What it draws with, read once: Datalayer's catalog unless given. */
+  catalog?: Catalog<ReactComponentImplementation>;
   /** Told of an action, with the surface it came from. */
   onAction: (action: A2uiClientAction, surface?: Surface) => void;
   validationError?: string | null;
@@ -80,14 +85,14 @@ export function InlineSurface({
   onActionRef.current = onAction;
   const processor = useMemo(
     () =>
-      new MessageProcessor<ReactComponentImplementation>(
-        [datalayerCatalog],
-        action =>
-          onActionRef.current(
-            action,
-            processorRef.current?.model.getSurface(action.surfaceId),
-          ),
+      new MessageProcessor<ReactComponentImplementation>([catalog], action =>
+        onActionRef.current(
+          action,
+          processorRef.current?.model.getSurface(action.surfaceId),
+        ),
       ),
+    // Once: a host that changes what it draws with mounts a new surface.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
   const processorRef = useRef<

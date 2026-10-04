@@ -453,7 +453,10 @@ contributes the page as the editor beside the chat (`LoopEditorView`), in place
 of the notebook and the document. It is drawn by the workspace's own A2UI
 renderer (`InlineSurface`, the one that draws surfaces in the transcript); an
 application with a page layout and no surface composed gets the default page
-of its kind. A decision's page is still the Studio's run page.
+of its kind, with the blocks the workspace's plugins contribute (see
+[The blocks a page draws](./app-renderer.mdx#the-blocks-a-page-draws)). A
+decision's page is its host's, drawn as the one view of a workspace without a
+conversation ([A decision](./app-renderer.mdx#a-decision)).
 
 The page's data model is published from the conversation, by path, and what a
 block writes there reaches the application through the chat — a message sent,

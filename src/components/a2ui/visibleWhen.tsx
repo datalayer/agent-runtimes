@@ -118,3 +118,28 @@ export const datalayerCatalog = new Catalog<ReactComponentImplementation>(
   basicCatalog.themeSchema,
   basicCatalog.instructions,
 );
+
+/**
+ * Datalayer's catalog narrowed to the components named — what the enabled
+ * plugins contribute as blocks (LOOP R-01b, `loop.canvas.block`), so that an
+ * application's page draws what its Canvas can place and nothing else. Under
+ * the same id; a name the catalog does not draw is an error.
+ */
+export function catalogOfBlocks(
+  names: readonly string[],
+): Catalog<ReactComponentImplementation> {
+  const unknown = names.filter(name => !datalayerCatalog.components.has(name));
+  if (unknown.length > 0) {
+    throw new Error(
+      `No renderer draws ${unknown.join(', ')}: a block is contributed by a plugin whose component the catalog draws.`,
+    );
+  }
+  return new Catalog<ReactComponentImplementation>(
+    datalayerCatalog.id,
+    datalayerCatalog.protocolVersion,
+    names.map(name => datalayerCatalog.components.get(name)!),
+    [...datalayerCatalog.functions.values()],
+    datalayerCatalog.themeSchema,
+    datalayerCatalog.instructions,
+  );
+}

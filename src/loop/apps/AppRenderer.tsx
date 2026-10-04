@@ -25,16 +25,23 @@
  * - its **page**, when it has one (`hasAppPage`: a chat, a widget or a worker
  *   with a `page` or `split` layout): its A2UI surface drawn by the
  *   `app-page` plugin, in place of the notebook and the document, fed from
- *   the conversation and answered through it (`APP_KIND_PATHS`). A
- *   decision's page stays the Studio's run page (R-02); its layout keeps the
- *   editors;
+ *   the conversation and answered through it (`APP_KIND_PATHS`), with the
+ *   Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what
+ *   the page draws (R-01b);
+ * - a **decision**: a workspace without a conversation whose one view is the
+ *   page its host draws (`page`, R-02) — the Studio's run page, at its
+ *   address and embedded;
  * - its **frame**, when the host asks (`frame`): the `window-frame` plugin's
  *   window, its title the application's face and name.
+ *
+ * Which plugins a kind needs, and how its workspace is laid out, is one
+ * function: `appPreset`, the preset per kind, as `loopPlugins` is for the
+ * examples.
  *
  * @module loop/apps/AppRenderer
  */
 
-import { useMemo } from 'react';
+import { useMemo, type ComponentType } from 'react';
 import type { PluginRef, ReactorPlugin } from '@datalayer/reactor';
 import { loopAccentStyles } from '@datalayer/primer-addons';
 import type { AppSpec } from '../../types/agentspecs';
@@ -42,9 +49,15 @@ import type { ThemeOverrides } from '../../types/chat';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
 import {
   APP_PAGE_SURFACE,
+  defineAppHostPagePlugin,
   defineAppPagePlugin,
   hasAppPage,
+  type AppHostPageProps,
 } from '../plugins/app-page';
+import {
+  CANVAS_BLOCK_PLUGINS,
+  canvasBlocksPluginName,
+} from '../plugins/canvas-blocks';
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
 import { dumpAppspec } from './appspec';
@@ -130,6 +143,19 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    * the application's face and name. A host's own `frameTitle` wins.
    */
   frame?: boolean;
+  /**
+   * The page a host draws for a kind the workspace has no page for: a
+   * decision's (R-02). The workspace's one view. A component defined once,
+   * outside the host's render: a new one would be a new plugin, and restart
+   * the workspace.
+   */
+  page?: ComponentType<AppHostPageProps>;
+  /**
+   * The UI plugins its organization has turned off (`plugins_off`, catalogue
+   * ids such as 'a2ui'): their blocks are off its page as they are off its
+   * Canvas's palette. Compared by content.
+   */
+  pluginsOff?: readonly string[];
 };
 
 /** What `interface.layout` sets on the workspace. */
@@ -176,6 +202,66 @@ export function appLayoutOptions(
     pageLayoutPrompt: 'floating',
     pageLayoutPromptAnchor: 'bottom',
     pageLayoutTurnPanelFooter: 'actions',
+  };
+}
+
+/** What a kind of application is drawn with: its plugins, and its workspace. */
+export type AppPreset = {
+  plugins: PluginRef[];
+  workspace: AppLayoutOptions & Pick<LoopPresetOptions, 'conversation'>;
+};
+
+/**
+ * The plugins an application's kind needs, and how its workspace is laid
+ * out (LOOP R-01): the preset per kind, as `loopPlugins` is for the examples.
+ *
+ * - a **chat**, a **widget**, a **worker**: its agent (`defineAppPlugin`);
+ *   its page (`app-page`) when it has one, with the Canvas's block plugins
+ *   but those of the UI plugins its organization turned off (`pluginsOff`),
+ *   whose contributions are the blocks it may draw (R-01b); a thumb and a
+ *   comment on each answer when its record keeps feedback (V-18); laid out
+ *   as `interface.layout` says;
+ * - a **decision**: the page its host draws (`page`), as the one view of a
+ *   workspace without a conversation (R-02).
+ *
+ * An application that cannot be drawn is refused with a sentence: a
+ * decision without its host's page, an application run by a team.
+ */
+export function appPreset(
+  app: AppSpec,
+  options: {
+    page?: ComponentType<AppHostPageProps>;
+    pluginsOff?: readonly string[];
+  } = {},
+): AppPreset {
+  if (app.kind === 'decision') {
+    if (!options.page) {
+      throw new Error(
+        `“${app.name}” is a decision, whose page is drawn by where it runs: none was given here.`,
+      );
+    }
+    return {
+      plugins: [defineAppHostPagePlugin(app, options.page)],
+      workspace: {
+        conversation: false,
+        editors: false,
+        showViewSelector: false,
+      },
+    };
+  }
+  const withPage = hasAppPage(app);
+  // The blocks its Canvas offers: those of the UI plugins not turned off.
+  const off = new Set((options.pluginsOff ?? []).map(canvasBlocksPluginName));
+  const blocks = CANVAS_BLOCK_PLUGINS.filter(plugin => !off.has(plugin.name));
+  return {
+    plugins: [
+      defineAppPlugin(app),
+      ...(withPage ? [defineAppPagePlugin(app), ...blocks] : []),
+      // A thumb and a comment on each answer, kept in its record (LOOP
+      // V-18): only for an application whose record keeps feedback.
+      ...(keepsFeedback(app) ? [defineAppFeedbackPlugin(app)] : []),
+    ],
+    workspace: appLayoutOptions(app),
   };
 }
 
@@ -248,47 +334,34 @@ export function AppRenderer({
   instance,
   onPresence,
   frame = false,
+  page,
+  pluginsOff,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   /*
-   * The application plugin, made once per application. `LoopEmbed` rebuilds
-   * its whole reactor when its plugins change, so a new plugin on every
-   * render of the host would restart the running workspace. The key is the
+   * The kind's plugins, made once per application. `LoopEmbed` rebuilds its
+   * whole reactor when its plugins change, so a new plugin on every render
+   * of the host would restart the running workspace. The key is the
    * application as its file holds it: a change to it is a new application.
    */
   const source = JSON.stringify(dumpAppspec(app));
-  const appPlugin = useMemo(
-    () => (app.agent ? defineAppPlugin(app) : null),
+  const off = [...(pluginsOff ?? [])].sort().join(',');
+  const preset = useMemo(
+    (): AppPreset | { problem: string } => {
+      try {
+        return appPreset(app, { page, pluginsOff });
+      } catch (error) {
+        return {
+          problem: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source],
-  );
-  const withPage = hasAppPage(app);
-  const pagePlugin = useMemo(
-    () => (withPage ? defineAppPagePlugin(app) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, withPage],
-  );
-  /*
-   * A thumb and a comment on each answer, kept in its record (LOOP V-18):
-   * only for an application whose record keeps feedback.
-   */
-  const keeps = keepsFeedback(app);
-  const feedbackPlugin = useMemo(
-    () => (keeps ? defineAppFeedbackPlugin(app) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, keeps],
+    [source, page, off],
   );
   const allPlugins = useMemo(
-    () =>
-      appPlugin
-        ? [
-            appPlugin,
-            ...(pagePlugin ? [pagePlugin] : []),
-            ...(feedbackPlugin ? [feedbackPlugin] : []),
-            ...plugins,
-          ]
-        : plugins,
-    [appPlugin, pagePlugin, feedbackPlugin, plugins],
+    () => ('problem' in preset ? plugins : [...preset.plugins, ...plugins]),
+    [preset, plugins],
   );
   /*
    * On Datalayer, the application runs on a runtime: allocated with a plain
@@ -296,10 +369,18 @@ export function AppRenderer({
    * the runtime registers it and decides every tool call by its rules (LOOP
    * R-03, R-05), as `loop apps run --cloud` does.
    */
+  const conversation =
+    !('problem' in preset) && preset.workspace.conversation !== false;
   const datalayerCreatePayload = useMemo(
-    () => (app.agent ? appDatalayerCreatePayload(app, instance) : undefined),
+    () => (conversation ? appDatalayerCreatePayload(app, instance) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, instance?.appUid, instance?.deploymentUid, instance?.version],
+    [
+      source,
+      conversation,
+      instance?.appUid,
+      instance?.deploymentUid,
+      instance?.version,
+    ],
   );
   const accent = app.interface?.accent;
   const themeOverrides = useMemo(
@@ -307,11 +388,10 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [accent],
   );
-  if (!appPlugin) {
+  if ('problem' in preset) {
     return (
       <div role="status" style={{ padding: 16 }}>
-        “{app.name}” is run by a team, which the workspace does not run as an
-        application yet.
+        {preset.problem}
       </div>
     );
   }
@@ -320,9 +400,10 @@ export function AppRenderer({
       // The application's own agent: created under its id, so that its
       // spec is applied to an agent of its own, never to the one it extends.
       agentId={app.id}
-      // Drawn as its layout says: the conversation alone, the page with
-      // the conversation over it, or the two side by side.
-      {...appLayoutOptions(app)}
+      // Drawn as its kind and its layout say: the conversation alone, the
+      // page with the conversation over it, the two side by side, or — a
+      // decision — its host's page alone.
+      {...preset.workspace}
       {...(frame
         ? {
             frameTitle: [app.emoji, app.name].filter(Boolean).join(' '),

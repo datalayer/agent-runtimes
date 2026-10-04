@@ -15,10 +15,16 @@
  *
  * What the page shows and takes, by kind, is `APP_KIND_PATHS`.
  *
+ * A page the workspace does not draw itself — a decision's, whose page is
+ * its host's (the Studio's run page, its hosted address, its embed) — is
+ * contributed by the host through `defineAppHostPagePlugin`, as the
+ * workspace's one view (`LoopViewType`), in a workspace without a
+ * conversation (LOOP R-02).
+ *
  * @module loop/plugins/app-page
  */
 
-import type { JSX } from 'react';
+import type { ComponentType, JSX } from 'react';
 import { BrowserIcon } from '@primer/octicons-react';
 import {
   contribution,
@@ -26,7 +32,12 @@ import {
   type ReactorPlugin,
 } from '@datalayer/reactor';
 import type { AppSpec } from '../../../types/agentspecs';
-import { LoopEditorView, type ChatSurfaceProps } from '../../core';
+import {
+  LoopEditorView,
+  LoopViewType,
+  type ChatSurfaceProps,
+  type LoopWorkspaceContext,
+} from '../../core';
 import { AppPage } from './AppPage';
 import { APP_PAGE_SURFACE } from './appPageModel';
 
@@ -57,6 +68,61 @@ export function defineAppPagePlugin(
           load: async () => ({ default: Page }),
         },
         { id: APP_PAGE_SURFACE, order: -10 },
+      ),
+    ],
+  });
+  return plugin as unknown as ReactorPlugin<
+    Record<string, never>,
+    unknown,
+    unknown
+  >;
+}
+
+/** The view an application's page is, when its host draws it. */
+export const APP_HOST_PAGE_VIEW = 'app-page';
+
+/** What a host's page is given: the application, and the workspace it is the view of. */
+export type AppHostPageProps = {
+  app: AppSpec;
+  workspace: LoopWorkspaceContext;
+};
+
+/**
+ * The plugin that makes a host's page the workspace's view (LOOP R-02): the
+ * page a host draws for an application whose kind the workspace has no page
+ * for — a decision's. The workspace opens on it; it is ordered before every
+ * other view.
+ */
+export function defineAppHostPagePlugin(
+  app: AppSpec,
+  Page: ComponentType<AppHostPageProps>,
+): ReactorPlugin<Record<string, never>, unknown, unknown> {
+  // One component per plugin: the view host keeps it, and the application with it.
+  function View({
+    workspace,
+  }: {
+    viewType: string;
+    workspace: LoopWorkspaceContext;
+  }): JSX.Element {
+    return <Page app={app} workspace={workspace} />;
+  }
+  const plugin = definePlugin({
+    name: `${APP_PAGE_PLUGIN_NAME}-${app.id}`,
+    displayName: `${app.name}: its page`,
+    description: `The page of ${app.name}, drawn by its host.`,
+    octicon: 'browser',
+    emoji: app.emoji || undefined,
+    contributes: [
+      contribution(
+        LoopViewType,
+        {
+          viewType: APP_HOST_PAGE_VIEW,
+          title: app.name,
+          icon: BrowserIcon,
+          order: -10,
+          load: async () => ({ default: View }),
+        },
+        { id: APP_HOST_PAGE_VIEW, order: -10 },
       ),
     ],
   });

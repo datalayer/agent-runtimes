@@ -207,6 +207,17 @@ export type LoopPresetOptions = {
    */
   editors?: boolean;
   /**
+   * Whether the workspace holds a conversation at all.
+   *
+   * True by default. A host whose one view is a page of its own — an
+   * application that answers in its page and has no agent to talk to, a
+   * decision (LOOP R-02) — passes `false`: the chat and its composer, the
+   * agents, the models, the editors and the page layout all stay out, so
+   * that nothing is launched or fetched for a conversation nobody has, and
+   * the workspace opens on the view a host's plugin contributes.
+   */
+  conversation?: boolean;
+  /**
    * The editor choice in the workspace header rather than above the chat.
    *
    * Mounts `EditorsPlugin` and switches the chat's own surface strip off —
@@ -284,6 +295,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     floatingPrompt = false,
     editorSelector = false,
     editors = true,
+    conversation = true,
     graph = false,
     commandPalette = false,
     pluginsPanel = false,
@@ -291,6 +303,22 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     firstPromptHook,
   } = options;
   const defaultEditor = askedEditor ?? (editors ? 'notebook' : 'none');
+
+  // A workspace without a conversation: the theme, the shell's points, and
+  // the host's chrome; its view is a host's plugin's.
+  if (!conversation) {
+    return [
+      ThemePlugin,
+      configurePlugin(ShellPlugin, {
+        defaultEditor: 'none',
+        showSelector: false,
+      }),
+      ...(graph ? [GraphViewPlugin] : []),
+      ...(commandPalette ? [LoopCommandsPlugin] : []),
+      ...(pluginsPanel ? [PluginsPanelPlugin] : []),
+      ...(windowFrame ? [WindowFramePlugin] : []),
+    ] as PluginRef[];
+  }
 
   return [
     // The chat owns the editor beside it, so which one opens is its

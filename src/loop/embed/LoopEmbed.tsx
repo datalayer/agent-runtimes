@@ -155,6 +155,7 @@ export function LoopEmbed({
       preset.floatingPrompt,
       preset.editorSelector,
       preset.editors,
+      preset.conversation,
       preset.graph,
       preset.commandPalette,
       preset.pluginsPanel,

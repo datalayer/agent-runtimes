@@ -32,7 +32,7 @@ export function WebResearch() {
 ## Its props
 
 `AppRenderer` takes every prop of `LoopEmbed` but `agentId` (the agent is the
-application's own, created under its id), and four of its own:
+application's own, created under its id), and six of its own:
 
 | Prop         | What it says                                                                                                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -40,6 +40,8 @@ application's own, created under its id), and four of its own:
 | `instance`   | What its record is kept under on Datalayer — `appUid`, `deploymentUid`, `version` — sent with the agent so that a runtime knows which deployment it serves.                                                    |
 | `onPresence` | Told what the application is doing — idle, thinking, working, waiting for you — for a host that draws its face in a frame of its own. Read once, when the workspace is built: pass a stable function, such as a state setter. |
 | `frame`      | Draw the application in the window-frame plugin's window, titled with its face and name. A host's own `frameTitle` wins.                                                                                     |
+| `page`       | The page a host draws for a kind the workspace has no page for — a decision's. A component defined once, outside the host's render (a new one is a new plugin, and restarts the workspace); it is given `{ app, workspace }`. |
+| `pluginsOff` | The UI plugins its organization has turned off (`plugins_off`, catalogue ids such as `a2ui`): their blocks are off its page as they are off its Canvas's palette. |
 
 From the application, `AppRenderer` sets on `LoopEmbed`:
 
@@ -66,6 +68,62 @@ runs: `browser`, a local server, or `datalayer`), `serverUrl`,
 itself), `autoFocusPrompt` (`false` when the application is one section of a
 longer page), `frameHeight`, `plugins` (the host's own, mounted beside the
 application's).
+
+## The preset per kind
+
+Which plugins an application's kind needs, and how its workspace is laid
+out, is one function, `appPreset(app, { page })` — the preset per kind, as
+`loopPlugins` is for the examples. `AppRenderer` mounts what it returns, then
+the host's own `plugins`.
+
+| Kind                     | Plugins                                                                                                                                                                                                          | Workspace                                         |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| chat, widget, worker     | its agent (`defineAppPlugin`); with a page, the `app-page` plugin and the Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what the page draws; feedback, when its record keeps it              | as its layout says (`appLayoutOptions`)          |
+| decision                 | the host's page as the workspace's one view (`defineAppHostPagePlugin`, a `loop.viewType` contribution)                                                                                                           | `conversation: false`: no chat, no composer, no agent |
+
+What cannot be drawn is said in a sentence where it would have been: a
+decision given no `page`, an application run by a team.
+
+### A decision
+
+A decision is decided on a page, not in a conversation: its alternatives, the
+evidence on each, the typed criteria a decision model answers, the ranking by
+the weights, and the decision saved as a record. That page is its host's — in
+Datalayer, the Studio's run page, which is also what its hosted address and
+its embed show — and `AppRenderer` draws it as the one view of a workspace
+without a conversation (`loopPlugins({ conversation: false })`: the theme, the
+shell's points and the host's chrome, and nothing that launches an agent or
+fetches models).
+
+```tsx
+import { AppRenderer } from '@datalayer/agent-runtimes/lib/loop/apps/AppRenderer';
+import type { AppHostPageProps } from '@datalayer/agent-runtimes/lib/loop/plugins/app-page';
+
+// Defined once: the page is a plugin's view.
+function DecisionPage({ app }: AppHostPageProps) {
+  return <h1>{app.decision?.question}</h1>;
+}
+
+export function Decide({ app }) {
+  return <AppRenderer app={app} page={DecisionPage} />;
+}
+```
+
+What the host knows that the application does not — the record it read, who
+is signed in, a visitor's key — reaches the page through the host's own React
+context: the view is drawn inside the host's tree.
+
+## The blocks a page draws
+
+An application's page draws the blocks the workspace's plugins contribute to
+the Canvas's palette (`loop.canvas.block`), and nothing else: what the Canvas
+can place and what the page can draw are one list. The renderer is
+Datalayer's catalog narrowed to them (`catalogOfBlocks`). The blocks of a UI
+plugin its organization turned off (`pluginsOff`) are left out, as they are
+off its Canvas's palette. A page that places a
+block no enabled plugin contributes is not drawn; it says, in its place,
+*This page places Chart, which no enabled plugin contributes: it is drawn once
+the plugin that contributes it is on.*
 
 ## The layouts
 
@@ -136,7 +194,10 @@ Studio's Readiness page counts what was kept (LOOP V-18).
 ## What is tested, and what is not
 
 Tested: the options per layout and the embed's inline mode
-(`app-layout.test.tsx`); the presence state (`presence-status.test.ts`); in
+(`app-layout.test.tsx`); the preset per kind, a workspace without a
+conversation, and a decision drawn by the real workspace as its host's page
+(`app-preset.test.tsx`); a page drawn with the blocks contributed, and what it
+says when one is not (`app-page-blocks.test.tsx`); the presence state (`presence-status.test.ts`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
 Feedback: what is offered, what is sent and what a refusal says

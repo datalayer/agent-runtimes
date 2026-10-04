@@ -26,7 +26,16 @@ import type { AppSpec } from '../../types/agentspecs';
 import { LoopChatTurn, type LoopWorkspaceContext } from '../core';
 import { emptyAppspec } from '../apps/appspec';
 import { createTurnFeed } from '../plugins/chat/turnState';
-import { AppPage } from '../plugins/app-page';
+import {
+  AppPage,
+  blocksMissing,
+  componentsOnPage,
+} from '../plugins/app-page/AppPage';
+import { appPageMessages } from '../plugins/app-page';
+import { catalogOfBlocks } from '../../components/a2ui';
+import { LoopCanvasBlock } from '../core';
+import { COMPONENT_CATALOGUE } from '../../specs/uiPlugins';
+import { CANVAS_BLOCK_PLUGINS } from '../plugins/canvas-blocks';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -42,7 +51,10 @@ const surfaceOf = (components: Node[]) => ({
 });
 
 /** A page drawn as AppRenderer draws it: the chat's turn feed, its controls. */
-async function drawPage(app: AppSpec) {
+async function drawPage(
+  app: AppSpec,
+  blocks: Parameters<typeof buildReactorFromPlugins>[0] = CANVAS_BLOCK_PLUGINS,
+) {
   const feed = createTurnFeed();
   const send = vi.fn();
   const plugin = definePlugin({
@@ -60,7 +72,10 @@ async function drawPage(app: AppSpec) {
     prompts: { submit: vi.fn() },
   } as unknown as LoopWorkspaceContext;
   function Harness() {
-    const reactor = React.useMemo(() => buildReactorFromPlugins([plugin]), []);
+    const reactor = React.useMemo(
+      () => buildReactorFromPlugins([plugin, ...blocks]),
+      [],
+    );
     useReactor(reactor);
     return (
       <ThemeProvider>
@@ -256,6 +271,77 @@ describe('a File upload on a widget’s page', () => {
     expect(send).toHaveBeenCalledTimes(1);
     expect(send.mock.calls[0][0]).toContain(
       'The file tiny.csv (text/csv):\n```\na,b\n1,2\n```',
+    );
+  });
+});
+
+describe('what the page draws is what the Canvas can place (R-01b)', () => {
+  const table: AppSpec = {
+    ...emptyAppspec('widget'),
+    id: 'rows',
+    name: 'Rows',
+    agent: 'example-simple:0.0.1',
+    interface: {
+      ...emptyAppspec('widget').interface,
+      layout: 'page',
+      surface: surfaceOf([
+        { id: 'root', component: 'Column', children: ['title'] },
+        { id: 'title', component: 'Text', text: 'The rows' },
+      ]),
+    },
+  };
+
+  it('reads what a page places from its messages', () => {
+    expect(componentsOnPage(appPageMessages(table, 'c'))).toEqual([
+      'Column',
+      'Text',
+    ]);
+  });
+
+  it('says which placed blocks no plugin contributes, and nothing when all are', () => {
+    expect(blocksMissing(['Column', 'Text'], ['Column', 'Text'])).toBeNull();
+    expect(blocksMissing(['Column', 'Chart'], ['Column'])).toMatch(
+      /places Chart, which no enabled plugin contributes/,
+    );
+  });
+
+  it('narrows the catalog to the blocks contributed, and refuses one nothing draws', () => {
+    const catalog = catalogOfBlocks(['Column', 'Text']);
+    expect([...catalog.components.keys()]).toEqual(['Column', 'Text']);
+    expect(() => catalogOfBlocks(['Nope'])).toThrow(/No renderer draws Nope/);
+  });
+
+  it('draws every block the catalogue’s plugins contribute', () => {
+    // One list: every component of the enabled UI plugins has its renderer.
+    expect(() =>
+      catalogOfBlocks(Object.keys(COMPONENT_CATALOGUE)),
+    ).not.toThrow();
+  });
+
+  it('draws the page with the blocks the workspace’s plugins contribute', async () => {
+    const { container } = await drawPage(table);
+    expect(container.textContent).toContain('The rows');
+  });
+
+  it('says so in place of the page when a block it places is not contributed', async () => {
+    const onlyColumn = definePlugin({
+      name: 'only-column',
+      contributes: [
+        contribution(
+          LoopCanvasBlock,
+          {
+            id: 'Column',
+            uiPlugin: 'a2ui',
+            component: COMPONENT_CATALOGUE.Column,
+          },
+          { id: 'Column' },
+        ),
+      ],
+    });
+    const { container } = await drawPage(table, [onlyColumn]);
+    expect(container.textContent).not.toContain('The rows');
+    expect(container.textContent).toContain(
+      'This page places Text, which no enabled plugin contributes',
     );
   });
 });

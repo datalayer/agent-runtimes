@@ -9,6 +9,11 @@
  * turn and its conversation, its buttons — and a Chat block's message, a File
  * upload's files — answered through the chat's controls.
  *
+ * It draws the blocks the workspace's plugins contribute to the Canvas's
+ * palette (`loop.canvas.block`, R-01b) and nothing else, so that what the
+ * Canvas can place and what the page can draw are one list: a page that
+ * uses a block no enabled plugin contributes says so, in place of the page.
+ *
  * @module loop/plugins/app-page/AppPage
  */
 
@@ -19,7 +24,9 @@ import { signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import type { AppSpec } from '../../../types/agentspecs';
+import { catalogOfBlocks } from '../../../components/a2ui';
 import {
+  LoopCanvasBlock,
   LoopChatTurn,
   type ChatTurnSnapshot,
   type ConversationEntry,
@@ -36,6 +43,38 @@ import { appPageAction, appPageData, appPageMessages } from './appPageModel';
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
 const NO_CONVERSATION = signal<ConversationEntry[]>([]);
 
+/** The components a page's messages place, each once. */
+export function componentsOnPage(messages: readonly unknown[]): string[] {
+  const names = new Set<string>();
+  for (const message of messages) {
+    const update = (
+      message as {
+        updateComponents?: { components?: Array<{ component?: unknown }> };
+      }
+    ).updateComponents;
+    for (const node of update?.components ?? []) {
+      names.add(String(node.component));
+    }
+  }
+  return [...names];
+}
+
+/**
+ * Why a page is not drawn with the blocks contributed, or null: the blocks it
+ * places that no enabled plugin contributes.
+ */
+export function blocksMissing(
+  placed: readonly string[],
+  contributed: readonly string[],
+): string | null {
+  const have = new Set(contributed);
+  const missing = placed.filter(name => !have.has(name));
+  if (missing.length === 0) {
+    return null;
+  }
+  return `This page places ${missing.join(', ')}, which no enabled plugin contributes: ${missing.length === 1 ? 'it is' : 'they are'} drawn once the plugin that contributes ${missing.length === 1 ? 'it' : 'them'} is on.`;
+}
+
 export type AppPageProps = {
   app: AppSpec;
   workspace: LoopWorkspaceContext;
@@ -51,6 +90,25 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
     () => appPageMessages(app, SURFACE_CATALOG_ID) as A2uiMessage[],
     [app],
   );
+  // The blocks the enabled plugins contribute: what this page may draw.
+  const blocks = useContributions(LoopCanvasBlock);
+  const contributed = [...new Set(blocks.map(entry => entry.value.id))].sort();
+  const drawnWith = contributed.join(',');
+  const drawing = useMemo(():
+    { catalog: ReturnType<typeof catalogOfBlocks> } | { problem: string } => {
+    const missing = blocksMissing(componentsOnPage(messages), contributed);
+    if (missing) {
+      return { problem: missing };
+    }
+    try {
+      return { catalog: catalogOfBlocks(contributed) };
+    } catch (error) {
+      return {
+        problem: error instanceof Error ? error.message : String(error),
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, drawnWith]);
   const data = useMemo(
     () => appPageData(app, turn, conversation),
     [app, turn, conversation],
@@ -102,12 +160,21 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
       data-testid="app-page"
       sx={{ height: '100%', minHeight: 0, overflow: 'auto', p: 3 }}
     >
-      <InlineSurface
-        messages={messages}
-        data={data}
-        onAction={onAction}
-        validationError={refusal}
-      />
+      {'problem' in drawing ? (
+        <Box role="status" sx={{ color: 'fg.muted', fontSize: 1 }}>
+          {drawing.problem}
+        </Box>
+      ) : (
+        <InlineSurface
+          // A new list of blocks is a new surface, drawn with it.
+          key={drawnWith}
+          messages={messages}
+          data={data}
+          onAction={onAction}
+          validationError={refusal}
+          catalog={drawing.catalog}
+        />
+      )}
     </Box>
   );
 }
