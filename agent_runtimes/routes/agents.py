@@ -1180,7 +1180,9 @@ class CreateAgentRequest(BaseModel):
             "Which instance of the application this agent runs, as the platform "
             "knows it: `app_uid` (its Spacer item), `deployment_uid`, `version`, "
             "and `purpose` `test` with its `launch_uid` when the session tests it "
-            "(the Evals engine's runs). What its record is kept under (LOOP R-07)."
+            "(the Evals engine's runs), and `woken_by` when nobody opened the "
+            "session — `{kind: schedule, ...}` (LOOP R-14). What its record is "
+            "kept under (LOOP R-07)."
         ),
     )
     subagents: SubAgentsConfig | None = Field(
@@ -2277,6 +2279,8 @@ async def create_agent(
                     version=int(serving.get("version") or 0),
                     purpose=str(serving.get("purpose") or ""),
                     launch_uid=str(serving.get("launch_uid") or ""),
+                    # What woke it, when nobody opened it (R-14).
+                    woken_by=dict(serving.get("woken_by") or {}),
                 )
                 rules = rules_for(running_app, agent_id=agent_id)
                 rules.record = recorder.decided

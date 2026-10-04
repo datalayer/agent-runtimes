@@ -77,8 +77,10 @@ async def test_a_session_is_sent_with_what_it_did():
     ]
     assert body["entries"][1]["payload"]["tool"] == "search"
     assert body["entries"][2]["summary"] == "Here is the news."
-    # Real use: no purpose named.
+    # Real use: no purpose named, and a person opened it: nothing woke it.
     assert (body["purpose"], body["launch_uid"]) == ("", "")
+    assert body["woken_by"] == {}
+    assert "woken_by" not in body["entries"][0]["payload"]
 
 
 async def test_a_test_session_says_it_is_a_test_and_of_which_launch():
@@ -93,6 +95,18 @@ async def test_a_test_session_says_it_is_a_test_and_of_which_launch():
     body = sent[0]
     assert (body["deployment_uid"], body["version"]) == ("", 3)
     assert (body["purpose"], body["launch_uid"]) == ("test", "launch-1")
+
+
+async def test_a_session_nobody_opened_says_what_woke_it():
+    woken = {"kind": "schedule", "schedule_uid": "sch-1", "cron": "0 9 * * 1"}
+    agent, sent = recorded(app(["outputs"]), "The digest.", woken_by=woken)
+    await agent.run("Write the Monday digest.")
+    body = sent[0]
+    assert body["woken_by"] == woken
+    opening = body["entries"][0]
+    assert opening["kind"] == "session"
+    assert opening["summary"] == "A session of Desk started, woken by its schedule"
+    assert opening["payload"]["woken_by"] == woken
 
 
 async def test_only_what_the_application_keeps_is_kept():

@@ -120,6 +120,7 @@ class Application:
         self._handlers: Dict[str, Handler] = {}
         self._actions: Dict[str, Handler] = {}
         self._schedules: Dict[str, Handler] = {}
+        self._schedule_crons: Dict[str, str] = {}
 
     @classmethod
     def from_spec(cls, spec: Union[AppSpec, Mapping[str, Any]]) -> "Application":
@@ -149,6 +150,7 @@ class Application:
         application._handlers = {}
         application._actions = {}
         application._schedules = {}
+        application._schedule_crons = {}
         application.spec  # noqa: B018 - refused here, not at the first session
         return application
 
@@ -406,6 +408,7 @@ class Application:
             )
             self._declare("triggers", trigger)
             self._schedules[name] = handler
+            self._schedule_crons[name] = cron
             return handler
 
         return decorate
@@ -593,7 +596,8 @@ class AppHost:
         return session
 
     async def schedule(self, name: str) -> Session:
-        """Run a schedule now, in a session of its own.
+        """Run a schedule now, in a session of its own, whose record says
+        the schedule woke it (R-14).
 
         Parameters
         ----------
@@ -609,6 +613,14 @@ class AppHost:
         if handler is None:
             raise KeyError(f"{self.app.id} has no schedule {name!r}.")
         session = self._session()
+        self.recorder.start(
+            session.id,
+            woken_by={
+                "kind": "schedule",
+                "schedule": name,
+                "cron": self.app._schedule_crons.get(name, ""),
+            },
+        )
         await self._react(session, handler)
         return session
 

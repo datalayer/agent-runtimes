@@ -14,6 +14,11 @@ the instance names its `purpose`, `test`, and the launch that ran it, and
 both are sent with its entries, so that ai-agents reads tests apart from
 real use. A session that names no purpose is real use.
 
+A session nobody opened says what woke it (LOOP R-14): the instance, or the
+host that ran it, names `woken_by` — ``{"kind": "schedule", ...}`` with the
+schedule's details — and it is sent with the entries and written on the
+session's first one. A session a person opened names nothing.
+
 A session is a conversation when the run names one, a run otherwise. The
 record is sent after each run, with the token the run was made with; a
 record that cannot be sent is logged, and never fails the run.
@@ -134,10 +139,13 @@ class AppRecorder:
     purpose: str = ""
     #: The launch that ran it, for a test.
     launch_uid: str = ""
+    #: What woke its sessions, when nobody opened them: ``{"kind": "schedule", ...}``.
+    woken_by: Dict[str, Any] = field(default_factory=dict)
     send: Send = send_to_ai_agents
 
     _pending: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict, init=False)
     _started: Set[str] = field(default_factory=set, init=False)
+    _woken: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
 
     def kept(self, kind: str) -> bool:
         if kind == "session":
@@ -158,12 +166,22 @@ class AppRecorder:
             {"kind": kind, "summary": summary[:2000], "payload": payload or {}}
         )
 
-    def start(self, session: str) -> None:
+    def woken(self, session: str) -> Dict[str, Any]:
+        """What woke a session: its own, or every session's; empty when a person opened it."""
+        return self._woken.get(session) or self.woken_by
+
+    def start(self, session: str, *, woken_by: Optional[Dict[str, Any]] = None) -> None:
         _SESSION.set(session)
         if session not in self._started:
             self._started.add(session)
+            if woken_by:
+                self._woken[session] = dict(woken_by)
+            woken = self.woken(session)
             self.add(
-                "session", f"A session of {self.app.name} started", {"app": self.app.id}
+                "session",
+                f"A session of {self.app.name} started"
+                + (f", woken by its {woken.get('kind')}" if woken else ""),
+                {"app": self.app.id, **({"woken_by": woken} if woken else {})},
             )
 
     async def flush(self, session: str) -> None:
@@ -177,6 +195,7 @@ class AppRecorder:
             "version": self.version,
             "purpose": self.purpose,
             "launch_uid": self.launch_uid,
+            "woken_by": self.woken(session),
             "keep_days": keep_days_of(self.app),
             "entries": entries,
         }

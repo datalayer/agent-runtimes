@@ -232,9 +232,14 @@ async def test_a_schedule_runs_in_a_session_of_its_own():
     async def monday(session: Session) -> None:
         await session.send("digest")
 
-    host, channel, _ = hosted(app)
+    host, channel, sent = hosted(app)
     session = await host.schedule("monday")
     assert channel.messages[-1].session_id == session.id
+    # Its record says the schedule woke it (R-14).
+    woken = {"kind": "schedule", "schedule": "monday", "cron": "0 9 * * 1"}
+    assert sent[-1]["session_uid"] == session.id
+    assert sent[-1]["woken_by"] == woken
+    assert sent[-1]["entries"][0]["payload"]["woken_by"] == woken
     with pytest.raises(KeyError, match="no schedule"):
         await host.schedule("friday")
 

@@ -9,6 +9,11 @@ and its latest version; what runs is kept by ai-agents
 (`/api/ai-agents/v1/apps/deployments`, LOOP R-11). A deployment points at one
 version; deploying moves the pointer; a hosted deployment has its address on
 the main site, `/apps/<slug>`.
+
+And a session of a deployment that nobody opened: woken by one of its
+schedules (LOOP R-14), the scheduler launches a runtime, creates the
+deployment's agent on it with `session_payload` — what ai-agents answers it
+with — and asks it the trigger's prompt with `start_session`.
 """
 
 from __future__ import annotations
@@ -16,7 +21,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, replace
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 from urllib.parse import quote
 
 import httpx
@@ -241,3 +246,168 @@ def deploy(
         return hosted, "unchanged"
     done = "moved" if hosted.version != target else "resumed"
     return deployments.update(replace(hosted, version=target, state="live")), done
+
+
+# --- a session of a deployment, woken by its trigger (LOOP R-14) ----------------
+
+
+@dataclass(frozen=True)
+class ScheduleTrigger:
+    """One of an application's schedules: where it sits among its triggers,
+    when it fires, and what its agent is asked then."""
+
+    position: int
+    cron: str
+    prompt: str
+    description: str = ""
+
+
+def schedule_triggers(spec: Mapping[str, Any]) -> list[ScheduleTrigger]:
+    """The schedules an Appspec declares, each known by its position among
+    the application's triggers: a trigger has no name of its own, and the
+    position is what the scheduler keeps it under.
+
+    What the agent is asked is the trigger's ``prompt``, or its
+    ``description`` when it has no prompt; a schedule with neither is
+    refused, since a session woken with nothing to do does nothing.
+    """
+    found: list[ScheduleTrigger] = []
+    for position, trigger in enumerate(spec.get("triggers") or []):
+        if not isinstance(trigger, Mapping) or trigger.get("type") != "schedule":
+            continue
+        cron = str(trigger.get("cron") or "").strip()
+        description = str(trigger.get("description") or "").strip()
+        prompt = str(trigger.get("prompt") or "").strip() or description
+        if not cron:
+            raise DeployRefused(
+                f"The schedule at trigger {position} says no time: its cron is empty."
+            )
+        if not prompt:
+            raise DeployRefused(
+                f"The schedule at trigger {position} ({cron}) asks its agent nothing: give it a prompt."
+            )
+        found.append(ScheduleTrigger(position, cron, prompt, description))
+    return found
+
+
+def session_payload(
+    spec: Mapping[str, Any],
+    *,
+    app_uid: str,
+    deployment_uid: str,
+    version: int,
+    woken_by: Mapping[str, Any],
+) -> dict[str, Any]:
+    """What creates a deployment's agent on a runtime for a session nobody
+    opened: the payload the hosted page sends (`AppRenderer`), on Vercel AI
+    since the session is one prompt, with the instance its record is kept
+    under — the deployment, and what woke it.
+
+    `AppNotRunnable` when the runtime's own loader refuses the Appspec;
+    `DeployRefused` for an application run by a team, which a woken session
+    does not run yet.
+    """
+    from agent_runtimes.loop.apps.loading import agent_id_of, load_app
+
+    app = load_app(spec)
+    if not app.agent:
+        raise DeployRefused(
+            f"{app.name or app.id} is run by a team, which a woken session does not run yet."
+        )
+    return {
+        "name": app.id,
+        "description": f"{app.name or app.id}, version {version}, woken by its {woken_by.get('kind') or 'trigger'}",
+        "transport": "vercel-ai",
+        "agent_spec_id": agent_id_of(app),
+        "app_spec": dict(spec),
+        "enable_codemode": bool(app.permissions.computer.shell),
+        **({"model": app.model} if app.model else {}),
+        "app_instance": {
+            "app_uid": app_uid,
+            "deployment_uid": deployment_uid,
+            "version": int(version),
+            "woken_by": dict(woken_by),
+        },
+    }
+
+
+class SessionNotStarted(RuntimeError):
+    """Why a woken session could not start on its runtime, in a sentence."""
+
+
+def start_session(
+    *,
+    ingress: str,
+    token: str,
+    payload: Mapping[str, Any],
+    prompt: str,
+    timeout: int = 300,
+    attempts: int = 12,
+    wait_seconds: float = 5.0,
+    client: Optional[httpx.Client] = None,
+) -> dict[str, Any]:
+    """Create the deployment's agent on a runtime that was just launched,
+    then ask it the trigger's prompt — the routes the hosted page and the
+    Evals engine use (`/api/v1/agents`, then `/api/v1/vercel-ai/<agent>`).
+
+    The runtime may not answer yet when it has just been launched: creating
+    the agent is tried again for ``attempts`` times, ``wait_seconds`` apart.
+    An agent already there (409) is the one asked. Answers the agent's id and
+    the chat's result (``status`` ``completed`` or not, the answer's text, and
+    why it failed when it did); `SessionNotStarted` when the agent could not
+    be created — the runtime never answered, or refused the application.
+    """
+    import time
+
+    from agent_runtimes.client.agent_client import (
+        build_agent_runtimes_base_url,
+        run_cloud_agent_chat,
+    )
+
+    base = build_agent_runtimes_base_url(ingress).rstrip("/")
+    if not base:
+        raise SessionNotStarted("The runtime has no address to reach it at.")
+    http = client or httpx.Client(timeout=60.0)
+    fallback = str(payload.get("name") or "").lower().replace(" ", "-")
+    agent_id = ""
+    last = ""
+    try:
+        for attempt in range(max(1, attempts)):
+            try:
+                response = http.post(
+                    f"{base}/api/v1/agents",
+                    json=dict(payload),
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+            except httpx.HTTPError as error:
+                last = f"the runtime did not answer: {error}"
+            else:
+                if response.status_code == 409:
+                    agent_id = fallback
+                    break
+                if response.status_code in (400, 422):
+                    raise SessionNotStarted(
+                        f"The runtime refused the application: {response.text[:500]}"
+                    )
+                if response.status_code < 300:
+                    created = response.json() if response.content else {}
+                    agent_id = str((created or {}).get("id") or fallback)
+                    break
+                last = f"the runtime answered {response.status_code}: {response.text[:200]}"
+            if attempt + 1 < attempts:
+                time.sleep(wait_seconds)
+    finally:
+        if client is None:
+            http.close()
+    if not agent_id:
+        raise SessionNotStarted(
+            f"The application's agent could not be created: {last}."
+        )
+    result = run_cloud_agent_chat(
+        ingress=ingress,
+        token=token,
+        prompt=prompt,
+        route_candidates=[agent_id],
+        timeout=timeout,
+    )
+    return {"agent_id": agent_id, "result": result}

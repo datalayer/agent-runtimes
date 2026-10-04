@@ -178,3 +178,146 @@ def test_a_deployment_is_read_as_ai_agents_answers():
     for older in ('{"version": 4}', "not json", None):
         with pytest.raises(DeployRefused, match="older form"):
             version_of_model(older)
+
+
+# --- a session of a deployment, woken by its trigger (LOOP R-14) ----------------
+
+DIGEST = {
+    "schema": "loop.app/v1",
+    "id": "digest",
+    "name": "Digest",
+    "kind": "worker",
+    "agent": "cog-crawler:0.0.1",
+    "goal": "A digest of the week's news, every Monday.",
+    "triggers": [
+        {"type": "once", "at": "launch"},
+        {"type": "schedule", "cron": "0 9 * * 1", "prompt": "Write the Monday digest."},
+        {"type": "schedule", "cron": "0 18 * * 5", "description": "Sum up the week."},
+    ],
+}
+
+
+def test_the_schedules_of_an_application_are_known_by_their_position():
+    from agent_runtimes.loop.apps.deployments import ScheduleTrigger, schedule_triggers
+
+    assert schedule_triggers(DIGEST) == [
+        ScheduleTrigger(1, "0 9 * * 1", "Write the Monday digest.", ""),
+        # No prompt: its description is what the agent is asked.
+        ScheduleTrigger(2, "0 18 * * 5", "Sum up the week.", "Sum up the week."),
+    ]
+    assert schedule_triggers({"triggers": []}) == []
+    with pytest.raises(DeployRefused, match="asks its agent nothing"):
+        schedule_triggers({"triggers": [{"type": "schedule", "cron": "0 9 * * 1"}]})
+    with pytest.raises(DeployRefused, match="says no time"):
+        schedule_triggers({"triggers": [{"type": "schedule", "prompt": "Go."}]})
+
+
+def test_a_woken_session_is_created_with_its_deployment_and_what_woke_it():
+    pytest.importorskip("agentspecs.apps")
+    from agent_runtimes.loop.apps.deployments import session_payload
+
+    woken = {
+        "kind": "schedule",
+        "schedule_uid": "sch-1",
+        "run_uid": "run-1",
+        "cron": "0 9 * * 1",
+    }
+    payload = session_payload(
+        DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4, woken_by=woken
+    )
+    assert payload["name"] == "digest"
+    assert payload["agent_spec_id"] == "cog-crawler"
+    assert payload["transport"] == "vercel-ai"
+    assert payload["app_spec"] == DIGEST
+    assert payload["app_instance"] == {
+        "app_uid": "app-1",
+        "deployment_uid": "dep-1",
+        "version": 4,
+        "woken_by": woken,
+    }
+    with pytest.raises(DeployRefused, match="run by a team"):
+        session_payload(
+            {
+                **{k: v for k, v in DIGEST.items() if k != "agent"},
+                "team": "analyze-support-tickets:0.0.1",
+            },
+            app_uid="app-1",
+            deployment_uid="dep-1",
+            version=4,
+            woken_by=woken,
+        )
+
+
+def _runtime(answers: list[httpx.Response], seen: list[httpx.Request]) -> httpx.Client:
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return answers.pop(0)
+
+    return httpx.Client(transport=httpx.MockTransport(handle))
+
+
+def test_a_woken_session_creates_its_agent_then_asks_it(monkeypatch):
+    from agent_runtimes.client import agent_client
+    from agent_runtimes.loop.apps.deployments import start_session
+
+    asked: list[dict] = []
+    monkeypatch.setattr(
+        agent_client,
+        "run_cloud_agent_chat",
+        lambda **kwargs: (
+            asked.append(kwargs) or {"status": "completed", "output": {"text": "Done."}}
+        ),
+    )
+    seen: list[httpx.Request] = []
+    # The runtime was just launched: it does not answer at first.
+    client = _runtime(
+        [
+            httpx.Response(503, text="starting"),
+            httpx.Response(201, json={"id": "digest"}),
+        ],
+        seen,
+    )
+    started = start_session(
+        ingress="https://r1.example/jupyter/server/rt-1",
+        token="tok",
+        payload={"name": "digest", "app_instance": {}},
+        prompt="Write the Monday digest.",
+        wait_seconds=0,
+        client=client,
+    )
+    assert started == {
+        "agent_id": "digest",
+        "result": {"status": "completed", "output": {"text": "Done."}},
+    }
+    assert [str(request.url) for request in seen] == [
+        "https://r1.example/agent-runtimes/rt-1/api/v1/agents"
+    ] * 2
+    assert seen[0].headers["authorization"] == "Bearer tok"
+    assert asked[0]["route_candidates"] == ["digest"]
+    assert asked[0]["prompt"] == "Write the Monday digest."
+
+
+def test_a_woken_session_the_runtime_refuses_is_said(monkeypatch):
+    from agent_runtimes.loop.apps.deployments import SessionNotStarted, start_session
+
+    seen: list[httpx.Request] = []
+    refused = _runtime([httpx.Response(422, json={"detail": "no such agent"})], seen)
+    with pytest.raises(SessionNotStarted, match="refused the application"):
+        start_session(
+            ingress="https://rt",
+            token="t",
+            payload={"name": "d"},
+            prompt="p",
+            client=refused,
+        )
+    silent = _runtime([httpx.Response(502)] * 2, seen)
+    with pytest.raises(SessionNotStarted, match="could not be created"):
+        start_session(
+            ingress="https://rt",
+            token="t",
+            payload={"name": "d"},
+            prompt="p",
+            attempts=2,
+            wait_seconds=0,
+            client=silent,
+        )

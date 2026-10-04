@@ -202,6 +202,28 @@ session always first:
 A second handler for the same moment, action or schedule raises
 `ValueError`.
 
+### Schedules on the platform
+
+A deployed application's schedules fire with nobody at a browser. When an
+application is deployed, each `schedule` trigger of the deployed version is
+registered with the platform's scheduler; on each tick the scheduler
+launches a runtime, creates the application's agent on it as the hosted
+page does, asks it the trigger's `prompt` (its `description` when it has no
+prompt), and stops the runtime. Pausing the deployment stops its schedules,
+resuming starts them again, taking it down removes them; deploying another
+version registers that version's schedules. Every tick is a run of the
+schedule, which says whether it answered.
+
+What runs on the platform is the Appspec: the code of a `@app.schedule`
+handler runs where an `AppHost` runs it (`host.schedule(name)`), not on the
+platform's tick. A schedule with neither a prompt nor a description is
+refused at deploy: a session woken with nothing to ask does nothing. An
+application run by a team is not woken yet.
+
+The record of a session nobody opened says what woke it: `woken_by`,
+`{"kind": "schedule", ...}` — the schedule, its cron, and on the platform
+the scheduler's run — sent with its entries and written on its first.
+
 ## `AppHost`
 
 `AppHost(app, channel, *, agent=local_agent, recorder=None)` runs an
@@ -215,7 +237,7 @@ application in this process. A runtime, a test or a script drives it:
 | `await host.settings(session, values)` | Checks the values, keeps them, runs `settings`. A value its input does not take raises `InvalidAnswer`. |
 | `await host.stop(session)` | Cancels what runs in the session, then runs `stop`. |
 | `await host.resume(session_id, state, user=None, settings=None)` | Reopens a session with its state, and runs `resume`. |
-| `await host.schedule(name)` | Runs a schedule now, in a new session. |
+| `await host.schedule(name)` | Runs a schedule now, in a new session whose record says the schedule woke it. |
 
 Each handler runs as one turn: it can be stopped, and the record of the turn
 is sent when it ends. `agent` says how the application's agent is built
